@@ -21,6 +21,8 @@ use rusqlite::Connection;
 mod controllers;
 pub use controllers::user_controller::*;
 use crate::models::itunes_models::Podcast;
+use crate::service::rust_service::insert_podcast_episodes;
+use crate::service::file_service::create_podcast_root_directory_exists;
 
 mod db;
 mod models;
@@ -38,8 +40,47 @@ fn rocket() -> rocket::Rocket {
 }
 
 fn main() {
+    init_db();
+    create_podcast_root_directory_exists();
+
+    thread::spawn(||{
+        let mut scheduler = Scheduler::new();
+
+        scheduler.every(1.minutes()).run(||{
+            let connection = Connection::open("cats.db");
+            let connection_client = connection.unwrap();
+            //check for new episodes
+            let mut result = connection_client.prepare("select * from Podcast")
+                .expect("Error getting podcasts from database");
+
+            let result = result.query_map([], |row| {
+                Ok(Podcast {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    directory: row.get(2)?,
+                    rssfeed: row.get(3)?,
+                })
+            }).expect("Error getting podcasts from database");
+
+            for res in result {
+                let podcast = res.unwrap();
+                insert_podcast_episodes(podcast);
+            }
+            //download new episodes
 
 
+            //update queue
+
+        });
+        loop {
+            scheduler.run_pending();
+            thread::sleep(Duration::from_millis(1000));
+        }
+    });
+    rocket().launch();
+}
+
+fn init_db() {
     let conn = Connection::open("cats.db");
     let connre = conn.unwrap();
 
@@ -60,81 +101,10 @@ fn main() {
     connre.execute("create table if not exists queue (
              id integer primary key,
              podcast_id integer not null,
+             download_url text not null,
              episode_id TEXT not null,
              status integer not null,
              FOREIGN KEY (podcast_id) REFERENCES Podcast(id),
              FOREIGN KEY (episode_id) REFERENCES podcast_episodes(id))",
                    []).expect("Error creating table");
-    thread::spawn(||{
-        let mut scheduler = Scheduler::new();
-
-
-        scheduler.every(1.minutes()).run(||{
-            let connection = Connection::open("cats.db");
-            let connection_client = connection.unwrap();
-            //check for new episodes
-            let mut result = connection_client.prepare("select * from Podcast")
-                .expect("Error getting podcasts from database");
-
-            let result = result.query_map([], |row| {
-                Ok(Podcast {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    directory: row.get(2)?,
-                    rssfeed: row.get(3)?,
-                })
-            }).expect("Error getting podcasts from database");
-
-            for res in result {
-                let podcast = res.unwrap();
-
-                let client = ClientBuilder::new().build().unwrap();
-                let result = client.get(podcast.rssfeed).send().unwrap();
-                let bytes = result.bytes().unwrap();
-
-                let feed = parser::parse(&*bytes).unwrap();
-                feed.entries.iter().for_each(|mut item| {
-                    println!("id: {}, name: {}, url: {}, date: {}", item.id, item.title.as_ref()
-                        .unwrap().content, item.links.first().unwrap().href, item.published
-                        .unwrap());
-
-                    let mut result = connection_client.prepare("select * from podcast_episodes where episode_id = ?1")
-                        .expect("Error getting podcasts from database");
-
-                    let result = result.query_map([&item.id], |row| {
-                        Ok(Podcast {
-                            id: row.get(0)?,
-                            name: row.get(1)?,
-                            directory: row.get(2)?,
-                            rssfeed: row.get(3)?,
-                        })
-                    }).expect("Error getting podcasts from database");
-
-
-                    if result.count() == 0 {
-                        connection_client.execute("INSERT INTO podcast_episodes (podcast_id,\
-                        episode_id, name, url, date) VALUES (?1,?2, ?3, ?4, ?5)",
-                                                  (&podcast.id, &item.id, &item.title.as_ref()
-                                                      .unwrap()
-                                                      .content,
-                                                      &item.links.first().unwrap().href, &item.published.unwrap()))
-                            .expect("Error inserting podcast episode");
-                    }
-                });
-            }
-            //download new episodes
-
-
-            //update queue
-
-        });
-        loop {
-            scheduler.run_pending();
-            thread::sleep(Duration::from_millis(1000));
-        }
-    });
-    rocket().launch();
-
-
-
 }

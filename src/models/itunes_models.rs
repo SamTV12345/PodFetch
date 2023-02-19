@@ -47,3 +47,13 @@ pub struct Podcast {
     pub directory: String,
     pub(crate) rssfeed: String,
 }
+
+
+pub struct PodcastEpisode {
+    pub(crate) id: i64,
+    pub(crate) podcast_id: i64,
+    pub(crate) episode_id: String,
+    pub(crate) name: String,
+    pub(crate) url: String,
+    pub(crate) date: String,
+}
