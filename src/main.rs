@@ -20,6 +20,7 @@ use rusqlite::Connection;
 
 mod controllers;
 pub use controllers::user_controller::*;
+use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::Podcast;
 use crate::service::rust_service::insert_podcast_episodes;
 use crate::service::file_service::create_podcast_root_directory_exists;
@@ -47,7 +48,7 @@ fn main() {
         let mut scheduler = Scheduler::new();
 
         scheduler.every(1.minutes()).run(||{
-            let connection = Connection::open("cats.db");
+            let connection = Connection::open(DB_NAME);
             let connection_client = connection.unwrap();
             //check for new episodes
             let mut result = connection_client.prepare("select * from Podcast")
@@ -66,13 +67,9 @@ fn main() {
                 let podcast = res.unwrap();
                 insert_podcast_episodes(podcast);
             }
-            //download new episodes
-
-
-            //update queue
-
         });
         loop {
+            println!("Running scheduler...");
             scheduler.run_pending();
             thread::sleep(Duration::from_millis(1000));
         }
@@ -81,7 +78,7 @@ fn main() {
 }
 
 fn init_db() {
-    let conn = Connection::open("cats.db");
+    let conn = Connection::open(DB_NAME);
     let connre = conn.unwrap();
 
     connre.execute("create table if not exists Podcast (
@@ -107,4 +104,5 @@ fn init_db() {
              FOREIGN KEY (podcast_id) REFERENCES Podcast(id),
              FOREIGN KEY (episode_id) REFERENCES podcast_episodes(id))",
                    []).expect("Error creating table");
+    connre.close().expect("Error closing connection");
 }
