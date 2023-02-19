@@ -40,3 +40,10 @@ pub struct ResponseModel {
     pub result_count: i32,
     pub results: Vec<ItunesModel>,
 }
+
+pub struct Podcast {
+    pub(crate) id: i64,
+    pub(crate) name: String,
+    pub directory: String,
+    pub(crate) rssfeed: String,
+}
