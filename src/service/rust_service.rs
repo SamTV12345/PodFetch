@@ -50,8 +50,10 @@ pub fn schedule_episode_download(podcast: Podcast){
             println!("Downloading: {}", podcast_episode.url);
             let client = ClientBuilder::new().build().unwrap();
             let mut resp = client.get(podcast_episode.url).send().unwrap();
-            let mut out = std::fs::File::create(format!("podcasts\\{}\\{}", podcast.directory,
-                                                        podcast_cloned.episode_id)).unwrap();
+            let mut out = std::fs::File::create(format!("podcasts\\{}\\{}.{}", podcast.directory,
+                                                        podcast_cloned.episode_id,
+                                                        get_url_file_suffix(podcast_episode.url)))
+                .unwrap();
             io::copy(&mut resp, &mut out).expect("failed to copy content");
             println!("Done copying")
         }
@@ -66,4 +68,10 @@ fn get_media_urls(text: &str)-> Vec<String> {
         urls.push(url.to_owned())
     }
     return urls;
+}
+
+fn get_url_file_suffix(url: String) -> String {
+    let re = Regex::new(r#"\.([a-zA-Z0-9]+)$"#).unwrap();
+    let capture = re.captures(&url).unwrap();
+    return capture.get(1).unwrap().as_str().to_owned();
 }
