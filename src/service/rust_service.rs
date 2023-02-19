@@ -26,7 +26,7 @@ pub fn insert_podcast_episodes(podcast: Podcast){
     let bytes = result.bytes().unwrap();
     let text = String::from_utf8(bytes.to_vec()).unwrap();
     let vec = get_media_urls(&text);
-
+    println!("Vec: {:?}", vec);
     let feed = parser::parse(&*bytes).unwrap();
     for (i,item) in feed.entries.iter().enumerate(){
         let db = DB::new().unwrap();
@@ -43,26 +43,29 @@ pub fn insert_podcast_episodes(podcast: Podcast){
 pub fn schedule_episode_download(podcast: Podcast){
     let db = DB::new().unwrap();
     let result = db.get_last_5_podcast_episodes(podcast.id).unwrap();
-    println!("Result: {:?}", result);
     for podcast_episode in result {
-        let podcast_cloned = podcast_episode.clone();
-        if !check_if_podcast_episode_downloaded(podcast_episode.podcast_id, podcast_episode.episode_id) {
-            println!("Downloading: {}", podcast_episode.url);
+        let podcast_episode_cloned = podcast_episode.clone();
+        let podcast_cloned = podcast.clone();
+        let suffix = get_url_file_suffix(podcast_episode_cloned.url);
+
+        if !check_if_podcast_episode_downloaded(&podcast_cloned.directory, podcast_episode
+            .episode_id, &suffix) {
+            println!("Downloading from: {}", podcast_episode.url);
             let client = ClientBuilder::new().build().unwrap();
             let mut resp = client.get(podcast_episode.url).send().unwrap();
             let mut out = std::fs::File::create(format!("podcasts\\{}\\{}.{}", podcast.directory,
-                                                        podcast_cloned.episode_id,
-                                                        get_url_file_suffix(podcast_episode.url)))
+                                                        podcast_episode_cloned.episode_id,
+                                                        suffix))
                 .unwrap();
             io::copy(&mut resp, &mut out).expect("failed to copy content");
-            println!("Done copying")
+            println!("Done copying");
         }
     }
 }
 
 fn get_media_urls(text: &str)-> Vec<String> {
     let mut urls = Vec::new();
-    let re = Regex::new(r#"enclosure\s+url="([^"]+)""#).unwrap();
+    let re = Regex::new(r#"<enclosure.*?url="(.*?)".*?/>"#).unwrap();;
     for capture in re.captures_iter(text){
         let url = capture.get(1).unwrap().as_str();
         urls.push(url.to_owned())
@@ -71,7 +74,7 @@ fn get_media_urls(text: &str)-> Vec<String> {
 }
 
 fn get_url_file_suffix(url: String) -> String {
-    let re = Regex::new(r#"\.([a-zA-Z0-9]+)$"#).unwrap();
+    let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
     let capture = re.captures(&url).unwrap();
     return capture.get(1).unwrap().as_str().to_owned();
 }

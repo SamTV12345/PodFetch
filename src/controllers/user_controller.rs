@@ -35,7 +35,6 @@ pub fn find_user() -> Json<Value> {
 
 #[get("/podcast?<podcast>")]
 pub fn find_podcast(podcast: &RawStr) ->Json<Value> {
-    println!("Podcast: {}", podcast);
     let res = find_podcast_service(podcast);
     Json(json!({
         "status": 200,

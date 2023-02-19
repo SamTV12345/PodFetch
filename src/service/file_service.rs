@@ -1,8 +1,9 @@
 use std::path::Path;
 
 
-pub fn check_if_podcast_episode_downloaded(podcast_id: i64, episode_id: String) -> bool {
-    return Path::new(&format!("episodes\\{}", episode_id)).exists()
+pub fn check_if_podcast_episode_downloaded(podcast_id: &str, episode_id: String, suffix: &str) ->
+                                                                                            bool {
+    return Path::new(&format!("podcasts\\{}\\{}.{}",podcast_id, episode_id,suffix )).exists()
 }
 
 pub fn create_podcast_root_directory_exists(){
