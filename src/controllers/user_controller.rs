@@ -5,6 +5,7 @@ use rocket_contrib::json::Json;
 use rusqlite::Connection;
 use serde_json::Value;
 use crate::constants::constants::DB_NAME;
+use crate::db::DB;
 use crate::models::models::{NewUser, PodCastAddModel, UserData};
 use crate::service::rust_service::find_podcast as find_podcast_service;
 
@@ -51,17 +52,15 @@ pub fn add_podcast(track_id: Json<PodCastAddModel>){
         .to_string())
         .send().unwrap();
 
-    let connection = Connection::open(DB_NAME);
-    let connection_client = connection.unwrap();
+    let db = DB::new().unwrap();
 
     let res  = res.json::<Value>().unwrap();
-     connection_client.execute("INSERT INTO Podcast (name, directory, rssfeed) VALUES (?1, ?2, ?3)",
-                               [unwrap_string(&res["results"][0]["collectionName"]),
-                                   unwrap_string(&res["results"][0]["collectionId"]),
-                                   unwrap_string(&res["results"][0]["feedUrl"])])
-         .expect("Error inserting podcast into database");
-    connection_client.close().unwrap();
+    db.add_podcast_to_database(unwrap_string(&res["results"][0]["collectionName"]),
+                               unwrap_string(&res["results"][0]["collectionId"]),
+                               unwrap_string(&res["results"][0]["feedUrl"]));
 }
+
+
 
 fn unwrap_string(value: &Value) -> String {
     return value.to_string().replace("\"", "");
