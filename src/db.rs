@@ -1,5 +1,5 @@
 use feed_rs::model::Entry;
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, Result, Statement};
 use rusqlite::types::Value;
 use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
@@ -16,7 +16,8 @@ impl DB{
              id integer primary key,
              name text not null unique,
              directory text not null,
-             rssfeed text not null)", []).expect("Error creating table");
+             rssfeed text not null,
+             image_url text not null)", []).expect("Error creating table");
         conn.execute("create table if not exists podcast_episodes (
              id integer primary key,
              podcast_id integer not null,
@@ -47,6 +48,7 @@ impl DB{
                 name: row.get(1)?,
                 directory: row.get(2)?,
                 rssfeed: row.get(3)?,
+                image_url: row.get(4)?
             })
         })?;
 
@@ -65,6 +67,7 @@ impl DB{
                 name: row.get(1)?,
                 directory: row.get(2)?,
                 rssfeed: row.get(3)?,
+                image_url: row.get(4)?
             })
         })?;
 
@@ -75,7 +78,7 @@ impl DB{
         Ok(podcasts[0].clone())
     }
 
-    pub fn get_podcast_episodes(&self, podcast_id: &str) -> Result<Option<PodcastEpisode>>{
+    pub fn get_podcast_episode_by_id(&self, podcast_id: &str) -> Result<Option<PodcastEpisode>>{
         let mut stmt = self.conn.prepare("select * from podcast_episodes where episode_id = ?1")?;
         let mut podcast_iter = stmt.query_map([&podcast_id], |row| {
             Ok(PodcastEpisode {
@@ -105,16 +108,28 @@ impl DB{
     }
 
     pub fn add_podcast_to_database(&self, collection_name:String, collection_id:String,
-                                   feed_url:String){
-        self.conn.execute("INSERT INTO Podcast (name, directory, rssfeed) VALUES (?1, \
-        ?2, ?3)",
-                                  [collection_name, collection_id, feed_url])
+                                   feed_url:String, image_url: String){
+        self.conn.execute("INSERT INTO Podcast (name, directory, rssfeed, image_url) VALUES (?1, \
+        ?2, ?3, ?4)",
+                                  [collection_name, collection_id, feed_url, image_url])
             .expect("Error inserting podcast into database");
     }
 
     pub fn get_last_5_podcast_episodes(&self, podcast_id: i64) -> Result<Vec<PodcastEpisode>>{
         let mut stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
         order by date(date) desc limit 5")?;
+        Ok(Self::extract_statement(stmt, podcast_id))
+    }
+
+
+    pub fn get_podcast_episodes_of_podcast(&self, podcast_id: i64) -> Result<Vec<PodcastEpisode>>{
+        let mut stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
+        order by date(date) desc")?;
+
+        Ok(Self::extract_statement(stmt, podcast_id))
+    }
+
+    fn extract_statement(mut stmt: Statement, podcast_id: i64) -> Vec<PodcastEpisode> {
         let podcast_iter = stmt.query_map([&podcast_id], |row| {
             Ok(PodcastEpisode {
                 id: row.get(0)?,
@@ -125,12 +140,11 @@ impl DB{
                 date: row.get(5)?,
                 image_url: row.get(6)?,
             })
-        })?;
-
+        }).unwrap();
         let mut podcasts = Vec::new();
         for podcast in podcast_iter {
-            podcasts.push(podcast?);
+            podcasts.push(podcast.unwrap());
         }
-        Ok(podcasts)
+        return podcasts;
     }
 }

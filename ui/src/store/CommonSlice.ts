@@ -4,17 +4,30 @@ export type Podcast = {
     directory: string,
     id: number,
     name: string,
-    rssfeed: string
+    rssfeed: string,
+    image_url: string,
+}
+
+export type PodcastEpisode = {
+    id: number,
+    podcast_id: number,
+    episode_id: number,
+    name: string,
+    url: string,
+    date: string,
+    image_url: string,
 }
 
 // Define a type for the slice state
 interface CommonProps {
+    selectedEpisodes: PodcastEpisode[]
     sideBarCollapsed: boolean,
     podcasts:Podcast[]
 }
 
 // Define the initial state using that type
 const initialState: CommonProps = {
+    selectedEpisodes: [],
     sideBarCollapsed: false,
     podcasts: []
 }
@@ -29,9 +42,12 @@ export const commonSlice = createSlice({
         },
         setPodcasts: (state, action) => {
             state.podcasts = action.payload
+        },
+        setSelectedEpisodes: (state, action) => {
+            state.selectedEpisodes = action.payload
         }
 }})
 
-export const {setSideBarCollapsed, setPodcasts} = commonSlice.actions
+export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes} = commonSlice.actions
 
 export default commonSlice.reducer

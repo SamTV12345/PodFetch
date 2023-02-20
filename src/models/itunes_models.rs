@@ -47,9 +47,10 @@ pub struct Podcast {
     pub(crate) name: String,
     pub directory: String,
     pub(crate) rssfeed: String,
+    pub image_url: String
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PodcastEpisode {
     pub(crate) id: i64,
     pub(crate) podcast_id: i64,

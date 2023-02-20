@@ -4,6 +4,7 @@ import {SideBar} from "./components/SideBar";
 import {Header} from "./components/Header";
 import {useAppSelector} from "./store/hooks";
 import {Podcasts} from "./pages/Podcasts";
+import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 
 const App = ()=> {
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
@@ -17,6 +18,7 @@ const App = ()=> {
                   <Routes>
                       <Route path={"/home"} element={<div>test</div>}/>
                       <Route path={"/podcasts"} element={<Podcasts/>}/>
+                      <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
                   </Routes>
               </div>
           </div>

@@ -31,7 +31,7 @@ pub fn insert_podcast_episodes(podcast: Podcast){
     let feed = parser::parse(&*bytes).unwrap();
     for (i,item) in feed.entries.iter().enumerate(){
         let db = DB::new().unwrap();
-        let mut result = db.get_podcast_episodes(&item.id);
+        let mut result = db.get_podcast_episode_by_id(&item.id);
 
         if result.unwrap().is_none() {
             // Insert new podcast episode
@@ -47,8 +47,8 @@ pub fn schedule_episode_download(podcast: Podcast){
     for podcast_episode in result {
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
-        let suffix = get_url_file_suffix(podcast_episode_cloned.url);
-        let image_suffix = get_url_file_suffix(podcast_episode_cloned.image_url);
+        let suffix = get_url_file_suffix(&podcast_episode_cloned.url);
+        let image_suffix = get_url_file_suffix(&podcast_episode_cloned.image_url);
 
         if !check_if_podcast_episode_downloaded(&podcast_cloned.directory, podcast_episode
             .episode_id) {
@@ -87,7 +87,7 @@ fn get_media_urls(text: &str)-> Vec<String> {
     return urls;
 }
 
-fn get_url_file_suffix(url: String) -> String {
+pub fn get_url_file_suffix(url: &str) -> String {
     let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
     let capture = re.captures(&url).unwrap();
     return capture.get(1).unwrap().as_str().to_owned();

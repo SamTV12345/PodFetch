@@ -1,13 +1,17 @@
 use std::future::Future;
 use reqwest::blocking::{Client, ClientBuilder, Response};
 use rocket::http::{RawStr, Status};
+use rocket::http::ext::IntoCollection;
 use rocket::response::status;
 use rocket_contrib::json::Json;
 use rusqlite::Connection;
 use serde_json::Value;
-use crate::constants::constants::DB_NAME;
+use crate::constants::constants::{DB_NAME};
 use crate::db::DB;
+use crate::models::itunes_models::Podcast;
 use crate::models::models::{NewUser, PodCastAddModel, UserData};
+use crate::service::file_service::{create_podcast_directory_exists, download_podcast_image};
+use crate::service::mapping_service::MappingService;
 use crate::service::rust_service::find_podcast as find_podcast_service;
 
 #[post("/users", format = "application/json")]
@@ -37,10 +41,27 @@ pub fn find_user() -> Json<Value> {
 #[get("/podcasts")]
 pub fn find_all_podcasts() -> status::Accepted<Json<Value>> {
     let db = DB::new().unwrap();
+    let mappingservice = MappingService::new();
     let podcasts = db.get_podcasts().unwrap();
 
-    status::Accepted(Some(Json(json!(podcasts))))
+    let mapped_podcasts = podcasts
+        .into_iter()
+        .map(|podcast| mappingservice.map_podcast_to_podcast_dto(&podcast)).collect::<Vec<_>>();
+    status::Accepted(Some(Json(json!(mapped_podcasts))))
 }
+
+#[get("/podcast/<id>/episodes")]
+pub fn find_all_podcast_episodes_of_podcast(id: i64) -> status::Accepted<Json<Value>> {
+    let db = DB::new().unwrap();
+    let mappingservice = MappingService::new();
+
+    let res  = db.get_podcast_episodes_of_podcast(id).unwrap();
+    let mapped_podcasts = res
+        .into_iter()
+        .map(|podcast| mappingservice.map_podcastepisode_to_dto(&podcast)).collect::<Vec<_>>();
+    status::Accepted(Some(Json(json!(mapped_podcasts))))
+}
+
 
 #[get("/podcast?<podcast>")]
 pub fn find_podcast(podcast: &RawStr) ->Json<Value> {
@@ -63,9 +84,15 @@ pub fn add_podcast(track_id: Json<PodCastAddModel>){
     let db = DB::new().unwrap();
 
     let res  = res.json::<Value>().unwrap();
+
+
     db.add_podcast_to_database(unwrap_string(&res["results"][0]["collectionName"]),
                                unwrap_string(&res["results"][0]["collectionId"]),
-                               unwrap_string(&res["results"][0]["feedUrl"]));
+                               unwrap_string(&res["results"][0]["feedUrl"]),
+                               unwrap_string(&res["results"][0]["artworkUrl600"]));
+    create_podcast_directory_exists(&unwrap_string(&res["results"][0]["collectionId"]));
+    download_podcast_image(&unwrap_string(&res["results"][0]["collectionId"]),
+                           &unwrap_string(&res["results"][0]["artworkUrl600"]));
 }
 
 
