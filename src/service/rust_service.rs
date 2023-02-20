@@ -1,3 +1,4 @@
+use std::fs::create_dir;
 use std::io;
 use std::ptr::null;
 use feed_rs::parser;
@@ -32,10 +33,10 @@ pub fn insert_podcast_episodes(podcast: Podcast){
         let db = DB::new().unwrap();
         let mut result = db.get_podcast_episodes(&item.id);
 
-
         if result.unwrap().is_none() {
             // Insert new podcast episode
-            db.insert_podcast_episodes(podcast.clone(), &vec[i].to_owned(), item);
+            db.insert_podcast_episodes(podcast.clone(), &vec[i].to_owned(), item, &feed.logo
+                .clone().unwrap().uri);
         }
     }
 }
@@ -47,17 +48,30 @@ pub fn schedule_episode_download(podcast: Podcast){
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = get_url_file_suffix(podcast_episode_cloned.url);
+        let image_suffix = get_url_file_suffix(podcast_episode_cloned.image_url);
 
         if !check_if_podcast_episode_downloaded(&podcast_cloned.directory, podcast_episode
-            .episode_id, &suffix) {
+            .episode_id) {
             println!("Downloading from: {}", podcast_episode.url);
             let client = ClientBuilder::new().build().unwrap();
             let mut resp = client.get(podcast_episode.url).send().unwrap();
-            let mut out = std::fs::File::create(format!("podcasts\\{}\\{}.{}", podcast.directory,
-                                                        podcast_episode_cloned.episode_id,
-                                                        suffix))
+            let mut image_response = client.get(podcast_episode.image_url).send().unwrap();
+
+            create_dir(format!("podcasts\\{}\\{}", podcast.directory,
+                               podcast_episode_cloned.episode_id)).expect("Error creating directory");
+
+            let mut podcast_out = std::fs::File::create(format!("podcasts\\{}\\{}\\podcast.{}",
+                                                                podcast.directory,
+                                                                podcast_episode_cloned.episode_id,
+                                                                suffix))
                 .unwrap();
-            io::copy(&mut resp, &mut out).expect("failed to copy content");
+            let mut image_out = std::fs::File::create(format!("podcasts\\{}\\{}\\image.{}",
+                                                        podcast.directory,
+                                                        podcast_episode_cloned.episode_id,
+                                                        image_suffix))
+                .unwrap();
+            io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
+            io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
             println!("Done copying");
         }
     }

@@ -24,6 +24,7 @@ impl DB{
              name text not null,
              url text not null,
              date text not null,
+             image_url text not null,
              FOREIGN KEY (podcast_id) REFERENCES Podcast(id))", []).expect("Error creating table");
         // status 0 = not downloaded, 1 = downloaded, 2 = error
         conn.execute("create table if not exists queue (
@@ -84,6 +85,7 @@ impl DB{
                 name: row.get(3)?,
                 url: row.get(4)?,
                 date: row.get(5)?,
+                image_url: row.get(6)?,
             })
         })?;
 
@@ -91,13 +93,14 @@ impl DB{
         Ok((iter))
     }
 
-    pub fn insert_podcast_episodes(&self, podcast: Podcast, link: &str, item: &Entry){
+    pub fn insert_podcast_episodes(&self, podcast: Podcast, link: &str, item: &Entry, image_url:
+    &str){
         self.conn.execute("INSERT INTO podcast_episodes (podcast_id,\
-                        episode_id, name, url, date) VALUES (?1,?2, ?3, ?4, ?5)",
+                        episode_id, name, url, date, image_url) VALUES (?1,?2, ?3, ?4, ?5, ?6)",
                                   (&podcast.id, &item.id, &item.title.as_ref()
                                       .unwrap()
                                       .content,
-                                   link, &item.published.unwrap()))
+                                   link, &item.published.unwrap(), image_url))
             .expect("Error inserting podcast episode");
     }
 
@@ -120,6 +123,7 @@ impl DB{
                 name: row.get(3)?,
                 url: row.get(4)?,
                 date: row.get(5)?,
+                image_url: row.get(6)?,
             })
         })?;
 

@@ -49,7 +49,7 @@ fn main() {
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
 
-        scheduler.every(300.minutes()).run(||{
+        scheduler.every(1.minutes()).run(||{
             let db = DB::new().unwrap();
             //check for new episodes
             let podcasts = db.get_podcasts().unwrap();
