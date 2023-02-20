@@ -1,6 +1,7 @@
 use std::future::Future;
 use reqwest::blocking::{Client, ClientBuilder, Response};
-use rocket::http::RawStr;
+use rocket::http::{RawStr, Status};
+use rocket::response::status;
 use rocket_contrib::json::Json;
 use rusqlite::Connection;
 use serde_json::Value;
@@ -33,11 +34,19 @@ pub fn find_user() -> Json<Value> {
     }))
 }
 
+#[get("/podcasts")]
+pub fn find_all_podcasts() -> status::Accepted<Json<Value>> {
+    let db = DB::new().unwrap();
+    let podcasts = db.get_podcasts().unwrap();
+
+    status::Accepted(Some(Json(json!(podcasts))))
+}
+
 #[get("/podcast?<podcast>")]
 pub fn find_podcast(podcast: &RawStr) ->Json<Value> {
     let res = find_podcast_service(podcast);
     Json(json!({
-        "status": 200,
+        "code": 200,
         "result": res,
     }))
 }

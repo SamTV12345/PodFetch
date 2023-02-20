@@ -17,9 +17,10 @@ use clokwerk::{Scheduler, TimeUnits};
 use feed_rs::parser;
 use reqwest::blocking::{Client, ClientBuilder};
 use rusqlite::Connection;
-
+use rocket_contrib::serve::StaticFiles;
 mod controllers;
 pub use controllers::user_controller::*;
+use crate::config::cors;
 use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::Podcast;
 use crate::service::rust_service::{insert_podcast_episodes, schedule_episode_download};
@@ -30,15 +31,15 @@ mod models;
 mod constants;
 mod service;
 use crate::db::DB;
+mod config;
 
 fn rocket() -> rocket::Rocket {
     dotenv().ok();
 
     rocket::ignite()
-        .mount(
-            "/api/v1/",
-            routes![get_all, new_user, find_user, find_podcast, add_podcast],
-        )
+        .attach(cors::CORS)
+        .mount("/api/v1/", routes![get_all, new_user, find_user, find_podcast, add_podcast, find_all_podcasts])
+        .mount("/podcasts", StaticFiles::from("podcasts"))
 }
 
 fn main() {
@@ -48,7 +49,7 @@ fn main() {
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
 
-        scheduler.every(1.minutes()).run(||{
+        scheduler.every(300.minutes()).run(||{
             let db = DB::new().unwrap();
             //check for new episodes
             let podcasts = db.get_podcasts().unwrap();

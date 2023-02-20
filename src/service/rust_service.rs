@@ -26,7 +26,7 @@ pub fn insert_podcast_episodes(podcast: Podcast){
     let bytes = result.bytes().unwrap();
     let text = String::from_utf8(bytes.to_vec()).unwrap();
     let vec = get_media_urls(&text);
-    println!("Vec: {:?}", vec);
+
     let feed = parser::parse(&*bytes).unwrap();
     for (i,item) in feed.entries.iter().enumerate(){
         let db = DB::new().unwrap();

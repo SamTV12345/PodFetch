@@ -41,7 +41,7 @@ pub struct ResponseModel {
     pub results: Vec<ItunesModel>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Podcast {
     pub(crate) id: i64,
     pub(crate) name: String,
