@@ -10,7 +10,7 @@ export const AudioPlayer = () => {
         <div className="place-items-center grid">
                 <div className="flex gap-3 align-baseline">
                 <i className="fa-solid fa-backward text-xl text-white"></i>
-            <PlayIcon className="text-white text-xl align-top"/>
+            <PlayIcon className="text-white align-top"/>
                 <i className="fa-solid fa-forward h-6 text-xl text-white"></i>
             </div>
         </div>
