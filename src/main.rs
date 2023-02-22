@@ -16,6 +16,7 @@ use std::time::Duration;
 use clokwerk::{Scheduler, TimeUnits};
 use feed_rs::parser;
 use reqwest::blocking::{Client, ClientBuilder};
+use rocket::{Rocket};
 use rusqlite::Connection;
 use rocket_contrib::serve::StaticFiles;
 mod controllers;
@@ -25,7 +26,8 @@ use crate::constants::constants::{DB_NAME, PODCASTS_ROOT_DIRECTORY};
 use crate::models::itunes_models::Podcast;
 use crate::service::rust_service::{insert_podcast_episodes, schedule_episode_download};
 use crate::service::file_service::create_podcast_root_directory_exists;
-
+use crate::controllers::file_controller::files;
+use crate::controllers::file_controller::static_rocket_route_info_for_files;
 mod db;
 mod models;
 mod constants;
@@ -33,7 +35,7 @@ mod service;
 use crate::db::DB;
 mod config;
 
-fn rocket() -> rocket::Rocket {
+fn rocket () -> Rocket {
     dotenv().ok();
 
     rocket::ignite()
@@ -41,7 +43,7 @@ fn rocket() -> rocket::Rocket {
         .mount("/api/v1/",
                routes![get_all, new_user, find_user, find_podcast,
                    add_podcast,find_all_podcasts, find_all_podcast_episodes_of_podcast])
-        .mount(PODCASTS_ROOT_DIRECTORY, StaticFiles::from("podcasts"))
+        .mount(PODCASTS_ROOT_DIRECTORY, routes![files])
 }
 
 fn main() {
