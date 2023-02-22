@@ -1,4 +1,4 @@
-import {createSlice} from '@reduxjs/toolkit'
+import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 
 export type Podcast = {
     directory: string,
@@ -40,10 +40,10 @@ export const commonSlice = createSlice({
         setSideBarCollapsed: (state, action) => {
             state.sideBarCollapsed = action.payload
         },
-        setPodcasts: (state, action) => {
+        setPodcasts: (state, action: PayloadAction<Podcast[]>) => {
             state.podcasts = action.payload
         },
-        setSelectedEpisodes: (state, action) => {
+        setSelectedEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
             state.selectedEpisodes = action.payload
         }
 }})

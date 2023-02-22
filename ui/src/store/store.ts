@@ -1,9 +1,11 @@
 import {configureStore} from '@reduxjs/toolkit'
 import {commonSlice} from "./CommonSlice";
+import {AudioPlayerSlice} from "./AudioPlayerSlice";
 
 export const store = configureStore({
     reducer: {
         common: commonSlice.reducer,
+        audioPlayer: AudioPlayerSlice.reducer
     },
 })
 
