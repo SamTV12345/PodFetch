@@ -1,12 +1,15 @@
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ItunesModel {
-    pub kind: String,
+    pub artist_id: Option<i64>,
+    pub description: Option<String>,
+    pub artist_view_url: Option<String>,
+    pub kind: Option<String>,
     pub wrapper_type: String,
     pub collection_id: i64,
-    pub track_id: i64,
+    pub track_id: Option<i64>,
     pub collection_censored_name: String,
-    pub track_censored_name: String,
+    pub track_censored_name: Option<String>,
     pub artwork_url30: String,
     pub artwork_url60: String,
     pub artwork_url600: String,
@@ -34,7 +37,7 @@ pub struct ItunesModel {
     pub genres: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseModel {
     pub result_count: i32,

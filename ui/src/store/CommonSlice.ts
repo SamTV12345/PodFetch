@@ -1,11 +1,12 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit'
+import {GeneralModel} from "../models/PodcastAddModel";
 
 export type Podcast = {
     directory: string,
     id: number,
     name: string,
     rssfeed: string,
-    image_url: string,
+    image_url: string
 }
 
 export type PodcastEpisode = {
@@ -15,21 +16,24 @@ export type PodcastEpisode = {
     name: string,
     url: string,
     date: string,
-    image_url: string,
+    image_url: string
+
 }
 
 // Define a type for the slice state
 interface CommonProps {
     selectedEpisodes: PodcastEpisode[]
     sideBarCollapsed: boolean,
-    podcasts:Podcast[]
+    podcasts:Podcast[],
+    searchedPodcasts: GeneralModel|undefined
 }
 
 // Define the initial state using that type
 const initialState: CommonProps = {
     selectedEpisodes: [],
     sideBarCollapsed: false,
-    podcasts: []
+    podcasts: [],
+    searchedPodcasts: undefined
 }
 
 export const commonSlice = createSlice({
@@ -45,9 +49,12 @@ export const commonSlice = createSlice({
         },
         setSelectedEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
             state.selectedEpisodes = action.payload
+        },
+        setSearchedPodcasts: (state, action:PayloadAction<GeneralModel>) => {
+            state.searchedPodcasts = action.payload
         }
 }})
 
-export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes} = commonSlice.actions
+export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts} = commonSlice.actions
 
 export default commonSlice.reducer

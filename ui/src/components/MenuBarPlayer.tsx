@@ -53,7 +53,6 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
             <i className="fa-solid fa-backward text-xl text-white text-3xl" onClick={()=>skipToPreviousEpisode()}></i>
             <i className="fa-solid fa-play text-white align-top text-3xl" onClick={()=>{
                 if(refItem===undefined || refItem.current===undefined|| refItem.current===null){
-                    console.log("ref is undefined")
                     return
                 }
                 if(refItem.current.paused){

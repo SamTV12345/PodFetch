@@ -5,6 +5,7 @@ import {Header} from "./components/Header";
 import {useAppSelector} from "./store/hooks";
 import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
+import {Modal} from "./components/Modal";
 
 const App = ()=> {
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)

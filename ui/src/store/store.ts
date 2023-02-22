@@ -1,11 +1,13 @@
 import {configureStore} from '@reduxjs/toolkit'
 import {commonSlice} from "./CommonSlice";
 import {AudioPlayerSlice} from "./AudioPlayerSlice";
+import {modalSlice} from "./ModalSlice";
 
 export const store = configureStore({
     reducer: {
         common: commonSlice.reducer,
-        audioPlayer: AudioPlayerSlice.reducer
+        audioPlayer: AudioPlayerSlice.reducer,
+        modal: modalSlice.reducer
     },
 })
 

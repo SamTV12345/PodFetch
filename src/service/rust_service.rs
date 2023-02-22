@@ -10,12 +10,14 @@ use crate::models::itunes_models::{Podcast, PodcastEpisode, ResponseModel};
 use crate::service::file_service::check_if_podcast_episode_downloaded;
 use regex::Regex;
 use rusqlite::ffi::{sqlite3_unlock_notify, SQLITE_OPEN_NOMUTEX};
+use serde_json::Value;
 use crate::db::{DB};
 
-pub fn find_podcast(podcast: &str)-> ResponseModel {
+pub fn find_podcast(podcast: &str)-> Value {
     let client = ClientBuilder::new().build().unwrap();
     let result = client.get(ITUNES_URL.to_owned()+podcast).send().unwrap();
-    return result.json::<ResponseModel>().unwrap();
+    //println!("Result: {:?}", result.text());
+    return result.json().unwrap();
 }
 
 
