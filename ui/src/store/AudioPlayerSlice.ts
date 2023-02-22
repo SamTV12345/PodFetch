@@ -1,5 +1,5 @@
 import {createSlice, PayloadAction} from "@reduxjs/toolkit";
-import {PodcastEpisode} from "./CommonSlice";
+import {Podcast, PodcastEpisode} from "./CommonSlice";
 
 type AudioMetadata = {
     currentTime: number,
@@ -9,12 +9,14 @@ type AudioMetadata = {
 
 type AudioPlayerProps = {
     isPlaying: boolean,
-    currentPodcast: PodcastEpisode|undefined,
+    currentPodcastEpisode: PodcastEpisode|undefined,
+    currentPodcast: Podcast|undefined,
     metadata: AudioMetadata|undefined,
 }
 
 const initialState: AudioPlayerProps = {
     isPlaying: false,
+    currentPodcastEpisode: undefined,
     currentPodcast: undefined,
     metadata: undefined
 }
@@ -26,8 +28,8 @@ export const AudioPlayerSlice = createSlice({
         setPlaying: (state, action:PayloadAction<boolean>) => {
             state.isPlaying = action.payload
         },
-        setCurrentPodcast: (state, action:PayloadAction<PodcastEpisode>) => {
-            state.currentPodcast = action.payload
+        setCurrentPodcastEpisode: (state, action:PayloadAction<PodcastEpisode>) => {
+            state.currentPodcastEpisode = action.payload
         },
         setMetadata: (state, action:PayloadAction<AudioMetadata>) => {
             state.metadata = action.payload
@@ -43,10 +45,13 @@ export const AudioPlayerSlice = createSlice({
                 state.metadata.percentage = action.payload
                 state.metadata.currentTime = (state.metadata.percentage/100)*state.metadata.duration
             }
+        },
+        setCurrentPodcast(state, action:PayloadAction<Podcast>){
+            state.currentPodcast = action.payload
         }
     }
 })
 
-export const {setPlaying, setCurrentPodcast, setMetadata, setCurrentTimeUpdate, setCurrentTimeUpdatePercentage} = AudioPlayerSlice.actions
+export const {setPlaying, setCurrentPodcastEpisode, setMetadata, setCurrentTimeUpdate, setCurrentTimeUpdatePercentage, setCurrentPodcast} = AudioPlayerSlice.actions
 
 export default AudioPlayerSlice.reducer

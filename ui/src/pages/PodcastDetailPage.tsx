@@ -3,14 +3,14 @@ import {useParams} from "react-router-dom";
 import {useEffect} from "react";
 import {apiURL} from "../utils/Utilities";
 import axios from "axios";
-import {setPodcasts, setSelectedEpisodes} from "../store/CommonSlice";
+import {setSelectedEpisodes} from "../store/CommonSlice";
 import {AudioPlayer} from "../components/AudioPlayer";
 import {PlayIcon} from "../components/PlayIcon";
 import {store} from "../store/store";
-import {setCurrentPodcast} from "../store/AudioPlayerSlice";
+import {setCurrentPodcast, setCurrentPodcastEpisode} from "../store/AudioPlayerSlice";
 
 export const PodcastDetailPage = () => {
-    const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcast)
+    const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
     const params = useParams()
     const podcast = useAppSelector(state=>state.common.podcasts.find(podcast=>podcast.id===Number(params.id)))
     const selectedEpisodes = useAppSelector(state=>state.common.selectedEpisodes)
@@ -41,7 +41,10 @@ export const PodcastDetailPage = () => {
                 selectedEpisodes.map((episode, index)=>{
                     return <div key={index} className="grid grid-cols-[auto_1fr] gap-4">
                         <div className="flex align-baseline">
-                            <PlayIcon podcast={currentPodcast} onClick={()=>store.dispatch(setCurrentPodcast(episode))}/>
+                            <PlayIcon podcast={currentPodcast} onClick={()=>{
+                                store.dispatch(setCurrentPodcastEpisode(episode))
+                                dispatch(setCurrentPodcast(podcast))
+                            }}/>
                         </div>
                         <span>{episode.name}</span>
                     </div>
