@@ -1,4 +1,4 @@
-import {createRef, FC, useEffect, useMemo, useState} from "react";
+import React, {createRef, FC, useEffect, useMemo, useState} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setCurrentTimeUpdatePercentage} from "../store/AudioPlayerSlice";
 
@@ -14,6 +14,7 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     window.addEventListener("mouseup", (e) => {
         setMousePressed(false)
     })
+    const minute = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
     const maxProgress = 90;
     const minProgress = 0;
     const [mousePressed, setMousePressed] = useState(false);
@@ -48,6 +49,7 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
         <div className="h-4 ml-5 mr-5 cursor-pointer" id="audio-progress-wrapper" ref={wrapper} onClick={(e)=>{
             endWrapperPosition(e)
         }}>
+            <div className="absolute -top-5 opacity-0 hidden" id="timecounter">{minute}</div>
             <div className="bg-gray-500 h-1" id="audio-progress" style={{width: metadata?.percentage +"%"}}>
                 <i className="fa-solid text-gray-300 fa-circle opacity-0 hidden" id="sound-control" ref={control}
                    onMouseMove={(e)=>calcTotalMovement(e)}>

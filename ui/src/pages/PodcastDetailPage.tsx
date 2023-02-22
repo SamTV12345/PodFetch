@@ -39,7 +39,7 @@ export const PodcastDetailPage = () => {
         <div>
             {
                 selectedEpisodes.map((episode, index)=>{
-                    return <div key={index} className="grid grid-cols-[auto_1fr] gap-4">
+                    return <><div key={index} className="grid grid-cols-[auto_1fr] gap-4">
                         <div className="flex align-baseline">
                             <PlayIcon podcast={currentPodcast} onClick={()=>{
                                 store.dispatch(setCurrentPodcastEpisode(episode))
@@ -48,6 +48,8 @@ export const PodcastDetailPage = () => {
                         </div>
                         <span>{episode.name}</span>
                     </div>
+                        <hr className="border-gray-500"/>
+                    </>
                 })
             }
         </div>
