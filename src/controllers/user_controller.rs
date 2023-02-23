@@ -4,6 +4,7 @@ use rocket::http::{RawStr, Status};
 use rocket::http::ext::IntoCollection;
 use rocket::response::status;
 use rocket_contrib::json::Json;
+use rocket_cors::{CorsOptions, Guard, Responder};
 use rusqlite::Connection;
 use serde_json::Value;
 use crate::constants::constants::{DB_NAME};
@@ -12,7 +13,7 @@ use crate::models::itunes_models::Podcast;
 use crate::models::models::{NewUser, PodCastAddModel, UserData};
 use crate::service::file_service::{create_podcast_directory_exists, download_podcast_image};
 use crate::service::mapping_service::MappingService;
-use crate::service::rust_service::find_podcast as find_podcast_service;
+use crate::service::rust_service::{find_podcast as find_podcast_service, insert_podcast_episodes, schedule_episode_download};
 
 #[post("/users", format = "application/json")]
 pub fn get_all() -> Json<Value> {
@@ -50,6 +51,16 @@ pub fn find_all_podcasts() -> status::Accepted<Json<Value>> {
     status::Accepted(Some(Json(json!(mapped_podcasts))))
 }
 
+
+#[get("/podcast/<id>")]
+pub fn find_podcast_by_id(id: i64) -> status::Accepted<Json<Value>> {
+    let db = DB::new().unwrap();
+    let mappingservice = MappingService::new();
+    let podcast = db.get_podcast(id).unwrap();
+    let mapped_podcast = mappingservice.map_podcast_to_podcast_dto(&podcast);
+    status::Accepted(Some(Json(json!(mapped_podcast))))
+}
+
 #[get("/podcast/<id>/episodes")]
 pub fn find_all_podcast_episodes_of_podcast(id: i64) -> status::Accepted<Json<Value>> {
     let db = DB::new().unwrap();
@@ -70,6 +81,17 @@ pub fn find_podcast(podcast: &RawStr) ->Json<Value> {
         "code": 200,
         "result": res,
     }))
+}
+
+fn cors_options_all() -> CorsOptions {
+    // You can also deserialize this
+    Default::default()
+}
+
+/// Manually mount an OPTIONS route for your own handling
+#[options("/podcast")]
+pub fn manual_options(cors: Guard<'_>) -> Responder<&str> {
+    cors.responder("Manual OPTIONS preflight handling")
 }
 
 #[post("/podcast", format = "application/json", data = "<track_id>")]
@@ -93,6 +115,15 @@ pub fn add_podcast(track_id: Json<PodCastAddModel>){
     create_podcast_directory_exists(&unwrap_string(&res["results"][0]["collectionId"]));
     download_podcast_image(&unwrap_string(&res["results"][0]["collectionId"]),
                            &unwrap_string(&res["results"][0]["artworkUrl600"]));
+    let podcast = db.get_podcast_episode_by_track_id(track_id.track_id).unwrap();
+    match  { podcast}{
+        Some(podcast) => {
+            let podcast_cloned = podcast.clone();
+            insert_podcast_episodes(podcast);
+            schedule_episode_download(podcast_cloned)
+        },
+        None => {println!("No podcast found")}
+    }
 }
 
 

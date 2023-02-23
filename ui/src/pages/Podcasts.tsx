@@ -25,7 +25,7 @@ export const Podcasts = ()=>{
             dispatch(setModalOpen(true))
         }}></button>
         </div>
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-3 gap-2">
             {podcasts.map((podcast, index)=>{
                 return <Card podcast={podcast} key={index}/>
             })

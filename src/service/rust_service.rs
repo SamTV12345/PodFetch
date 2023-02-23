@@ -23,7 +23,7 @@ pub fn find_podcast(podcast: &str)-> Value {
 
 // Used for creating/updating podcasts
 pub fn insert_podcast_episodes(podcast: Podcast){
-
+    println!("Inserting podcast episodes for: {}", podcast.name);
     let client = ClientBuilder::new().build().unwrap();
     let result = client.get(podcast.clone().rssfeed).send().unwrap();
     let bytes = result.bytes().unwrap();

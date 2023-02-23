@@ -96,6 +96,24 @@ impl DB{
         Ok((iter))
     }
 
+
+    pub fn get_podcast_episode_by_track_id(&self, podcast_id: i64) ->
+                                                                   Result<Option<Podcast>>{
+        let mut stmt = self.conn.prepare("select * from Podcast where directory = ?1")?;
+        let mut podcast_iter = stmt.query_map([&podcast_id], |row| {
+            Ok(Podcast {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                directory: row.get(2)?,
+                rssfeed: row.get(3)?,
+                image_url: row.get(4)?
+            })
+        })?;
+
+        let iter = podcast_iter.next().map(|podcast| podcast.unwrap());
+        Ok((iter))
+    }
+
     pub fn insert_podcast_episodes(&self, podcast: Podcast, link: &str, item: &Entry, image_url:
     &str){
         self.conn.execute("INSERT INTO podcast_episodes (podcast_id,\

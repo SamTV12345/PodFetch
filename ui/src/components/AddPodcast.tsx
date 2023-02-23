@@ -14,6 +14,10 @@ export const AddPodcast = ()=>{
     const searchedPodcasts = useAppSelector(state=>state.common.searchedPodcasts)
 
 
+    type AddPostPostModel = {
+        trackId: number,
+        userId: number
+    }
     useDebounce(()=>{
             axios.get(apiURL+"/podcast?podcast="+searchText)
                 .then((v:AxiosResponse<GeneralModel>)=>{
@@ -22,13 +26,19 @@ export const AddPodcast = ()=>{
         },
         2000,[searchText])
 
+    const addPodcast = (podcast:AddPostPostModel)=>{
+        axios.post(apiURL+"/podcast",podcast).then((v)=>{
+            dispatch(setModalOpen(false))
+        })
+    }
+
     return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText="Podcast hinzufügen" onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
         <div>
             <div className="flex flex-col gap-4">
                 <input value={searchText} placeholder="Podcast suchen"
                        className={"border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"}
                        onChange={(v)=>setSearchText(v.target.value)}/>
-                <div className="border-2 border-gray-600 rounded p-5">
+                <div className="border-2 border-gray-600 rounded p-5 max-h-80 overflow-y-scroll">
                 {
                     searchedPodcasts&& searchedPodcasts.result.results.map((podcast, index)=>{
                         return <div key={index}>
@@ -39,7 +49,10 @@ export const AddPodcast = ()=>{
                                 </div>
                                 <div>
                                 <button className="fa fa-plus bg-blue-900 text-white p-3" onClick={()=>{
-
+                                    addPodcast({
+                                        trackId: podcast.trackId,
+                                        userId:1
+                                    })
                                 }}></button>
                                 </div>
                             </div>

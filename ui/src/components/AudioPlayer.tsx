@@ -1,8 +1,7 @@
-import {PlayIcon} from "./PlayIcon";
 import {createRef, useEffect} from "react";
 import ProgressBar from "./AudioProgressBar";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {setCurrentTimeUpdate, setMetadata, setPlaying, setVolume} from "../store/AudioPlayerSlice";
+import { setVolume} from "../store/AudioPlayerSlice";
 import {VolumeIcon} from "./VolumeIcon";
 import {PreviewPlayer} from "./PreviewPlayer";
 import {MenuBarPlayer} from "./MenuBarPlayer";
@@ -40,6 +39,6 @@ export const AudioPlayer = () => {
             </div>
         </div>
         </div>
-        <HiddenAudioPlayer refItem={ref} podcastEpisode={podcastEpisode}/>
+        <HiddenAudioPlayer refItem={ref}/>
     </div>
 }

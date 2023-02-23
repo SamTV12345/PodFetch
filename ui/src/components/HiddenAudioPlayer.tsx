@@ -1,17 +1,27 @@
 import {setCurrentTimeUpdate, setMetadata} from "../store/AudioPlayerSlice";
-import {FC, RefObject} from "react";
-import {useAppDispatch} from "../store/hooks";
-import {PodcastEpisode} from "../store/CommonSlice";
+import {FC, RefObject, useEffect} from "react";
+import {useAppDispatch, useAppSelector} from "../store/hooks";
 
 type HiddenAudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement>,
-    podcastEpisode?: PodcastEpisode
+    refItem: RefObject<HTMLAudioElement>
 }
 
-export const HiddenAudioPlayer:FC<HiddenAudioPlayerProps> = ({refItem, podcastEpisode}) => {
+export const HiddenAudioPlayer:FC<HiddenAudioPlayerProps> = ({refItem}) => {
     const dispatch = useAppDispatch()
+    const podcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
-    return <audio ref={refItem}  onTimeUpdate={(e)=>{
+    useEffect(
+        ()=>{
+            if(podcastEpisode && refItem && refItem.current){
+                console.log("Switched to episode: "+podcastEpisode.url)
+                refItem.current.load()
+                refItem.current.play()
+                refItem.current.currentTime=0
+            }
+        }
+        ,[podcastEpisode])
+
+    return <audio ref={refItem} src={podcastEpisode?.url}  onTimeUpdate={(e)=>{
         dispatch(setCurrentTimeUpdate(e.currentTarget.currentTime))
     }} onLoadedMetadata={(e)=>{
         dispatch(setMetadata({
@@ -19,7 +29,5 @@ export const HiddenAudioPlayer:FC<HiddenAudioPlayerProps> = ({refItem, podcastEp
             duration: e.currentTarget.duration,
             percentage: 0
         }))
-    }}>
-        <source src={podcastEpisode?.url}/>
-    </audio>
+    }}/>
 }
