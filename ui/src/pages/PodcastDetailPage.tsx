@@ -8,6 +8,7 @@ import {AudioPlayer} from "../components/AudioPlayer";
 import {PlayIcon} from "../components/PlayIcon";
 import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode} from "../store/AudioPlayerSlice";
+import {Waypoint} from "react-waypoint";
 
 export const PodcastDetailPage = () => {
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
@@ -42,7 +43,7 @@ export const PodcastDetailPage = () => {
         <div>
             {
                 selectedEpisodes.map((episode, index)=>{
-                    return <><div key={index} className="grid grid-cols-[auto_1fr] gap-4">
+                    return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr] gap-4">
                         <div className="flex align-baseline">
                             <PlayIcon podcast={currentPodcastEpisode} onClick={()=>{
                                 store.dispatch(setCurrentPodcastEpisode(episode))
@@ -52,6 +53,15 @@ export const PodcastDetailPage = () => {
                         <span>{episode.name}</span>
                     </div>
                         <hr className="border-gray-500"/>
+                        {
+                            index===selectedEpisodes.length-5&&<Waypoint onEnter={()=>{
+                                axios.get(apiURL+"/podcast/"+params.id+"/episodes?last_podcast_episode="+episode.date)
+                                    .then((response)=>{
+                                    dispatch(setSelectedEpisodes([...selectedEpisodes, ...response.data]))
+                                })
+                            }
+                            }/>
+                        }
                     </>
                 })
             }

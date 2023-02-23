@@ -11,7 +11,19 @@ use crate::service::file_service::{create_podcast_directory_exists, download_pod
 use crate::service::mapping_service::MappingService;
 use crate::service::rust_service::{find_podcast as find_podcast_service, insert_podcast_episodes, schedule_episode_download};
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::web::Query;
+use std::option::Option;
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OptionalId {
+    last_podcast_episode: Option<String>,
+}
+
+impl OptionalId {
+    pub fn new() -> Self {
+        OptionalId { last_podcast_episode: None }
+    }
+}
 
 #[get("/podcasts")]
 pub async fn find_all_podcasts() -> impl Responder {
@@ -28,7 +40,6 @@ pub async fn find_all_podcasts() -> impl Responder {
 
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(id: web::Path<String>) -> impl Responder {
-    println!("id: {}", id);
     let id_num = from_str::<i64>(&id).unwrap();
     let db = DB::new().unwrap();
     let mappingservice = MappingService::new();
@@ -38,12 +49,17 @@ pub async fn find_podcast_by_id(id: web::Path<String>) -> impl Responder {
 }
 
 #[get("/podcast/{id}/episodes")]
-pub async fn find_all_podcast_episodes_of_podcast(id: web::Path<String>) -> impl Responder {
+pub async fn find_all_podcast_episodes_of_podcast(id: web::Path<String>, last_podcast_episode :
+web::Query<OptionalId>)
+    -> impl Responder {
+
+    let last_podcast_episode = last_podcast_episode.into_inner();
+    println!("test: {:?}", last_podcast_episode.last_podcast_episode);
     let id_num = from_str(&id).unwrap();
     let db = DB::new().unwrap();
     let mappingservice = MappingService::new();
-
-    let res  = db.get_podcast_episodes_of_podcast(id_num).unwrap();
+    let res  = db.get_podcast_episodes_of_podcast(id_num,last_podcast_episode
+        .last_podcast_episode ).unwrap();
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast| mappingservice.map_podcastepisode_to_dto(&podcast)).collect::<Vec<_>>();

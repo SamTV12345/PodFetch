@@ -1,6 +1,7 @@
 use feed_rs::model::Entry;
-use rusqlite::{Connection, Result, Statement};
+use rusqlite::{Connection, params, Result, Statement};
 use rusqlite::types::Value;
+use serde::de::Unexpected::Str;
 use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 
@@ -27,6 +28,7 @@ impl DB{
              date text not null,
              image_url text not null,
              FOREIGN KEY (podcast_id) REFERENCES Podcast(id))", []).expect("Error creating table");
+        conn.execute("CREATE INDEX IF NOT EXISTS podcast_episodes_podcast_id_index ON podcast_episodes (podcast_id)", []).expect("Error creating index");
         // status 0 = not downloaded, 1 = downloaded, 2 = error
         conn.execute("create table if not exists queue (
              id integer primary key,
@@ -136,19 +138,55 @@ impl DB{
     pub fn get_last_5_podcast_episodes(&self, podcast_id: i64) -> Result<Vec<PodcastEpisode>>{
         let mut stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
         order by date(date) desc limit 5")?;
-        Ok(Self::extract_statement(stmt, podcast_id))
+        Ok(Self::extract_statement(stmt, podcast_id, ))
     }
 
 
-    pub fn get_podcast_episodes_of_podcast(&self, podcast_id: i64) -> Result<Vec<PodcastEpisode>>{
-        let mut stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
-        order by date(date) desc")?;
+    pub fn get_podcast_episodes_of_podcast(&self, podcast_id: i64,  last_id: Option<String>) ->
+                                                                      Result<Vec<PodcastEpisode>>{
+        let mut stmt:Statement;
+        match last_id {
+            Some(last_id) => {
+                println!("last id: {}", last_id);
+                 stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
+        AND date(date) < ?2 \
+        order by date(date) desc LIMIT 75")?;
+                Ok(Self::extract_statement_with_episode(stmt, podcast_id, last_id))
+            }
+            None => {
+                stmt = self.conn.prepare("select * from podcast_episodes where podcast_id\
+                 = ?1 LIMIT 75")?;
+                Ok(Self::extract_statement(stmt, podcast_id))
+            }
+        }
 
-        Ok(Self::extract_statement(stmt, podcast_id))
+
     }
 
     fn extract_statement(mut stmt: Statement, podcast_id: i64) -> Vec<PodcastEpisode> {
         let podcast_iter = stmt.query_map([&podcast_id], |row| {
+            Ok(PodcastEpisode {
+                id: row.get(0)?,
+                podcast_id: row.get(1)?,
+                episode_id: row.get(2)?,
+                name: row.get(3)?,
+                url: row.get(4)?,
+                date: row.get(5)?,
+                image_url: row.get(6)?,
+            })
+        }).unwrap();
+        let mut podcasts = Vec::new();
+        for podcast in podcast_iter {
+            podcasts.push(podcast.unwrap());
+        }
+        return podcasts;
+    }
+
+
+    fn extract_statement_with_episode(mut stmt: Statement, podcast_id: i64,podcast_episode: String )
+        ->
+                                                                               Vec<PodcastEpisode> {
+        let podcast_iter = stmt.query_map(params![podcast_id, podcast_episode], |row| {
             Ok(PodcastEpisode {
                 id: row.get(0)?,
                 podcast_id: row.get(1)?,
