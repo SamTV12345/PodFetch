@@ -1,9 +1,15 @@
+use std::io::ErrorKind;
+use std::time::SystemTime;
+use actix::fut::err;
+use actix_web_actors::ws::CloseCode::Error;
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use feed_rs::model::Entry;
 use rusqlite::{Connection, params, Result, Statement};
 use rusqlite::types::Value;
 use serde::de::Unexpected::Str;
 use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::models::{PodcastWatchedEpisodeModel, PodcastWatchedModel, PodcastWatchedPostModel};
 
 
 pub struct DB{
@@ -38,6 +44,14 @@ impl DB{
              status integer not null,
              FOREIGN KEY (podcast_id) REFERENCES Podcast(id),
              FOREIGN KEY (episode_id) REFERENCES podcast_episodes(id))",
+                       []).expect("Error creating table");
+        conn.execute("CREATE table if not exists Podcast_History (
+             id integer primary key,
+             podcast_id integer not null,
+             episode_id TEXT not null,
+             watched_time integer not null,
+             date text not null,
+             FOREIGN KEY (podcast_id) REFERENCES Podcast(id))",
                        []).expect("Error creating table");
         Ok(DB{conn})
     }
@@ -138,7 +152,7 @@ impl DB{
     pub fn get_last_5_podcast_episodes(&self, podcast_id: i64) -> Result<Vec<PodcastEpisode>>{
         let mut stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
         order by date(date) desc limit 5")?;
-        Ok(Self::extract_statement(stmt, podcast_id, ))
+        Ok(Self::extract_podcast_episodes(stmt, podcast_id, ))
     }
 
 
@@ -156,14 +170,14 @@ impl DB{
             None => {
                 stmt = self.conn.prepare("select * from podcast_episodes where podcast_id\
                  = ?1 LIMIT 75")?;
-                Ok(Self::extract_statement(stmt, podcast_id))
+                Ok(Self::extract_podcast_episodes(stmt, podcast_id))
             }
         }
 
 
     }
 
-    fn extract_statement(mut stmt: Statement, podcast_id: i64) -> Vec<PodcastEpisode> {
+    fn extract_podcast_episodes(mut stmt: Statement, podcast_id: i64) -> Vec<PodcastEpisode>  {
         let podcast_iter = stmt.query_map([&podcast_id], |row| {
             Ok(PodcastEpisode {
                 id: row.get(0)?,
@@ -180,6 +194,21 @@ impl DB{
             podcasts.push(podcast.unwrap());
         }
         return podcasts;
+    }
+
+    fn extract_watchtime_log(mut stmt: Statement, podcast_episode_id: &str) -> Result<Option<PodcastWatchedModel>> {
+        let mut podcast_iter = stmt.query_map([podcast_episode_id], |row| {
+            Ok(PodcastWatchedModel {
+                id: row.get(0)?,
+                podcast_id: row.get(1)?,
+                episode_id: row.get(2)?,
+                watched_time: row.get(3)?,
+                date: row.get(4)?,
+
+            })
+        }).unwrap();
+        let iter = podcast_iter.next().map(|podcast| podcast.unwrap());
+        Ok((iter))
     }
 
 
@@ -202,5 +231,101 @@ impl DB{
             podcasts.push(podcast.unwrap());
         }
         return podcasts;
+    }
+
+    pub fn log_watchtime(&self, watch_model: PodcastWatchedPostModel)->Result<()> {
+        let result = self.get_podcast_episode_by_id(&watch_model.podcast_episode_id).unwrap();
+
+        match result {
+            Some(podcast_episode) => {
+                println!("podcast episode: {:?}", podcast_episode);
+                let now = SystemTime::now();
+                let now: DateTime<Utc> = now.into();
+                let now: &str = &now.to_rfc3339();
+                self.conn.execute("INSERT INTO Podcast_History (podcast_id, episode_id, \
+                watched_time, date) VALUES (?1, \
+        ?2, ?3, ?4)",
+                                  (&podcast_episode.podcast_id, &podcast_episode.episode_id,
+                                   &watch_model.time, &now))
+                    .expect("TODO: panic message");
+                Ok(())
+            }
+            None => {
+                panic!("Podcast not found")
+            }
+        }
+    }
+
+    pub fn get_watchtime(&self, podcast_id: &str) ->Result<PodcastWatchedModel>{
+        let result = self.get_podcast_episode_by_id(podcast_id).unwrap();
+
+        match result {
+            Some(podcast) => {
+                println!("Found podcast: {:?}", podcast);
+                let mut stmt = self.conn.prepare("SELECT * FROM PODCAST_HISTORY WHERE episode_id \
+                = ?1 ORDER BY datetime(date) DESC LIMIT 1")?;
+                match Self::extract_watchtime_log(stmt, podcast_id ){
+                    Ok(Some(podcast)) => {
+                        Ok(podcast)
+                    }
+                    Ok(None) => {
+                        println!("No watchtime found, creating new entry");
+                        Ok(PodcastWatchedModel {
+                            id: 0,
+                            podcast_id: podcast.podcast_id,
+                            episode_id: podcast.episode_id,
+                            watched_time: 0,
+                            date: "".to_string(),
+                        })
+                    }
+                    Err(e) => {
+                        panic!("Error: {}", e)
+                    }
+                }
+            }
+            None => {
+                panic!("Podcast not found")
+            }
+        }
+    }
+
+
+    pub fn get_last_watched_podcasts(&self) -> Result<Vec<PodcastWatchedEpisodeModel>>{
+        let mut stmt = self.conn.prepare("SELECT DISTINCT * FROM PODCAST_HISTORY GROUP BY \
+        datetime(date)")?;
+        let mut podcast_iter = stmt.query_map([], |row| {
+            Ok(PodcastWatchedModel {
+                id: row.get(0)?,
+                podcast_id: row.get(1)?,
+                episode_id: row.get(2)?,
+                watched_time: row.get(3)?,
+                date: row.get(4)?,
+            })
+        })?;
+
+        let podcast_watch_episode = podcast_iter.map(|podcast_watched_model| {
+            let podcast_watched_model = podcast_watched_model.unwrap();
+            let optional_podcast = self.get_podcast_episode_by_id(&podcast_watched_model.episode_id)
+                .unwrap();
+
+            match optional_podcast {
+                Some(podcast) => {
+                    PodcastWatchedEpisodeModel{
+                        id: podcast_watched_model.id,
+                        watched_time: podcast_watched_model.watched_time,
+                        podcast_id: podcast_watched_model.podcast_id,
+                        episode_id: podcast_watched_model.episode_id,
+                        date: podcast_watched_model.date,
+                        url: podcast.url,
+                        name: podcast.name,
+                        image_url: podcast.image_url,
+                    }
+                }
+                None => {
+                    panic!("Podcast not found");
+                }
+            }
+        }).collect::<Vec<PodcastWatchedEpisodeModel>>();
+        Ok(podcast_watch_episode)
     }
 }

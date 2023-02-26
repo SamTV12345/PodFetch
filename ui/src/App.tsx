@@ -7,6 +7,7 @@ import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {Modal} from "./components/Modal";
 import {AudioPlayer} from "./components/AudioPlayer";
+import {Homepage} from "./pages/Homepage";
 
 const App = ()=> {
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
@@ -19,7 +20,7 @@ const App = ()=> {
               <div className={`col-span-6 md:col-span-5 ${sideBarCollapsed?'xs:col-span-5':'hidden'} md:block w-full overflow-x-auto`}>
                   <div className="grid grid-rows-[1fr_auto] h-full ">
                   <Routes>
-                      <Route path={"/home"} element={<div>test</div>}/>
+                      <Route path={"/home"} element={<Homepage/>}/>
                       <Route path={"/podcasts"} element={<Podcasts/>}/>
                       <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
                   </Routes>

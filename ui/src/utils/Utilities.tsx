@@ -1,3 +1,6 @@
+import axios from "axios";
+import {store} from "../store/store";
+
 export const isLocalhost = Boolean(
     window.location.hostname === 'localhost' ||
     // [::1] is the IPv6 localhost address.
@@ -18,4 +21,12 @@ if(isLocalhost){
 else {
     apiURL=window.location.protocol+"//"+window.location.hostname+"/api"
     uiURL=window.location.protocol+"//"+window.location.hostname+"/ui"
+}
+
+
+export  const logCurrentPlaybackTime = (episodeId: string,timeInSeconds: number)=> {
+        axios.post(apiURL+"/podcast/episode", {
+            podcastEpisodeId: episodeId,
+            time: Number(timeInSeconds.toFixed(0))
+        })
 }

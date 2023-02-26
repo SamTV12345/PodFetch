@@ -6,7 +6,7 @@ use serde_json::{from_str, Value};
 use crate::constants::constants::{DB_NAME};
 use crate::db::DB;
 use crate::models::itunes_models::Podcast;
-use crate::models::models::{NewUser, PodCastAddModel, UserData};
+use crate::models::models::{NewUser, PodCastAddModel, PodcastWatchedPostModel, UserData};
 use crate::service::file_service::{create_podcast_directory_exists, download_podcast_image};
 use crate::service::mapping_service::MappingService;
 use crate::service::rust_service::{find_podcast as find_podcast_service, insert_podcast_episodes, schedule_episode_download};
@@ -105,6 +105,29 @@ pub async fn add_podcast(track_id: web::Json<PodCastAddModel>) -> impl Responder
     }
     HttpResponse::Ok()
 }
+
+#[post("/podcast/episode")]
+pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>) -> impl Responder {
+    let db = DB::new().unwrap();
+    db.log_watchtime(podcast_watch.0).expect("Error logging watchtime");
+    HttpResponse::Ok()
+}
+
+
+#[get("/podcast/episode/lastwatched")]
+pub async fn get_last_watched() -> impl Responder {
+    let db = DB::new().unwrap();
+    let last_watched = db.get_last_watched_podcasts().unwrap();
+    HttpResponse::Ok().json(last_watched)
+}
+
+#[get("/podcast/episode/{id}")]
+pub async fn get_watchtime(id: web::Path<String>) -> impl Responder {
+    let db = DB::new().unwrap();
+    let watchtime = db.get_watchtime(&id).unwrap();
+    HttpResponse::Ok().json(watchtime)
+}
+
 
 
 

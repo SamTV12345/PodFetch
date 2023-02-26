@@ -2,6 +2,7 @@ import {PlayIcon} from "./PlayIcon";
 import {setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {FC, RefObject} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
+import {logCurrentPlaybackTime} from "../utils/Utilities";
 
 type MenuBarPlayerProps = {
     refItem: RefObject<HTMLAudioElement>
@@ -10,7 +11,7 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
     const dispatch = useAppDispatch()
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
     const episodes = useAppSelector(state=>state.common.selectedEpisodes)
-
+    const time = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
     const skipToPreviousEpisode = () => {
         if(currentPodcastEpisode===undefined){
             return
@@ -61,6 +62,9 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
                     dispatch(setPlaying(true))
                     refItem.current.play()
                 }else{
+                    if(time && currentPodcastEpisode){
+                        logCurrentPlaybackTime(currentPodcastEpisode.episode_id,time)
+                    }
                     dispatch(setPlaying(false))
                     refItem.current?.pause()
                 }

@@ -1,14 +1,14 @@
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useParams} from "react-router-dom";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {apiURL} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {Podcast, setSelectedEpisodes} from "../store/CommonSlice";
-import {AudioPlayer} from "../components/AudioPlayer";
 import {PlayIcon} from "../components/PlayIcon";
 import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode} from "../store/AudioPlayerSlice";
 import {Waypoint} from "react-waypoint";
+import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 
 export const PodcastDetailPage = () => {
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
@@ -16,6 +16,7 @@ export const PodcastDetailPage = () => {
     const params = useParams()
     const selectedEpisodes = useAppSelector(state=>state.common.selectedEpisodes)
     const dispatch = useAppDispatch()
+    const time = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
 
     useEffect(()=> {
         axios.get(apiURL + "/podcast/" + params.id).then((response: AxiosResponse<Podcast>) => {
@@ -34,6 +35,8 @@ export const PodcastDetailPage = () => {
     }
 
 
+
+
     return <><div className="pl-5 pt-5 overflow-y-scroll">
         <h1 className="text-center text-2xl">{currentPodcast.name}</h1>
         <div className="grid place-items-center">
@@ -44,17 +47,23 @@ export const PodcastDetailPage = () => {
             {
                 selectedEpisodes.map((episode, index)=>{
                     return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr] gap-4">
-                        <div className="flex align-baseline">
-                            <PlayIcon podcast={currentPodcastEpisode} onClick={()=>{
-                                store.dispatch(setCurrentPodcastEpisode(episode))
-                                dispatch(setCurrentPodcast(currentPodcast))
+                        <div className="flex align-baseline" key={episode.episode_id+"container"}>
+                            <PlayIcon key={episode.episode_id+"icon"} podcast={currentPodcastEpisode} onClick={()=>{
+                                axios.get(apiURL+"/podcast/episode/"+episode.episode_id)
+                                    .then((response: AxiosResponse<PodcastWatchedModel>)=>{
+                                        store.dispatch(setCurrentPodcastEpisode({
+                                            ...episode,
+                                            time: response.data.watchedTime
+                                        }))
+                                        dispatch(setCurrentPodcast(currentPodcast))
+                                    })
                             }}/>
                         </div>
-                        <span>{episode.name}</span>
+                        <span key={episode.episode_id+"name"}>{episode.name}</span>
                     </div>
-                        <hr className="border-gray-500"/>
+                        <hr className="border-gray-500" key={index+"hr"}/>
                         {
-                            index===selectedEpisodes.length-5&&<Waypoint onEnter={()=>{
+                            index===selectedEpisodes.length-5&&<Waypoint key={index+"waypoint"} onEnter={()=>{
                                 axios.get(apiURL+"/podcast/"+params.id+"/episodes?last_podcast_episode="+episode.date)
                                     .then((response)=>{
                                     dispatch(setSelectedEpisodes([...selectedEpisodes, ...response.data]))

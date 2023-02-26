@@ -1,6 +1,7 @@
 import React, {createRef, FC, useEffect, useMemo, useState} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setCurrentTimeUpdatePercentage} from "../store/AudioPlayerSlice";
+import {logCurrentPlaybackTime} from "../utils/Utilities";
 
 type ProgressBarProps = {
     audioplayerRef: React.RefObject<HTMLAudioElement>
@@ -22,6 +23,8 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     const dispatch = useAppDispatch()
     const control = createRef<HTMLElement>()
     const wrapper = createRef<HTMLDivElement>()
+    const time = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
+    const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
     if(audioplayerRef===undefined || audioplayerRef.current===undefined){
         return <div>test</div>
@@ -34,6 +37,9 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
             const percentage = localX / offset.width * 100
             if (percentage >= minProgress && percentage <= maxProgress && audioplayerRef.current) {
                 audioplayerRef.current.currentTime = Math.floor(percentage / 100 * audioplayerRef.current.duration)
+                if(time && currentPodcastEpisode){
+                    logCurrentPlaybackTime(currentPodcastEpisode.episode_id,Number(audioplayerRef.current.currentTime.toFixed(0)))
+                }
             }
         }
     }
@@ -48,6 +54,7 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     return (
         <div className="h-4 ml-5 mr-5 cursor-pointer" id="audio-progress-wrapper" ref={wrapper} onClick={(e)=>{
             endWrapperPosition(e)
+
         }}>
             <div className="absolute -top-5 opacity-0 hidden" id="timecounter">{minute}</div>
             <div className="bg-gray-500 h-1" id="audio-progress" style={{width: metadata?.percentage +"%"}}>

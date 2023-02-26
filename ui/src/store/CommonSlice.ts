@@ -12,12 +12,12 @@ export type Podcast = {
 export type PodcastEpisode = {
     id: number,
     podcast_id: number,
-    episode_id: number,
+    episode_id: string,
     name: string,
     url: string,
     date: string,
-    image_url: string
-
+    image_url: string,
+    time: number
 }
 
 // Define a type for the slice state

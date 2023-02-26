@@ -13,15 +13,15 @@ export const HiddenAudioPlayer:FC<HiddenAudioPlayerProps> = ({refItem}) => {
     useEffect(
         ()=>{
             if(podcastEpisode && refItem && refItem.current){
-                console.log("Switched to episode: "+podcastEpisode.url)
+                console.log("Switched to episode: "+podcastEpisode.url+ " at time: "+podcastEpisode.time)
                 refItem.current.load()
+                refItem.current.currentTime = podcastEpisode.time
                 refItem.current.play()
-                refItem.current.currentTime=0
             }
         }
         ,[podcastEpisode])
 
-    return <audio ref={refItem} src={podcastEpisode?.url}  onTimeUpdate={(e)=>{
+    return <audio ref={refItem} src={podcastEpisode?.url} id={'hiddenaudio'} onTimeUpdate={(e)=>{
         dispatch(setCurrentTimeUpdate(e.currentTarget.currentTime))
     }} onLoadedMetadata={(e)=>{
         dispatch(setMetadata({
