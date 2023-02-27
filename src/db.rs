@@ -33,6 +33,9 @@ impl DB{
              url text not null,
              date text not null,
              image_url text not null,
+             total_time integer DEFAULT 0 not null,
+             local_url text DEFAULT '' not null,
+             local_image_url text DEFAULT '' not null,
              FOREIGN KEY (podcast_id) REFERENCES Podcast(id))", []).expect("Error creating table");
         conn.execute("CREATE INDEX IF NOT EXISTS podcast_episodes_podcast_id_index ON podcast_episodes (podcast_id)", []).expect("Error creating index");
         // status 0 = not downloaded, 1 = downloaded, 2 = error
@@ -105,6 +108,9 @@ impl DB{
                 url: row.get(4)?,
                 date: row.get(5)?,
                 image_url: row.get(6)?,
+                total_time: row.get(7)?,
+                local_url: row.get(8)?,
+                local_image_url: row.get(9)?
             })
         })?;
 
@@ -187,6 +193,9 @@ impl DB{
                 url: row.get(4)?,
                 date: row.get(5)?,
                 image_url: row.get(6)?,
+                total_time: row.get(7)?,
+                local_url: row.get(8)?,
+                local_image_url: row.get(9)?
             })
         }).unwrap();
         let mut podcasts = Vec::new();
@@ -224,6 +233,9 @@ impl DB{
                 url: row.get(4)?,
                 date: row.get(5)?,
                 image_url: row.get(6)?,
+                total_time: row.get(7)?,
+                local_url: row.get(8)?,
+                local_image_url: row.get(9)?
             })
         }).unwrap();
         let mut podcasts = Vec::new();
@@ -291,8 +303,7 @@ impl DB{
 
 
     pub fn get_last_watched_podcasts(&self) -> Result<Vec<PodcastWatchedEpisodeModel>>{
-        let mut stmt = self.conn.prepare("SELECT DISTINCT * FROM PODCAST_HISTORY GROUP BY \
-        datetime(date)")?;
+        let mut stmt = self.conn.prepare("SELECT * FROM (SELECT * FROM Podcast_History ORDER BY datetime(date) DESC) GROUP BY episode_id  LIMIT 10;")?;
         let mut podcast_iter = stmt.query_map([], |row| {
             Ok(PodcastWatchedModel {
                 id: row.get(0)?,
@@ -319,6 +330,7 @@ impl DB{
                         url: podcast.url,
                         name: podcast.name,
                         image_url: podcast.image_url,
+                        total_time: podcast.total_time
                     }
                 }
                 None => {
@@ -327,5 +339,23 @@ impl DB{
             }
         }).collect::<Vec<PodcastWatchedEpisodeModel>>();
         Ok(podcast_watch_episode)
+    }
+
+    pub fn update_total_podcast_time_and_image(&self, episode_id: &str, time: u64, image_url:
+        &str, url: &str ) -> Result<()> {
+        let result = self.get_podcast_episode_by_id(episode_id).unwrap();
+
+        match result {
+            Some(podcast) => {
+                let mut stmt = self.conn.prepare("UPDATE podcast_episodes SET total_time = ?1, \
+                local_image_url = ?3, local_url = ?4 \
+                WHERE episode_id = ?2")?;
+                stmt.execute(params![time, podcast.episode_id, &image_url, &url])?;
+                Ok(())
+            }
+            None => {
+                panic!("Podcast not found")
+            }
+        }
     }
 }

@@ -32,6 +32,7 @@ mod models;
 mod constants;
 mod service;
 use crate::db::DB;
+use crate::service::environment_service::EnvironmentService;
 
 mod config;
 
@@ -42,8 +43,9 @@ async fn main()-> std::io::Result<()> {
 
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
-
-        scheduler.every(300.minutes()).run(||{
+        let env = EnvironmentService::new();
+        let polling_interval = env.get_polling_interval();
+        scheduler.every(polling_interval.minutes()).run(||{
             let db = DB::new().unwrap();
             //check for new episodes
             let podcasts = db.get_podcasts().unwrap();

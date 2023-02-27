@@ -50,9 +50,9 @@ pub async fn find_podcast_by_id(id: web::Path<String>) -> impl Responder {
 
 #[get("/podcast/{id}/episodes")]
 pub async fn find_all_podcast_episodes_of_podcast(id: web::Path<String>, last_podcast_episode :
-web::Query<OptionalId>)
+Query<OptionalId>)
     -> impl Responder {
-
+    println!("Getting all episodes of podcast: {}", id);
     let last_podcast_episode = last_podcast_episode.into_inner();
     println!("test: {:?}", last_podcast_episode.last_podcast_episode);
     let id_num = from_str(&id).unwrap();

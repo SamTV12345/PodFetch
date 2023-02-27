@@ -17,7 +17,9 @@ export type PodcastEpisode = {
     url: string,
     date: string,
     image_url: string,
-    time: number
+    time: number,
+    local_url: string,
+    local_image_url:string
 }
 
 // Define a type for the slice state

@@ -60,6 +60,9 @@ pub struct PodcastEpisode {
     pub(crate) episode_id: String,
     pub(crate) name: String,
     pub(crate) url: String,
+    pub(crate) local_url: String,
+    pub(crate) local_image_url: String,
     pub(crate) date: String,
     pub image_url: String,
+    pub total_time: u64,
 }

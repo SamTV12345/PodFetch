@@ -45,5 +45,6 @@ pub struct PodcastWatchedEpisodeModel {
     pub name: String,
     pub image_url: String,
     pub watched_time: i64,
-    pub date: String
+    pub date: String,
+    pub total_time: u64
 }
