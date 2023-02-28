@@ -2,9 +2,15 @@ import {useEffect, useState} from "react";
 import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
 import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel";
+import {PlayIcon} from "../components/PlayIcon";
+import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import {store} from "../store/store";
+import {setCurrentPodcast, setCurrentPodcastEpisode} from "../store/AudioPlayerSlice";
+import {useAppDispatch} from "../store/hooks";
 
 export const Homepage = () => {
     const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
+    const dispatch = useAppDispatch()
 
     useEffect(()=>{
         axios.get(apiURL+"/podcast/episode/lastwatched")
@@ -18,10 +24,23 @@ export const Homepage = () => {
         <div className="grid grid-cols-5 gap-4">
         {
             podcastWatched.map((v)=>{
+                console.log(v)
                 return <div key={v.episodeId}
                     className="max-w-sm rounded-lg shadow bg-gray-800 border-gray-700">
-                    <div  className={`bg-[${v.imageUrl}] object-cover`}>
-                        <div>test</div>
+                    <div className="relative" key={v.episodeId}>
+                        <img src={v.podcastEpisode.local_image_url} alt="" className=""/>
+                        <div className="absolute left-0 top-0 w-full h-full hover:bg-gray-500 opacity-80 z-50 grid place-items-center">
+                            <PlayIcon key={v.podcastEpisode.episode_id+"icon"} podcast={v.podcastEpisode} className="w-20 h-20" onClick={()=>{
+                                axios.get(apiURL+"/podcast/episode/"+v.podcastEpisode.episode_id)
+                                    .then((response: AxiosResponse<PodcastWatchedModel>)=>{
+                                        store.dispatch(setCurrentPodcastEpisode({
+                                            ...v.podcastEpisode,
+                                            time: response.data.watchedTime
+                                        }))
+                                        dispatch(setCurrentPodcast(v.podcast))
+                                    })
+                            }}/>
+                        </div>
                     </div>
                     <div className="bg-blue-900 h-2" style={{width: (v.watchedTime/v.totalTime)*100+"%"}}></div>
                     <div className="p-5">
@@ -31,7 +50,7 @@ export const Homepage = () => {
 
 
                 return <div key={v.episodeId}>
-                    <img src={v.imageUrl} alt="" className=""/>
+                    <img src={v.podcastEpisode.local_image_url} alt="" className=""/>
                     <span>{v.name}</span>
                 </div>
             })

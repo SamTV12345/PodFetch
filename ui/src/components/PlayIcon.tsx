@@ -14,7 +14,7 @@ export const PlayIcon:FC<IconProps> = ({className, onClick, podcast}) => {
         }
         }
     }
-                                            stroke="currentColor" className={`w-6 h-6 cursor-pointer ${className}`}>
+                                            stroke="currentColor" className={` ${className} cursor-pointer`}>
         <path strokeLinecap="round" strokeLinejoin="round"
               d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         <path strokeLinecap="round" strokeLinejoin="round"

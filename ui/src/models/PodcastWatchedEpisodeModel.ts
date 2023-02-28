@@ -1,3 +1,5 @@
+import {Podcast, PodcastEpisode} from "../store/CommonSlice";
+
 export interface PodcastWatchedEpisodeModel {
     id: number,
     podcastId: number,
@@ -7,5 +9,7 @@ export interface PodcastWatchedEpisodeModel {
     date: string,
     imageUrl: string,
     watchedTime: number,
-    totalTime: number
+    totalTime: number,
+    podcastEpisode: PodcastEpisode,
+    podcast: Podcast
 }

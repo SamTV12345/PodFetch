@@ -1,6 +1,8 @@
 import axios from "axios";
 import {store} from "../store/store";
 
+const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
 export const isLocalhost = Boolean(
     window.location.hostname === 'localhost' ||
     // [::1] is the IPv6 localhost address.
@@ -29,4 +31,8 @@ export  const logCurrentPlaybackTime = (episodeId: string,timeInSeconds: number)
             podcastEpisodeId: episodeId,
             time: Number(timeInSeconds.toFixed(0))
         })
+}
+
+export const formatTime = (isoDate: string) => {
+    return new Date(isoDate).toLocaleDateString("de-DE")
 }

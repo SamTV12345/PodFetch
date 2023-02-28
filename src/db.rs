@@ -9,7 +9,8 @@ use rusqlite::types::Value;
 use serde::de::Unexpected::Str;
 use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::models::models::{PodcastWatchedEpisodeModel, PodcastWatchedModel, PodcastWatchedPostModel};
+use crate::models::models::{PodcastWatchedEpisodeModel, PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedModel, PodcastWatchedPostModel};
+use crate::service::mapping_service::MappingService;
 
 
 pub struct DB{
@@ -302,7 +303,7 @@ impl DB{
     }
 
 
-    pub fn get_last_watched_podcasts(&self) -> Result<Vec<PodcastWatchedEpisodeModel>>{
+    pub fn get_last_watched_podcasts(&self) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>{
         let mut stmt = self.conn.prepare("SELECT * FROM (SELECT * FROM Podcast_History ORDER BY datetime(date) DESC) GROUP BY episode_id  LIMIT 10;")?;
         let mut podcast_iter = stmt.query_map([], |row| {
             Ok(PodcastWatchedModel {
@@ -318,26 +319,31 @@ impl DB{
             let podcast_watched_model = podcast_watched_model.unwrap();
             let optional_podcast = self.get_podcast_episode_by_id(&podcast_watched_model.episode_id)
                 .unwrap();
+            let mapping = MappingService::new();
 
             match optional_podcast {
-                Some(podcast) => {
-                    PodcastWatchedEpisodeModel{
+                Some(podcast_episode) => {
+                    let podcast_dto = mapping.map_podcastepisode_to_dto(&podcast_episode);
+                    let podcast = self.get_podcast(podcast_episode.podcast_id).unwrap();
+                    PodcastWatchedEpisodeModelWithPodcastEpisode{
                         id: podcast_watched_model.id,
                         watched_time: podcast_watched_model.watched_time,
                         podcast_id: podcast_watched_model.podcast_id,
                         episode_id: podcast_watched_model.episode_id,
                         date: podcast_watched_model.date,
-                        url: podcast.url,
-                        name: podcast.name,
-                        image_url: podcast.image_url,
-                        total_time: podcast.total_time
+                        url: podcast_episode.clone().url,
+                        name: podcast_episode.clone().name,
+                        image_url: podcast_episode.clone().image_url,
+                        total_time: podcast_episode.clone().total_time,
+                        podcast_episode: podcast_dto,
+                        podcast
                     }
                 }
                 None => {
                     panic!("Podcast not found");
                 }
             }
-        }).collect::<Vec<PodcastWatchedEpisodeModel>>();
+        }).collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
         Ok(podcast_watch_episode)
     }
 

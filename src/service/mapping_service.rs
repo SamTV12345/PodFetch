@@ -24,17 +24,13 @@ impl MappingService {
             directory: podcast.directory.clone(),
             rssfeed: podcast.rssfeed.clone(),
             image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
-                +PODCASTS_ROOT_DIRECTORY+"/"+&podcast.directory+"/image.jpg",
+                +PODCASTS_ROOT_DIRECTORY+"/"+&podcast.directory+"/image.png",
         }
     }
 
     pub fn map_podcastepisode_to_dto(&self, podcast_episode: &PodcastEpisode)->PodcastEpisode{
-        let podcast = self.db.get_podcast(podcast_episode.podcast_id).unwrap();
-        let image_suffix = get_url_file_suffix(&podcast_episode.image_url);
-        let podcast_suffix = get_url_file_suffix(&podcast_episode.url);
         let podcast_path = environment_service::EnvironmentService::get_server_url(&self.env_service);
         println!("podcast_path: {}", podcast_path);
-        let podcast_path_clone = podcast_path.clone();
         PodcastEpisode{
             id: podcast_episode.id,
             podcast_id: podcast_episode.podcast_id,

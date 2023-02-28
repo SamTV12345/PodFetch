@@ -1,7 +1,7 @@
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useParams} from "react-router-dom";
 import {useEffect} from "react";
-import {apiURL} from "../utils/Utilities";
+import {apiURL, formatTime} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {Podcast, setSelectedEpisodes} from "../store/CommonSlice";
 import {PlayIcon} from "../components/PlayIcon";
@@ -46,9 +46,9 @@ export const PodcastDetailPage = () => {
         <div>
             {
                 selectedEpisodes.map((episode, index)=>{
-                    return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr] gap-4">
+                    return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr_auto] gap-4 mr-5">
                         <div className="flex align-baseline" key={episode.episode_id+"container"}>
-                            <PlayIcon key={episode.episode_id+"icon"} podcast={currentPodcastEpisode} onClick={()=>{
+                            <PlayIcon className="h-6" key={episode.episode_id+"icon"} podcast={currentPodcastEpisode} onClick={()=>{
                                 axios.get(apiURL+"/podcast/episode/"+episode.episode_id)
                                     .then((response: AxiosResponse<PodcastWatchedModel>)=>{
                                         store.dispatch(setCurrentPodcastEpisode({
@@ -60,6 +60,7 @@ export const PodcastDetailPage = () => {
                             }}/>
                         </div>
                         <span key={episode.episode_id+"name"}>{episode.name}</span>
+                        <span key={episode.episode_id+"date"}>{formatTime(episode.date)}</span>
                     </div>
                         <hr className="border-gray-500" key={index+"hr"}/>
                         {

@@ -7,7 +7,7 @@ use reqwest::{Request, Response};
 use reqwest::blocking::ClientBuilder;
 use rusqlite::{Connection, OpenFlags};
 use crate::models::itunes_models::{Podcast, PodcastEpisode, ResponseModel};
-use crate::service::file_service::check_if_podcast_episode_downloaded;
+use crate::service::file_service::{check_if_podcast_episode_downloaded, check_if_podcast_main_image_downloaded};
 use regex::Regex;
 use rusqlite::ffi::{sqlite3_unlock_notify, SQLITE_OPEN_NOMUTEX};
 use serde_json::Value;
@@ -47,6 +47,7 @@ pub fn schedule_episode_download(podcast: Podcast){
     let db = DB::new().unwrap();
     let result = db.get_last_5_podcast_episodes(podcast.id).unwrap();
     for podcast_episode in result {
+
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = get_url_file_suffix(&podcast_episode_cloned.url);
@@ -56,7 +57,9 @@ pub fn schedule_episode_download(podcast: Podcast){
                                       podcast.directory,
                                       podcast_episode_cloned.episode_id,
                                       image_suffix);
-
+        let image_podcast_path = format!("podcasts\\{}\\image.{}",
+                                         podcast.directory,
+                                         image_suffix);
         let podcast_save_path = format!("podcasts\\{}\\{}\\podcast.{}",
                                         podcast.directory,
                                         podcast_episode_cloned.episode_id,
@@ -74,9 +77,16 @@ pub fn schedule_episode_download(podcast: Podcast){
             let mut podcast_out = std::fs::File::create(podcast_save_path.clone()).unwrap();
             let mut image_out = std::fs::File::create(image_save_path.clone())
                 .unwrap();
+
+            if !check_if_podcast_main_image_downloaded(&podcast_cloned.directory) {
+                let mut image_podcast = std::fs::File::create(image_podcast_path)
+                    .unwrap();
+                io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
+            }
+
             io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
             let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
-            println!("Duration: {:?}", duration);
+
             io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
             db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id, duration
                 .as_secs(), &to_relative_url(&image_save_path),
