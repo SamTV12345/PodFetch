@@ -1,8 +1,10 @@
 import axios from "axios";
-import {store} from "../store/store";
+import TimeAgo from 'javascript-time-ago'
+import de from 'javascript-time-ago/locale/de'
 
-const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
 
+TimeAgo.addDefaultLocale(de)
+const timeago = new TimeAgo('de-DE')
 export const isLocalhost = Boolean(
     window.location.hostname === 'localhost' ||
     // [::1] is the IPv6 localhost address.
@@ -13,8 +15,8 @@ export const isLocalhost = Boolean(
     )
 );
 
-export let apiURL=''
-export let uiURL=''
+export let apiURL= ''
+export let uiURL= ''
 
 if(isLocalhost){
     apiURL="http://localhost:8000/api/v1"
@@ -34,5 +36,9 @@ export  const logCurrentPlaybackTime = (episodeId: string,timeInSeconds: number)
 }
 
 export const formatTime = (isoDate: string) => {
-    return new Date(isoDate).toLocaleDateString("de-DE")
+    return timeago.format(new Date(isoDate))
+}
+
+export const removeHTML = (html: string) => {
+    return html.replace(/<[^>]*>?/gm, '');
 }

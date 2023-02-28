@@ -26,7 +26,6 @@ pub fn create_podcast_directory_exists(podcast_id: &str){
 }
 
 pub fn download_podcast_image(podcast_id: &str, image_url: &str){
-    println!("Downloading image from: {}", image_url);
     let client = ClientBuilder::new().build().unwrap();
     let mut image_response = client.get(image_url).send().unwrap();
     let image_suffix = get_url_file_suffix(image_url);

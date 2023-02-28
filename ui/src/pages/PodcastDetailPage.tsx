@@ -1,7 +1,7 @@
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useParams} from "react-router-dom";
 import {useEffect} from "react";
-import {apiURL, formatTime} from "../utils/Utilities";
+import {apiURL, formatTime, removeHTML} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {Podcast, setSelectedEpisodes} from "../store/CommonSlice";
 import {PlayIcon} from "../components/PlayIcon";
@@ -16,7 +16,6 @@ export const PodcastDetailPage = () => {
     const params = useParams()
     const selectedEpisodes = useAppSelector(state=>state.common.selectedEpisodes)
     const dispatch = useAppDispatch()
-    const time = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
 
     useEffect(()=> {
         axios.get(apiURL + "/podcast/" + params.id).then((response: AxiosResponse<Podcast>) => {
@@ -46,7 +45,7 @@ export const PodcastDetailPage = () => {
         <div>
             {
                 selectedEpisodes.map((episode, index)=>{
-                    return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr_auto] gap-4 mr-5">
+                    return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr_3fr_auto] gap-4 mr-5">
                         <div className="flex align-baseline" key={episode.episode_id+"container"}>
                             <PlayIcon className="h-6" key={episode.episode_id+"icon"} podcast={currentPodcastEpisode} onClick={()=>{
                                 axios.get(apiURL+"/podcast/episode/"+episode.episode_id)
@@ -60,6 +59,7 @@ export const PodcastDetailPage = () => {
                             }}/>
                         </div>
                         <span key={episode.episode_id+"name"}>{episode.name}</span>
+                        <span>{removeHTML(episode.description)}</span>
                         <span key={episode.episode_id+"date"}>{formatTime(episode.date)}</span>
                     </div>
                         <hr className="border-gray-500" key={index+"hr"}/>

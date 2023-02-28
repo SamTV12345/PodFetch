@@ -1,29 +1,25 @@
 use std::fs::create_dir;
 use std::io;
-use std::ptr::null;
 use feed_rs::parser;
-use crate::constants::constants::{DB_NAME, ITUNES_URL};
-use reqwest::{Request, Response};
+use crate::constants::constants::{ITUNES_URL};
 use reqwest::blocking::ClientBuilder;
-use rusqlite::{Connection, OpenFlags};
-use crate::models::itunes_models::{Podcast, PodcastEpisode, ResponseModel};
 use crate::service::file_service::{check_if_podcast_episode_downloaded, check_if_podcast_main_image_downloaded};
 use regex::Regex;
-use rusqlite::ffi::{sqlite3_unlock_notify, SQLITE_OPEN_NOMUTEX};
 use serde_json::Value;
 use crate::db::{DB};
+use crate::models::itunes_models::Podcast;
+use crate::service::path_service::PathService;
 
 pub fn find_podcast(podcast: &str)-> Value {
     let client = ClientBuilder::new().build().unwrap();
     let result = client.get(ITUNES_URL.to_owned()+podcast).send().unwrap();
-    //println!("Result: {:?}", result.text());
+    log::debug!("Found podcast: {}", result.url());
     return result.json().unwrap();
 }
 
 
 // Used for creating/updating podcasts
 pub fn insert_podcast_episodes(podcast: Podcast){
-    println!("Inserting podcast episodes for: {}", podcast.name);
     let client = ClientBuilder::new().build().unwrap();
     let result = client.get(podcast.clone().rssfeed).send().unwrap();
     let bytes = result.bytes().unwrap();
@@ -33,12 +29,13 @@ pub fn insert_podcast_episodes(podcast: Podcast){
     let feed = parser::parse(&*bytes).unwrap();
     for (i,item) in feed.entries.iter().enumerate(){
         let db = DB::new().unwrap();
-        let mut result = db.get_podcast_episode_by_id(&item.id);
+        let result = db.get_podcast_episode_by_id(&item.id);
 
         if result.unwrap().is_none() {
             // Insert new podcast episode
-            db.insert_podcast_episodes(podcast.clone(), &vec[i].to_owned(), item, &feed.logo
-                .clone().unwrap().uri);
+            db.insert_podcast_episodes(podcast.clone(), &vec[i].to_owned(),
+                                       item, &feed.logo
+                .clone().unwrap().uri,&item.summary.clone().unwrap().content);
         }
     }
 }
@@ -60,13 +57,12 @@ pub fn schedule_episode_download(podcast: Podcast){
         let image_podcast_path = format!("podcasts\\{}\\image.{}",
                                          podcast.directory,
                                          image_suffix);
-        let podcast_save_path = format!("podcasts\\{}\\{}\\podcast.{}",
-                                        podcast.directory,
-                                        podcast_episode_cloned.episode_id,
-                                        suffix);
+
+        let podcast_save_path = PathService::get_podcast_episode_path(&podcast.directory.clone(),
+                                                                      &podcast_episode_cloned.episode_id,
+                                                                      &suffix);
         if !check_if_podcast_episode_downloaded(&podcast_cloned.directory, podcast_episode
             .episode_id) {
-            println!("Downloading from: {}", podcast_episode.url);
             let client = ClientBuilder::new().build().unwrap();
             let mut resp = client.get(podcast_episode.url).send().unwrap();
             let mut image_response = client.get(podcast_episode.image_url).send().unwrap();
@@ -92,14 +88,13 @@ pub fn schedule_episode_download(podcast: Podcast){
                 .as_secs(), &to_relative_url(&image_save_path),
                                                    &to_relative_url(&podcast_save_path.clone()))
                 .expect("Error saving total time of podcast episode.");
-            println!("Done copying");
         }
     }
 }
 
 fn get_media_urls(text: &str)-> Vec<String> {
     let mut urls = Vec::new();
-    let re = Regex::new(r#"<enclosure.*?url="(.*?)".*?/>"#).unwrap();;
+    let re = Regex::new(r#"<enclosure.*?url="(.*?)".*?/>"#).unwrap();
     for capture in re.captures_iter(text){
         let url = capture.get(1).unwrap().as_str();
         urls.push(url.to_owned())

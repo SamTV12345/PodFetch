@@ -65,4 +65,5 @@ pub struct PodcastEpisode {
     pub(crate) date: String,
     pub image_url: String,
     pub total_time: u64,
+    pub (crate) description: String
 }

@@ -29,3 +29,8 @@
     object-fit: fill;
 
 }
+
+
+.play-button-background:hover > *{
+    @apply visible opacity-100;
+}

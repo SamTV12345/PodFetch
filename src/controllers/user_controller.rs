@@ -1,16 +1,11 @@
-use std::future::Future;
-use actix::ActorStreamExt;
-use reqwest::blocking::{Client, ClientBuilder, Response};
-use rusqlite::Connection;
+use reqwest::blocking::{ClientBuilder};
 use serde_json::{from_str, Value};
-use crate::constants::constants::{DB_NAME};
 use crate::db::DB;
-use crate::models::itunes_models::Podcast;
-use crate::models::models::{NewUser, PodCastAddModel, PodcastWatchedPostModel, UserData};
+use crate::models::models::{PodCastAddModel, PodcastWatchedPostModel};
 use crate::service::file_service::{create_podcast_directory_exists, download_podcast_image};
 use crate::service::mapping_service::MappingService;
 use crate::service::rust_service::{find_podcast as find_podcast_service, insert_podcast_episodes, schedule_episode_download};
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, web, HttpResponse, Responder};
 use actix_web::web::Query;
 use std::option::Option;
 
@@ -52,9 +47,7 @@ pub async fn find_podcast_by_id(id: web::Path<String>) -> impl Responder {
 pub async fn find_all_podcast_episodes_of_podcast(id: web::Path<String>, last_podcast_episode :
 Query<OptionalId>)
     -> impl Responder {
-    println!("Getting all episodes of podcast: {}", id);
     let last_podcast_episode = last_podcast_episode.into_inner();
-    println!("test: {:?}", last_podcast_episode.last_podcast_episode);
     let id_num = from_str(&id).unwrap();
     let db = DB::new().unwrap();
     let mappingservice = MappingService::new();
@@ -75,9 +68,8 @@ pub async fn find_podcast(podcast: String) -> impl Responder {
 
 #[post("/podcast")]
 pub async fn add_podcast(track_id: web::Json<PodCastAddModel>) -> impl Responder {
-    println!("Podcast: {}", track_id.track_id);
     let client = ClientBuilder::new().build().unwrap();
-    let mut res = client.get("https://itunes.apple.com/lookup?id=".to_owned()+&track_id
+    let res = client.get("https://itunes.apple.com/lookup?id=".to_owned()+&track_id
         .track_id
         .to_string())
         .send().unwrap();
@@ -101,15 +93,18 @@ pub async fn add_podcast(track_id: web::Json<PodCastAddModel>) -> impl Responder
             insert_podcast_episodes(podcast);
             schedule_episode_download(podcast_cloned)
         },
-        None => {println!("No podcast found")}
+        None => {panic!("No podcast found")}
     }
+    log::info!("Added podcast: {}", unwrap_string(&res["results"][0]["collectionName"]));
     HttpResponse::Ok()
 }
 
 #[post("/podcast/episode")]
 pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>) -> impl Responder {
     let db = DB::new().unwrap();
+    let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
     db.log_watchtime(podcast_watch.0).expect("Error logging watchtime");
+    log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
     HttpResponse::Ok()
 }
 

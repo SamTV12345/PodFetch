@@ -4,27 +4,18 @@
 
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
 extern crate serde_json;
 
-use dotenv::dotenv;
-use std::{env, thread};
+use std::{thread};
 use std::env::var;
 use actix_files as fs;
 use actix_web::{App, http, HttpServer, web};
-use std::process::Command;
 use std::time::Duration;
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use clokwerk::{Scheduler, TimeUnits};
-use feed_rs::parser;
-use reqwest::blocking::{Client, ClientBuilder};
-use rusqlite::Connection;
-
 mod controllers;
 pub use controllers::user_controller::*;
-use crate::constants::constants::{DB_NAME, PODCASTS_ROOT_DIRECTORY};
-use crate::models::itunes_models::Podcast;
 use crate::service::rust_service::{insert_podcast_episodes, schedule_episode_download};
 use crate::service::file_service::create_podcast_root_directory_exists;
 mod db;
@@ -33,23 +24,28 @@ mod constants;
 mod service;
 use crate::db::DB;
 use crate::service::environment_service::EnvironmentService;
+use crate::service::logging_service::init_logging;
 
 mod config;
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
+    EnvironmentService::print_banner();
+    init_logging();
     DB::new().unwrap();
     create_podcast_root_directory_exists();
+
+
 
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
         let env = EnvironmentService::new();
+        env.get_environment();
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(||{
             let db = DB::new().unwrap();
             //check for new episodes
             let podcasts = db.get_podcasts().unwrap();
-            println!("Checking for new episodes: {:?}", podcasts);
             for podcast in podcasts {
                 let podcast_clone = podcast.clone();
                 insert_podcast_episodes(podcast);
@@ -63,13 +59,13 @@ async fn main()-> std::io::Result<()> {
     });
 
     // Start WebSocket server
-    let websocket_server = thread::spawn(||HttpServer::new(|| {
+    /*let websocket_server = thread::spawn(||HttpServer::new(|| {
         App::new()
             .service(web::resource("/ws/"))
     })
         .bind("127.0.0.1:8080")
         .unwrap()
-        .run());
+        .run());*/
 
 
     HttpServer::new(|| {

@@ -29,8 +29,8 @@ export const Homepage = () => {
                     className="max-w-sm rounded-lg shadow bg-gray-800 border-gray-700">
                     <div className="relative" key={v.episodeId}>
                         <img src={v.podcastEpisode.local_image_url} alt="" className=""/>
-                        <div className="absolute left-0 top-0 w-full h-full hover:bg-gray-500 opacity-80 z-50 grid place-items-center">
-                            <PlayIcon key={v.podcastEpisode.episode_id+"icon"} podcast={v.podcastEpisode} className="w-20 h-20" onClick={()=>{
+                        <div className="absolute left-0 top-0 w-full h-full hover:bg-gray-500 opacity-80 z-50 grid place-items-center play-button-background">
+                            <PlayIcon key={v.podcastEpisode.episode_id+"icon"} podcast={v.podcastEpisode} className="w-20 h-20 opacity-0" onClick={()=>{
                                 axios.get(apiURL+"/podcast/episode/"+v.podcastEpisode.episode_id)
                                     .then((response: AxiosResponse<PodcastWatchedModel>)=>{
                                         store.dispatch(setCurrentPodcastEpisode({
@@ -46,12 +46,6 @@ export const Homepage = () => {
                     <div className="p-5">
                             <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{v.name}</h5>
                     </div>
-                </div>
-
-
-                return <div key={v.episodeId}>
-                    <img src={v.podcastEpisode.local_image_url} alt="" className=""/>
-                    <span>{v.name}</span>
                 </div>
             })
         }
