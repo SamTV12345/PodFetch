@@ -362,15 +362,16 @@ impl DB{
     }
 
     pub fn update_podcast_image(self,id: &str, image_url: &str) -> Result<()> {
-        let mut stmt = self.conn.prepare("UPDATE Podcast SET image_url = ?1 \
+        let mut stmt = self.conn.prepare("UPDATE Podcast Set image_url = ?1 \
         WHERE directory = ?2")?;
+        println!("{} {}", image_url, id);
         stmt.execute(params![&image_url, id])?;
         Ok(())
     }
 
     pub fn get_podcast_by_directory(self, podcast_id: &str)->Result<Option<Podcast>>{
         let mut stmt = self.conn.prepare("SELECT * FROM Podcast WHERE directory = ?1")?;
-        let mut podcast_iter = stmt.query_map([], |row| {
+        let mut podcast_iter = stmt.query_map([podcast_id], |row| {
             Ok(Podcast {
                 id: row.get(0)?,
                 name: row.get(1)?,
