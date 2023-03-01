@@ -1,7 +1,6 @@
 use std::io::Write;
 use std::path::Path;
-use reqwest::{ClientBuilder as AsyncClientBuilder, ClientBuilder};
-use crate::db;
+use reqwest::{ClientBuilder};
 use crate::db::DB;
 use crate::service::rust_service::get_url_file_suffix;
 

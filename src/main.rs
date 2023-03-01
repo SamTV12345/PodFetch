@@ -3,11 +3,10 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::{thread};
-use std::env::var;
-use actix_files as fs;
-use actix_web::{App, http, HttpServer, web};
+use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
 use actix_cors::Cors;
+use actix_files::Files;
 use actix_web::middleware::Logger;
 use clokwerk::{Scheduler, TimeUnits};
 mod controllers;
@@ -35,6 +34,11 @@ pub fn run_poll(){
 }
 }
 
+async fn index() ->  impl Responder {
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(include_str!("../static/index.html"))
+}
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
@@ -59,15 +63,6 @@ async fn main()-> std::io::Result<()> {
         }
     });
 
-    // Start WebSocket server
-    /*let websocket_server = thread::spawn(||HttpServer::new(|| {
-        App::new()
-            .service(web::resource("/ws/"))
-    })
-        .bind("127.0.0.1:8080")
-        .unwrap()
-        .run());*/
-
 
     HttpServer::new(|| {
         let cors = Cors::default()
@@ -76,6 +71,10 @@ async fn main()-> std::io::Result<()> {
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
             .max_age(3600);
+
+        let ui = web::scope("/ui")
+            .route("/{path:[^.]*}", web::get().to(index))
+            .service(Files::new("/", "./static").index_file("index.html"));
 
 
         let api = web::scope("/api/v1")
@@ -89,11 +88,11 @@ async fn main()-> std::io::Result<()> {
             .service(get_watchtime)
 
             .wrap(Logger::default());
-        App::new().service(fs::Files::new
+        App::new().service(Files::new
             ("/podcasts", "podcasts").show_files_listing())
-            .service(fs::Files::new("/ui", "./static").index_file("index.html"))
             .wrap(cors)
             .service(api)
+            .service(ui)
             .wrap(Logger::default())
     }
     )

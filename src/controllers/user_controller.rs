@@ -1,4 +1,5 @@
-use reqwest::ClientBuilder as AsyncClientBuilder;
+use std::borrow::ToOwned;
+use reqwest::{ClientBuilder as AsyncClientBuilder};
 use serde_json::{from_str, Value};
 use crate::db::DB;
 use crate::models::models::{PodCastAddModel, PodcastWatchedPostModel};
@@ -6,7 +7,7 @@ use crate::service::file_service::{create_podcast_directory_exists, download_pod
 use crate::service::mapping_service::MappingService;
 use crate::service::rust_service::{find_podcast as find_podcast_service, insert_podcast_episodes, schedule_episode_download};
 use actix_web::{get, post, web, HttpResponse, Responder};
-use actix_web::web::Query;
+use actix_web::web::{Query};
 use std::option::Option;
 use std::thread;
 
@@ -129,7 +130,6 @@ pub async fn get_watchtime(id: web::Path<String>) -> impl Responder {
     let watchtime = db.get_watchtime(&id).unwrap();
     HttpResponse::Ok().json(watchtime)
 }
-
 
 
 

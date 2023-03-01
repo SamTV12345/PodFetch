@@ -23,8 +23,8 @@ if(isLocalhost && import.meta.env.DEV){
     uiURL="http://localhost:5173/ui"
 }
 else {
-    apiURL=window.location.protocol+"//"+window.location.hostname+"/api/v1"
-    uiURL=window.location.protocol+"//"+window.location.hostname+"/ui"
+    apiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/api/v1"
+    uiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/ui"
 }
 
 
