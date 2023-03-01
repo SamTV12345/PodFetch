@@ -12,7 +12,9 @@ WORKDIR /app/src
 RUN apk add pkgconfig openssl-dev libc-dev
 RUN USER=root
 
-COPY ./ ./
+ADD src ./src
+ADD static ./static
+ADD Cargo.toml .
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM alpine:latest
