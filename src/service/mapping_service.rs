@@ -20,7 +20,7 @@ impl MappingService {
             directory: podcast.directory.clone(),
             rssfeed: podcast.rssfeed.clone(),
             image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
-                +PODCASTS_ROOT_DIRECTORY+"/"+&podcast.directory+"/image.png",
+                + &podcast.image_url.clone()
         }
     }
 
