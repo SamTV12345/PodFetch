@@ -4,4 +4,19 @@ Cargo.lock
 .idea
 podcasts
 
-static/*
+!static/index.html
+static/assets
+static/*.svg
+static/*.png
+static/*.ico
+static/*.js
+static/*.css
+static/*.woff
+static/*.woff2
+static/*.ttf
+static/*.eot
+static/*.otf
+static/*.map
+static/*.json
+static/*.txt
+static/*.xml
