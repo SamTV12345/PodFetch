@@ -32,7 +32,7 @@ pub fn run_poll(){
     let podcast_clone = podcast.clone();
     insert_podcast_episodes(podcast);
     schedule_episode_download(podcast_clone);
-    }
+}
 }
 
 
@@ -70,9 +70,8 @@ async fn main()-> std::io::Result<()> {
 
 
     HttpServer::new(|| {
-        let public_url = var("PUBLIC_URL").unwrap_or("http://localhost:5173".to_string());
         let cors = Cors::default()
-            .allowed_origin(&public_url)
+            .allow_any_origin()
             .allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
@@ -92,7 +91,7 @@ async fn main()-> std::io::Result<()> {
             .wrap(Logger::default());
         App::new().service(fs::Files::new
             ("/podcasts", "podcasts").show_files_listing())
-            .service(fs::Files::new("/ui", "./static").index_file("index.html"))
+            .service(fs::Files::new("/ui", "./static"))
             .wrap(cors)
             .service(api)
             .wrap(Logger::default())
