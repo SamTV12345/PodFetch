@@ -3,18 +3,20 @@ use std::io;
 use feed_rs::parser;
 use crate::constants::constants::{ITUNES_URL};
 use reqwest::blocking::ClientBuilder;
+use reqwest::ClientBuilder as AsyncClientBuilder;
 use crate::service::file_service::{check_if_podcast_episode_downloaded, check_if_podcast_main_image_downloaded};
 use regex::Regex;
 use serde_json::Value;
+use tokio::net::windows::named_pipe::PipeEnd::Client;
 use crate::db::{DB};
 use crate::models::itunes_models::Podcast;
 use crate::service::path_service::PathService;
 
-pub fn find_podcast(podcast: &str)-> Value {
-    let client = ClientBuilder::new().build().unwrap();
-    let result = client.get(ITUNES_URL.to_owned()+podcast).send().unwrap();
-    log::debug!("Found podcast: {}", result.url());
-    return result.json().unwrap();
+pub async fn find_podcast(podcast: &str)-> Value {
+    let client = AsyncClientBuilder::new().build().unwrap();
+    let result = client.get(ITUNES_URL.to_owned()+podcast).send().await.unwrap();
+    log::info!("Found podcast: {}", result.url());
+    return result.json().await.unwrap();
 }
 
 
@@ -43,6 +45,7 @@ pub fn insert_podcast_episodes(podcast: Podcast){
 pub fn schedule_episode_download(podcast: Podcast){
     let db = DB::new().unwrap();
     let result = db.get_last_5_podcast_episodes(podcast.id).unwrap();
+    println!("Result: {:?}", result);
     for podcast_episode in result {
 
         let podcast_episode_cloned = podcast_episode.clone();
@@ -67,6 +70,8 @@ pub fn schedule_episode_download(podcast: Podcast){
             let mut resp = client.get(podcast_episode.url).send().unwrap();
             let mut image_response = client.get(podcast_episode.image_url).send().unwrap();
 
+            println!("{}",format!("podcasts\\{}\\{}", podcast.directory,
+                             podcast_episode_cloned.episode_id));
             create_dir(format!("podcasts\\{}\\{}", podcast.directory,
                                podcast_episode_cloned.episode_id)).expect("Error creating directory");
 

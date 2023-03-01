@@ -1,0 +1,9 @@
+version: '3'
+services:
+  podgrabv2:
+    image: samuel19982/podgrabv2:latest
+    ports:
+      - "80:8080"
+    environment:
+      - POLLING_INTERVAL=60
+      - SERVER_URL=http://localhost:80

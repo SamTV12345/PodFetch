@@ -6,9 +6,6 @@ export type PodcastAddModel = {
 }
 
 export type GeneralModel = {
-    code: number,
-    result: {
-        resultCount: number,
+   resultCount: number,
         results: PodcastAddModel[]
-    }
 }

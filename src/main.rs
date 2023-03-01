@@ -1,7 +1,3 @@
-#![feature(plugin, decl_macro, proc_macro_hygiene)]
-#![allow(proc_macro_derive_resolution_fallback, unused_attributes)]
-
-
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
@@ -28,6 +24,18 @@ use crate::service::logging_service::init_logging;
 
 mod config;
 
+pub fn run_poll(){
+    let db = DB::new().unwrap();
+    //check for new episodes
+    let podcasts = db.get_podcasts().unwrap();
+    for podcast in podcasts {
+    let podcast_clone = podcast.clone();
+    insert_podcast_episodes(podcast);
+    schedule_episode_download(podcast_clone);
+    }
+}
+
+
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
     EnvironmentService::print_banner();
@@ -43,14 +51,7 @@ async fn main()-> std::io::Result<()> {
         env.get_environment();
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(||{
-            let db = DB::new().unwrap();
-            //check for new episodes
-            let podcasts = db.get_podcasts().unwrap();
-            for podcast in podcasts {
-                let podcast_clone = podcast.clone();
-                insert_podcast_episodes(podcast);
-                schedule_episode_download(podcast_clone)
-            }
+           run_poll();
         });
         loop {
             scheduler.run_pending();
@@ -91,6 +92,7 @@ async fn main()-> std::io::Result<()> {
             .wrap(Logger::default());
         App::new().service(fs::Files::new
             ("/podcasts", "podcasts").show_files_listing())
+            .service(fs::Files::new("/ui", "./static").index_file("index.html"))
             .wrap(cors)
             .service(api)
             .wrap(Logger::default())

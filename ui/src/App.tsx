@@ -5,7 +5,6 @@ import {Header} from "./components/Header";
 import {useAppSelector} from "./store/hooks";
 import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
-import {Modal} from "./components/Modal";
 import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
 

@@ -19,7 +19,7 @@ export const AddPodcast = ()=>{
         userId: number
     }
     useDebounce(()=>{
-            axios.get(apiURL+"/podcast?podcast="+searchText)
+            axios.get(apiURL+"/podcasts/"+searchText+"/search")
                 .then((v:AxiosResponse<GeneralModel>)=>{
                     dispatch(setSearchedPodcasts(v.data))
                 })
@@ -40,7 +40,7 @@ export const AddPodcast = ()=>{
                        onChange={(v)=>setSearchText(v.target.value)}/>
                 <div className="border-2 border-gray-600 rounded p-5 max-h-80 overflow-y-scroll">
                 {
-                    searchedPodcasts&& searchedPodcasts.result.results.map((podcast, index)=>{
+                    searchedPodcasts&& searchedPodcasts.results.map((podcast, index)=>{
                         return <div key={index}>
                             <div className="flex">
                                 <div className="flex-1 grid grid-rows-2">
