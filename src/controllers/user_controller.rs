@@ -1,4 +1,3 @@
-use reqwest::blocking::{ClientBuilder};
 use reqwest::ClientBuilder as AsyncClientBuilder;
 use serde_json::{from_str, Value};
 use crate::db::DB;
@@ -10,7 +9,6 @@ use actix_web::{get, post, web, HttpResponse, Responder};
 use actix_web::web::Query;
 use std::option::Option;
 use std::thread;
-use log::log;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -85,13 +83,13 @@ pub async fn add_podcast(track_id: web::Json<PodCastAddModel>) -> impl Responder
     let res  = res.json::<Value>().await.unwrap();
 
 
-    let result = db.add_podcast_to_database(unwrap_string(&res["results"][0]["collectionName"]),
+    db.add_podcast_to_database(unwrap_string(&res["results"][0]["collectionName"]),
                                unwrap_string(&res["results"][0]["collectionId"]),
                                unwrap_string(&res["results"][0]["feedUrl"]),
                                unwrap_string(&res["results"][0]["artworkUrl600"]));
     create_podcast_directory_exists(&unwrap_string(&res["results"][0]["collectionId"]));
     download_podcast_image(&unwrap_string(&res["results"][0]["collectionId"]),
-                           &unwrap_string(&res["results"][0]["artworkUrl600"]));
+                           &unwrap_string(&res["results"][0]["artworkUrl600"])).await;
     let podcast = db.get_podcast_episode_by_track_id(track_id.track_id).unwrap();
 
     match podcast {

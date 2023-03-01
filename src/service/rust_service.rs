@@ -7,7 +7,6 @@ use reqwest::ClientBuilder as AsyncClientBuilder;
 use crate::service::file_service::{check_if_podcast_episode_downloaded, check_if_podcast_main_image_downloaded};
 use regex::Regex;
 use serde_json::Value;
-use tokio::net::windows::named_pipe::PipeEnd::Client;
 use crate::db::{DB};
 use crate::models::itunes_models::Podcast;
 use crate::service::path_service::PathService;
