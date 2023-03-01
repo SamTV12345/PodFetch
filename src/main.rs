@@ -91,7 +91,7 @@ async fn main()-> std::io::Result<()> {
             .wrap(Logger::default());
         App::new().service(fs::Files::new
             ("/podcasts", "podcasts").show_files_listing())
-            .service(fs::Files::new("/ui", "./static"))
+            .service(fs::Files::new("/ui", "./static").index_file("index.html"))
             .wrap(cors)
             .service(api)
             .wrap(Logger::default())
