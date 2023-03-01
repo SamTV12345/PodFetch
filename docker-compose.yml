@@ -4,6 +4,9 @@ services:
     image: samuel19982/podgrabv2:latest
     ports:
       - "80:8000"
+    volumes:
+      - podgrab-podcasts:/app/podcasts
+      - podgrab-db:/app/podcast.db
     environment:
       - POLLING_INTERVAL=60
       - SERVER_URL=http://localhost:80
