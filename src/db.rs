@@ -360,4 +360,26 @@ impl DB{
             }
         }
     }
+
+    pub fn update_podcast_image(self,id: &str, image_url: &str) -> Result<()> {
+        let mut stmt = self.conn.prepare("UPDATE Podcast SET image_url = ?1 \
+        WHERE directory = ?2")?;
+        stmt.execute(params![&image_url, id])?;
+        Ok(())
+    }
+
+    pub fn get_podcast_by_directory(self, podcast_id: &str)->Result<Option<Podcast>>{
+        let mut stmt = self.conn.prepare("SELECT * FROM Podcast WHERE directory = ?1")?;
+        let mut podcast_iter = stmt.query_map([], |row| {
+            Ok(Podcast {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                directory: row.get(2)?,
+                rssfeed: row.get(3)?,
+                image_url: row.get(4)?
+            })
+        })?;
+        let iter = podcast_iter.next().map(|podcast| podcast.unwrap());
+        Ok(iter)
+    }
 }
