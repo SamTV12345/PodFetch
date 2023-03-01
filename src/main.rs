@@ -55,6 +55,7 @@ async fn main()-> std::io::Result<()> {
         env.get_environment();
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(||{
+            log::Adinfo!("Polling for new episodes");
            run_poll();
         });
         loop {
