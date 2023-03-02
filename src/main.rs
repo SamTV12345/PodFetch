@@ -3,19 +3,14 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::{thread};
-use std::env::var;
-use std::error::Error;
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
 use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::middleware::Logger;
 use clokwerk::{Scheduler, TimeUnits};
-use diesel::QueryDsl;
 
 mod controllers;
 pub use controllers::user_controller::*;
-use crate::config::DBConfig::establish_connection;
 use crate::service::rust_service::{insert_podcast_episodes, schedule_episode_download};
 use crate::service::file_service::create_podcast_root_directory_exists;
 mod db;
@@ -23,15 +18,12 @@ mod models;
 mod constants;
 mod service;
 use crate::db::DB;
-use crate::models::itunes_models::Podcast;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::logging_service::init_logging;
-use diesel::prelude::*;
 
 mod config;
 pub mod schema;
 
-use crate::schema::podcasts::dsl::podcasts;
 
 pub fn run_poll(){
     let mut db = DB::new().unwrap();
@@ -52,9 +44,6 @@ async fn index() ->  impl Responder {
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
-
-    let conn = &mut establish_connection();
-
 
     EnvironmentService::print_banner();
     init_logging();

@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use crate::schema::*;
-use diesel::sql_types::Integer;
-use diesel::sql_types::Text;
+
+
 #[derive(Debug, Serialize, Deserialize,Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ItunesModel {

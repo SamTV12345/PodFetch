@@ -1,22 +1,15 @@
-use std::process::id;
 use std::time::SystemTime;
 use chrono::{DateTime, Utc};
 use diesel::{insert_into, RunQueryDsl, sql_query};
-use diesel::associations::HasTable;
-use diesel::dsl::sql;
 use feed_rs::model::Entry;
-use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastHistoryItem,
                             PodcastWatchedPostModel};
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
-use crate::config::DBConfig::establish_connection;
-use crate::schema::podcast_episodes::date_of_recording;
+use crate::config::dbconfig::establish_connection;
 use crate::schema::podcast_episodes::dsl::podcast_episodes;
 use crate::schema::podcast_history_items::dsl::podcast_history_items;
-
-
 
 pub struct DB{
     conn: SqliteConnection,
@@ -38,7 +31,7 @@ impl DB{
     }
 
     pub fn get_podcast(&mut self, podcast_id_to_be_found: i32) -> Result<Podcast, String>{
-        use crate::schema::podcasts::{directory, id as podcast_id, rssfeed};
+        use crate::schema::podcasts::{id as podcast_id};
         use crate::schema::podcasts::dsl::podcasts;
         let found_podcast = podcasts
             .filter(podcast_id.eq(podcast_id_to_be_found))
@@ -50,10 +43,9 @@ impl DB{
 
     pub fn get_podcast_episode_by_id(&mut self, podcas_episode_id_to_be_found: &str) ->
                                                                    Result<Option<PodcastEpisode>, String>{
-        use crate::schema::podcast_episodes::{date_of_recording, description, episode_id, id as podcast_episode_id, name, url};
+        use crate::schema::podcast_episodes::{episode_id};
         use crate::schema::podcast_episodes::dsl::*;
 
-        use diesel::OptionalExtension;
         let found_podcast_episode = podcast_episodes
             .filter(episode_id.eq(podcas_episode_id_to_be_found))
             .first::<PodcastEpisode>(&mut self.conn)
@@ -66,7 +58,7 @@ impl DB{
 
     pub fn get_podcast_episode_by_track_id(&mut self, podcast_id: i32) ->
                                                                    Result<Option<Podcast>, String>{
-        use crate::schema::podcasts::{directory, id, rssfeed};
+        use crate::schema::podcasts::{directory};
         use crate::schema::podcasts::dsl::podcasts;
         let optional_podcast = podcasts
             .filter(directory.eq(podcast_id.to_string()))
@@ -97,7 +89,7 @@ impl DB{
 
     pub fn add_podcast_to_database(&mut self, collection_name:String, collection_id:String,
                                    feed_url:String, image_url_1: String){
-        use crate::schema::podcasts::{directory, id, rssfeed, name as podcast_name, image_url};
+        use crate::schema::podcasts::{directory, rssfeed, name as podcast_name, image_url};
         use crate::schema::podcasts;
 
         insert_into(podcasts::table)
@@ -114,9 +106,7 @@ impl DB{
     pub fn get_last_5_podcast_episodes(&mut self, podcast_episode_id: i32) ->
                                                                       Result<Vec<PodcastEpisode>,
                                                                           String>{
-        use crate::schema::podcast_episodes::{date_of_recording, description, episode_id,
-                                              podcast_id, id as
-        pid, name, url};
+        use crate::schema::podcast_episodes::{date_of_recording, podcast_id};
         let podcasts = podcast_episodes
             .filter(podcast_id.eq(podcast_episode_id))
             .limit(5)
@@ -218,7 +208,6 @@ impl DB{
 
     pub fn get_last_watched_podcasts(&mut self)
         -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
-        use crate::schema::podcast_history_items::*;
 
         let result = sql_query("SELECT * FROM (SELECT * FROM podcast_history_items ORDER BY \
         datetime\
@@ -251,7 +240,6 @@ impl DB{
 
     pub fn update_total_podcast_time_and_image(&mut self, episode_id: &str, time: i32, image_url:
     &str, url: &str ) -> Result<(), String> {
-        use crate::schema::podcast_episodes;
         use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::schema::podcast_episodes::dsl::total_time as total_time_column;
         use crate::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
@@ -267,7 +255,7 @@ impl DB{
             Some(found_podcast)=>{
                 println!("Found podcast: {:?}", found_podcast);
                 let new_time = found_podcast.total_time + time;
-                let query = diesel::update(podcast_episodes)
+                diesel::update(podcast_episodes)
                     .filter(episode_id_column.eq(episode_id))
                     .set((
                         total_time_column.eq(new_time),
@@ -286,8 +274,6 @@ impl DB{
 
     pub fn update_podcast_image(mut self, id: &str, image_url: &str)
         -> Result<(), String> {
-        use crate::schema::podcasts;
-        use crate::schema::podcasts::dsl::id as id_column;
         use crate::schema::podcasts::dsl::image_url as image_url_column;
         use crate::schema::podcasts::dsl::directory;
         use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
@@ -298,7 +284,7 @@ impl DB{
             .optional()
             .expect("Error loading podcast episode by id");
         match result {
-            Some(found_podcast)=>{
+            Some(..)=>{
                 diesel::update(dsl_podcast.filter(directory.eq(id)))
                     .set(image_url_column.eq(image_url))
                     .execute(&mut self.conn)
@@ -313,7 +299,6 @@ impl DB{
 
     pub fn get_podcast_by_directory(mut self, podcast_id: &str)
         ->Result<Option<Podcast>, String>{
-        use crate::schema::podcasts;
         use crate::schema::podcasts::dsl::directory;
         use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
         let result = dsl_podcast

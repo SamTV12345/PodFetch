@@ -1,1 +1,1 @@
-pub mod DBConfig;
+pub mod dbconfig;
