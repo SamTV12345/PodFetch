@@ -33,6 +33,7 @@ RUN rm -rf /app/src/target/release/podgrabv2*
 
 ADD Cargo.toml .
 ADD static ./static
+ADD migrations ./migrations
 ADD src ./src
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
@@ -43,6 +44,7 @@ RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
+COPY --from=builder /app/src/migrations /app/migrations
 COPY --from=ui-builder /app/dist /app/static
 
 EXPOSE 8000
