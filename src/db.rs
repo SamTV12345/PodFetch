@@ -113,7 +113,6 @@ impl DB{
             .order(date_of_recording.desc())
             .load::<PodcastEpisode>(&mut self.conn)
             .expect("Error loading podcasts");
-        println!("Podcasts found: {}", podcasts.len());
         Ok(podcasts)
     }
 
@@ -253,7 +252,6 @@ impl DB{
 
         match result {
             Some(found_podcast)=>{
-                println!("Found podcast: {:?}", found_podcast);
                 let new_time = found_podcast.total_time + time;
                 diesel::update(podcast_episodes)
                     .filter(episode_id_column.eq(episode_id))
