@@ -9,8 +9,11 @@ use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::middleware::Logger;
 use clokwerk::{Scheduler, TimeUnits};
+use diesel::QueryDsl;
+
 mod controllers;
 pub use controllers::user_controller::*;
+use crate::config::DBConfig::establish_connection;
 use crate::service::rust_service::{insert_podcast_episodes, schedule_episode_download};
 use crate::service::file_service::create_podcast_root_directory_exists;
 mod db;
@@ -18,16 +21,20 @@ mod models;
 mod constants;
 mod service;
 use crate::db::DB;
+use crate::models::itunes_models::Podcast;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::logging_service::init_logging;
-
+use diesel::prelude::*;
 mod config;
+pub mod schema;
+use diesel::query_builder::AsQuery;
+use diesel::RunQueryDsl;
 
 pub fn run_poll(){
     let db = DB::new().unwrap();
     //check for new episodes
-    let podcasts = db.get_podcasts().unwrap();
-    for podcast in podcasts {
+    let podcats_result = db.get_podcasts().unwrap();
+    for podcast in podcats_result {
     let podcast_clone = podcast.clone();
     insert_podcast_episodes(podcast);
     schedule_episode_download(podcast_clone);
@@ -42,6 +49,15 @@ async fn index() ->  impl Responder {
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
+    let connection = &mut establish_connection();
+
+    use self::schema::podcasts::dsl::*;
+    let results = podcasts
+        .limit(5)
+        .as_query()
+    .load::<Podcast>(connection)
+        ;
+
     EnvironmentService::print_banner();
     init_logging();
     DB::new().unwrap();

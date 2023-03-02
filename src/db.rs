@@ -1,11 +1,16 @@
 use std::time::SystemTime;
 use chrono::{DateTime, Utc};
+use diesel::RunQueryDsl;
 use feed_rs::model::Entry;
 use rusqlite::{Connection, params, Result, Statement};
 use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedModel, PodcastWatchedPostModel};
+use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastHistoryItem,
+                            PodcastWatchedPostModel};
 use crate::service::mapping_service::MappingService;
+use diesel::prelude::*;
+use crate::schema::podcast_episodes::dsl::podcast_episodes;
+use crate::schema::podcast_episodes::{date, id};
 
 
 pub struct DB{
@@ -16,36 +21,7 @@ pub struct DB{
 impl DB{
     pub fn new() -> Result<DB>{
         let conn = Connection::open(DB_NAME)?;
-        conn.execute("create table if not exists Podcast (
-             id integer primary key,
-             name text not null unique,
-             directory text not null,
-             rssfeed text not null,
-             image_url text not null)", []).expect("Error creating table");
-        conn.execute("create table if not exists podcast_episodes (
-             id integer primary key,
-             podcast_id integer not null,
-             episode_id TEXT not null,
-             name text not null,
-             url text not null,
-             date text not null,
-             image_url text not null,
-             total_time integer DEFAULT 0 not null,
-             local_url text DEFAULT '' not null,
-             local_image_url text DEFAULT '' not null,
-             description text DEFAULT '' not null,
-             FOREIGN KEY (podcast_id) REFERENCES Podcast(id))", []).expect("Error creating table");
-        conn.execute("CREATE INDEX IF NOT EXISTS podcast_episodes_podcast_id_index ON podcast_episodes (podcast_id)", []).expect("Error creating index");
         // status 0 = not downloaded, 1 = downloaded, 2 = error
-        conn.execute("create table if not exists queue (
-             id integer primary key,
-             podcast_id integer not null,
-             download_url text not null,
-             episode_id TEXT not null,
-             status integer not null,
-             FOREIGN KEY (podcast_id) REFERENCES Podcast(id),
-             FOREIGN KEY (episode_id) REFERENCES podcast_episodes(id))",
-                       []).expect("Error creating table");
         conn.execute("CREATE table if not exists Podcast_History (
              id integer primary key,
              podcast_id integer not null,
@@ -76,9 +52,9 @@ impl DB{
         Ok(podcasts)
     }
 
-    pub fn get_podcast(&self, id: i64) -> Result<Podcast>{
+    pub fn get_podcast(&self, podcast_id_to_be_found: i32) -> Result<Podcast>{
         let mut stmt = self.conn.prepare("select * from Podcast where id = ?1")?;
-        let podcast_iter = stmt.query_map([&id], |row| {
+        let podcast_iter = stmt.query_map([&podcast_id_to_be_found], |row| {
             Ok(Podcast {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -155,7 +131,12 @@ impl DB{
             .expect("Error inserting podcast into database");
     }
 
-    pub fn get_last_5_podcast_episodes(&self, podcast_id: i64) -> Result<Vec<PodcastEpisode>>{
+    pub fn get_last_5_podcast_episodes(&self, podcast_id: i32) -> Result<Vec<PodcastEpisode>>{
+        podcast_episodes.filter(id.eq(podcast_id))
+            .limit(5)
+            .order(date.desc())
+            .load::<PodcastEpisode>(&self.conn)
+            .expect("Error loading podcasts");
         let stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
         order by date(date) desc limit 5")?;
         Ok(Self::extract_podcast_episodes(stmt, podcast_id, ))
@@ -182,7 +163,7 @@ impl DB{
 
     }
 
-    fn extract_podcast_episodes(mut stmt: Statement, podcast_id: i64) -> Vec<PodcastEpisode>  {
+    fn extract_podcast_episodes(mut stmt: Statement, podcast_id: i32) -> Vec<PodcastEpisode>  {
         let podcast_iter = stmt.query_map([&podcast_id], |row| {
             Ok(PodcastEpisode {
                 id: row.get(0)?,
@@ -205,9 +186,9 @@ impl DB{
         return podcasts;
     }
 
-    fn extract_watchtime_log(mut stmt: Statement, podcast_episode_id: &str) -> Result<Option<PodcastWatchedModel>> {
+    fn extract_watchtime_log(mut stmt: Statement, podcast_episode_id: &str) -> Result<Option<PodcastHistoryItem>> {
         let mut podcast_iter = stmt.query_map([podcast_episode_id], |row| {
-            Ok(PodcastWatchedModel {
+            Ok(PodcastHistoryItem {
                 id: row.get(0)?,
                 podcast_id: row.get(1)?,
                 episode_id: row.get(2)?,
@@ -268,7 +249,7 @@ impl DB{
         }
     }
 
-    pub fn get_watchtime(&self, podcast_id: &str) ->Result<PodcastWatchedModel>{
+    pub fn get_watchtime(&self, podcast_id: &str) ->Result<PodcastHistoryItem>{
         let result = self.get_podcast_episode_by_id(podcast_id).unwrap();
 
         match result {
@@ -280,7 +261,7 @@ impl DB{
                         Ok(podcast)
                     }
                     Ok(None) => {
-                        Ok(PodcastWatchedModel {
+                        Ok(PodcastHistoryItem {
                             id: 0,
                             podcast_id: podcast.podcast_id,
                             episode_id: podcast.episode_id,
@@ -303,7 +284,7 @@ impl DB{
     pub fn get_last_watched_podcasts(&self) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>{
         let mut stmt = self.conn.prepare("SELECT * FROM (SELECT * FROM Podcast_History ORDER BY datetime(date) DESC) GROUP BY episode_id  LIMIT 10;")?;
         let podcast_iter = stmt.query_map([], |row| {
-            Ok(PodcastWatchedModel {
+            Ok(PodcastHistoryItem {
                 id: row.get(0)?,
                 podcast_id: row.get(1)?,
                 episode_id: row.get(2)?,

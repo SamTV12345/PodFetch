@@ -1,3 +1,6 @@
+use diesel::prelude::*;
+use crate::schema::*;
+
 #[derive(Debug, Serialize, Deserialize,Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ItunesModel {
@@ -44,26 +47,26 @@ pub struct ResponseModel {
     pub results: Vec<ItunesModel>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone)]
 pub struct Podcast {
-    pub(crate) id: i64,
+    pub(crate) id: i32,
     pub(crate) name: String,
     pub directory: String,
     pub(crate) rssfeed: String,
     pub image_url: String
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 pub struct PodcastEpisode {
     pub(crate) id: i64,
     pub(crate) podcast_id: i64,
     pub(crate) episode_id: String,
     pub(crate) name: String,
     pub(crate) url: String,
-    pub(crate) local_url: String,
-    pub(crate) local_image_url: String,
     pub(crate) date: String,
     pub image_url: String,
     pub total_time: u64,
+    pub(crate) local_url: String,
+    pub(crate) local_image_url: String,
     pub (crate) description: String
 }

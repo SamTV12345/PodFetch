@@ -1,4 +1,5 @@
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use diesel::prelude::*;
 
 // decode request data
 #[derive(Deserialize)]
@@ -27,9 +28,9 @@ pub struct PodcastWatchedPostModel {
     pub time: i64
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Queryable)]
 #[serde(rename_all = "camelCase")]
-pub struct PodcastWatchedModel {
+pub struct PodcastHistoryItem {
     pub id : i64,
     pub podcast_id: i64,
     pub episode_id: String,

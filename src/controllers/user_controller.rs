@@ -44,7 +44,7 @@ pub async fn find_all_podcasts() -> impl Responder {
 
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(id: web::Path<String>) -> impl Responder {
-    let id_num = from_str::<i64>(&id).unwrap();
+    let id_num = from_str::<i32>(&id).unwrap();
     let db = DB::new().unwrap();
     let mappingservice = MappingService::new();
     let podcast = db.get_podcast(id_num).unwrap();
