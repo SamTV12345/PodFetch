@@ -61,8 +61,6 @@ async fn main()-> std::io::Result<()> {
     DB::new().unwrap();
     create_podcast_root_directory_exists();
 
-
-
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
         let env = EnvironmentService::new();
@@ -100,15 +98,15 @@ async fn main()-> std::io::Result<()> {
             .service(find_podcast_by_id)
             .service(log_watchtime)
             .service(get_last_watched)
-            .service(get_watchtime)
+            .service(get_watchtime);
 
-            .wrap(Logger::default());
+           // .wrap(Logger::default());
         App::new().service(Files::new
             ("/podcasts", "podcasts").show_files_listing())
             .wrap(cors)
             .service(api)
             .service(ui)
-            .wrap(Logger::default())
+            //.wrap(Logger::default())
     }
     )
         .bind(("0.0.0.0", 8000))?
