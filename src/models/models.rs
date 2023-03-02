@@ -1,6 +1,6 @@
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use diesel::prelude::*;
-
+use diesel::sql_types::{Integer, Text};
 // decode request data
 #[derive(Deserialize)]
 pub struct UserData {
@@ -17,53 +17,58 @@ pub struct NewUser {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PodCastAddModel {
-    pub track_id: i64,
-    pub user_id: i64
+    pub track_id: i32,
+    pub user_id: i32
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedPostModel {
     pub podcast_episode_id: String,
-    pub time: i64
+    pub time: i32
 }
 
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone )]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastHistoryItem {
-    pub id : i64,
-    pub podcast_id: i64,
+    #[sql_type = "Integer"]
+    pub id : i32,
+    #[sql_type = "Integer"]
+    pub podcast_id: i32,
+    #[sql_type = "Text"]
     pub episode_id: String,
-    pub watched_time: i64,
+    #[sql_type = "Integer"]
+    pub watched_time: i32,
+    #[sql_type = "Text"]
     pub date: String
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModel {
-    pub id : i64,
-    pub podcast_id: i64,
+    pub id : i32,
+    pub podcast_id: i32,
     pub episode_id: String,
     pub url: String,
     pub name: String,
     pub image_url: String,
-    pub watched_time: i64,
+    pub watched_time: i32,
     pub date: String,
-    pub total_time: u64
+    pub total_time: i32
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
-    pub id : i64,
-    pub podcast_id: i64,
+    pub id : i32,
+    pub podcast_id: i32,
     pub episode_id: String,
     pub url: String,
     pub name: String,
     pub image_url: String,
-    pub watched_time: i64,
+    pub watched_time: i32,
     pub date: String,
-    pub total_time: u64,
+    pub total_time: i32,
     pub podcast_episode: PodcastEpisode,
     pub podcast: Podcast,
 }

@@ -29,7 +29,7 @@ pub fn insert_podcast_episodes(podcast: Podcast){
 
     let feed = parser::parse(&*bytes).unwrap();
     for (i,item) in feed.entries.iter().enumerate(){
-        let db = DB::new().unwrap();
+        let mut db = DB::new().unwrap();
         let result = db.get_podcast_episode_by_id(&item.id);
 
         if result.unwrap().is_none() {
@@ -42,9 +42,8 @@ pub fn insert_podcast_episodes(podcast: Podcast){
 }
 
 pub fn schedule_episode_download(podcast: Podcast){
-    let db = DB::new().unwrap();
+    let mut db = DB::new().unwrap();
     let result = db.get_last_5_podcast_episodes(podcast.id).unwrap();
-    println!("Result: {:?}", result);
     for podcast_episode in result {
 
         let podcast_episode_cloned = podcast_episode.clone();
@@ -63,14 +62,15 @@ pub fn schedule_episode_download(podcast: Podcast){
         let podcast_save_path = PathService::get_podcast_episode_path(&podcast.directory.clone(),
                                                                       &podcast_episode_cloned.episode_id,
                                                                       &suffix);
+        let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
+
+
         if !check_if_podcast_episode_downloaded(&podcast_cloned.directory, podcast_episode
             .episode_id) {
             let client = ClientBuilder::new().build().unwrap();
             let mut resp = client.get(podcast_episode.url).send().unwrap();
             let mut image_response = client.get(podcast_episode.image_url).send().unwrap();
 
-            println!("{}",format!("podcasts/{}/{}", podcast.directory,
-                             podcast_episode_cloned.episode_id));
             create_dir(format!("podcasts/{}/{}", podcast.directory,
                                podcast_episode_cloned.episode_id)).expect("Error creating directory");
 
@@ -85,11 +85,15 @@ pub fn schedule_episode_download(podcast: Podcast){
             }
 
             io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
-            let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
-
-            io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
             db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id, duration
-                .as_secs(), &image_save_path,
+                .as_secs() as i32, &image_save_path,
+                                                   &podcast_save_path.clone())
+                .expect("TODO: panic message");
+            io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
+        }
+        else{
+            db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id, duration
+                .as_secs() as i32, &image_save_path,
                                                    &podcast_save_path.clone())
                 .expect("Error saving total time of podcast episode.");
         }

@@ -3,6 +3,8 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::{thread};
+use std::env::var;
+use std::error::Error;
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
 use actix_cors::Cors;
@@ -25,13 +27,14 @@ use crate::models::itunes_models::Podcast;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::logging_service::init_logging;
 use diesel::prelude::*;
+
 mod config;
 pub mod schema;
-use diesel::query_builder::AsQuery;
-use diesel::RunQueryDsl;
+
+use crate::schema::podcasts::dsl::podcasts;
 
 pub fn run_poll(){
-    let db = DB::new().unwrap();
+    let mut db = DB::new().unwrap();
     //check for new episodes
     let podcats_result = db.get_podcasts().unwrap();
     for podcast in podcats_result {
@@ -49,14 +52,9 @@ async fn index() ->  impl Responder {
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
-    let connection = &mut establish_connection();
 
-    use self::schema::podcasts::dsl::*;
-    let results = podcasts
-        .limit(5)
-        .as_query()
-    .load::<Podcast>(connection)
-        ;
+    let conn = &mut establish_connection();
+
 
     EnvironmentService::print_banner();
     init_logging();

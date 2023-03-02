@@ -15,7 +15,7 @@ export type PodcastEpisode = {
     episode_id: string,
     name: string,
     url: string,
-    date: string,
+    date_of_recording: string,
     image_url: string,
     time: number,
     local_url: string,

@@ -1,367 +1,327 @@
+use std::process::id;
 use std::time::SystemTime;
 use chrono::{DateTime, Utc};
-use diesel::RunQueryDsl;
+use diesel::{insert_into, RunQueryDsl, sql_query};
+use diesel::associations::HasTable;
+use diesel::dsl::sql;
 use feed_rs::model::Entry;
-use rusqlite::{Connection, params, Result, Statement};
 use crate::constants::constants::DB_NAME;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastHistoryItem,
                             PodcastWatchedPostModel};
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
+use crate::config::DBConfig::establish_connection;
+use crate::schema::podcast_episodes::date_of_recording;
 use crate::schema::podcast_episodes::dsl::podcast_episodes;
-use crate::schema::podcast_episodes::{date, id};
+use crate::schema::podcast_history_items::dsl::podcast_history_items;
+
 
 
 pub struct DB{
-    conn: Connection,
+    conn: SqliteConnection,
     mapping_service: MappingService
 }
 
 impl DB{
-    pub fn new() -> Result<DB>{
-        let conn = Connection::open(DB_NAME)?;
-        // status 0 = not downloaded, 1 = downloaded, 2 = error
-        conn.execute("CREATE table if not exists Podcast_History (
-             id integer primary key,
-             podcast_id integer not null,
-             episode_id TEXT not null,
-             watched_time integer not null,
-             date text not null,
-             FOREIGN KEY (podcast_id) REFERENCES Podcast(id))",
-                       []).expect("Error creating table");
+    pub fn new() -> Result<DB, String>{
+        let conn = establish_connection();
         Ok(DB{conn, mapping_service: MappingService::new()})
     }
 
-    pub fn get_podcasts(&self) -> Result<Vec<Podcast>>{
-        let mut stmt = self.conn.prepare("select * from Podcast")?;
-        let podcast_iter = stmt.query_map([], |row| {
-            Ok(Podcast {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                directory: row.get(2)?,
-                rssfeed: row.get(3)?,
-                image_url: row.get(4)?
-            })
-        })?;
-
-        let mut podcasts = Vec::new();
-        for podcast in podcast_iter {
-            podcasts.push(podcast?);
-        }
-        Ok(podcasts)
+    pub fn get_podcasts(&mut self) -> Result<Vec<Podcast>, String>{
+        use crate::schema::podcasts::dsl::podcasts;
+        let result = podcasts
+            .load::<Podcast>(&mut self.conn)
+            .expect("Error loading podcasts");
+        Ok(result)
     }
 
-    pub fn get_podcast(&self, podcast_id_to_be_found: i32) -> Result<Podcast>{
-        let mut stmt = self.conn.prepare("select * from Podcast where id = ?1")?;
-        let podcast_iter = stmt.query_map([&podcast_id_to_be_found], |row| {
-            Ok(Podcast {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                directory: row.get(2)?,
-                rssfeed: row.get(3)?,
-                image_url: row.get(4)?
-            })
-        })?;
+    pub fn get_podcast(&mut self, podcast_id_to_be_found: i32) -> Result<Podcast, String>{
+        use crate::schema::podcasts::{directory, id as podcast_id, rssfeed};
+        use crate::schema::podcasts::dsl::podcasts;
+        let found_podcast = podcasts
+            .filter(podcast_id.eq(podcast_id_to_be_found))
+            .first::<Podcast>(&mut self.conn)
+            .expect("Error loading podcast by id");
 
-        let mut podcasts = Vec::new();
-        for podcast in podcast_iter {
-            podcasts.push(podcast?);
-        }
-        Ok(podcasts[0].clone())
+        Ok(found_podcast)
     }
 
-    pub fn get_podcast_episode_by_id(&self, podcast_id: &str) -> Result<Option<PodcastEpisode>>{
-        let mut stmt = self.conn.prepare("select * from podcast_episodes where episode_id = ?1")?;
-        let mut podcast_iter = stmt.query_map([&podcast_id], |row| {
-            Ok(PodcastEpisode {
-                id: row.get(0)?,
-                podcast_id: row.get(1)?,
-                episode_id: row.get(2)?,
-                name: row.get(3)?,
-                url: row.get(4)?,
-                date: row.get(5)?,
-                image_url: row.get(6)?,
-                total_time: row.get(7)?,
-                local_url: row.get(8)?,
-                local_image_url: row.get(9)?,
-                description: row.get(10)?
-            })
-        })?;
+    pub fn get_podcast_episode_by_id(&mut self, podcas_episode_id_to_be_found: &str) ->
+                                                                   Result<Option<PodcastEpisode>, String>{
+        use crate::schema::podcast_episodes::{date_of_recording, description, episode_id, id as podcast_episode_id, name, url};
+        use crate::schema::podcast_episodes::dsl::*;
 
-        let iter = podcast_iter.next().map(|podcast| podcast.unwrap());
-        Ok(iter)
+        use diesel::OptionalExtension;
+        let found_podcast_episode = podcast_episodes
+            .filter(episode_id.eq(podcas_episode_id_to_be_found))
+            .first::<PodcastEpisode>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast by id");
+
+        Ok(found_podcast_episode)
     }
 
 
-    pub fn get_podcast_episode_by_track_id(&self, podcast_id: i64) ->
-                                                                   Result<Option<Podcast>>{
-        let mut stmt = self.conn.prepare("select * from Podcast where directory = ?1")?;
-        let mut podcast_iter = stmt.query_map([&podcast_id], |row| {
-            Ok(Podcast {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                directory: row.get(2)?,
-                rssfeed: row.get(3)?,
-                image_url: row.get(4)?
-            })
-        })?;
+    pub fn get_podcast_episode_by_track_id(&mut self, podcast_id: i32) ->
+                                                                   Result<Option<Podcast>, String>{
+        use crate::schema::podcasts::{directory, id, rssfeed};
+        use crate::schema::podcasts::dsl::podcasts;
+        let optional_podcast = podcasts
+            .filter(directory.eq(podcast_id.to_string()))
+            .first::<Podcast>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast by id");
 
-        let iter = podcast_iter.next().map(|podcast| podcast.unwrap());
-        Ok(iter)
+        Ok(optional_podcast)
     }
 
-    pub fn insert_podcast_episodes(&self, podcast: Podcast, link: &str, item: &Entry, image_url:
-    &str, episode_description: &str){
-        self.conn.execute("INSERT INTO podcast_episodes (podcast_id,\
-                        episode_id, name, url, date, image_url, description) VALUES (?1,?2, ?3, ?4, \
-                        ?5, ?6, ?7)",
-                                  (&podcast.id, &item.id, &item.title.as_ref()
-                                      .unwrap()
-                                      .content,
-                                   link, &item.published.unwrap(), image_url, episode_description))
+    pub fn insert_podcast_episodes(&mut self, podcast: Podcast, link: &str, item: &Entry,
+                                   image_url_1: &str, episode_description: &str){
+        use crate::schema::podcast_episodes::dsl::*;
+
+        insert_into(podcast_episodes)
+            .values((
+                podcast_id.eq(podcast.id),
+                episode_id.eq(&item.id),
+                name.eq(item.title.as_ref().unwrap().clone().content),
+                url.eq(link.to_string()),
+                date_of_recording.eq(&item.published.unwrap().to_rfc3339()),
+                image_url.eq(image_url_1.to_string()),
+                description.eq(episode_description)
+            ))
+            .execute(&mut self.conn)
             .expect("Error inserting podcast episode");
     }
 
-    pub fn add_podcast_to_database(&self, collection_name:String, collection_id:String,
-                                   feed_url:String, image_url: String){
-        self.conn.execute("INSERT INTO Podcast (name, directory, rssfeed, image_url) VALUES (?1, \
-        ?2, ?3, ?4)",
-                                  [collection_name, collection_id, feed_url, image_url])
-            .expect("Error inserting podcast into database");
+    pub fn add_podcast_to_database(&mut self, collection_name:String, collection_id:String,
+                                   feed_url:String, image_url_1: String){
+        use crate::schema::podcasts::{directory, id, rssfeed, name as podcast_name, image_url};
+        use crate::schema::podcasts;
+
+        insert_into(podcasts::table)
+            .values((
+                directory.eq(collection_id.to_string()),
+                podcast_name.eq(collection_name.to_string()),
+                rssfeed.eq(feed_url.to_string()),
+                image_url.eq(image_url_1.to_string())
+            ))
+            .execute(&mut self.conn)
+            .expect("Error inserting podcast");
     }
 
-    pub fn get_last_5_podcast_episodes(&self, podcast_id: i32) -> Result<Vec<PodcastEpisode>>{
-        podcast_episodes.filter(id.eq(podcast_id))
+    pub fn get_last_5_podcast_episodes(&mut self, podcast_episode_id: i32) ->
+                                                                      Result<Vec<PodcastEpisode>,
+                                                                          String>{
+        use crate::schema::podcast_episodes::{date_of_recording, description, episode_id,
+                                              podcast_id, id as
+        pid, name, url};
+        let podcasts = podcast_episodes
+            .filter(podcast_id.eq(podcast_episode_id))
             .limit(5)
-            .order(date.desc())
-            .load::<PodcastEpisode>(&self.conn)
+            .order(date_of_recording.desc())
+            .load::<PodcastEpisode>(&mut self.conn)
             .expect("Error loading podcasts");
-        let stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
-        order by date(date) desc limit 5")?;
-        Ok(Self::extract_podcast_episodes(stmt, podcast_id, ))
+        println!("Podcasts found: {}", podcasts.len());
+        Ok(podcasts)
     }
 
 
-    pub fn get_podcast_episodes_of_podcast(&self, podcast_id: i64,  last_id: Option<String>) ->
-                                                                      Result<Vec<PodcastEpisode>>{
-        let stmt:Statement;
+    pub fn get_podcast_episodes_of_podcast(&mut self, podcast_id_to_be_searched: i32, last_id:
+    Option<String>) ->
+                                                                      Result<Vec<PodcastEpisode>, String>{
+        use crate::schema::podcast_episodes::*;
         match last_id {
             Some(last_id) => {
-                 stmt = self.conn.prepare("select * from podcast_episodes where podcast_id = ?1 \
-        AND date(date) < ?2 \
-        order by date(date) desc LIMIT 75")?;
-                Ok(Self::extract_statement_with_episode(stmt, podcast_id, last_id))
+                let podcasts_found = podcast_episodes.filter(podcast_id.eq(podcast_id_to_be_searched))
+                    .filter(date_of_recording.lt(last_id))
+                    .order(date_of_recording.desc())
+                    .limit(75)
+                    .load::<PodcastEpisode>(&mut self.conn)
+                    .expect("Error loading podcasts");
+                Ok(podcasts_found)
             }
             None => {
-                stmt = self.conn.prepare("select * from podcast_episodes where podcast_id\
-                 = ?1 LIMIT 75")?;
-                Ok(Self::extract_podcast_episodes(stmt, podcast_id))
+                let podcasts_found = podcast_episodes.filter(podcast_id.eq(podcast_id_to_be_searched))
+                    .order(date_of_recording.desc())
+                    .limit(75)
+                    .load::<PodcastEpisode>(&mut self.conn)
+                    .expect("Error loading podcasts");
+
+                Ok(podcasts_found)
             }
         }
 
 
     }
 
-    fn extract_podcast_episodes(mut stmt: Statement, podcast_id: i32) -> Vec<PodcastEpisode>  {
-        let podcast_iter = stmt.query_map([&podcast_id], |row| {
-            Ok(PodcastEpisode {
-                id: row.get(0)?,
-                podcast_id: row.get(1)?,
-                episode_id: row.get(2)?,
-                name: row.get(3)?,
-                url: row.get(4)?,
-                date: row.get(5)?,
-                image_url: row.get(6)?,
-                total_time: row.get(7)?,
-                local_url: row.get(8)?,
-                local_image_url: row.get(9)?,
-                description: row.get(10)?
-            })
-        }).unwrap();
-        let mut podcasts = Vec::new();
-        for podcast in podcast_iter {
-            podcasts.push(podcast.unwrap());
-        }
-        return podcasts;
-    }
-
-    fn extract_watchtime_log(mut stmt: Statement, podcast_episode_id: &str) -> Result<Option<PodcastHistoryItem>> {
-        let mut podcast_iter = stmt.query_map([podcast_episode_id], |row| {
-            Ok(PodcastHistoryItem {
-                id: row.get(0)?,
-                podcast_id: row.get(1)?,
-                episode_id: row.get(2)?,
-                watched_time: row.get(3)?,
-                date: row.get(4)?,
-
-            })
-        }).unwrap();
-        let iter = podcast_iter.next().map(|podcast| podcast.unwrap());
-        Ok(iter)
-    }
-
-
-    fn extract_statement_with_episode(mut stmt: Statement, podcast_id: i64,podcast_episode: String )
-        ->
-                                                                               Vec<PodcastEpisode> {
-        let podcast_iter = stmt.query_map(params![podcast_id, podcast_episode], |row| {
-            Ok(PodcastEpisode {
-                id: row.get(0)?,
-                podcast_id: row.get(1)?,
-                episode_id: row.get(2)?,
-                name: row.get(3)?,
-                url: row.get(4)?,
-                date: row.get(5)?,
-                image_url: row.get(6)?,
-                total_time: row.get(7)?,
-                local_url: row.get(8)?,
-                local_image_url: row.get(9)?,
-                description: row.get(10)?
-            })
-        }).unwrap();
-        let mut podcasts = Vec::new();
-        for podcast in podcast_iter {
-            podcasts.push(podcast.unwrap());
-        }
-        return podcasts;
-    }
-
-    pub fn log_watchtime(&self, watch_model: PodcastWatchedPostModel)->Result<()> {
+    pub fn log_watchtime(&mut self, watch_model: PodcastWatchedPostModel) ->Result<(), String> {
         let result = self.get_podcast_episode_by_id(&watch_model.podcast_episode_id).unwrap();
 
+        use crate::schema::podcast_history_items;
         match result {
-            Some(podcast_episode) => {
+            Some(result)=>{
                 let now = SystemTime::now();
                 let now: DateTime<Utc> = now.into();
                 let now: &str = &now.to_rfc3339();
-                self.conn.execute("INSERT INTO Podcast_History (podcast_id, episode_id, \
-                watched_time, date) VALUES (?1, \
-        ?2, ?3, ?4)",
-                                  (&podcast_episode.podcast_id, &podcast_episode.episode_id,
-                                   &watch_model.time, &now))
-                    .expect("TODO: panic message");
+                insert_into(podcast_history_items)
+                    .values((
+                        podcast_history_items::podcast_id.eq(result.podcast_id),
+                        podcast_history_items::episode_id.eq(result.episode_id),
+                        podcast_history_items::watched_time.eq(watch_model.time),
+                        podcast_history_items::date.eq(&now),
+                    ))
+                    .execute(&mut self.conn)
+                    .expect("Error inserting podcast episode");
                 Ok(())
             }
-            None => {
-                panic!("Podcast not found")
+            None=>{
+                panic!("Podcast episode not found");
             }
         }
     }
 
-    pub fn get_watchtime(&self, podcast_id: &str) ->Result<PodcastHistoryItem>{
+    pub fn get_watchtime(&mut self, podcast_id: &str) ->Result<PodcastHistoryItem, String>{
         let result = self.get_podcast_episode_by_id(podcast_id).unwrap();
+        use crate::schema::podcast_history_items;
 
         match result {
-            Some(podcast) => {
-                let stmt = self.conn.prepare("SELECT * FROM PODCAST_HISTORY WHERE episode_id \
-                = ?1 ORDER BY datetime(date) DESC LIMIT 1")?;
-                match Self::extract_watchtime_log(stmt, podcast_id ){
-                    Ok(Some(podcast)) => {
-                        Ok(podcast)
+            Some(found_podcast)=>{
+
+                let history_item = podcast_history_items
+                    .filter(podcast_history_items::episode_id.eq(podcast_id))
+                    .first::<PodcastHistoryItem>(&mut self.conn)
+                    .optional()
+                    .expect("Error loading podcast episode by id");
+                return match history_item {
+                    Some(found_history_item) => {
+                        Ok(found_history_item)
                     }
-                    Ok(None) => {
+                    None => {
                         Ok(PodcastHistoryItem {
                             id: 0,
-                            podcast_id: podcast.podcast_id,
-                            episode_id: podcast.episode_id,
+                            podcast_id: found_podcast.podcast_id,
+                            episode_id: found_podcast.episode_id,
                             watched_time: 0,
                             date: "".to_string(),
                         })
                     }
-                    Err(e) => {
-                        panic!("Error: {}", e)
-                    }
                 }
             }
-            None => {
-                panic!("Podcast not found")
+            None=>{
+                panic!("Podcast episode not found");
             }
         }
     }
 
 
-    pub fn get_last_watched_podcasts(&self) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>{
-        let mut stmt = self.conn.prepare("SELECT * FROM (SELECT * FROM Podcast_History ORDER BY datetime(date) DESC) GROUP BY episode_id  LIMIT 10;")?;
-        let podcast_iter = stmt.query_map([], |row| {
-            Ok(PodcastHistoryItem {
-                id: row.get(0)?,
-                podcast_id: row.get(1)?,
-                episode_id: row.get(2)?,
-                watched_time: row.get(3)?,
-                date: row.get(4)?,
-            })
-        })?;
+    pub fn get_last_watched_podcasts(&mut self)
+        -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
+        use crate::schema::podcast_history_items::*;
 
-        let podcast_watch_episode = podcast_iter.map(|podcast_watched_model| {
-            let podcast_watched_model = podcast_watched_model.unwrap();
-            let optional_podcast = self.get_podcast_episode_by_id(&podcast_watched_model.episode_id)
+        let result = sql_query("SELECT * FROM (SELECT * FROM podcast_history_items ORDER BY \
+        datetime\
+        (date) \
+        DESC) GROUP BY episode_id  LIMIT 10;")
+            .load::<PodcastHistoryItem>(&mut self.conn)
+            .unwrap();
+
+        let podcast_watch_episode = result.iter().map(|podcast_watch_model|{
+            let optional_podcast = self.get_podcast_episode_by_id(&podcast_watch_model.episode_id)
                 .unwrap();
+        match optional_podcast {
+            Some(podcast_episode) => {
 
-            match optional_podcast {
-                Some(podcast_episode) => {
-                    let podcast_dto = self.mapping_service.map_podcastepisode_to_dto(&podcast_episode);
-                    let podcast = self.get_podcast(podcast_episode.podcast_id).unwrap();
-                    PodcastWatchedEpisodeModelWithPodcastEpisode{
-                        id: podcast_watched_model.id,
-                        watched_time: podcast_watched_model.watched_time,
-                        podcast_id: podcast_watched_model.podcast_id,
-                        episode_id: podcast_watched_model.episode_id,
-                        date: podcast_watched_model.date,
-                        url: podcast_episode.clone().url,
-                        name: podcast_episode.clone().name,
-                        image_url: podcast_episode.clone().image_url,
-                        total_time: podcast_episode.clone().total_time,
-                        podcast_episode: podcast_dto,
-                        podcast
-                    }
-                }
-                None => {
-                    panic!("Podcast not found");
-                }
+                let podcast_dto = self.mapping_service.map_podcastepisode_to_dto(&podcast_episode);
+                let podcast = self.get_podcast(podcast_episode.podcast_id).unwrap();
+                let podcast_watch_model = self.mapping_service
+                    .map_podcast_history_item_to_with_podcast_episode(&podcast_watch_model.clone(),
+                                                                      podcast_dto, podcast);
+                return podcast_watch_model
             }
-        }).collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
+            None => {
+                panic!("Podcast episode not found");
+            }
+        }
+
+    }).collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
         Ok(podcast_watch_episode)
     }
 
-    pub fn update_total_podcast_time_and_image(&self, episode_id: &str, time: u64, image_url:
-        &str, url: &str ) -> Result<()> {
-        let result = self.get_podcast_episode_by_id(episode_id).unwrap();
+    pub fn update_total_podcast_time_and_image(&mut self, episode_id: &str, time: i32, image_url:
+    &str, url: &str ) -> Result<(), String> {
+        use crate::schema::podcast_episodes;
+        use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
+        use crate::schema::podcast_episodes::dsl::total_time as total_time_column;
+        use crate::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
+        use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
+
+        let result = podcast_episodes
+            .filter(episode_id_column.eq(episode_id))
+            .first::<PodcastEpisode>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast episode by id");
 
         match result {
-            Some(podcast) => {
-                let mut stmt = self.conn.prepare("UPDATE podcast_episodes SET total_time = ?1, \
-                local_image_url = ?3, local_url = ?4 \
-                WHERE episode_id = ?2")?;
-                stmt.execute(params![time, podcast.episode_id, &image_url, &url])?;
+            Some(found_podcast)=>{
+                println!("Found podcast: {:?}", found_podcast);
+                let new_time = found_podcast.total_time + time;
+                let query = diesel::update(podcast_episodes)
+                    .filter(episode_id_column.eq(episode_id))
+                    .set((
+                        total_time_column.eq(new_time),
+                        local_image_url_column.eq(image_url),
+                        local_url_column.eq(url)
+                    ))
+                    .execute(&mut self.conn)
+                    .expect("Error updating local image url");
                 Ok(())
             }
-            None => {
-                panic!("Podcast not found")
+            None=>{
+                panic!("Podcast episode not found");
             }
         }
     }
 
-    pub fn update_podcast_image(self,id: &str, image_url: &str) -> Result<()> {
-        let mut stmt = self.conn.prepare("UPDATE Podcast Set image_url = ?1 \
-        WHERE directory = ?2")?;
-        println!("{} {}", image_url, id);
-        stmt.execute(params![&image_url, id])?;
-        Ok(())
+    pub fn update_podcast_image(mut self, id: &str, image_url: &str)
+        -> Result<(), String> {
+        use crate::schema::podcasts;
+        use crate::schema::podcasts::dsl::id as id_column;
+        use crate::schema::podcasts::dsl::image_url as image_url_column;
+        use crate::schema::podcasts::dsl::directory;
+        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+
+        let result = dsl_podcast
+            .filter(directory.eq(id))
+            .first::<Podcast>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast episode by id");
+        match result {
+            Some(found_podcast)=>{
+                diesel::update(dsl_podcast.filter(directory.eq(id)))
+                    .set(image_url_column.eq(image_url))
+                    .execute(&mut self.conn)
+                    .expect("Error updating podcast episode");
+                Ok(())
+            }
+            None=>{
+                panic!("Podcast episode not found");
+            }
+        }
     }
 
-    pub fn get_podcast_by_directory(self, podcast_id: &str)->Result<Option<Podcast>>{
-        let mut stmt = self.conn.prepare("SELECT * FROM Podcast WHERE directory = ?1")?;
-        let mut podcast_iter = stmt.query_map([podcast_id], |row| {
-            Ok(Podcast {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                directory: row.get(2)?,
-                rssfeed: row.get(3)?,
-                image_url: row.get(4)?
-            })
-        })?;
-        let iter = podcast_iter.next().map(|podcast| podcast.unwrap());
-        Ok(iter)
+    pub fn get_podcast_by_directory(mut self, podcast_id: &str)
+        ->Result<Option<Podcast>, String>{
+        use crate::schema::podcasts;
+        use crate::schema::podcasts::dsl::directory;
+        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+        let result = dsl_podcast
+            .filter(directory.eq(podcast_id))
+            .first::<Podcast>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast episode by id");
+        Ok(result)
+
     }
 }

@@ -60,12 +60,12 @@ export const PodcastDetailPage = () => {
                         </div>
                         <span key={episode.episode_id+"name"}>{episode.name}</span>
                         <span>{removeHTML(episode.description)}</span>
-                        <span key={episode.episode_id+"date"}>{formatTime(episode.date)}</span>
+                        <span key={episode.episode_id+"date"}>{formatTime(episode.date_of_recording)}</span>
                     </div>
                         <hr className="border-gray-500" key={index+"hr"}/>
                         {
                             index===selectedEpisodes.length-5&&<Waypoint key={index+"waypoint"} onEnter={()=>{
-                                axios.get(apiURL+"/podcast/"+params.id+"/episodes?last_podcast_episode="+episode.date)
+                                axios.get(apiURL+"/podcast/"+params.id+"/episodes?last_podcast_episode="+episode.date_of_recording)
                                     .then((response)=>{
                                     dispatch(setSelectedEpisodes([...selectedEpisodes, ...response.data]))
                                 })
