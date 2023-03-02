@@ -62,7 +62,6 @@ pub fn schedule_episode_download(podcast: Podcast){
         let podcast_save_path = PathService::get_podcast_episode_path(&podcast.directory.clone(),
                                                                       &podcast_episode_cloned.episode_id,
                                                                       &suffix);
-        let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
 
 
         if !check_if_podcast_episode_downloaded(&podcast_cloned.directory, podcast_episode
@@ -85,6 +84,8 @@ pub fn schedule_episode_download(podcast: Podcast){
             }
 
             io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
+            let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
+
             db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id, duration
                 .as_secs() as i32, &image_save_path,
                                                    &podcast_save_path.clone())
@@ -92,6 +93,7 @@ pub fn schedule_episode_download(podcast: Podcast){
             io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
         }
         else{
+            let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
             db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id, duration
                 .as_secs() as i32, &image_save_path,
                                                    &podcast_save_path.clone())
