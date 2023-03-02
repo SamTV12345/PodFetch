@@ -1,3 +1,7 @@
+use diesel::prelude::*;
+use crate::schema::*;
+use diesel::sql_types::Integer;
+use diesel::sql_types::Text;
 #[derive(Debug, Serialize, Deserialize,Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ItunesModel {
@@ -44,26 +48,33 @@ pub struct ResponseModel {
     pub results: Vec<ItunesModel>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone)]
 pub struct Podcast {
-    pub(crate) id: i64,
+    #[diesel(sql_type = Integer)]
+    pub(crate) id: i32,
+    #[diesel(sql_type = Text)]
     pub(crate) name: String,
+    #[diesel(sql_type = Text)]
     pub directory: String,
+    #[diesel(sql_type = Text)]
+
     pub(crate) rssfeed: String,
+    #[diesel(sql_type = Text)]
+
     pub image_url: String
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug)]
 pub struct PodcastEpisode {
-    pub(crate) id: i64,
-    pub(crate) podcast_id: i64,
+    pub(crate) id: i32,
+    pub(crate) podcast_id: i32,
     pub(crate) episode_id: String,
     pub(crate) name: String,
     pub(crate) url: String,
+    pub(crate) date_of_recording: String,
+    pub image_url: String,
+    pub total_time: i32,
     pub(crate) local_url: String,
     pub(crate) local_image_url: String,
-    pub(crate) date: String,
-    pub image_url: String,
-    pub total_time: u64,
     pub (crate) description: String
 }
