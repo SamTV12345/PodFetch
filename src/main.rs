@@ -1,3 +1,5 @@
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
@@ -11,6 +13,7 @@ use clokwerk::{Scheduler, TimeUnits};
 
 mod controllers;
 pub use controllers::user_controller::*;
+use crate::config::dbconfig::establish_connection;
 use crate::service::rust_service::{insert_podcast_episodes, schedule_episode_download};
 use crate::service::file_service::create_podcast_root_directory_exists;
 mod db;
@@ -23,6 +26,7 @@ use crate::service::logging_service::init_logging;
 
 mod config;
 pub mod schema;
+
 
 
 pub fn run_poll(){
@@ -42,8 +46,15 @@ async fn index() ->  impl Responder {
         .body(include_str!("../static/index.html"))
 }
 
+
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
+
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
+    println!("cargo:rerun-if-changed=./Cargo.toml");
+
+    let mut connection = establish_connection();
+    connection.run_pending_migrations(MIGRATIONS).unwrap();
 
     EnvironmentService::print_banner();
     init_logging();
