@@ -31,15 +31,15 @@ pub struct PodcastWatchedPostModel {
 #[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone )]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastHistoryItem {
-    #[sql_type = "Integer"]
+    #[diesel(sql_type = Integer)]
     pub id : i32,
-    #[sql_type = "Integer"]
+    #[diesel(sql_type = Integer)]
     pub podcast_id: i32,
-    #[sql_type = "Text"]
+    #[diesel(sql_type = Text)]
     pub episode_id: String,
-    #[sql_type = "Integer"]
+    #[diesel(sql_type = Integer)]
     pub watched_time: i32,
-    #[sql_type = "Text"]
+    #[diesel(sql_type = Text)]
     pub date: String
 }
 
