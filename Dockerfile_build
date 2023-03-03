@@ -27,7 +27,7 @@ RUN apk add pkgconfig openssl-dev libc-dev
 
 COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
 COPY --from=dependency-cache /app/src/target/ /app/src/target/
-
+COPY --from=ui-builder /app/dist /app/static
 RUN rm -rf /app/src/target/release/deps/podgrabv2*
 RUN rm -rf /app/src/target/release/podgrabv2*
 

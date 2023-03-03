@@ -91,7 +91,8 @@ async fn main()-> std::io::Result<()> {
             .route("/podcasts", web::get().to(index))
             .route("/podcasts/{id}", web::get().to(index))
             .route("/home", web::get().to(index))
-            .service(Files::new("/", "./static").index_file("index.html"));
+            .service(Files::new("/", "./static").index_file("index.html"))
+            .service(Files::new("/assets", "./static/assets"));
 
 
         let api = web::scope("/api/v1")
