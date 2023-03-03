@@ -9,6 +9,7 @@ use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
 use actix_cors::Cors;
 use actix_files::Files;
+use actix_web::web::{redirect};
 use clokwerk::{Scheduler, TimeUnits};
 
 mod controllers;
@@ -86,9 +87,13 @@ async fn main()-> std::io::Result<()> {
             .max_age(3600);
 
         let ui = web::scope("/ui")
-            .route("/{path:[^.]*}", web::get().to(index))
+            .service(redirect("","/ui/"))
+            .route("/", web::get().to(index))
+            .route("/index.html", web::get().to(index))
+            .route("/podcasts", web::get().to(index))
+            .route("/podcasts/{id}", web::get().to(index))
+            .route("/home", web::get().to(index))
             .service(Files::new("", "./static").index_file("index.html"));
-
 
         let api = web::scope("/api/v1")
             .service(find_podcast)
@@ -103,6 +108,7 @@ async fn main()-> std::io::Result<()> {
            // .wrap(Logger::default());
         App::new().service(Files::new
             ("/podcasts", "podcasts").show_files_listing())
+            .service(redirect("/","/ui/"))
             .wrap(cors)
             .service(api)
             .service(ui)
