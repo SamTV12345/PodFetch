@@ -13,10 +13,6 @@ export const SideBar  = ()=>{
                 <SideBarItem highlightPath={'/home'} translationkey={t('homepage')} icon={<i className="fa-solid fa-house fa-xl"></i>}/>
                 <SideBarItem highlightPath={'/podcasts'} translationkey={t('podcasts')} icon={<i className="fa-solid fa-guitar   fa-xl"></i>
                 }/>
-                <SideBarItem highlightPath={'/folder'} translationkey={t('folderView')} icon={<i className="fa-solid fa-folder fa-xl"></i>}/>
-                <SideBarItem highlightPath={'/notes'} translationkey={t('notesView')} icon={<i className="fa-solid fa-note-sticky fa-xl"></i>}/>
-                <SideBarItem highlightPath={'/concerts'} translationkey={t('concertView')} icon={<i className="fa-solid fa-ticket fa-xl"></i>}/>
-                <SideBarItem highlightPath={'/io'} translationkey={t('io')} icon={<i className="fa-solid fa-download fa-xl"></i>}/>
             </ul>
         </div>
     </aside>
