@@ -34,3 +34,7 @@
 .play-button-background:hover > *{
     @apply visible opacity-100;
 }
+
+#audio-bottom-bar:hover >* {
+    @apply visible opacity-100;
+}

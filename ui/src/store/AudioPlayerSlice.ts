@@ -4,7 +4,7 @@ import {Podcast, PodcastEpisode} from "./CommonSlice";
 type AudioMetadata = {
     currentTime: number,
     duration: number,
-    percentage: number,
+    percentage: number
 }
 
 type AudioPlayerProps = {

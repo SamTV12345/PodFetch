@@ -46,7 +46,7 @@ export const PodcastDetailPage = () => {
             {
                 selectedEpisodes.map((episode, index)=>{
                     return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr_3fr_auto] gap-4 mr-5">
-                        <div className="flex align-baseline" key={episode.episode_id+"container"}>
+                        <div className="grid place-items-center" key={episode.episode_id+"container"}>
                             <PlayIcon className="h-6" key={episode.episode_id+"icon"} podcast={currentPodcastEpisode} onClick={()=>{
                                 axios.get(apiURL+"/podcast/episode/"+episode.episode_id)
                                     .then((response: AxiosResponse<PodcastWatchedModel>)=>{

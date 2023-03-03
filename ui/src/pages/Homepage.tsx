@@ -37,12 +37,15 @@ export const Homepage = () => {
                                             ...v.podcastEpisode,
                                             time: response.data.watchedTime
                                         }))
+                                        console.log(response.data.watchedTime)
                                         dispatch(setCurrentPodcast(v.podcast))
                                     })
                             }}/>
                         </div>
                     </div>
-                    <div className="bg-blue-900 h-2" style={{width: (v.watchedTime/v.totalTime)*100+"%"}}></div>
+                    <div className="relative border-box w-11/12">
+                        <div className="bg-blue-900 h-2" style={{width: (v.watchedTime/v.totalTime)*100+"%"}}></div>
+                    </div>
                     <div className="p-5">
                             <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{v.name}</h5>
                     </div>

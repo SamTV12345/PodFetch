@@ -70,11 +70,13 @@ impl DB{
     }
 
     pub fn insert_podcast_episodes(&mut self, podcast: Podcast, link: &str, item: &Entry,
-                                   image_url_1: &str, episode_description: &str){
+                                   image_url_1: &str, episode_description: &str,
+                                   total_time_of_podcast: i32){
         use crate::schema::podcast_episodes::dsl::*;
 
         insert_into(podcast_episodes)
             .values((
+                total_time.eq(total_time_of_podcast),
                 podcast_id.eq(podcast.id),
                 episode_id.eq(&item.id),
                 name.eq(item.title.as_ref().unwrap().clone().content),
@@ -180,6 +182,7 @@ impl DB{
 
                 let history_item = podcast_history_items
                     .filter(podcast_history_items::episode_id.eq(podcast_id))
+                    .order(podcast_history_items::date.desc())
                     .first::<PodcastHistoryItem>(&mut self.conn)
                     .optional()
                     .expect("Error loading podcast episode by id");
@@ -237,10 +240,9 @@ impl DB{
         Ok(podcast_watch_episode)
     }
 
-    pub fn update_total_podcast_time_and_image(&mut self, episode_id: &str, time: i32, image_url:
+    pub fn update_total_podcast_time_and_image(&mut self, episode_id: &str, image_url:
     &str, url: &str ) -> Result<(), String> {
         use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
-        use crate::schema::podcast_episodes::dsl::total_time as total_time_column;
         use crate::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
         use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
 
@@ -251,12 +253,10 @@ impl DB{
             .expect("Error loading podcast episode by id");
 
         match result {
-            Some(found_podcast)=>{
-                let new_time = found_podcast.total_time + time;
+            Some(..)=>{
                 diesel::update(podcast_episodes)
                     .filter(episode_id_column.eq(episode_id))
                     .set((
-                        total_time_column.eq(new_time),
                         local_image_url_column.eq(image_url),
                         local_url_column.eq(url)
                     ))

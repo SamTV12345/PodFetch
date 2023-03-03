@@ -7,6 +7,19 @@ type ProgressBarProps = {
     audioplayerRef: React.RefObject<HTMLAudioElement>
 }
 
+const convertToMinutes = (time: number|undefined)=>{
+    if(time===undefined){
+        return "00:00:00"
+    }
+    let hours = Math.floor(time / 3600);
+    time %= 3600;
+    let minutes = Math.floor(time / 60);
+    let seconds = time % 60;
+    let minutes_p = String(minutes).padStart(2, "0");
+    let hours_p = String(hours).padStart(2, "0");
+    let seconds_p = String(seconds).padStart(2, "0");
+    return hours_p + ":" + minutes_p + ":" + seconds_p.substring(0,2);
+}
 
 const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     window.addEventListener("mousedown", (e) => {
@@ -16,8 +29,6 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
         setMousePressed(false)
     })
     const minute = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
-    const maxProgress = 90;
-    const minProgress = 0;
     const [mousePressed, setMousePressed] = useState(false);
     const metadata = useAppSelector(state=>state.audioPlayer.metadata)
     const dispatch = useAppDispatch()
@@ -26,7 +37,15 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     const time = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
-    if(audioplayerRef===undefined || audioplayerRef.current===undefined){
+    const totalDuration = useMemo(()=>{
+        return convertToMinutes(metadata?.duration)
+    },[metadata?.duration])
+
+    const currentTime = useMemo(()=>{
+        return convertToMinutes(minute)
+    },[minute])
+
+    if(audioplayerRef===undefined || audioplayerRef.current===undefined|| metadata===undefined){
         return <div>test</div>
     }
 
@@ -35,7 +54,8 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
         if (offset) {
             const localX = e.clientX - offset.left;
             const percentage = localX / offset.width * 100
-            if (percentage >= minProgress && percentage <= maxProgress && audioplayerRef.current) {
+            console.log("Percentage: " + percentage)
+            if (percentage && audioplayerRef.current) {
                 audioplayerRef.current.currentTime = Math.floor(percentage / 100 * audioplayerRef.current.duration)
                 if(time && currentPodcastEpisode){
                     logCurrentPlaybackTime(currentPodcastEpisode.episode_id,Number(audioplayerRef.current.currentTime.toFixed(0)))
@@ -45,19 +65,23 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     }
 
     const calcTotalMovement = (e: React.MouseEvent<HTMLElement, MouseEvent>)=>{
-        if(mousePressed && metadata && metadata.percentage>=minProgress && metadata.percentage<maxProgress && audioplayerRef.current){
+        if(mousePressed && metadata && audioplayerRef.current){
+            console.log("Changing percentage to: "+(metadata.percentage + e.movementX))
             dispatch(setCurrentTimeUpdatePercentage(metadata.percentage + e.movementX))
             audioplayerRef.current.currentTime = Math.floor(metadata.percentage + e.movementX / 100 * audioplayerRef.current.duration)
         }
     }
 
+
+
     return (
-        <div className="h-4 ml-5 mr-5 cursor-pointer" id="audio-progress-wrapper" ref={wrapper} onClick={(e)=>{
+        <div className="relative h-4 ml-5 mr-5 cursor-pointer w-11/12 box-border" id="audio-progress-wrapper" ref={wrapper} onClick={(e)=>{
             endWrapperPosition(e)
 
         }}>
-            <div className="absolute -top-5 opacity-0 hidden" id="timecounter">{minute}</div>
-            <div className="bg-gray-500 h-1" id="audio-progress" style={{width: metadata?.percentage +"%"}}>
+            <div className="absolute -top-6 opacity-0 hidden" >{currentTime}</div>
+            <div className="absolute right-0 -top-6 opacity-0 hidden">{totalDuration}</div>
+            <div className="bg-gray-500 h-1" id="audio-progress" style={{width: (metadata.percentage) +"%"}}>
                 <i className="fa-solid text-gray-300 fa-circle opacity-0 hidden" id="sound-control" ref={control}
                    onMouseMove={(e)=>calcTotalMovement(e)}>
                 </i>

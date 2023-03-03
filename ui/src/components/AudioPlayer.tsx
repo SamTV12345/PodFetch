@@ -1,4 +1,4 @@
-import {createRef, useEffect} from "react";
+import {createRef, useEffect, useState} from "react";
 import ProgressBar from "./AudioProgressBar";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import { setVolume} from "../store/AudioPlayerSlice";
@@ -6,6 +6,23 @@ import {VolumeIcon} from "./VolumeIcon";
 import {PreviewPlayer} from "./PreviewPlayer";
 import {MenuBarPlayer} from "./MenuBarPlayer";
 import {HiddenAudioPlayer} from "./HiddenAudioPlayer";
+import {AudioAmplifier} from "../models/AudioAmplifier";
+
+const amplifyMedia = (mediaElem: HTMLAudioElement, multiplier:number)=> {
+    const context = new (window.AudioContext),
+        result = {
+            context: context,
+            source: context.createMediaElementSource(mediaElem),
+            gain: context.createGain(),
+            media: mediaElem,
+            amplify: (multiplier: number)=> { result.gain.gain.value = multiplier; },
+            getAmpLevel: function() { return result.gain.gain.value; }
+        };
+    result.source.connect(result.gain);
+    result.gain.connect(context.destination);
+    result.amplify(multiplier);
+    return result;
+}
 
 export const AudioPlayer = () => {
     const dispatch = useAppDispatch()
@@ -13,8 +30,9 @@ export const AudioPlayer = () => {
     const volume = useAppSelector(state=>state.audioPlayer.volume)
     const podcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
     const podcast = useAppSelector(state=>state.audioPlayer.currentPodcast)
-
+    let isAudioAmplifierSet = false;
     const ref = createRef<HTMLAudioElement>()
+    let  [audioAmplifier,setAudioAmplifier] = useState<AudioAmplifier>()
 
     useEffect(()=>{
         if(podcastEpisode && playing){
@@ -22,7 +40,16 @@ export const AudioPlayer = () => {
         }
     },[podcastEpisode, playing])
 
-    return <div className="sticky bottom-0 w-full bg-gray-800">
+    useEffect(()=>{
+        if(!audioAmplifier?.getSource()){
+            console.log("Setting audio amplifier")
+            isAudioAmplifierSet = true
+
+            setAudioAmplifier(new AudioAmplifier(ref.current!))
+        }
+    },[audioAmplifier])
+
+    return <div className="sticky bottom-0 w-full bg-gray-800" id="audio-bottom-bar">
         <ProgressBar audioplayerRef={ref}/>
         <div className="grid grid-cols-3">
             <PreviewPlayer podcast={podcast} podcastEpisode={podcastEpisode}/>
@@ -30,12 +57,14 @@ export const AudioPlayer = () => {
         <div className="grid place-items-center">
             <div className="flex gap-3">
                 <VolumeIcon className="text-white" audio={ref}/>
-                <input type="range" value={volume} onChange={(e)=>{
+                <input type="range" value={volume} max={300} onChange={(e)=>{
+                    audioAmplifier&& audioAmplifier.setVolume(Number(e.currentTarget.value)/100)
                     if(ref && ref.current){
-                        ref.current.volume = Number(e.currentTarget.value)/100
                         dispatch(setVolume(Number(e.currentTarget.value)))
+
                 }}
                 }/>
+                <span className="text-white">{volume}%</span>
             </div>
         </div>
         </div>

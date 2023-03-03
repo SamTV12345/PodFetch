@@ -21,7 +21,7 @@ export const HiddenAudioPlayer:FC<HiddenAudioPlayerProps> = ({refItem}) => {
         }
         ,[podcastEpisode])
 
-    return <audio ref={refItem} src={podcastEpisode?.local_url} id={'hiddenaudio'} onTimeUpdate={(e)=>{
+    return <audio crossOrigin={"anonymous"} ref={refItem} src={podcastEpisode?.local_url} id={'hiddenaudio'} onTimeUpdate={(e)=>{
         dispatch(setCurrentTimeUpdate(e.currentTarget.currentTime))
     }} onLoadedMetadata={(e)=>{
         dispatch(setMetadata({

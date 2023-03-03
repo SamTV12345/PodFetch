@@ -26,7 +26,7 @@ pub fn insert_podcast_episodes(podcast: Podcast){
     let bytes = result.bytes().unwrap();
     let text = String::from_utf8(bytes.to_vec()).unwrap();
     let vec = get_media_urls(&text);
-
+    let durations = get_time_in_millis(&text);
     let feed = parser::parse(&*bytes).unwrap();
     for (i,item) in feed.entries.iter().enumerate(){
         let mut db = DB::new().unwrap();
@@ -34,9 +34,18 @@ pub fn insert_podcast_episodes(podcast: Podcast){
 
         if result.unwrap().is_none() {
             // Insert new podcast episode
+            let duration_string = durations[i].to_owned();
+            let duration = parse_duration(&duration_string);
+            let mut duration_episode = 0;
+
+            if duration.is_some()
+            {
+                duration_episode = duration.unwrap();
+            }
             db.insert_podcast_episodes(podcast.clone(), &vec[i].to_owned(),
                                        item, &feed.logo
-                .clone().unwrap().uri,&item.summary.clone().unwrap().content);
+                .clone().unwrap().uri, &item.summary.clone().unwrap().content,
+                                       duration_episode as i32);
         }
     }
 }
@@ -84,18 +93,15 @@ pub fn schedule_episode_download(podcast: Podcast){
             }
 
             io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
-            let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
 
-            db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id, duration
-                .as_secs() as i32, &image_save_path,
+            db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id,
+                                                   &image_save_path,
                                                    &podcast_save_path.clone())
                 .expect("TODO: panic message");
             io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
         }
         else{
-            let duration = mp3_duration::from_path(podcast_save_path.clone()).unwrap();
-            db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id, duration
-                .as_secs() as i32, &image_save_path,
+            db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id,  &image_save_path,
                                                    &podcast_save_path.clone())
                 .expect("Error saving total time of podcast episode.");
         }
@@ -110,6 +116,45 @@ fn get_media_urls(text: &str)-> Vec<String> {
         urls.push(url.to_owned())
     }
     return urls;
+}
+
+fn get_time_in_millis(text: &str)-> Vec<String> {
+    let mut urls = Vec::new();
+    let re = Regex::new(r#"<itunes:duration>(.*?)</itunes:duration>"#).unwrap();
+    for capture in re.captures_iter(text){
+        let durations = capture.get(1).unwrap().as_str();
+        urls.push(durations.to_owned())
+    }
+    return urls;
+}
+
+fn parse_duration(duration_str: &str) -> Option<u32> {
+    let parts: Vec<&str> = duration_str.split(":").collect();
+    match parts.len() {
+        1=> {
+            let seconds = parts[0].parse::<u32>().ok()?;
+            Some(seconds)
+        }
+        2 => {
+            let minutes = parts[0].parse::<u32>().ok()?;
+            let seconds = parts[1].parse::<u32>().ok()?;
+            Some(minutes * 60 + seconds)
+        }
+        3 => {
+            let hours = parts[0].parse::<u32>().ok()?;
+            let minutes = parts[1].parse::<u32>().ok()?;
+            let seconds = parts[2].parse::<u32>().ok()?;
+            Some(hours * 3600 + minutes * 60 + seconds)
+        }
+        4=>{
+            let days = parts[0].parse::<u32>().ok()?;
+            let hours = parts[1].parse::<u32>().ok()?;
+            let minutes = parts[2].parse::<u32>().ok()?;
+            let seconds = parts[3].parse::<u32>().ok()?;
+            Some(days * 86400 + hours * 3600 + minutes * 60 + seconds)
+        }
+        _ => None
+    }
 }
 
 pub fn get_url_file_suffix(url: &str) -> String {
