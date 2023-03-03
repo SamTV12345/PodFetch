@@ -87,7 +87,7 @@ async fn main()-> std::io::Result<()> {
 
         let ui = web::scope("/ui")
             .route("/{path:[^.]*}", web::get().to(index))
-            .service(Files::new("/", "./static").index_file("index.html"));
+            .service(Files::new("", "./static").index_file("index.html"));
 
 
         let api = web::scope("/api/v1")
