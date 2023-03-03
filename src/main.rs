@@ -5,7 +5,6 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::{env, thread};
-use std::env::current_dir;
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
 use actix_cors::Cors;
@@ -89,12 +88,8 @@ async fn main()-> std::io::Result<()> {
 
         let ui = web::scope("/ui")
             .route("/index.html", web::get().to(index))
-            .route("/podcasts", web::get().to(index))
-            .route("/podcasts/{id}", web::get().to(index))
-            .route("/home", web::get().to(index))
-            .service(Files::new("/", "./static").index_file("index.html"))
-            .service(Files::new("/assets", "./static/assets"));
-
+            .route("/{path:[^.]*}", web::get().to(index))
+            .service(Files::new("/", "./static").index_file("index.html"));
 
         let api = web::scope("/api/v1")
             .service(find_podcast)
