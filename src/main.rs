@@ -87,8 +87,6 @@ async fn main()-> std::io::Result<()> {
             .max_age(3600);
 
         let ui = web::scope("/ui")
-            .service(redirect("","/ui/"))
-            .route("/", web::get().to(index))
             .route("/index.html", web::get().to(index))
             .route("/podcasts", web::get().to(index))
             .route("/podcasts/{id}", web::get().to(index))
