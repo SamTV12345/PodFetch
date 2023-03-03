@@ -7,6 +7,7 @@ import {PreviewPlayer} from "./PreviewPlayer";
 import {MenuBarPlayer} from "./MenuBarPlayer";
 import {HiddenAudioPlayer} from "./HiddenAudioPlayer";
 import {AudioAmplifier} from "../models/AudioAmplifier";
+import useOnMount from "../hooks/useOnMount";
 
 const amplifyMedia = (mediaElem: HTMLAudioElement, multiplier:number)=> {
     const context = new (window.AudioContext),
@@ -30,7 +31,6 @@ export const AudioPlayer = () => {
     const volume = useAppSelector(state=>state.audioPlayer.volume)
     const podcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
     const podcast = useAppSelector(state=>state.audioPlayer.currentPodcast)
-    let isAudioAmplifierSet = false;
     const ref = createRef<HTMLAudioElement>()
     let  [audioAmplifier,setAudioAmplifier] = useState<AudioAmplifier>()
 
@@ -40,14 +40,9 @@ export const AudioPlayer = () => {
         }
     },[podcastEpisode, playing])
 
-    useEffect(()=>{
-        if(!audioAmplifier?.getSource()){
-            console.log("Setting audio amplifier")
-            isAudioAmplifierSet = true
-
+    useOnMount(()=>{
             setAudioAmplifier(new AudioAmplifier(ref.current!))
-        }
-    },[audioAmplifier])
+    })
 
     return <div className="sticky bottom-0 w-full bg-gray-800" id="audio-bottom-bar">
         <ProgressBar audioplayerRef={ref}/>

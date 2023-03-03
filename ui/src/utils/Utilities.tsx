@@ -36,7 +36,6 @@ export  const logCurrentPlaybackTime = (episodeId: string,timeInSeconds: number)
 }
 
 export const formatTime = (isoDate: string) => {
-    console.log(isoDate);
     return timeago.format(new Date(isoDate))
 }
 

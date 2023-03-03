@@ -24,7 +24,6 @@ export const Homepage = () => {
         <div className="grid grid-cols-5 gap-4">
         {
             podcastWatched.map((v)=>{
-                console.log(v)
                 return <div key={v.episodeId}
                     className="max-w-sm rounded-lg shadow bg-gray-800 border-gray-700">
                     <div className="relative" key={v.episodeId}>

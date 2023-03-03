@@ -14,4 +14,9 @@ export class AudioAmplifier {
     getSource(){
         return this.source;
     }
+
+    destroy(){
+        this.gainNode.disconnect()
+        this.source.disconnect()
+    }
 }
