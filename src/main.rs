@@ -4,7 +4,8 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 extern crate serde_derive;
 extern crate serde_json;
 
-use std::{thread};
+use std::{env, thread};
+use std::env::current_dir;
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
 use actix_cors::Cors;
@@ -44,7 +45,7 @@ pub fn run_poll(){
 async fn index() ->  impl Responder {
     HttpResponse::Ok()
         .content_type("text/html")
-        .body(include_str!("../static/index.html"))
+        .body(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/static/index.html")))
 }
 
 
