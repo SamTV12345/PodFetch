@@ -1,6 +1,8 @@
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
+use utoipa::{ToSchema, IntoParams};
+
 // decode request data
 #[derive(Deserialize)]
 pub struct UserData {
@@ -14,21 +16,21 @@ pub struct NewUser {
     pub first_name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodCastAddModel {
     pub track_id: i32,
     pub user_id: i32
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedPostModel {
     pub podcast_episode_id: String,
     pub time: i32
 }
 
-#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone )]
+#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema )]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastHistoryItem {
     #[diesel(sql_type = Integer)]
@@ -43,7 +45,7 @@ pub struct PodcastHistoryItem {
     pub date: String
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModel {
     pub id : i32,
@@ -57,7 +59,7 @@ pub struct PodcastWatchedEpisodeModel {
     pub total_time: i32
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub id : i32,

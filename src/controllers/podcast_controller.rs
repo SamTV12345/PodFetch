@@ -13,6 +13,12 @@ use crate::service::rust_service::{find_podcast as find_podcast_service};
 use reqwest::{ClientBuilder as AsyncClientBuilder};
 
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Find a podcast by its collection id", body = [Podcast])
+)
+)]
 #[get("/podcast/{id}")]
     pub async fn find_podcast_by_id( id: web::Path<String>) -> impl Responder {
         let id_num = from_str::<i32>(&id).unwrap();
@@ -23,6 +29,12 @@ use reqwest::{ClientBuilder as AsyncClientBuilder};
         HttpResponse::Ok().json(mapped_podcast)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets all stored podcasts as a list", body = [Podcast])
+)
+)]
 #[get("/podcasts")]
 pub async fn find_all_podcasts() -> impl Responder {
     let mut db = DB::new().unwrap();
@@ -35,6 +47,12 @@ pub async fn find_all_podcasts() -> impl Responder {
     HttpResponse::Ok().json(mapped_podcasts)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Finds a podcast from the itunes url.", body = [ItunesModel])
+)
+)]
 #[get("/podcasts/{podcast}/search")]
 pub async fn find_podcast(podcast: web::Path<String>) -> impl Responder {
     log::debug!("Searching for podcast: {}", podcast);

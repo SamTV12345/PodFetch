@@ -1,8 +1,9 @@
 use diesel::prelude::*;
 use crate::schema::*;
+use utoipa::{ToSchema, IntoParams};
 
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize,Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ItunesModel {
     pub artist_id: Option<i64>,
@@ -41,14 +42,14 @@ pub struct ItunesModel {
     pub genres: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseModel {
     pub result_count: i32,
     pub results: Vec<ItunesModel>,
 }
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema)]
 pub struct Podcast {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
@@ -64,7 +65,7 @@ pub struct Podcast {
     pub image_url: String
 }
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug, ToSchema)]
 pub struct PodcastEpisode {
     pub(crate) id: i32,
     pub(crate) podcast_id: i32,
