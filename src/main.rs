@@ -13,17 +13,21 @@ use actix_web::web::{redirect};
 use clokwerk::{Scheduler, TimeUnits};
 
 mod controllers;
-pub use controllers::user_controller::*;
+pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
-use crate::service::rust_service::{insert_podcast_episodes, schedule_episode_download};
-use crate::service::file_service::create_podcast_root_directory_exists;
+use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
+use crate::controllers::podcast_episode_controller::find_all_podcast_episodes_of_podcast;
+use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
+use crate::service::rust_service::{schedule_episode_download};
 mod db;
 mod models;
 mod constants;
 mod service;
 use crate::db::DB;
 use crate::service::environment_service::EnvironmentService;
+use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
 
 mod config;
 pub mod schema;
@@ -36,9 +40,9 @@ pub fn run_poll(){
     let podcats_result = db.get_podcasts().unwrap();
     for podcast in podcats_result {
     let podcast_clone = podcast.clone();
-    insert_podcast_episodes(podcast);
+    PodcastEpisodeService::insert_podcast_episodes(podcast);
     schedule_episode_download(podcast_clone);
-}
+    }
 }
 
 async fn index() ->  impl Responder {
@@ -60,7 +64,7 @@ async fn main()-> std::io::Result<()> {
     EnvironmentService::print_banner();
     init_logging();
     DB::new().unwrap();
-    create_podcast_root_directory_exists();
+    FileService::create_podcast_root_directory_exists();
 
     thread::spawn(||{
         let mut scheduler = Scheduler::new();

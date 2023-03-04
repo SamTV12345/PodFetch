@@ -5,3 +5,5 @@ pub mod environment_service;
 pub mod websocket_service;
 pub mod logging_service;
 pub mod path_service;
+mod download_service;
+pub mod podcast_episode_service;
