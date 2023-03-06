@@ -11,10 +11,13 @@ use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::web::{redirect};
 use clokwerk::{Scheduler, TimeUnits};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 mod controllers;
 pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
+use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::find_all_podcast_episodes_of_podcast;
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
@@ -105,9 +108,16 @@ async fn main()-> std::io::Result<()> {
             .service(get_last_watched)
             .service(get_watchtime);
 
+        let openapi = ApiDoc::openapi();
+
            // .wrap(Logger::default());
         App::new().service(Files::new
             ("/podcasts", "podcasts").show_files_listing())
+            .service(redirect("/swagger-ui", "/swagger-ui/"))
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-doc/openapi.json", openapi),
+            )
             .service(redirect("/","/ui/"))
             .wrap(cors)
             .service(api)

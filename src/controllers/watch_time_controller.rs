@@ -2,7 +2,12 @@ use actix_web::{post, get, web, HttpResponse, Responder};
 use crate::db::DB;
 use crate::models::models::PodcastWatchedPostModel;
 
-
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Logs a watchtime request.")),
+tag="watchtime"
+)]
 #[post("/podcast/episode")]
 pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>) -> impl Responder {
     let mut db = DB::new().unwrap();
@@ -12,6 +17,12 @@ pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>) ->
     HttpResponse::Ok()
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the last watched podcasts.")),
+tag="watchtime"
+)]
 #[get("/podcast/episode/lastwatched")]
 pub async fn get_last_watched() -> impl Responder {
     let mut db = DB::new().unwrap();
@@ -19,6 +30,12 @@ pub async fn get_last_watched() -> impl Responder {
     HttpResponse::Ok().json(last_watched)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets watchtime by id.")),
+tag="watchtime"
+)]
 #[get("/podcast/episode/{id}")]
 pub async fn get_watchtime(id: web::Path<String>) -> impl Responder {
     let mut db = DB::new().unwrap();
