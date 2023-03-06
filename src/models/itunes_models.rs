@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 use crate::schema::*;
-use utoipa::{ToSchema, IntoParams};
+use utoipa::{ToSchema};
 
 
 #[derive(Debug, Serialize, Deserialize,Clone, ToSchema)]

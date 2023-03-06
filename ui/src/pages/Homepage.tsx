@@ -21,7 +21,7 @@ export const Homepage = () => {
 
     return <div className="p-3">
         <h1 className="font-bold text-2xl">Zuletzt gehört</h1>
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 xs:grid-cols-1 gap-4">
         {
             podcastWatched.map((v)=>{
                 return <div key={v.episodeId}

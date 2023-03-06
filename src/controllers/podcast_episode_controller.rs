@@ -20,8 +20,8 @@ impl OptionalId {
 context_path="/api/v1",
 responses(
 (status = 200, description = "Finds all podcast episodes of a given podcast id.", body =
-[PodcastEpisode])
-)
+[PodcastEpisode])),
+tag="podcast_episodes"
 )]
 #[get("/podcast/{id}/episodes")]
 pub async fn find_all_podcast_episodes_of_podcast(id: web::Path<String>, last_podcast_episode :

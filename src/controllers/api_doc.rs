@@ -6,31 +6,32 @@ use utoipa::{Modify, OpenApi};
 use models::itunes_models::{Podcast, PodcastEpisode, ItunesModel};
 use crate::models;
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModel,
-                            PodcastWatchedPostModel, PodCastAddModel, NewUser, UserData};
+                            PodcastWatchedPostModel, PodCastAddModel};
 use futures::future::LocalBoxFuture;
-use regex::Error;
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
-use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
-use crate::controllers::podcast_episode_controller::find_all_podcast_episodes_of_podcast;
-use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 
 use crate::controllers::podcast_controller::__path_find_podcast_by_id;
 use crate::controllers::podcast_controller::__path_find_all_podcasts;
 use crate::controllers::podcast_episode_controller::__path_find_all_podcast_episodes_of_podcast;
-
+use crate::controllers::watch_time_controller::*;
 #[derive(OpenApi)]
 #[openapi(
 paths(
     find_podcast_by_id,
     find_all_podcasts,
-    find_all_podcast_episodes_of_podcast
+    find_all_podcast_episodes_of_podcast,
+    log_watchtime,
+    get_last_watched,
+    get_watchtime
 ),
 components(
 schemas(Podcast, PodcastEpisode, ItunesModel, PodcastHistoryItem,
 PodcastWatchedEpisodeModel, PodcastWatchedPostModel, PodCastAddModel)
 ),
 tags(
-(name = "podcasts", description = "Podcast management endpoints.")
+(name = "podcasts", description = "Podcast management endpoints."),
+(name = "podcast_episodes", description = "Podcast episode management endpoints."),
+(name = "watchtime", description = "Watchtime management endpoints.")
 ),
 modifiers(&SecurityAddon)
 )]

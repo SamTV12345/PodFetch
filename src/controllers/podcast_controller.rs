@@ -17,7 +17,8 @@ use reqwest::{ClientBuilder as AsyncClientBuilder};
 context_path="/api/v1",
 responses(
 (status = 200, description = "Find a podcast by its collection id", body = [Podcast])
-)
+),
+tag="podcasts"
 )]
 #[get("/podcast/{id}")]
     pub async fn find_podcast_by_id( id: web::Path<String>) -> impl Responder {
@@ -33,7 +34,8 @@ responses(
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all stored podcasts as a list", body = [Podcast])
-)
+),
+tag="podcasts"
 )]
 #[get("/podcasts")]
 pub async fn find_all_podcasts() -> impl Responder {
@@ -51,7 +53,8 @@ pub async fn find_all_podcasts() -> impl Responder {
 context_path="/api/v1",
 responses(
 (status = 200, description = "Finds a podcast from the itunes url.", body = [ItunesModel])
-)
+),
+tag="podcasts"
 )]
 #[get("/podcasts/{podcast}/search")]
 pub async fn find_podcast(podcast: web::Path<String>) -> impl Responder {
@@ -60,6 +63,12 @@ pub async fn find_podcast(podcast: web::Path<String>) -> impl Responder {
     HttpResponse::Ok().json(res.await)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Adds a podcast to the database.")),
+tag="podcasts"
+)]
 #[post("/podcast")]
 pub async fn add_podcast(track_id: web::Json<PodCastAddModel>) -> impl Responder {
     let client = AsyncClientBuilder::new().build().unwrap();

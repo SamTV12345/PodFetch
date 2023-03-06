@@ -1,7 +1,7 @@
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
-use utoipa::{ToSchema, IntoParams};
+use utoipa::{ToSchema};
 
 // decode request data
 #[derive(Deserialize)]
