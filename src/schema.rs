@@ -13,6 +13,7 @@ diesel::table! {
         local_url -> Text,
         local_image_url -> Text,
         description -> Text,
+        status -> Text,
     }
 }
 

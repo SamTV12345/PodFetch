@@ -77,5 +77,6 @@ pub struct PodcastEpisode {
     pub total_time: i32,
     pub(crate) local_url: String,
     pub(crate) local_image_url: String,
-    pub (crate) description: String
+    pub (crate) description: String,
+    pub (crate) status: String
 }

@@ -36,7 +36,6 @@ mod config;
 pub mod schema;
 
 
-
 pub fn run_poll(){
     let mut db = DB::new().unwrap();
     //check for new episodes

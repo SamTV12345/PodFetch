@@ -9,6 +9,7 @@ use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
 use crate::config::dbconfig::establish_connection;
 use crate::schema::podcast_episodes::dsl::podcast_episodes;
+use crate::schema::podcast_episodes::url;
 use crate::schema::podcast_history_items::dsl::podcast_history_items;
 
 pub struct DB{
@@ -55,6 +56,20 @@ impl DB{
         Ok(found_podcast_episode)
     }
 
+    pub fn get_podcast_episode_by_url(&mut self, podcas_episode_url_to_be_found: &str) ->
+                                                                   Result<Option<PodcastEpisode>, String>{
+        use crate::schema::podcast_episodes::{url};
+        use crate::schema::podcast_episodes::dsl::*;
+
+        let found_podcast_episode = podcast_episodes
+            .filter(url.eq(podcas_episode_url_to_be_found))
+            .first::<PodcastEpisode>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast by id");
+
+        Ok(found_podcast_episode)
+    }
+
 
     pub fn get_podcast_episode_by_track_id(&mut self, podcast_id: i32) ->
                                                                    Result<Option<Podcast>, String>{
@@ -73,12 +88,13 @@ impl DB{
                                    image_url_1: &str, episode_description: &str,
                                    total_time_of_podcast: i32){
         use crate::schema::podcast_episodes::dsl::*;
+        let uuid_podcast = uuid::Uuid::new_v4();
 
         insert_into(podcast_episodes)
             .values((
                 total_time.eq(total_time_of_podcast),
                 podcast_id.eq(podcast.id),
-                episode_id.eq(&item.id),
+                episode_id.eq(uuid_podcast.to_string()),
                 name.eq(item.title.as_ref().unwrap().clone().content),
                 url.eq(link.to_string()),
                 date_of_recording.eq(&item.published.unwrap().to_rfc3339()),
@@ -241,7 +257,7 @@ impl DB{
     }
 
     pub fn update_total_podcast_time_and_image(&mut self, episode_id: &str, image_url:
-    &str, url: &str ) -> Result<(), String> {
+    &str, local_download_url: &str ) -> Result<(), String> {
         use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
         use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
@@ -258,7 +274,7 @@ impl DB{
                     .filter(episode_id_column.eq(episode_id))
                     .set((
                         local_image_url_column.eq(image_url),
-                        local_url_column.eq(url)
+                        local_url_column.eq(local_download_url)
                     ))
                     .execute(&mut self.conn)
                     .expect("Error updating local image url");
@@ -306,5 +322,42 @@ impl DB{
             .expect("Error loading podcast episode by id");
         Ok(result)
 
+    }
+
+    pub fn check_if_downloaded(&mut self, download_episode_url: &str) ->Result<bool, String>{
+        use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
+        use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
+        use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        let result = dsl_podcast_episodes
+            .filter(local_url_column.is_not_null())
+            .filter(url.eq(download_episode_url))
+            .first::<PodcastEpisode>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast episode by id");
+        match result {
+            Some(podcast_episode)=>{
+                return match podcast_episode.status.as_str() {
+                    "N"=> Ok(false),
+                    "D"=> Ok(true),
+                    "P"=> Ok(false),
+                    _=> Ok(false)
+                }
+            }
+            None=>{
+                panic!("Podcast episode not found");
+            }
+        }
+    }
+
+    pub fn update_podcast_episode_status(&mut self, download_url_of_episode: &str, status: &str)
+                                         ->Result<(), String> {
+        use crate::schema::podcast_episodes::dsl::status as status_column;
+        use crate::schema::podcast_episodes::dsl::url as download_url;
+        use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        diesel::update(dsl_podcast_episodes.filter(download_url.eq(download_url_of_episode)))
+                .set(status_column.eq(status))
+                .execute(&mut self.conn)
+                .expect("Error updating podcast episode");
+                Ok(())
     }
 }
