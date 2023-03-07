@@ -4,7 +4,6 @@ use reqwest::blocking::ClientBuilder;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::download_service::DownloadService;
-use crate::service::file_service::FileService;
 use crate::service::path_service::PathService;
 
 pub struct PodcastEpisodeService {
@@ -19,7 +18,7 @@ impl PodcastEpisodeService{
     }
     pub fn download_podcast_episode_if_not_locally_available(&mut self, podcast_episode: PodcastEpisode,
                                                              podcast: Podcast){
-
+        let mut db = DB::new().unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
@@ -35,17 +34,24 @@ impl PodcastEpisodeService{
         &suffix);
 
 
-        if !FileService::check_if_podcast_episode_downloaded(&podcast_cloned.directory,
-        podcast_episode.episode_id) {
-        let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned,
-        podcast_cloned);
+        match  db.check_if_downloaded(&podcast_episode.url){
+        Ok(true) => {
+                self.db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id,
+                                                            &image_save_path,
+                                                            &podcast_save_path.clone())
+                    .expect("Error saving total time of podcast episode.");
         }
-        else{
-        self.db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id,
-        &image_save_path,
-        &podcast_save_path.clone())
-        .expect("Error saving total time of podcast episode.");
+        Ok(false) => {
+            log::info!("Downloading podcast episode: {}",podcast_episode.name);
+            let mut download_service = DownloadService::new();
+            download_service.download_podcast_episode(podcast_episode_cloned,
+                                                      podcast_cloned);
+            db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
+        }
+
+        _ => {
+                println!("Error checking if podcast episode is downloaded.");
+            }
         }
     }
 
@@ -64,7 +70,7 @@ impl PodcastEpisodeService{
         let feed = parser::parse(&*bytes).unwrap();
         for (i,item) in feed.entries.iter().enumerate(){
             let mut db = DB::new().unwrap();
-            let result = db.get_podcast_episode_by_id(&item.id);
+            let result = db.get_podcast_episode_by_url(&vec[i].to_owned());
 
             if result.unwrap().is_none() {
                 // Insert new podcast episode
@@ -104,11 +110,6 @@ impl PodcastEpisodeService{
         }
         return urls;
     }
-
-
-
-
-
 
     fn parse_duration(duration_str: &str) -> Option<u32> {
         let parts: Vec<&str> = duration_str.split(":").collect();

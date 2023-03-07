@@ -46,7 +46,7 @@ export const Homepage = () => {
                         <div className="bg-blue-900 h-2" style={{width: (v.watchedTime/v.totalTime)*100+"%"}}></div>
                     </div>
                     <div className="p-5">
-                            <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{v.name}</h5>
+                            <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white break-words">{v.name}</h5>
                     </div>
                 </div>
             })

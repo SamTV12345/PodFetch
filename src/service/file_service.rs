@@ -8,11 +8,6 @@ pub struct FileService {}
 
 impl FileService {
 
-        pub fn check_if_podcast_episode_downloaded(podcast_id: &str, episode_id: String) ->
-        bool {
-            return Path::new(&format!("podcasts/{}/{}",podcast_id, episode_id )).exists()
-        }
-
         pub fn check_if_podcast_main_image_downloaded(podcast_id: &str) -> bool {
             let db = DB::new().unwrap();
             let podcast = db.get_podcast_by_directory(podcast_id).unwrap();

@@ -38,6 +38,7 @@ impl MappingService {
             total_time: podcast_episode.total_time,
             local_url: podcast_path.clone()+&podcast_episode.local_url.clone(),
             local_image_url: podcast_path+&podcast_episode.local_image_url.clone(),
+            status: podcast_episode.status.clone()
         }
     }
 

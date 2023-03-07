@@ -9,6 +9,7 @@ import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode} from "../store/AudioPlayerSlice";
 import {Waypoint} from "react-waypoint";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import {CloudIcon} from "../components/CloudIcon";
 
 export const PodcastDetailPage = () => {
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
@@ -47,16 +48,19 @@ export const PodcastDetailPage = () => {
                 selectedEpisodes.map((episode, index)=>{
                     return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr_3fr_auto] gap-4 mr-5">
                         <div className="grid place-items-center" key={episode.episode_id+"container"}>
-                            <PlayIcon className="h-6" key={episode.episode_id+"icon"} podcast={currentPodcastEpisode} onClick={()=>{
-                                axios.get(apiURL+"/podcast/episode/"+episode.episode_id)
-                                    .then((response: AxiosResponse<PodcastWatchedModel>)=>{
-                                        store.dispatch(setCurrentPodcastEpisode({
-                                            ...episode,
-                                            time: response.data.watchedTime
-                                        }))
-                                        dispatch(setCurrentPodcast(currentPodcast))
-                                    })
-                            }}/>
+                            {
+                                episode.status==='D'?
+                                <PlayIcon className="h-6" key={episode.episode_id+"icon"} podcast={currentPodcastEpisode} onClick={()=>{
+                                    axios.get(apiURL+"/podcast/episode/"+episode.episode_id)
+                                        .then((response: AxiosResponse<PodcastWatchedModel>)=>{
+                                            store.dispatch(setCurrentPodcastEpisode({
+                                                ...episode,
+                                                time: response.data.watchedTime
+                                            }))
+                                            dispatch(setCurrentPodcast(currentPodcast))
+                                        })
+                                }}/>:<CloudIcon/>
+                            }
                         </div>
                         <span key={episode.episode_id+"name"}>{episode.name}</span>
                         <span>{removeHTML(episode.description)}</span>
