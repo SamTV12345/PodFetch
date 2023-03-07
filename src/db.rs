@@ -8,8 +8,6 @@ use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, Podcas
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
 use crate::config::dbconfig::establish_connection;
-use crate::schema::podcast_episodes::dsl::podcast_episodes;
-use crate::schema::podcast_episodes::url;
 use crate::schema::podcast_history_items::dsl::podcast_history_items;
 
 pub struct DB{
@@ -124,6 +122,7 @@ impl DB{
     pub fn get_last_5_podcast_episodes(&mut self, podcast_episode_id: i32) ->
                                                                       Result<Vec<PodcastEpisode>,
                                                                           String>{
+        use crate::schema::podcast_episodes::dsl::podcast_episodes as podcast_episodes;
         use crate::schema::podcast_episodes::{date_of_recording, podcast_id};
         let podcasts = podcast_episodes
             .filter(podcast_id.eq(podcast_episode_id))
@@ -138,6 +137,7 @@ impl DB{
     pub fn get_podcast_episodes_of_podcast(&mut self, podcast_id_to_be_searched: i32, last_id:
     Option<String>) ->
                                                                       Result<Vec<PodcastEpisode>, String>{
+        use crate::schema::podcast_episodes::dsl::podcast_episodes as podcast_episodes;
         use crate::schema::podcast_episodes::*;
         match last_id {
             Some(last_id) => {
@@ -261,7 +261,7 @@ impl DB{
         use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
         use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
-
+        use crate::schema::podcast_episodes::dsl::podcast_episodes as podcast_episodes;
         let result = podcast_episodes
             .filter(episode_id_column.eq(episode_id))
             .first::<PodcastEpisode>(&mut self.conn)
@@ -325,12 +325,12 @@ impl DB{
     }
 
     pub fn check_if_downloaded(&mut self, download_episode_url: &str) ->Result<bool, String>{
+        use crate::schema::podcast_episodes::url as podcast_episode_url;
         use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
-        use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         let result = dsl_podcast_episodes
             .filter(local_url_column.is_not_null())
-            .filter(url.eq(download_episode_url))
+            .filter(podcast_episode_url.eq(download_episode_url))
             .first::<PodcastEpisode>(&mut self.conn)
             .optional()
             .expect("Error loading podcast episode by id");

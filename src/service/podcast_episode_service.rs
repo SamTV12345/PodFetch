@@ -4,7 +4,6 @@ use reqwest::blocking::ClientBuilder;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::download_service::DownloadService;
-use crate::service::file_service::FileService;
 use crate::service::path_service::PathService;
 
 pub struct PodcastEpisodeService {
