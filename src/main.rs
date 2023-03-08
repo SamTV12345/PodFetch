@@ -7,6 +7,7 @@ extern crate serde_json;
 use std::{env, thread};
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
+use actix::Actor;
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::web::{redirect};
@@ -27,6 +28,7 @@ mod models;
 mod constants;
 mod service;
 use crate::db::DB;
+use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
@@ -59,7 +61,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
     println!("cargo:rerun-if-changed=./Cargo.toml");
-
+    let chat_server = Lobby::default().start();
     let mut connection = establish_connection();
     connection.run_pending_migrations(MIGRATIONS).unwrap();
 
@@ -84,13 +86,19 @@ async fn main()-> std::io::Result<()> {
     });
 
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
+            .allowed_header(http::header::CONNECTION)
+            .allowed_header(http::header::UPGRADE)
             .max_age(3600);
+
+        let ws = web::scope("/ws")
+            .data(chat_server.clone())
+            .service(controllers::websocket_controller::start_connection);
 
         let ui = web::scope("/ui")
             .route("/index.html", web::get().to(index))
@@ -120,6 +128,7 @@ async fn main()-> std::io::Result<()> {
             .service(redirect("/","/ui/"))
             .wrap(cors)
             .service(api)
+            .service(ws)
             .service(ui)
             //.wrap(Logger::default())
     }

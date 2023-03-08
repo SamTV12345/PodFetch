@@ -7,10 +7,27 @@ import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
+import {apiURL} from "./utils/Utilities";
+import axios from "axios";
 
 const App = ()=> {
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
+
+    fetch("http://localhost:8000/ws/websocket").then((response)=>{
+        response.headers.forEach((value, key)=>{
+            console.log(key+": "+value)
+        })
+        /*
+        const socket = new WebSocket(response.body)
+        socket.onopen = ()=>{
+            console.log("Connected to websocket")
+        }
+        socket.onmessage = (message)=>{
+            console.log(message)
+        }*/
+    })
+
     return (
       <BrowserRouter basename="/ui">
           <div className="grid  grid-rows-[auto_1fr] h-full md:grid-cols-[300px_1fr]">
