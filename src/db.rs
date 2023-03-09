@@ -4,10 +4,12 @@ use diesel::{insert_into, RunQueryDsl, sql_query};
 use feed_rs::model::Entry;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastHistoryItem,
-                            PodcastWatchedPostModel};
+                            PodcastWatchedPostModel, Notification as Notification};
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
 use crate::config::dbconfig::establish_connection;
+use crate::schema::notifications::created_at;
+use crate::schema::notifications::dsl::notifications;
 use crate::schema::podcast_history_items::dsl::podcast_history_items;
 
 pub struct DB{
@@ -360,4 +362,47 @@ impl DB{
                 .expect("Error updating podcast episode");
                 Ok(())
     }
+
+    pub fn get_unread_notifications(&mut self) -> Result<Vec<Notification>, String> {
+        use crate::schema::notifications::dsl::status as is_read_column;
+        use crate::schema::notifications::dsl::notifications as dsl_notifications;
+        use crate::schema::notifications::dsl::notifications;
+        use crate::schema::notifications::type_of_message;
+        let result = dsl_notifications
+            .filter(is_read_column.eq("unread"))
+            .order(created_at.desc())
+            .load::<Notification>(&mut self.conn)
+            .unwrap();
+        Ok(result)
+    }
+
+    pub fn insert_notification(&mut self, notification: Notification) -> Result<(), String> {
+        use crate::schema::notifications::dsl::notifications as notifications;
+        use crate::schema::notifications::type_of_message;
+        use crate::schema::notifications::*;
+        insert_into(notifications)
+            .values(
+                (
+                    type_of_message.eq(notification.type_of_message),
+                    message.eq(notification.message),
+                    status.eq(notification.status),
+                    created_at.eq(notification.created_at),
+                    )
+            )
+            .execute(&mut self.conn)
+            .expect("Error inserting Notification");
+        Ok(())
+    }
+
+    pub fn update_status_of_notification(&mut self, id_to_search: i32, status_update: &str) ->
+                                                                                        Result<(),
+        String> {
+        use crate::schema::notifications::*;
+        diesel::update(notifications.filter(id.eq(id_to_search)))
+            .set(status.eq(status_update))
+            .execute(&mut self.conn)
+            .expect("Error updating notification");
+        Ok(())
+    }
+
 }

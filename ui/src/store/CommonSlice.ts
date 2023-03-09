@@ -1,5 +1,6 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {GeneralModel} from "../models/PodcastAddModel";
+import {Notification} from "../models/Notification";
 
 export type Podcast = {
     directory: string,
@@ -29,7 +30,8 @@ interface CommonProps {
     selectedEpisodes: PodcastEpisode[]
     sideBarCollapsed: boolean,
     podcasts:Podcast[],
-    searchedPodcasts: GeneralModel|undefined
+    searchedPodcasts: GeneralModel|undefined,
+    notifications: Notification[]
 }
 
 // Define the initial state using that type
@@ -37,7 +39,8 @@ const initialState: CommonProps = {
     selectedEpisodes: [],
     sideBarCollapsed: false,
     podcasts: [],
-    searchedPodcasts: undefined
+    searchedPodcasts: undefined,
+    notifications: []
 }
 
 export const commonSlice = createSlice({
@@ -56,9 +59,15 @@ export const commonSlice = createSlice({
         },
         setSearchedPodcasts: (state, action:PayloadAction<GeneralModel>) => {
             state.searchedPodcasts = action.payload
+        },
+        setNotifications: (state, action:PayloadAction<Notification[]>) => {
+            state.notifications = action.payload
+        },
+        removeNotification: (state, action:PayloadAction<number>) => {
+            state.notifications = state.notifications.filter((notification) => notification.id !== action.payload)
         }
 }})
 
-export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts} = commonSlice.actions
+export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts, setNotifications, removeNotification} = commonSlice.actions
 
 export default commonSlice.reducer
