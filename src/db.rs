@@ -8,6 +8,8 @@ use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, Podcas
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
 use crate::config::dbconfig::establish_connection;
+use crate::schema::notifications::created_at;
+use crate::schema::notifications::dsl::notifications;
 use crate::schema::podcast_history_items::dsl::podcast_history_items;
 
 pub struct DB{
@@ -368,6 +370,7 @@ impl DB{
         use crate::schema::notifications::type_of_message;
         let result = dsl_notifications
             .filter(is_read_column.eq("unread"))
+            .order(created_at.desc())
             .load::<Notification>(&mut self.conn)
             .unwrap();
         Ok(result)
@@ -380,7 +383,6 @@ impl DB{
         insert_into(notifications)
             .values(
                 (
-                    id.eq(notification.id),
                     type_of_message.eq(notification.type_of_message),
                     message.eq(notification.message),
                     status.eq(notification.status),
@@ -391,4 +393,16 @@ impl DB{
             .expect("Error inserting Notification");
         Ok(())
     }
+
+    pub fn update_status_of_notification(&mut self, id_to_search: i32, status_update: &str) ->
+                                                                                        Result<(),
+        String> {
+        use crate::schema::notifications::*;
+        diesel::update(notifications.filter(id.eq(id_to_search)))
+            .set(status.eq(status_update))
+            .execute(&mut self.conn)
+            .expect("Error updating notification");
+        Ok(())
+    }
+
 }
