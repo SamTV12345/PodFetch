@@ -7,9 +7,13 @@
     @apply absolute;
 }
 
-#audio-progress-wrapper:hover #sound-control, #audio-progress-wrapper:hover #timecounter {
+#audio-progress-wrapper:hover #sound-control, #audio-progress-wrapper:hover .timecounter {
     @apply visible opacity-100;
 }
+
+
+
+
 #sound-control{
     position:absolute;
     right: 0;

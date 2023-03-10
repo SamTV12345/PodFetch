@@ -11,7 +11,8 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
     const dispatch = useAppDispatch()
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
     const episodes = useAppSelector(state=>state.common.selectedEpisodes)
-    const time = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
+    const isPlaying  = useAppSelector(state=>state.audioPlayer.isPlaying)
+    const time  = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
     const skipToPreviousEpisode = () => {
         if(currentPodcastEpisode===undefined){
             return
@@ -51,25 +52,37 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
         dispatch(setPlaying(true))
     }
 
-    return  <div className="grid place-items-center">
+    const handleButton = ()=>{
+        if(refItem===undefined || refItem.current===undefined|| refItem.current===null){
+            return
+        }
+        if(refItem.current.paused){
+            dispatch(setPlaying(true))
+            refItem.current.play()
+        }else{
+            if(time && currentPodcastEpisode){
+                logCurrentPlaybackTime(currentPodcastEpisode.episode_id,time)
+            }
+            dispatch(setPlaying(false))
+            refItem.current?.pause()
+        }
+    }
+
+    return  <div className="grid place-items-center mr-5 md:mr-0 mb-1">
         <div className="flex gap-5 align-baseline">
-            <i className="fa-solid fa-backward text-xl text-white text-3xl" onClick={()=>skipToPreviousEpisode()}></i>
-            <i className="fa-solid fa-play text-white align-top text-3xl" onClick={()=>{
-                if(refItem===undefined || refItem.current===undefined|| refItem.current===null){
-                    return
+            <div className="place-items-center hidden md:grid">
+            <i className="fa-solid fa-backward text-xl text-white text-3xl hover:text-blue-500" onClick={()=>skipToPreviousEpisode()}></i>
+            </div>
+            <div className="relative rounded-full bg-black w-12 h-12 p-2 grid place-items-center bg-gray-900 hover:bg-gray-600 active:scale-75" onClick={()=>handleButton()}>
+                {isPlaying?
+                    <i className="fa-solid fa-pause text-3xl ml-1 text-white mr-1"></i>:
+                    <i className=" fa-solid fa-play text-white align-top text-3xl ml-1"></i>
                 }
-                if(refItem.current.paused){
-                    dispatch(setPlaying(true))
-                    refItem.current.play()
-                }else{
-                    if(time && currentPodcastEpisode){
-                        logCurrentPlaybackTime(currentPodcastEpisode.episode_id,time)
-                    }
-                    dispatch(setPlaying(false))
-                    refItem.current?.pause()
-                }
-            }}/>
-            <i className="fa-solid fa-forward h-6 text-xl text-white text-3xl" onClick={()=>{skipToNextEpisode()}}></i>
+            </div>
+            <div className="grid place-items-center">
+                <i className="fa-solid fa-forward h-6 text-xl text-white text-3xl hover:text-blue-500" onClick={()=>{skipToNextEpisode()}}></i>
+            </div>
+
         </div>
     </div>
 }

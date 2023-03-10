@@ -11,13 +11,17 @@ const convertToMinutes = (time: number|undefined)=>{
     if(time===undefined){
         return "00:00:00"
     }
-    let hours = Math.floor(time / 3600);
-    time %= 3600;
-    let minutes = Math.floor(time / 60);
-    let seconds = time % 60;
+    const timeToConvert = Number(time?.toFixed(0))
+    let hours = Math.floor(timeToConvert / 3600);
+
+    let minutes = Math.floor(timeToConvert / 60);
+    let seconds = timeToConvert % 60;
     let minutes_p = String(minutes).padStart(2, "0");
     let hours_p = String(hours).padStart(2, "0");
     let seconds_p = String(seconds).padStart(2, "0");
+    if(hours_p==="00"){
+        return minutes_p + ":" + seconds_p.substring(0,2);
+    }
     return hours_p + ":" + minutes_p + ":" + seconds_p.substring(0,2);
 }
 
@@ -38,6 +42,7 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
     const totalDuration = useMemo(()=>{
+        console.log("Total duration: "+metadata?.duration)
         return convertToMinutes(metadata?.duration)
     },[metadata?.duration])
 
@@ -79,10 +84,10 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
             endWrapperPosition(e)
 
         }}>
-            <div className="absolute -top-6 opacity-0 hidden" >{currentTime}</div>
-            <div className="absolute right-0 -top-6 opacity-0 hidden">{totalDuration}</div>
+            <div className="absolute -top-6 opacity-0 invisible timecounter" id="timecounter">{currentTime}</div>
+            <div className="absolute right-0 -top-6 opacity-0 invisible timecounter">{totalDuration}</div>
             <div className="bg-gray-500 h-1" id="audio-progress" style={{width: (metadata.percentage) +"%"}}>
-                <i className="fa-solid text-gray-300 fa-circle opacity-0 hidden" id="sound-control" ref={control}
+                <i className="fa-solid text-gray-300 fa-circle opacity-0 invisible" id="sound-control" ref={control}
                    onMouseMove={(e)=>calcTotalMovement(e)}>
                 </i>
             </div>
