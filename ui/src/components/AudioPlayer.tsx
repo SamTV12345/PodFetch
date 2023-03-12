@@ -44,23 +44,23 @@ export const AudioPlayer = () => {
             setAudioAmplifier(new AudioAmplifier(ref.current!))
     })
 
-    return <div className="sticky bottom-0 w-full bg-gray-800" id="audio-bottom-bar">
+    return <div className="sticky bottom-0 w-full bg-gray-800 z-50" id="audio-bottom-bar">
         <ProgressBar audioplayerRef={ref}/>
-        <div className="grid grid-cols-3">
+        <div className="grid md:grid-cols-3 grid-cols-[1fr_auto]">
             <PreviewPlayer podcast={podcast} podcastEpisode={podcastEpisode}/>
             <MenuBarPlayer refItem={ref}/>
-        <div className="grid place-items-center">
-            <div className="flex gap-3">
-                <VolumeIcon className="text-white" audio={ref}/>
-                <input type="range" value={volume} max={300} onChange={(e)=>{
-                    audioAmplifier&& audioAmplifier.setVolume(Number(e.currentTarget.value)/100)
-                    if(ref && ref.current){
-                        dispatch(setVolume(Number(e.currentTarget.value)))
+            <div className="hidden md:grid place-items-center">
+                <div className="flex gap-3">
+                    <VolumeIcon className="text-white hover:text-blue-500" audio={ref}/>
+                    <input type="range" value={volume} max={300} onChange={(e)=>{
+                        audioAmplifier&& audioAmplifier.setVolume(Number(e.currentTarget.value)/100)
+                        if(ref && ref.current){
+                            dispatch(setVolume(Number(e.currentTarget.value)))
 
-                }}
-                }/>
-                <span className="text-white">{volume}%</span>
-            </div>
+                    }}
+                    }/>
+                    <span className="text-white">{volume}%</span>
+                </div>
         </div>
         </div>
         <HiddenAudioPlayer refItem={ref}/>

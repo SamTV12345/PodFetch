@@ -2,17 +2,34 @@ import './App.css'
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {SideBar} from "./components/SideBar";
 import {Header} from "./components/Header";
-import {useAppSelector} from "./store/hooks";
+import {useAppDispatch, useAppSelector} from "./store/hooks";
 import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
 import {Search} from "./components/Search";
+import {apiURL} from "./utils/Utilities";
+import axios, {AxiosResponse} from "axios";
+import {useEffect} from "react";
+import {Notification} from "./models/Notification";
+import {setNotifications} from "./store/CommonSlice";
 
 const App = ()=> {
+    const dispatch = useAppDispatch()
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
+    const getNotifications = ()=>{
+        axios.get(apiURL+'/notifications/unread')
+            .then((response:AxiosResponse<Notification[]>)=>{
+                console.log(response.data)
+               dispatch(setNotifications(response.data))
+            })
+    }
+
+    useEffect(()=>{
+        getNotifications()
+    },[])
 
     return (
       <BrowserRouter basename="/ui">

@@ -3,6 +3,7 @@ use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::models::Notification;
 use crate::service::download_service::DownloadService;
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
@@ -50,6 +51,14 @@ impl PodcastEpisodeService{
             download_service.download_podcast_episode(podcast_episode_cloned,
                                                       podcast_cloned);
             db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
+            let notification = Notification {
+                id: 0,
+                message: format!("Episode {} is now available offline", podcast_episode.name),
+                created_at: chrono::Utc::now().naive_utc().to_string(),
+                type_of_message: "Download".to_string(),
+                status: "unread".to_string(),
+            };
+            db.insert_notification(notification).unwrap();
         }
 
         _ => {

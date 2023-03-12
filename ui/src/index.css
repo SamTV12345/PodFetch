@@ -7,9 +7,12 @@
     @apply absolute;
 }
 
-#audio-progress-wrapper:hover #sound-control, #audio-progress-wrapper:hover #timecounter {
+#audio-progress-wrapper:hover #sound-control, #audio-progress-wrapper:hover .timecounter {
     @apply visible opacity-100;
 }
+
+
+
 
 #sound-control{
     position:absolute;
@@ -36,8 +39,37 @@
     @apply visible opacity-100;
 }
 
+
+#positionwrapper {
+    left: 50%;
+}
+
 #audio-bottom-bar:hover >* {
     @apply visible opacity-100;
+}
+
+#notification-modal {
+    background-color: rgb(31 41 55 / var(--tw-border-opacity));
+    top: 0;
+}
+
+.notification-modal-visible{
+    @apply visible opacity-100;
+    left: 50%;
+    transform: translate(-50%, 0);
+    margin-top: 10px;
+}
+
+#notification-modal::after {
+    content: '';
+    position: absolute;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid rgb(31 41 55 / var(--tw-border-opacity));
+    transform: rotate(180deg) translate(50%, 100%);
+    left: 50%;
+    top: 0;
+    clear: both;
 }
 
 ::-webkit-scrollbar {
