@@ -7,7 +7,7 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::{get, post};
 use crate::models::models::PodCastAddModel;
 use crate::service::file_service::FileService;
-use crate::service::rust_service::schedule_episode_download;
+use crate::service::rust_service::{refresh_podcast, schedule_episode_download};
 use crate::unwrap_string;
 use crate::service::rust_service::{find_podcast as find_podcast_service};
 use reqwest::{ClientBuilder as AsyncClientBuilder};
@@ -113,4 +113,15 @@ pub async fn query_for_podcast(podcast: web::Path<String>) -> impl Responder {
     let res = podcast_service.query_for_podcast(&podcast);
 
     HttpResponse::Ok().json(res)
+}
+
+#[post("/podcast/{id}/refresh")]
+pub async fn download_podcast(id: web::Path<String>) -> impl Responder {
+    thread::spawn(move ||{
+        let id_num = from_str::<i32>(&id).unwrap();
+        let mut db = DB::new().unwrap();
+        let podcast = db.get_podcast(id_num).unwrap();
+        refresh_podcast(podcast.clone());
+    });
+    HttpResponse::Ok().json("Refreshing podcast")
 }

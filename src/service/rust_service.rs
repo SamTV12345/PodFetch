@@ -21,3 +21,9 @@ pub fn schedule_episode_download(podcast: Podcast){
                                                                                  podcast.clone());
     }
 }
+
+pub fn refresh_podcast(podcast:Podcast){
+    log::info!("Refreshing podcast: {}", podcast.name);
+    PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
+    schedule_episode_download(podcast);
+}

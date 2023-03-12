@@ -1,15 +1,17 @@
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useParams} from "react-router-dom";
 import {useEffect} from "react";
-import {apiURL, formatTime, removeHTML} from "../utils/Utilities";
+import {apiURL, formatTime} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
-import {Podcast, setSelectedEpisodes} from "../store/CommonSlice";
+import {Podcast, setInfoModalPodcast, setInfoModalPodcastOpen, setSelectedEpisodes} from "../store/CommonSlice";
 import {PlayIcon} from "../components/PlayIcon";
 import {store} from "../store/store";
-import {setCurrentPodcast, setCurrentPodcastEpisode} from "../store/AudioPlayerSlice";
+import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {Waypoint} from "react-waypoint";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {CloudIcon} from "../components/CloudIcon";
+import {InfoIcon} from "../components/InfoIcon";
+import {PodcastInfoModal} from "../components/PodcastInfoModal";
 
 export const PodcastDetailPage = () => {
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
@@ -53,7 +55,14 @@ export const PodcastDetailPage = () => {
     }
 
     return <><div className="pl-5 pt-5 overflow-y-scroll">
-        <h1 className="text-center text-2xl">{currentPodcast.name}</h1>
+        <PodcastInfoModal/>
+        <h1 className="text-center text-2xl">{currentPodcast.name}
+            <i className="fa-solid fa-arrows-rotate hover:text-slate-400 active:text-slate-800 active:scale-95 ml-1" onClick={()=>{
+                axios.post(apiURL+"/podcast/"+params.id+"/refresh")
+                    .then(()=>{
+                       console.log("Refreshed")
+                    })
+            }}></i></h1>
         <div className="grid place-items-center">
             <img className="w-1/5 rounded" src={currentPodcast.image_url} alt=""/>
         </div>
@@ -61,7 +70,7 @@ export const PodcastDetailPage = () => {
         <div>
             {
                 selectedEpisodes.map((episode, index)=>{
-                    return <><div key={episode.episode_id} id={"episode_"+episode.id} className="grid grid-cols-[auto_1fr_3fr_auto] gap-4 mr-5">
+                    return <><div key={episode.episode_id} id={"episode_"+episode.id} className="grid grid-cols-[auto_7fr_auto_1fr] gap-4 mr-5">
                         <div className="grid place-items-center" key={episode.episode_id+"container"}>
                             {
                                 episode.status==='D'?
@@ -73,13 +82,20 @@ export const PodcastDetailPage = () => {
                                                 time: response.data.watchedTime
                                             }))
                                             dispatch(setCurrentPodcast(currentPodcast))
+                                            dispatch(setPlaying(true))
                                         })
                                 }}/>:<CloudIcon/>
                             }
                         </div>
                         <span key={episode.episode_id+"name"}>{episode.name}</span>
-                        <span>{removeHTML(episode.description)}</span>
-                        <span key={episode.episode_id+"date"}>{formatTime(episode.date_of_recording)}</span>
+                        <span><InfoIcon onClick={()=>{
+                            console.log("Clicked")
+                            dispatch(setInfoModalPodcast(episode))
+                            dispatch(setInfoModalPodcastOpen(true))
+                        }}/></span>
+                        <span key={episode.episode_id+"date"} className="flex gap-5">
+                            {formatTime(episode.date_of_recording)}
+                        </span>
                     </div>
                         <hr className="border-gray-500" key={index+"hr"}/>
                         {

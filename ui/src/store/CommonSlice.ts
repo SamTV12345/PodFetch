@@ -31,7 +31,9 @@ interface CommonProps {
     sideBarCollapsed: boolean,
     podcasts:Podcast[],
     searchedPodcasts: GeneralModel|undefined,
-    notifications: Notification[]
+    notifications: Notification[],
+    infoModalPodcast: PodcastEpisode|undefined,
+    infoModalPodcastOpen: boolean
 }
 
 // Define the initial state using that type
@@ -40,7 +42,9 @@ const initialState: CommonProps = {
     sideBarCollapsed: false,
     podcasts: [],
     searchedPodcasts: undefined,
-    notifications: []
+    notifications: [],
+    infoModalPodcast: undefined,
+    infoModalPodcastOpen: false
 }
 
 export const commonSlice = createSlice({
@@ -65,9 +69,27 @@ export const commonSlice = createSlice({
         },
         removeNotification: (state, action:PayloadAction<number>) => {
             state.notifications = state.notifications.filter((notification) => notification.id !== action.payload)
+        },
+        setInfoModalPodcast: (state, action:PayloadAction<PodcastEpisode>) => {
+            state.infoModalPodcast = action.payload
+        },
+        setInfoModalPodcastOpen: (state, action:PayloadAction<boolean>) => {
+            state.infoModalPodcastOpen = action.payload
+        },
+        setInfoModalDownloaded: (state, action:PayloadAction<string>) => {
+            if(state.infoModalPodcast) {
+                state.infoModalPodcast.status = 'D'
+                state.selectedEpisodes = state.selectedEpisodes.map((episode) => {
+                    if(episode.episode_id === action.payload) {
+                        episode.status = 'D'
+                    }
+                    return episode
+                })
+            }
         }
 }})
 
-export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts, setNotifications, removeNotification} = commonSlice.actions
+export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts, setInfoModalDownloaded,
+    setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen} = commonSlice.actions
 
 export default commonSlice.reducer

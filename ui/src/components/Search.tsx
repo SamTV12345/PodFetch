@@ -1,9 +1,9 @@
 import {createPortal} from "react-dom";
 import axios, {AxiosResponse} from "axios";
-import {apiURL, removeHTML} from "../utils/Utilities";
-import {useEffect, useRef, useState} from "react";
+import {apiURL, formatTime, removeHTML} from "../utils/Utilities";
+import {useState} from "react";
 import {useDebounce} from "../utils/useDebounce";
-import {useKeyDown} from "../hooks/useKeyDown";
+import {useCtrlPressed, useKeyDown} from "../hooks/useKeyDown";
 import {PodcastEpisode} from "../store/CommonSlice";
 import {useNavigate} from "react-router-dom";
 
@@ -13,16 +13,18 @@ export const Search = () => {
     const [podcastEpisode, setPodcastEpisode] = useState<PodcastEpisode[]>([])
     const navigate = useNavigate()
     const performSearch = ()=>{
-        axios.get(apiURL+"/podcasts/"+searchName+"/query")
-            .then((v:AxiosResponse<PodcastEpisode[]>)=>{
-                setPodcastEpisode(v.data)
-            })
+        if(searchName.trim().length>0) {
+            axios.get(apiURL + "/podcasts/" + searchName + "/query")
+                .then((v: AxiosResponse<PodcastEpisode[]>) => {
+                    setPodcastEpisode(v.data)
+                })
+        }
     }
 
-    useKeyDown(()=>{
+    useCtrlPressed(()=>{
          setOpen(!open)
          document.getElementById('search-input')!.focus()
-    }, ["f", "ctrl"])
+    }, ["f"])
 
     useKeyDown(()=>{
         setOpen(false)
@@ -41,7 +43,7 @@ export const Search = () => {
                         <input type="text" className="bg-gray-700 text-white w-full p-2 rounded-lg" value={searchName}
                                onChange={(v)=>setSearchName(v.target.value)} id="search-input"/>
                     </div>
-                    <div className="overflow-auto max-h-72 max-w-5xl">
+                    <div className="overflow-auto max-h-72 searchfield">
                     {
                         podcastEpisode.length>0&& <hr className="h-px bg-gray-200 border-0 dark:bg-gray-700"/>
                     }
@@ -54,7 +56,7 @@ export const Search = () => {
                                     }}/>
                                     <div className="flex flex-col">
                                         <div className="text-white font-bold">{v.name}
-                                            <span className="text-gray-400 text-sm font-normal"> - {v.name}</span>
+                                            <span className="text-gray-400 text-sm font-normal"> - {formatTime(v.date_of_recording)}</span>
                                         </div>
                                         <div className="text-gray-400 text-sm font-normal">{removeHTML(v.description)}</div>
                                     </div>

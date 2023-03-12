@@ -1,6 +1,5 @@
 
-use actix_web::{get,put, HttpRequest, HttpResponse, Responder, web};
-use serde_json::json;
+use actix_web::{get,put, HttpResponse, Responder, web};
 use crate::db::DB;
 
 #[get("/notifications/unread")]

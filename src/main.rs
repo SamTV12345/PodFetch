@@ -18,10 +18,10 @@ mod controllers;
 pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
 use crate::controllers::api_doc::ApiDoc;
-use crate::controllers::podcast_controller::{query_for_podcast};
+use crate::controllers::podcast_controller::{download_podcast, query_for_podcast};
 use crate::controllers::notification_controller::{dismiss_notifications, get_unread_notifications};
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
-use crate::controllers::podcast_episode_controller::find_all_podcast_episodes_of_podcast;
+use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::service::rust_service::{schedule_episode_download};
 mod db;
@@ -110,7 +110,9 @@ async fn main()-> std::io::Result<()> {
             .service(get_watchtime)
             .service(get_unread_notifications)
             .service(dismiss_notifications)
+            .service(download_podcast)
             .service(query_for_podcast)
+            .service(download_podcast_episodes_of_podcast)
             .service(get_watchtime);
 
         let openapi = ApiDoc::openapi();

@@ -46,25 +46,30 @@ impl PodcastEpisodeService{
                     .expect("Error saving total time of podcast episode.");
         }
         Ok(false) => {
-            log::info!("Downloading podcast episode: {}",podcast_episode.name);
-            let mut download_service = DownloadService::new();
-            download_service.download_podcast_episode(podcast_episode_cloned,
-                                                      podcast_cloned);
-            db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
-            let notification = Notification {
-                id: 0,
-                message: format!("Episode {} is now available offline", podcast_episode.name),
-                created_at: chrono::Utc::now().naive_utc().to_string(),
-                type_of_message: "Download".to_string(),
-                status: "unread".to_string(),
-            };
-            db.insert_notification(notification).unwrap();
+            Self::perform_download(&podcast_episode, &mut db, podcast_episode_cloned, podcast_cloned);
         }
 
         _ => {
                 println!("Error checking if podcast episode is downloaded.");
             }
         }
+    }
+
+    pub fn perform_download(podcast_episode: &PodcastEpisode, db: &mut DB,
+    podcast_episode_cloned: PodcastEpisode, podcast_cloned: Podcast) {
+        log::info!("Downloading podcast episode: {}",podcast_episode.name);
+        let mut download_service = DownloadService::new();
+        download_service.download_podcast_episode(podcast_episode_cloned,
+                                                  podcast_cloned);
+        db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
+        let notification = Notification {
+            id: 0,
+            message: format!("Episode {} is now available offline", podcast_episode.name),
+            created_at: chrono::Utc::now().naive_utc().to_string(),
+            type_of_message: "Download".to_string(),
+            status: "unread".to_string(),
+        };
+        db.insert_notification(notification).unwrap();
     }
 
     pub fn get_last_5_podcast_episodes(&mut self, podcast: Podcast) -> Vec<PodcastEpisode>{

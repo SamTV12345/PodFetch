@@ -22,7 +22,6 @@ const App = ()=> {
     const getNotifications = ()=>{
         axios.get(apiURL+'/notifications/unread')
             .then((response:AxiosResponse<Notification[]>)=>{
-                console.log(response.data)
                dispatch(setNotifications(response.data))
             })
     }

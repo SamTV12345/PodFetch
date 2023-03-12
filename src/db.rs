@@ -8,10 +8,6 @@ use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, Podcas
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
 use crate::config::dbconfig::establish_connection;
-use crate::schema::podcast_episodes::dsl::podcast_episodes;
-use crate::schema::notifications::created_at;
-use crate::schema::notifications::dsl::notifications;
-use crate::schema::podcast_history_items::dsl::podcast_history_items;
 
 pub struct DB{
     conn: SqliteConnection,
@@ -169,7 +165,7 @@ impl DB{
     pub fn log_watchtime(&mut self, watch_model: PodcastWatchedPostModel) ->Result<(), String> {
         let result = self.get_podcast_episode_by_id(&watch_model.podcast_episode_id).unwrap();
 
-        use crate::schema::podcast_history_items;
+        use crate::schema::podcast_history_items::dsl::*;
         match result {
             Some(result)=>{
                 let now = SystemTime::now();
@@ -177,10 +173,10 @@ impl DB{
                 let now: &str = &now.to_rfc3339();
                 insert_into(podcast_history_items)
                     .values((
-                        podcast_history_items::podcast_id.eq(result.podcast_id),
-                        podcast_history_items::episode_id.eq(result.episode_id),
-                        podcast_history_items::watched_time.eq(watch_model.time),
-                        podcast_history_items::date.eq(&now),
+                        podcast_id.eq(result.podcast_id),
+                        episode_id.eq(result.episode_id),
+                        watched_time.eq(watch_model.time),
+                        date.eq(&now),
                     ))
                     .execute(&mut self.conn)
                     .expect("Error inserting podcast episode");
@@ -192,16 +188,16 @@ impl DB{
         }
     }
 
-    pub fn get_watchtime(&mut self, podcast_id: &str) ->Result<PodcastHistoryItem, String>{
-        let result = self.get_podcast_episode_by_id(podcast_id).unwrap();
-        use crate::schema::podcast_history_items;
+    pub fn get_watchtime(&mut self, podcast_id_tos_search: &str) ->Result<PodcastHistoryItem,
+        String>{
+        let result = self.get_podcast_episode_by_id(podcast_id_tos_search).unwrap();
+        use crate::schema::podcast_history_items::dsl::*;
 
         match result {
             Some(found_podcast)=>{
-
                 let history_item = podcast_history_items
-                    .filter(podcast_history_items::episode_id.eq(podcast_id))
-                    .order(podcast_history_items::date.desc())
+                    .filter(episode_id.eq(podcast_id_tos_search))
+                    .order(date.desc())
                     .first::<PodcastHistoryItem>(&mut self.conn)
                     .optional()
                     .expect("Error loading podcast episode by id");
@@ -365,12 +361,9 @@ impl DB{
     }
 
     pub fn get_unread_notifications(&mut self) -> Result<Vec<Notification>, String> {
-        use crate::schema::notifications::dsl::status as is_read_column;
-        use crate::schema::notifications::dsl::notifications as dsl_notifications;
-        use crate::schema::notifications::dsl::notifications;
-        use crate::schema::notifications::type_of_message;
-        let result = dsl_notifications
-            .filter(is_read_column.eq("unread"))
+        use crate::schema::notifications::dsl::*;
+        let result = notifications
+            .filter(status.eq("unread"))
             .order(created_at.desc())
             .load::<Notification>(&mut self.conn)
             .unwrap();
@@ -398,7 +391,7 @@ impl DB{
     pub fn update_status_of_notification(&mut self, id_to_search: i32, status_update: &str) ->
                                                                                         Result<(),
         String> {
-        use crate::schema::notifications::*;
+        use crate::schema::notifications::dsl::*;
         diesel::update(notifications.filter(id.eq(id_to_search)))
             .set(status.eq(status_update))
             .execute(&mut self.conn)
@@ -408,7 +401,7 @@ impl DB{
 
 
     pub fn query_for_podcast(&mut self, query: &str) -> Result<Vec<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::*;
+        use crate::schema::podcast_episodes::dsl::*;
         let result = podcast_episodes
             .filter(name.like(format!("%{}%", query))
                 .or(description.like(format!("%{}%", query))))
