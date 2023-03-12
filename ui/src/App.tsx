@@ -7,10 +7,13 @@ import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
+import {Search} from "./components/Search";
 
 const App = ()=> {
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
+
+
     return (
       <BrowserRouter basename="/ui">
           <div className="grid  grid-rows-[auto_1fr] h-full md:grid-cols-[300px_1fr]">
@@ -22,11 +25,13 @@ const App = ()=> {
                       <Route path={"/home"} element={<Homepage/>}/>
                       <Route path={"/podcasts"} element={<Podcasts/>}/>
                       <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
+                      <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
                   </Routes>
                       {currentPodcast&& <AudioPlayer/>}
                   </div>
               </div>
           </div>
+          <Search/>
       </BrowserRouter>
   )
 }

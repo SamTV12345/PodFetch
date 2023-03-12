@@ -25,17 +25,32 @@ export const PodcastDetailPage = () => {
             axios.get(apiURL + "/podcast/" + params.id + "/episodes")
                 .then((response) => {
                     dispatch(setSelectedEpisodes(response.data))
+                    if(params.podcastid){
+                        const element = document.getElementById("episode_"+params.podcastid)
+                        if(element){
+                            element.scrollIntoView({behavior: "smooth", block: "start", inline: "nearest"})
+                        }
+                    }
                 })
         })
     }, [])
+
+    useEffect(()=>{
+
+            if(params.podcastid){
+                const element = document.getElementById("episode_"+params.podcastid)
+                if(element){
+                    element.scrollIntoView({behavior: "smooth", block: "start", inline: "nearest"})
+                }
+            }
+        },
+
+        [params])
 
 
     if(currentPodcast===undefined){
         return <div>"Nicht gefunden"</div>
     }
-
-
-
 
     return <><div className="pl-5 pt-5 overflow-y-scroll">
         <h1 className="text-center text-2xl">{currentPodcast.name}</h1>
@@ -46,7 +61,7 @@ export const PodcastDetailPage = () => {
         <div>
             {
                 selectedEpisodes.map((episode, index)=>{
-                    return <><div key={episode.episode_id} className="grid grid-cols-[auto_1fr_3fr_auto] gap-4 mr-5">
+                    return <><div key={episode.episode_id} id={"episode_"+episode.id} className="grid grid-cols-[auto_1fr_3fr_auto] gap-4 mr-5">
                         <div className="grid place-items-center" key={episode.episode_id+"container"}>
                             {
                                 episode.status==='D'?

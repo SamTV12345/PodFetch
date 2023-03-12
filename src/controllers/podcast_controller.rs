@@ -26,7 +26,7 @@ tag="podcasts"
         let mut db = DB::new().unwrap();
         let podcast = db.get_podcast(id_num).unwrap();
         let mapping_service = MappingService::new();
-        let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(&podcast);
+        let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(podcast);
         HttpResponse::Ok().json(mapped_podcast)
 }
 
@@ -45,7 +45,7 @@ pub async fn find_all_podcasts() -> impl Responder {
 
     let mapped_podcasts = podcasts
         .into_iter()
-        .map(|podcast| mappingservice.map_podcast_to_podcast_dto(&podcast)).collect::<Vec<_>>();
+        .map(|podcast| mappingservice.map_podcast_to_podcast_dto(podcast)).collect::<Vec<_>>();
     HttpResponse::Ok().json(mapped_podcasts)
 }
 
@@ -104,4 +104,13 @@ pub async fn add_podcast(track_id: web::Json<PodCastAddModel>) -> impl Responder
     }
     log::info!("Added podcast: {}", unwrap_string(&res["results"][0]["collectionName"]));
     HttpResponse::Ok()
+}
+
+
+#[get("/podcasts/{podcast}/query")]
+pub async fn query_for_podcast(podcast: web::Path<String>) -> impl Responder {
+    let mut podcast_service = PodcastEpisodeService::new();
+    let res = podcast_service.query_for_podcast(&podcast);
+
+    HttpResponse::Ok().json(res)
 }

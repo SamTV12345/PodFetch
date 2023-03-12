@@ -8,6 +8,7 @@ use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, Podcas
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
 use crate::config::dbconfig::establish_connection;
+use crate::schema::podcast_episodes::dsl::podcast_episodes;
 use crate::schema::podcast_history_items::dsl::podcast_history_items;
 
 pub struct DB{
@@ -359,5 +360,15 @@ impl DB{
                 .execute(&mut self.conn)
                 .expect("Error updating podcast episode");
                 Ok(())
+    }
+
+    pub fn query_for_podcast(&mut self, query: &str) -> Result<Vec<PodcastEpisode>, String> {
+        use crate::schema::podcast_episodes::*;
+        let result = podcast_episodes
+            .filter(name.like(format!("%{}%", query))
+                .or(description.like(format!("%{}%", query))))
+            .load::<PodcastEpisode>(&mut self.conn)
+            .expect("Error loading podcast episode by id");
+        Ok(result)
     }
 }

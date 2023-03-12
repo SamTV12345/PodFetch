@@ -4,16 +4,19 @@ use reqwest::blocking::ClientBuilder;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::download_service::DownloadService;
+use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
 
 pub struct PodcastEpisodeService {
-    db: DB
+    db: DB,
+    mapping_service: MappingService
 }
 
 impl PodcastEpisodeService{
     pub fn new() -> Self {
         PodcastEpisodeService {
-            db: DB::new().unwrap()
+            db: DB::new().unwrap(),
+            mapping_service: MappingService::new()
         }
     }
     pub fn download_podcast_episode_if_not_locally_available(&mut self, podcast_episode: PodcastEpisode,
@@ -144,5 +147,13 @@ impl PodcastEpisodeService{
         let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
         let capture = re.captures(&url).unwrap();
         return capture.get(1).unwrap().as_str().to_owned();
+    }
+
+    pub fn query_for_podcast(&mut self, query:&str) ->Vec<PodcastEpisode>{
+        let podcasts = self.db.query_for_podcast(query).unwrap();
+        let podcast_dto = podcasts.iter().map(|podcast| {
+            self.mapping_service.map_podcastepisode_to_dto(podcast)
+        }).collect::<Vec<PodcastEpisode>>();
+        return podcast_dto
     }
 }
