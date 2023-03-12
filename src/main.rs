@@ -18,7 +18,7 @@ mod controllers;
 pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
 use crate::controllers::api_doc::ApiDoc;
-use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, query_for_podcast};
+use crate::controllers::podcast_controller::{query_for_podcast};
 use crate::controllers::notification_controller::{dismiss_notifications, get_unread_notifications};
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::find_all_podcast_episodes_of_podcast;

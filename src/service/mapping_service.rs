@@ -13,7 +13,7 @@ impl MappingService {
         }
     }
 
-    pub fn map_podcast_to_podcast_dto(&self, podcast: &Podcast) -> Podcast {
+    pub fn map_podcast_to_podcast_dto(&self, podcast: Podcast) -> Podcast {
         Podcast {
             id: podcast.id,
             name: podcast.name.clone(),
