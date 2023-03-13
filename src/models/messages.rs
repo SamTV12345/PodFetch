@@ -9,7 +9,6 @@ pub struct WsMessage(pub String);
 #[rtype(result = "()")]
 pub struct Connect {
     pub addr: Recipient<WsMessage>,
-    pub lobby_id: Uuid,
     pub self_id: Uuid,
 }
 
@@ -17,7 +16,6 @@ pub struct Connect {
 #[rtype(result = "()")]
 pub struct Disconnect {
     pub id: Uuid,
-    pub room_id: Uuid,
 }
 
 #[derive(Message)]

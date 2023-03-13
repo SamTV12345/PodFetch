@@ -1,26 +1,29 @@
-use actix::{fut, ActorContext, WrapFuture, ContextFutureSpawner, ActorFuture, ActorFutureExt};
-use actix::{Actor, Addr, Running, StreamHandler};
-use actix::{AsyncContext, Handler};
-use actix_web_actors::ws;
-use actix_web_actors::ws::Message::Text;
+use std::any::Any;
 use std::time::{Duration, Instant};
-use actix_web_actors::ws::{Message, ProtocolError};
-use futures::AsyncWriteExt;
+use actix::{Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, fut, Handler, Running, StreamHandler, WrapFuture};
+use actix_web_actors::ws;
+use actix_web_actors::ws::Message;
+use actix_web_actors::ws::Message::Text;
 use uuid::Uuid;
-use crate::models::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
+use crate::models::messages::{Connect, Disconnect, WsMessage};
 use crate::models::web_socket_message::Lobby;
-
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
+#[derive(Clone)]
 pub struct WsConn {
     hb: Instant,
+    id: Uuid,
+    addr: Addr<Lobby>
 }
 
 impl WsConn {
-    pub fn new() -> Self {
-        Self { hb: Instant::now() }
+    pub fn new(addr: Addr<Lobby>) -> Self {
+        Self { hb: Instant::now(),
+            id: Uuid::new_v4(),
+            addr
+        }
     }
 
     // This function will run on an interval, every 5 seconds to check
@@ -34,7 +37,6 @@ impl WsConn {
                 return;
             }
 
-            println!("Ping");
             ctx.ping(b"");
         });
     }
@@ -46,6 +48,27 @@ impl Actor for WsConn {
     // Start the heartbeat process for this connection
     fn started(&mut self, ctx: &mut Self::Context) {
         self.hb(ctx);
+
+        let addr = ctx.address();
+        self.addr
+            .send(Connect {
+                addr: addr.recipient(),
+                self_id: self.id,
+            })
+            .into_actor(self)
+            .then(|res, _, ctx| {
+                match res {
+                    Ok(_res) => (),
+                    _ => ctx.stop(),
+                }
+                fut::ready(())
+            })
+            .wait(ctx);
+    }
+
+    fn stopping(&mut self, _: &mut Self::Context) -> Running {
+        self.addr.do_send(Disconnect { id: self.id });
+        Running::Stop
     }
 }
 
@@ -76,5 +99,13 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
             }
             _ => ctx.stop(),
         }
+    }
+}
+
+impl Handler<WsMessage> for WsConn {
+    type Result = ();
+
+    fn handle(&mut self, msg: WsMessage, ctx: &mut Self::Context) {
+        ctx.text(msg.0);
     }
 }

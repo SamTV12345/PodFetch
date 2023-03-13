@@ -26,6 +26,7 @@ const App = ()=> {
     }
 
     socket.onerror = (event) => {
+        console.log(event)
         console.log("Error")
     }
 

@@ -10,6 +10,7 @@ use std::time::Duration;
 use actix::Actor;
 use actix_cors::Cors;
 use actix_files::Files;
+use actix_web::middleware::Logger;
 use actix_web::web::{redirect};
 use clokwerk::{Scheduler, TimeUnits};
 use utoipa::OpenApi;
@@ -63,6 +64,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 async fn main()-> std::io::Result<()> {
     println!("cargo:rerun-if-changed=./Cargo.toml");
     let chat_server = Lobby::default().start();
+
     let mut connection = establish_connection();
     connection.run_pending_migrations(MIGRATIONS).unwrap();
 
@@ -126,8 +128,9 @@ async fn main()-> std::io::Result<()> {
             .wrap(cors)
             .service(api)
             .service(ui)
-            .service(web::resource("/ws").route(web::get().to(start_connection)))
-            //.wrap(Logger::default())
+            .service(start_connection)
+            .data(chat_server.clone())
+            .wrap(Logger::default())
     }
     )
         .bind(("0.0.0.0", 8000))?

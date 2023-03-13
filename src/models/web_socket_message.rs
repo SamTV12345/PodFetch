@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use actix::{Actor, Context, Handler};
 use actix::prelude::{Message, Recipient};
 use uuid::Uuid;
@@ -36,6 +36,16 @@ impl Lobby {
             println!("attempting to send message but couldn't find user id.");
         }
     }
+
+    pub fn get_all_sockets(&self) -> Vec<Socket> {
+        self.sessions.clone().into_values().collect()
+    }
+
+    fn broadcast_message(&self, message: &str) {
+        self.sessions.clone().into_values().for_each(|socket| {
+            socket.do_send(WsMessage(message.to_string()));
+        });
+    }
 }
 
 impl Actor for Lobby {
@@ -46,6 +56,7 @@ impl Handler<Disconnect> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
+        println!("Handling disconnect");
         if self.sessions.remove(&msg.id).is_some() {
             self.sessions.clone().into_values().for_each(|socket| {
                 socket.do_send(WsMessage("Test123".to_string()));
@@ -59,6 +70,7 @@ impl Handler<Connect> for Lobby {
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
 
+        println!("Inserting new connection");
         self.sessions.insert(
             msg.self_id,
             msg.addr,
