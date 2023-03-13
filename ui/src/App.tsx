@@ -14,19 +14,24 @@ const App = ()=> {
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
-    fetch("http://localhost:8000/ws/websocket").then((response)=>{
-        response.headers.forEach((value, key)=>{
-            console.log(key+": "+value)
-        })
-        /*
-        const socket = new WebSocket(response.body)
-        socket.onopen = ()=>{
-            console.log("Connected to websocket")
-        }
-        socket.onmessage = (message)=>{
-            console.log(message)
-        }*/
-    })
+    let socket = new WebSocket("ws://localhost:8000/ws")
+
+    socket.onopen = () => {
+        console.log("Connected")
+        socket.send("Hello")
+    }
+
+    socket.onmessage = (event) => {
+        console.log(event.data)
+    }
+
+    socket.onerror = (event) => {
+        console.log("Error")
+    }
+
+    socket.onclose = (event) => {
+        console.log("Closed")
+    }
 
     return (
       <BrowserRouter basename="/ui">

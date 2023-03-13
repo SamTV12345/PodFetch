@@ -22,6 +22,7 @@ use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::find_all_podcast_episodes_of_podcast;
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
+use crate::controllers::websocket_controller::start_connection;
 use crate::service::rust_service::{schedule_episode_download};
 mod db;
 mod models;
@@ -96,10 +97,6 @@ async fn main()-> std::io::Result<()> {
             .allowed_header(http::header::UPGRADE)
             .max_age(3600);
 
-        let ws = web::scope("/ws")
-            .data(chat_server.clone())
-            .service(controllers::websocket_controller::start_connection);
-
         let ui = web::scope("/ui")
             .route("/index.html", web::get().to(index))
             .route("/{path:[^.]*}", web::get().to(index))
@@ -128,8 +125,8 @@ async fn main()-> std::io::Result<()> {
             .service(redirect("/","/ui/"))
             .wrap(cors)
             .service(api)
-            .service(ws)
             .service(ui)
+            .service(web::resource("/ws").route(web::get().to(start_connection)))
             //.wrap(Logger::default())
     }
     )
