@@ -64,6 +64,9 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 async fn main()-> std::io::Result<()> {
     println!("cargo:rerun-if-changed=./Cargo.toml");
 
+    let lobby = Lobby::default();
+
+    let chat_server = lobby.start();
 
     let mut connection = establish_connection();
     connection.run_pending_migrations(MIGRATIONS).unwrap();
@@ -90,11 +93,6 @@ async fn main()-> std::io::Result<()> {
 
 
     HttpServer::new(move || {
-
-        let lobby = Lobby::default();
-
-        let chat_server = lobby.start();
-
         let cors = Cors::default()
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST"])
@@ -135,7 +133,7 @@ async fn main()-> std::io::Result<()> {
             .service(ui)
             .service(start_connection)
             .service(send_message_to_user)
-            .data(chat_server)
+            .data(chat_server.clone())
             .wrap(Logger::default())
     }
     )
