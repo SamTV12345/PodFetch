@@ -14,6 +14,11 @@ pub struct Connect {
 
 #[derive(Message)]
 #[rtype(result = "()")]
+pub struct BroadcastMessage{
+    pub message: String
+}
+#[derive(Message)]
+#[rtype(result = "()")]
 pub struct Disconnect {
     pub id: Uuid,
 }

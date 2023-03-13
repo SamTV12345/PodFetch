@@ -2,7 +2,7 @@ use std::collections::{HashMap};
 use actix::{Actor, Context, Handler};
 use actix::prelude::{Message, Recipient};
 use uuid::Uuid;
-use crate::models::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
+use crate::models::messages::{BroadcastMessage, ClientActorMessage, Connect, Disconnect, WsMessage};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -41,9 +41,19 @@ impl Lobby {
         self.sessions.clone().into_values().collect()
     }
 
-    fn broadcast_message(&self, message: &str) {
+    pub fn broadcast_message(&self, message: &str) {
+
+    }
+}
+
+impl Handler<BroadcastMessage> for Lobby {
+    type Result = ();
+
+    fn handle(&mut self, msg: BroadcastMessage, _: &mut Context<Self>) {
+        println!("Handling broadcast message");
         self.sessions.clone().into_values().for_each(|socket| {
-            socket.do_send(WsMessage(message.to_string()));
+            println!("Sending message to socket: {}", msg.message);
+            socket.do_send(WsMessage(msg.message.to_string()));
         });
     }
 }
@@ -56,7 +66,9 @@ impl Handler<Disconnect> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
+        println!("Disconnecting");
         println!("Handling disconnect");
+        println!("Sessions length: {}", self.sessions.len().to_string());
         if self.sessions.remove(&msg.id).is_some() {
             self.sessions.clone().into_values().for_each(|socket| {
                 socket.do_send(WsMessage("Test123".to_string()));
@@ -75,7 +87,7 @@ impl Handler<Connect> for Lobby {
             msg.self_id,
             msg.addr,
         );
-
+        println!("Sessions length: {}", self.sessions.len().to_string());
         self.send_message(&format!("your id is {}", msg.self_id), &msg.self_id)
     }
 }

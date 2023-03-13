@@ -67,6 +67,7 @@ impl Actor for WsConn {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
+        println!("Stopping connection");
         self.addr.do_send(Disconnect { id: self.id });
         Running::Stop
     }

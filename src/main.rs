@@ -23,7 +23,7 @@ use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::find_all_podcast_episodes_of_podcast;
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
-use crate::controllers::websocket_controller::start_connection;
+use crate::controllers::websocket_controller::{send_message_to_user, start_connection};
 use crate::service::rust_service::{schedule_episode_download};
 mod db;
 mod models;
@@ -63,7 +63,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
     println!("cargo:rerun-if-changed=./Cargo.toml");
-    let chat_server = Lobby::default().start();
+
 
     let mut connection = establish_connection();
     connection.run_pending_migrations(MIGRATIONS).unwrap();
@@ -90,6 +90,11 @@ async fn main()-> std::io::Result<()> {
 
 
     HttpServer::new(move || {
+
+        let lobby = Lobby::default();
+
+        let chat_server = lobby.start();
+
         let cors = Cors::default()
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST"])
@@ -129,7 +134,8 @@ async fn main()-> std::io::Result<()> {
             .service(api)
             .service(ui)
             .service(start_connection)
-            .data(chat_server.clone())
+            .service(send_message_to_user)
+            .data(chat_server)
             .wrap(Logger::default())
     }
     )
