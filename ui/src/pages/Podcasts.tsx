@@ -1,8 +1,8 @@
 import {useEffect} from "react";
-import axios from "axios";
+import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {setPodcasts} from "../store/CommonSlice";
+import {Podcast, setPodcasts} from "../store/CommonSlice";
 import {Card} from "../components/Card";
 import {AddPodcast} from "../components/AddPodcast";
 import {setModalOpen} from "../store/ModalSlice";
@@ -12,8 +12,9 @@ export const Podcasts = ()=>{
     const dispatch = useAppDispatch()
 
     useEffect(()=>{
-        axios.get(apiURL+"/podcasts").then((response)=>{
-            dispatch(setPodcasts(response.data))
+        axios.get(apiURL+"/podcasts")
+            .then((response:AxiosResponse<Podcast[]>)=>{
+                dispatch(setPodcasts(response.data))
         })
     },[])
 

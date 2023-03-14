@@ -113,7 +113,7 @@ Responder {
                 log::debug!("Inserting podcast episodes: {}", podcast.name);
                 let inserted_podcasts = PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
 
-                lobby.do_send(BroadcastMessage{
+                lobby.get_ref().do_send(BroadcastMessage{
                     podcast_episode: None,
                     type_of: ADD_PODCAST_EPISODES_TYPE.to_string(),
                     message: format!("Added podcast episodes: {}", podcast.name),

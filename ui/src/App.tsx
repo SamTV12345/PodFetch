@@ -12,78 +12,94 @@ import {apiURL, isJsonString} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {useEffect} from "react";
 import {Notification} from "./models/Notification";
-import {setNotifications, setPodcasts} from "./store/CommonSlice";
+import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
+import useOnMount from "./hooks/useOnMount";
 
-const App = ()=> {
+const App = () => {
     const dispatch = useAppDispatch()
-    const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
-    const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
-    const podcasts = useAppSelector(state=>state.common.podcasts)
-    let socket = new WebSocket("ws://localhost:8000/ws")
+    const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
+    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
+    const podcasts = useAppSelector(state => state.common.podcasts)
+    const downloadedPodcasts = useAppSelector(state => state.common.selectedEpisodes)
 
-    socket.onopen = () => {
-        console.log("Connected")
-        socket.send("Hello")
-    }
+    useOnMount(() => {
+        let socket = new WebSocket("ws://localhost:8000/ws")
 
-    socket.onmessage = (event) => {
-        if(!isJsonString(event.data)){
-            return
+        socket.onopen = () => {
+            console.log("Connected")
+            socket.send("Hello")
         }
-        const parsed = JSON.parse(event.data)
-        if(checkIfPodcastAdded(parsed)){
-            const podcast = parsed.podcast
-            dispatch(setPodcasts([...podcasts,podcast]))
+
+        socket.onmessage = (event) => {
+            if (!isJsonString(event.data)) {
+                return
+            }
+            const parsed = JSON.parse(event.data)
+            if (checkIfPodcastAdded(parsed)) {
+                const podcast = parsed.podcast
+                console.log(parsed)
+                console.log(podcasts)
+                dispatch(setPodcasts([...podcasts, podcast]))
+            } else if (checkIfPodcastEpisodeAdded(parsed)) {
+                console.log(parsed)
+                const downloadedPodcastEpisode = parsed.podcast_episode
+
+                let podcastUpdated = downloadedPodcasts.map(p => {
+                    if (p.id === downloadedPodcastEpisode.id) {
+                        const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
+                        foundDownload.status = "D"
+                        return foundDownload
+                    }
+                    return p
+                })
+                console.log(podcastUpdated)
+                dispatch(setSelectedEpisodes(podcastUpdated))
+            }
         }
-        else if (checkIfPodcastEpisodeAdded(parsed)){
 
+        socket.onerror = (event) => {
+            console.log(event)
+            console.log("Error")
         }
-        else if (checkIfPodcastEpisodeAdded(parsed)){
 
+        socket.onclose = (event) => {
+            console.log("Closed")
         }
-    }
+    })
 
-    socket.onerror = (event) => {
-        console.log(event)
-        console.log("Error")
-    }
-
-    socket.onclose = (event) => {
-        console.log("Closed")
-    }
-
-    const getNotifications = ()=>{
-        axios.get(apiURL+'/notifications/unread')
-            .then((response:AxiosResponse<Notification[]>)=>{
+    const getNotifications = () => {
+        axios.get(apiURL + '/notifications/unread')
+            .then((response: AxiosResponse<Notification[]>) => {
                 dispatch(setNotifications(response.data))
             })
     }
 
-    useEffect(()=>{
+    useEffect(() => {
         getNotifications()
-    },[])
+    }, [])
 
     return (
-      <BrowserRouter basename="/ui">
-          <div className="grid  grid-rows-[auto_1fr] h-full md:grid-cols-[300px_1fr]">
-              <Header/>
-              <SideBar/>
-              <div className={`col-span-6 md:col-span-5 ${sideBarCollapsed?'xs:col-span-5':'hidden'} md:block w-full overflow-x-auto`}>
-                  <div className="grid grid-rows-[1fr_auto] h-full ">
-                  <Routes>
-                      <Route path={"/home"} element={<Homepage/>}/>
-                      <Route path={"/podcasts"} element={<Podcasts/>}/>
-                      <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
-                      <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
-                  </Routes>
-                      {currentPodcast&& <AudioPlayer/>}
-                  </div>
-              </div>
-          </div>
-          <Search/>
-      </BrowserRouter>
-  )
+        <BrowserRouter basename="/ui">
+            <div className="grid  grid-rows-[auto_1fr] h-full md:grid-cols-[300px_1fr]">
+                <Header/>
+                <SideBar/>
+                <div
+                    className={`col-span-6 md:col-span-5 ${sideBarCollapsed ? 'xs:col-span-5' : 'hidden'} md:block w-full overflow-x-auto`}>
+                    <div className="grid grid-rows-[1fr_auto] h-full ">
+                        <Routes>
+                            <Route path={"/home"} element={<Homepage/>}/>
+                            <Route path={"/podcasts"} element={<Podcasts/>}/>
+                            <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
+                            <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
+                        </Routes>
+                        {currentPodcast && <AudioPlayer/>}
+                    </div>
+                </div>
+            </div>
+            <Search/>
+        </BrowserRouter>
+    )
 }
 
 export default App

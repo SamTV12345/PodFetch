@@ -1,6 +1,7 @@
 use std::collections::{HashMap};
 use actix::{Actor, Context, Handler};
 use actix::prelude::{Message, Recipient};
+use log::log;
 use serde_json::json;
 use uuid::Uuid;
 use crate::models::messages::{BroadcastMessage, Connect, Disconnect, WsMessage};
@@ -47,12 +48,9 @@ impl Handler<Disconnect> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        println!("Disconnecting");
-        println!("Handling disconnect");
-        println!("Sessions length: {}", self.sessions.len().to_string());
         if self.sessions.remove(&msg.id).is_some() {
             self.sessions.clone().into_values().for_each( |_|{
-                println!("Disconnected web client");
+                log::debug!("Disconnected web client");
             });
         }
     }
