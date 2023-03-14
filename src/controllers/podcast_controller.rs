@@ -1,4 +1,5 @@
 use std::thread;
+use actix::Addr;
 use actix_web::{HttpResponse, Responder, web};
 use serde_json::{from_str, Value};
 use crate::db::DB;
@@ -11,6 +12,7 @@ use crate::service::rust_service::{refresh_podcast, schedule_episode_download};
 use crate::unwrap_string;
 use crate::service::rust_service::{find_podcast as find_podcast_service};
 use reqwest::{ClientBuilder as AsyncClientBuilder};
+use crate::models::web_socket_message::Lobby;
 
 
 #[utoipa::path(
@@ -70,7 +72,9 @@ responses(
 tag="podcasts"
 )]
 #[post("/podcast")]
-pub async fn add_podcast(track_id: web::Json<PodCastAddModel>) -> impl Responder {
+pub async fn add_podcast(track_id: web::Json<PodCastAddModel>, lobby: web::Data<Addr<Lobby>>) ->
+                                                                                             impl
+Responder {
     let client = AsyncClientBuilder::new().build().unwrap();
     let res = client.get("https://itunes.apple.com/lookup?id=".to_owned()+&track_id
         .track_id

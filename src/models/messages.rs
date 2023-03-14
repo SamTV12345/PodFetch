@@ -1,5 +1,6 @@
 use actix::prelude::{Message, Recipient};
 use uuid::Uuid;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -12,10 +13,14 @@ pub struct Connect {
     pub self_id: Uuid,
 }
 
-#[derive(Message)]
+#[derive(Message, Serialize, Deserialize)]
 #[rtype(result = "()")]
 pub struct BroadcastMessage{
-    pub message: String
+    pub type_of: String,
+    pub message: String,
+    pub podcast: Option<Podcast>,
+    pub podcast_episodes: Option<Vec<PodcastEpisode>>,
+    pub podcast_episode: Option<PodcastEpisode>
 }
 #[derive(Message)]
 #[rtype(result = "()")]

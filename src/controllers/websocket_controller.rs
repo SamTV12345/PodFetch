@@ -17,7 +17,10 @@ pub async fn start_connection(req: HttpRequest, stream: Payload, lobby: Data<Add
 
 #[get("/ws/send")]
 pub async fn send_message_to_user(lobby: Data<Addr<Lobby>>) ->impl Responder{
-    lobby.get_ref().send(BroadcastMessage { message: "Broadcast".to_string() }).await.unwrap();
+    lobby.get_ref().send(BroadcastMessage { type_of: "".to_string(), message: "Broadcast".to_string(),
+        podcast: None,
+        podcast_episodes: None,
+        podcast_episode: None }).await.unwrap();
 
     HttpResponse::Ok().body("Message sent")
 }

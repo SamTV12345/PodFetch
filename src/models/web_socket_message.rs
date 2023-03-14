@@ -1,6 +1,9 @@
 use std::collections::{HashMap};
 use actix::{Actor, Context, Handler};
 use actix::prelude::{Message, Recipient};
+use actix_web::web;
+use serde::Serialize;
+use serde_json::json;
 use uuid::Uuid;
 use crate::models::messages::{BroadcastMessage, ClientActorMessage, Connect, Disconnect, WsMessage};
 
@@ -53,7 +56,7 @@ impl Handler<BroadcastMessage> for Lobby {
         println!("Handling broadcast message");
         self.sessions.clone().into_values().for_each(|socket| {
             println!("Sending message to socket: {}", msg.message);
-            socket.do_send(WsMessage(msg.message.to_string()));
+            socket.do_send(WsMessage(json!(msg).to_string()));
         });
     }
 }
