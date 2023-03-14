@@ -15,14 +15,17 @@ export const isLocalhost = Boolean(
     )
 );
 
-export let apiURL= ''
-export let uiURL= ''
+export let apiURL: string
+export let uiURL: string
+export let wsURL: string
 
 if(isLocalhost && import.meta.env.DEV){
     apiURL="http://localhost:8000/api/v1"
     uiURL="http://localhost:5173/ui"
+    wsURL="ws://localhost:8000/ws"
 }
 else {
+    wsURL = "ws:"+"//"+window.location.hostname+":"+window.location.port+"/ws"
     apiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/api/v1"
     uiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/ui"
 }
