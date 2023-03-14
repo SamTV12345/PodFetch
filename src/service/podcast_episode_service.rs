@@ -1,9 +1,14 @@
+use actix::Addr;
+use actix_web::web;
 use feed_rs::parser;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
+use crate::constants::constants::ADD_PODCAST_EPISODE_TYPE;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::messages::BroadcastMessage;
 use crate::models::models::Notification;
+use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
@@ -21,7 +26,8 @@ impl PodcastEpisodeService{
         }
     }
     pub fn download_podcast_episode_if_not_locally_available(&mut self, podcast_episode: PodcastEpisode,
-                                                             podcast: Podcast){
+                                                             podcast: Podcast, lobby:
+                                                             Option<web::Data<Addr<Lobby>>>){
         let mut db = DB::new().unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
@@ -47,6 +53,19 @@ impl PodcastEpisodeService{
         }
         Ok(false) => {
             Self::perform_download(&podcast_episode, &mut db, podcast_episode_cloned, podcast_cloned);
+            match lobby {
+                Some(lobby) => {
+                    lobby.do_send(BroadcastMessage{
+                        message: format!("Episode {} is now available offline", podcast_episode.name),
+                        podcast: Option::from(podcast.clone()),
+                        type_of: ADD_PODCAST_EPISODE_TYPE.to_string(),
+                        podcast_episode: Some(podcast_episode),
+                        podcast_episodes: None,
+                    })
+                }
+                None => {}
+            }
+
         }
 
         _ => {
@@ -77,7 +96,7 @@ impl PodcastEpisodeService{
     }
 
     // Used for creating/updating podcasts
-    pub fn insert_podcast_episodes(podcast: Podcast){
+    pub fn insert_podcast_episodes(podcast: Podcast) ->Vec<PodcastEpisode>{
         let client = ClientBuilder::new().build().unwrap();
         let result = client.get(podcast.clone().rssfeed).send().unwrap();
         let bytes = result.bytes().unwrap();
@@ -85,6 +104,8 @@ impl PodcastEpisodeService{
         let vec = Self::get_media_urls(&text);
         let durations = Self::get_time_in_millis(&text);
         let feed = parser::parse(&*bytes).unwrap();
+
+        let mut podcast_inserted:Vec<PodcastEpisode> = Vec::new();
         for (i,item) in feed.entries.iter().enumerate(){
             let mut db = DB::new().unwrap();
             let result = db.get_podcast_episode_by_url(&vec[i].to_owned());
@@ -99,12 +120,15 @@ impl PodcastEpisodeService{
                 {
                     duration_episode = duration.unwrap();
                 }
-                db.insert_podcast_episodes(podcast.clone(), &vec[i].to_owned(),
+                let inserted_episode = db.insert_podcast_episodes(podcast.clone(), &vec[i]
+                    .to_owned(),
                                            item, &feed.logo
                         .clone().unwrap().uri, &item.summary.clone().unwrap().content,
                                            duration_episode as i32);
+                podcast_inserted.push(inserted_episode);
             }
         }
+        return podcast_inserted;
     }
 
 

@@ -13,9 +13,6 @@ pub struct OptionalId {
 }
 
 impl OptionalId {
-    pub fn new() -> Self {
-        OptionalId { last_podcast_episode: None }
-    }
 }
 
 #[utoipa::path(

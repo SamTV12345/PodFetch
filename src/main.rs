@@ -7,9 +7,10 @@ extern crate serde_json;
 use std::{env, thread};
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
+use actix::{Actor};
 use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::web::{redirect};
+use actix_web::web::{Data, redirect};
 use clokwerk::{Scheduler, TimeUnits};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -23,12 +24,14 @@ use crate::controllers::notification_controller::{dismiss_notifications, get_unr
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
+use crate::controllers::websocket_controller::{start_connection};
 use crate::service::rust_service::{schedule_episode_download};
 mod db;
 mod models;
 mod constants;
 mod service;
 use crate::db::DB;
+use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
@@ -45,7 +48,7 @@ pub fn run_poll(){
     for podcast in podcats_result {
     let podcast_clone = podcast.clone();
     PodcastEpisodeService::insert_podcast_episodes(podcast);
-    schedule_episode_download(podcast_clone);
+    schedule_episode_download(podcast_clone, None);
     }
 }
 
@@ -60,7 +63,11 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
-    println!("cargo:rerun-if-changed=./Cargo.toml");
+    //println!("cargo:rerun-if-changed=./Cargo.toml");
+
+    let lobby = Lobby::default();
+
+    let chat_server = lobby.start();
 
     let mut connection = establish_connection();
     connection.run_pending_migrations(MIGRATIONS).unwrap();
@@ -86,12 +93,14 @@ async fn main()-> std::io::Result<()> {
     });
 
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
+            .allowed_header(http::header::CONNECTION)
+            .allowed_header(http::header::UPGRADE)
             .max_age(3600);
 
         let ui = web::scope("/ui")
@@ -117,7 +126,6 @@ async fn main()-> std::io::Result<()> {
 
         let openapi = ApiDoc::openapi();
 
-           // .wrap(Logger::default());
         App::new().service(Files::new
             ("/podcasts", "podcasts").show_files_listing())
             .service(redirect("/swagger-ui", "/swagger-ui/"))
@@ -129,7 +137,8 @@ async fn main()-> std::io::Result<()> {
             .wrap(cors)
             .service(api)
             .service(ui)
-            //.wrap(Logger::default())
+            .service(start_connection)
+            .app_data(Data::new(chat_server.clone()))
     }
     )
         .bind(("0.0.0.0", 8000))?
