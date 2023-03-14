@@ -1,6 +1,16 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    notifications (id) {
+        id -> Integer,
+        type_of_message -> Text,
+        message -> Text,
+        created_at -> Text,
+        status -> Text,
+    }
+}
+
+diesel::table! {
     podcast_episodes (id) {
         id -> Integer,
         podcast_id -> Integer,
@@ -52,6 +62,7 @@ diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
 diesel::joinable!(queue -> podcasts (podcast_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    notifications,
     podcast_episodes,
     podcast_history_items,
     podcasts,

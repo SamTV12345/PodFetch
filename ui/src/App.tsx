@@ -2,15 +2,20 @@ import './App.css'
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import {SideBar} from "./components/SideBar";
 import {Header} from "./components/Header";
-import {useAppSelector} from "./store/hooks";
+import {useAppDispatch, useAppSelector} from "./store/hooks";
 import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
+import {Search} from "./components/Search";
 import {apiURL} from "./utils/Utilities";
-import axios from "axios";
+import axios, {AxiosResponse} from "axios";
+import {useEffect} from "react";
+import {Notification} from "./models/Notification";
+import {setNotifications} from "./store/CommonSlice";
 
 const App = ()=> {
+    const dispatch = useAppDispatch()
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
@@ -34,6 +39,17 @@ const App = ()=> {
         console.log("Closed")
     }
 
+    const getNotifications = ()=>{
+        axios.get(apiURL+'/notifications/unread')
+            .then((response:AxiosResponse<Notification[]>)=>{
+                dispatch(setNotifications(response.data))
+            })
+    }
+
+    useEffect(()=>{
+        getNotifications()
+    },[])
+
     return (
       <BrowserRouter basename="/ui">
           <div className="grid  grid-rows-[auto_1fr] h-full md:grid-cols-[300px_1fr]">
@@ -45,11 +61,13 @@ const App = ()=> {
                       <Route path={"/home"} element={<Homepage/>}/>
                       <Route path={"/podcasts"} element={<Podcasts/>}/>
                       <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
+                      <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
                   </Routes>
                       {currentPodcast&& <AudioPlayer/>}
                   </div>
               </div>
           </div>
+          <Search/>
       </BrowserRouter>
   )
 }

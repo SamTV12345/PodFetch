@@ -1,5 +1,6 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {GeneralModel} from "../models/PodcastAddModel";
+import {Notification} from "../models/Notification";
 
 export type Podcast = {
     directory: string,
@@ -29,7 +30,10 @@ interface CommonProps {
     selectedEpisodes: PodcastEpisode[]
     sideBarCollapsed: boolean,
     podcasts:Podcast[],
-    searchedPodcasts: GeneralModel|undefined
+    searchedPodcasts: GeneralModel|undefined,
+    notifications: Notification[],
+    infoModalPodcast: PodcastEpisode|undefined,
+    infoModalPodcastOpen: boolean
 }
 
 // Define the initial state using that type
@@ -37,7 +41,10 @@ const initialState: CommonProps = {
     selectedEpisodes: [],
     sideBarCollapsed: false,
     podcasts: [],
-    searchedPodcasts: undefined
+    searchedPodcasts: undefined,
+    notifications: [],
+    infoModalPodcast: undefined,
+    infoModalPodcastOpen: false
 }
 
 export const commonSlice = createSlice({
@@ -56,9 +63,33 @@ export const commonSlice = createSlice({
         },
         setSearchedPodcasts: (state, action:PayloadAction<GeneralModel>) => {
             state.searchedPodcasts = action.payload
+        },
+        setNotifications: (state, action:PayloadAction<Notification[]>) => {
+            state.notifications = action.payload
+        },
+        removeNotification: (state, action:PayloadAction<number>) => {
+            state.notifications = state.notifications.filter((notification) => notification.id !== action.payload)
+        },
+        setInfoModalPodcast: (state, action:PayloadAction<PodcastEpisode>) => {
+            state.infoModalPodcast = action.payload
+        },
+        setInfoModalPodcastOpen: (state, action:PayloadAction<boolean>) => {
+            state.infoModalPodcastOpen = action.payload
+        },
+        setInfoModalDownloaded: (state, action:PayloadAction<string>) => {
+            if(state.infoModalPodcast) {
+                state.infoModalPodcast.status = 'D'
+                state.selectedEpisodes = state.selectedEpisodes.map((episode) => {
+                    if(episode.episode_id === action.payload) {
+                        episode.status = 'D'
+                    }
+                    return episode
+                })
+            }
         }
 }})
 
-export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts} = commonSlice.actions
+export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts, setInfoModalDownloaded,
+    setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen} = commonSlice.actions
 
 export default commonSlice.reducer

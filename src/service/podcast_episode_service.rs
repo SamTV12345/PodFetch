@@ -3,17 +3,21 @@ use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::models::Notification;
 use crate::service::download_service::DownloadService;
+use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
 
 pub struct PodcastEpisodeService {
-    db: DB
+    db: DB,
+    mapping_service: MappingService
 }
 
 impl PodcastEpisodeService{
     pub fn new() -> Self {
         PodcastEpisodeService {
-            db: DB::new().unwrap()
+            db: DB::new().unwrap(),
+            mapping_service: MappingService::new()
         }
     }
     pub fn download_podcast_episode_if_not_locally_available(&mut self, podcast_episode: PodcastEpisode,
@@ -42,17 +46,30 @@ impl PodcastEpisodeService{
                     .expect("Error saving total time of podcast episode.");
         }
         Ok(false) => {
-            log::info!("Downloading podcast episode: {}",podcast_episode.name);
-            let mut download_service = DownloadService::new();
-            download_service.download_podcast_episode(podcast_episode_cloned,
-                                                      podcast_cloned);
-            db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
+            Self::perform_download(&podcast_episode, &mut db, podcast_episode_cloned, podcast_cloned);
         }
 
         _ => {
                 println!("Error checking if podcast episode is downloaded.");
             }
         }
+    }
+
+    pub fn perform_download(podcast_episode: &PodcastEpisode, db: &mut DB,
+    podcast_episode_cloned: PodcastEpisode, podcast_cloned: Podcast) {
+        log::info!("Downloading podcast episode: {}",podcast_episode.name);
+        let mut download_service = DownloadService::new();
+        download_service.download_podcast_episode(podcast_episode_cloned,
+                                                  podcast_cloned);
+        db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
+        let notification = Notification {
+            id: 0,
+            message: format!("Episode {} is now available offline", podcast_episode.name),
+            created_at: chrono::Utc::now().naive_utc().to_string(),
+            type_of_message: "Download".to_string(),
+            status: "unread".to_string(),
+        };
+        db.insert_notification(notification).unwrap();
     }
 
     pub fn get_last_5_podcast_episodes(&mut self, podcast: Podcast) -> Vec<PodcastEpisode>{
@@ -144,5 +161,13 @@ impl PodcastEpisodeService{
         let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
         let capture = re.captures(&url).unwrap();
         return capture.get(1).unwrap().as_str().to_owned();
+    }
+
+    pub fn query_for_podcast(&mut self, query:&str) ->Vec<PodcastEpisode>{
+        let podcasts = self.db.query_for_podcast(query).unwrap();
+        let podcast_dto = podcasts.iter().map(|podcast| {
+            self.mapping_service.map_podcastepisode_to_dto(podcast)
+        }).collect::<Vec<PodcastEpisode>>();
+        return podcast_dto
     }
 }

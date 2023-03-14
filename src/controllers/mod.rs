@@ -4,4 +4,5 @@ pub mod podcast_episode_controller;
 pub mod watch_time_controller;
 pub mod api_doc;
 pub mod websocket_controller;
-mod web_socket;
+pub mod web_socket;
+pub mod notification_controller;
