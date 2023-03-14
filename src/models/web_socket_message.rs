@@ -34,7 +34,7 @@ impl Handler<BroadcastMessage> for Lobby {
 
     fn handle(&mut self, msg: BroadcastMessage, _: &mut Context<Self>) {
         self.sessions.clone().into_values().for_each(|socket| {
-            println!("Sending message to socket: {}", msg.message);
+            log::debug!("Sending message to socket: {}", msg.message);
             socket.do_send(WsMessage(json!(msg).to_string()));
         });
     }

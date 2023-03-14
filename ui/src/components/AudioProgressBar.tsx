@@ -42,7 +42,6 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
     const currentPodcastEpisode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
 
     const totalDuration = useMemo(()=>{
-        console.log("Total duration: "+metadata?.duration)
         return convertToMinutes(metadata?.duration)
     },[metadata?.duration])
 

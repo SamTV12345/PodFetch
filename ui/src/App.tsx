@@ -10,22 +10,21 @@ import {Homepage} from "./pages/Homepage";
 import {Search} from "./components/Search";
 import {apiURL, isJsonString} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
 import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import useOnMount from "./hooks/useOnMount";
+import {store} from "./store/store";
 
 const App = () => {
     const dispatch = useAppDispatch()
     const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
     const podcasts = useAppSelector(state => state.common.podcasts)
-    const downloadedPodcasts = useAppSelector(state => state.common.selectedEpisodes)
+    const [socket] = useState(()=>new WebSocket("ws://localhost:8000/ws"))
 
-    useOnMount(() => {
-        let socket = new WebSocket("ws://localhost:8000/ws")
-
+    useEffect(() => {
         socket.onopen = () => {
             console.log("Connected")
             socket.send("Hello")
@@ -38,14 +37,10 @@ const App = () => {
             const parsed = JSON.parse(event.data)
             if (checkIfPodcastAdded(parsed)) {
                 const podcast = parsed.podcast
-                console.log(parsed)
-                console.log(podcasts)
                 dispatch(setPodcasts([...podcasts, podcast]))
             } else if (checkIfPodcastEpisodeAdded(parsed)) {
-                console.log(parsed)
                 const downloadedPodcastEpisode = parsed.podcast_episode
-
-                let podcastUpdated = downloadedPodcasts.map(p => {
+                let podcastUpdated = store.getState().common.selectedEpisodes.map(p => {
                     if (p.id === downloadedPodcastEpisode.id) {
                         const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
                         foundDownload.status = "D"
@@ -53,20 +48,18 @@ const App = () => {
                     }
                     return p
                 })
-                console.log(podcastUpdated)
                 dispatch(setSelectedEpisodes(podcastUpdated))
             }
         }
 
         socket.onerror = (event) => {
-            console.log(event)
             console.log("Error")
         }
 
         socket.onclose = (event) => {
             console.log("Closed")
         }
-    })
+    }, [podcasts, socket])
 
     const getNotifications = () => {
         axios.get(apiURL + '/notifications/unread')
