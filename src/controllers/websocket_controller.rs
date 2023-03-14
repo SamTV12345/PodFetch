@@ -1,10 +1,8 @@
-use std::ptr::null;
 use actix::Addr;
-use actix_web::{web::Payload, Error, HttpResponse, HttpRequest, web, web::Data, get, Responder};
+use actix_web::{web::Payload, Error, HttpResponse, HttpRequest, web::Data, get, Responder};
 use actix_web_actors::ws;
-use uuid::Uuid;
 use crate::controllers::web_socket::WsConn;
-use crate::models::messages::{BroadcastMessage, ClientActorMessage};
+use crate::models::messages::{BroadcastMessage};
 use crate::models::web_socket_message::Lobby;
 
 #[get("/ws")]

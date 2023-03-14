@@ -8,17 +8,18 @@ import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
 import {Search} from "./components/Search";
-import {apiURL} from "./utils/Utilities";
+import {apiURL, isJsonString} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {useEffect} from "react";
 import {Notification} from "./models/Notification";
-import {setNotifications} from "./store/CommonSlice";
+import {setNotifications, setPodcasts} from "./store/CommonSlice";
+import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 
 const App = ()=> {
     const dispatch = useAppDispatch()
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
-
+    const podcasts = useAppSelector(state=>state.common.podcasts)
     let socket = new WebSocket("ws://localhost:8000/ws")
 
     socket.onopen = () => {
@@ -27,7 +28,20 @@ const App = ()=> {
     }
 
     socket.onmessage = (event) => {
-        console.log(event.data)
+        if(!isJsonString(event.data)){
+            return
+        }
+        const parsed = JSON.parse(event.data)
+        if(checkIfPodcastAdded(parsed)){
+            const podcast = parsed.podcast
+            dispatch(setPodcasts([...podcasts,podcast]))
+        }
+        else if (checkIfPodcastEpisodeAdded(parsed)){
+
+        }
+        else if (checkIfPodcastEpisodeAdded(parsed)){
+
+        }
     }
 
     socket.onerror = (event) => {

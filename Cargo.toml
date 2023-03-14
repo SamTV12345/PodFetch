@@ -20,7 +20,7 @@ actix-web-actors = "4.2.0"
 actix-cors="0.6.4"
 feed-rs = "1.3"
 regex = "1.7.1"
-diesel = { version = "2.0.3", features = ["sqlite"] }
+diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35"] }
 utoipa = { version = "3", features = ["actix_extras"] }
 futures = "0.3.26"
 utoipa-swagger-ui = {version = "3", features = ["actix-web"] }

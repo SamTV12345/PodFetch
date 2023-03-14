@@ -7,11 +7,11 @@ extern crate serde_json;
 use std::{env, thread};
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
-use actix::Actor;
+use actix::{Actor};
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::middleware::Logger;
-use actix_web::web::{redirect};
+use actix_web::web::{Data, redirect};
 use clokwerk::{Scheduler, TimeUnits};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -49,7 +49,7 @@ pub fn run_poll(){
     for podcast in podcats_result {
     let podcast_clone = podcast.clone();
     PodcastEpisodeService::insert_podcast_episodes(podcast);
-    schedule_episode_download(podcast_clone);
+    schedule_episode_download(podcast_clone, None);
     }
 }
 
@@ -141,7 +141,7 @@ async fn main()-> std::io::Result<()> {
             .service(ui)
             .service(start_connection)
             .service(send_message_to_user)
-            .data(chat_server.clone())
+            .app_data(Data::new(chat_server.clone()))
             .wrap(Logger::default())
     }
     )

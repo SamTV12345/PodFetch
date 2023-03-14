@@ -1,7 +1,10 @@
+use actix::Addr;
+use actix_web::web::Data;
 use crate::constants::constants::{ITUNES_URL};
 use reqwest::ClientBuilder as AsyncClientBuilder;
 use serde_json::Value;
 use crate::models::itunes_models::Podcast;
+use crate::models::web_socket_message::Lobby;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 
 pub async fn find_podcast(podcast: &str)-> Value {
@@ -13,17 +16,18 @@ pub async fn find_podcast(podcast: &str)-> Value {
 
 
 
-pub fn schedule_episode_download(podcast: Podcast){
+pub fn schedule_episode_download(podcast: Podcast, lobby: Option<Data<Addr<Lobby>>>){
     let mut podcast_service = PodcastEpisodeService::new();
     let result = podcast_service.get_last_5_podcast_episodes(podcast.clone());
     for podcast_episode in result {
         podcast_service.download_podcast_episode_if_not_locally_available(podcast_episode,
-                                                                                 podcast.clone());
+                                                                                 podcast.clone(),
+                                                                          lobby.clone());
     }
 }
 
-pub fn refresh_podcast(podcast:Podcast){
+pub fn refresh_podcast(podcast:Podcast, lobby: Data<Addr<Lobby>>){
     log::info!("Refreshing podcast: {}", podcast.name);
     PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
-    schedule_episode_download(podcast);
+    schedule_episode_download(podcast, Some(lobby));
 }

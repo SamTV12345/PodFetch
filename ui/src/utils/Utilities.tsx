@@ -42,3 +42,13 @@ export const formatTime = (isoDate: string) => {
 export const removeHTML = (html: string) => {
     return html.replace(/<[^>]*>?/gm, '');
 }
+
+
+export const isJsonString = (str: string) => {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+}

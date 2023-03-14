@@ -68,7 +68,7 @@ impl DB{
     }
 
 
-    pub fn get_podcast_episode_by_track_id(&mut self, podcast_id: i32) ->
+    pub fn get_podcast_by_track_id(&mut self, podcast_id: i32) ->
                                                                    Result<Option<Podcast>, String>{
         use crate::schema::podcasts::{directory};
         use crate::schema::podcasts::dsl::podcasts;
@@ -83,11 +83,11 @@ impl DB{
 
     pub fn insert_podcast_episodes(&mut self, podcast: Podcast, link: &str, item: &Entry,
                                    image_url_1: &str, episode_description: &str,
-                                   total_time_of_podcast: i32){
+                                   total_time_of_podcast: i32)->PodcastEpisode{
         use crate::schema::podcast_episodes::dsl::*;
         let uuid_podcast = uuid::Uuid::new_v4();
 
-        insert_into(podcast_episodes)
+        let inserted_podcast = insert_into(podcast_episodes)
             .values((
                 total_time.eq(total_time_of_podcast),
                 podcast_id.eq(podcast.id),
@@ -98,24 +98,26 @@ impl DB{
                 image_url.eq(image_url_1.to_string()),
                 description.eq(episode_description)
             ))
-            .execute(&mut self.conn)
+            .get_result::<PodcastEpisode>(&mut self.conn)
             .expect("Error inserting podcast episode");
+        return inserted_podcast;
     }
 
     pub fn add_podcast_to_database(&mut self, collection_name:String, collection_id:String,
-                                   feed_url:String, image_url_1: String){
+                                   feed_url:String, image_url_1: String)->Podcast{
         use crate::schema::podcasts::{directory, rssfeed, name as podcast_name, image_url};
         use crate::schema::podcasts;
 
-        insert_into(podcasts::table)
+        let inserted_podcast = insert_into(podcasts::table)
             .values((
                 directory.eq(collection_id.to_string()),
                 podcast_name.eq(collection_name.to_string()),
                 rssfeed.eq(feed_url.to_string()),
                 image_url.eq(image_url_1.to_string())
             ))
-            .execute(&mut self.conn)
+            .get_result::<Podcast>(&mut self.conn)
             .expect("Error inserting podcast");
+        return inserted_podcast;
     }
 
     pub fn get_last_5_podcast_episodes(&mut self, podcast_episode_id: i32) ->

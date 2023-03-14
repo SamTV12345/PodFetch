@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::time::{Duration, Instant};
 use actix::{Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, fut, Handler, Running, StreamHandler, WrapFuture};
 use actix_web_actors::ws;

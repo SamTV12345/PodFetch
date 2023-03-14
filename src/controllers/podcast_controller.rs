@@ -12,6 +12,8 @@ use crate::service::rust_service::{refresh_podcast, schedule_episode_download};
 use crate::unwrap_string;
 use crate::service::rust_service::{find_podcast as find_podcast_service};
 use reqwest::{ClientBuilder as AsyncClientBuilder};
+use crate::constants::constants::{ADD_PODCAST_EPISODES_TYPE, ADD_PODCAST_TYPE};
+use crate::models::messages::BroadcastMessage;
 use crate::models::web_socket_message::Lobby;
 
 
@@ -80,13 +82,14 @@ Responder {
         .track_id
         .to_string())
         .send().await.unwrap();
-
+    let mapping_service = MappingService::new();
     let mut db = DB::new().unwrap();
 
     let res  = res.json::<Value>().await.unwrap();
 
 
-    db.add_podcast_to_database(unwrap_string(&res["results"][0]["collectionName"]),
+    let inserted_podcast = db.add_podcast_to_database(unwrap_string
+                                                     (&res["results"][0]["collectionName"]),
                                unwrap_string(&res["results"][0]["collectionId"]),
                                unwrap_string(&res["results"][0]["feedUrl"]),
                                unwrap_string(&res["results"][0]["artworkUrl600"]));
@@ -94,14 +97,30 @@ Responder {
         (&res["results"][0]["collectionId"]));
     FileService::download_podcast_image(&unwrap_string(&res["results"][0]["collectionId"]),
                                         &unwrap_string(&res["results"][0]["artworkUrl600"])).await;
-    let podcast = db.get_podcast_episode_by_track_id(track_id.track_id).unwrap();
-
+    let podcast = db.get_podcast_by_track_id(track_id.track_id).unwrap();
+    lobby.get_ref()
+        .send(
+        BroadcastMessage{
+            podcast_episode: None,
+            type_of: ADD_PODCAST_TYPE.to_string(),
+            message: format!("Added podcast: {}", inserted_podcast.name),
+            podcast: Option::from(mapping_service.map_podcast_to_podcast_dto(podcast.clone().unwrap())),
+            podcast_episodes: None,
+        }).await.unwrap();
     match podcast {
         Some(podcast) => {
-            thread::spawn(||{
+            thread::spawn( move ||{
                 log::debug!("Inserting podcast episodes: {}", podcast.name);
-                PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
-                schedule_episode_download(podcast);
+                let inserted_podcasts = PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
+
+                lobby.do_send(BroadcastMessage{
+                    podcast_episode: None,
+                    type_of: ADD_PODCAST_EPISODES_TYPE.to_string(),
+                    message: format!("Added podcast episodes: {}", podcast.name),
+                    podcast: Option::from(podcast.clone()),
+                    podcast_episodes: Option::from(inserted_podcasts),
+                });
+                schedule_episode_download(podcast, Some(lobby));
             });
         },
         None => {panic!("No podcast found")}
@@ -120,12 +139,12 @@ pub async fn query_for_podcast(podcast: web::Path<String>) -> impl Responder {
 }
 
 #[post("/podcast/{id}/refresh")]
-pub async fn download_podcast(id: web::Path<String>) -> impl Responder {
+pub async fn download_podcast(id: web::Path<String>, lobby: web::Data<Addr<Lobby>>) -> impl Responder {
     thread::spawn(move ||{
         let id_num = from_str::<i32>(&id).unwrap();
         let mut db = DB::new().unwrap();
         let podcast = db.get_podcast(id_num).unwrap();
-        refresh_podcast(podcast.clone());
+        refresh_podcast(podcast.clone(), lobby);
     });
     HttpResponse::Ok().json("Refreshing podcast")
 }
