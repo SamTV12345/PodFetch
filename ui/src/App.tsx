@@ -35,6 +35,7 @@ const App = () => {
                 return
             }
             const parsed = JSON.parse(event.data)
+            console.log(parsed)
             if (checkIfPodcastAdded(parsed)) {
                 const podcast = parsed.podcast
                 dispatch(setPodcasts([...podcasts, podcast]))
@@ -44,6 +45,10 @@ const App = () => {
                     if (p.id === downloadedPodcastEpisode.id) {
                         const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
                         foundDownload.status = "D"
+                        foundDownload.url = downloadedPodcastEpisode.url
+                        foundDownload.local_url = downloadedPodcastEpisode.local_url
+                        foundDownload.image_url = downloadedPodcastEpisode.image_url
+                        foundDownload.local_image_url = downloadedPodcastEpisode.local_image_url
                         return foundDownload
                     }
                     return p

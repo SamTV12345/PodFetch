@@ -52,14 +52,17 @@ impl PodcastEpisodeService{
                     .expect("Error saving total time of podcast episode.");
         }
         Ok(false) => {
-            Self::perform_download(&podcast_episode, &mut db, podcast_episode_cloned, podcast_cloned);
+            let podcast_inserted = Self::perform_download(&podcast_episode, &mut db,
+                                                  podcast_episode_cloned,
+                                    podcast_cloned);
+            let mapped_dto = self.mapping_service.map_podcastepisode_to_dto(&podcast_inserted);
             match lobby {
                 Some(lobby) => {
                     lobby.do_send(BroadcastMessage{
                         message: format!("Episode {} is now available offline", podcast_episode.name),
                         podcast: Option::from(podcast.clone()),
                         type_of: ADD_PODCAST_EPISODE_TYPE.to_string(),
-                        podcast_episode: Some(podcast_episode),
+                        podcast_episode: Some(mapped_dto),
                         podcast_episodes: None,
                     })
                 }
@@ -75,12 +78,12 @@ impl PodcastEpisodeService{
     }
 
     pub fn perform_download(podcast_episode: &PodcastEpisode, db: &mut DB,
-    podcast_episode_cloned: PodcastEpisode, podcast_cloned: Podcast) {
+    podcast_episode_cloned: PodcastEpisode, podcast_cloned: Podcast)->PodcastEpisode {
         log::info!("Downloading podcast episode: {}",podcast_episode.name);
         let mut download_service = DownloadService::new();
         download_service.download_podcast_episode(podcast_episode_cloned,
                                                   podcast_cloned);
-        db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
+        let podcast = db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
         let notification = Notification {
             id: 0,
             message: format!("Episode {} is now available offline", podcast_episode.name),
@@ -89,6 +92,7 @@ impl PodcastEpisodeService{
             status: "unread".to_string(),
         };
         db.insert_notification(notification).unwrap();
+        return podcast;
     }
 
     pub fn get_last_5_podcast_episodes(&mut self, podcast: Podcast) -> Vec<PodcastEpisode>{

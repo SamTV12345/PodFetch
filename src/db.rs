@@ -351,15 +351,17 @@ impl DB{
     }
 
     pub fn update_podcast_episode_status(&mut self, download_url_of_episode: &str, status: &str)
-                                         ->Result<(), String> {
+                                         ->Result<(PodcastEpisode), String> {
         use crate::schema::podcast_episodes::dsl::status as status_column;
         use crate::schema::podcast_episodes::dsl::url as download_url;
         use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
-        diesel::update(dsl_podcast_episodes.filter(download_url.eq(download_url_of_episode)))
+        let updated_podcast = diesel::update(dsl_podcast_episodes.filter(download_url.eq
+        (download_url_of_episode)))
                 .set(status_column.eq(status))
-                .execute(&mut self.conn)
+                .get_result::<PodcastEpisode>(&mut self.conn)
                 .expect("Error updating podcast episode");
-                Ok(())
+
+        Ok((updated_podcast))
     }
 
     pub fn get_unread_notifications(&mut self) -> Result<Vec<Notification>, String> {
