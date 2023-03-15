@@ -3,7 +3,7 @@ use actix_web::web;
 use feed_rs::parser;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
-use crate::constants::constants::ADD_PODCAST_EPISODE_TYPE;
+use crate::constants::constants::{PodcastType};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::messages::BroadcastMessage;
@@ -61,7 +61,7 @@ impl PodcastEpisodeService{
                     lobby.do_send(BroadcastMessage{
                         message: format!("Episode {} is now available offline", podcast_episode.name),
                         podcast: Option::from(podcast.clone()),
-                        type_of: ADD_PODCAST_EPISODE_TYPE.to_string(),
+                        type_of: PodcastType::AddPodcastEpisode,
                         podcast_episode: Some(mapped_dto),
                         podcast_episodes: None,
                     })

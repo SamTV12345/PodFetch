@@ -1,7 +1,6 @@
 use std::collections::{HashMap};
 use actix::{Actor, Context, Handler};
 use actix::prelude::{Message, Recipient};
-use log::log;
 use serde_json::json;
 use uuid::Uuid;
 use crate::models::messages::{BroadcastMessage, Connect, Disconnect, WsMessage};

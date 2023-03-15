@@ -12,7 +12,7 @@ use crate::service::rust_service::{refresh_podcast, schedule_episode_download};
 use crate::unwrap_string;
 use crate::service::rust_service::{find_podcast as find_podcast_service};
 use reqwest::{ClientBuilder as AsyncClientBuilder};
-use crate::constants::constants::{ADD_PODCAST_EPISODES_TYPE, ADD_PODCAST_TYPE};
+use crate::constants::constants::{PodcastType};
 use crate::models::messages::BroadcastMessage;
 use crate::models::web_socket_message::Lobby;
 
@@ -102,7 +102,7 @@ Responder {
         .send(
         BroadcastMessage{
             podcast_episode: None,
-            type_of: ADD_PODCAST_TYPE.to_string(),
+            type_of: PodcastType::AddPodcast,
             message: format!("Added podcast: {}", inserted_podcast.name),
             podcast: Option::from(mapping_service.map_podcast_to_podcast_dto(podcast.clone().unwrap())),
             podcast_episodes: None,
@@ -115,7 +115,7 @@ Responder {
 
                 lobby.get_ref().do_send(BroadcastMessage{
                     podcast_episode: None,
-                    type_of: ADD_PODCAST_EPISODES_TYPE.to_string(),
+                    type_of: PodcastType::AddPodcastEpisodes,
                     message: format!("Added podcast episodes: {}", podcast.name),
                     podcast: Option::from(podcast.clone()),
                     podcast_episodes: Option::from(inserted_podcasts),
