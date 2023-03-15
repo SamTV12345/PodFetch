@@ -25,7 +25,9 @@ if(isLocalhost && import.meta.env.DEV){
     wsURL="ws://localhost:8000/ws"
 }
 else {
-    wsURL = "ws:"+"//"+window.location.hostname+":"+window.location.port+"/ws"
+    const wsProtocol = window.location.protocol==='https'?'wss:':'ws:'
+
+    wsURL  = wsProtocol+'//'+window.location.hostname+":"+window.location.port+"/ws"
     apiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/api/v1"
     uiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/ui"
 }

@@ -8,7 +8,7 @@ import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
 import {Search} from "./components/Search";
-import {apiURL, isJsonString} from "./utils/Utilities";
+import {apiURL, isJsonString, wsURL} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
@@ -22,7 +22,7 @@ const App = () => {
     const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
     const podcasts = useAppSelector(state => state.common.podcasts)
-    const [socket] = useState(()=>new WebSocket("ws://localhost:8000/ws"))
+    const [socket] = useState(()=>new WebSocket(wsURL))
 
     useEffect(() => {
         socket.onopen = () => {
