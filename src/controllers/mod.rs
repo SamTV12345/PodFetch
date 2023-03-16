@@ -6,3 +6,4 @@ pub mod api_doc;
 pub mod websocket_controller;
 pub mod web_socket;
 pub mod notification_controller;
+pub mod sys_info_controller;

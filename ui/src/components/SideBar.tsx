@@ -11,8 +11,8 @@ export const SideBar  = ()=>{
         <div className="py-4 px-3 bg-gray-800 h-full w-full">
             <ul className="space-y-2">
                 <SideBarItem highlightPath={'/home'} translationkey={t('homepage')} icon={<i className="fa-solid fa-house fa-xl"></i>}/>
-                <SideBarItem highlightPath={'/podcasts'} translationkey={t('podcasts')} icon={<i className="fa-solid fa-guitar   fa-xl"></i>
-                }/>
+                <SideBarItem highlightPath={'/podcasts'} translationkey={t('podcasts')} icon={<i className="fa-solid fa-guitar   fa-xl"></i>}/>
+                <SideBarItem highlightPath={"info"} translationkey={t('info')} icon={<i className="fa-solid fa-info-circle fa-xl"></i>}/>
             </ul>
         </div>
     </aside>

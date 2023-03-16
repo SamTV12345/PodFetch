@@ -14,8 +14,8 @@ import {useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
 import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
-import useOnMount from "./hooks/useOnMount";
 import {store} from "./store/store";
+import {PodcastInfoPage} from "./pages/PodcastInfoPage";
 
 const App = () => {
     const dispatch = useAppDispatch()
@@ -57,11 +57,11 @@ const App = () => {
             }
         }
 
-        socket.onerror = (event) => {
+        socket.onerror = () => {
             console.log("Error")
         }
 
-        socket.onclose = (event) => {
+        socket.onclose = () => {
             console.log("Closed")
         }
     }, [podcasts, socket])
@@ -90,6 +90,7 @@ const App = () => {
                             <Route path={"/podcasts"} element={<Podcasts/>}/>
                             <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
                             <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
+                            <Route path={"/info"} element={<PodcastInfoPage/>}/>
                         </Routes>
                         {currentPodcast && <AudioPlayer/>}
                     </div>
