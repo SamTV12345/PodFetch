@@ -37,6 +37,23 @@ services:
 
 - After adding a podcast refresh the browser. There is currently no websocket support available so after performing a manual action like downloading a new podcast episode you need to refresh the browser. 
 
+# UI
+
+## Audio Player
+
+The podcast listening tool contains an advanced audio player that can be used to listen to your podcasts,skip episodes, turn the volumes as high as 300% or skip around in the current episode.
+![Audio Player](https://raw.githubusercontent.com/samuel19982/podgrabv2/main/docs/advanced_audio_player.png)
+
+# Continue right where you stopped
+
+The tool will automatically save your progress in the current episode and will resume from where you left off even if you close the browser. 
+You can continue listening on all devices by just hitting play on any episode on your home screen.
+
+![Continue listening to episodes](https://raw.githubusercontent.com/samuel19982/podgrabv2/main/docs/continue_listening.png)
+
+## Search for podcasts
+You can search for podcast episodes by hitting CTRL+F and typing any word that might appear in the description or title of the podcast episode you want to listen to.
+
 # Roadmap
 
 - [x] Add podcasts via Itunes API

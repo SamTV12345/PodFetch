@@ -1,5 +1,23 @@
 {
   "homepage": "Homepage",
+  "last-listened": "Last listened",
   "podcasts": "Podcast",
+  "no-notifications": "No notifications",
+  "download-computer": "Download to computer",
+  "download-to-server": "Download to server",
+  "cpu-info": "CPU info",
+  "cpu-brand": "CPU brand",
+  "cpu-cores": "CPU cores",
+  "podcast-size": "Podcast directory size",
+  "cpu-usage": "CPU usage",
+  "used-cpu": "Used CPU",
+  "free-cpu": "Available CPU",
+  "loading": "Loading",
+  "memory-usage": "Memory usage",
+  "used-memory": "Used memory",
+  "free-memory": "Available memory",
+  "disk-usage": "Disk usage",
+  "used-disk": "Used disk",
+  "free-disk": "Available disk",
   "info": "Info"
 }

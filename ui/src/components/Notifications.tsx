@@ -4,23 +4,25 @@ import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {Notification} from "../models/Notification";
 import axios from "axios";
 import {apiURL} from "../utils/Utilities";
-import {removeNotification, setNotifications} from "../store/CommonSlice";
+import {removeNotification} from "../store/CommonSlice";
+import {useTranslation} from "react-i18next";
 
 export const Notifications = () => {
     const notifications = useAppSelector(state=>state.common.notifications)
     const [open, setOpen] = useState<boolean>(false)
     const dispatch = useAppDispatch()
+    const {t}  = useTranslation()
 
     const dismissNotification = (notification: Notification)=>{
         axios.put(apiURL+'/notifications/dismiss', {id: notification.id})
-            .then(c=>{
+            .then(()=>{
                 dispatch(removeNotification(notification.id))
             })}
 
     const displayNotifications = ()=>{
         if(notifications.length===0){
             return <div className="text-center h-20 place-items-center flex text-white ml-2 mr-2 pt-2 text-gray-500">
-                No notifications
+                {t('no-notifications')}
             </div>
         }
         else{

@@ -3,11 +3,13 @@ import {apiURL, removeHTML} from "../utils/Utilities";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setInfoModalDownloaded, setInfoModalPodcastOpen} from "../store/CommonSlice";
 import axios from "axios";
+import {useTranslation} from "react-i18next";
 
 export const PodcastInfoModal = () => {
     const dispatch = useAppDispatch()
     const selectedPodcastEpisode = useAppSelector(state=>state.common.infoModalPodcast)
     const infoModalOpen = useAppSelector(state=>state.common.infoModalPodcastOpen)
+    const {t} =  useTranslation()
 
     const download = (url: string, filename: string) => {
         const element = document.createElement('a');
@@ -51,7 +53,7 @@ export const PodcastInfoModal = () => {
                             if(selectedPodcastEpisode) {
                                 download(selectedPodcastEpisode.local_url, selectedPodcastEpisode?.name)
                             }
-                        }}>Download to computer</button>
+                        }}>{t('download-computer')}</button>
                         <button disabled={selectedPodcastEpisode&&selectedPodcastEpisode.status==='D'}
                                 className="bg-blue-500 disabled:bg-blue-900 p-1 rounded hover:bg-blue-400" onClick={()=>{
                                     if(selectedPodcastEpisode) {
@@ -61,7 +63,7 @@ export const PodcastInfoModal = () => {
                                             })
 
                                     }
-                        }}>Download to server</button>
+                        }}><i className="fa-solid fa-save text-white text-2xl p-2" title={t('download-to-server') as string}></i></button>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,23 @@
 {
   "homepage": "Startseite",
   "podcasts": "Podcast",
+  "last-listened": "Zuletzt gehört",
+  "no-notifications": "Keine Benachrichtigungen",
+  "download-computer": "Auf den Computer herunterladen",
+  "download-to-server": "Auf den Server herunterladen",
+  "cpu-info": "CPU Info",
+  "cpu-brand": "CPU Marke",
+  "cpu-cores": "CPU Kerne",
+  "podcast-size": "Podcast Verzeichnis Größe",
+  "cpu-usage": "CPU-Auslastung",
+  "used-cpu": "Verwendete CPU",
+  "free-cpu": "Freie CPU",
+  "memory-usage": "Speicherauslastung",
+  "used-memory": "Verwendeter Speicher",
+  "loading": "Laden",
+  "free-memory": "Freier Speicher",
+  "disk-usage": "Festplattenauslastung",
+  "used-disk": "Verwendete Festplatte",
+  "free-disk": "Freie Festplatte",
   "info": "Info"
 }

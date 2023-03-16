@@ -6,12 +6,15 @@ import {Doughnut} from "react-chartjs-2";
 import {Chart as ChartJS, ArcElement, Tooltip, Legend} from "chart.js";
 import {DiskModel} from "../models/DiskModel";
 import {SysExtraInfo} from "../models/SysExtraInfo";
+import {useTranslation} from "react-i18next";
+import {Loading} from "../components/Loading";
 
 export const PodcastInfoPage = () => {
     const [systemInfo, setSystemInfo] = useState<SysExtraInfo>()
     const gigaByte = Math.pow(10,9)
     const megaByte = Math.pow(10,6)
     const teraByte = Math.pow(10,12)
+    const {t} = useTranslation()
 
     useEffect(()=>{
         axios.get(apiURL+"/sys/info")
@@ -19,7 +22,7 @@ export const PodcastInfoPage = () => {
     },[])
 
     if(!systemInfo){
-        return <div>Laden...</div>
+        return <Loading/>
     }
 
     ChartJS.register(ArcElement, Tooltip, Legend);
@@ -36,11 +39,11 @@ export const PodcastInfoPage = () => {
 
 
         return <div className="grid grid-cols-2 text-white gap-4">
-            <div>CPU Brand</div>
+            <div>{t('cpu-brand')}</div>
             <div>{systemInfo.system.global_cpu_info.brand}</div>
-            <div>° CPUs</div>
+            <div>{t('cpu-cores')}</div>
             <div>{systemInfo.system.cpus.length}</div>
-            <div>Podcast Größe</div>
+            <div>{t('podcast-size')}</div>
             <div>{calcPodcastSize()}</div>
         </div>
     }
@@ -58,8 +61,8 @@ export const PodcastInfoPage = () => {
     return <div className="p-5">
         <h1 className="text-center text-2xl font-bold">Infoseite</h1>
         <div className="grid grid-cols-3 gap-3">
-        <SysCard title={"CPU Info"} children={<CPUInfo/>}/>
-            <SysCard title={"CPU Usage"} children={<Doughnut
+        <SysCard title={t('cpu-info')} children={<CPUInfo/>}/>
+            <SysCard title={t('cpu-usage')} children={<Doughnut
                 options={{
                     plugins: {
                         tooltip:{
@@ -73,9 +76,9 @@ export const PodcastInfoPage = () => {
                 }
                 }
                 data={{
-                labels: ['used CPU', "Free CPU"],
+                labels: [t('used-cpu'), t('free-cpu')],
                 datasets: [{
-                    label: 'CPU Usage',
+                    label: t('cpu-usage') as string,
                     data: [systemInfo.system.global_cpu_info.cpu_usage, 100-systemInfo.system.global_cpu_info.cpu_usage],
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.2)',
@@ -87,7 +90,7 @@ export const PodcastInfoPage = () => {
                     ]
                 }],
             }}/>}/>
-            <SysCard title={"Memory Usage"} children={<Doughnut options={{
+            <SysCard title={t('memory-usage')} children={<Doughnut options={{
                 plugins: {
                     tooltip:{
                         callbacks: {
@@ -99,9 +102,9 @@ export const PodcastInfoPage = () => {
                 }
             }
             } data={{
-                labels: ['used Memory', "Free Memory"],
+                labels: [t('used-memory'), t('free-memory')],
                 datasets: [{
-                    label: 'Memory Usage',
+                    label: t('memory-usage') as string,
                     data: [ (systemInfo.system.total_memory-systemInfo.system.free_memory)/gigaByte, systemInfo.system.free_memory/gigaByte],
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.2)',
@@ -113,14 +116,14 @@ export const PodcastInfoPage = () => {
                         ]
                 }]
             }}/>}/>
-            <SysCard title={"Disk Usage"} children={<Doughnut
+            <SysCard title={t('disk-usage')} children={<Doughnut
                 options={
                     {
                         plugins: {
                             tooltip:{
                                 callbacks: {
                                     label: (context) => {
-                                        if(context.parsed > gigaByte){
+                                        if(context.parsed > teraByte){
                                             return context.label + ": " + (context.parsed/teraByte).toFixed(2) + " TB"
                                         }
                                         else{
@@ -133,9 +136,9 @@ export const PodcastInfoPage = () => {
                     }
                 }
                 data={{
-                labels: ['used Disk', "Free Disk"],
+                labels: [t('used-disk'), t('free-disk')],
                 datasets: [{
-                    label: 'Disk Usage',
+                    label: t('disk-usage') as string,
                     data: calculateFreeDiskSpace(systemInfo.system.disks),
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.2)',

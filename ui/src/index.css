@@ -96,3 +96,11 @@
 .searchfield{
     width: 64rem;
 }
+
+.dots-distance {
+    gap: 2px;
+}
+
+.dots-margin-bottom {
+    margin-bottom: 0.15rem;
+}
