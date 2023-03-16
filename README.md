@@ -54,6 +54,9 @@ You can continue listening on all devices by just hitting play on any episode on
 ## Search for podcasts
 You can search for podcast episodes by hitting CTRL+F and typing any word that might appear in the description or title of the podcast episode you want to listen to.
 
+## Internationalization
+Podgrab is currently available in English and German. If you want to add a new language you can do so by adding a new file to the `i18n` folder and adding the translations to the file.
+
 # Roadmap
 
 - [x] Add podcasts via Itunes API
@@ -64,4 +67,4 @@ You can search for podcast episodes by hitting CTRL+F and typing any word that m
 - [x] Force refresh of podcast episodes.
 - [x] Resume podcasts even if browser is closed. 
 - [] Delete/Unsubscribe podcasts.
-- [] Add websocket support for new podcasts
+- [x] Add websocket support for new podcasts
