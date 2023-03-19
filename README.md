@@ -35,7 +35,6 @@ services:
 
 # Known issues
 
-- After adding a podcast refresh the browser. There is currently no websocket support available so after performing a manual action like downloading a new podcast episode you need to refresh the browser. 
 
 # UI
 
