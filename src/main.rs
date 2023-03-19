@@ -5,6 +5,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::{env, thread};
+use std::sync::{Mutex};
 use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
 use std::time::Duration;
 use actix::{Actor};
@@ -26,7 +27,6 @@ use crate::controllers::podcast_episode_controller::{download_podcast_episodes_o
 use crate::controllers::sys_info_controller::get_sys_info;
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{start_connection};
-use crate::service::rust_service::{schedule_episode_download};
 mod db;
 mod models;
 mod constants;
@@ -36,20 +36,22 @@ use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
+use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::service::rust_service::PodcastService;
 
 mod config;
 pub mod schema;
 
 
-pub fn run_poll(){
-    let mut db = DB::new().unwrap();
-    //check for new episodes
-    let podcats_result = db.get_podcasts().unwrap();
-    for podcast in podcats_result {
-    let podcast_clone = podcast.clone();
-    PodcastEpisodeService::insert_podcast_episodes(podcast);
-    schedule_episode_download(podcast_clone, None);
+pub fn run_poll(mut podcast_service: PodcastService){
+        let mut db = DB::new().unwrap();
+        //check for new episodes
+        let podcats_result = db.get_podcasts().unwrap();
+        for podcast in podcats_result {
+        let podcast_clone = podcast.clone();
+        PodcastEpisodeService::insert_podcast_episodes(podcast);
+        podcast_service.schedule_episode_download(podcast_clone, None);
     }
 }
 
@@ -64,7 +66,6 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[actix_web::main]
 async fn main()-> std::io::Result<()> {
-    //println!("cargo:rerun-if-changed=./Cargo.toml");
 
     let lobby = Lobby::default();
 
@@ -75,8 +76,14 @@ async fn main()-> std::io::Result<()> {
 
     EnvironmentService::print_banner();
     init_logging();
-    DB::new().unwrap();
     FileService::create_podcast_root_directory_exists();
+
+    //services
+    let podcast_episode_service = PodcastEpisodeService::new();
+    let podcast_service = PodcastService::new();
+    let db = DB::new().unwrap();
+    let mapping_service = MappingService::new();
+    let file_service = FileService::new();
 
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
@@ -84,8 +91,9 @@ async fn main()-> std::io::Result<()> {
         env.get_environment();
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(||{
+            let podcast_service = PodcastService::new();
             log::info!("Polling for new episodes");
-           run_poll();
+           run_poll(podcast_service.clone());
         });
         loop {
             scheduler.run_pending();
@@ -141,6 +149,11 @@ async fn main()-> std::io::Result<()> {
             .service(ui)
             .service(start_connection)
             .app_data(Data::new(chat_server.clone()))
+            .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
+            .app_data(Data::new(Mutex::new(podcast_service.clone())))
+            .app_data(Data::new(Mutex::new(db.clone())))
+            .app_data(Data::new(Mutex::new(mapping_service.clone())))
+            .app_data(Data::new(Mutex::new(file_service.clone())))
     }
     )
         .bind(("0.0.0.0", 8000))?

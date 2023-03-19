@@ -2,6 +2,7 @@ use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 use crate::service::environment_service;
 
+#[derive(Clone)]
 pub struct MappingService {
     env_service: environment_service::EnvironmentService,
 }

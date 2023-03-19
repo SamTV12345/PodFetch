@@ -1,16 +1,24 @@
 use std::io::Write;
 use std::path::Path;
-use reqwest::{ClientBuilder};
+use reqwest::{Client, ClientBuilder};
 use crate::db::DB;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 
-pub struct FileService {}
+#[derive(Clone)]
+pub struct FileService {
+    pub db: DB,
+    pub client: Client
+}
 
 impl FileService {
-
-        pub fn check_if_podcast_main_image_downloaded(podcast_id: &str) -> bool {
-            let db = DB::new().unwrap();
-            let podcast = db.get_podcast_by_directory(podcast_id).unwrap();
+        pub fn new() -> Self {
+            FileService {
+                db: DB::new().unwrap(),
+                client: ClientBuilder::new().build().unwrap()
+            }
+        }
+        pub fn check_if_podcast_main_image_downloaded(&mut self,podcast_id: &str) -> bool {
+            let podcast = self.db.clone().get_podcast_by_directory(podcast_id).unwrap();
             match podcast {
                 Some(podcast) => {
                     if !podcast.image_url.contains("http") {
@@ -37,9 +45,8 @@ impl FileService {
             }
         }
 
-        pub async fn download_podcast_image(podcast_id: &str, image_url: &str){
-            let client = ClientBuilder::new().build().unwrap();
-            let image_response = client.get(image_url).send().await.unwrap();
+        pub async fn download_podcast_image(&self,podcast_id: &str, image_url: &str){
+            let image_response = self.client.get(image_url).send().await.unwrap();
             let image_suffix = PodcastEpisodeService::get_url_file_suffix(image_url);
             let file_path = format!("podcasts/{}/image.{}", podcast_id, image_suffix);
             let mut image_out = std::fs::File::create(file_path.clone())

@@ -14,6 +14,14 @@ pub struct DB{
     mapping_service: MappingService
 }
 
+impl Clone for DB{
+    fn clone(&self) -> Self {
+        DB{
+            conn: establish_connection(),
+            mapping_service: MappingService::new()
+        }
+    }
+}
 impl DB{
     pub fn new() -> Result<DB, String>{
         let conn = establish_connection();

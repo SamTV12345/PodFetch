@@ -11,7 +11,8 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 pub struct DownloadService {
     pub db: DB,
     pub mappingservice: MappingService,
-    pub client_builder: ClientBuilder
+    pub client_builder: ClientBuilder,
+    pub file_service: FileService,
 }
 
 impl DownloadService {
@@ -19,7 +20,8 @@ impl DownloadService {
         DownloadService {
             db: DB::new().unwrap(),
             mappingservice: MappingService::new(),
-            client_builder: ClientBuilder::new()
+            client_builder: ClientBuilder::new(),
+            file_service: FileService::new()
         }
     }
 
@@ -49,7 +51,7 @@ impl DownloadService {
         let mut image_out = std::fs::File::create(image_save_path.clone())
             .unwrap();
 
-        if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory) {
+        if !self.file_service.check_if_podcast_main_image_downloaded(&podcast.clone().directory) {
             let mut image_podcast = std::fs::File::create(image_podcast_path)
                 .unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");

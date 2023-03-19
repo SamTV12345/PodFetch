@@ -13,6 +13,7 @@ use crate::service::download_service::DownloadService;
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
 
+#[derive(Clone)]
 pub struct PodcastEpisodeService {
     db: DB,
     mapping_service: MappingService

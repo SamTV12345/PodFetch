@@ -1,33 +1,52 @@
 use actix::Addr;
 use actix_web::web::Data;
 use crate::constants::constants::{ITUNES_URL};
-use reqwest::ClientBuilder as AsyncClientBuilder;
+use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
 use serde_json::Value;
+use crate::db::DB;
 use crate::models::itunes_models::Podcast;
 use crate::models::web_socket_message::Lobby;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 
-pub async fn find_podcast(podcast: &str)-> Value {
-    let client = AsyncClientBuilder::new().build().unwrap();
-    let result = client.get(ITUNES_URL.to_owned()+podcast).send().await.unwrap();
-    log::info!("Found podcast: {}", result.url());
-    return result.json().await.unwrap();
+#[derive(Clone)]
+pub struct PodcastService {
+    pub client: Client,
+    pub podcast_episode_service: PodcastEpisodeService,
+    pub db: DB,
 }
 
-
-
-pub fn schedule_episode_download(podcast: Podcast, lobby: Option<Data<Addr<Lobby>>>){
-    let mut podcast_service = PodcastEpisodeService::new();
-    let result = podcast_service.get_last_5_podcast_episodes(podcast.clone());
-    for podcast_episode in result {
-        podcast_service.download_podcast_episode_if_not_locally_available(podcast_episode,
-                                                                                 podcast.clone(),
-                                                                          lobby.clone());
+impl PodcastService {
+    pub fn new() -> PodcastService {
+        PodcastService {
+            client: AsyncClientBuilder::new().build().unwrap(),
+            db: DB::new().unwrap(),
+            podcast_episode_service: PodcastEpisodeService::new()
+        }
     }
-}
 
-pub fn refresh_podcast(podcast:Podcast, lobby: Data<Addr<Lobby>>){
-    log::info!("Refreshing podcast: {}", podcast.name);
-    PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
-    schedule_episode_download(podcast, Some(lobby));
+    pub async fn find_podcast(&mut self,podcast: &str) -> Value {
+        let result = self.client.get(ITUNES_URL.to_owned() + podcast).send().await.unwrap();
+        log::info!("Found podcast: {}", result.url());
+        return result.json().await.unwrap();
+    }
+
+
+    pub fn schedule_episode_download(&mut self,podcast: Podcast, lobby: Option<Data<Addr<Lobby>>>) {
+        let result = self.podcast_episode_service.get_last_5_podcast_episodes(podcast.clone());
+        for podcast_episode in result {
+            self.podcast_episode_service.download_podcast_episode_if_not_locally_available(podcast_episode,
+                                                                              podcast.clone(),
+                                                                              lobby.clone());
+        }
+    }
+
+    pub fn refresh_podcast(&mut self,podcast: Podcast, lobby: Data<Addr<Lobby>>) {
+        log::info!("Refreshing podcast: {}", podcast.name);
+        PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
+        self.schedule_episode_download(podcast, Some(lobby));
+    }
+
+    pub fn get_podcast_by_id(&mut self, id: i32) -> Podcast {
+        self.db.get_podcast(id).unwrap()
+    }
 }

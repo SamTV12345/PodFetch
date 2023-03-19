@@ -1,6 +1,7 @@
+use std::sync::Mutex;
 use std::thread;
 use actix_web::{HttpResponse, Responder, web};
-use actix_web::web::Query;
+use actix_web::web::{Data, Query};
 use serde_json::from_str;
 use crate::db::DB;
 use crate::service::mapping_service::MappingService;
@@ -24,17 +25,18 @@ tag="podcast_episodes"
 )]
 #[get("/podcast/{id}/episodes")]
 pub async fn find_all_podcast_episodes_of_podcast(id: web::Path<String>, last_podcast_episode :
-Query<OptionalId>)
+Query<OptionalId>, db: Data<Mutex<DB>>, mapping_service: Data<Mutex<MappingService>>)
                                                   -> impl Responder {
+    let mut db = db.lock().expect("Error acquiring lock");
+    let mapping_service = mapping_service.lock().expect("Error acquiring lock");
+
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
-    let mut db = DB::new().unwrap();
-    let mappingservice = MappingService::new();
     let res  = db.get_podcast_episodes_of_podcast(id_num,last_podcast_episode
         .last_podcast_episode ).unwrap();
     let mapped_podcasts = res
         .into_iter()
-        .map(|podcast| mappingservice.map_podcastepisode_to_dto(&podcast)).collect::<Vec<_>>();
+        .map(|podcast| mapping_service.map_podcastepisode_to_dto(&podcast)).collect::<Vec<_>>();
     HttpResponse::Ok().json(mapped_podcasts)
 }
 

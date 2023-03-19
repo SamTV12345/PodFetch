@@ -1,6 +1,6 @@
 use std::env::{var};
 
-
+#[derive(Clone)]
 pub struct EnvironmentService {
     pub server_url: String,
     pub polling_interval: u32,
