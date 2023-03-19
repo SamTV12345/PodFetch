@@ -35,7 +35,6 @@ services:
 
 # Known issues
 
-- After adding a podcast refresh the browser. There is currently no websocket support available so after performing a manual action like downloading a new podcast episode you need to refresh the browser. 
 
 # UI
 
@@ -66,5 +65,5 @@ Podgrab is currently available in English and German. If you want to add a new l
 - [x] Force refresh download of podcast episodes.
 - [x] Force refresh of podcast episodes.
 - [x] Resume podcasts even if browser is closed. 
-- [] Delete/Unsubscribe podcasts.
+- [ ] Delete/Unsubscribe podcasts.
 - [x] Add websocket support for new podcasts
