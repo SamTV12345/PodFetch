@@ -1,4 +1,4 @@
-# UI frontend for podgrab V2
+# UI frontend for Podfetch
 
 ## Features
 
