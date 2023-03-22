@@ -19,5 +19,7 @@
   "disk-usage": "Disk usage",
   "used-disk": "Used disk",
   "free-disk": "Available disk",
-  "info": "Info"
+  "info": "Info",
+  "add-podcast": "Add Podcast",
+  "search-podcast": "Search podcast"
 }

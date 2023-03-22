@@ -59,7 +59,7 @@ export const PodcastInfoPage = () => {
     }
 
     return <div className="p-5">
-        <h1 className="text-center text-2xl font-bold">Infoseite</h1>
+        <h1 className="text-center text-3xl font-bold">{t('info')}</h1>
         <div className="grid grid-cols-3 gap-3">
         <SysCard title={t('cpu-info')} children={<CPUInfo/>}/>
             <SysCard title={t('cpu-usage')} children={<Doughnut

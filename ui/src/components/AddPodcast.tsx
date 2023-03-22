@@ -7,12 +7,13 @@ import {GeneralModel} from "../models/PodcastAddModel";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setSearchedPodcasts} from "../store/CommonSlice";
 import {setModalOpen} from "../store/ModalSlice";
+import {useTranslation} from "react-i18next";
 
 export const AddPodcast = ()=>{
     const [searchText, setSearchText] = useState<string>("")
     const dispatch = useAppDispatch()
     const searchedPodcasts = useAppSelector(state=>state.common.searchedPodcasts)
-
+    const {t} = useTranslation()
 
     type AddPostPostModel = {
         trackId: number,
@@ -27,15 +28,15 @@ export const AddPodcast = ()=>{
         2000,[searchText])
 
     const addPodcast = (podcast:AddPostPostModel)=>{
-        axios.post(apiURL+"/podcast",podcast).then((v)=>{
+        axios.post(apiURL+"/podcast",podcast).then(()=>{
             dispatch(setModalOpen(false))
         })
     }
 
-    return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText="Podcast hinzufügen" onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
+    return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText={t('add-podcast')} onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
         <div>
             <div className="flex flex-col gap-4">
-                <input value={searchText} placeholder="Podcast suchen"
+                <input value={searchText} placeholder={t('search-podcast')!}
                        className={"border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"}
                        onChange={(v)=>setSearchText(v.target.value)}/>
                 <div className="border-2 border-gray-600 rounded p-5 max-h-80 overflow-y-scroll">

@@ -19,5 +19,7 @@
   "disk-usage": "Festplattenauslastung",
   "used-disk": "Verwendete Festplatte",
   "free-disk": "Freie Festplatte",
-  "info": "Info"
+  "info": "Info",
+  "add-podcast": "Podcast hinzufügen",
+  "search-podcast": "Podcast suchen"
 }
