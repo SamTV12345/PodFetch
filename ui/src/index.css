@@ -104,3 +104,15 @@
 .dots-margin-bottom {
     margin-bottom: 0.15rem;
 }
+
+.animate-opacity {
+    @apply opacity-0;
+    animation: fadein 0.5s;
+}
+.z-60{
+    z-index: 60;
+}
+
+.visibility-important{
+    visibility: visible !important;
+}
