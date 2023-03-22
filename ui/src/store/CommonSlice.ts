@@ -33,7 +33,8 @@ interface CommonProps {
     searchedPodcasts: GeneralModel|undefined,
     notifications: Notification[],
     infoModalPodcast: PodcastEpisode|undefined,
-    infoModalPodcastOpen: boolean
+    infoModalPodcastOpen: boolean,
+    detailedAudioPlayerOpen: boolean
 }
 
 // Define the initial state using that type
@@ -44,7 +45,8 @@ const initialState: CommonProps = {
     searchedPodcasts: undefined,
     notifications: [],
     infoModalPodcast: undefined,
-    infoModalPodcastOpen: false
+    infoModalPodcastOpen: false,
+    detailedAudioPlayerOpen: false
 }
 
 export const commonSlice = createSlice({
@@ -86,10 +88,13 @@ export const commonSlice = createSlice({
                     return episode
                 })
             }
+        },
+        setDetailedAudioPlayerOpen: (state, action:PayloadAction<boolean>) => {
+            state.detailedAudioPlayerOpen = action.payload
         }
 }})
 
 export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts, setInfoModalDownloaded,
-    setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen} = commonSlice.actions
+    setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

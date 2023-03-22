@@ -16,6 +16,7 @@ import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {PodcastInfoPage} from "./pages/PodcastInfoPage";
+import {DetailedAudioPlayer} from "./components/DetailedAudioPlayer";
 
 const App = () => {
     const dispatch = useAppDispatch()
@@ -93,6 +94,7 @@ const App = () => {
                             <Route path={"/info"} element={<PodcastInfoPage/>}/>
                         </Routes>
                         {currentPodcast && <AudioPlayer/>}
+                        {currentPodcast && <DetailedAudioPlayer/>}
                     </div>
                 </div>
             </div>
