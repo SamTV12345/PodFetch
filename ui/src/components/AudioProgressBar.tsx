@@ -1,10 +1,11 @@
-import React, {createRef, FC, useEffect, useMemo, useState} from "react";
+import React, {createRef, FC, useMemo, useState} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setCurrentTimeUpdatePercentage} from "../store/AudioPlayerSlice";
 import {logCurrentPlaybackTime} from "../utils/Utilities";
 
 type ProgressBarProps = {
-    audioplayerRef: React.RefObject<HTMLAudioElement>
+    audioplayerRef: React.RefObject<HTMLAudioElement>,
+    className?: string
 }
 
 const convertToMinutes = (time: number|undefined)=>{
@@ -14,7 +15,7 @@ const convertToMinutes = (time: number|undefined)=>{
     const timeToConvert = Number(time?.toFixed(0))
     let hours = Math.floor(timeToConvert / 3600);
 
-    let minutes = Math.floor(timeToConvert / 60);
+    let minutes = Math.floor(timeToConvert / 60)%60;
     let seconds = timeToConvert % 60;
     let minutes_p = String(minutes).padStart(2, "0");
     let hours_p = String(hours).padStart(2, "0");
@@ -25,11 +26,11 @@ const convertToMinutes = (time: number|undefined)=>{
     return hours_p + ":" + minutes_p + ":" + seconds_p.substring(0,2);
 }
 
-const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
-    window.addEventListener("mousedown", (e) => {
+const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef, className}) => {
+    window.addEventListener("mousedown", () => {
         setMousePressed(true)
     })
-    window.addEventListener("mouseup", (e) => {
+    window.addEventListener("mouseup", () => {
         setMousePressed(false)
     })
     const minute = useAppSelector(state=>state.audioPlayer.metadata?.currentTime)
@@ -79,12 +80,11 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef}) => {
 
 
     return (
-        <div className="relative h-4 ml-5 mr-5 cursor-pointer w-11/12 box-border" id="audio-progress-wrapper" ref={wrapper} onClick={(e)=>{
+        <div className="relative h-1 bg-slate-900 ml-5 mr-5 mb-2 cursor-pointer w-12/12 box-border" id="audio-progress-wrapper" ref={wrapper} onClick={(e)=>{
             endWrapperPosition(e)
-
         }}>
-            <div className="absolute -top-6 opacity-0 invisible timecounter" id="timecounter">{currentTime}</div>
-            <div className="absolute right-0 -top-6 opacity-0 invisible timecounter">{totalDuration}</div>
+            <div className={`absolute -top-6 opacity-0 invisible timecounter ${className}`} id="timecounter">{currentTime}</div>
+            <div className={`absolute right-0 -top-6 opacity-0 invisible timecounter ${className}`}>{totalDuration}</div>
             <div className="bg-gray-500 h-1" id="audio-progress" style={{width: (metadata.percentage) +"%"}}>
                 <i className="fa-solid text-gray-300 fa-circle opacity-0 invisible" id="sound-control" ref={control}
                    onMouseMove={(e)=>calcTotalMovement(e)}>

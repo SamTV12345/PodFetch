@@ -5,7 +5,6 @@ import {Header} from "./components/Header";
 import {useAppDispatch, useAppSelector} from "./store/hooks";
 import {Podcasts} from "./pages/Podcasts";
 import {PodcastDetailPage} from "./pages/PodcastDetailPage";
-import {AudioPlayer} from "./components/AudioPlayer";
 import {Homepage} from "./pages/Homepage";
 import {Search} from "./components/Search";
 import {apiURL, isJsonString, wsURL} from "./utils/Utilities";
@@ -16,12 +15,11 @@ import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {PodcastInfoPage} from "./pages/PodcastInfoPage";
-import {DetailedAudioPlayer} from "./components/DetailedAudioPlayer";
+import {AudioComponents} from "./components/AudioComponents";
 
 const App = () => {
     const dispatch = useAppDispatch()
     const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
-    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
     const podcasts = useAppSelector(state => state.common.podcasts)
     const [socket] = useState(()=>new WebSocket(wsURL))
 
@@ -93,8 +91,7 @@ const App = () => {
                             <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
                             <Route path={"/info"} element={<PodcastInfoPage/>}/>
                         </Routes>
-                        {currentPodcast && <AudioPlayer/>}
-                        {currentPodcast && <DetailedAudioPlayer/>}
+                        <AudioComponents/>
                     </div>
                 </div>
             </div>

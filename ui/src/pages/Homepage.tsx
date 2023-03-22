@@ -21,7 +21,7 @@ export const Homepage = () => {
             })
     },[])
 
-    return <div className="p-3">
+    return <div className="p-3 ml-12">
         <h1 className="font-bold text-2xl">{t('last-listened')}</h1>
         <div className="grid grid-cols-2 md:grid-cols-5 xs:grid-cols-1 gap-4">
         {
