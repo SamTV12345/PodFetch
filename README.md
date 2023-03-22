@@ -28,10 +28,11 @@ services:
 
 # Environment Variables
 
-| Variable         | Description                                   | Default               |
-|------------------|-----------------------------------------------|-----------------------|
-| POLLING_INTERVAL | Interval in minutes to check for new episodes | 60                    |
-| SERVER_URL       | URL of the server                             | http://localhost:8000 |
+| Variable         | Description                                   | Default                  |
+|------------------|-----------------------------------------------|--------------------------|
+| POLLING_INTERVAL | Interval in minutes to check for new episodes | 60                       |
+| SERVER_URL       | URL of the server                             | http://localhost:8000    |
+| DATABASE_URL     | URL of the database                           | sqlite::/./db/podcast.db |
 
 # Known issues
 
@@ -64,6 +65,9 @@ Podgrab is currently available in English and German. If you want to add a new l
 - [x] Play episodes.
 - [x] Force refresh download of podcast episodes.
 - [x] Force refresh of podcast episodes.
-- [x] Resume podcasts even if browser is closed. 
+- [x] Resume podcasts even if browser is closed.
+- [x] Add websocket support for new podcasts.
+- [ ] Add detailed audio player.
 - [ ] Delete/Unsubscribe podcasts.
-- [x] Add websocket support for new podcasts
+- [ ] Star podcasts.
+- [ ] Like episodes.
