@@ -112,3 +112,7 @@
 .z-60{
     z-index: 60;
 }
+
+.visibility-important{
+    visibility: visible !important;
+}

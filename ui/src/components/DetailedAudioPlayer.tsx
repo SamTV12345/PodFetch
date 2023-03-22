@@ -40,7 +40,7 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
                 </div>
             </div>
             <div className="col-span-2 mb-3">
-                <ProgressBar audioplayerRef={refItem} className={"text-white"}/>
+                <ProgressBar audioplayerRef={refItem} className={"text-white visibility-important opacity-100"}/>
                 <div className="grid-cols-3 grid">
                     <div></div>
                     <MenuBarPlayer refItem={refItem}/>
