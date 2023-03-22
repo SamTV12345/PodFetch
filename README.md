@@ -1,6 +1,6 @@
-# Podgrab V2
+# Podfetch
 
-Podgrab is a self-hosted podcast manager. 
+Podfetch is a self-hosted podcast manager. 
 It is a web app that lets you download podcasts and listen to them online.
 It is written in Rust and uses React for the frontend.
 
@@ -57,7 +57,7 @@ You can search for podcast episodes by hitting CTRL+F and typing any word that m
 ![Audio Player](https://raw.githubusercontent.com/SamTV12345/podgrabv2/main/docs/search.png)
 
 ## Internationalization
-Podgrab is currently available in English and German. If you want to add a new language you can do so by adding a new file to the `i18n` folder and adding the translations to the file.
+Podfetch is currently available in English and German. If you want to add a new language you can do so by adding a new file to the `i18n` folder and adding the translations to the file.
 
 # Roadmap
 
