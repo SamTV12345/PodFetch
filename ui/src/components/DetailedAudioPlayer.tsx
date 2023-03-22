@@ -17,6 +17,7 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
     const dispatch = useAppDispatch()
     const detailedAudioPlayerOpen = useAppSelector(state => state.common.detailedAudioPlayerOpen)
     const selectedPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
+    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
 
     return createPortal(<div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setDetailedAudioPlayerOpen(false))}
                                            className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-60 md:inset-0 h-modal md:h-full
@@ -25,7 +26,14 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
         <div className="bg-gray-800 h-full grid grid-rows-[1fr_auto]"  onClick={event => event.stopPropagation()}>
             <div className="grid grid-cols-[1fr_2fr]">
                 <div className="grid place-items-center">
+                    <div className="relative">
                     <img src={selectedPodcast?.local_image_url} alt={selectedPodcast?.name} className="h-80 object-cover shadow-lg shadow-amber-600"/>
+                        <div  className="absolute mt-2 text-2xl font-bold text-white">
+                            <div>{selectedPodcast?.name}</div>
+                            <div className="text-sm font-normal">{currentPodcast&&currentPodcast.name}</div>
+                        </div>
+
+                    </div>
                 </div>
                 <div className="grid place-items-center text-white text-2xl">
                     <div className="max-h-80 overflow-y-auto">{selectedPodcast?.description&& removeHTML(selectedPodcast.description)}</div>
