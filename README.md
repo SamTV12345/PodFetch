@@ -6,6 +6,27 @@ It is written in Rust and uses React for the frontend.
 
 Every time a new commit is pushed to the main branch, a new docker image is built and pushed to docker hub. So it is best to use something like [watchtower](https://github.com/containrrr/watchtower) to automatically update the docker image.
 
+# Contributing
+
+## Building the project
+
+### Prerequisites
+- Rust
+- Cargo
+- Node
+- npm/yarn/pnpm
+
+### Building the app
+```bash
+cargo.exe run --color=always --package podgrabv2 --bin podgrabv2
+cd ui
+<npm/yarn/pnpm> install
+<npm/yarn/pnpm> run dev
+```
+
+## UI Development
+
+I would love to have a UX expert to help me with the UI. If you are interested in helping me out, please contact me via GitHub issue with designs/implemented React pages.
 
 # Getting Started
 
