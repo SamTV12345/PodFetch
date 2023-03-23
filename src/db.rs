@@ -421,4 +421,42 @@ impl DB{
             .expect("Error loading podcast episode by id");
         Ok(result)
     }
+
+    pub fn update_podcast_favor(&mut self, podcast_id: &i32, favor: bool) -> Result<(), String> {
+        use crate::schema::podcasts::dsl::favored as favor_column;
+        use crate::schema::podcasts::dsl::id;
+        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+
+        let result = dsl_podcast
+            .filter(id.eq(podcast_id))
+            .first::<Podcast>(&mut self.conn)
+            .optional()
+            .expect("Error loading podcast episode by id");
+        match result {
+            Some(..)=>{
+                diesel::update(dsl_podcast.filter(id.eq(podcast_id)))
+                    .set(favor_column.eq(favor as i32))
+                    .execute(&mut self.conn)
+                    .expect("Error updating podcast episode");
+                Ok(())
+            }
+            None=>{
+                panic!("Podcast episode not found");
+            }
+        }
+    }
+
+    pub fn get_favored_podcasts(&mut self) -> Result<Vec<Podcast>, String>{
+        use crate::schema::podcasts::dsl::favored as favor_column;
+        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+        let result = dsl_podcast
+            .filter(favor_column.eq(1))
+            .load::<Podcast>(&mut self.conn)
+            .expect("Error loading podcast episode by id");
+
+        let mapped_result = result.iter().map(|podcast| {
+            return self.mapping_service.map_podcast_to_podcast_dto(podcast)
+        }).collect::<Vec<Podcast>>();
+        Ok(mapped_result)
+    }
 }

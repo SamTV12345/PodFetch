@@ -46,7 +46,15 @@ impl PodcastService {
         self.schedule_episode_download(podcast, Some(lobby));
     }
 
+    pub fn update_favor_podcast(&mut self, id:i32, x: bool){
+        self.db.update_podcast_favor(&id, x).unwrap();
+    }
+
     pub fn get_podcast_by_id(&mut self, id: i32) -> Podcast {
         self.db.get_podcast(id).unwrap()
+    }
+
+    pub fn get_favored_podcasts(&mut self)-> Vec<Podcast>{
+        self.db.get_favored_podcasts().unwrap()
     }
 }

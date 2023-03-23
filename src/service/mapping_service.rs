@@ -14,14 +14,15 @@ impl MappingService {
         }
     }
 
-    pub fn map_podcast_to_podcast_dto(&self, podcast: Podcast) -> Podcast {
+    pub fn map_podcast_to_podcast_dto(&self, podcast: &Podcast) -> Podcast {
         Podcast {
             id: podcast.id,
             name: podcast.name.clone(),
             directory: podcast.directory.clone(),
             rssfeed: podcast.rssfeed.clone(),
             image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
-                + &podcast.image_url.clone()
+                + &podcast.image_url.clone(),
+            favored: podcast.favored
         }
     }
 

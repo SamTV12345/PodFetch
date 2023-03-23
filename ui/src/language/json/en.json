@@ -21,5 +21,6 @@
   "free-disk": "Available disk",
   "info": "Info",
   "add-podcast": "Add Podcast",
-  "search-podcast": "Search podcast"
+  "search-podcast": "Search podcast",
+  "favorites": "Favorites"
 }

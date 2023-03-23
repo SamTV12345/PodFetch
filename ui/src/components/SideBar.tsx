@@ -12,6 +12,7 @@ export const SideBar  = ()=>{
             <ul className="space-y-2">
                 <SideBarItem highlightPath={'/home'} translationkey={t('homepage')} icon={<i className="fa-solid fa-house fa-xl"></i>}/>
                 <SideBarItem highlightPath={'/podcasts'} translationkey={t('podcasts')} icon={<i className="fa-solid fa-guitar   fa-xl"></i>}/>
+                <SideBarItem highlightPath={"/favorites"} translationkey={t('favorites')} icon={<i className="fa-solid fa-star"></i>}/>
                 <SideBarItem highlightPath={"info"} translationkey={t('info')} icon={<i className="fa-solid fa-info-circle fa-xl"></i>}/>
             </ul>
         </div>

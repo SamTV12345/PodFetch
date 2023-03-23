@@ -5,7 +5,7 @@ use serde_json::{from_str, Value};
 use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use actix_web::{get, post};
+use actix_web::{get, post, put};
 use actix_web::web::Data;
 use crate::models::models::PodCastAddModel;
 use crate::service::file_service::FileService;
@@ -13,6 +13,7 @@ use crate::unwrap_string;
 use reqwest::{ClientBuilder as AsyncClientBuilder};
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
+use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::messages::BroadcastMessage;
 use crate::models::web_socket_message::Lobby;
 use crate::service::rust_service::PodcastService;
@@ -30,7 +31,7 @@ tag="podcasts"
         let id_num = from_str::<i32>(&id).unwrap();
         let podcast = db.lock().expect("Error acquiring lock").get_podcast(id_num).unwrap();
         let mapping_service = mapping_service.lock().expect("Error acquiring lock");
-        let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(podcast);
+        let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(&podcast);
         HttpResponse::Ok().json(mapped_podcast)
 }
 
@@ -49,7 +50,7 @@ pub async fn find_all_podcasts(db: Data<Mutex<DB>>, mapping_service:Data<Mutex<M
 
     let mapped_podcasts = podcasts
         .into_iter()
-        .map(|podcast| mapping_service.map_podcast_to_podcast_dto(podcast)).collect::<Vec<_>>();
+        .map(|podcast| mapping_service.map_podcast_to_podcast_dto(&podcast)).collect::<Vec<_>>();
     HttpResponse::Ok().json(mapped_podcasts)
 }
 
@@ -107,7 +108,8 @@ Responder {
             podcast_episode: None,
             type_of: PodcastType::AddPodcast,
             message: format!("Added podcast: {}", inserted_podcast.name),
-            podcast: Option::from(mapping_service.map_podcast_to_podcast_dto(podcast.clone().unwrap())),
+            podcast: Option::from(mapping_service.map_podcast_to_podcast_dto(&podcast.clone()
+                .unwrap())),
             podcast_episodes: None,
         }).await.unwrap();
     match podcast {
@@ -149,4 +151,19 @@ pub async fn download_podcast(id: web::Path<String>, lobby: Data<Addr<Lobby>>, p
         let podcast = podcast_service.get_podcast_by_id(id_num);
         podcast_service.refresh_podcast(podcast.clone(), lobby);
     HttpResponse::Ok().json("Refreshing podcast")
+}
+
+#[put("/podcast/favored")]
+pub async fn favorite_podcast(update_model: web::Json<PodcastFavorUpdateModel> ,
+                              podcast_service_mutex: Data<Mutex<PodcastService>>) -> impl Responder {
+    let mut podcast_service = podcast_service_mutex.lock().unwrap();
+    podcast_service.update_favor_podcast( update_model.id, update_model.favored);
+    HttpResponse::Ok().json("Favorited podcast")
+}
+
+#[get("/podcasts/favored")]
+pub async fn get_favored_podcasts(podcast_service_mutex: Data<Mutex<PodcastService>>) -> impl Responder {
+    let mut podcast_service = podcast_service_mutex.lock().unwrap();
+    let podcasts = podcast_service.get_favored_podcasts();
+    HttpResponse::Ok().json(podcasts)
 }
