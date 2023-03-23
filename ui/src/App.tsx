@@ -90,6 +90,7 @@ const App = () => {
                             <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
                             <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
                             <Route path={"/info"} element={<PodcastInfoPage/>}/>
+                            <Route path={"/favorites"} element={<Podcasts onlyFavorites={true}/>}/>
                         </Routes>
                         <AudioComponents/>
                     </div>

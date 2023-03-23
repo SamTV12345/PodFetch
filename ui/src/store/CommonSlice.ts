@@ -7,7 +7,8 @@ export type Podcast = {
     id: number,
     name: string,
     rssfeed: string,
-    image_url: string
+    image_url: string,
+    favored: boolean
 }
 
 export type PodcastEpisode = {
@@ -60,6 +61,14 @@ export const commonSlice = createSlice({
         setPodcasts: (state, action: PayloadAction<Podcast[]>) => {
             state.podcasts = action.payload
         },
+        updateLikePodcast:(state, action: PayloadAction<number>)=>{
+          state.podcasts = state.podcasts.map((podcast) => {
+                if(podcast.id === action.payload) {
+                    podcast.favored = !podcast.favored
+                }
+                return podcast
+          })
+        },
         setSelectedEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
             state.selectedEpisodes = action.payload
         },
@@ -94,7 +103,7 @@ export const commonSlice = createSlice({
         }
 }})
 
-export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts, setInfoModalDownloaded,
+export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

@@ -58,11 +58,10 @@ pub struct Podcast {
     #[diesel(sql_type = Text)]
     pub directory: String,
     #[diesel(sql_type = Text)]
-
     pub(crate) rssfeed: String,
     #[diesel(sql_type = Text)]
-
-    pub image_url: String
+    pub image_url: String,
+    pub favored: i32
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug, ToSchema)]
