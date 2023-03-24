@@ -33,7 +33,6 @@ mod constants;
 mod service;
 use crate::db::DB;
 use crate::models::web_socket_message::Lobby;
-use crate::schema::podcasts::rssfeed;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;

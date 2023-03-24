@@ -461,7 +461,6 @@ impl DB{
     }
 
     pub fn get_downloaded_episodes(&mut self)->Vec<PodcastEpisode> {
-        use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
         use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         use crate::schema::podcast_episodes::dsl::status as dsl_status;
         dsl_podcast_episodes
