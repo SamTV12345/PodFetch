@@ -59,7 +59,7 @@ volumes:
 |------------------|-----------------------------------------------|--------------------------|
 | POLLING_INTERVAL | Interval in minutes to check for new episodes | 60                       |
 | SERVER_URL       | URL of the server                             | http://localhost:8000    |
-| DATABASE_URL     | URL of the database                           | sqlite::/./db/podcast.db |
+| DATABASE_URL     | URL of the database                           | sqlite://./db/podcast.db |
 
 # Known issues
 
