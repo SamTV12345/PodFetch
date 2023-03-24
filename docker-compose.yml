@@ -10,3 +10,7 @@ services:
     environment:
       - POLLING_INTERVAL=60
       - SERVER_URL=http://localhost:80
+
+volumes:
+    podgrab-podcasts:
+    podgrab-db:
