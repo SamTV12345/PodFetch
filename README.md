@@ -37,16 +37,20 @@ I would love to have a UX expert to help me with the UI. If you are interested i
 ```yaml
 version: '3'
 services:
-  podgrabv2:
+  podfetch:
     image: samuel19982/podgrabv2:latest
     ports:
       - "80:8000"
     volumes:
       - podgrab-podcasts:/app/podcasts
-      - podgrab-db:/app/podcast.db
+      - podgrab-db:/app/db/podcast.db
     environment:
       - POLLING_INTERVAL=60
-      - SERVER_URL=http://<url to the server>
+      - SERVER_URL=http://<your-ip>:<your-port>
+
+volumes:
+  podgrab-podcasts:
+  podgrab-db:
 ```
 
 # Environment Variables
