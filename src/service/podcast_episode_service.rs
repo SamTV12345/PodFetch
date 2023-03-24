@@ -199,4 +199,11 @@ impl PodcastEpisodeService{
         }).collect::<Vec<PodcastEpisode>>();
         return podcast_dto
     }
+
+    pub fn find_all_downloaded_podcast_episodes(&mut self) ->Vec<PodcastEpisode>{
+        let result = self.db.get_downloaded_episodes();
+        result.iter().map(|podcast| {
+            return self.mapping_service.map_podcastepisode_to_dto(podcast)})
+            .collect::<Vec<PodcastEpisode>>()
+    }
 }

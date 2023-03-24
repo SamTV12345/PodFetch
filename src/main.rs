@@ -26,7 +26,7 @@ use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, fin
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
 use crate::controllers::sys_info_controller::get_sys_info;
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
-use crate::controllers::websocket_controller::{start_connection};
+use crate::controllers::websocket_controller::{get_rss_feed, start_connection};
 mod db;
 mod models;
 mod constants;
@@ -150,6 +150,7 @@ async fn main()-> std::io::Result<()> {
             .service(api)
             .service(ui)
             .service(start_connection)
+            .service(get_rss_feed)
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
             .app_data(Data::new(Mutex::new(podcast_service.clone())))

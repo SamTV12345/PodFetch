@@ -84,6 +84,10 @@ You can search for podcast episodes by hitting CTRL+F and typing any word that m
 ## Internationalization
 Podfetch is currently available in English and German. If you want to add a new language you can do so by adding a new file to the `i18n` folder and adding the translations to the file.
 
+# RSS feed
+
+Podfetch offers an own feed to download podcast episodes. You can add the url <SERVER_URL>/rss to your favorite podcast app like gPodder to download and play episodes.
+
 # Roadmap
 
 - [x] Add podcasts via Itunes API
