@@ -32,7 +32,8 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode}) => {
             <div className="grid place-items-center"><img src={currentPodcast.image_url} alt={currentPodcast.name} className="h-20 rounded"/></div>
             <div className="flex flex-col">
                 <div className="ml-2 text-ago">{formatTime(episode.date_of_recording)}</div>
-                <div className="line-clamp-3 text-slate-500 m-2" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
+                <div className="ml-2 text-white font-bold mt-1">{episode.name}</div>
+                <div className="line-clamp-3 text-slate-400 m-2" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
             </div>
             <div className="flex gap-5">
                 <div className="grid place-items-center" key={episode.episode_id + "container"}>
