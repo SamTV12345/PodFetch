@@ -1,5 +1,3 @@
-#![feature(slice_concat_trait)]
-
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 #[macro_use]
