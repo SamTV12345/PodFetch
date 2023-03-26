@@ -203,6 +203,7 @@ impl PodcastEpisodeService {
     pub fn cleanup_old_episodes(&mut self, days: i32) {
         let old_podcast_episodes = self.db.get_podcast_episodes_older_than_days(days);
 
+        log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
         for old_podcast in old_podcast_episodes {
             let podcast = self.db.get_podcast(old_podcast.clone().podcast_id).unwrap();
             let res = FileService::cleanup_old_episode(podcast, old_podcast.clone());
@@ -211,8 +212,8 @@ impl PodcastEpisodeService {
                 Ok(_) => {
                     self.db.update_download_status_of_episode(old_podcast.clone().id);
                 }
-                Err(_) => {
-                    println!("Error deleting podcast episode.");
+                Err(e) => {
+                    println!("Error deleting podcast episode.{}",e);
                 }
             }
         }

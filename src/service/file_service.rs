@@ -61,7 +61,8 @@ impl FileService {
         }
 
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> std::io::Result<()> {
-        std::fs::remove_dir(&format!("podcasts/{}/{}", podcast.directory, episode
+        log::info!("Cleaning up old episode: {}", episode.episode_id);
+        std::fs::remove_dir_all(&format!("podcasts/{}/{}", podcast.directory, episode
             .episode_id))
     }
 }

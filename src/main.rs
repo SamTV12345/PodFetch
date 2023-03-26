@@ -52,9 +52,11 @@ pub fn run_poll(mut podcast_service: PodcastService, mut podcast_episode_service
         //check for new episodes
         let podcats_result = db.get_podcasts().unwrap();
         for podcast in podcats_result {
-            let podcast_clone = podcast.clone();
-            podcast_episode_service.insert_podcast_episodes(podcast);
-            podcast_service.schedule_episode_download(podcast_clone, None);
+            if podcast.active {
+                let podcast_clone = podcast.clone();
+                podcast_episode_service.insert_podcast_episodes(podcast);
+                podcast_service.schedule_episode_download(podcast_clone, None);
+            }
     }
 }
 
@@ -97,10 +99,20 @@ async fn main()-> std::io::Result<()> {
         env.get_environment();
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(||{
-            let podcast_service = PodcastService::new();
-            let podcast_episode_service = PodcastEpisodeService::new();
-            log::info!("Polling for new episodes");
-           run_poll(podcast_service, podcast_episode_service);
+            let settings = DB::new().unwrap().get_settings();
+            match settings {
+                Some(settings)=>{
+                    if settings.auto_update {
+                        let podcast_service = PodcastService::new();
+                        let podcast_episode_service = PodcastEpisodeService::new();
+                        log::info!("Polling for new episodes");
+                        run_poll(podcast_service, podcast_episode_service);
+                    }
+                }
+                None => {
+                    log::error!("Could not get settings from database");
+                }
+            }
         });
 
         scheduler.every(1.day()).run(||{

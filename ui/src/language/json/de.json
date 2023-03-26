@@ -24,5 +24,11 @@
   "search-podcast": "Podcast suchen",
   "favorites": "Favoriten",
   "show-more": "Mehr anzeigen",
-  "show-less": "Weniger anzeigen"
+  "show-less": "Weniger anzeigen",
+  "settings": "Einstellungen",
+  "auto-cleanup": "Automatische Bereinigung",
+  "days-to-keep": "Tage zum Aufbewahren",
+  "auto-update": "Automatische Aktualisierung von Podcasts",
+  "auto-download": "Automatisches Herunterladen von Podcast-Episodes",
+  "save": "Speichern"
 }

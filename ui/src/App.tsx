@@ -16,6 +16,7 @@ import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageId
 import {store} from "./store/store";
 import {PodcastInfoPage} from "./pages/PodcastInfoPage";
 import {AudioComponents} from "./components/AudioComponents";
+import {SettingsPage} from "./pages/SettingsPage";
 
 const App = () => {
     const dispatch = useAppDispatch()
@@ -99,6 +100,7 @@ const App = () => {
                             <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
                             <Route path={"/info"} element={<PodcastInfoPage/>}/>
                             <Route path={"/favorites"} element={<Podcasts onlyFavorites={true}/>}/>
+                            <Route path={"/settings"} element={<SettingsPage/>}/>
                         </Routes>
                         <AudioComponents/>
                     </div>
