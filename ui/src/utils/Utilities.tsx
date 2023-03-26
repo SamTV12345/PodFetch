@@ -1,8 +1,7 @@
 import axios from "axios";
 import TimeAgo from 'javascript-time-ago'
 import de from 'javascript-time-ago/locale/de'
-import * as sanitizeHtml from 'sanitize-html';
-import {IOptions} from "sanitize-html";
+import sanitizeHtml,{IOptions} from 'sanitize-html'
 
 const defaultOptions: IOptions = {
     allowedTags: [ 'b', 'i', 'em', 'strong', 'a' ],
@@ -29,7 +28,7 @@ export let uiURL: string
 export let wsURL: string
 
 if(isLocalhost && import.meta.env.DEV){
-    apiURL="http://localhost:8000/api/v1"
+    apiURL="http://192.168.2.9/api/v1"
     uiURL="http://localhost:5173/ui"
     wsURL="ws://localhost:8000/ws"
 }
