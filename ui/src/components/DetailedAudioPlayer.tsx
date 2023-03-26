@@ -36,7 +36,7 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
                     </div>
                 </div>
                 <div className="grid place-items-center text-white text-2xl">
-                    <div className="max-h-80 overflow-y-auto">{selectedPodcast?.description&& removeHTML(selectedPodcast.description)}</div>
+                    <div className="max-h-80 overflow-y-auto" dangerouslySetInnerHTML={selectedPodcast?.description? removeHTML(selectedPodcast.description):{__html:''}}/>
                 </div>
             </div>
             <div className="col-span-2 mb-3">

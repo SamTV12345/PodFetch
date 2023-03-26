@@ -6,9 +6,9 @@ import axios, {AxiosResponse} from "axios";
 import {Podcast, setSelectedEpisodes} from "../store/CommonSlice";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
 import {useTranslation} from "react-i18next";
-import {PodcastDetailItem} from "../components/PodcastDetailItem";
 import {setCurrentPodcast} from "../store/AudioPlayerSlice";
 import {Chip} from "../components/Chip";
+import {PodcastDetailItem} from "../components/PodcastDetailItem";
 
 export const PodcastDetailPage = () => {
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
