@@ -15,6 +15,7 @@ export type Podcast = {
     keywords?: string,
     author?: string,
     last_build_date?: string,
+    active:boolean
 }
 
 export type PodcastEpisode = {

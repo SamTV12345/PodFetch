@@ -24,5 +24,13 @@
   "search-podcast": "Search podcast",
   "favorites": "Favorites",
   "show-more": "Show more",
-  "show-less": "Show less"
+  "show-less": "Show less",
+  "settings": "Settings",
+  "auto-clean": "Auto clean",
+  "days-to-keep": "Days to keep",
+  "auto-update": "Auto update podcasts",
+  "auto-download": "Auto download new episodes",
+  "save": "Save",
+  "active": "Active",
+  "run-cleanup": "Run cleanup now"
 }

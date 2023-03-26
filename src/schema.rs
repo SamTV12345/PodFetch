@@ -24,6 +24,7 @@ diesel::table! {
         local_image_url -> Text,
         description -> Text,
         status -> Text,
+        download_time -> Nullable<Timestamp>,
     }
 }
 
@@ -51,6 +52,17 @@ diesel::table! {
         keywords -> Nullable<Text>,
         last_build_date -> Nullable<Text>,
         author -> Nullable<Text>,
+        active -> Bool,
+    }
+}
+
+diesel::table! {
+    settings (id) {
+        id -> Integer,
+        auto_download -> Bool,
+        auto_update -> Bool,
+        auto_cleanup -> Bool,
+        auto_cleanup_days -> Integer,
     }
 }
 
@@ -62,4 +74,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     podcast_episodes,
     podcast_history_items,
     podcasts,
+    settings,
 );

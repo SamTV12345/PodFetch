@@ -15,12 +15,12 @@ actix-files = "0.6.2"
 actix-web = "4.3.0"
 log = "0.4.17"
 env_logger = "0.10.0"
-chrono = "0.4.23"
+chrono = {version  = "0.4.23", features = ["serde"]}
 actix-web-actors = "4.2.0"
 actix-cors="0.6.4"
 rss = "2.0.2"
 regex = "1.7.1"
-diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35"] }
+diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "chrono"] }
 utoipa = { version = "3", features = ["actix_extras"] }
 futures = "0.3.26"
 utoipa-swagger-ui = {version = "3", features = ["actix-web"] }

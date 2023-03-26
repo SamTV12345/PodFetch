@@ -1,6 +1,7 @@
 use std::time::SystemTime;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use diesel::{insert_into, RunQueryDsl, sql_query};
+use diesel::dsl::sql;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastHistoryItem,
                             PodcastWatchedPostModel, Notification as Notification};
@@ -9,6 +10,8 @@ use diesel::prelude::*;
 use rss::extension::itunes::ITunesItemExtension;
 use rss::Item;
 use crate::config::dbconfig::establish_connection;
+use crate::constants::constants::DEFAULT_SETTINGS;
+use crate::models::settings::Setting;
 use crate::utils::podcast_builder::PodcastExtra;
 
 pub struct DB{
@@ -371,14 +374,15 @@ impl DB{
         }
     }
 
-    pub fn update_podcast_episode_status(&mut self, download_url_of_episode: &str, status: &str)
+    pub fn update_podcast_episode_status(&mut self, download_url_of_episode: &str, status_to_insert: &str)
                                          ->Result<PodcastEpisode, String> {
-        use crate::schema::podcast_episodes::dsl::status as status_column;
-        use crate::schema::podcast_episodes::dsl::url as download_url;
-        use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
-        let updated_podcast = diesel::update(dsl_podcast_episodes.filter(download_url.eq
-        (download_url_of_episode)))
-                .set(status_column.eq(status))
+        use crate::schema::podcast_episodes::dsl::*;
+
+        let updated_podcast = diesel::update(podcast_episodes.filter(url.eq(download_url_of_episode)))
+                .set((
+                    status.eq(status_to_insert),
+                    download_time.eq(Utc::now().naive_utc())
+                ))
                 .get_result::<PodcastEpisode>(&mut self.conn)
                 .expect("Error updating podcast episode");
 
@@ -474,7 +478,7 @@ impl DB{
     }
 
     pub fn get_downloaded_episodes(&mut self)->Vec<PodcastEpisode> {
-        use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        use     crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         use crate::schema::podcast_episodes::dsl::status as dsl_status;
         dsl_podcast_episodes
             .filter(dsl_status.eq("D"))
@@ -497,5 +501,70 @@ impl DB{
                 ))
             .execute(&mut self.conn)
             .expect("Error updating podcast episode");
+    }
+
+    pub fn get_settings(&mut self)-> Option<Setting> {
+        use crate::schema::settings::dsl::*;
+
+        settings
+            .first::<Setting>(&mut self.conn)
+            .optional()
+            .unwrap()
+    }
+
+    pub fn get_podcast_episodes_older_than_days(&mut self, days: i32) ->Vec<PodcastEpisode>{
+        use  crate::schema::podcast_episodes::dsl::*;
+
+        podcast_episodes
+            .filter(download_time.lt(Utc::now().naive_utc() - Duration::days(days as i64)))
+            .load::<PodcastEpisode>(&mut self.conn)
+            .expect("Error loading podcast episode by id")
+    }
+
+    pub fn update_download_status_of_episode(&mut self, id_to_find: i32){
+        use crate::schema::podcast_episodes::dsl::*;
+        diesel::update(podcast_episodes.filter(id.eq(id_to_find)))
+                .set((
+                    status.eq("N"),
+                    download_time.eq(sql("NULL"))
+                ))
+                .get_result::<PodcastEpisode>(&mut self.conn)
+                .expect("Error updating podcast episode");
+    }
+
+    pub fn update_settings(&mut self, setting:Setting) ->Setting{
+        use crate::schema::settings::dsl::*;
+        let setting_to_update = settings.first::<Setting>(&mut self.conn).expect("Error loading settings");
+            diesel::update(&setting_to_update)
+                .set(setting)
+                .get_result::<Setting>(&mut self.conn)
+                .expect("Error updating settings")
+    }
+
+    pub fn insert_default_settings(&mut self){
+        use crate::schema::settings::dsl::*;
+
+        insert_into(settings)
+            .values(DEFAULT_SETTINGS)
+            .execute(&mut self.conn)
+            .expect("Error setting default values");
+    }
+
+    pub fn update_podcast_active(&mut self, podcast_id:i32){
+        use crate::schema::podcasts::dsl::*;
+
+        let found_podcast = self.get_podcast(podcast_id);
+
+        match found_podcast {
+            Ok(found_podcast)=>{
+                diesel::update(podcasts.filter(id.eq(podcast_id)))
+                    .set(active.eq(!found_podcast.active))
+                    .execute(&mut self.conn)
+                    .expect("Error updating podcast episode");
+            }
+            Err(e)=>{
+                panic!("Error updating podcast active: {}", e);
+            }
+        }
     }
 }

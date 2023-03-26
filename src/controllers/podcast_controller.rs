@@ -174,3 +174,11 @@ pub async fn get_favored_podcasts(podcast_service_mutex: Data<Mutex<PodcastServi
     let podcasts = podcast_service.get_favored_podcasts();
     HttpResponse::Ok().json(podcasts)
 }
+
+#[put("/podcast/{id}/active")]
+pub async fn update_active_podcast(id: web::Path<String>, podcast_service_mutex: Data<Mutex<PodcastService>>) -> impl Responder {
+    let id_num = from_str::<i32>(&id).unwrap();
+    let mut podcast_service = podcast_service_mutex.lock().unwrap();
+    podcast_service.update_active_podcast(id_num);
+    HttpResponse::Ok().json("Updated active podcast")
+}
