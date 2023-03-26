@@ -31,5 +31,6 @@
   "auto-update": "Automatische Aktualisierung von Podcasts",
   "auto-download": "Automatisches Herunterladen von Podcast-Episodes",
   "save": "Speichern",
-  "active": "Aktiv"
+  "active": "Aktiv",
+  "run-cleanup": "Bereinigung jetzt ausführen"
 }

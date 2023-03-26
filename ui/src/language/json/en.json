@@ -31,5 +31,6 @@
   "auto-update": "Auto update podcasts",
   "auto-download": "Auto download new episodes",
   "save": "Save",
-  "active": "Active"
+  "active": "Active",
+  "run-cleanup": "Run cleanup now"
 }

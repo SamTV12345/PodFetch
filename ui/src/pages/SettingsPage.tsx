@@ -50,6 +50,9 @@ export const SettingsPage = () => {
                         <Switcher checked={settings.autoDownload} setChecked={()=>{
                             setSettings({...settings, autoDownload: !settings?.autoDownload})
                         }}/>
+                        <button className="bg-blue-600 rounded p-2 hover:bg-blue-500 ml-5" onClick={()=>{
+                            axios.put(apiURL+"/settings/runcleanup")
+                        }}>{t('run-cleanup')}</button>
                     </div>
                 </div>
                 <div className="flex">
