@@ -1,6 +1,7 @@
-use diesel::prelude::*;
+use diesel::prelude::{Insertable, Queryable};
 use crate::schema::*;
 use utoipa::{ToSchema};
+use chrono::NaiveDateTime;
 
 #[derive(Debug, Serialize, Deserialize,Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -73,7 +74,8 @@ pub struct Podcast {
     #[diesel(sql_type = Nullable<Text>)]
     pub last_build_date: Option<String>,
     #[diesel(sql_type = Nullable<Text>)]
-    pub author: Option<String>
+    pub author: Option<String>,
+    pub active: i32
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug, ToSchema)]
@@ -89,5 +91,6 @@ pub struct PodcastEpisode {
     pub(crate) local_url: String,
     pub(crate) local_image_url: String,
     pub (crate) description: String,
-    pub (crate) status: String
+    pub (crate) status: String,
+    pub (crate) download_time: Option<NaiveDateTime>,
 }

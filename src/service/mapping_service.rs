@@ -28,7 +28,8 @@ impl MappingService {
             explicit: podcast.clone().explicit,
             favored: podcast.favored,
             last_build_date: podcast.clone().last_build_date,
-            author: podcast.author.clone()
+            author: podcast.author.clone(),
+            active: podcast.active,
         }
     }
 
@@ -46,7 +47,8 @@ impl MappingService {
             total_time: podcast_episode.total_time,
             local_url: podcast_path.clone()+&podcast_episode.local_url.clone(),
             local_image_url: podcast_path+&podcast_episode.local_image_url.clone(),
-            status: podcast_episode.status.clone()
+            status: podcast_episode.status.clone(),
+            download_time: podcast_episode.download_time.clone(),
         }
     }
 

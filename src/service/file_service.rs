@@ -1,7 +1,9 @@
 use std::io::Write;
 use std::path::Path;
 use reqwest::{Client, ClientBuilder};
+use rss::Error;
 use crate::db::DB;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 
 #[derive(Clone)]
@@ -57,4 +59,9 @@ impl FileService {
             println!("Before update: {}", file_path);
             db.update_podcast_image(podcast_id, &file_path).unwrap();
         }
+
+    pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> std::io::Result<()> {
+        std::fs::remove_dir(&format!("podcasts/{}/{}", podcast.directory, episode
+            .episode_id))
+    }
 }

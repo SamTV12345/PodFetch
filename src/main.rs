@@ -24,6 +24,7 @@ use crate::controllers::podcast_controller::{download_podcast, favorite_podcast,
 use crate::controllers::notification_controller::{dismiss_notifications, get_unread_notifications};
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
+use crate::controllers::settings_controller::{get_settings, run_cleanup, update_settings};
 use crate::controllers::sys_info_controller::get_sys_info;
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{get_rss_feed, start_connection};
@@ -32,6 +33,7 @@ mod models;
 mod constants;
 mod service;
 use crate::db::DB;
+use crate::models::settings::Setting;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -86,6 +88,9 @@ async fn main()-> std::io::Result<()> {
     let mapping_service = MappingService::new();
     let file_service = FileService::new();
 
+    //insert default settings if not present in database
+    insert_default_settings_if_not_present();
+
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
         let env = EnvironmentService::new();
@@ -97,6 +102,23 @@ async fn main()-> std::io::Result<()> {
             log::info!("Polling for new episodes");
            run_poll(podcast_service, podcast_episode_service);
         });
+
+        scheduler.every(1.day()).run(||{
+            let mut db = DB::new().unwrap();
+            let mut podcast_episode_service = PodcastEpisodeService::new();
+            let settings = db.get_settings();
+            match settings {
+                Some(settings)=>{
+                    if settings.auto_cleanup {
+                        podcast_episode_service.cleanup_old_episodes(settings.auto_cleanup_days);
+                    }
+                }
+                None => {
+                    log::error!("Could not get settings from database");
+                }
+            }
+        });
+
         loop {
             scheduler.run_pending();
             thread::sleep(Duration::from_millis(1000));
@@ -152,6 +174,9 @@ pub fn get_api_config()->Scope{
         .service(get_favored_podcasts)
         .service(favorite_podcast)
         .service(get_watchtime)
+        .service(get_settings)
+        .service(update_settings)
+        .service(run_cleanup)
 }
 
 pub fn get_ui_config()->Scope{
@@ -170,4 +195,19 @@ pub fn get_cors_config()->Cors{
         .allowed_header(http::header::CONNECTION)
         .allowed_header(http::header::UPGRADE)
         .max_age(3600)
+}
+
+
+pub fn insert_default_settings_if_not_present() {
+    let mut db = DB::new().unwrap();
+    let settings = db.get_settings();
+    match settings {
+        Some(_) => {
+            log::info!("Settings already present");
+        }
+        None => {
+            log::info!("No settings found, inserting default settings");
+            db.insert_default_settings();
+        }
+    }
 }

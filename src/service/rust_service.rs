@@ -32,11 +32,21 @@ impl PodcastService {
 
 
     pub fn schedule_episode_download(&mut self,podcast: Podcast, lobby: Option<Data<Addr<Lobby>>>) {
-        let result = self.podcast_episode_service.get_last_5_podcast_episodes(podcast.clone());
-        for podcast_episode in result {
-            self.podcast_episode_service.download_podcast_episode_if_not_locally_available(podcast_episode,
-                                                                              podcast.clone(),
-                                                                              lobby.clone());
+        let settings = self.db.get_settings();
+        match settings {
+            Some(settings) => {
+                if settings.auto_download {
+                    let result = self.podcast_episode_service.get_last_5_podcast_episodes(podcast.clone());
+                    for podcast_episode in result {
+                        self.podcast_episode_service.download_podcast_episode_if_not_locally_available(podcast_episode,
+                                                                                                       podcast.clone(),
+                                                                                                       lobby.clone());
+                    }
+                }
+            }
+            None => {
+                log::error!("Error getting settings");
+            }
         }
     }
 
