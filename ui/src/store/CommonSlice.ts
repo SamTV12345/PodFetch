@@ -8,7 +8,13 @@ export type Podcast = {
     name: string,
     rssfeed: string,
     image_url: string,
-    favored: boolean
+    favored: boolean,
+    summary?: string,
+    language?: string,
+    explicit?: boolean,
+    keywords?: string,
+    author?: string,
+    last_build_date?: string,
 }
 
 export type PodcastEpisode = {

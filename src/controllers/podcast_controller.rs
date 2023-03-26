@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use std::thread;
 use actix::Addr;
 use actix_web::{HttpResponse, Responder, web};
 use serde_json::{from_str, Value};
@@ -29,7 +30,8 @@ tag="podcasts"
 #[get("/podcast/{id}")]
     pub async fn find_podcast_by_id( id: web::Path<String>, db: Data<Mutex<DB>>, mapping_service: Data<Mutex<MappingService>>) -> impl Responder {
         let id_num = from_str::<i32>(&id).unwrap();
-        let podcast = db.lock().expect("Error acquiring lock").get_podcast(id_num).unwrap();
+        let podcast = db.lock().expect("Error acquiring lock").get_podcast(id_num)
+            .expect("Error getting podcast");
         let mapping_service = mapping_service.lock().expect("Error acquiring lock");
         let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(&podcast);
         HttpResponse::Ok().json(mapped_podcast)
@@ -116,8 +118,10 @@ Responder {
         Some(podcast) => {
             spawn_blocking(move || {
                 let mut podcast_service = PodcastService::new();
+                let mut podcast_episode_service = PodcastEpisodeService::new();
                 log::debug!("Inserting podcast episodes: {}", podcast.name);
-                let inserted_podcasts = PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
+                let inserted_podcasts = podcast_episode_service.insert_podcast_episodes(podcast
+                    .clone());
 
                 lobby.get_ref().do_send(BroadcastMessage {
                     podcast_episode: None,
@@ -149,8 +153,11 @@ pub async fn download_podcast(id: web::Path<String>, lobby: Data<Addr<Lobby>>, p
         let id_num = from_str::<i32>(&id).unwrap();
         let mut podcast_service = podcast_service.lock().unwrap();
         let podcast = podcast_service.get_podcast_by_id(id_num);
-        podcast_service.refresh_podcast(podcast.clone(), lobby);
-    HttpResponse::Ok().json("Refreshing podcast")
+        thread::spawn(move || {
+            let mut podcast_service = PodcastService::new();
+            podcast_service.refresh_podcast(podcast.clone(), lobby);
+        });
+        HttpResponse::Ok().json("Refreshing podcast")
 }
 
 #[put("/podcast/favored")]

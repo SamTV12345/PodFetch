@@ -7,6 +7,8 @@ import {store} from "./store/store";
 import {I18nextProvider} from "react-i18next";
 import i18n from "./language/i18n";
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import "@fontsource/roboto"
+import "@fontsource/anton"
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

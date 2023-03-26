@@ -22,5 +22,7 @@
   "info": "Info",
   "add-podcast": "Podcast hinzufügen",
   "search-podcast": "Podcast suchen",
-  "favorites": "Favoriten"
+  "favorites": "Favoriten",
+  "show-more": "Mehr anzeigen",
+  "show-less": "Weniger anzeigen"
 }

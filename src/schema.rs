@@ -45,6 +45,12 @@ diesel::table! {
         rssfeed -> Text,
         image_url -> Text,
         favored -> Integer,
+        summary -> Nullable<Text>,
+        language -> Nullable<Text>,
+        explicit -> Nullable<Text>,
+        keywords -> Nullable<Text>,
+        last_build_date -> Nullable<Text>,
+        author -> Nullable<Text>,
     }
 }
 

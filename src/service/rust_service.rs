@@ -42,7 +42,7 @@ impl PodcastService {
 
     pub fn refresh_podcast(&mut self,podcast: Podcast, lobby: Data<Addr<Lobby>>) {
         log::info!("Refreshing podcast: {}", podcast.name);
-        PodcastEpisodeService::insert_podcast_episodes(podcast.clone());
+        self.podcast_episode_service.insert_podcast_episodes(podcast.clone());
         self.schedule_episode_download(podcast, Some(lobby));
     }
 

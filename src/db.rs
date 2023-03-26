@@ -1,13 +1,15 @@
 use std::time::SystemTime;
 use chrono::{DateTime, Utc};
 use diesel::{insert_into, RunQueryDsl, sql_query};
-use feed_rs::model::Entry;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastHistoryItem,
                             PodcastWatchedPostModel, Notification as Notification};
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
+use rss::extension::itunes::ITunesItemExtension;
+use rss::Item;
 use crate::config::dbconfig::establish_connection;
+use crate::utils::podcast_builder::PodcastExtra;
 
 pub struct DB{
     conn: SqliteConnection,
@@ -42,9 +44,13 @@ impl DB{
         let found_podcast = podcasts
             .filter(podcast_id.eq(podcast_id_to_be_found))
             .first::<Podcast>(&mut self.conn)
+            .optional()
             .expect("Error loading podcast by id");
 
-        Ok(found_podcast)
+        match found_podcast{
+            Some(podcast) => Ok(podcast),
+            None => Err("Podcast not found".to_string())
+        }
     }
 
     pub fn get_podcast_episode_by_id(&mut self, podcas_episode_id_to_be_found: &str) ->
@@ -89,22 +95,30 @@ impl DB{
         Ok(optional_podcast)
     }
 
-    pub fn insert_podcast_episodes(&mut self, podcast: Podcast, link: &str, item: &Entry,
-                                   image_url_1: &str, episode_description: &str,
-                                   total_time_of_podcast: i32)->PodcastEpisode{
+    pub fn insert_podcast_episodes(&mut self, podcast: Podcast, item: Item,
+                                   extension: ITunesItemExtension, duration: i32)
+        ->PodcastEpisode{
         use crate::schema::podcast_episodes::dsl::*;
         let uuid_podcast = uuid::Uuid::new_v4();
 
+        let mut  inserted_date= "".to_string();
+        match &item.pub_date {
+            Some(date)=>{
+                let date = DateTime::parse_from_rfc2822(date).expect("Error parsing date");
+                inserted_date = date.to_rfc3339()
+            },
+            None=>{}
+        }
         let inserted_podcast = insert_into(podcast_episodes)
             .values((
-                total_time.eq(total_time_of_podcast),
+                total_time.eq(duration),
                 podcast_id.eq(podcast.id),
                 episode_id.eq(uuid_podcast.to_string()),
-                name.eq(item.title.as_ref().unwrap().clone().content),
-                url.eq(link.to_string()),
-                date_of_recording.eq(&item.published.unwrap().to_rfc3339()),
-                image_url.eq(image_url_1.to_string()),
-                description.eq(episode_description)
+                name.eq(item.title.as_ref().unwrap().clone()),
+                url.eq(item.enclosure.unwrap().url),
+                date_of_recording.eq(inserted_date),
+                image_url.eq(extension.image.unwrap()),
+                description.eq(item.description.unwrap())
             ))
             .get_result::<PodcastEpisode>(&mut self.conn)
             .expect("Error inserting podcast episode");
@@ -131,8 +145,7 @@ impl DB{
     pub fn get_last_5_podcast_episodes(&mut self, podcast_episode_id: i32) ->
                                                                       Result<Vec<PodcastEpisode>,
                                                                           String>{
-        use crate::schema::podcast_episodes::dsl::podcast_episodes as podcast_episodes;
-        use crate::schema::podcast_episodes::{date_of_recording, podcast_id};
+        use crate::schema::podcast_episodes::dsl::*;
         let podcasts = podcast_episodes
             .filter(podcast_id.eq(podcast_episode_id))
             .limit(5)
@@ -467,5 +480,22 @@ impl DB{
             .filter(dsl_status.eq("D"))
             .load::<PodcastEpisode>(&mut self.conn)
             .expect("Error loading podcast episode by id")
+    }
+
+    pub fn update_podcast_fields(&mut self, podcast_extra:PodcastExtra){
+        use crate::schema::podcasts::dsl::*;
+
+        diesel::update(podcasts)
+            .filter(id.eq(podcast_extra.id))
+            .set((
+                author.eq(podcast_extra.author),
+                keywords.eq(podcast_extra.keywords),
+                explicit.eq(podcast_extra.explicit.to_string()),
+                language.eq(podcast_extra.language),
+                summary.eq(podcast_extra.description),
+                last_build_date.eq(podcast_extra.last_build_date)
+                ))
+            .execute(&mut self.conn)
+            .expect("Error updating podcast episode");
     }
 }

@@ -1,7 +1,16 @@
 import axios from "axios";
 import TimeAgo from 'javascript-time-ago'
 import de from 'javascript-time-ago/locale/de'
+import * as sanitizeHtml from 'sanitize-html';
+import {IOptions} from "sanitize-html";
 
+const defaultOptions: IOptions = {
+    allowedTags: [ 'b', 'i', 'em', 'strong', 'a' ],
+    allowedAttributes: {
+        'a': [ 'href' ]
+    },
+    allowedIframeHostnames: ['www.youtube.com']
+};
 
 TimeAgo.addDefaultLocale(de)
 const timeago = new TimeAgo('de-DE')
@@ -45,7 +54,9 @@ export const formatTime = (isoDate: string) => {
 }
 
 export const removeHTML = (html: string) => {
-    return html.replace(/<[^>]*>?/gm, '');
+    return {
+        __html:sanitizeHtml(html, defaultOptions)
+    }
 }
 
 
