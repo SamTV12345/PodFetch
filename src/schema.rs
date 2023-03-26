@@ -52,7 +52,7 @@ diesel::table! {
         keywords -> Nullable<Text>,
         last_build_date -> Nullable<Text>,
         author -> Nullable<Text>,
-        active -> Integer,
+        active -> Bool,
     }
 }
 

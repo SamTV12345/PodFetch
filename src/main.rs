@@ -20,7 +20,7 @@ mod controllers;
 pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
 use crate::controllers::api_doc::ApiDoc;
-use crate::controllers::podcast_controller::{download_podcast, favorite_podcast, get_favored_podcasts, query_for_podcast};
+use crate::controllers::podcast_controller::{download_podcast, favorite_podcast, get_favored_podcasts, query_for_podcast, update_active_podcast};
 use crate::controllers::notification_controller::{dismiss_notifications, get_unread_notifications};
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
@@ -33,7 +33,6 @@ mod models;
 mod constants;
 mod service;
 use crate::db::DB;
-use crate::models::settings::Setting;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -188,6 +187,7 @@ pub fn get_api_config()->Scope{
         .service(get_watchtime)
         .service(get_settings)
         .service(update_settings)
+        .service(update_active_podcast)
         .service(run_cleanup)
 }
 

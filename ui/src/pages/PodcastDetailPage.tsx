@@ -9,6 +9,7 @@ import {useTranslation} from "react-i18next";
 import {setCurrentPodcast} from "../store/AudioPlayerSlice";
 import {Chip} from "../components/Chip";
 import {PodcastDetailItem} from "../components/PodcastDetailItem";
+import {Switcher} from "../components/Switcher";
 
 export const PodcastDetailPage = () => {
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
@@ -85,6 +86,15 @@ export const PodcastDetailPage = () => {
                                            console.log("Refreshed")
                                        })
                                }}></i></h1>
+                        <div className="flex gap-3">
+                            <div>{t('active')}</div>
+                            <Switcher checked={currentPodcast.active} setChecked={()=>{
+                                axios.put(apiURL + "/podcast/" + params.id + "/active")
+                                    .then(() => {
+                                        dispatch(setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active}))
+                                    })
+                            }}/>
+                        </div>
                         <h2 className="text-xl text-slate-600">{currentPodcast.author}</h2>
                         {<div className="flex gap-2">
                             {

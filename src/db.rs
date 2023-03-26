@@ -9,7 +9,6 @@ use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
 use rss::extension::itunes::ITunesItemExtension;
 use rss::Item;
-use serde_json::Value::Null;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::DEFAULT_SETTINGS;
 use crate::models::settings::Setting;
@@ -549,5 +548,23 @@ impl DB{
             .values(DEFAULT_SETTINGS)
             .execute(&mut self.conn)
             .expect("Error setting default values");
+    }
+
+    pub fn update_podcast_active(&mut self, podcast_id:i32){
+        use crate::schema::podcasts::dsl::*;
+
+        let found_podcast = self.get_podcast(podcast_id);
+
+        match found_podcast {
+            Ok(found_podcast)=>{
+                diesel::update(podcasts.filter(id.eq(podcast_id)))
+                    .set(active.eq(!found_podcast.active))
+                    .execute(&mut self.conn)
+                    .expect("Error updating podcast episode");
+            }
+            Err(e)=>{
+                panic!("Error updating podcast active: {}", e);
+            }
+        }
     }
 }

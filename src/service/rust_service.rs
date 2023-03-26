@@ -67,4 +67,8 @@ impl PodcastService {
     pub fn get_favored_podcasts(&mut self)-> Vec<Podcast>{
         self.db.get_favored_podcasts().unwrap()
     }
+
+    pub fn update_active_podcast(&mut self, id:i32){
+        self.db.update_podcast_active(id);
+    }
 }

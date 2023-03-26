@@ -30,5 +30,6 @@
   "days-to-keep": "Tage zum Aufbewahren",
   "auto-update": "Automatische Aktualisierung von Podcasts",
   "auto-download": "Automatisches Herunterladen von Podcast-Episodes",
-  "save": "Speichern"
+  "save": "Speichern",
+  "active": "Aktiv"
 }

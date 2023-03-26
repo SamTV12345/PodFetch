@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 use actix_web::{post, get, web, HttpResponse, Responder};
 use actix_web::web::Data;
 use crate::db::DB;
@@ -27,7 +27,7 @@ tag="watchtime"
 )]
 #[get("/podcast/episode/lastwatched")]
 pub async fn get_last_watched(db: Data<Mutex<DB>>) -> impl Responder {
-    let mut db = db.lock().expect("Error acquiring db lock");
+    let mut db = db.lock().unwrap_or_else(PoisonError::into_inner);
     let last_watched = db.get_last_watched_podcasts().unwrap();
     HttpResponse::Ok().json(last_watched)
 }
@@ -40,7 +40,7 @@ tag="watchtime"
 )]
 #[get("/podcast/episode/{id}")]
 pub async fn get_watchtime(id: web::Path<String>, db: Data<Mutex<DB>>) -> impl Responder {
-    let mut db = db.lock().expect("Error acquiring db lock");
+    let mut db = db.lock().unwrap_or_else(PoisonError::into_inner);
     let watchtime = db.get_watchtime(&id).unwrap();
     HttpResponse::Ok().json(watchtime)
 }

@@ -30,5 +30,6 @@
   "days-to-keep": "Days to keep",
   "auto-update": "Auto update podcasts",
   "auto-download": "Auto download new episodes",
-  "save": "Save"
+  "save": "Save",
+  "active": "Active"
 }
