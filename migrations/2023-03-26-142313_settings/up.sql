@@ -9,3 +9,5 @@ CREATE TABLE settings (
 
 ALTER TABLE podcast_episodes ADD COLUMN download_time DATETIME NULL;
 ALTER TABLE podcasts ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;
+
+UPDATE podcast_episodes SET download_time = datetime('now') WHERE status='D';
