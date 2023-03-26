@@ -1,3 +1,5 @@
+#![feature(slice_concat_trait)]
+
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 #[macro_use]
@@ -6,7 +8,7 @@ extern crate serde_json;
 
 use std::{env, thread};
 use std::sync::{Mutex};
-use actix_web::{App, http, HttpResponse, HttpServer, Responder, web};
+use actix_web::{App, http, HttpResponse, HttpServer, Responder, Scope, web};
 use std::time::Duration;
 use actix::{Actor};
 use actix_cors::Cors;
@@ -42,16 +44,17 @@ use crate::service::rust_service::PodcastService;
 
 mod config;
 pub mod schema;
+pub mod utils;
 
 
-pub fn run_poll(mut podcast_service: PodcastService){
+pub fn run_poll(mut podcast_service: PodcastService, mut podcast_episode_service: PodcastEpisodeService){
         let mut db = DB::new().unwrap();
         //check for new episodes
         let podcats_result = db.get_podcasts().unwrap();
         for podcast in podcats_result {
-        let podcast_clone = podcast.clone();
-        PodcastEpisodeService::insert_podcast_episodes(podcast);
-        podcast_service.schedule_episode_download(podcast_clone, None);
+            let podcast_clone = podcast.clone();
+            podcast_episode_service.insert_podcast_episodes(podcast);
+            podcast_service.schedule_episode_download(podcast_clone, None);
     }
 }
 
@@ -92,8 +95,9 @@ async fn main()-> std::io::Result<()> {
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(||{
             let podcast_service = PodcastService::new();
+            let podcast_episode_service = PodcastEpisodeService::new();
             log::info!("Polling for new episodes");
-           run_poll(podcast_service.clone());
+           run_poll(podcast_service, podcast_episode_service);
         });
         loop {
             scheduler.run_pending();
@@ -103,39 +107,6 @@ async fn main()-> std::io::Result<()> {
 
 
     HttpServer::new(move || {
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-            .allowed_header(http::header::CONTENT_TYPE)
-            .allowed_header(http::header::CONNECTION)
-            .allowed_header(http::header::UPGRADE)
-            .max_age(3600);
-
-        let ui = web::scope("/ui")
-            .route("/index.html", web::get().to(index))
-            .route("/{path:[^.]*}", web::get().to(index))
-            .service(Files::new("/", "./static").index_file("index.html"));
-
-        let api = web::scope("/api/v1")
-            .service(find_podcast)
-            .service(add_podcast)
-            .service(find_all_podcasts)
-            .service(find_all_podcast_episodes_of_podcast)
-            .service(find_podcast_by_id)
-            .service(log_watchtime)
-            .service(get_last_watched)
-            .service(get_watchtime)
-            .service(get_unread_notifications)
-            .service(dismiss_notifications)
-            .service(download_podcast)
-            .service(query_for_podcast)
-            .service(download_podcast_episodes_of_podcast)
-            .service(get_sys_info)
-            .service(get_favored_podcasts)
-            .service(favorite_podcast)
-            .service(get_watchtime);
-
         let openapi = ApiDoc::openapi();
 
         App::new().service(Files::new
@@ -146,9 +117,9 @@ async fn main()-> std::io::Result<()> {
                     .url("/api-doc/openapi.json", openapi),
             )
             .service(redirect("/","/ui/"))
-            .wrap(cors)
-            .service(api)
-            .service(ui)
+            .wrap(get_cors_config())
+            .service(get_api_config())
+            .service(get_ui_config())
             .service(start_connection)
             .service(get_rss_feed)
             .app_data(Data::new(chat_server.clone()))
@@ -157,9 +128,48 @@ async fn main()-> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(db.clone())))
             .app_data(Data::new(Mutex::new(mapping_service.clone())))
             .app_data(Data::new(Mutex::new(file_service.clone())))
-    }
-    )
+    })
         .bind(("0.0.0.0", 8000))?
         .run()
         .await
+}
+
+
+pub fn get_api_config()->Scope{
+    web::scope("/api/v1")
+        .service(find_podcast)
+        .service(add_podcast)
+        .service(find_all_podcasts)
+        .service(find_all_podcast_episodes_of_podcast)
+        .service(find_podcast_by_id)
+        .service(log_watchtime)
+        .service(get_last_watched)
+        .service(get_watchtime)
+        .service(get_unread_notifications)
+        .service(dismiss_notifications)
+        .service(download_podcast)
+        .service(query_for_podcast)
+        .service(download_podcast_episodes_of_podcast)
+        .service(get_sys_info)
+        .service(get_favored_podcasts)
+        .service(favorite_podcast)
+        .service(get_watchtime)
+}
+
+pub fn get_ui_config()->Scope{
+    web::scope("/ui")
+        .route("/index.html", web::get().to(index))
+        .route("/{path:[^.]*}", web::get().to(index))
+        .service(Files::new("/", "./static").index_file("index.html"))
+}
+
+pub fn get_cors_config()->Cors{
+    Cors::default()
+        .allow_any_origin()
+        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+        .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+        .allowed_header(http::header::CONTENT_TYPE)
+        .allowed_header(http::header::CONNECTION)
+        .allowed_header(http::header::UPGRADE)
+        .max_age(3600)
 }

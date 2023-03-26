@@ -22,6 +22,7 @@ const App = () => {
     const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
     const podcasts = useAppSelector(state => state.common.podcasts)
     const [socket] = useState(()=>new WebSocket(wsURL))
+    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
 
     useEffect(() => {
         socket.onopen = () => {
@@ -39,20 +40,27 @@ const App = () => {
                 const podcast = parsed.podcast
                 dispatch(setPodcasts([...podcasts, podcast]))
             } else if (checkIfPodcastEpisodeAdded(parsed)) {
-                const downloadedPodcastEpisode = parsed.podcast_episode
-                let podcastUpdated = store.getState().common.selectedEpisodes.map(p => {
-                    if (p.id === downloadedPodcastEpisode.id) {
-                        const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
-                        foundDownload.status = "D"
-                        foundDownload.url = downloadedPodcastEpisode.url
-                        foundDownload.local_url = downloadedPodcastEpisode.local_url
-                        foundDownload.image_url = downloadedPodcastEpisode.image_url
-                        foundDownload.local_image_url = downloadedPodcastEpisode.local_image_url
-                        return foundDownload
+                if(currentPodcast?.id === parsed.podcast_episode.podcast_id) {
+                    const downloadedPodcastEpisode = parsed.podcast_episode
+                    let res = store.getState().common.selectedEpisodes.find(p => p.id === downloadedPodcastEpisode.id)
+                    if (res == undefined) {
+                        // This is a completely new episode
+                        dispatch(setSelectedEpisodes([...store.getState().common.selectedEpisodes, downloadedPodcastEpisode]))
                     }
-                    return p
-                })
-                dispatch(setSelectedEpisodes(podcastUpdated))
+                    let podcastUpdated = store.getState().common.selectedEpisodes.map(p => {
+                        if (p.id === downloadedPodcastEpisode.id) {
+                            const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
+                            foundDownload.status = "D"
+                            foundDownload.url = downloadedPodcastEpisode.url
+                            foundDownload.local_url = downloadedPodcastEpisode.local_url
+                            foundDownload.image_url = downloadedPodcastEpisode.image_url
+                            foundDownload.local_image_url = downloadedPodcastEpisode.local_image_url
+                            return foundDownload
+                        }
+                        return p
+                    })
+                    dispatch(setSelectedEpisodes(podcastUpdated))
+                }
             }
         }
 

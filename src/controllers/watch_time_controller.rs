@@ -11,10 +11,10 @@ responses(
 tag="watchtime"
 )]
 #[post("/podcast/episode")]
-pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>, db: Data<Mutex<DB>>) -> impl Responder {
+pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>) -> impl Responder {
     let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
-
-    db.lock().expect("Error acquiring db lock").log_watchtime(podcast_watch.0).expect("Error logging watchtime");
+    let mut db = DB::new().expect("Error creating db");
+    db.log_watchtime(podcast_watch.0).expect("Error logging watchtime");
     log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
     HttpResponse::Ok()
 }

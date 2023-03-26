@@ -2,7 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+*{
+    font-family: Roboto, serif;
+}
 
+.movie-text{
+    font-family: anton, serif;
+    font-weight: 800;
+    font-size: 50px;
+    @apply text-gray-900;
+}
 #audio-progress{
     @apply absolute;
 }
@@ -115,4 +124,21 @@
 
 .visibility-important{
     visibility: visible !important;
+}
+
+.line-clamp-3{
+    position: relative;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+}
+
+.podcast-summary a{
+    @apply text-gray-900 hover:underline ;
+    text-underline: steelblue ;
+}
+
+.text-ago{
+    color: #25d1da;
 }

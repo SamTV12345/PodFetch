@@ -22,7 +22,13 @@ impl MappingService {
             rssfeed: podcast.rssfeed.clone(),
             image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
                 + &podcast.image_url.clone(),
-            favored: podcast.favored
+            language: podcast.language.clone(),
+            keywords: podcast.keywords.clone(),
+            summary: podcast.summary.clone(),
+            explicit: podcast.clone().explicit,
+            favored: podcast.favored,
+            last_build_date: podcast.clone().last_build_date,
+            author: podcast.author.clone()
         }
     }
 

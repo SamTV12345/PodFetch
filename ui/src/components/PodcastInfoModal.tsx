@@ -45,9 +45,9 @@ export const PodcastInfoModal = () => {
                     </button>
                 </div>
                 <div className="p-6 space-y-6">
-                    <p className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                        {selectedPodcastEpisode&&removeHTML(selectedPodcastEpisode.description)}
-                    </p>
+                    {selectedPodcastEpisode&&<p className="text-base leading-relaxed text-gray-500 dark:text-gray-400" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
+
+                    </p>}
                     <div className="flex gap-4">
                         <button disabled={!selectedPodcastEpisode} className="bg-blue-500 p-1 rounded disabled:bg-blue-900 hover:bg-blue-400" onClick={()=>{
                             if(selectedPodcastEpisode) {

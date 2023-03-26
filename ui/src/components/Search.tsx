@@ -58,7 +58,7 @@ export const Search = () => {
                                         <div className="text-white font-bold">{v.name}
                                             <span className="text-gray-400 text-sm font-normal"> - {formatTime(v.date_of_recording)}</span>
                                         </div>
-                                        <div className="text-gray-400 text-sm font-normal">{removeHTML(v.description)}</div>
+                                        <div className="text-gray-400 text-sm font-normal" dangerouslySetInnerHTML={removeHTML(v.description)}></div>
                                     </div>
                                 </div>
                             </div>

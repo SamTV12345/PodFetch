@@ -2,7 +2,6 @@ use diesel::prelude::*;
 use crate::schema::*;
 use utoipa::{ToSchema};
 
-
 #[derive(Debug, Serialize, Deserialize,Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ItunesModel {
@@ -61,7 +60,20 @@ pub struct Podcast {
     pub(crate) rssfeed: String,
     #[diesel(sql_type = Text)]
     pub image_url: String,
-    pub favored: i32
+    #[diesel(sql_type = Text)]
+    pub favored: i32,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub summary: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub language: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub explicit: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub keywords: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub last_build_date: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub author: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug, ToSchema)]

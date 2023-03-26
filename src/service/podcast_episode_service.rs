@@ -1,8 +1,8 @@
 use actix::Addr;
 use actix_web::web;
-use feed_rs::parser;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
+use rss::Channel;
 use crate::constants::constants::{PodcastType};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
@@ -12,6 +12,7 @@ use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
+use crate::utils::podcast_builder::PodcastBuilder;
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -101,88 +102,67 @@ impl PodcastEpisodeService{
     }
 
     // Used for creating/updating podcasts
-    pub fn insert_podcast_episodes(podcast: Podcast) ->Vec<PodcastEpisode>{
+    pub fn insert_podcast_episodes(&mut self, podcast: Podcast) ->Vec<PodcastEpisode>{
         let client = ClientBuilder::new().build().unwrap();
         let result = client.get(podcast.clone().rssfeed).send().unwrap();
         let bytes = result.bytes().unwrap();
-        let text = String::from_utf8(bytes.to_vec()).unwrap();
-        let vec = Self::get_media_urls(&text);
-        let durations = Self::get_time_in_millis(&text);
-        let feed = parser::parse(&*bytes).unwrap();
+        let channel = Channel::read_from(&*bytes).unwrap();
+
+        self.update_podcast_fields(channel.clone(), podcast.id.clone());
 
         let mut podcast_inserted:Vec<PodcastEpisode> = Vec::new();
-        for (i,item) in feed.entries.iter().enumerate(){
+        for (_,item) in channel.items.iter().enumerate(){
             let mut db = DB::new().unwrap();
-            let result = db.get_podcast_episode_by_url(&vec[i].to_owned());
+            let itunes_ext = item.clone().itunes_ext.unwrap();
+            let result = db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
+            let mut duration_episode = 0;
 
             if result.unwrap().is_none() {
                 // Insert new podcast episode
-                let duration_string = durations[i].to_owned();
-                let duration = Self::parse_duration(&duration_string);
-                let mut duration_episode = 0;
-
-                if duration.is_some()
-                {
-                    duration_episode = duration.unwrap();
+                match itunes_ext.clone().duration {
+                    Some(duration) => {
+                        duration_episode = Self::parse_duration(&duration);
+                    }
+                    None =>{
+                    }
                 }
-                let inserted_episode = db.insert_podcast_episodes(podcast.clone(), &vec[i]
-                    .to_owned(),
-                                           item, &feed.logo
-                        .clone().unwrap().uri, &item.summary.clone().unwrap().content,
-                                           duration_episode as i32);
+
+                let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
+                                                                  itunes_ext, duration_episode as i32);
                 podcast_inserted.push(inserted_episode);
             }
         }
         return podcast_inserted;
     }
 
-
-    fn get_media_urls(text: &str)-> Vec<String> {
-        let mut urls = Vec::new();
-        let re = Regex::new(r#"<enclosure.*?url="(.*?)".*?/>"#).unwrap();
-        for capture in re.captures_iter(text){
-            let url = capture.get(1).unwrap().as_str();
-            urls.push(url.to_owned())
-        }
-        return urls;
-    }
-
-    fn get_time_in_millis(text: &str)-> Vec<String> {
-        let mut urls = Vec::new();
-        let re = Regex::new(r#"<itunes:duration>(.*?)</itunes:duration>"#).unwrap();
-        for capture in re.captures_iter(text){
-            let durations = capture.get(1).unwrap().as_str();
-            urls.push(durations.to_owned())
-        }
-        return urls;
-    }
-
-    fn parse_duration(duration_str: &str) -> Option<u32> {
+    fn parse_duration(duration_str: &str) -> u32 {
         let parts: Vec<&str> = duration_str.split(":").collect();
         match parts.len() {
             1=> {
-                let seconds = parts[0].parse::<u32>().ok()?;
-                Some(seconds)
+                let seconds = parts[0].parse::<u32>().unwrap();
+                seconds
             }
             2 => {
-                let minutes = parts[0].parse::<u32>().ok()?;
-                let seconds = parts[1].parse::<u32>().ok()?;
-                Some(minutes * 60 + seconds)
+                let minutes = parts[0].parse::<u32>().unwrap();
+                let seconds = parts[1].parse::<u32>().unwrap();
+                minutes * 60 + seconds
             }
             3 => {
-                let hours = parts[0].parse::<u32>().ok()?;
-                let minutes = parts[1].parse::<u32>().ok()?;
-                let seconds = parts[2].parse::<u32>().ok()?;
-                Some(hours * 3600 + minutes * 60 + seconds)
+                let hours = parts[0].parse::<u32>().unwrap();
+                let minutes = parts[1].parse::<u32>().unwrap();
+                let seconds = parts[2].parse::<u32>().unwrap();
+                hours * 3600 + minutes * 60 + seconds
             }
             4=>{
-                let days = parts[0].parse::<u32>().ok()?;
-                let hours = parts[1].parse::<u32>().ok()?;
-                let minutes = parts[2].parse::<u32>().ok()?;
-                let seconds = parts[3].parse::<u32>().ok()?;
-                Some(days * 86400 + hours * 3600 + minutes * 60 + seconds)
+                let days = parts[0].parse::<u32>().unwrap();
+                let hours = parts[1].parse::<u32>().unwrap();
+                let minutes = parts[2].parse::<u32>().unwrap();
+                let seconds = parts[3].parse::<u32>().unwrap();
+                days * 86400 + hours * 3600 + minutes * 60 + seconds
             }
-            _ => None
+            _=>{
+                0
+            }
         }
     }
 
@@ -205,5 +185,19 @@ impl PodcastEpisodeService{
         result.iter().map(|podcast| {
             return self.mapping_service.map_podcastepisode_to_dto(podcast)})
             .collect::<Vec<PodcastEpisode>>()
+    }
+
+    fn update_podcast_fields(&mut self,feed: Channel, podcast_id: i32){
+
+        let itunes = feed.clone().itunes_ext.unwrap();
+        let constructed_extra_fields = PodcastBuilder::new(podcast_id)
+            .author(itunes.author)
+            .last_build_date(feed.last_build_date)
+            .description(feed.description)
+            .language(feed.language)
+            .keywords(itunes.categories)
+            .build();
+
+        self.db.update_podcast_fields(constructed_extra_fields);
     }
 }
