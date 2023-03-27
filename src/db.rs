@@ -12,6 +12,7 @@ use rss::Item;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::DEFAULT_SETTINGS;
 use crate::models::settings::Setting;
+use crate::schema::podcasts::original_image_url;
 use crate::utils::podcast_builder::PodcastExtra;
 
 pub struct DB{
@@ -104,7 +105,9 @@ impl DB{
         use crate::schema::podcast_episodes::dsl::*;
         let uuid_podcast = uuid::Uuid::new_v4();
 
+        println!("Downloading image for podcast episode: {}", extension.explicit.unwrap());
         let mut  inserted_date= "".to_string();
+        let inserted_image_url;
         match &item.pub_date {
             Some(date)=>{
                 let date = DateTime::parse_from_rfc2822(date).expect("Error parsing date");
@@ -112,6 +115,16 @@ impl DB{
             },
             None=>{}
         }
+
+        match  extension.image{
+            Some(image_url_podcast_episode)=>{
+                inserted_image_url = image_url_podcast_episode;
+            },
+            None=>{
+                inserted_image_url = podcast.original_image_url;
+            }
+        }
+
         let inserted_podcast = insert_into(podcast_episodes)
             .values((
                 total_time.eq(duration),
@@ -120,7 +133,7 @@ impl DB{
                 name.eq(item.title.as_ref().unwrap().clone()),
                 url.eq(item.enclosure.unwrap().url),
                 date_of_recording.eq(inserted_date),
-                image_url.eq(extension.image.unwrap()),
+                image_url.eq(inserted_image_url),
                 description.eq(item.description.unwrap())
             ))
             .get_result::<PodcastEpisode>(&mut self.conn)
@@ -138,7 +151,8 @@ impl DB{
                 directory.eq(collection_id.to_string()),
                 podcast_name.eq(collection_name.to_string()),
                 rssfeed.eq(feed_url.to_string()),
-                image_url.eq(image_url_1.to_string())
+                image_url.eq(image_url_1.to_string()),
+                original_image_url.eq(image_url_1.to_string())
             ))
             .get_result::<Podcast>(&mut self.conn)
             .expect("Error inserting podcast");
@@ -567,4 +581,12 @@ impl DB{
             }
         }
     }
+
+    pub fn update_original_image_url(&mut self, original_image_url_to_set: &str, podcast_id_to_find: i32){
+        use crate::schema::podcasts::dsl::*;
+                    diesel::update(podcasts.filter(id.eq(podcast_id_to_find)))
+                        .set(original_image_url.eq(original_image_url_to_set))
+                        .execute(&mut self.conn)
+                        .expect("Error updating podcast episode");
+        }
 }

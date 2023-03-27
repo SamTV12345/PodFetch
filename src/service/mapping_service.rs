@@ -30,6 +30,7 @@ impl MappingService {
             last_build_date: podcast.clone().last_build_date,
             author: podcast.author.clone(),
             active: podcast.active,
+            original_image_url: podcast.original_image_url.clone(),
         }
     }
 

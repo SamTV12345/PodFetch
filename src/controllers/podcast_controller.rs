@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 use std::thread;
 use actix::Addr;
 use actix_web::{HttpResponse, Responder, web};
@@ -82,7 +82,7 @@ pub async fn add_podcast(track_id: web::Json<PodCastAddModel>,
                          lobby: Data<Addr<Lobby>>, db: Data<Mutex<DB>>, mapping_service: Data<Mutex<MappingService>>, fileservice: Data<Mutex<FileService>> ) ->
                                                                                              impl
 Responder {
-    let mapping_service = mapping_service.lock().expect("Error locking mapping service");
+    let mapping_service = mapping_service.lock().unwrap_or_else(PoisonError::into_inner);
     let mut db = db.lock().expect("Error acquiring lock");
     let fileservice = fileservice.lock().expect("Error acquiring lock");
     let client = AsyncClientBuilder::new().build().unwrap();

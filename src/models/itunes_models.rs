@@ -75,7 +75,8 @@ pub struct Podcast {
     pub last_build_date: Option<String>,
     #[diesel(sql_type = Nullable<Text>)]
     pub author: Option<String>,
-    pub active: bool
+    pub active: bool,
+    pub original_image_url: String
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug, ToSchema)]

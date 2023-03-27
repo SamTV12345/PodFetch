@@ -53,6 +53,7 @@ diesel::table! {
         last_build_date -> Nullable<Text>,
         author -> Nullable<Text>,
         active -> Bool,
+        original_image_url -> Text,
     }
 }
 

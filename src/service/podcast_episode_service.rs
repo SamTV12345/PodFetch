@@ -111,6 +111,13 @@ impl PodcastEpisodeService {
         self.update_podcast_fields(channel.clone(), podcast.id.clone());
 
         let mut podcast_inserted: Vec<PodcastEpisode> = Vec::new();
+
+        // insert original podcast image url
+        if podcast.original_image_url.is_empty(){
+            let mut db = DB::new().unwrap();
+            db.update_original_image_url(&channel.image().unwrap().url.to_string(), podcast.id);
+        }
+
         for (_, item) in channel.items.iter().enumerate() {
             let mut db = DB::new().unwrap();
             let itunes_ext = item.clone().itunes_ext.unwrap();
