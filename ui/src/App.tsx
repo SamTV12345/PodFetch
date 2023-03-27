@@ -1,5 +1,13 @@
 import './App.css'
-import {BrowserRouter, Route, Routes} from "react-router-dom";
+import {
+    BrowserRouter,
+    createBrowserRouter,
+    createRoutesFromElements,
+    Outlet,
+    Route,
+    RouterProvider,
+    Routes
+} from "react-router-dom";
 import {SideBar} from "./components/SideBar";
 import {Header} from "./components/Header";
 import {useAppDispatch, useAppSelector} from "./store/hooks";
@@ -9,18 +17,38 @@ import {Homepage} from "./pages/Homepage";
 import {Search} from "./components/Search";
 import {apiURL, isJsonString, wsURL} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
-import {useEffect, useState} from "react";
+import {FC, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
 import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {PodcastInfoPage} from "./pages/PodcastInfoPage";
-import {AudioComponents} from "./components/AudioComponents";
 import {SettingsPage} from "./pages/SettingsPage";
+import {Root} from "./routing/Root";
+
+
+const router =  createBrowserRouter(createRoutesFromElements(
+    <Route path="/ui" element={<Root/>}>
+        <Route index element={<Homepage/>}/>
+        <Route path={"podcasts"}>
+            <Route index  element={<Podcasts/>}/>
+            <Route path={":id/episodes"} element={<PodcastDetailPage/>}/>
+            <Route path={":id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
+        </Route>
+        <Route path={"favorites"}>
+            <Route element={<Podcasts onlyFavorites={true}/>} index/>
+            <Route path={":id/episodes"} element={<PodcastDetailPage/>}/>
+            <Route path={":id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
+        </Route>
+        <Route path={"info"} element={<PodcastInfoPage/>}/>
+        <Route path={"settings"} element={<SettingsPage/>}/>
+    </Route>
+
+
+))
 
 const App = () => {
     const dispatch = useAppDispatch()
-    const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
     const podcasts = useAppSelector(state => state.common.podcasts)
     const [socket] = useState(()=>new WebSocket(wsURL))
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
@@ -85,30 +113,14 @@ const App = () => {
         getNotifications()
     }, [])
 
-    return (
-        <BrowserRouter basename="/ui">
-            <div className="grid  grid-rows-[auto_1fr] h-full md:grid-cols-[300px_1fr]">
-                <Header/>
-                <SideBar/>
-                <div
-                    className={`col-span-6 md:col-span-5 ${sideBarCollapsed ? 'xs:col-span-5' : 'hidden'} md:block w-full overflow-x-auto`}>
-                    <div className="grid grid-rows-[1fr_auto] h-full ">
-                        <Routes>
-                            <Route path={"/home"} element={<Homepage/>}/>
-                            <Route path={"/podcasts"} element={<Podcasts/>}/>
-                            <Route path={"/podcasts/:id"} element={<PodcastDetailPage/>}/>
-                            <Route path={"/podcasts/:id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
-                            <Route path={"/info"} element={<PodcastInfoPage/>}/>
-                            <Route path={"/favorites"} element={<Podcasts onlyFavorites={true}/>}/>
-                            <Route path={"/settings"} element={<SettingsPage/>}/>
-                        </Routes>
-                        <AudioComponents/>
-                    </div>
-                </div>
-            </div>
-            <Search/>
-        </BrowserRouter>
-    )
+
+
+
+
+
+
+
+    return <RouterProvider router={router}/>
 }
 
 export default App

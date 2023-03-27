@@ -21,7 +21,7 @@ export const Card:FC<CardProps> = ({podcast})=>{
     }
 
     return <div className="max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
-        <Link to={"/podcasts/"+podcast.id}>
+        <Link to={podcast.id+"/episodes"}>
             <div className="relative">
             <img className="rounded-t-lg" src={podcast.image_url} alt=""/>
                 {!podcast.active&&<div className="absolute pointer-events-none left-0 top-0 w-full h-full bg-gray-500 opacity-80 z-10 grid place-items-center"></div>}

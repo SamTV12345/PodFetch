@@ -1,4 +1,4 @@
-import {FC, useEffect} from "react";
+import {FC, useEffect, useMemo} from "react";
 import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
@@ -6,6 +6,7 @@ import {Podcast, setPodcasts} from "../store/CommonSlice";
 import {Card} from "../components/Card";
 import {AddPodcast} from "../components/AddPodcast";
 import {setModalOpen} from "../store/ModalSlice";
+import {useLocation} from "react-router-dom";
 
 
 interface PodcastsProps {
@@ -15,6 +16,7 @@ interface PodcastsProps {
 export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
     const podcasts = useAppSelector(state=>state.common.podcasts)
     const dispatch = useAppDispatch()
+    let location = useLocation();
 
     useEffect(()=>{
         let url = apiURL+"/podcasts"
@@ -24,8 +26,8 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
         axios.get(url)
             .then((response:AxiosResponse<Podcast[]>)=>{
                 dispatch(setPodcasts(response.data))
-        })
-    },[window.location.pathname])
+            })
+    },[location])
 
     return <div className="p-5">
         <AddPodcast/>

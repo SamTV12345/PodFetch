@@ -5,7 +5,7 @@ import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel";
 import {PlayIcon} from "../components/PlayIcon";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
-import {setCurrentPodcast, setCurrentPodcastEpisode} from "../store/AudioPlayerSlice";
+import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {useAppDispatch} from "../store/hooks";
 import {useTranslation} from "react-i18next";
 
@@ -38,8 +38,8 @@ export const Homepage = () => {
                                             ...v.podcastEpisode,
                                             time: response.data.watchedTime
                                         }))
-                                        console.log(response.data.watchedTime)
                                         dispatch(setCurrentPodcast(v.podcast))
+                                        dispatch(setPlaying(true))
                                     })
                             }}/>
                         </div>

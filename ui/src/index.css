@@ -142,3 +142,7 @@
 .text-ago{
     color: #25d1da;
 }
+
+.sidebar .active{
+    @apply bg-gray-700;
+}

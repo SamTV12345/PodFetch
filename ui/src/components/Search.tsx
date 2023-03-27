@@ -52,7 +52,7 @@ export const Search = () => {
                             return <div className="p-2 " key={i}>
                                 <div className="flex gap-2">
                                     <img src={v.image_url} alt={v.name} className="w-12 h-12 cursor-pointer" onClick={()=>{
-                                        navigate('/podcasts/'+v.podcast_id+'/episodes/'+v.id)
+                                        navigate('podcasts/'+v.podcast_id+'/episodes/'+v.id)
                                     }}/>
                                     <div className="flex flex-col">
                                         <div className="text-white font-bold">{v.name}

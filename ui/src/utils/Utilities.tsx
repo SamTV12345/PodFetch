@@ -2,6 +2,7 @@ import axios from "axios";
 import TimeAgo from 'javascript-time-ago'
 import de from 'javascript-time-ago/locale/de'
 import sanitizeHtml,{IOptions} from 'sanitize-html'
+import {useLocation} from "react-router-dom";
 
 const defaultOptions: IOptions = {
     allowedTags: [ 'b', 'i', 'em', 'strong', 'a' ],
@@ -13,6 +14,7 @@ const defaultOptions: IOptions = {
 
 TimeAgo.addDefaultLocale(de)
 const timeago = new TimeAgo('de-DE')
+
 export const isLocalhost = Boolean(
     window.location.hostname === 'localhost' ||
     // [::1] is the IPv6 localhost address.
