@@ -2,5 +2,4 @@ target
 *.db
 .idea
 podcasts
-
 static/*
