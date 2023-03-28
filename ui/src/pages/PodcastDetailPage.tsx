@@ -3,7 +3,7 @@ import {useParams} from "react-router-dom";
 import {Fragment, useEffect, useState} from "react";
 import {apiURL, removeHTML} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
-import {Podcast, setSelectedEpisodes} from "../store/CommonSlice";
+import {Podcast, setCurrentDetailedPodcastId, setSelectedEpisodes} from "../store/CommonSlice";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
 import {useTranslation} from "react-i18next";
 import {setCurrentPodcast} from "../store/AudioPlayerSlice";
@@ -20,6 +20,10 @@ export const PodcastDetailPage = () => {
     const {t} = useTranslation()
 
     useEffect(() => {
+        if(params&&!isNaN(parseFloat(params.id as string))) {
+            dispatch(setCurrentDetailedPodcastId(Number(params.id)))
+        }
+
         axios.get(apiURL + "/podcast/" + params.id).then((response: AxiosResponse<Podcast>) => {
             dispatch(setCurrentPodcast(response.data))
         }).then(() => {

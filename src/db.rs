@@ -105,7 +105,6 @@ impl DB{
         use crate::schema::podcast_episodes::dsl::*;
         let uuid_podcast = uuid::Uuid::new_v4();
 
-        println!("Downloading image for podcast episode: {}", extension.explicit.unwrap());
         let mut  inserted_date= "".to_string();
         let inserted_image_url;
         match &item.pub_date {

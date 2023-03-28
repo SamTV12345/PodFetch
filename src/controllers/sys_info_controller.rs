@@ -2,6 +2,7 @@ use actix_web::{HttpResponse, Responder};
 use sysinfo::{System, SystemExt};
 use actix_web::get;
 use fs_extra::dir::get_size;
+use crate::service::environment_service::EnvironmentService;
 
 #[get("/sys/info")]
 pub async fn get_sys_info() -> impl Responder {
@@ -19,4 +20,12 @@ pub async fn get_sys_info() -> impl Responder {
 pub struct SysExtraInfo {
     pub system: System,
     pub podcast_directory: u64,
+}
+
+
+#[get("/sys/config")]
+pub async fn get_sys_config() -> impl Responder {
+   let mut env = EnvironmentService::new();
+    let config = env.get_config();
+    HttpResponse::Ok().json(config)
 }

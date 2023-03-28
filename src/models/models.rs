@@ -23,6 +23,14 @@ pub struct PodCastAddModel {
     pub user_id: i32
 }
 
+
+pub struct PodcastInsertModel {
+    pub title: String,
+    pub id: i32,
+    pub feed_url: String,
+    pub image_url: String
+}
+
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedPostModel {

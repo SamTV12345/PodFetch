@@ -1,6 +1,7 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit'
-import {GeneralModel} from "../models/PodcastAddModel";
+import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
 import {Notification} from "../models/Notification";
+import {ConfigModel} from "../models/SysInfo";
 
 export type Podcast = {
     directory: string,
@@ -38,11 +39,13 @@ interface CommonProps {
     selectedEpisodes: PodcastEpisode[]
     sideBarCollapsed: boolean,
     podcasts:Podcast[],
-    searchedPodcasts: GeneralModel|undefined,
+    searchedPodcasts: AgnosticPodcastDataModel[]|undefined,
     notifications: Notification[],
     infoModalPodcast: PodcastEpisode|undefined,
     infoModalPodcastOpen: boolean,
-    detailedAudioPlayerOpen: boolean
+    detailedAudioPlayerOpen: boolean,
+    configModel: ConfigModel|undefined,
+    currentDetailedPodcastId: number|undefined
 }
 
 // Define the initial state using that type
@@ -54,7 +57,9 @@ const initialState: CommonProps = {
     notifications: [],
     infoModalPodcast: undefined,
     infoModalPodcastOpen: false,
-    detailedAudioPlayerOpen: false
+    detailedAudioPlayerOpen: false,
+    configModel: undefined,
+    currentDetailedPodcastId: undefined
 }
 
 export const commonSlice = createSlice({
@@ -79,7 +84,7 @@ export const commonSlice = createSlice({
         setSelectedEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
             state.selectedEpisodes = action.payload
         },
-        setSearchedPodcasts: (state, action:PayloadAction<GeneralModel>) => {
+        setSearchedPodcasts: (state, action:PayloadAction<AgnosticPodcastDataModel[]>) => {
             state.searchedPodcasts = action.payload
         },
         setNotifications: (state, action:PayloadAction<Notification[]>) => {
@@ -107,10 +112,16 @@ export const commonSlice = createSlice({
         },
         setDetailedAudioPlayerOpen: (state, action:PayloadAction<boolean>) => {
             state.detailedAudioPlayerOpen = action.payload
+        },
+        setConfigModel: (state, action:PayloadAction<ConfigModel>) => {
+            state.configModel = action.payload
+        },
+        setCurrentDetailedPodcastId: (state, action:PayloadAction<number>) => {
+            state.currentDetailedPodcastId = action.payload
         }
 }})
 
-export const {setSideBarCollapsed, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
+export const {setSideBarCollapsed, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

@@ -146,3 +146,7 @@
 .sidebar .active{
     @apply bg-gray-700;
 }
+
+#podcast-add-decider .active{
+    @apply bg-slate-800  text-blue-500;
+}

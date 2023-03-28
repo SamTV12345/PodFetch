@@ -55,7 +55,6 @@ impl FileService {
             let bytes  =image_response.bytes().await.unwrap();
             image_out.write_all(&bytes).unwrap();
             let db = DB::new().unwrap();
-            println!("Before update: {}", file_path);
             db.update_podcast_image(podcast_id, &file_path).unwrap();
         }
 
