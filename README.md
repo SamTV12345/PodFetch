@@ -98,7 +98,9 @@ Podfetch offers an own feed to download podcast episodes. You can add the url <S
 - [x] Force refresh of podcast episodes.
 - [x] Resume podcasts even if browser is closed.
 - [x] Add websocket support for new podcasts.
-- [ ] Add detailed audio player.
-- [ ] Delete/Unsubscribe podcasts.
-- [ ] Star podcasts.
+- [x] Add detailed audio player.
+- [x] Star podcasts.
+- [x] Unsubscribe podcasts.
 - [ ] Like episodes.
+- [ ] Add retrieving podcasts from Podcastindex.org.
+- [ ] Delete podcasts.
