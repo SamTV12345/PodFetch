@@ -1,51 +1,48 @@
 import './App.css'
-import {
-    BrowserRouter,
-    createBrowserRouter,
-    createRoutesFromElements,
-    Outlet,
-    Route,
-    RouterProvider,
-    Routes
-} from "react-router-dom";
-import {SideBar} from "./components/SideBar";
-import {Header} from "./components/Header";
+import {createBrowserRouter, createRoutesFromElements, Route, RouterProvider} from "react-router-dom";
 import {useAppDispatch, useAppSelector} from "./store/hooks";
-import {Podcasts} from "./pages/Podcasts";
-import {PodcastDetailPage} from "./pages/PodcastDetailPage";
 import {Homepage} from "./pages/Homepage";
-import {Search} from "./components/Search";
 import {apiURL, isJsonString, wsURL} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
-import {FC, useEffect, useState} from "react";
+import {Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
 import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
-import {PodcastInfoPage} from "./pages/PodcastInfoPage";
-import {SettingsPage} from "./pages/SettingsPage";
 import {Root} from "./routing/Root";
+import {PodcastWatchedEpisodeModel} from "./models/PodcastWatchedEpisodeModel";
+import {
+    PodcastDetailViewLazyLoad,
+    PodcastInfoViewLazyLoad,
+    PodcastViewLazyLoad,
+    SettingsViewLazyLoad
+} from "./utils/LazyLoading";
 
 
 const router =  createBrowserRouter(createRoutesFromElements(
-    <Route path="/ui" element={<Root/>}>
-        <Route index element={<Homepage/>}/>
+    <Route path="/" element={<Root/>}>
+        <Route index element={<Homepage/>} loader={()=>{
+            return         axios.get(apiURL+"/podcast/episode/lastwatched")
+                .then((v:AxiosResponse<PodcastWatchedEpisodeModel[]>)=>{
+                    return v.data
+                })
+        }}/>
         <Route path={"podcasts"}>
-            <Route index  element={<Podcasts/>}/>
-            <Route path={":id/episodes"} element={<PodcastDetailPage/>}/>
-            <Route path={":id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
+            <Route index  element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
+            <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+            <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
         </Route>
         <Route path={"favorites"}>
-            <Route element={<Podcasts onlyFavorites={true}/>} index/>
-            <Route path={":id/episodes"} element={<PodcastDetailPage/>}/>
-            <Route path={":id/episodes/:podcastid"} element={<PodcastDetailPage/>}/>
+            <Route element={<PodcastViewLazyLoad onlyFavorites={true}/>} index/>
+            <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+            <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
         </Route>
-        <Route path={"info"} element={<PodcastInfoPage/>}/>
-        <Route path={"settings"} element={<SettingsPage/>}/>
+        <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad/></Suspense>}/>
+        <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad/></Suspense>}/>
     </Route>
-
-
-))
+), {
+    basename: import.meta.env.BASE_URL
+})
 
 const App = () => {
     const dispatch = useAppDispatch()
@@ -56,7 +53,6 @@ const App = () => {
     useEffect(() => {
         socket.onopen = () => {
             console.log("Connected")
-            socket.send("Hello")
         }
 
         socket.onmessage = (event) => {
@@ -112,13 +108,6 @@ const App = () => {
     useEffect(() => {
         getNotifications()
     }, [])
-
-
-
-
-
-
-
 
     return <RouterProvider router={router}/>
 }

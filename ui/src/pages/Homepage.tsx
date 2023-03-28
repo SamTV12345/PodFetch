@@ -8,18 +8,18 @@ import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {useAppDispatch} from "../store/hooks";
 import {useTranslation} from "react-i18next";
+import {useLoaderData} from "react-router-dom";
 
 export const Homepage = () => {
     const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
     const dispatch = useAppDispatch()
     const {t} = useTranslation()
 
+    const ta = useLoaderData() as PodcastWatchedEpisodeModel[]
+
     useEffect(()=>{
-        axios.get(apiURL+"/podcast/episode/lastwatched")
-            .then((v:AxiosResponse<PodcastWatchedEpisodeModel[]>)=>{
-                setPodcastWatched(v.data)
-            })
-    },[])
+            setPodcastWatched(ta)
+    }, [ta])
 
     return <div className="p-3">
         <h1 className="font-bold text-2xl">{t('last-listened')}</h1>
