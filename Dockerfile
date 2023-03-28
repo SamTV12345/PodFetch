@@ -5,25 +5,47 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
+FROM rust:alpine3.17 as dependency-cache
+USER root
+
+RUN apk add pkgconfig openssl-dev libc-dev
+WORKDIR /app/src
+
+ADD Cargo.toml .
+ADD dummy.rs ./src/main.rs
+RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
+
+
 FROM rust:alpine3.17 as builder
+
+USER root
 
 WORKDIR /app/src
 
 RUN apk add pkgconfig openssl-dev libc-dev
-RUN USER=root
 
-ADD src ./src
-ADD static ./static
+
+COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
+COPY --from=dependency-cache /app/src/target/ /app/src/target/
+COPY --from=ui-builder /app/dist /app/src/static
+RUN rm -rf /app/src/target/release/deps/podgrabv2*
+RUN rm -rf /app/src/target/release/podgrabv2*
+
 ADD Cargo.toml .
+ADD static ./static
+ADD migrations ./migrations
+ADD src ./src
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
-FROM alpine:latest
-WORKDIR /app
+
+FROM library/alpine:latest
+WORKDIR /app/
 RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
+COPY --from=builder /app/src/migrations /app/migrations
 COPY --from=ui-builder /app/dist /app/static
 
 EXPOSE 8000
-CMD ["/app/podgrabv2"]
+CMD ["./podgrabv2"]
