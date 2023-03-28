@@ -9,3 +9,21 @@ export type GeneralModel = {
    resultCount: number,
         results: PodcastAddModel[]
 }
+
+
+export type AgnosticPodcastDataModel = {
+    imageUrl: string,
+    title: string,
+    artist: string,
+    id: number
+}
+
+
+export type PodIndexModel = {
+    feeds: [{
+        artwork: string,
+        title: string,
+        id: number,
+        author: string
+    }]
+}

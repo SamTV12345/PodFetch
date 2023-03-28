@@ -3,3 +3,4 @@ target
 .idea
 podcasts
 static/*
+.env

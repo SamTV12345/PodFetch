@@ -35,3 +35,8 @@ export interface SysInfo {
     host_name: string,
 
 }
+
+
+export interface ConfigModel {
+    podindexConfigured: boolean
+}

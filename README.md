@@ -88,6 +88,21 @@ Podfetch is currently available in English and German. If you want to add a new 
 
 Podfetch offers an own feed to download podcast episodes. You can add the url <SERVER_URL>/rss to your favorite podcast app like gPodder to download and play episodes.
 
+# Podcast Index
+
+It is also possible to retrieve/add podcasts from [Podcast Index](https://podcastindex.org/).
+To configure it you need to create an account on that website. After creating an account an email is sent to you with the required credentials.
+
+
+| Variable            | Description                           | Default |
+|---------------------|---------------------------------------|---------|
+| PODINDEX_API_KEY    | the API key sent to you via mail      | %       |
+| PODINDEX_API_SECRET | the API secret also found in the mail | %       |
+
+* % means an empty string is configured as default
+
+After successful setup you should see on the settings page a green checkmark next to the Podindex config section.
+
 # Roadmap
 
 - [x] Add podcasts via Itunes API
@@ -101,6 +116,6 @@ Podfetch offers an own feed to download podcast episodes. You can add the url <S
 - [x] Add detailed audio player.
 - [x] Star podcasts.
 - [x] Unsubscribe podcasts.
+- [x] Add retrieving podcasts from Podcastindex.org.
 - [ ] Like episodes.
-- [ ] Add retrieving podcasts from Podcastindex.org.
 - [ ] Delete podcasts.

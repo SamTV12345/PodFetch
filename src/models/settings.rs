@@ -10,3 +10,9 @@ pub struct Setting {
     pub auto_cleanup: bool,
     pub auto_cleanup_days: i32,
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigModel {
+    pub podindex_configured: bool,
+}

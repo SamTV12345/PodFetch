@@ -6,7 +6,7 @@ import {apiURL, isJsonString, wsURL} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
-import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
+import {PodcastEpisode, setConfigModel, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
@@ -17,6 +17,7 @@ import {
     PodcastViewLazyLoad,
     SettingsViewLazyLoad
 } from "./utils/LazyLoading";
+import {ConfigModel} from "./models/SysInfo";
 
 
 const router =  createBrowserRouter(createRoutesFromElements(
@@ -48,7 +49,6 @@ const App = () => {
     const dispatch = useAppDispatch()
     const podcasts = useAppSelector(state => state.common.podcasts)
     const [socket] = useState(()=>new WebSocket(wsURL))
-    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
 
     useEffect(() => {
         socket.onopen = () => {
@@ -65,7 +65,8 @@ const App = () => {
                 const podcast = parsed.podcast
                 dispatch(setPodcasts([...podcasts, podcast]))
             } else if (checkIfPodcastEpisodeAdded(parsed)) {
-                if(currentPodcast?.id === parsed.podcast_episode.podcast_id) {
+                if(store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
+                    console.log("Episode added to current podcast")
                     const downloadedPodcastEpisode = parsed.podcast_episode
                     let res = store.getState().common.selectedEpisodes.find(p => p.id === downloadedPodcastEpisode.id)
                     if (res == undefined) {
@@ -108,6 +109,12 @@ const App = () => {
     useEffect(() => {
         getNotifications()
     }, [])
+
+    useEffect(()=>{
+        axios.get(apiURL+"/sys/config").then((v:AxiosResponse<ConfigModel>)=>{
+            dispatch(setConfigModel(v.data))
+        })
+    },[])
 
     return <RouterProvider router={router}/>
 }

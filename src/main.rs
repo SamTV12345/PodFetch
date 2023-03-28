@@ -20,12 +20,12 @@ mod controllers;
 pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
 use crate::controllers::api_doc::ApiDoc;
-use crate::controllers::podcast_controller::{download_podcast, favorite_podcast, get_favored_podcasts, query_for_podcast, update_active_podcast};
+use crate::controllers::podcast_controller::{add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts, query_for_podcast, update_active_podcast};
 use crate::controllers::notification_controller::{dismiss_notifications, get_unread_notifications};
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
 use crate::controllers::settings_controller::{get_settings, run_cleanup, update_settings};
-use crate::controllers::sys_info_controller::get_sys_info;
+use crate::controllers::sys_info_controller::{get_sys_config, get_sys_info};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{get_rss_feed, start_connection};
 mod db;
@@ -189,6 +189,8 @@ pub fn get_api_config()->Scope{
         .service(update_settings)
         .service(update_active_podcast)
         .service(run_cleanup)
+        .service(get_sys_config)
+        .service(add_podcast_from_podindex)
 }
 
 pub fn get_ui_config()->Scope{

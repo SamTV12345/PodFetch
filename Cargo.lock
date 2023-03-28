@@ -1597,6 +1597,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "sha1",
  "sysinfo",
  "tokio",
  "utoipa",

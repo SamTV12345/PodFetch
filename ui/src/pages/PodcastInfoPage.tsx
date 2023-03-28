@@ -8,6 +8,7 @@ import {DiskModel} from "../models/DiskModel";
 import {SysExtraInfo} from "../models/SysExtraInfo";
 import {useTranslation} from "react-i18next";
 import {Loading} from "../components/Loading";
+import {useAppSelector} from "../store/hooks";
 
 export const PodcastInfoPage = () => {
     const [systemInfo, setSystemInfo] = useState<SysExtraInfo>()
@@ -15,6 +16,7 @@ export const PodcastInfoPage = () => {
     const megaByte = Math.pow(10,6)
     const teraByte = Math.pow(10,12)
     const {t} = useTranslation()
+    const configModel = useAppSelector(state=>state.common.configModel)
 
     useEffect(()=>{
         axios.get(apiURL+"/sys/info")
@@ -146,6 +148,15 @@ export const PodcastInfoPage = () => {
                     ],
                 }]
             }}/>}/>
+
+            <div className="col-span-2">
+            <SysCard title={t('podfetch-status')}>
+                <div className="grid grid-cols-2 text-white gap-4">
+                    <div className="text-xl">{t('podindex-configured')}</div>
+                    <div>{configModel?.podindexConfigured?<i className="fa-solid fa-check fa-2xl text-green-700"></i>:<i className="fa-solid fa-cross fa-2xl text-red-700"></i>}</div>
+                </div>
+            </SysCard>
+            </div>
         </div>
     </div>
 }

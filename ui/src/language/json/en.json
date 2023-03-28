@@ -32,5 +32,8 @@
   "auto-download": "Auto download new episodes",
   "save": "Save",
   "active": "Active",
-  "run-cleanup": "Run cleanup now"
+  "run-cleanup": "Run cleanup now",
+  "podindex-configured": "Podindex configured",
+  "podfetch-status": "Podfetch configuration status"
+
 }
