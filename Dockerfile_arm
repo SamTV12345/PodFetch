@@ -5,7 +5,7 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM library/rust:slim-buster as builder
+FROM library/rust:1.68-slim-buster as builder
 
 USER root
 
