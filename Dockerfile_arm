@@ -22,8 +22,7 @@ RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM library/ubuntu:latest
 WORKDIR /app/
-RUN apt install libgcc tzdata
-ENV TZ=Europe/Berlin
+
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
 COPY --from=builder /app/src/migrations /app/migrations
