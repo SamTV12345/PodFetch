@@ -5,7 +5,7 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM alpine3.17 as builder
+FROM alpine:3.17 as builder
 
 USER root
 
