@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:experimental
 
-FROM library/node:alpine as ui-builder
+FROM library/node:lts-bullseye as ui-builder
 
 WORKDIR /app
 COPY ./ui/ ./
