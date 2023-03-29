@@ -16,7 +16,7 @@ ADD dummy.rs ./src/main.rs
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM rust:alpine3.17 as builder
+FROM rust:latest as builder
 
 USER root
 
