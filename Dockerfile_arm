@@ -26,7 +26,7 @@ RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM library/alpine:latest
 WORKDIR /app/
-RUN apk install libgcc tzdata
+RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
