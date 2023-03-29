@@ -1,23 +1,36 @@
-# syntax = docker/dockerfile:experimental
-
-
-FROM node:latest as ui-builder
+FROM talk.schwanzer.online/dockerhub_proxy/library/node:alpine as ui-builder
 
 WORKDIR /app
 COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM library/rust:1.68-slim-buster as builder
+FROM talk.schwanzer.online/dockerhub_proxy/library/rust:alpine3.17 as dependency-cache
+USER root
+
+RUN apk add pkgconfig openssl-dev libc-dev
+WORKDIR /app/src
+
+ADD Cargo.toml .
+ADD dummy.rs ./src/main.rs
+RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
+
+
+FROM talk.schwanzer.online/dockerhub_proxy/library/rust:alpine3.17 as builder
 
 USER root
 
-RUN apt update && apt install -y pkg-config libssl-dev libc-dev
 WORKDIR /app/src
 
-COPY --from=ui-builder /app/dist /app/src/static
+RUN apk add pkgconfig openssl-dev libc-dev
 
-ADD Cargo.lock .
+
+COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
+COPY --from=dependency-cache /app/src/target/ /app/src/target/
+COPY --from=ui-builder /app/dist /app/src/static
+RUN rm -rf /app/src/target/release/deps/podgrabv2*
+RUN rm -rf /app/src/target/release/podgrabv2*
+
 ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
@@ -28,9 +41,10 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     cargo build --release
 
 
-FROM library/ubuntu:latest
+FROM talk.schwanzer.online/dockerhub_proxy/library/alpine:latest
 WORKDIR /app/
-RUN apt update && apt install -y libgcc1 tzdata
+RUN apk add libgcc tzdata
+ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
 COPY --from=builder /app/src/migrations /app/migrations
