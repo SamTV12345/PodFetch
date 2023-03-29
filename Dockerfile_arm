@@ -21,7 +21,7 @@ ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
 ADD src ./src
-RUN  mkdir -p /root/.cargo && chmod 777 /root/.cargo && mount -t tmpfs none /root/.cargo && cargo build --release
+RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM library/ubuntu:latest
 WORKDIR /app/
