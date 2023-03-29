@@ -1,3 +1,6 @@
+# syntax = docker/dockerfile:experimental
+
+
 FROM node:latest as ui-builder
 
 WORKDIR /app
@@ -18,8 +21,7 @@ ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
 ADD src ./src
-RUN cargo build --release
-
+RUN --security=insecure mkdir -p /root/.cargo && chmod 777 /root/.cargo && mount -t tmpfs none /root/.cargo && cargo build --release
 
 FROM library/ubuntu:latest
 WORKDIR /app/
