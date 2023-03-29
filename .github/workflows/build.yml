@@ -3,6 +3,7 @@ name: ci
 on:
   push:
     branches: develop
+  workflow_dispatch:
 
 jobs:
   multi:
