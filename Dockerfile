@@ -5,7 +5,7 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM rust:alpine3.17 as dependency-cache
+FROM rust:latest as dependency-cache
 USER root
 
 RUN apk add pkgconfig openssl-dev libc-dev
