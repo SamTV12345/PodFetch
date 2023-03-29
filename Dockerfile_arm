@@ -1,3 +1,5 @@
+# syntax = docker/dockerfile:experimental
+
 FROM talk.schwanzer.online/dockerhub_proxy/library/node:alpine as ui-builder
 
 WORKDIR /app
