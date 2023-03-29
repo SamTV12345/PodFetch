@@ -1,19 +1,8 @@
-FROM node:alpine as ui-builder
+FROM node:latest as ui-builder
 
 WORKDIR /app
 COPY ./ui/ ./
 RUN  npm install && npm run build
-
-
-FROM rust:alpine3.17 as dependency-cache
-USER root
-
-RUN apk add pkgconfig openssl-dev libc-dev
-WORKDIR /app/src
-
-ADD Cargo.toml .
-ADD dummy.rs ./src/main.rs
-RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
 FROM rust:alpine3.17 as builder
@@ -24,12 +13,7 @@ WORKDIR /app/src
 
 RUN apk add pkgconfig openssl-dev libc-dev
 
-
-COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
-COPY --from=dependency-cache /app/src/target/ /app/src/target/
 COPY --from=ui-builder /app/dist /app/src/static
-RUN rm -rf /app/src/target/release/deps/podgrabv2*
-RUN rm -rf /app/src/target/release/podgrabv2*
 
 ADD Cargo.toml .
 ADD static ./static
@@ -40,7 +24,7 @@ RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM library/alpine:latest
 WORKDIR /app/
-RUN apk add libgcc tzdata
+RUN apk install libgcc tzdata
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
