@@ -7,7 +7,7 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM library/rust:alpine3.17 as dependency-cache
+FROM samuel19982/rust-builder as dependency-cache
 USER root
 
 RUN apk add pkgconfig openssl-dev libc-dev
@@ -43,7 +43,7 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM library/alpine:3.17
+FROM library/alpine:3.17 AS Runtime
 WORKDIR /app/
 RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
