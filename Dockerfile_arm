@@ -1,14 +1,14 @@
 # syntax = docker/dockerfile:experimental
 
 
-FROM --platform=$BUILDPLATFORM node:latest as ui-builder
+FROM node:latest as ui-builder
 
 WORKDIR /app
 COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM --platform=$BUILDPLATFORM library/rust:1.68-slim-buster as builder
+FROM library/rust:1.68-slim-buster as builder
 
 USER root
 
@@ -24,7 +24,7 @@ ADD migrations ./migrations
 ADD src ./src
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
-FROM --platform=$BUILDPLATFORM library/ubuntu:latest
+FROM library/ubuntu:latest
 WORKDIR /app/
 
 
