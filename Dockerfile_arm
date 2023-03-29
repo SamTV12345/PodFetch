@@ -5,13 +5,15 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM rust:alpine3.17 as builder
+FROM alpine3.17 as builder
 
 USER root
 
 WORKDIR /app/src
 
-RUN apk add pkgconfig openssl-dev libc-dev
+RUN apk add pkgconfig openssl-dev libc-dev curl
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 COPY --from=ui-builder /app/dist /app/src/static
 
