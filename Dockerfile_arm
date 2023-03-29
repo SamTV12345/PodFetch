@@ -1,13 +1,13 @@
 # syntax = docker/dockerfile:experimental
 
-FROM talk.schwanzer.online/dockerhub_proxy/library/node:alpine as ui-builder
+FROM library/node:alpine as ui-builder
 
 WORKDIR /app
 COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM talk.schwanzer.online/dockerhub_proxy/library/rust:alpine3.17 as dependency-cache
+FROM library/rust:alpine3.17 as dependency-cache
 USER root
 
 RUN apk add pkgconfig openssl-dev libc-dev
@@ -18,7 +18,7 @@ ADD dummy.rs ./src/main.rs
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM talk.schwanzer.online/dockerhub_proxy/library/rust:alpine3.17 as builder
+FROM samuel19982/rust-builder as builder
 
 USER root
 
