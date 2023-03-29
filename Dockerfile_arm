@@ -17,7 +17,7 @@ ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
 ADD src ./src
-RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
+RUN cargo build --release
 
 
 FROM library/ubuntu:latest
