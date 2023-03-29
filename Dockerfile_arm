@@ -38,7 +38,7 @@ ADD src ./src
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     chmod 777 /usr/local/cargo/registry/index && \
     mount -t tmpfs none /usr/local/cargo/registry/index && \
-    cargo build --release
+    RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
 FROM talk.schwanzer.online/dockerhub_proxy/library/alpine:latest
