@@ -5,15 +5,11 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM library/alpine:3.17 as builder
+FROM library/rust:slim-buster as builder
 
 USER root
 
 WORKDIR /app/src
-
-RUN apk add pkgconfig openssl-dev libc-dev curl
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 COPY --from=ui-builder /app/dist /app/src/static
 
@@ -24,9 +20,9 @@ ADD src ./src
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM library/alpine:latest
+FROM library/ubuntu:latest
 WORKDIR /app/
-RUN apk add libgcc tzdata
+RUN apt install libgcc tzdata
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
