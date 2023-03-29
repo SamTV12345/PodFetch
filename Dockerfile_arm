@@ -26,9 +26,11 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     chmod 777 /usr/local/cargo/registry/index && \
     mount -t tmpfs none /usr/local/cargo/registry/index && \
     cargo build --release
+
+
 FROM library/ubuntu:latest
 WORKDIR /app/
-
+RUN apt update && apt install -y libgcc1 tzdata
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
 COPY --from=builder /app/src/migrations /app/migrations
