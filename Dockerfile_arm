@@ -13,6 +13,7 @@ WORKDIR /app/src
 
 COPY --from=ui-builder /app/dist /app/src/static
 
+ADD Cargo.lock .
 ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
