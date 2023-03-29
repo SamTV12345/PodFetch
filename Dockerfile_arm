@@ -43,7 +43,7 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM talk.schwanzer.online/dockerhub_proxy/library/alpine:latest
+FROM library/alpine:3.17
 WORKDIR /app/
 RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
