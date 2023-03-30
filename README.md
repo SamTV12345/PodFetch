@@ -101,6 +101,7 @@ To configure it you need to create an account on that website. After creating an
 
 * % means an empty string is configured as default
 
+
 After successful setup you should see on the settings page a green checkmark next to the Podindex config section.
 
 # Roadmap
