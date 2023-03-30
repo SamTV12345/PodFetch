@@ -34,6 +34,7 @@ RUN rm -rf /app/src/target/release/podgrabv2*
 ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
+ADD db ./db
 ADD src ./src
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
@@ -45,8 +46,8 @@ ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
 COPY --from=builder /app/src/migrations /app/migrations
+COPY --from=builder /app/src/db /app/db
 COPY --from=ui-builder /app/dist /app/static
-RUN mkdir db
 
 EXPOSE 8000
 CMD ["./podgrabv2"]
