@@ -1,0 +1,56 @@
+# syntax = docker/dockerfile:experimental
+
+FROM library/node:lts-bullseye as ui-builder
+
+WORKDIR /app
+COPY ./ui/ ./
+RUN  npm install && npm run build
+
+
+FROM samuel19982/rust-builder as dependency-cache
+USER root
+
+RUN apk add pkgconfig openssl-dev libc-dev
+WORKDIR /app/src
+
+ADD Cargo.toml .
+ADD dummy.rs ./src/main.rs
+RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
+
+
+FROM samuel19982/rust-builder as builder
+
+USER root
+
+WORKDIR /app/src
+
+RUN apk add pkgconfig openssl-dev libc-dev
+
+
+COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
+COPY --from=dependency-cache /app/src/target/ /app/src/target/
+COPY --from=ui-builder /app/dist /app/src/static
+RUN rm -rf /app/src/target/release/deps/podgrabv2*
+RUN rm -rf /app/src/target/release/podgrabv2*
+
+ADD Cargo.toml .
+ADD static ./static
+ADD migrations ./migrations
+ADD src ./src
+RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
+    chmod 777 /usr/local/cargo/registry/index && \
+    mount -t tmpfs none /usr/local/cargo/registry/index && \
+    RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
+
+
+FROM library/alpine:3.17 AS Runtime
+WORKDIR /app/
+RUN apk add libgcc tzdata
+ENV TZ=Europe/Berlin
+
+COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
+COPY --from=builder /app/src/migrations /app/migrations
+COPY --from=ui-builder /app/dist /app/static
+
+EXPOSE 8000
+CMD ["./podgrabv2"]
