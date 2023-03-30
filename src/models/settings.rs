@@ -15,4 +15,5 @@ pub struct Setting {
 #[serde(rename_all = "camelCase")]
 pub struct ConfigModel {
     pub podindex_configured: bool,
+    pub rss_feed: String,
 }
