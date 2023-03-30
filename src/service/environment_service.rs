@@ -48,7 +48,8 @@ impl EnvironmentService {
 
     pub fn get_config(&mut self)->ConfigModel{
         ConfigModel{
-            podindex_configured: self.podindex_api_key.len()>0&& self.podindex_api_secret.len()>0
+            podindex_configured: self.podindex_api_key.len()>0&& self.podindex_api_secret.len()>0,
+            rss_feed: self.server_url.clone() + "rss",
         }
     }
 
@@ -59,12 +60,11 @@ impl EnvironmentService {
 
     pub fn print_banner(){
         println!(r"
-.______     ______    _______   _______ .______          ___      .______      ____    ____  ___
-|   _  \   /  __  \  |       \ /  _____||   _  \        /   \     |   _  \     \   \  /   / |__ \
-|  |_)  | |  |  |  | |  .--.  |  |  __  |  |_)  |      /  ^  \    |  |_)  |     \   \/   /     ) |
-|   ___/  |  |  |  | |  |  |  |  | |_ | |      /      /  /_\  \   |   _  <       \      /     / /
-|  |      |  `--'  | |  '--'  |  |__| | |  |\  \----./  _____  \  |  |_)  |       \    /     / /_
-| _|       \______/  |_______/ \______| | _| `._____/__/     \__\ |______/         \__/     |____|
+  ____           _ _____    _       _
+ |  _ \ ___   __| |  ___|__| |_ ___| |__
+ | |_) / _ \ / _` | |_ / _ \ __/ __| '_ \
+ |  __/ (_) | (_| |  _|  __/ || (__| | | |
+ |_|   \___/ \__,_|_|  \___|\__\___|_| |_|
 
         ")
     }

@@ -1,3 +1,4 @@
+use std::io::Error;
 use std::time::SystemTime;
 use chrono::{DateTime, Duration, Utc};
 use diesel::{insert_into, RunQueryDsl, sql_query};
@@ -42,7 +43,7 @@ impl DB{
         Ok(result)
     }
 
-    pub fn get_podcast(&mut self, podcast_id_to_be_found: i32) -> Result<Podcast, String>{
+    pub fn get_podcast(&mut self, podcast_id_to_be_found: i32) -> Result<Podcast, Error>{
         use crate::schema::podcasts::{id as podcast_id};
         use crate::schema::podcasts::dsl::podcasts;
         let found_podcast = podcasts
@@ -53,7 +54,7 @@ impl DB{
 
         match found_podcast{
             Some(podcast) => Ok(podcast),
-            None => Err("Podcast not found".to_string())
+            None => Err(Error::new(std::io::ErrorKind::NotFound, "Podcast not found"))
         }
     }
 
@@ -588,4 +589,15 @@ impl DB{
                         .execute(&mut self.conn)
                         .expect("Error updating podcast episode");
         }
+
+
+    pub fn get_downloaded_episodes_by_podcast_id(&mut self, id_to_search: i32)->Vec<PodcastEpisode>{
+        use crate::schema::podcast_episodes::dsl::*;
+        podcast_episodes
+            .filter(podcast_id.eq(id_to_search))
+            .filter(status.eq("D"))
+            .load::<PodcastEpisode>(&mut self.conn)
+            .expect("Error loading podcast episode by id")
+
+    }
 }
