@@ -194,6 +194,14 @@ impl PodcastEpisodeService {
             .collect::<Vec<PodcastEpisode>>()
     }
 
+    pub fn find_all_downloaded_podcast_episodes_by_podcast_id(&mut self, podcast_id: i32) -> Vec<PodcastEpisode> {
+        let result = self.db.get_downloaded_episodes_by_podcast_id(podcast_id);
+        result.iter().map(|podcast| {
+            return self.mapping_service.map_podcastepisode_to_dto(podcast)
+        })
+            .collect::<Vec<PodcastEpisode>>()
+    }
+
     fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32) {
         let itunes = feed.clone().itunes_ext.unwrap();
         let constructed_extra_fields = PodcastBuilder::new(podcast_id)
@@ -225,4 +233,5 @@ impl PodcastEpisodeService {
             }
         }
     }
+
 }
