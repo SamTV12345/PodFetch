@@ -60,6 +60,7 @@ export const PodcastInfoPage = () => {
         return [freeSpace, totalSpace]
     }
 
+    console.log(configModel?.rssFeed)
     return <div className="p-5">
         <h1 className="text-center text-3xl font-bold">{t('info')}</h1>
         <div className="grid grid-cols-3 gap-3">
@@ -153,7 +154,11 @@ export const PodcastInfoPage = () => {
             <SysCard title={t('podfetch-status')}>
                 <div className="grid grid-cols-2 text-white gap-4">
                     <div className="text-xl">{t('podindex-configured')}</div>
-                    <div>{configModel?.podindexConfigured?<i className="fa-solid fa-check fa-2xl text-green-700"></i>:<i className="fa-solid fa-cross fa-2xl text-red-700"></i>}</div>
+                    <div>{configModel?.podindexConfigured?<i className="fa-solid fa-check fa-2xl text-green-700"></i>:<i className="fa-solid fa-x fa-2xl text-red-700"></i>}</div>
+                </div>
+                <div className="grid grid-cols-2 text-white gap-4">
+                    <div className="text-xl">{t('rss-feed')}</div>
+                    <div><a className="text-white hover:underline" href={configModel?.rssFeed} target="_blank">{configModel?.rssFeed}</a></div>
                 </div>
             </SysCard>
             </div>

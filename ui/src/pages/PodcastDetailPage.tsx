@@ -18,6 +18,7 @@ export const PodcastDetailPage = () => {
     const dispatch = useAppDispatch()
     const [lineClamp, setLineClamp] = useState(true)
     const {t} = useTranslation()
+    const configModel = useAppSelector(state => state.common.configModel)
 
     useEffect(() => {
         if(params&&!isNaN(parseFloat(params.id as string))) {
@@ -98,6 +99,8 @@ export const PodcastDetailPage = () => {
                                         dispatch(setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active}))
                                     })
                             }}/>
+
+                            <i className="fa-solid fa-rss cursor-pointer text-2xl" onClick={()=>{window.open(configModel?.rssFeed+"/"+params.id)}}></i>
                         </div>
                         <h2 className="text-xl text-slate-600">{currentPodcast.author}</h2>
                         {<div className="flex gap-2">

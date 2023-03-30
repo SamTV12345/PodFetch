@@ -38,5 +38,6 @@ export interface SysInfo {
 
 
 export interface ConfigModel {
-    podindexConfigured: boolean
+    podindexConfigured: boolean,
+    rssFeed: string
 }

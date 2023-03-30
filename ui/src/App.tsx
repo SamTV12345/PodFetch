@@ -112,6 +112,7 @@ const App = () => {
 
     useEffect(()=>{
         axios.get(apiURL+"/sys/config").then((v:AxiosResponse<ConfigModel>)=>{
+            console.log(v.data)
             dispatch(setConfigModel(v.data))
         })
     },[])
