@@ -34,5 +34,6 @@
   "active": "Aktiv",
   "run-cleanup": "Bereinigung jetzt ausführen",
   "podindex-configured": "Podindex konfiguriert",
-  "podfetch-status": "Podfetch Konfigurationsstatus"
+  "podfetch-status": "Podfetch Konfigurationsstatus",
+  "rss-feed": "RSS Feed"
 }
