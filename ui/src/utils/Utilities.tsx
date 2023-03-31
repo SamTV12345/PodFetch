@@ -2,7 +2,6 @@ import axios from "axios";
 import TimeAgo from 'javascript-time-ago'
 import de from 'javascript-time-ago/locale/de'
 import sanitizeHtml,{IOptions} from 'sanitize-html'
-import {useLocation} from "react-router-dom";
 
 const defaultOptions: IOptions = {
     allowedTags: [ 'b', 'i', 'em', 'strong', 'a' ],
@@ -35,13 +34,16 @@ if(isLocalhost && import.meta.env.DEV){
     wsURL="ws://localhost:8000/ws"
 }
 else {
+    console.log(window.location.protocol==='https')
     const wsProtocol = window.location.protocol==='https'?'wss:':'ws:'
 
+    console.log(wsProtocol)
     wsURL  = wsProtocol+'//'+window.location.hostname+":"+window.location.port+"/ws"
     apiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/api/v1"
     uiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/ui"
 }
 
+console.log(wsURL)
 
 export  const logCurrentPlaybackTime = (episodeId: string,timeInSeconds: number)=> {
         axios.post(apiURL+"/podcast/episode", {
