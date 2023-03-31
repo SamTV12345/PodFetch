@@ -53,6 +53,19 @@ volumes:
   podgrab-db:
 ```
 
+
+## Proxy
+
+## Requirements
+- Set the  `SERVER_URL` environment variable to the url of the proxy.
+- Turn on websocket support in your proxy
+
+&rarr; You won't be able to use your service via the plain local url as the websocket connection will fail.
+
+If the SERVER_URL starts with
+- https => Secured Websocket (wss)
+- http => Unsecured Websocket (ws)
+
 # Environment Variables
 
 | Variable         | Description                                   | Default                  |
@@ -61,7 +74,6 @@ volumes:
 | SERVER_URL       | URL of the server                             | http://localhost:8000    |
 | DATABASE_URL     | URL of the database                           | sqlite://./db/podcast.db |
 
-# Known issues
 
 
 # UI
