@@ -43,7 +43,7 @@ services:
       - "80:8000"
     volumes:
       - podgrab-podcasts:/app/podcasts
-      - podgrab-db:/app/db/podcast.db
+      - podgrab-db:/app/db
     environment:
       - POLLING_INTERVAL=60
       - SERVER_URL=http://<your-ip>:<your-port>
