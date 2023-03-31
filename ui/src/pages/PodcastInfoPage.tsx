@@ -60,7 +60,6 @@ export const PodcastInfoPage = () => {
         return [freeSpace, totalSpace]
     }
 
-    console.log(configModel?.rssFeed)
     return <div className="p-5">
         <h1 className="text-center text-3xl font-bold">{t('info')}</h1>
         <div className="grid grid-cols-3 gap-3">

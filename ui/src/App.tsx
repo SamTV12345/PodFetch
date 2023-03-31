@@ -1,12 +1,11 @@
 import './App.css'
-import {createBrowserRouter, createRoutesFromElements, Route, RouterProvider} from "react-router-dom";
+import {createBrowserRouter, createRoutesFromElements, Route} from "react-router-dom";
 import {useAppDispatch, useAppSelector} from "./store/hooks";
 import {Homepage} from "./pages/Homepage";
-import {apiURL, isJsonString, wsURL} from "./utils/Utilities";
 import axios, {AxiosResponse} from "axios";
-import {Suspense, useEffect, useState} from "react";
+import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
-import {PodcastEpisode, setConfigModel, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
+import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
@@ -17,13 +16,13 @@ import {
     PodcastViewLazyLoad,
     SettingsViewLazyLoad
 } from "./utils/LazyLoading";
-import {ConfigModel} from "./models/SysInfo";
+import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities";
 
 
-const router =  createBrowserRouter(createRoutesFromElements(
+export const router =  createBrowserRouter(createRoutesFromElements(
     <Route path="/" element={<Root/>}>
         <Route index element={<Homepage/>} loader={()=>{
-            return         axios.get(apiURL+"/podcast/episode/lastwatched")
+            return axios.get(apiURL+"/podcast/episode/lastwatched")
                 .then((v:AxiosResponse<PodcastWatchedEpisodeModel[]>)=>{
                     return v.data
                 })
@@ -45,59 +44,69 @@ const router =  createBrowserRouter(createRoutesFromElements(
     basename: import.meta.env.BASE_URL
 })
 
-const App = () => {
+const App:FC<PropsWithChildren> = ({children}) => {
     const dispatch = useAppDispatch()
     const podcasts = useAppSelector(state => state.common.podcasts)
-    const [socket] = useState(()=>new WebSocket(wsURL))
+    const [socket, setSocket] = useState<any>()
+    const config = useAppSelector(state=>state.common.configModel)
 
     useEffect(() => {
-        socket.onopen = () => {
-            console.log("Connected")
-        }
-
-        socket.onmessage = (event) => {
-            if (!isJsonString(event.data)) {
-                return
+        if(socket) {
+            socket.onopen = () => {
+                console.log("Connected")
             }
-            const parsed = JSON.parse(event.data)
-            console.log(parsed)
-            if (checkIfPodcastAdded(parsed)) {
-                const podcast = parsed.podcast
-                dispatch(setPodcasts([...podcasts, podcast]))
-            } else if (checkIfPodcastEpisodeAdded(parsed)) {
-                if(store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
-                    console.log("Episode added to current podcast")
-                    const downloadedPodcastEpisode = parsed.podcast_episode
-                    let res = store.getState().common.selectedEpisodes.find(p => p.id === downloadedPodcastEpisode.id)
-                    if (res == undefined) {
-                        // This is a completely new episode
-                        dispatch(setSelectedEpisodes([...store.getState().common.selectedEpisodes, downloadedPodcastEpisode]))
-                    }
-                    let podcastUpdated = store.getState().common.selectedEpisodes.map(p => {
-                        if (p.id === downloadedPodcastEpisode.id) {
-                            const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
-                            foundDownload.status = "D"
-                            foundDownload.url = downloadedPodcastEpisode.url
-                            foundDownload.local_url = downloadedPodcastEpisode.local_url
-                            foundDownload.image_url = downloadedPodcastEpisode.image_url
-                            foundDownload.local_image_url = downloadedPodcastEpisode.local_image_url
-                            return foundDownload
+
+            // @ts-ignore
+            socket.onmessage = (event) => {
+                if (!isJsonString(event.data)) {
+                    return
+                }
+                const parsed = JSON.parse(event.data)
+                if (checkIfPodcastAdded(parsed)) {
+                    const podcast = parsed.podcast
+                    dispatch(setPodcasts([...podcasts, podcast]))
+                } else if (checkIfPodcastEpisodeAdded(parsed)) {
+                    if (store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
+                        console.log("Episode added to current podcast")
+                        const downloadedPodcastEpisode = parsed.podcast_episode
+                        let res = store.getState().common.selectedEpisodes.find(p => p.id === downloadedPodcastEpisode.id)
+                        if (res == undefined) {
+                            // This is a completely new episode
+                            dispatch(setSelectedEpisodes([...store.getState().common.selectedEpisodes, downloadedPodcastEpisode]))
                         }
-                        return p
-                    })
-                    dispatch(setSelectedEpisodes(podcastUpdated))
+                        let podcastUpdated = store.getState().common.selectedEpisodes.map(p => {
+                            if (p.id === downloadedPodcastEpisode.id) {
+                                const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
+                                foundDownload.status = "D"
+                                foundDownload.url = downloadedPodcastEpisode.url
+                                foundDownload.local_url = downloadedPodcastEpisode.local_url
+                                foundDownload.image_url = downloadedPodcastEpisode.image_url
+                                foundDownload.local_image_url = downloadedPodcastEpisode.local_image_url
+                                return foundDownload
+                            }
+                            return p
+                        })
+                        dispatch(setSelectedEpisodes(podcastUpdated))
+                    }
                 }
             }
-        }
 
-        socket.onerror = () => {
-            console.log("Error")
-        }
 
-        socket.onclose = () => {
-            console.log("Closed")
+            socket.onerror = () => {
+                console.log("Error")
+            }
+
+            socket.onclose = () => {
+                console.log("Closed")
+            }
         }
-    }, [podcasts, socket])
+    }, [podcasts, socket, config])
+
+    useEffect(()=> {
+        if (config) {
+            setSocket(new WebSocket(configWSUrl(config?.serverUrl!)))
+        }
+    }, [config])
 
     const getNotifications = () => {
         axios.get(apiURL + '/notifications/unread')
@@ -110,14 +119,7 @@ const App = () => {
         getNotifications()
     }, [])
 
-    useEffect(()=>{
-        axios.get(apiURL+"/sys/config").then((v:AxiosResponse<ConfigModel>)=>{
-            console.log(v.data)
-            dispatch(setConfigModel(v.data))
-        })
-    },[])
-
-    return <RouterProvider router={router}/>
+    return <div>{children}</div>
 }
 
 export default App

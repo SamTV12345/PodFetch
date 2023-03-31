@@ -50,6 +50,7 @@ impl EnvironmentService {
         ConfigModel{
             podindex_configured: self.podindex_api_key.len()>0&& self.podindex_api_secret.len()>0,
             rss_feed: self.server_url.clone() + "rss",
+            server_url: self.server_url.clone(),
         }
     }
 

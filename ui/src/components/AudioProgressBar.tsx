@@ -59,7 +59,6 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef, className}) => {
         if (offset) {
             const localX = e.clientX - offset.left;
             const percentage = localX / offset.width * 100
-            console.log("Percentage: " + percentage)
             if (percentage && audioplayerRef.current) {
                 audioplayerRef.current.currentTime = Math.floor(percentage / 100 * audioplayerRef.current.duration)
                 if(time && currentPodcastEpisode){
