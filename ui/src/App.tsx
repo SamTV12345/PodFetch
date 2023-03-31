@@ -119,7 +119,7 @@ const App:FC<PropsWithChildren> = ({children}) => {
         getNotifications()
     }, [])
 
-    return <div>{children}</div>
+    return <Suspense><div className="h-full">{children}</div></Suspense>
 }
 
 export default App
