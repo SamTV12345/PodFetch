@@ -16,4 +16,5 @@ pub struct Setting {
 pub struct ConfigModel {
     pub podindex_configured: bool,
     pub rss_feed: String,
+    pub server_url: String,
 }
