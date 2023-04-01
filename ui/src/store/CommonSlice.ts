@@ -2,6 +2,7 @@ import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
 import {Notification} from "../models/Notification";
 import {ConfigModel} from "../models/SysInfo";
+import {LoginData} from "../components/LoginComponent";
 
 export type Podcast = {
     directory: string,
@@ -45,7 +46,8 @@ interface CommonProps {
     infoModalPodcastOpen: boolean,
     detailedAudioPlayerOpen: boolean,
     configModel: ConfigModel|undefined,
-    currentDetailedPodcastId: number|undefined
+    currentDetailedPodcastId: number|undefined,
+    loginData: Partial<LoginData>|undefined
 }
 
 // Define the initial state using that type
@@ -59,7 +61,8 @@ const initialState: CommonProps = {
     infoModalPodcastOpen: false,
     detailedAudioPlayerOpen: false,
     configModel: undefined,
-    currentDetailedPodcastId: undefined
+    currentDetailedPodcastId: undefined,
+    loginData: undefined
 }
 
 export const commonSlice = createSlice({
@@ -118,10 +121,16 @@ export const commonSlice = createSlice({
         },
         setCurrentDetailedPodcastId: (state, action:PayloadAction<number>) => {
             state.currentDetailedPodcastId = action.payload
+        },
+        addPodcast: (state, action:PayloadAction<Podcast>) => {
+            state.podcasts = [...state.podcasts, action.payload]
+        },
+        setLoginData: (state, action:PayloadAction<Partial<LoginData>>) => {
+            state.loginData = action.payload
         }
 }})
 
-export const {setSideBarCollapsed, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
+export const {setSideBarCollapsed, setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

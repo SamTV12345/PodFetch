@@ -1,7 +1,10 @@
-use actix_web::{HttpResponse, Responder};
+use std::sync::{Mutex, PoisonError};
+use actix_web::{HttpResponse, Responder, web};
 use sysinfo::{System, SystemExt};
-use actix_web::get;
+use actix_web::{get, post};
+use actix_web::web::Data;
 use fs_extra::dir::get_size;
+use crate::constants::constants::ERROR_LOGIN_MESSAGE;
 use crate::service::environment_service::EnvironmentService;
 
 #[get("/sys/info")]
@@ -24,8 +27,25 @@ pub struct SysExtraInfo {
 
 
 #[get("/sys/config")]
-pub async fn get_sys_config() -> impl Responder {
+pub async fn get_public_config() -> impl Responder {
    let mut env = EnvironmentService::new();
     let config = env.get_config();
     HttpResponse::Ok().json(config)
+}
+
+#[post("/login")]
+pub async fn login(auth: web::Json<LoginRequest>, env:Data<Mutex<EnvironmentService>>) -> impl Responder {
+    let env_service = env.lock().unwrap_or_else(PoisonError::into_inner);
+
+    if auth.0.username == env_service.username && auth.0.password == env_service.password{
+        return HttpResponse::Ok().json("Login successful")
+    }
+
+    HttpResponse::Unauthorized().json(ERROR_LOGIN_MESSAGE)
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
 }

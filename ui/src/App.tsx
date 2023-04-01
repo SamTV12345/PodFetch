@@ -5,11 +5,10 @@ import {Homepage} from "./pages/Homepage";
 import axios, {AxiosResponse} from "axios";
 import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
-import {PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
+import {addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
-import {PodcastWatchedEpisodeModel} from "./models/PodcastWatchedEpisodeModel";
 import {
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
@@ -17,16 +16,13 @@ import {
     SettingsViewLazyLoad
 } from "./utils/LazyLoading";
 import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities";
+import {LoginComponent} from "./components/LoginComponent";
 
 
 export const router =  createBrowserRouter(createRoutesFromElements(
+    <>
     <Route path="/" element={<Root/>}>
-        <Route index element={<Homepage/>} loader={()=>{
-            return axios.get(apiURL+"/podcast/episode/lastwatched")
-                .then((v:AxiosResponse<PodcastWatchedEpisodeModel[]>)=>{
-                    return v.data
-                })
-        }}/>
+        <Route index element={<Homepage/>}/>
         <Route path={"podcasts"}>
             <Route index  element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
             <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
@@ -40,6 +36,8 @@ export const router =  createBrowserRouter(createRoutesFromElements(
         <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad/></Suspense>}/>
         <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad/></Suspense>}/>
     </Route>
+    <Route path="/login" element={<LoginComponent/>}/>
+    </>
 ), {
     basename: import.meta.env.BASE_URL
 })
@@ -64,7 +62,7 @@ const App:FC<PropsWithChildren> = ({children}) => {
                 const parsed = JSON.parse(event.data)
                 if (checkIfPodcastAdded(parsed)) {
                     const podcast = parsed.podcast
-                    dispatch(setPodcasts([...podcasts, podcast]))
+                    dispatch(addPodcast(podcast))
                 } else if (checkIfPodcastEpisodeAdded(parsed)) {
                     if (store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
                         console.log("Episode added to current podcast")
@@ -119,7 +117,7 @@ const App:FC<PropsWithChildren> = ({children}) => {
         getNotifications()
     }, [])
 
-    return <Suspense><div className="h-full">{children}</div></Suspense>
+    return <Suspense><div>{children}</div></Suspense>
 }
 
 export default App

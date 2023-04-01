@@ -7,6 +7,9 @@ pub struct EnvironmentService {
     pub polling_interval: u32,
     pub podindex_api_key: String,
     pub podindex_api_secret: String,
+    pub http_basic: bool,
+    pub username: String,
+    pub password: String,
 }
 
 impl EnvironmentService {
@@ -16,7 +19,10 @@ impl EnvironmentService {
             polling_interval: var("POLLING_INTERVAL").unwrap_or("300".to_string()).parse::<u32>()
                 .unwrap(),
             podindex_api_key: var("PODINDEX_API_KEY").unwrap_or("".to_string()),
-            podindex_api_secret: var("PODINDEX_API_SECRET").unwrap_or("".to_string())
+            podindex_api_secret: var("PODINDEX_API_SECRET").unwrap_or("".to_string()),
+            http_basic: var("BASIC_AUTH").is_ok(),
+            username: var("USERNAME").unwrap_or("".to_string()),
+            password: var("PASSWORD").unwrap_or("".to_string()),
         }
     }
 
@@ -51,6 +57,7 @@ impl EnvironmentService {
             podindex_configured: self.podindex_api_key.len()>0&& self.podindex_api_secret.len()>0,
             rss_feed: self.server_url.clone() + "rss",
             server_url: self.server_url.clone(),
+            basic_auth: self.http_basic
         }
     }
 

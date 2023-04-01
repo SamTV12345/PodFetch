@@ -19,6 +19,7 @@ specifiers:
   react: ^18.2.0
   react-chartjs-2: ^5.2.0
   react-dom: ^18.2.0
+  react-hook-form: ^7.43.9
   react-i18next: ^12.2.0
   react-redux: ^8.0.5
   react-router-dom: ^6.9.0
@@ -42,6 +43,7 @@ dependencies:
   react: 18.2.0
   react-chartjs-2: 5.2.0_t5yjg6ab35jnsudnh2qdighszm
   react-dom: 18.2.0_react@18.2.0
+  react-hook-form: 7.43.9_react@18.2.0
   react-i18next: 12.2.0_2rh65uwnd6kial3dj4kteywnti
   react-redux: 8.0.5_35wee4blr5lh4acjabmktp3wgu
   react-router-dom: 6.9.0_biqbaboplfbrettd7655fr4n2y
@@ -1087,6 +1089,15 @@ packages:
       loose-envify: 1.4.0
       react: 18.2.0
       scheduler: 0.23.0
+    dev: false
+
+  /react-hook-form/7.43.9_react@18.2.0:
+    resolution: {integrity: sha512-AUDN3Pz2NSeoxQ7Hs6OhQhDr6gtF9YRuutGDwPQqhSUAHJSgGl2VeY3qN19MG0SucpjgDiuMJ4iC5T5uB+eaNQ==}
+    engines: {node: '>=12.22.0'}
+    peerDependencies:
+      react: ^16.8.0 || ^17 || ^18
+    dependencies:
+      react: 18.2.0
     dev: false
 
   /react-i18next/12.2.0_2rh65uwnd6kial3dj4kteywnti:
