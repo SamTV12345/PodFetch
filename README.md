@@ -75,6 +75,15 @@ If the SERVER_URL starts with
 | DATABASE_URL     | URL of the database                           | sqlite://./db/podcast.db |
 
 
+## Basic Auth
+Basic Auth is not required. If you use a reverse proxy like nginx you can use a better form that is also able to save passwords in your phone.
+If you decide to use basic auth you need to set all three variables below. Otherwise, the container will crash with an error message as a safety measure.
+
+| Variable   | Description                                                                 |
+|------------|-----------------------------------------------------------------------------|
+| BASIC_AUTH | Set to true if you want to use basic auth                                   |
+| USERNAME   | Username for basic auth                                                     |
+| PASSWORD   | Password for basic auth                                                     |
 
 # UI
 
@@ -130,5 +139,6 @@ After successful setup you should see on the settings page a green checkmark nex
 - [x] Star podcasts.
 - [x] Unsubscribe podcasts.
 - [x] Add retrieving podcasts from Podcastindex.org.
+- [x] Basic Auth.
 - [ ] Like episodes.
 - [ ] Delete podcasts.
