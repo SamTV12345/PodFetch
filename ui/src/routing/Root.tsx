@@ -11,8 +11,6 @@ import {ConfigModel} from "../models/SysInfo";
 import {setConfigModel, setLoginData} from "../store/CommonSlice";
 import {Loading} from "../components/Loading";
 import App from "../App";
-import {AuthModel} from "../models/AuthModel";
-
 
 export const Root = () => {
     const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
@@ -40,7 +38,7 @@ export const Root = () => {
             if(configModel.basicAuth){
                 const auth_local =  localStorage.getItem('auth')
                 const auth_session = sessionStorage.getItem('auth')
-                if(auth_local == undefined && auth_session === undefined && !auth){
+                if(auth_local == undefined && auth_session == undefined && !auth){
                     navigate("/login")
                 }
                 else if (auth_local && !auth){
