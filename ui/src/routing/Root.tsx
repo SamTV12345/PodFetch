@@ -54,7 +54,7 @@ export const Root = () => {
         }
     },[configModel])
 
-    if(!configModel || (configModel.basicAuth && !auth)){
+    if(!configModel || (configModel.basicAuth && !axios.defaults.headers.common["Authorization"])){
         return <Loading/>
     }
 
