@@ -35,5 +35,12 @@
   "run-cleanup": "Bereinigung jetzt ausführen",
   "podindex-configured": "Podindex konfiguriert",
   "podfetch-status": "Podfetch Konfigurationsstatus",
-  "rss-feed": "RSS Feed"
+  "rss-feed": "RSS Feed",
+  "sign-in-to-podfetch": "Anmelden bei Podfetch",
+  "error-authenticating": "Fehler beim Einloggen",
+  "your-username": "Dein Benutzername",
+  "username": "Benutzername",
+  "password": "Passwort",
+  "remember-me": "Account merken",
+  "sign-in": "Anmelden"
 }

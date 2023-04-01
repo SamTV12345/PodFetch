@@ -15,11 +15,15 @@ export const Homepage = () => {
     const dispatch = useAppDispatch()
     const {t} = useTranslation()
 
-    const ta = useLoaderData() as PodcastWatchedEpisodeModel[]
+
 
     useEffect(()=>{
-            setPodcastWatched(ta)
-    }, [ta])
+            axios.get(apiURL+"/podcast/episode/lastwatched")
+                .then((v:AxiosResponse<PodcastWatchedEpisodeModel[]>)=>{
+                    setPodcastWatched(v.data)
+                })
+
+    }, [])
 
     return <div className="p-3">
         <h1 className="font-bold text-2xl">{t('last-listened')}</h1>

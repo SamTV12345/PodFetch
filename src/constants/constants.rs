@@ -16,3 +16,6 @@ pub const DEFAULT_SETTINGS: Setting = Setting {
     auto_cleanup: true,
     auto_cleanup_days: 30,
 };
+
+
+pub const ERROR_LOGIN_MESSAGE: &str = "User either not found or password is incorrect";

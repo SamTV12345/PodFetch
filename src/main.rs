@@ -1,17 +1,27 @@
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use base64::{engine::{general_purpose}, Engine};
 
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate core;
+
+use actix_web_httpauth::middleware::{HttpAuthentication};
 
 use std::{env, thread};
 use std::sync::{Mutex};
-use actix_web::{App, http, HttpResponse, HttpServer, Responder, Scope, web};
+use actix_web::{App,Error, http, HttpResponse, HttpServer, Responder, Scope,
+                web};
 use std::time::Duration;
 use actix::{Actor};
 use actix_cors::Cors;
 use actix_files::Files;
+use actix_web::body::{BoxBody, EitherBody};
+use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
+use actix_web::error::ErrorUnauthorized;
+use actix_web::middleware::{Condition};
 use actix_web::web::{Data, redirect};
+use actix_web_httpauth::extractors::basic::{BasicAuth};
 use clokwerk::{Scheduler, TimeUnits};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -19,13 +29,14 @@ use utoipa_swagger_ui::SwaggerUi;
 mod controllers;
 pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
+use crate::constants::constants::ERROR_LOGIN_MESSAGE;
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::podcast_controller::{add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts, query_for_podcast, update_active_podcast};
 use crate::controllers::notification_controller::{dismiss_notifications, get_unread_notifications};
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
 use crate::controllers::settings_controller::{get_settings, run_cleanup, update_settings};
-use crate::controllers::sys_info_controller::{get_sys_config, get_sys_info};
+use crate::controllers::sys_info_controller::{get_public_config, get_sys_info, login};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{get_rss_feed, get_rss_feed_for_podcast, start_connection};
 mod db;
@@ -45,6 +56,34 @@ mod config;
 pub mod schema;
 pub mod utils;
 
+async fn validator(
+    req: ServiceRequest,
+    _credentials: BasicAuth,
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+
+    let authorization = req.headers().get("Authorization").unwrap().to_str();
+
+    match authorization {
+        Ok(auth) => {
+            let auth = auth.to_string();
+            let auth = auth.split(" ").collect::<Vec<&str>>();
+            let auth = auth[1];
+            let auth = general_purpose::STANDARD.decode(auth).unwrap();
+            let auth = String::from_utf8(auth).unwrap();
+            let auth = auth.split(":").collect::<Vec<&str>>();
+            let username = auth[0];
+            let password = auth[1];
+            let env = EnvironmentService::new();
+            if username == env.username && password == env.password {
+                return Ok(req);
+            }
+        }
+        Err(_) => {
+            return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
+        }
+    }
+    return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
+}
 
 pub fn run_poll(mut podcast_service: PodcastService, mut podcast_episode_service: PodcastEpisodeService){
         let mut db = DB::new().unwrap();
@@ -88,9 +127,12 @@ async fn main()-> std::io::Result<()> {
     let db = DB::new().unwrap();
     let mapping_service = MappingService::new();
     let file_service = FileService::new();
+    let environment_service = EnvironmentService::new();
+    let dev_enabled = env::var("DEV").is_ok();
 
-    //insert default settings if not present in database
     insert_default_settings_if_not_present();
+    check_server_config(environment_service.clone());
+
 
     thread::spawn(||{
         let mut scheduler = Scheduler::new();
@@ -136,20 +178,20 @@ async fn main()-> std::io::Result<()> {
         }
     });
 
-
     HttpServer::new(move || {
         let openapi = ApiDoc::openapi();
-
-        App::new().service(Files::new
+        let service = get_api_config();
+        App::new()
+            .service(Files::new
             ("/podcasts", "podcasts").show_files_listing())
             .service(redirect("/swagger-ui", "/swagger-ui/"))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", openapi),
             )
+            .wrap(Condition::new(dev_enabled, get_cors_config()))
             .service(redirect("/","/ui/"))
-            .wrap(get_cors_config())
-            .service(get_api_config())
+            .service(service)
             .service(get_ui_config())
             .service(start_connection)
             .service(get_rss_feed)
@@ -160,6 +202,8 @@ async fn main()-> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(db.clone())))
             .app_data(Data::new(Mutex::new(mapping_service.clone())))
             .app_data(Data::new(Mutex::new(file_service.clone())))
+            .app_data(Data::new(Mutex::new(environment_service.clone())))
+
     })
         .bind(("0.0.0.0", 8000))?
         .run()
@@ -169,6 +213,18 @@ async fn main()-> std::io::Result<()> {
 
 pub fn get_api_config()->Scope{
     web::scope("/api/v1")
+        .service(login)
+        .service(get_public_config)
+        .service(get_private_api())
+
+}
+
+
+fn get_private_api()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = actix_web::Error, InitError = ()>>{
+    let enable_normalize = env::var("BASIC_AUTH").is_ok();
+    let auth = HttpAuthentication::basic(validator);
+
+    web::scope("")
         .service(find_podcast)
         .service(add_podcast)
         .service(find_all_podcasts)
@@ -190,9 +246,10 @@ pub fn get_api_config()->Scope{
         .service(update_settings)
         .service(update_active_podcast)
         .service(run_cleanup)
-        .service(get_sys_config)
         .service(add_podcast_from_podindex)
+        .wrap(Condition::new(enable_normalize, auth))
 }
+
 
 pub fn get_ui_config()->Scope{
     web::scope("/ui")
@@ -223,6 +280,16 @@ pub fn insert_default_settings_if_not_present() {
         None => {
             log::info!("No settings found, inserting default settings");
             db.insert_default_settings();
+        }
+    }
+}
+
+
+pub fn check_server_config(service1: EnvironmentService){
+    if service1.http_basic{
+        if service1.password.is_empty() || service1.username.is_empty(){
+            log::error!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
+            std::process::exit(1);
         }
     }
 }
