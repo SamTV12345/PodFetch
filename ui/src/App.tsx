@@ -5,11 +5,10 @@ import {Homepage} from "./pages/Homepage";
 import axios, {AxiosResponse} from "axios";
 import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
-import {addPodcast, PodcastEpisode, setNotifications, setPodcasts, setSelectedEpisodes} from "./store/CommonSlice";
+import {addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes} from "./store/CommonSlice";
 import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
-import {PodcastWatchedEpisodeModel} from "./models/PodcastWatchedEpisodeModel";
 import {
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
@@ -118,7 +117,7 @@ const App:FC<PropsWithChildren> = ({children}) => {
         getNotifications()
     }, [])
 
-    return <Suspense><div className="h-full">{children}</div></Suspense>
+    return <Suspense><div>{children}</div></Suspense>
 }
 
 export default App

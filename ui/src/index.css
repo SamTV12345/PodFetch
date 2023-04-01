@@ -150,3 +150,7 @@
 #podcast-add-decider .active{
     @apply bg-slate-800  text-blue-500;
 }
+
+#root > div{
+    @apply h-full;
+}
