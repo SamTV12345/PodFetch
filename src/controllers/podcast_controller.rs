@@ -1,6 +1,4 @@
-use std::future::Future;
-use std::ops::Add;
-use std::sync::{Mutex};
+use std::sync::{Mutex, PoisonError};
 use std::thread;
 use actix::Addr;
 use actix_web::{HttpResponse, Responder, web};
@@ -9,17 +7,14 @@ use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::{get, post, put};
-use actix_web::body::{BoxBody, MessageBody};
-use actix_web::web::{block, Data, Path};
-use futures::future::BoxFuture;
+use actix_web::web::{Data, Path};
 use opml::{OPML, Outline};
 use reqwest::blocking::{Client, ClientBuilder as SyncClientBuilder};
 use reqwest::ClientBuilder as AsyncClientBuilder;
 use rss::Channel;
 use crate::models::models::{PodCastAddModel, PodcastInsertModel};
 use crate::unwrap_string;
-use tokio::task::{block_in_place, spawn_blocking};
-use uuid::Uuid;
+use tokio::task::{spawn_blocking};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::search_type::SearchType::{ITUNES, PODINDEX};
 use crate::models::web_socket_message::Lobby;
@@ -27,9 +22,8 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::rust_service::PodcastService;
 use rand::Rng;
 use rand::rngs::ThreadRng;
-use tokio::runtime::Handle;
 use crate::models::opml_model::OpmlModel;
-use futures::{executor, FutureExt};
+use futures::{executor};
 use async_recursion::async_recursion;
 #[utoipa::path(
 context_path="/api/v1",
@@ -58,8 +52,8 @@ tag="podcasts"
 #[get("/podcasts")]
 pub async fn find_all_podcasts(db: Data<Mutex<DB>>, mapping_service:Data<Mutex<MappingService>>) -> impl Responder {
 
-    let mapping_service = mapping_service.lock().expect("Error acquiring lock");
-    let podcasts = db.lock().expect("Error acquiring lock").get_podcasts().unwrap();
+    let mapping_service = mapping_service.lock().unwrap_or_else(PoisonError::into_inner);
+    let podcasts = db.lock().unwrap_or_else(PoisonError::into_inner).get_podcasts().unwrap();
 
     let mapped_podcasts = podcasts
         .into_iter()
@@ -138,8 +132,8 @@ pub async fn import_podcasts_from_opml(opml: web::Json<OpmlModel>, lobby:Data<Ad
 Responder{
 
         spawn_blocking(move || {
-            let mut rng = rand::thread_rng();
-            let mut environment = EnvironmentService::new();
+            let rng = rand::thread_rng();
+            let environment = EnvironmentService::new();
             let document = OPML::from_str(&opml.content).unwrap();
 
             for outline in document.body.outlines {

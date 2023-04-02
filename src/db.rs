@@ -8,7 +8,6 @@ use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, Podcas
                             PodcastWatchedPostModel, Notification as Notification};
 use crate::service::mapping_service::MappingService;
 use diesel::prelude::*;
-use rss::extension::itunes::ITunesItemExtension;
 use rss::Item;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::DEFAULT_SETTINGS;

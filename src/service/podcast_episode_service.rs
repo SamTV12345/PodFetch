@@ -19,14 +19,14 @@ use crate::utils::podcast_builder::PodcastBuilder;
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
     db: DB,
-    mapping_service: MappingService
+    mapping_service: MappingService,
 }
 
 impl PodcastEpisodeService {
     pub fn new() -> Self {
         PodcastEpisodeService {
             db: DB::new().unwrap(),
-            mapping_service: MappingService::new()
+            mapping_service: MappingService::new(),
         }
     }
     pub fn download_podcast_episode_if_not_locally_available(&mut self, podcast_episode: PodcastEpisode,
@@ -108,13 +108,13 @@ impl PodcastEpisodeService {
         let result = client.get(podcast.clone().rssfeed).send().unwrap();
         let bytes = result.bytes().unwrap();
         let channel = Channel::read_from(&*bytes).unwrap();
-        let environment_service  = EnvironmentService::new();
+        let environment_service = EnvironmentService::new();
         self.update_podcast_fields(channel.clone(), podcast.id.clone());
 
         let mut podcast_inserted: Vec<PodcastEpisode> = Vec::new();
 
         // insert original podcast image url
-        if podcast.original_image_url.is_empty(){
+        if podcast.original_image_url.is_empty() {
             let mut db = DB::new().unwrap();
             db.update_original_image_url(&channel.image().unwrap().url.to_string(), podcast.id);
         }
@@ -142,16 +142,23 @@ impl PodcastEpisodeService {
                                                                           duration_episode as i32);
                         podcast_inserted.push(inserted_episode);
                     }
-                        }
-                        None => {
-                            let result = db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
-                            let mut duration_episode = 0;
-                            let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
-                                                                              Some
-                                                                                  (environment_service.server_url.clone().to_owned() + "/ui/default.jpg"),
-                                                                              duration_episode as i32);
-                        }
+                }
+                None => {
+                    let result = db.get_podcast_episode_by_url(&item.enclosure().expect
+                    ("A podcast episode needs to have a podcast url").url
+                        .to_string());
+                    // We can't retrieve the duration of the podcast episode, so we set it to 0
+
+                    if result.unwrap().is_none() {
+                        let duration_episode = 0;
+                        let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
+                                                                          Some
+                                                                              (environment_service.server_url.clone().to_owned() + "/ui/default.jpg"),
+                                                                          duration_episode as i32);
+                        podcast_inserted.push(inserted_episode);
                     }
+                }
+            }
         }
         return podcast_inserted;
     }
@@ -198,13 +205,13 @@ impl PodcastEpisodeService {
         let podcast_dto = podcasts.iter().map(|podcast| {
             self.mapping_service.map_podcastepisode_to_dto(podcast)
         }).collect::<Vec<PodcastEpisode>>();
-        return podcast_dto
+        return podcast_dto;
     }
 
     pub fn find_all_downloaded_podcast_episodes(&mut self) -> Vec<PodcastEpisode> {
         let result = self.db.get_downloaded_episodes();
         result.iter().map(|podcast| {
-            return self.mapping_service.map_podcastepisode_to_dto(podcast)
+            return self.mapping_service.map_podcastepisode_to_dto(podcast);
         })
             .collect::<Vec<PodcastEpisode>>()
     }
@@ -212,7 +219,7 @@ impl PodcastEpisodeService {
     pub fn find_all_downloaded_podcast_episodes_by_podcast_id(&mut self, podcast_id: i32) -> Vec<PodcastEpisode> {
         let result = self.db.get_downloaded_episodes_by_podcast_id(podcast_id);
         result.iter().map(|podcast| {
-            return self.mapping_service.map_podcastepisode_to_dto(podcast)
+            return self.mapping_service.map_podcastepisode_to_dto(podcast);
         })
             .collect::<Vec<PodcastEpisode>>()
     }
@@ -232,8 +239,7 @@ impl PodcastEpisodeService {
 
                 self.db.update_podcast_fields(constructed_extra_fields);
             }
-            None =>{
-            }
+            None => {}
         }
     }
 
@@ -250,10 +256,9 @@ impl PodcastEpisodeService {
                     self.db.update_download_status_of_episode(old_podcast.clone().id);
                 }
                 Err(e) => {
-                    println!("Error deleting podcast episode.{}",e);
+                    println!("Error deleting podcast episode.{}", e);
                 }
             }
         }
     }
-
 }
