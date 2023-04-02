@@ -31,7 +31,7 @@ pub use controllers::controller_utils::*;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::ERROR_LOGIN_MESSAGE;
 use crate::controllers::api_doc::ApiDoc;
-use crate::controllers::podcast_controller::{add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts, query_for_podcast, update_active_podcast};
+use crate::controllers::podcast_controller::{add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts, import_podcasts_from_opml, query_for_podcast, update_active_podcast};
 use crate::controllers::notification_controller::{dismiss_notifications, get_unread_notifications};
 use crate::controllers::podcast_controller::{add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast};
@@ -183,7 +183,7 @@ async fn main()-> std::io::Result<()> {
         let service = get_api_config();
         App::new()
             .service(Files::new
-            ("/podcasts", "podcasts").show_files_listing())
+            ("/podcasts", "podcasts"))
             .service(redirect("/swagger-ui", "/swagger-ui/"))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
@@ -245,6 +245,7 @@ fn get_private_api()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Res
         .service(get_settings)
         .service(update_settings)
         .service(update_active_podcast)
+        .service(import_podcasts_from_opml)
         .service(run_cleanup)
         .service(add_podcast_from_podindex)
         .wrap(Condition::new(enable_normalize, auth))

@@ -5,3 +5,4 @@ podcasts
 static/*
 .env
 
+!static/default.jpg

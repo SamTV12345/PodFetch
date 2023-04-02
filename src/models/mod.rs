@@ -5,3 +5,4 @@ pub mod messages;
 pub mod dto_models;
 pub mod settings;
 pub mod search_type;
+pub mod opml_model;

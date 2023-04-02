@@ -140,5 +140,6 @@ After successful setup you should see on the settings page a green checkmark nex
 - [x] Unsubscribe podcasts.
 - [x] Add retrieving podcasts from Podcastindex.org.
 - [x] Basic Auth.
+- [x] Import from OPML file.
 - [ ] Like episodes.
 - [ ] Delete podcasts.
