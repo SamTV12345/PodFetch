@@ -182,8 +182,7 @@ async fn main()-> std::io::Result<()> {
         let openapi = ApiDoc::openapi();
         let service = get_api_config();
         App::new()
-            .service(Files::new
-            ("/podcasts", "podcasts").show_files_listing())
+            .service(get_static_hosting())
             .service(redirect("/swagger-ui", "/swagger-ui/"))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
@@ -216,11 +215,19 @@ pub fn get_api_config()->Scope{
         .service(login)
         .service(get_public_config)
         .service(get_private_api())
+}
 
+pub fn get_static_hosting()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response =
+ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
+    let enable_normalize = env::var("BASIC_AUTH").is_ok();
+    let auth = HttpAuthentication::basic(validator);
+    web::scope("/podcasts")
+        .wrap(Condition::new(enable_normalize, auth))
+        .service(Files::new("/podcasts", "podcasts").show_files_listing())
 }
 
 
-fn get_private_api()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = actix_web::Error, InitError = ()>>{
+fn get_private_api()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
     let enable_normalize = env::var("BASIC_AUTH").is_ok();
     let auth = HttpAuthentication::basic(validator);
 
@@ -256,6 +263,7 @@ pub fn get_ui_config()->Scope{
         .route("/index.html", web::get().to(index))
         .route("/{path:[^.]*}", web::get().to(index))
         .service(Files::new("/", "./static").index_file("index.html"))
+
 }
 
 pub fn get_cors_config()->Cors{
