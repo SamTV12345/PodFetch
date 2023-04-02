@@ -101,7 +101,7 @@ impl DB{
     }
 
     pub fn insert_podcast_episodes(&mut self, podcast: Podcast, item: Item,
-                                   extension: ITunesItemExtension, duration: i32)
+                                   optional_image: Option<String>, duration: i32)
         ->PodcastEpisode{
         use crate::schema::podcast_episodes::dsl::*;
         let uuid_podcast = uuid::Uuid::new_v4();
@@ -116,7 +116,7 @@ impl DB{
             None=>{}
         }
 
-        match  extension.image{
+        match  optional_image{
             Some(image_url_podcast_episode)=>{
                 inserted_image_url = image_url_podcast_episode;
             },

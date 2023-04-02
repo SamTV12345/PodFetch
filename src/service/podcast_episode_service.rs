@@ -10,6 +10,7 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::models::Notification;
 use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
+use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
@@ -107,7 +108,7 @@ impl PodcastEpisodeService {
         let result = client.get(podcast.clone().rssfeed).send().unwrap();
         let bytes = result.bytes().unwrap();
         let channel = Channel::read_from(&*bytes).unwrap();
-
+        let environment_service  = EnvironmentService::new();
         self.update_podcast_fields(channel.clone(), podcast.id.clone());
 
         let mut podcast_inserted: Vec<PodcastEpisode> = Vec::new();
@@ -120,23 +121,37 @@ impl PodcastEpisodeService {
 
         for (_, item) in channel.items.iter().enumerate() {
             let mut db = DB::new().unwrap();
-            let itunes_ext = item.clone().itunes_ext.unwrap();
-            let result = db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
-            let mut duration_episode = 0;
+            let itunes_ext = item.clone().itunes_ext;
 
-            if result.unwrap().is_none() {
-                // Insert new podcast episode
-                match itunes_ext.clone().duration {
-                    Some(duration) => {
-                        duration_episode = Self::parse_duration(&duration);
+            match itunes_ext {
+                Some(itunes_ext) => {
+                    let result = db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
+                    let mut duration_episode = 0;
+
+                    if result.unwrap().is_none() {
+                        // Insert new podcast episode
+                        match itunes_ext.clone().duration {
+                            Some(duration) => {
+                                duration_episode = Self::parse_duration(&duration);
+                            }
+                            None => {}
+                        }
+
+                        let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
+                                                                          itunes_ext.image,
+                                                                          duration_episode as i32);
+                        podcast_inserted.push(inserted_episode);
                     }
-                    None => {}
-                }
-
-                let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
-                                                                  itunes_ext, duration_episode as i32);
-                podcast_inserted.push(inserted_episode);
-            }
+                        }
+                        None => {
+                            let result = db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
+                            let mut duration_episode = 0;
+                            let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
+                                                                              Some
+                                                                                  (environment_service.server_url.clone().to_owned() + "/ui/default.jpg"),
+                                                                              duration_episode as i32);
+                        }
+                    }
         }
         return podcast_inserted;
     }
@@ -203,16 +218,23 @@ impl PodcastEpisodeService {
     }
 
     fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32) {
-        let itunes = feed.clone().itunes_ext.unwrap();
-        let constructed_extra_fields = PodcastBuilder::new(podcast_id)
-            .author(itunes.author)
-            .last_build_date(feed.last_build_date)
-            .description(feed.description)
-            .language(feed.language)
-            .keywords(itunes.categories)
-            .build();
+        let itunes = feed.clone().itunes_ext;
 
-        self.db.update_podcast_fields(constructed_extra_fields);
+        match itunes {
+            Some(itunes) => {
+                let constructed_extra_fields = PodcastBuilder::new(podcast_id)
+                    .author(itunes.author)
+                    .last_build_date(feed.last_build_date)
+                    .description(feed.description)
+                    .language(feed.language)
+                    .keywords(itunes.categories)
+                    .build();
+
+                self.db.update_podcast_fields(constructed_extra_fields);
+            }
+            None =>{
+            }
+        }
     }
 
     pub fn cleanup_old_episodes(&mut self, days: i32) {
