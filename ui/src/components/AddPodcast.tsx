@@ -42,26 +42,28 @@ export const AddPodcast = ()=>{
         }
     }
 
-    useEffect(()=>{
-        if(files.length>0){
-            axios.post(apiURL+"/podcast/opml", {
-                content: files[0].content
+    const uploadOpml = ()=>{
+        axios.post(apiURL+"/podcast/opml", {
+            content: files[0].content
+        })
+            .then((v)=>{
+                console.log(v)
             })
-                .then((v)=>{
-                    console.log(v)
-                })
-                .catch((e)=>{
-                    console.log(e)
-                })
-        }
-    },[files])
+            .catch((e)=>{
+                console.log(e)
+            })
+    }
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault()
 
-        const f  =  e.dataTransfer.files[0]
-
-
+        const fileList: Promise<FileItem>[] = []
+        for (const f of e.dataTransfer.files) {
+            fileList.push(readFile(f))
+        }
+        Promise.all(fileList).then(e => {
+            setFiles(e)
+        })
         setDragState("none")
     }
 
@@ -159,14 +161,13 @@ export const AddPodcast = ()=>{
                             </div>
                             <hr className="border-gray-500"/>
                         </div>
-
                     })
                 }
                 </div>
             </div>}
             {
                 selectedSearchType==="opml"&&<div className="flex flex-col gap-4">
-                    <div className={`p-4 border-4 ${handleDropColor()} border-dashed border-gray-500 text-center w-full h-40 grid place-items-center cursor-pointer`}
+            {files.length===0&&<><div className={`p-4 border-4 ${handleDropColor()} border-dashed border-gray-500 text-center w-full h-40 grid place-items-center cursor-pointer`}
                          onDragEnter={() => setDragState("allowed")}
                          onDragLeave={() => setDragState("none")}
                          onDragOver={handleDragOver} onDrop={handleDrop}
@@ -175,12 +176,17 @@ export const AddPodcast = ()=>{
                     </div>
                     <input type={"file"} ref={fileInputRef} accept="application/xml" hidden onChange={(e)=>{
                         handleInputChanged(e)}
-                    } />
+                    } /></>}
                     {
                         files.length > 0 && <div>
-                            {files[0].name}
+                            {t('following-file-uploaded')}
+                            <div className="ml-4" onClick={()=>{setFiles([])}}>{files[0].name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i></div>
                         </div>
                     }
+                    <div className="flex">
+                        <div className="flex-1"/>
+                        <button className="bg-blue-800 p-2 disabled:bg-gray-800" disabled={files.length==0} onClick={()=>{uploadOpml()}}>Upload OPML</button>
+                    </div>
                 </div>
             }
         </div>

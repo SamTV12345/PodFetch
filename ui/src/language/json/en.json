@@ -42,5 +42,8 @@
   "username": "Username",
   "password": "Password",
   "remember-me": "Remember account",
-  "sign-in": "Sign in"
+  "sign-in": "Sign in",
+  "drag-here": "Drag here",
+  "following-file-uploaded": "The following file will be uploaded:",
+  "upload-opml": "Upload OPML"
 }

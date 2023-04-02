@@ -183,7 +183,7 @@ async fn main()-> std::io::Result<()> {
         let service = get_api_config();
         App::new()
             .service(Files::new
-            ("/podcasts", "podcasts").show_files_listing())
+            ("/podcasts", "podcasts"))
             .service(redirect("/swagger-ui", "/swagger-ui/"))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
