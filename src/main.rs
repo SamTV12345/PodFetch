@@ -24,7 +24,8 @@ use std::time::Duration;
 use std::{env, thread};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
-use jsonwebtoken::jwk::{Jwk, JwkSet};
+use jsonwebtoken::jwk::{Jwk};
+use log::info;
 use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -120,11 +121,12 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer:BearerAuth)->Result<Serv
 
     let jwk = from_str::<Jwk>(&*jwk_string).unwrap();
     let key = DecodingKey::from_jwk(&jwk).unwrap();
-    let mut validation = Validation::new(Algorithm::RS256);
+    let validation = Validation::new(Algorithm::RS256);
     match decode::<Value>(&token, &key, &validation) {
-        Ok(_) => Ok((rq)),
-        Err(_) =>{
-            Err((ErrorUnauthorized("Invalid authorization header"), rq))
+        Ok(_) => Ok(rq),
+        Err(e) =>{
+            info!("Error: {:?}",e);
+            Err((ErrorUnauthorized("Invalid oidc token."), rq))
         }
     }
 }
@@ -193,7 +195,7 @@ async fn main() -> std::io::Result<()> {
                     if settings.auto_update {
                         let podcast_service = PodcastService::new();
                         let podcast_episode_service = PodcastEpisodeService::new();
-                        log::info!("Polling for new episodes");
+                        info!("Polling for new episodes");
                         run_poll(podcast_service, podcast_episode_service);
                     }
                 }
@@ -259,7 +261,7 @@ pub fn get_api_config() -> Scope {
         .service(get_private_api())
 }
 
-fn get_private_api() -> actix_web::Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = actix_web::Error, InitError = ()>> {
+fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
     let enable_basic_auth = env::var("BASIC_AUTH").is_ok();
     let auth = HttpAuthentication::basic(validator);
 
@@ -317,10 +319,10 @@ pub fn insert_default_settings_if_not_present() {
     let settings = db.get_settings();
     match settings {
         Some(_) => {
-            log::info!("Settings already present");
+            info!("Settings already present");
         }
         None => {
-            log::info!("No settings found, inserting default settings");
+            info!("No settings found, inserting default settings");
             db.insert_default_settings();
         }
     }
@@ -332,5 +334,9 @@ pub fn check_server_config(service1: EnvironmentService) {
             log::error!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
             std::process::exit(1);
         }
+    }
+
+    if service1.http_basic && service1.oidc_configured{
+        log::error!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
     }
 }

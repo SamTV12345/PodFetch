@@ -5,10 +5,9 @@ import {SideBar} from "../components/SideBar";
 import {Outlet, useNavigate} from "react-router-dom";
 import {AudioComponents} from "../components/AudioComponents";
 import {Search} from "../components/Search";
-import axios, {AxiosResponse} from "axios";
-import {apiURL, configWSUrl} from "../utils/Utilities";
-import {ConfigModel} from "../models/SysInfo";
-import {setConfigModel, setLoginData} from "../store/CommonSlice";
+import axios from "axios";
+import {configWSUrl} from "../utils/Utilities";
+import {setLoginData} from "../store/CommonSlice";
 import {Loading} from "../components/Loading";
 import App from "../App";
 
@@ -19,11 +18,7 @@ export const Root = () => {
     const navigate = useNavigate()
     const auth = useAppSelector(state => state.common.loginData)
 
-    useEffect(()=>{
-        axios.get(apiURL+"/sys/config").then((v:AxiosResponse<ConfigModel>)=>{
-            dispatch(setConfigModel(v.data))
-        })
-    },[])
+
 
     const extractLoginData = (auth_local: string)=>{
         const test = atob(auth_local)
@@ -51,10 +46,13 @@ export const Root = () => {
                     axios.defaults.headers.common['Authorization'] = 'Basic ' + btoa(auth.username + ":" + auth.password);
                 }
             }
+            else if (configModel.oidcConfig && !axios.defaults.headers.common["Authorization"]){
+                navigate("/login")
+            }
         }
     },[configModel])
 
-    if(!configModel || (configModel.basicAuth && !axios.defaults.headers.common["Authorization"])){
+    if(!configModel || (configModel.basicAuth && !axios.defaults.headers.common["Authorization"]||(configModel.oidcConfigured&& !axios.defaults.headers.common["Authorization"]))){
         return <Loading/>
     }
 

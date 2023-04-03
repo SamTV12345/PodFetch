@@ -3,14 +3,15 @@ import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setSideBarCollapsed} from "../store/CommonSlice";
 import {Notifications} from "./Notifications";
 import {Dropdown} from "./I18nDropdown";
+import {useAuth} from "react-oidc-context";
 
 
 export const Header = ()=>{
     const {t} = useTranslation()
     const dispatch = useAppDispatch()
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
-
-
+    const configModel = useAppSelector(state=>state.common.configModel)
+    const auth = useAuth()
     return (
         <div className="bg-neutral-900 w-full col-span-6 h-20 w-screen">
             <div className="flex items-center justify-between border-gray-100 py-6 md:justify-start md:space-x-10 col-span-6 w-screen h-20">
@@ -25,6 +26,10 @@ export const Header = ()=>{
 
                 <div className="flex flex-grow"/>
                 <Notifications/>
+                {configModel?.oidcConfigured&& <button className="text-white" onClick={()=>{
+                    auth.signoutRedirect()
+                }}>{t('logout')}</button>
+                }
                 <Dropdown/>
                 <div className="mr-2"></div>
             </div>

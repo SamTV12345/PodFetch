@@ -1,8 +1,13 @@
 use crate::models::settings::ConfigModel;
 use std::env::var;
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct OidcConfig{
-
+    authority: String,
+    client_id: String,
+    redirect_uri: String,
+    scope: String
 }
 
 
@@ -15,18 +20,23 @@ pub struct EnvironmentService {
     pub http_basic: bool,
     pub username: String,
     pub password: String,
-    pub oidc_config: Option<OidcConfig>
+    pub oidc_config: Option<OidcConfig>,
+    pub oidc_configured: bool,
 }
 
 impl EnvironmentService {
     pub fn new() -> EnvironmentService {
-        let mut option_oidc_config = Option::None;
-
-        if var("OIDC_AUTH").is_ok(){
-            option_oidc_config = Option::Some(OidcConfig{
-                
+        let mut option_oidc_config = None;
+        let oidc_configured = var("OIDC_AUTH").is_ok();
+        if oidc_configured{
+            option_oidc_config = Some(OidcConfig{
+                redirect_uri: var("OIDC_REDIRECT_URI").expect("OIDC redirect uri not configured"),
+                authority: var("OIDC_AUTHORITY").expect("OIDC authority not configured"),
+                client_id: var("OIDC_CLIENT_ID").expect("OIDC client id not configured"),
+                scope: var("OIDC_SCOPE").unwrap_or("openid profile email".to_string())
             });
         }
+
         EnvironmentService {
             server_url: var("SERVER_URL").unwrap_or("http://localhost:8000".to_string()),
             polling_interval: var("POLLING_INTERVAL")
@@ -38,6 +48,7 @@ impl EnvironmentService {
             http_basic: var("BASIC_AUTH").is_ok(),
             username: var("USERNAME").unwrap_or("".to_string()),
             password: var("PASSWORD").unwrap_or("".to_string()),
+            oidc_configured,
             oidc_config: option_oidc_config
         }
     }
@@ -81,6 +92,8 @@ impl EnvironmentService {
             rss_feed: self.server_url.clone() + "rss",
             server_url: self.server_url.clone(),
             basic_auth: self.http_basic,
+            oidc_configured: self.oidc_configured,
+            oidc_config: self.oidc_config.clone()
         }
     }
 

@@ -15,12 +15,14 @@ specifiers:
   i18next: ^22.4.13
   i18next-browser-languagedetector: ^7.0.1
   javascript-time-ago: ^2.5.9
+  oidc-client-ts: ^2.2.0
   postcss: ^8.4.21
   react: ^18.2.0
   react-chartjs-2: ^5.2.0
   react-dom: ^18.2.0
   react-hook-form: ^7.43.9
   react-i18next: ^12.2.0
+  react-oidc-context: ^2.2.0
   react-redux: ^8.0.5
   react-router-dom: ^6.9.0
   react-waypoint: ^10.3.0
@@ -40,11 +42,13 @@ dependencies:
   i18next: 22.4.13
   i18next-browser-languagedetector: 7.0.1
   javascript-time-ago: 2.5.9
+  oidc-client-ts: 2.2.2
   react: 18.2.0
   react-chartjs-2: 5.2.0_t5yjg6ab35jnsudnh2qdighszm
   react-dom: 18.2.0_react@18.2.0
   react-hook-form: 7.43.9_react@18.2.0
   react-i18next: 12.2.0_2rh65uwnd6kial3dj4kteywnti
+  react-oidc-context: 2.2.2_t6ypyw6vqwvvymx3m4g42li3ku
   react-redux: 8.0.5_35wee4blr5lh4acjabmktp3wgu
   react-router-dom: 6.9.0_biqbaboplfbrettd7655fr4n2y
   react-waypoint: 10.3.0_react@18.2.0
@@ -617,6 +621,10 @@ packages:
     resolution: {integrity: sha512-2/uRVMdRypf5z/TW/ncD/66l75P5hH2vM/GR8Jf8HLc2xnfJtmina6F6du8+v4Z2vTrMo7jC+W1tmEEuuELgkQ==}
     dev: false
 
+  /crypto-js/4.1.1:
+    resolution: {integrity: sha512-o2JlM7ydqd3Qk9CA0L4NL6mTzU2sdx96a+oOfPu8Mkl/PK51vSyoi8/rQ8NknZtk44vq15lmhAj9CIAGwgeWKw==}
+    dev: false
+
   /cssesc/3.0.0:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
     engines: {node: '>=4'}
@@ -890,6 +898,10 @@ packages:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
     dev: false
 
+  /jwt-decode/3.1.2:
+    resolution: {integrity: sha512-UfpWE/VZn0iP50d8cz9NrZLM9lSWhcJ+0Gt/nm4by88UL+J1SiKN8/5dkjMmbEzwL2CAe+67GsegCbIKtbp75A==}
+    dev: false
+
   /lilconfig/2.0.6:
     resolution: {integrity: sha512-9JROoBW7pobfsx+Sq2JsASvCo6Pfo6WWoUW79HuB1BCoBXD4PLWJPqDF6fNj67pqBYTbAHkE57M1kS/+L1neOg==}
     engines: {node: '>=10'}
@@ -959,6 +971,14 @@ packages:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
     dev: true
+
+  /oidc-client-ts/2.2.2:
+    resolution: {integrity: sha512-tEpnC1xQX6PMhnDMNEvDhpqnsu0buh29b/sA9a1I5tq6lD87wRAW1rTj49B2+5925I0sQlvU64DoK0Pxeiu7Dg==}
+    engines: {node: '>=12.13.0'}
+    dependencies:
+      crypto-js: 4.1.1
+      jwt-decode: 3.1.2
+    dev: false
 
   /parse-srcset/1.0.2:
     resolution: {integrity: sha512-/2qh0lav6CmI15FzA3i/2Bzk2zCgQhGMkvhOhKNcBVQ1ldgpbfiNTVslmooUmWJcADi1f1kIeynbDRVzNlfR6Q==}
@@ -1126,6 +1146,17 @@ packages:
 
   /react-is/18.2.0:
     resolution: {integrity: sha512-xWGDIW6x921xtzPkhiULtthJHoJvBbF3q26fzloPCK0hsvxtPVelvftw3zjbHWSkR2km9Z+4uxbDDK/6Zw9B8w==}
+    dev: false
+
+  /react-oidc-context/2.2.2_t6ypyw6vqwvvymx3m4g42li3ku:
+    resolution: {integrity: sha512-rke8goKuxxQhSAR11h8wVn56m7kEa1mcAfYDlIycsIgmbZOFzKA0Un0y0RodHZ/M/CG6u0JD1I8RKZHqRJjWnA==}
+    engines: {node: '>=12.13.0'}
+    peerDependencies:
+      oidc-client-ts: ^2.2.1
+      react: '>=16.8.0'
+    dependencies:
+      oidc-client-ts: 2.2.2
+      react: 18.2.0
     dev: false
 
   /react-redux/8.0.5_35wee4blr5lh4acjabmktp3wgu:

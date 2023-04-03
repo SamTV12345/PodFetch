@@ -3,7 +3,6 @@ pub mod environment_service;
 pub(crate) mod file_service;
 pub mod logging_service;
 pub mod mapping_service;
-pub mod oidc_service;
 pub mod path_service;
 pub mod podcast_episode_service;
 pub mod rust_service;
