@@ -183,7 +183,7 @@ impl PodcastEpisodeService {
                             item.clone(),
                             Some(
                                 environment_service.server_url.clone().to_owned()
-                                    + "/ui/default.jpg",
+                                    + "ui/default.jpg",
                             ),
                             duration_episode as i32,
                         );

@@ -17,10 +17,12 @@ pub struct Jwk {
 }
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CustomJwkSet {
     pub(crate) keys: Vec<CustomJwk>,
 }
+
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CustomJwk{
     pub kid: String,

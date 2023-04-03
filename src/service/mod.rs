@@ -7,3 +7,4 @@ pub mod path_service;
 pub mod podcast_episode_service;
 pub mod rust_service;
 pub mod websocket_service;
+pub mod jwkservice;

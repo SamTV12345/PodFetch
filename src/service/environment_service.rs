@@ -36,9 +36,13 @@ impl EnvironmentService {
                 scope: var("OIDC_SCOPE").unwrap_or("openid profile email".to_string())
             });
         }
-
+        let mut server_url = var("SERVER_URL").unwrap_or("http://localhost:8000".to_string());
+        // Add trailing slash if not present
+        if !server_url.ends_with("/") {
+            server_url+= "/"
+        }
         EnvironmentService {
-            server_url: var("SERVER_URL").unwrap_or("http://localhost:8000".to_string()),
+            server_url: server_url.clone() ,
             polling_interval: var("POLLING_INTERVAL")
                 .unwrap_or("300".to_string())
                 .parse::<u32>()

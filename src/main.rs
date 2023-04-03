@@ -26,11 +26,11 @@ use std::env::var;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
-use log::info;
+use log::{info};
 use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-
+use std::time::{SystemTime, UNIX_EPOCH};
 mod controllers;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::ERROR_LOGIN_MESSAGE;
@@ -64,6 +64,7 @@ use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
+use crate::service::jwkservice::JWKService;
 use crate::service::logging_service::init_logging;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -101,17 +102,41 @@ async fn validator(
     return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
 }
 
-async fn validate_oidc_token(rq: ServiceRequest, bearer:BearerAuth)->Result<ServiceRequest,
+async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService)
+                             ->Result<ServiceRequest,
     (Error, ServiceRequest)> {
     // Check if the Authorization header exists and has a Bearer token
     let token = bearer.token();
-    let jwk_uri = var("OIDC_JWKS").expect("OIDC_JWKS must be set");
-    let response = reqwest::get(jwk_uri).await.unwrap()
-        .json::<CustomJwkSet>()
-        .await.unwrap();
+
+
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards").as_secs();
+
+    let response;
+    match jwk_service.jwk {
+        Some(jwk)=>{
+            if since_the_epoch-jwk_service.timestamp>3600{
+                //refetch and update timestamp
+                info!("Renewing jwk set");
+                response = get_jwk().await;
+                jwk_service.timestamp = since_the_epoch
+            }
+            else{
+                info!("Using cached jwk set");
+                response = jwk;
+            }
+        }
+        None=>{
+            // Fetch on cold start
+            response = get_jwk().await;
+            jwk_service.jwk = Some(response.clone());
+        }
+    }
 
     // Filter out all unknown algorithms
-    let response = response.keys.into_iter().filter(|x| {
+    let response = response.clone().keys.into_iter().filter(|x| {
         x.alg.eq(&"RS256")
     }).collect::<Vec<CustomJwk>>();
 
@@ -130,6 +155,14 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer:BearerAuth)->Result<Serv
             Err((ErrorUnauthorized("Invalid oidc token."), rq))
         }
     }
+}
+
+async fn get_jwk() -> CustomJwkSet {
+    let jwk_uri = var("OIDC_JWKS").expect("OIDC_JWKS must be set");
+    let response = reqwest::get(jwk_uri).await.unwrap()
+        .json::<CustomJwkSet>()
+        .await.unwrap();
+    response
 }
 
 pub fn run_poll(
@@ -179,7 +212,7 @@ async fn main() -> std::io::Result<()> {
     let mapping_service = MappingService::new();
     let file_service = FileService::new();
     let environment_service = EnvironmentService::new();
-    let dev_enabled = env::var("DEV").is_ok();
+    let dev_enabled = var("DEV").is_ok();
 
     insert_default_settings_if_not_present();
     check_server_config(environment_service.clone());
@@ -263,11 +296,17 @@ pub fn get_api_config() -> Scope {
 }
 
 fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
-    let enable_basic_auth = env::var("BASIC_AUTH").is_ok();
+    let enable_basic_auth = var("BASIC_AUTH").is_ok();
     let auth = HttpAuthentication::basic(validator);
+    let enable_oidc_auth = var("OIDC_AUTH").is_ok();
+    let jwk_service = JWKService{
+        timestamp:0,
+        jwk:None
+    };
 
-    let enable_oidc_auth = env::var("OIDC_AUTH").is_ok();
-    let oidc_auth = HttpAuthentication::bearer(validate_oidc_token);
+    let oidc_auth = HttpAuthentication::bearer(move |srv,req|{
+        validate_oidc_token(srv,req, jwk_service.clone())
+    });
 
     web::scope("")
         .service(find_podcast)
