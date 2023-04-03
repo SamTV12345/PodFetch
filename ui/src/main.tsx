@@ -15,8 +15,9 @@ import {apiURL} from "./utils/Utilities";
 import {ConfigModel} from "./models/SysInfo";
 import {setConfigModel} from "./store/CommonSlice";
 import {useAppDispatch, useAppSelector} from "./store/hooks";
-import {AuthProvider, useAuth} from "react-oidc-context";
+import {AuthProvider} from "react-oidc-context";
 import {Loading} from "./components/Loading";
+import {OIDCRefresher} from "./components/OIDCRefresher";
 
 const AuthWrapper:FC<PropsWithChildren> = ({children})=>{
     const dispatch = useAppDispatch()
@@ -45,27 +46,7 @@ const AuthWrapper:FC<PropsWithChildren> = ({children})=>{
 }
 
 
-const refreshInterval = 1000*60
-const OIDCRefresher:FC<PropsWithChildren> = ({children})=>{
-    const auth = useAuth()
 
-    useEffect(()=>{
-
-        setInterval(()=> {
-            if (auth.user &&auth.user.expires_in&& auth.user.expires_in<60){
-                console.log("Refreshing token")
-                auth.signinSilent()
-                    .then(()=>{
-                        axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user?.access_token
-                    })
-            }
-        }, refreshInterval)
-    }, [auth])
-
-    return <>
-        {children}
-    </>
-}
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

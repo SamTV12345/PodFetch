@@ -22,6 +22,7 @@ use clokwerk::{Scheduler, TimeUnits};
 use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, thread};
+use std::env::var;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
@@ -104,8 +105,8 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer:BearerAuth)->Result<Serv
     (Error, ServiceRequest)> {
     // Check if the Authorization header exists and has a Bearer token
     let token = bearer.token();
-
-    let response = reqwest::get("https://pihole.schwanzer.online/realms/master/protocol/openid-connect/certs").await.unwrap()
+    let jwk_uri = var("OIDC_JWKS").expect("OIDC_JWKS must be set");
+    let response = reqwest::get(jwk_uri).await.unwrap()
         .json::<CustomJwkSet>()
         .await.unwrap();
 
