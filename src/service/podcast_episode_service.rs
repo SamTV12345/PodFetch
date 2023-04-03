@@ -1,9 +1,4 @@
-use actix::Addr;
-use actix_web::web;
-use regex::Regex;
-use reqwest::blocking::ClientBuilder;
-use rss::Channel;
-use crate::constants::constants::{PodcastType};
+use crate::constants::constants::PodcastType;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::messages::BroadcastMessage;
@@ -15,6 +10,11 @@ use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
 use crate::utils::podcast_builder::PodcastBuilder;
+use actix::Addr;
+use actix_web::web;
+use regex::Regex;
+use reqwest::blocking::ClientBuilder;
+use rss::Channel;
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -29,47 +29,61 @@ impl PodcastEpisodeService {
             mapping_service: MappingService::new(),
         }
     }
-    pub fn download_podcast_episode_if_not_locally_available(&mut self, podcast_episode: PodcastEpisode,
-                                                             podcast: Podcast, lobby:
-                                                             Option<web::Data<Addr<Lobby>>>) {
+    pub fn download_podcast_episode_if_not_locally_available(
+        &mut self,
+        podcast_episode: PodcastEpisode,
+        podcast: Podcast,
+        lobby: Option<web::Data<Addr<Lobby>>>,
+    ) {
         let mut db = DB::new().unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
         let image_suffix = Self::get_url_file_suffix(&podcast_episode_cloned.image_url);
 
-        let image_save_path = PathService::get_image_path(&podcast_cloned.clone().directory,
-                                                          &podcast_episode_cloned.clone()
-                                                              .episode_id, &image_suffix);
+        let image_save_path = PathService::get_image_path(
+            &podcast_cloned.clone().directory,
+            &podcast_episode_cloned.clone().episode_id,
+            &image_suffix,
+        );
 
-
-        let podcast_save_path = PathService::get_podcast_episode_path(&podcast.directory.clone(),
-                                                                      &podcast_episode_cloned.episode_id,
-                                                                      &suffix);
-
+        let podcast_save_path = PathService::get_podcast_episode_path(
+            &podcast.directory.clone(),
+            &podcast_episode_cloned.episode_id,
+            &suffix,
+        );
 
         match db.check_if_downloaded(&podcast_episode.url) {
             Ok(true) => {
-                self.db.update_total_podcast_time_and_image(&podcast_episode_cloned.episode_id,
-                                                            &image_save_path,
-                                                            &podcast_save_path.clone())
+                self.db
+                    .update_total_podcast_time_and_image(
+                        &podcast_episode_cloned.episode_id,
+                        &image_save_path,
+                        &podcast_save_path.clone(),
+                    )
                     .expect("Error saving total time of podcast episode.");
             }
             Ok(false) => {
-                let podcast_inserted = Self::perform_download(&podcast_episode, &mut db,
-                                                              podcast_episode_cloned,
-                                                              podcast_cloned);
-                let mapped_dto = self.mapping_service.map_podcastepisode_to_dto(&podcast_inserted);
+                let podcast_inserted = Self::perform_download(
+                    &podcast_episode,
+                    &mut db,
+                    podcast_episode_cloned,
+                    podcast_cloned,
+                );
+                let mapped_dto = self
+                    .mapping_service
+                    .map_podcastepisode_to_dto(&podcast_inserted);
                 match lobby {
-                    Some(lobby) => {
-                        lobby.do_send(BroadcastMessage {
-                            message: format!("Episode {} is now available offline", podcast_episode.name),
-                            podcast: Option::from(podcast.clone()),
-                            type_of: PodcastType::AddPodcastEpisode,
-                            podcast_episode: Some(mapped_dto),
-                            podcast_episodes: None,
-                        })
-                    }
+                    Some(lobby) => lobby.do_send(BroadcastMessage {
+                        message: format!(
+                            "Episode {} is now available offline",
+                            podcast_episode.name
+                        ),
+                        podcast: Option::from(podcast.clone()),
+                        type_of: PodcastType::AddPodcastEpisode,
+                        podcast_episode: Some(mapped_dto),
+                        podcast_episodes: None,
+                    }),
                     None => {}
                 }
             }
@@ -80,13 +94,18 @@ impl PodcastEpisodeService {
         }
     }
 
-    pub fn perform_download(podcast_episode: &PodcastEpisode, db: &mut DB,
-                            podcast_episode_cloned: PodcastEpisode, podcast_cloned: Podcast) -> PodcastEpisode {
-        log::info!("Downloading podcast episode: {}",podcast_episode.name);
+    pub fn perform_download(
+        podcast_episode: &PodcastEpisode,
+        db: &mut DB,
+        podcast_episode_cloned: PodcastEpisode,
+        podcast_cloned: Podcast,
+    ) -> PodcastEpisode {
+        log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned,
-                                                  podcast_cloned);
-        let podcast = db.update_podcast_episode_status(&podcast_episode.url, "D").unwrap();
+        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned);
+        let podcast = db
+            .update_podcast_episode_status(&podcast_episode.url, "D")
+            .unwrap();
         let notification = Notification {
             id: 0,
             message: format!("Episode {} is now available offline", podcast_episode.name),
@@ -125,7 +144,8 @@ impl PodcastEpisodeService {
 
             match itunes_ext {
                 Some(itunes_ext) => {
-                    let result = db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
+                    let result =
+                        db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
                     let mut duration_episode = 0;
 
                     if result.unwrap().is_none() {
@@ -137,24 +157,36 @@ impl PodcastEpisodeService {
                             None => {}
                         }
 
-                        let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
-                                                                          itunes_ext.image,
-                                                                          duration_episode as i32);
+                        let inserted_episode = db.insert_podcast_episodes(
+                            podcast.clone(),
+                            item.clone(),
+                            itunes_ext.image,
+                            duration_episode as i32,
+                        );
                         podcast_inserted.push(inserted_episode);
                     }
                 }
                 None => {
-                    let result = db.get_podcast_episode_by_url(&item.enclosure().expect
-                    ("A podcast episode needs to have a podcast url").url
-                        .to_string());
+                    let result = db.get_podcast_episode_by_url(
+                        &item
+                            .enclosure()
+                            .expect("A podcast episode needs to have a podcast url")
+                            .url
+                            .to_string(),
+                    );
                     // We can't retrieve the duration of the podcast episode, so we set it to 0
 
                     if result.unwrap().is_none() {
                         let duration_episode = 0;
-                        let inserted_episode = db.insert_podcast_episodes(podcast.clone(), item.clone(),
-                                                                          Some
-                                                                              (environment_service.server_url.clone().to_owned() + "/ui/default.jpg"),
-                                                                          duration_episode as i32);
+                        let inserted_episode = db.insert_podcast_episodes(
+                            podcast.clone(),
+                            item.clone(),
+                            Some(
+                                environment_service.server_url.clone().to_owned()
+                                    + "/ui/default.jpg",
+                            ),
+                            duration_episode as i32,
+                        );
                         podcast_inserted.push(inserted_episode);
                     }
                 }
@@ -188,9 +220,7 @@ impl PodcastEpisodeService {
                 let seconds = parts[3].parse::<u32>().unwrap();
                 days * 86400 + hours * 3600 + minutes * 60 + seconds
             }
-            _ => {
-                0
-            }
+            _ => 0,
         }
     }
 
@@ -202,25 +232,33 @@ impl PodcastEpisodeService {
 
     pub fn query_for_podcast(&mut self, query: &str) -> Vec<PodcastEpisode> {
         let podcasts = self.db.query_for_podcast(query).unwrap();
-        let podcast_dto = podcasts.iter().map(|podcast| {
-            self.mapping_service.map_podcastepisode_to_dto(podcast)
-        }).collect::<Vec<PodcastEpisode>>();
+        let podcast_dto = podcasts
+            .iter()
+            .map(|podcast| self.mapping_service.map_podcastepisode_to_dto(podcast))
+            .collect::<Vec<PodcastEpisode>>();
         return podcast_dto;
     }
 
     pub fn find_all_downloaded_podcast_episodes(&mut self) -> Vec<PodcastEpisode> {
         let result = self.db.get_downloaded_episodes();
-        result.iter().map(|podcast| {
-            return self.mapping_service.map_podcastepisode_to_dto(podcast);
-        })
+        result
+            .iter()
+            .map(|podcast| {
+                return self.mapping_service.map_podcastepisode_to_dto(podcast);
+            })
             .collect::<Vec<PodcastEpisode>>()
     }
 
-    pub fn find_all_downloaded_podcast_episodes_by_podcast_id(&mut self, podcast_id: i32) -> Vec<PodcastEpisode> {
+    pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
+        &mut self,
+        podcast_id: i32,
+    ) -> Vec<PodcastEpisode> {
         let result = self.db.get_downloaded_episodes_by_podcast_id(podcast_id);
-        result.iter().map(|podcast| {
-            return self.mapping_service.map_podcastepisode_to_dto(podcast);
-        })
+        result
+            .iter()
+            .map(|podcast| {
+                return self.mapping_service.map_podcastepisode_to_dto(podcast);
+            })
             .collect::<Vec<PodcastEpisode>>()
     }
 
@@ -253,7 +291,8 @@ impl PodcastEpisodeService {
 
             match res {
                 Ok(_) => {
-                    self.db.update_download_status_of_episode(old_podcast.clone().id);
+                    self.db
+                        .update_download_status_of_episode(old_podcast.clone().id);
                 }
                 Err(e) => {
                     println!("Error deleting podcast episode.{}", e);

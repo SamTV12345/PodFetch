@@ -1,8 +1,8 @@
-use std::sync::{Mutex, PoisonError};
-use actix_web::{post, get, web, HttpResponse, Responder};
-use actix_web::web::Data;
 use crate::db::DB;
 use crate::models::models::PodcastWatchedPostModel;
+use actix_web::web::Data;
+use actix_web::{get, post, web, HttpResponse, Responder};
+use std::sync::{Mutex, PoisonError};
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -14,7 +14,8 @@ tag="watchtime"
 pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>) -> impl Responder {
     let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
     let mut db = DB::new().expect("Error creating db");
-    db.log_watchtime(podcast_watch.0).expect("Error logging watchtime");
+    db.log_watchtime(podcast_watch.0)
+        .expect("Error logging watchtime");
     log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
     HttpResponse::Ok()
 }

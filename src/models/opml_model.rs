@@ -1,5 +1,4 @@
-
 #[derive(Deserialize)]
 pub struct OpmlModel {
-    pub content: String
+    pub content: String,
 }

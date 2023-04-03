@@ -1,7 +1,9 @@
-use diesel::prelude::{Insertable, Queryable, Identifiable, AsChangeset};
 use crate::schema::*;
+use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 
-#[derive(Serialize, Deserialize,Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset )]
+#[derive(
+    Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Setting {
     pub id: i32,

@@ -1,9 +1,9 @@
-use diesel::prelude::{Insertable, Queryable};
 use crate::schema::*;
-use utoipa::{ToSchema};
 use chrono::NaiveDateTime;
+use diesel::prelude::{Insertable, Queryable};
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize,Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ItunesModel {
     pub artist_id: Option<i64>,
@@ -76,7 +76,7 @@ pub struct Podcast {
     #[diesel(sql_type = Nullable<Text>)]
     pub author: Option<String>,
     pub active: bool,
-    pub original_image_url: String
+    pub original_image_url: String,
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug, ToSchema)]
@@ -91,7 +91,7 @@ pub struct PodcastEpisode {
     pub total_time: i32,
     pub(crate) local_url: String,
     pub(crate) local_image_url: String,
-    pub (crate) description: String,
-    pub (crate) status: String,
-    pub (crate) download_time: Option<NaiveDateTime>,
+    pub(crate) description: String,
+    pub(crate) status: String,
+    pub(crate) download_time: Option<NaiveDateTime>,
 }

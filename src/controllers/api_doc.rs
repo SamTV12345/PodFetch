@@ -1,17 +1,18 @@
-use std::future;
-use std::future::Ready;
+use crate::models;
+use crate::models::models::{
+    PodCastAddModel, PodcastHistoryItem, PodcastWatchedEpisodeModel, PodcastWatchedPostModel,
+};
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::HttpResponse;
-use utoipa::{Modify, OpenApi};
-use models::itunes_models::{Podcast, PodcastEpisode, ItunesModel};
-use crate::models;
-use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModel,
-                            PodcastWatchedPostModel, PodCastAddModel};
 use futures::future::LocalBoxFuture;
+use models::itunes_models::{ItunesModel, Podcast, PodcastEpisode};
+use std::future;
+use std::future::Ready;
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
+use utoipa::{Modify, OpenApi};
 
-use crate::controllers::podcast_controller::__path_find_podcast_by_id;
 use crate::controllers::podcast_controller::__path_find_all_podcasts;
+use crate::controllers::podcast_controller::__path_find_podcast_by_id;
 use crate::controllers::podcast_episode_controller::__path_find_all_podcast_episodes_of_podcast;
 use crate::controllers::watch_time_controller::*;
 #[derive(OpenApi)]
@@ -60,13 +61,13 @@ const API_KEY: &str = "utoipa-rocks";
 struct RequireApiKey;
 
 impl<S> Transform<S, ServiceRequest> for RequireApiKey
-    where
-        S: Service<
-            ServiceRequest,
-            Response = ServiceResponse<actix_web::body::BoxBody>,
-            Error = actix_web::Error,
-        >,
-        S::Future: 'static,
+where
+    S: Service<
+        ServiceRequest,
+        Response = ServiceResponse<actix_web::body::BoxBody>,
+        Error = actix_web::Error,
+    >,
+    S::Future: 'static,
 {
     type Response = ServiceResponse<actix_web::body::BoxBody>;
     type Error = actix_web::Error;
@@ -86,13 +87,13 @@ impl<S> Transform<S, ServiceRequest> for RequireApiKey
 struct LogApiKey;
 
 impl<S> Transform<S, ServiceRequest> for LogApiKey
-    where
-        S: Service<
-            ServiceRequest,
-            Response = ServiceResponse<actix_web::body::BoxBody>,
-            Error = actix_web::Error,
-        >,
-        S::Future: 'static,
+where
+    S: Service<
+        ServiceRequest,
+        Response = ServiceResponse<actix_web::body::BoxBody>,
+        Error = actix_web::Error,
+    >,
+    S::Future: 'static,
 {
     type Response = ServiceResponse<actix_web::body::BoxBody>;
     type Error = actix_web::Error;
@@ -108,13 +109,13 @@ impl<S> Transform<S, ServiceRequest> for LogApiKey
     }
 }
 impl<S> Service<ServiceRequest> for ApiKeyMiddleware<S>
-    where
-        S: Service<
-            ServiceRequest,
-            Response = ServiceResponse<actix_web::body::BoxBody>,
-            Error = actix_web::Error,
-        >,
-        S::Future: 'static,
+where
+    S: Service<
+        ServiceRequest,
+        Response = ServiceResponse<actix_web::body::BoxBody>,
+        Error = actix_web::Error,
+    >,
+    S::Future: 'static,
 {
     type Response = ServiceResponse<actix_web::body::BoxBody>;
     type Error = actix_web::Error;
@@ -139,7 +140,8 @@ impl<S> Service<ServiceRequest> for ApiKeyMiddleware<S>
                 } else {
                     return response(
                         req,
-                        HttpResponse::Unauthorized().json(String::from("incorrect api key"), ));
+                        HttpResponse::Unauthorized().json(String::from("incorrect api key")),
+                    );
                 }
             }
             None => {
@@ -148,8 +150,8 @@ impl<S> Service<ServiceRequest> for ApiKeyMiddleware<S>
                 } else {
                     return response(
                         req,
-                        HttpResponse::Unauthorized()
-                            .json(String::from("missing api key")));
+                        HttpResponse::Unauthorized().json(String::from("missing api key")),
+                    );
                 }
             }
             _ => (), // just passthrough

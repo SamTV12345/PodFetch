@@ -1,5 +1,6 @@
 pub enum SearchType {
-    ITUNES, PODINDEX
+    ITUNES,
+    PODINDEX,
 }
 
 impl TryFrom<i32> for SearchType {
