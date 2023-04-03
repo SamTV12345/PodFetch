@@ -28,7 +28,7 @@ rss = "2.0.2"
 regex = "1.7.1"
 diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "chrono"] }
 utoipa = { version = "3", features = ["actix_extras"] }
-futures = "0.3.26"
+futures = "0.3.28"
 utoipa-swagger-ui = {version = "3", features = ["actix-web"] }
 dotenvy = "0.15"
 clokwerk= "0.4.0"
