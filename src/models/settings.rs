@@ -1,7 +1,10 @@
-use diesel::prelude::{Insertable, Queryable, Identifiable, AsChangeset};
 use crate::schema::*;
+use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
+use crate::service::environment_service::OidcConfig;
 
-#[derive(Serialize, Deserialize,Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset )]
+#[derive(
+    Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Setting {
     pub id: i32,
@@ -18,4 +21,6 @@ pub struct ConfigModel {
     pub rss_feed: String,
     pub server_url: String,
     pub basic_auth: bool,
+    pub oidc_configured: bool,
+    pub oidc_config: Option<OidcConfig>
 }

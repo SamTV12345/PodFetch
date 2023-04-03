@@ -1,11 +1,13 @@
 import {useState} from "react";
 import {apiURL} from "../utils/Utilities";
 import {SubmitHandler, useForm} from "react-hook-form";
-import axios, {AxiosError, AxiosResponse} from "axios";
+import axios, {AxiosError} from "axios";
 import {useTranslation} from "react-i18next";
 import {useNavigate} from "react-router-dom";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setLoginData} from "../store/CommonSlice";
+import {OIDCLogin} from "./OIDCButton";
+import {Loading} from "./Loading";
 
 export type LoginData = {
     username: string,
@@ -15,11 +17,12 @@ export type LoginData = {
 
 export const LoginComponent = () => {
     const dispatch = useAppDispatch()
-    const {register, handleSubmit, watch, formState: {errors}} = useForm<LoginData>();
+    const {register, handleSubmit, formState: {}} = useForm<LoginData>();
     const [alert, setAlert] = useState<string>()
     const {t} = useTranslation()
     const navigate = useNavigate()
-    const loginData = useAppSelector(state=>state.common.loginData)
+    const configModel = useAppSelector(state => state.common.configModel)
+
 
     const onSubmit: SubmitHandler<LoginData> = (data, p) => {
         p?.preventDefault()
@@ -41,6 +44,9 @@ export const LoginComponent = () => {
             })
     }
 
+    if (!configModel){
+        return <Loading/>
+    }
     return <section className="bg-gray-50 dark:bg-gray-900 h-full">
         <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
             <a href="#" className="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
@@ -53,7 +59,7 @@ export const LoginComponent = () => {
                     <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
                         {t('sign-in-to-podfetch')}
                     </h1>
-                    <form className="space-y-4 md:space-y-6" onSubmit={handleSubmit(onSubmit)}>
+                    {configModel?.basicAuth&&<form className="space-y-4 md:space-y-6" onSubmit={handleSubmit(onSubmit)}>
                         {alert&&<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
                              role="alert">
                                                 <strong className="font-bold">{t('error-authenticating')}</strong>
@@ -94,7 +100,10 @@ export const LoginComponent = () => {
                         </div>
                         <button type="submit"
                                 className="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-800 dark:bg-primary-700 dark:hover:bg-blue-700 dark:focus:ring-primary-800">{t('sign-in')}</button>
-                    </form>
+                    </form>}
+                    {configModel.oidcConfigured&& configModel.oidcConfig&&
+                            <OIDCLogin/>
+                    }
                 </div>
             </div>
         </div>

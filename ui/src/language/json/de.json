@@ -45,5 +45,7 @@
   "sign-in": "Anmelden",
   "drag-here": "Hierhin ziehen",
   "following-file-uploaded": "Die folgende Datei wird hochgeladen:",
-  "upload-opml": "OPML-Datei hochladen"
+  "upload-opml": "OPML-Datei hochladen",
+  "logout": "Abmelden",
+  "oidc-login": "OIDC Login"
 }

@@ -7,7 +7,7 @@ pub struct PodcastBuilder {
     keywords: String,
     last_build_date: String,
     explicit: bool,
-    author: String
+    author: String,
 }
 
 pub struct PodcastExtra {
@@ -17,7 +17,7 @@ pub struct PodcastExtra {
     pub keywords: String,
     pub last_build_date: String,
     pub explicit: bool,
-    pub author: String
+    pub author: String,
 }
 
 impl PodcastBuilder {
@@ -29,37 +29,40 @@ impl PodcastBuilder {
             keywords: "".to_string(),
             last_build_date: "".to_string(),
             explicit: false,
-            author: "".to_string()
+            author: "".to_string(),
         };
     }
 
-    pub fn description(&mut self, description: String)->&mut PodcastBuilder{
+    pub fn description(&mut self, description: String) -> &mut PodcastBuilder {
         self.description = description;
         return self;
     }
 
-    pub fn language(&mut self, language: Option<String>)->&mut PodcastBuilder{
-        if language.is_some(){
+    pub fn language(&mut self, language: Option<String>) -> &mut PodcastBuilder {
+        if language.is_some() {
             self.language = language.unwrap();
         }
         return self;
     }
 
-    pub fn keywords(&mut self, keywords: Vec<ITunesCategory>)->&mut PodcastBuilder{
-        self.keywords = keywords.iter().map(|x| x.text.clone()).collect::<Vec<String>>().join(",");
+    pub fn keywords(&mut self, keywords: Vec<ITunesCategory>) -> &mut PodcastBuilder {
+        self.keywords = keywords
+            .iter()
+            .map(|x| x.text.clone())
+            .collect::<Vec<String>>()
+            .join(",");
         return self;
     }
 
-    pub fn last_build_date(&mut self, last_build_date: Option<String>)->&mut PodcastBuilder{
-        if last_build_date.is_some(){
+    pub fn last_build_date(&mut self, last_build_date: Option<String>) -> &mut PodcastBuilder {
+        if last_build_date.is_some() {
             self.last_build_date = last_build_date.unwrap();
         }
         return self;
     }
 
-    pub fn explicit(&mut self, explicit: Option<String>)->&mut PodcastBuilder{
-        match explicit
-        {
+    pub fn explicit(&mut self, explicit: Option<String>) -> &mut PodcastBuilder {
+        match explicit {
             Some(explicit) => {
                 self.explicit = explicit == "yes";
             }
@@ -68,9 +71,8 @@ impl PodcastBuilder {
         return self;
     }
 
-    pub fn author(&mut self, author: Option<String>)->&mut PodcastBuilder{
-        match author
-        {
+    pub fn author(&mut self, author: Option<String>) -> &mut PodcastBuilder {
+        match author {
             Some(author) => {
                 self.author = author;
             }
@@ -87,7 +89,7 @@ impl PodcastBuilder {
             language: self.language.clone(),
             keywords: self.keywords.clone(),
             last_build_date: self.last_build_date.clone(),
-            author: self.author.clone()
+            author: self.author.clone(),
         };
     }
 }

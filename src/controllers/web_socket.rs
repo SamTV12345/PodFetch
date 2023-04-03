@@ -1,11 +1,14 @@
-use std::time::{Duration, Instant};
-use actix::{Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, fut, Handler, Running, StreamHandler, WrapFuture};
+use crate::models::messages::{Connect, Disconnect, WsMessage};
+use crate::models::web_socket_message::Lobby;
+use actix::{
+    fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
+    Running, StreamHandler, WrapFuture,
+};
 use actix_web_actors::ws;
 use actix_web_actors::ws::Message;
 use actix_web_actors::ws::Message::Text;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
-use crate::models::messages::{Connect, Disconnect, WsMessage};
-use crate::models::web_socket_message::Lobby;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -14,14 +17,15 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 pub struct WsConn {
     hb: Instant,
     id: Uuid,
-    addr: Addr<Lobby>
+    addr: Addr<Lobby>,
 }
 
 impl WsConn {
     pub fn new(addr: Addr<Lobby>) -> Self {
-        Self { hb: Instant::now(),
+        Self {
+            hb: Instant::now(),
             id: Uuid::new_v4(),
-            addr
+            addr,
         }
     }
 
@@ -71,10 +75,8 @@ impl Actor for WsConn {
     }
 }
 
-
 // The `StreamHandler` trait is used to handle the messages that are sent over the socket.
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
-
     // The `handle()` function is where we'll determine the response
     // to the client's messages. So, for example, if we ping the client,
     // it should respond with a pong. These two messages are necessary

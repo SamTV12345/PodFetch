@@ -1,15 +1,14 @@
-import {useTranslation} from "react-i18next";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setSideBarCollapsed} from "../store/CommonSlice";
 import {Notifications} from "./Notifications";
 import {Dropdown} from "./I18nDropdown";
+import {LogoutButton} from "./LogoutButton";
 
 
 export const Header = ()=>{
-    const {t} = useTranslation()
     const dispatch = useAppDispatch()
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
-
+    const configModel = useAppSelector(state=>state.common.configModel)
 
     return (
         <div className="bg-neutral-900 w-full col-span-6 h-20 w-screen">
@@ -25,6 +24,7 @@ export const Header = ()=>{
 
                 <div className="flex flex-grow"/>
                 <Notifications/>
+                {configModel?.oidcConfigured&&<LogoutButton/>}
                 <Dropdown/>
                 <div className="mr-2"></div>
             </div>
