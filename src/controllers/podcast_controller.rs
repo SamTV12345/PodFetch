@@ -1,4 +1,3 @@
-use crate::db::DB;
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::models::{PodCastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -35,11 +34,11 @@ tag="podcasts"
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(
     id: Path<String>,
-    db: Data<Mutex<DB>>,
+    podcast_service: Data<Mutex<PodcastService>>,
     mapping_service: Data<Mutex<MappingService>>,
 ) -> impl Responder {
     let id_num = from_str::<i32>(&id).unwrap();
-    let podcast = db
+    let podcast = podcast_service
         .lock()
         .expect("Error acquiring lock")
         .get_podcast(id_num)
@@ -58,13 +57,13 @@ tag="podcasts"
 )]
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
-    db: Data<Mutex<DB>>,
+    podcast_service: Data<Mutex<PodcastService>>,
     mapping_service: Data<Mutex<MappingService>>,
 ) -> impl Responder {
     let mapping_service = mapping_service
         .lock()
         .unwrap_or_else(PoisonError::into_inner);
-    let podcasts = db
+    let podcasts = podcast_service
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
         .get_podcasts()

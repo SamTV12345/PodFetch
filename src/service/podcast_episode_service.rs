@@ -300,4 +300,13 @@ impl PodcastEpisodeService {
             }
         }
     }
+
+    pub fn get_podcast_episodes_of_podcast(&mut self, id_num: i32, last_id: Option<String>, )
+        -> Result<Vec<PodcastEpisode>, String> {
+        self.db.get_podcast_episodes_of_podcast(id_num, last_id)
+    }
+
+    pub fn get_podcast_episode_by_id(&mut self, id_num: &str) -> Result<Option<PodcastEpisode>, String> {
+        self.db.get_podcast_episode_by_id(id_num)
+    }
 }

@@ -67,8 +67,10 @@ use crate::service::file_service::FileService;
 use crate::service::jwkservice::JWKService;
 use crate::service::logging_service::init_logging;
 use crate::service::mapping_service::MappingService;
+use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
+use crate::service::settings_service::SettingsService;
 
 mod config;
 pub mod schema;
@@ -212,6 +214,9 @@ async fn main() -> std::io::Result<()> {
     let mapping_service = MappingService::new();
     let file_service = FileService::new();
     let environment_service = EnvironmentService::new();
+    let notification_service = NotificationService::new();
+    let settings_service = SettingsService::new();
+
     let dev_enabled = var("DEV").is_ok();
 
     insert_default_settings_if_not_present();
@@ -282,6 +287,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(mapping_service.clone())))
             .app_data(Data::new(Mutex::new(file_service.clone())))
             .app_data(Data::new(Mutex::new(environment_service.clone())))
+            .app_data(Data::new(Mutex::new(notification_service.clone())))
+            .app_data(Data::new(Mutex::new(settings_service.clone())))
     })
     .bind(("0.0.0.0", 8000))?
     .run()

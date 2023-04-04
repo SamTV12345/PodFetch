@@ -26,15 +26,15 @@ tag="podcast_episodes"
 pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
     last_podcast_episode: Query<OptionalId>,
-    db: Data<Mutex<DB>>,
+    podcast_service: Data<Mutex<PodcastEpisodeService>>,
     mapping_service: Data<Mutex<MappingService>>,
 ) -> impl Responder {
-    let mut db = db.lock().expect("Error acquiring lock");
+    let mut podcast_service = podcast_service.lock().expect("Error acquiring lock");
     let mapping_service = mapping_service.lock().expect("Error acquiring lock");
 
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
-    let res = db
+    let res = podcast_service
         .get_podcast_episodes_of_podcast(id_num, last_podcast_episode.last_podcast_episode)
         .unwrap();
     let mapped_podcasts = res
