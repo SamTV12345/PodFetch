@@ -8,3 +8,5 @@ pub mod podcast_episode_service;
 pub mod rust_service;
 pub mod websocket_service;
 pub mod jwkservice;
+pub mod notification_service;
+pub mod settings_service;

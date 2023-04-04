@@ -1,3 +1,4 @@
+use std::io::Error;
 use crate::constants::constants::{PodcastType, ITUNES_URL};
 use crate::db::DB;
 use crate::models::itunes_models::Podcast;
@@ -236,5 +237,13 @@ impl PodcastService {
         );
 
         headers
+    }
+
+    pub fn get_podcast(&mut self, podcast_id_to_be_searched: i32)->Result<Podcast, Error>{
+        self.db.get_podcast(podcast_id_to_be_searched)
+    }
+
+    pub fn get_podcasts(&mut self) -> Result<Vec<Podcast>, String> {
+        self.db.get_podcasts()
     }
 }
