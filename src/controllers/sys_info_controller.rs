@@ -4,8 +4,9 @@ use actix_web::web::Data;
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Mutex};
 use sysinfo::{System, SystemExt};
+use crate::mutex::LockResultExt;
 
 #[get("/sys/info")]
 pub async fn get_sys_info() -> impl Responder {
@@ -37,7 +38,7 @@ pub async fn login(
     auth: web::Json<LoginRequest>,
     env: Data<Mutex<EnvironmentService>>,
 ) -> impl Responder {
-    let env_service = env.lock().unwrap_or_else(PoisonError::into_inner);
+    let env_service = env.lock().ignore_poison();
 
     if auth.0.username == env_service.username && auth.0.password == env_service.password {
         return HttpResponse::Ok().json("Login successful");

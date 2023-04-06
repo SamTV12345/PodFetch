@@ -17,7 +17,9 @@ use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
+use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
+use crate::config::dbconfig::establish_connection;
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -62,7 +64,9 @@ impl PodcastService {
         return result.json().await.unwrap();
     }
 
-    pub async fn insert_podcast_from_podindex(&mut self, id: i32, lobby: Data<Addr<Lobby>>) {
+    pub async fn insert_podcast_from_podindex(&mut self, conn: &mut SqliteConnection, id: i32,
+                                              lobby:
+    Data<Addr<Lobby>>) {
         let mapping_service = MappingService::new();
         let resp = self
             .client
@@ -79,7 +83,7 @@ impl PodcastService {
 
         let podcast = resp.json::<Value>().await.unwrap();
 
-        self.handle_insert_of_podcast(
+        self.handle_insert_of_podcast(conn,
             PodcastInsertModel {
                 title: unwrap_string(&podcast["feed"]["title"]),
                 id,
@@ -94,13 +98,14 @@ impl PodcastService {
 
     pub async fn handle_insert_of_podcast(
         &mut self,
+        conn: &mut SqliteConnection,
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
         lobby: Data<Addr<Lobby>>,
     ) {
         let fileservice = FileService::new();
-        let mut db = DB::new().unwrap();
-        let inserted_podcast = db.add_podcast_to_database(
+        let inserted_podcast = DB::add_podcast_to_database(
+            conn,
             podcast_insert.title,
             podcast_insert.id.to_string(),
             podcast_insert.feed_url,
@@ -113,8 +118,7 @@ impl PodcastService {
                 &podcast_insert.image_url.clone().to_string(),
             )
             .await;
-        let podcast = db
-            .get_podcast_by_track_id(podcast_insert.id.clone())
+        let podcast = DB::get_podcast_by_track_id(conn, podcast_insert.id.clone())
             .unwrap();
         lobby
             .get_ref()
@@ -134,9 +138,10 @@ impl PodcastService {
                 spawn_blocking(move || {
                     let mut podcast_service = PodcastService::new();
                     let mut podcast_episode_service = PodcastEpisodeService::new();
+                    let mut conn = establish_connection();
                     log::debug!("Inserting podcast episodes: {}", podcast.name);
                     let inserted_podcasts =
-                        podcast_episode_service.insert_podcast_episodes(podcast.clone());
+                        podcast_episode_service.insert_podcast_episodes(&mut conn, podcast.clone());
 
                     lobby.get_ref().do_send(BroadcastMessage {
                         podcast_episode: None,
@@ -145,7 +150,7 @@ impl PodcastService {
                         podcast: Option::from(podcast.clone()),
                         podcast_episodes: Option::from(inserted_podcasts),
                     });
-                    podcast_service.schedule_episode_download(podcast, Some(lobby));
+                    podcast_service.schedule_episode_download(podcast, Some(lobby),&mut conn);
                 })
                 .await
                 .unwrap();
@@ -160,14 +165,14 @@ impl PodcastService {
         &mut self,
         podcast: Podcast,
         lobby: Option<Data<Addr<Lobby>>>,
+        conn: &mut SqliteConnection
     ) {
         let settings = self.db.get_settings();
         match settings {
             Some(settings) => {
                 if settings.auto_download {
-                    let result = self
-                        .podcast_episode_service
-                        .get_last_5_podcast_episodes(podcast.clone());
+                    let result = PodcastEpisodeService::
+                        get_last_5_podcast_episodes(conn, podcast.clone());
                     for podcast_episode in result {
                         self.podcast_episode_service
                             .download_podcast_episode_if_not_locally_available(
@@ -184,27 +189,28 @@ impl PodcastService {
         }
     }
 
-    pub fn refresh_podcast(&mut self, podcast: Podcast, lobby: Data<Addr<Lobby>>) {
+    pub fn refresh_podcast(&mut self, podcast: Podcast, lobby: Data<Addr<Lobby>>, conn:&mut
+    SqliteConnection) {
         log::info!("Refreshing podcast: {}", podcast.name);
         self.podcast_episode_service
-            .insert_podcast_episodes(podcast.clone());
-        self.schedule_episode_download(podcast, Some(lobby));
+            .insert_podcast_episodes(conn, podcast.clone());
+        self.schedule_episode_download(podcast, Some(lobby), conn);
     }
 
     pub fn update_favor_podcast(&mut self, id: i32, x: bool) {
         self.db.update_podcast_favor(&id, x).unwrap();
     }
 
-    pub fn get_podcast_by_id(&mut self, id: i32) -> Podcast {
-        self.db.get_podcast(id).unwrap()
+    pub fn get_podcast_by_id(&mut self,conn: &mut SqliteConnection, id: i32) -> Podcast {
+        DB::get_podcast(conn,id).unwrap()
     }
 
     pub fn get_favored_podcasts(&mut self) -> Vec<Podcast> {
         self.db.get_favored_podcasts().unwrap()
     }
 
-    pub fn update_active_podcast(&mut self, id: i32) {
-        self.db.update_podcast_active(id);
+    pub fn update_active_podcast(conn: &mut SqliteConnection, id: i32) {
+        DB::update_podcast_active(conn, id);
     }
 
     fn compute_podindex_header(&mut self) -> HeaderMap {
@@ -239,11 +245,11 @@ impl PodcastService {
         headers
     }
 
-    pub fn get_podcast(&mut self, podcast_id_to_be_searched: i32)->Result<Podcast, Error>{
-        self.db.get_podcast(podcast_id_to_be_searched)
+    pub fn get_podcast(conn: &mut SqliteConnection, podcast_id_to_be_searched: i32)->Result<Podcast, Error>{
+        DB::get_podcast(conn, podcast_id_to_be_searched)
     }
 
-    pub fn get_podcasts(&mut self) -> Result<Vec<Podcast>, String> {
-        self.db.get_podcasts()
+    pub fn get_podcasts(conn: &mut SqliteConnection) -> Result<Vec<Podcast>, String> {
+        DB::get_podcasts(conn)
     }
 }

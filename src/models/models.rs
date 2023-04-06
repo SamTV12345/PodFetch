@@ -82,7 +82,7 @@ pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub podcast: Podcast,
 }
 
-#[derive(Serialize, Deserialize, Queryable, ToSchema)]
+#[derive(Serialize, Deserialize, Queryable,Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Notification {
     pub id: i32,

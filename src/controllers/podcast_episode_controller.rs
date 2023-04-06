@@ -7,6 +7,8 @@ use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
+use crate::DbPool;
+use crate::mutex::LockResultExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -26,16 +28,15 @@ tag="podcast_episodes"
 pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
     last_podcast_episode: Query<OptionalId>,
-    podcast_service: Data<Mutex<PodcastEpisodeService>>,
     mapping_service: Data<Mutex<MappingService>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
-    let mut podcast_service = podcast_service.lock().expect("Error acquiring lock");
-    let mapping_service = mapping_service.lock().expect("Error acquiring lock");
+    let mapping_service = mapping_service.lock() .ignore_poison();
 
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
-    let res = podcast_service
-        .get_podcast_episodes_of_podcast(id_num, last_podcast_episode.last_podcast_episode)
+    let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(&mut conn.get().unwrap(), id_num,
+                                                                     last_podcast_episode.last_podcast_episode)
         .unwrap();
     let mapped_podcasts = res
         .into_iter()
@@ -48,13 +49,17 @@ pub async fn find_all_podcast_episodes_of_podcast(
  * id is the episode id (uuid)
  */
 #[put("/podcast/{id}/episodes/download")]
-pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>) -> impl Responder {
+pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>) ->
+                                                                                             impl
+Responder {
     thread::spawn(move || {
         let mut db = DB::new().unwrap();
-        let res = db.get_podcast_episode_by_id(&id.into_inner()).unwrap();
+        let res = DB::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
+            .unwrap();
         match res {
             Some(podcast_episode) => {
-                let podcast = db.get_podcast(podcast_episode.podcast_id).unwrap();
+                let podcast = DB::get_podcast(&mut conn.get().unwrap(),podcast_episode
+                    .podcast_id).unwrap();
                 PodcastEpisodeService::perform_download(
                     &podcast_episode,
                     &mut db,

@@ -31,8 +31,12 @@ use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
+use diesel::r2d2::ConnectionManager;
+use diesel::SqliteConnection;
+use r2d2::Pool;
+
 mod controllers;
-use crate::config::dbconfig::establish_connection;
+use crate::config::dbconfig::{establish_connection, get_database_url};
 use crate::constants::constants::ERROR_LOGIN_MESSAGE;
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
@@ -75,6 +79,10 @@ use crate::service::settings_service::SettingsService;
 mod config;
 pub mod schema;
 pub mod utils;
+pub mod mutex;
+
+type DbPool = Pool<ConnectionManager<SqliteConnection>>;
+
 
 async fn validator(
     req: ServiceRequest,
@@ -171,14 +179,13 @@ pub fn run_poll(
     mut podcast_service: PodcastService,
     mut podcast_episode_service: PodcastEpisodeService,
 ) {
-    let mut db = DB::new().unwrap();
     //check for new episodes
-    let podcats_result = db.get_podcasts().unwrap();
+    let podcats_result = DB::get_podcasts(&mut establish_connection()).unwrap();
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
-            podcast_episode_service.insert_podcast_episodes(podcast);
-            podcast_service.schedule_episode_download(podcast_clone, None);
+            podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast);
+            podcast_service.schedule_episode_download(podcast_clone, None, &mut establish_connection());
         }
     }
 }
@@ -196,7 +203,18 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    //services
+    let podcast_episode_service = PodcastEpisodeService::new();
+    let podcast_service = PodcastService::new();
+    let db = DB::new().unwrap();
+    let mapping_service = MappingService::new();
+    let file_service = FileService::new();
+    let environment_service = EnvironmentService::new();
+    let notification_service = NotificationService::new();
+    let settings_service = SettingsService::new();
+
     let lobby = Lobby::default();
+    let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
 
     let chat_server = lobby.start();
 
@@ -207,15 +225,6 @@ async fn main() -> std::io::Result<()> {
     init_logging();
     FileService::create_podcast_root_directory_exists();
 
-    //services
-    let podcast_episode_service = PodcastEpisodeService::new();
-    let podcast_service = PodcastService::new();
-    let db = DB::new().unwrap();
-    let mapping_service = MappingService::new();
-    let file_service = FileService::new();
-    let environment_service = EnvironmentService::new();
-    let notification_service = NotificationService::new();
-    let settings_service = SettingsService::new();
 
     let dev_enabled = var("DEV").is_ok();
 
@@ -251,7 +260,8 @@ async fn main() -> std::io::Result<()> {
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
-                        podcast_episode_service.cleanup_old_episodes(settings.auto_cleanup_days);
+                        podcast_episode_service.cleanup_old_episodes(settings.auto_cleanup_days,
+                                                                     &mut establish_connection());
                     }
                 }
                 None => {
@@ -289,6 +299,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(environment_service.clone())))
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
+            .app_data(Data::new(pool.clone()))
     })
     .bind(("0.0.0.0", 8000))?
     .run()
@@ -386,4 +397,11 @@ pub fn check_server_config(service1: EnvironmentService) {
     if service1.http_basic && service1.oidc_configured{
         log::error!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
     }
+}
+
+async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<SqliteConnection>>,
+    String> {
+    let manager = ConnectionManager::<SqliteConnection>::new(database_url);
+    let pool = Pool::new(manager).unwrap();
+    Ok(pool)
 }
