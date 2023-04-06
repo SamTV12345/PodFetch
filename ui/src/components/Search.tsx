@@ -6,17 +6,22 @@ import {useDebounce} from "../utils/useDebounce";
 import {useCtrlPressed, useKeyDown} from "../hooks/useKeyDown";
 import {PodcastEpisode} from "../store/CommonSlice";
 import {useNavigate} from "react-router-dom";
+import {Spinner} from "./Spinner";
 
 export const Search = () => {
     const [searchName, setSearchName] = useState<string>('')
     const [open, setOpen] = useState<boolean>(false)
     const [podcastEpisode, setPodcastEpisode] = useState<PodcastEpisode[]>([])
     const navigate = useNavigate()
+    const [searching, setSearching] = useState<boolean>()
+
     const performSearch = ()=>{
         if(searchName.trim().length>0) {
+            setSearching(true)
             axios.get(apiURL + "/podcasts/" + searchName + "/query")
                 .then((v: AxiosResponse<PodcastEpisode[]>) => {
                     setPodcastEpisode(v.data)
+                    setSearching(false)
                 })
         }
     }
@@ -47,7 +52,7 @@ export const Search = () => {
                     {
                         podcastEpisode.length>0&& <hr className="h-px bg-gray-200 border-0 dark:bg-gray-700"/>
                     }
-                    {
+                        { searching?<div className="grid place-items-center"><Spinner className="w-12 h-12"/></div>:
                         podcastEpisode.map((v, i)=>{
                             return <div className="p-2 " key={i}>
                                 <div className="flex gap-2">
