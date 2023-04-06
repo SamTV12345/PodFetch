@@ -15,6 +15,8 @@ use rss::{
     Category, CategoryBuilder, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder,
 };
 use std::sync::Mutex;
+use crate::DbPool;
+use crate::mutex::LockResultExt;
 
 #[get("/ws")]
 pub async fn start_connection(
@@ -34,7 +36,7 @@ pub async fn get_rss_feed(
     let env = EnvironmentService::new();
     let mut podcast_service = podcast_episode_service
         .lock()
-        .expect("Error locking podcast service");
+        .ignore_poison();
     let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes();
 
     let server_url = env.get_server_url();
@@ -67,14 +69,14 @@ pub async fn get_rss_feed(
 pub async fn get_rss_feed_for_podcast(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
     id: web::Path<i32>,
-    db: Data<Mutex<DB>>,
+    conn: Data<DbPool>,
 ) -> HttpResponse {
     let env = EnvironmentService::new();
     let server_url = env.server_url;
     let mut podcast_service = podcast_episode_service
         .lock()
-        .expect("Error locking podcast service");
-    let res = db.lock().expect("Error locking db").get_podcast(id.clone());
+        .ignore_poison();
+    let res = DB::get_podcast(&mut conn.get().unwrap(),id.clone());
 
     match res {
         Ok(podcast) => {

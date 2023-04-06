@@ -7,7 +7,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::unwrap_string;
+use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
 use actix_web::{get, post, put};
@@ -21,9 +21,12 @@ use reqwest::blocking::{Client, ClientBuilder as SyncClientBuilder};
 use reqwest::ClientBuilder as AsyncClientBuilder;
 use rss::Channel;
 use serde_json::{from_str, Value};
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Mutex};
 use std::thread;
+use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
+use crate::mutex::LockResultExt;
+
 #[utoipa::path(
 context_path="/api/v1",
 responses(
@@ -34,14 +37,11 @@ tag="podcasts"
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(
     id: Path<String>,
-    podcast_service: Data<Mutex<PodcastService>>,
     mapping_service: Data<Mutex<MappingService>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
     let id_num = from_str::<i32>(&id).unwrap();
-    let podcast = podcast_service
-        .lock()
-        .expect("Error acquiring lock")
-        .get_podcast(id_num)
+    let podcast = PodcastService::get_podcast(&mut conn.get().unwrap(), id_num)
         .expect("Error getting podcast");
     let mapping_service = mapping_service.lock().expect("Error acquiring lock");
     let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(&podcast);
@@ -57,16 +57,13 @@ tag="podcasts"
 )]
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
-    podcast_service: Data<Mutex<PodcastService>>,
     mapping_service: Data<Mutex<MappingService>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
     let mapping_service = mapping_service
         .lock()
-        .unwrap_or_else(PoisonError::into_inner);
-    let podcasts = podcast_service
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-        .get_podcasts()
+        .ignore_poison();
+    let podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap())
         .unwrap();
 
     let mapped_podcasts = podcasts
@@ -93,7 +90,7 @@ pub async fn find_podcast(
         Ok(ITUNES) => {
             let mut podcast_service = podcast_service
                 .lock()
-                .expect("Error locking podcastservice");
+                .ignore_poison();
             log::debug!("Searching for podcast: {}", podcast);
             let res = podcast_service.find_podcast(&podcast).await;
             HttpResponse::Ok().json(res)
@@ -124,6 +121,7 @@ tag="podcasts"
 pub async fn add_podcast(
     track_id: web::Json<PodCastAddModel>,
     lobby: Data<Addr<Lobby>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
     let client = AsyncClientBuilder::new().build().unwrap();
     let res = client
@@ -137,7 +135,7 @@ pub async fn add_podcast(
     let mut podcast_service = PodcastService::new();
     let mapping_service = MappingService::new();
     podcast_service
-        .handle_insert_of_podcast(
+        .handle_insert_of_podcast(&mut conn.get().unwrap(),
             PodcastInsertModel {
                 feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
                 title: unwrap_string(&res["results"][0]["collectionName"]),
@@ -157,6 +155,7 @@ pub async fn add_podcast(
 pub async fn import_podcasts_from_opml(
     opml: web::Json<OpmlModel>,
     lobby: Data<Addr<Lobby>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
     spawn_blocking(move || {
         let rng = rand::thread_rng();
@@ -165,13 +164,8 @@ pub async fn import_podcasts_from_opml(
 
         for outline in document.body.outlines {
             let client = SyncClientBuilder::new().build().unwrap();
-            executor::block_on(insert_outline(
-                outline.clone(),
-                client.clone(),
-                lobby.clone(),
-                rng.clone(),
-                environment.clone(),
-            ));
+            executor::block_on(insert_outline(outline.clone(), client.clone(), lobby.clone(), rng
+                .clone(), environment.clone(), conn.clone()));
         }
     });
 
@@ -182,6 +176,7 @@ pub async fn import_podcasts_from_opml(
 pub async fn add_podcast_from_podindex(
     id: web::Json<PodCastAddModel>,
     lobby: Data<Addr<Lobby>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
     let mut environment = EnvironmentService::new();
 
@@ -190,17 +185,17 @@ pub async fn add_podcast_from_podindex(
     }
 
     spawn_blocking(move || {
-        start_download_podindex(id.track_id, lobby);
+        start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap());
     });
     HttpResponse::Ok()
 }
 
-fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>) {
+fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let mut podcast_service = PodcastService::new();
         podcast_service
-            .insert_podcast_from_podindex(id, lobby)
+            .insert_podcast_from_podindex(conn, id, lobby)
             .await;
     });
 }
@@ -210,7 +205,8 @@ pub async fn query_for_podcast(
     podcast: Path<String>,
     podcast_service: Data<Mutex<PodcastEpisodeService>>,
 ) -> impl Responder {
-    let mut podcast_service = podcast_service.lock().unwrap();
+    let mut podcast_service = podcast_service.lock()
+        .ignore_poison();
     let res = podcast_service.query_for_podcast(&podcast);
 
     HttpResponse::Ok().json(res)
@@ -221,13 +217,15 @@ pub async fn download_podcast(
     id: Path<String>,
     lobby: Data<Addr<Lobby>>,
     podcast_service: Data<Mutex<PodcastService>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
     let id_num = from_str::<i32>(&id).unwrap();
-    let mut podcast_service = podcast_service.lock().unwrap();
-    let podcast = podcast_service.get_podcast_by_id(id_num);
+    let mut podcast_service = podcast_service.lock()
+        .ignore_poison();
+    let podcast = podcast_service.get_podcast_by_id(&mut conn.get().unwrap(),id_num);
     thread::spawn(move || {
         let mut podcast_service = PodcastService::new();
-        podcast_service.refresh_podcast(podcast.clone(), lobby);
+        podcast_service.refresh_podcast(podcast.clone(), lobby, &mut conn.get().unwrap());
     });
     HttpResponse::Ok().json("Refreshing podcast")
 }
@@ -237,7 +235,9 @@ pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
 ) -> impl Responder {
-    let mut podcast_service = podcast_service_mutex.lock().unwrap();
+    let mut podcast_service = podcast_service_mutex.lock()
+        .ignore_poison();
+
     podcast_service.update_favor_podcast(update_model.id, update_model.favored);
     HttpResponse::Ok().json("Favorited podcast")
 }
@@ -246,7 +246,7 @@ pub async fn favorite_podcast(
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,
 ) -> impl Responder {
-    let mut podcast_service = podcast_service_mutex.lock().unwrap();
+    let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
     let podcasts = podcast_service.get_favored_podcasts();
     HttpResponse::Ok().json(podcasts)
 }
@@ -254,11 +254,10 @@ pub async fn get_favored_podcasts(
 #[put("/podcast/{id}/active")]
 pub async fn update_active_podcast(
     id: Path<String>,
-    podcast_service_mutex: Data<Mutex<PodcastService>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
     let id_num = from_str::<i32>(&id).unwrap();
-    let mut podcast_service = podcast_service_mutex.lock().unwrap();
-    podcast_service.update_active_podcast(id_num);
+    PodcastService::update_active_podcast(&mut conn.get().unwrap(), id_num);
     HttpResponse::Ok().json("Updated active podcast")
 }
 
@@ -269,6 +268,7 @@ async fn insert_outline(
     lobby: Data<Addr<Lobby>>,
     mut rng: ThreadRng,
     environment: EnvironmentService,
+    conn: Data<DbPool>
 ) {
     if podcast.outlines.len() > 0 {
         for outline_nested in podcast.clone().outlines {
@@ -278,6 +278,7 @@ async fn insert_outline(
                 lobby.clone(),
                 rng.clone(),
                 environment.clone(),
+                conn.clone()
             )
             .await;
         }
@@ -299,6 +300,7 @@ async fn insert_outline(
 
     podcast_service
         .handle_insert_of_podcast(
+            &mut conn.get().unwrap(),
             PodcastInsertModel {
                 feed_url: podcast.clone().xml_url.expect("No feed url"),
                 title: channel.title,

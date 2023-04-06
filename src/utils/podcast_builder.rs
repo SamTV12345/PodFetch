@@ -10,6 +10,7 @@ pub struct PodcastBuilder {
     author: String,
 }
 
+#[derive(Clone)]
 pub struct PodcastExtra {
     pub id: i32,
     pub description: String,

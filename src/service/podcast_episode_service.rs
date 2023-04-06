@@ -12,6 +12,7 @@ use crate::service::path_service::PathService;
 use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
+use diesel::SqliteConnection;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use rss::Channel;
@@ -117,12 +118,14 @@ impl PodcastEpisodeService {
         return podcast;
     }
 
-    pub fn get_last_5_podcast_episodes(&mut self, podcast: Podcast) -> Vec<PodcastEpisode> {
-        self.db.get_last_5_podcast_episodes(podcast.id).unwrap()
+    pub fn get_last_5_podcast_episodes(conn: &mut SqliteConnection, podcast: Podcast) ->
+                                                                             Vec<PodcastEpisode> {
+        DB::get_last_5_podcast_episodes(conn, podcast.id).unwrap()
     }
 
     // Used for creating/updating podcasts
-    pub fn insert_podcast_episodes(&mut self, podcast: Podcast) -> Vec<PodcastEpisode> {
+    pub fn insert_podcast_episodes(&mut self, conn: &mut SqliteConnection, podcast: Podcast) ->
+                                                                             Vec<PodcastEpisode> {
         let client = ClientBuilder::new().build().unwrap();
         let result = client.get(podcast.clone().rssfeed).send().unwrap();
         let bytes = result.bytes().unwrap();
@@ -139,13 +142,13 @@ impl PodcastEpisodeService {
         }
 
         for (_, item) in channel.items.iter().enumerate() {
-            let mut db = DB::new().unwrap();
             let itunes_ext = item.clone().itunes_ext;
 
             match itunes_ext {
                 Some(itunes_ext) => {
                     let result =
-                        db.get_podcast_episode_by_url(&item.enclosure().unwrap().url.to_string());
+                        DB::get_podcast_episode_by_url(conn, &item.enclosure().unwrap().url
+                            .to_string());
                     let mut duration_episode = 0;
 
                     if result.unwrap().is_none() {
@@ -157,7 +160,7 @@ impl PodcastEpisodeService {
                             None => {}
                         }
 
-                        let inserted_episode = db.insert_podcast_episodes(
+                        let inserted_episode = DB::insert_podcast_episodes(conn,
                             podcast.clone(),
                             item.clone(),
                             itunes_ext.image,
@@ -167,7 +170,8 @@ impl PodcastEpisodeService {
                     }
                 }
                 None => {
-                    let result = db.get_podcast_episode_by_url(
+                    let result = DB::get_podcast_episode_by_url(
+                        conn,
                         &item
                             .enclosure()
                             .expect("A podcast episode needs to have a podcast url")
@@ -178,7 +182,8 @@ impl PodcastEpisodeService {
 
                     if result.unwrap().is_none() {
                         let duration_episode = 0;
-                        let inserted_episode = db.insert_podcast_episodes(
+                        let inserted_episode = DB::insert_podcast_episodes(
+                            conn,
                             podcast.clone(),
                             item.clone(),
                             Some(
@@ -281,12 +286,12 @@ impl PodcastEpisodeService {
         }
     }
 
-    pub fn cleanup_old_episodes(&mut self, days: i32) {
+    pub fn cleanup_old_episodes(&mut self, days: i32, conn: &mut SqliteConnection) {
         let old_podcast_episodes = self.db.get_podcast_episodes_older_than_days(days);
 
         log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
         for old_podcast in old_podcast_episodes {
-            let podcast = self.db.get_podcast(old_podcast.clone().podcast_id).unwrap();
+            let podcast = DB::get_podcast(conn,old_podcast.clone().podcast_id).unwrap();
             let res = FileService::cleanup_old_episode(podcast, old_podcast.clone());
 
             match res {
@@ -301,12 +306,14 @@ impl PodcastEpisodeService {
         }
     }
 
-    pub fn get_podcast_episodes_of_podcast(&mut self, id_num: i32, last_id: Option<String>, )
+    pub fn get_podcast_episodes_of_podcast(conn: &mut SqliteConnection, id_num: i32, last_id:
+    Option<String>)
         -> Result<Vec<PodcastEpisode>, String> {
-        self.db.get_podcast_episodes_of_podcast(id_num, last_id)
+        DB::get_podcast_episodes_of_podcast(conn,id_num, last_id)
     }
 
-    pub fn get_podcast_episode_by_id(&mut self, id_num: &str) -> Result<Option<PodcastEpisode>, String> {
-        self.db.get_podcast_episode_by_id(id_num)
+    pub fn get_podcast_episode_by_id(conn: &mut SqliteConnection, id_num: &str) ->
+                                                                   Result<Option<PodcastEpisode>, String> {
+        DB::get_podcast_episode_by_id(conn, id_num)
     }
 }

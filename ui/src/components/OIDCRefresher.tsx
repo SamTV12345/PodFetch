@@ -12,13 +12,19 @@ export const OIDCRefresher:FC<PropsWithChildren> = ({children})=>{
             if (auth.user &&auth.user.expires_in&& auth.user.expires_in<70){
                 auth.signinSilent()
                     .then(()=>{
-                        axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user?.access_token
                     })
             }
         }, refreshInterval)
 
         return ()=>clearInterval(interval)
     }, [])
+
+    useEffect(()=>{
+        if(auth.user?.access_token){
+            console.log("Refreshing token")
+            axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.access_token;
+        }
+    },[auth.user?.access_token])
 
     return <>
         {children}

@@ -26,7 +26,8 @@ actix-web-actors = "4.2.0"
 actix-cors="0.6.4"
 rss = "2.0.2"
 regex = "1.7.1"
-diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "chrono"] }
+diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "chrono", "r2d2"] }
+r2d2 = "0.8.10"
 utoipa = { version = "3", features = ["actix_extras"] }
 futures = "0.3.26"
 utoipa-swagger-ui = {version = "3", features = ["actix-web"] }
