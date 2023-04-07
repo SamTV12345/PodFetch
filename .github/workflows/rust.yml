@@ -29,8 +29,10 @@ jobs:
 
       - name: Build
         run: cargo build --all --release && strip target/release/podgrabv2 && mv target/release/podgrabv2 target/release/podgrabv2_amd64
+      - name: Copy to root
+        run: cp target/release/podgrabv2_amd64 .
       - name: zip
-        run: zip -r podfetch-linux.zip target/release/podgrabv2_amd64 db static migrations LICENSE README.md
+        run: zip -r podfetch-linux.zip podgrabv2_amd64 db static migrations LICENSE README.md
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -63,8 +65,10 @@ jobs:
 
       - name: Build
         run: cargo build --all --release
+      - name: Copy to root
+        run: cp target/release/podgrabv2.exe .
       - name: Zip
-        run: zip -r podfetch-win.zip target/release/podgrabv2.exe db static migrations LICENSE README.md
+        run: 7za -tzip podfetch-win.zip podgrabv2.exe db static migrations LICENSE README.md
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -98,8 +102,10 @@ jobs:
 
       - name: Build for mac
         run: cargo build --all --release && strip target/release/podgrabv2 && mv target/release/podgrabv2 target/release/podgrabv2_darwin
+      - name: Copy to root
+        run: cp target/release/podgrabv2_darwin .
       - name: Zip
-        run: zip -r podfetch-apple.zip target/release/podgrabv2_darwin db static migrations LICENSE README.md
+        run: zip -r podfetch-apple.zip podgrabv2_darwin db static migrations LICENSE README.md
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
