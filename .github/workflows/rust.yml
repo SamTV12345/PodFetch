@@ -68,7 +68,7 @@ jobs:
       - name: Copy to root
         run: cp target/release/podgrabv2.exe .
       - name: Zip
-        run: 7za -tzip podfetch-win.zip podgrabv2.exe db static migrations LICENSE README.md
+        run: Compress-Archive -Path podgrabv2.exe,db,static,migrations,LICENSE,README.md -DestinationPath podfetch-win.zip
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
