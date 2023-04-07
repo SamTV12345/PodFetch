@@ -11,5 +11,6 @@ export const Dropdown = ()=>{
     value={language}>
     <option value="de-DE">Deutsch</option>
         <option value="en">English</option>
-        </select></>
+        <option value="fr">Français</option>
+    </select></>
 }
