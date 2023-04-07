@@ -5,6 +5,7 @@ import {apiURL} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {Setting} from "../models/Setting";
 import {useSnackbar} from "notistack";
+import {Loading} from "../components/Loading";
 
 export const SettingsPage = () => {
     const {t} = useTranslation()
@@ -17,13 +18,13 @@ export const SettingsPage = () => {
     },[])
 
     if(settings===undefined){
-        return <div>Loading...</div>
+        return <Loading/>
     }
 
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl text-center font-bold">Settings</h1>
+            <h1 className="text-2xl text-center font-bold">{t('settings')}</h1>
 
             <div className="bg-slate-900 rounded p-5 text-white">
                 <div className="grid grid-cols-2 gap-5">

@@ -18,6 +18,7 @@ import {
 import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities";
 import {LoginComponent} from "./components/LoginComponent";
 import {enqueueSnackbar} from "notistack";
+import {useTranslation} from "react-i18next";
 
 
 export const router =  createBrowserRouter(createRoutesFromElements(
@@ -48,6 +49,7 @@ const App:FC<PropsWithChildren> = ({children}) => {
     const podcasts = useAppSelector(state => state.common.podcasts)
     const [socket, setSocket] = useState<any>()
     const config = useAppSelector(state=>state.common.configModel)
+    const {t} = useTranslation()
 
     useEffect(() => {
         if(socket) {
@@ -64,10 +66,10 @@ const App:FC<PropsWithChildren> = ({children}) => {
                 if (checkIfPodcastAdded(parsed)) {
                     const podcast = parsed.podcast
                     dispatch(addPodcast(podcast))
-                    enqueueSnackbar("New podcast added: " + podcast.name, {variant: "success"})
+                    enqueueSnackbar(t('new-podcast-added',{name: podcast.name}), {variant: "success"})
                 } else if (checkIfPodcastEpisodeAdded(parsed)) {
                     if (store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
-                        enqueueSnackbar("New episode added: " + parsed.podcast_episode.name, {variant: "success"})
+                        enqueueSnackbar(t('new-podcast-episode-added', {name: parsed.podcast_episode.name}), {variant: "success"})
                         const downloadedPodcastEpisode = parsed.podcast_episode
                         let res = store.getState().common.selectedEpisodes.find(p => p.id === downloadedPodcastEpisode.id)
                         if (res == undefined) {

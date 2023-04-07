@@ -49,6 +49,7 @@ export const AddPodcast = ()=>{
             content: files[0].content
         })
             .then((v)=>{
+
                 console.log(v)
             })
             .catch((e)=>{
