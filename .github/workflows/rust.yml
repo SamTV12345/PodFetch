@@ -31,7 +31,7 @@ jobs:
         run: cargo build --all --release && strip target/release/podgrabv2 && mv target/release/podgrabv2 target/release/podgrabv2_amd64
       - uses: vimtor/action-zip@v1
         with:
-          files: target/release/podgrabv2_amd64 db/ static/ migrations/ LICENSE README.md
+          files: target/release/podgrabv2_amd64 db static migrations LICENSE README.md
           dest: podfetch-linux.zip
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -67,7 +67,7 @@ jobs:
         run: cargo build --all --release
       - uses: vimtor/action-zip@v1
         with:
-          files: target/release/podgrabv2.exe db/ static/ migrations/ LICENSE README.md
+          files: target/release/podgrabv2.exe db static migrations LICENSE README.md
           dest: podfetch-win.zip
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -104,7 +104,7 @@ jobs:
         run: cargo build --all --release && strip target/release/podgrabv2 && mv target/release/podgrabv2 target/release/podgrabv2_darwin
       - uses: vimtor/action-zip@v1
         with:
-          files: target/release/podgrabv2_darwin db/ static/ migrations/ LICENSE README.md
+          files: target/release/podgrabv2_darwin db static migrations LICENSE README.md
           dest: podfetch-apple.zip
       - name: Release
         uses: softprops/action-gh-release@v1
