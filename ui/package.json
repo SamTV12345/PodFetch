@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build-github":"tsc && vite build --outDir ../static"
   },
   "dependencies": {
     "@fontsource/anton": "^4.5.9",

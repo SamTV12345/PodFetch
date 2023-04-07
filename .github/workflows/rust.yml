@@ -21,6 +21,14 @@ jobs:
           - target: x86_64-apple-darwin
             archive: zip
     steps:
+      - name: Install and Build
+        env:
+            NODE_OPTIONS: --max-old-space-size=32768
+        run: |
+            cd ui
+            npm install
+            npm run build-github
+            cd ..
       - uses: actions/checkout@master
       - name: Compile and release
         uses: rust-build/rust-build.action@v1.4.3
@@ -29,3 +37,4 @@ jobs:
         with:
           RUSTTARGET: ${{ matrix.target }}
           ARCHIVE_TYPES: ${{ matrix.archive }}
+          EXTRA_FILES: Readme.md LICENSE db migrations static
