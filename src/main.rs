@@ -38,7 +38,7 @@ use r2d2::Pool;
 use regex::Regex;
 
 mod controllers;
-use crate::config::dbconfig::{establish_connection, get_database_url};
+use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
 use crate::constants::constants::ERROR_LOGIN_MESSAGE;
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
@@ -455,6 +455,11 @@ pub fn check_server_config(service1: EnvironmentService) {
 async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<SqliteConnection>>,
     String> {
     let manager = ConnectionManager::<SqliteConnection>::new(database_url);
-    let pool = Pool::new(manager).unwrap();
+    let pool = Pool::builder().max_size(16)
+        .connection_customizer(Box::new(ConnectionOptions {
+        enable_wal: true,
+        enable_foreign_keys: true,
+        busy_timeout: Some(Duration::from_secs(120)),
+    })).build(manager).unwrap();
     Ok(pool)
 }

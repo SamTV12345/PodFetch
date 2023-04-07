@@ -6,3 +6,5 @@ static/*
 .env
 
 !static/default.jpg
+podcast.db-shm
+podcast.db-wal
