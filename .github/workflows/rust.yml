@@ -18,8 +18,6 @@ jobs:
             archive: zip
           - target: x86_64-unknown-linux-musl
             archive: tar.gz tar.xz tar.zst
-          - target: x86_64-apple-darwin
-            archive: zip
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
