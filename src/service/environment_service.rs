@@ -1,5 +1,7 @@
+use std::env;
 use crate::models::settings::ConfigModel;
 use std::env::var;
+use regex::Regex;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -41,8 +43,20 @@ impl EnvironmentService {
         if !server_url.ends_with("/") {
             server_url+= "/"
         }
+
+        if  !var("SUB_DIRECTORY").is_ok(){
+            let re = Regex::new(r"^http[s]?://[^/]+(/.*)?$").unwrap();
+            let directory = re.captures(&*server_url).unwrap().get(1).unwrap().as_str();
+            if directory.ends_with("/"){
+                env::set_var("SUB_DIRECTORY", &directory[0..directory.len()-1]);
+            }
+            else{
+                env::set_var("SUB_DIRECTORY", directory);
+            }
+        }
+
         EnvironmentService {
-            server_url: server_url.clone() ,
+            server_url: server_url.clone(),
             polling_interval: var("POLLING_INTERVAL")
                 .unwrap_or("300".to_string())
                 .parse::<u32>()
@@ -75,7 +89,7 @@ impl EnvironmentService {
 
     pub fn get_environment(&self) {
         log::info!("Starting with the following environment variables:");
-        for (key, value) in std::env::vars() {
+        for (key, value) in env::vars() {
             log::debug!("{}: {}", key, value);
         }
         println!("Public server url: {}", self.server_url);

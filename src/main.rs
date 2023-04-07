@@ -10,9 +10,9 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 
 use actix::Actor;
 use actix_cors::Cors;
-use actix_files::Files;
+use actix_files::{Files, NamedFile};
 use actix_web::body::{BoxBody, EitherBody};
-use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
+use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::error::ErrorUnauthorized;
 use actix_web::middleware::Condition;
 use actix_web::web::{redirect, Data};
@@ -23,6 +23,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, thread};
 use std::env::var;
+use std::io::Read;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
@@ -34,6 +35,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use r2d2::Pool;
+use regex::Regex;
 
 mod controllers;
 use crate::config::dbconfig::{establish_connection, get_database_url};
@@ -190,13 +192,21 @@ pub fn run_poll(
     }
 }
 
+fn fix_links(content: &str)->String{
+    let dir = var("SUB_DIRECTORY").unwrap()+"/ui/";
+    content.replace("/ui/",&dir)
+}
+
 async fn index() -> impl Responder {
+    let index_html = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/static/index.html"
+    ));
+
+
     HttpResponse::Ok()
         .content_type("text/html")
-        .body(include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/static/index.html"
-        )))
+        .body(fix_links(index_html))
 }
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
@@ -213,6 +223,7 @@ async fn main() -> std::io::Result<()> {
     let notification_service = NotificationService::new();
     let settings_service = SettingsService::new();
 
+
     let lobby = Lobby::default();
     let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
 
@@ -226,7 +237,6 @@ async fn main() -> std::io::Result<()> {
     FileService::create_podcast_root_directory_exists();
 
 
-    let dev_enabled = var("DEV").is_ok();
 
     insert_default_settings_if_not_present();
     check_server_config(environment_service.clone());
@@ -277,19 +287,10 @@ async fn main() -> std::io::Result<()> {
     });
 
     HttpServer::new(move || {
-        let openapi = ApiDoc::openapi();
-        let service = get_api_config();
+
         App::new()
-            .service(Files::new("/podcasts", "podcasts"))
-            .service(redirect("/swagger-ui", "/swagger-ui/"))
-            .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
-            .wrap(Condition::new(dev_enabled, get_cors_config()))
-            .service(redirect("/", "/ui/"))
-            .service(service)
-            .service(get_ui_config())
-            .service(start_connection)
-            .service(get_rss_feed)
-            .service(get_rss_feed_for_podcast)
+            .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
+            .service(get_global_scope())
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
@@ -311,6 +312,27 @@ pub fn get_api_config() -> Scope {
         .service(login)
         .service(get_public_config)
         .service(get_private_api())
+}
+
+
+pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
+    let base_path = var("SUB_DIRECTORY").unwrap_or("/".to_string());
+    let openapi = ApiDoc::openapi();
+    let service = get_api_config();
+
+    let dev_enabled = var("DEV").is_ok();
+
+    web::scope(&base_path)
+        .service(Files::new("/podcasts", "podcasts"))
+        .service(redirect("/swagger-ui", "./swagger-ui/"))
+        .service(SwaggerUi::new("./swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
+        .wrap(Condition::new(dev_enabled, get_cors_config()))
+        .service(redirect("/", "./ui/"))
+        .service(service)
+        .service(get_ui_config())
+        .service(start_connection)
+        .service(get_rss_feed)
+        .service(get_rss_feed_for_podcast)
 }
 
 fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
@@ -354,11 +376,42 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
         .wrap(Condition::new(enable_oidc_auth, oidc_auth))
 }
 
+
 pub fn get_ui_config() -> Scope {
     web::scope("/ui")
+        .service(redirect("", "./"))
         .route("/index.html", web::get().to(index))
         .route("/{path:[^.]*}", web::get().to(index))
-        .service(Files::new("/", "./static").index_file("index.html"))
+        .default_service(fn_service(|req: ServiceRequest| async {
+            let (req, _) = req.into_parts();
+            let path = req.path();
+
+            let test = Regex::new(r"/ui/(.*)").unwrap();
+            let rs =  test.captures(path).unwrap().get(1).unwrap().as_str();
+            let file = NamedFile::open_async(format!("{}/{}",
+                                                     "./static", rs)).await?;
+            let mut content = String::new();
+
+            let type_of = file.content_type().to_string();
+            let res = file.file().read_to_string(&mut content);
+
+            match res {
+                Ok(_) => {},
+                Err(_) => {
+                    return Ok(ServiceResponse::new(req.clone(), file.into_response(&req)))
+                }
+            }
+            if type_of.contains("css"){
+                content  = fix_links(&content)
+            }
+            else if type_of.contains("javascript"){
+                content = fix_links(&content)
+            }
+            let res = HttpResponse::Ok()
+                .content_type(type_of)
+                .body(content);
+            Ok(ServiceResponse::new(req, res))}))
+
 }
 
 pub fn get_cors_config() -> Cors {

@@ -18,6 +18,7 @@ import {useAppDispatch, useAppSelector} from "./store/hooks";
 import {AuthProvider} from "react-oidc-context";
 import {Loading} from "./components/Loading";
 import {OIDCRefresher} from "./components/OIDCRefresher";
+import {SnackbarProvider} from "notistack";
 
 const AuthWrapper:FC<PropsWithChildren> = ({children})=>{
     const dispatch = useAppDispatch()
@@ -53,7 +54,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
       <I18nextProvider i18n={i18n}>
           <Provider store={store}>
               <AuthWrapper>
-                <RouterProvider router={router}/>
+                  <SnackbarProvider maxSnack={4} >
+                    <RouterProvider router={router}/>
+                  </SnackbarProvider>
               </AuthWrapper>
           </Provider>
       </I18nextProvider>

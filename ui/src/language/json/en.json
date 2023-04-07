@@ -47,5 +47,6 @@
   "following-file-uploaded": "The following file will be uploaded:",
   "upload-opml": "Upload OPML",
   "logout": "Logout",
-  "oidc-login": "OIDC Login"
+  "oidc-login": "OIDC Login",
+  "settings-saved": "Settings saved"
 }

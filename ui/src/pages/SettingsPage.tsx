@@ -4,11 +4,12 @@ import {useEffect, useState} from "react";
 import {apiURL} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
 import {Setting} from "../models/Setting";
+import {useSnackbar} from "notistack";
 
 export const SettingsPage = () => {
     const {t} = useTranslation()
     const [settings, setSettings] = useState<Setting>()
-
+    const {enqueueSnackbar} = useSnackbar()
     useEffect(()=>{
         axios.get(apiURL+"/settings").then((res:AxiosResponse<Setting>)=>{
             setSettings(res.data)
@@ -59,6 +60,9 @@ export const SettingsPage = () => {
                     <div className="flex-1"></div>
                     <button className=" p-2 bg-blue-600 rounded hover:bg-blue-500" onClick={()=>{
                         axios.put(apiURL+"/settings", settings)
+                            .then(()=>{
+                                enqueueSnackbar(t('settings-saved'), {variant: "success"})
+                            })
                     }}>
                         {t('save')}
                     </button>
