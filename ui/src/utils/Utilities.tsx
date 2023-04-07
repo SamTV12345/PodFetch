@@ -32,8 +32,15 @@ if(isLocalhost && import.meta.env.DEV){
     uiURL="http://localhost:5173/ui"
 }
 else {
-    apiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/api/v1"
-    uiURL=window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/ui"
+    if (window.location.pathname.startsWith("/ui")) {
+        apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port+"/api/v1"
+    }
+    else {
+        //match everything before /ui
+        const regex = /\/([^/]+)\/ui\//
+        apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/" + regex.exec(window.location.href)![1] + "/api/v1"
+    }
+    uiURL =window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/ui"
 }
 
 const wsEndpoint = "ws"

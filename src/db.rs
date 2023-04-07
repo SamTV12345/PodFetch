@@ -71,7 +71,6 @@ impl DB {
         podcas_episode_id_to_be_found: &str,
     ) -> Result<Option<PodcastEpisode>, String> {
         use crate::schema::podcast_episodes::dsl::*;
-        use crate::schema::podcast_episodes::episode_id;
 
         let found_podcast_episode = podcast_episodes
             .filter(episode_id.eq(podcas_episode_id_to_be_found))
@@ -87,7 +86,6 @@ impl DB {
         podcas_episode_url_to_be_found: &str,
     ) -> Result<Option<PodcastEpisode>, String> {
         use crate::schema::podcast_episodes::dsl::*;
-        use crate::schema::podcast_episodes::url;
 
         let found_podcast_episode = podcast_episodes
             .filter(url.eq(podcas_episode_url_to_be_found))
@@ -451,7 +449,6 @@ impl DB {
 
     pub fn insert_notification(&mut self, notification: Notification) -> Result<(), String> {
         use crate::schema::notifications::dsl::notifications;
-        use crate::schema::notifications::type_of_message;
         use crate::schema::notifications::*;
         do_retry(||{insert_into(notifications)
             .values((

@@ -1,5 +1,5 @@
 import {Modal} from "./Modal";
-import {useEffect, useRef, useState} from "react";
+import {useRef, useState} from "react";
 import {useDebounce} from "../utils/useDebounce";
 import {apiURL} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
@@ -9,6 +9,7 @@ import {setSearchedPodcasts} from "../store/CommonSlice";
 import {setModalOpen} from "../store/ModalSlice";
 import {useTranslation} from "react-i18next";
 import {FileItem, readFile} from "../utils/FileUtils";
+import {Spinner} from "./Spinner";
 
 export const AddPodcast = ()=>{
     const [searchText, setSearchText] = useState<string>("")
@@ -21,6 +22,7 @@ export const AddPodcast = ()=>{
     type DragState = "none" | "allowed" | "invalid"
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [files, setFiles] = useState<FileItem[]>([])
+    const [loading, setLoading] = useState<boolean>()
 
     type AddPostPostModel = {
         trackId: number,
@@ -68,10 +70,11 @@ export const AddPodcast = ()=>{
     }
 
     useDebounce(()=>{
+        setLoading(true)
         selectedSearchType === "itunes"?
             axios.get(apiURL+"/podcasts/0/"+searchText+"/search")
                 .then((v:AxiosResponse<GeneralModel>)=>{
-
+                        setLoading(false)
                     const agnosticModel:AgnosticPodcastDataModel[] = v.data.results.map((podcast)=>{
                         return {
                             title: podcast.collectionName,
@@ -84,7 +87,7 @@ export const AddPodcast = ()=>{
                     dispatch(setSearchedPodcasts(agnosticModel))
                 }):axios.get(apiURL+"/podcasts/1/"+searchText+"/search")
                 .then((v:AxiosResponse<PodIndexModel>)=>{
-
+                    setLoading(false)
                     let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast)=>{
                         return {
                             title: podcast.title,
@@ -142,7 +145,7 @@ export const AddPodcast = ()=>{
                        className={"border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"}
                        onChange={(v)=>setSearchText(v.target.value)}/>
                 <div className="border-2 border-gray-600 rounded p-5 max-h-80 overflow-y-scroll">
-                {
+                {loading?<div className="grid place-items-center"><Spinner className="w-12 h-12"/></div>:
                     searchedPodcasts&& searchedPodcasts.map((podcast, index)=>{
                         return <div key={index}>
                             <div className="flex">

@@ -29,7 +29,9 @@
     "react-router-dom": "^6.9.0",
     "react-waypoint": "^10.3.0",
     "redux": "^4.2.1",
-    "sanitize-html": "^2.10.0"
+    "sanitize-html": "^2.10.0",
+    "notistack": "^3.0.1",
+    "csstype": "^3.1.2"
   },
   "devDependencies": {
     "@types/react": "^18.0.30",
