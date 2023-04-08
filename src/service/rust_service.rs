@@ -111,7 +111,15 @@ impl PodcastService {
             podcast_insert.feed_url,
             podcast_insert.image_url.clone(),
         );
-        FileService::create_podcast_directory_exists(&podcast_insert.id.clone().to_string());
+        let podcast_directory_created = FileService::create_podcast_directory_exists
+            (&podcast_insert.id.clone().to_string());
+        match podcast_directory_created {
+            Ok(_) => {}
+            Err(e) => {
+                log::error!("Error creating podcast directory: {}", e);
+            }
+        }
+
         fileservice
             .download_podcast_image(
                 &podcast_insert.id.clone().to_string(),

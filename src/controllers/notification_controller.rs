@@ -4,6 +4,12 @@ use std::sync::Mutex;
 use crate::mutex::LockResultExt;
 use crate::service::notification_service::NotificationService;
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets all unread notifications.")),
+tag="notifications"
+)]
 #[get("/notifications/unread")]
 pub async fn get_unread_notifications(db: Data<Mutex<NotificationService>>) -> impl Responder {
     let notifications = db
@@ -17,6 +23,12 @@ pub struct NotificationId {
     id: i32,
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Dismisses a notification")),
+tag="notifications"
+)]
 #[put("/notifications/dismiss")]
 pub async fn dismiss_notifications(
     id: web::Json<NotificationId>,

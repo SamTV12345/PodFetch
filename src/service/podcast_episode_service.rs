@@ -1,4 +1,4 @@
-use crate::constants::constants::PodcastType;
+use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::messages::BroadcastMessage;
@@ -13,9 +13,11 @@ use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
 use diesel::SqliteConnection;
+use dotenv::var;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use rss::Channel;
+use crate::service::telegram_api::send_new_episode_notification;
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -86,6 +88,9 @@ impl PodcastEpisodeService {
                         podcast_episodes: None,
                     }),
                     None => {}
+                }
+                if var(TELEGRAM_API_ENABLED).is_ok(){
+                    send_new_episode_notification(podcast_episode, podcast)
                 }
             }
 
