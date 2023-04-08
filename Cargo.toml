@@ -25,6 +25,7 @@ chrono = {version  = "0.4.23", default-features=false, features = ["serde"]}
 actix-web-actors = "4.2.0"
 actix-cors="0.6.4"
 rss = "2.0.2"
+frankenstein = "0.24.1"
 regex = "1.7.1"
 diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "chrono", "r2d2"] }
 r2d2 = "0.8.10"

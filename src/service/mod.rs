@@ -10,3 +10,4 @@ pub mod websocket_service;
 pub mod jwkservice;
 pub mod notification_service;
 pub mod settings_service;
+pub mod telegram_api;
