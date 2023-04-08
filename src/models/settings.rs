@@ -1,9 +1,9 @@
 use crate::schema::*;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use crate::service::environment_service::OidcConfig;
-
+use utoipa::ToSchema;
 #[derive(
-    Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,
+    Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,ToSchema
 )]
 #[serde(rename_all = "camelCase")]
 pub struct Setting {

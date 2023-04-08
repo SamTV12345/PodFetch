@@ -8,6 +8,12 @@ use crate::DbPool;
 use crate::mutex::LockResultExt;
 use crate::service::settings_service::SettingsService;
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the current settings")),
+tag="podcast_episodes"
+)]
 #[get("/settings")]
 pub async fn get_settings(db: Data<Mutex<SettingsService>>) -> impl Responder {
     let mut db = db.lock().ignore_poison();
@@ -19,6 +25,13 @@ pub async fn get_settings(db: Data<Mutex<SettingsService>>) -> impl Responder {
     }
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body=Setting,
+responses(
+(status = 200, description = "Updates the current settings")),
+tag="settings"
+)]
 #[put("/settings")]
 pub async fn update_settings(db: Data<Mutex<SettingsService>>, settings: web::Json<Setting>) -> impl Responder {
     let mut db = db.lock().ignore_poison();
@@ -27,6 +40,12 @@ pub async fn update_settings(db: Data<Mutex<SettingsService>>, settings: web::Js
     HttpResponse::Ok().json(settings)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Runs a cleanup of old episodes")),
+tag="settings"
+)]
 #[put("/settings/runcleanup")]
 pub async fn run_cleanup(
     pdservice: Data<Mutex<PodcastEpisodeService>>,

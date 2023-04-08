@@ -48,6 +48,12 @@ pub async fn find_all_podcast_episodes_of_podcast(
 /**
  * id is the episode id (uuid)
  */
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Starts the download of a given podcast episode")),
+tag="podcast_episodes"
+)]
 #[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>) ->
                                                                                              impl

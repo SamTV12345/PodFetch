@@ -2,7 +2,7 @@ use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
-use std::io::Write;
+use std::io::{Error, Write};
 use std::path::Path;
 
 #[derive(Clone)]
@@ -37,17 +37,20 @@ impl FileService {
         return false;
     }
 
-    pub fn create_podcast_root_directory_exists() {
+    pub fn create_podcast_root_directory_exists() ->Result<(), Error> {
         if !Path::new("podcasts").exists() {
-            std::fs::create_dir("podcasts").expect("Error creating directory");
+            return std::fs::create_dir("podcasts")
         }
+
+        Ok(())
     }
 
-    pub fn create_podcast_directory_exists(podcast_id: &str) {
+    pub fn create_podcast_directory_exists(podcast_id: &str)->Result<(), Error> {
         if !Path::new(&format!("podcasts/{}", podcast_id)).exists() {
             std::fs::create_dir(&format!("podcasts/{}", podcast_id))
-                .expect("Error creating directory");
+                .expect("Error creating directory")
         }
+        Ok(())
     }
 
     pub async fn download_podcast_image(&self, podcast_id: &str, image_url: &str) {

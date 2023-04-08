@@ -234,7 +234,13 @@ async fn main() -> std::io::Result<()> {
 
     EnvironmentService::print_banner();
     init_logging();
-    FileService::create_podcast_root_directory_exists();
+    match FileService::create_podcast_root_directory_exists(){
+        Ok(_)=>{},
+        Err(e)=>{
+            log::error!("Could not create podcast root directory: {}",e);
+            panic!("Could not create podcast root directory: {}",e);
+        }
+    }
 
 
 
@@ -324,8 +330,8 @@ pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = ()
 
     web::scope(&base_path)
         .service(Files::new("/podcasts", "podcasts"))
-        .service(redirect("/swagger-ui", "./swagger-ui/"))
-        .service(SwaggerUi::new("./swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
+        .service(redirect("/swagger-ui", "/swagger-ui/"))
+        .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
         .wrap(Condition::new(dev_enabled, get_cors_config()))
         .service(redirect("/", "./ui/"))
         .service(service)
