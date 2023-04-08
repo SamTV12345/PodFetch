@@ -9,7 +9,7 @@ RUN  npm install && npm run build
 
 FROM samuel19982/rust-builder as dependency-cache
 USER root
-
+RUN rustup default nightly
 RUN apk add pkgconfig openssl-dev libc-dev
 WORKDIR /app/src
 
