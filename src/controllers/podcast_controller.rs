@@ -343,7 +343,7 @@ async fn insert_outline(
 
     let image_url = match channel.image {
         Some(image) => image.url,
-        None => environment.server_url.clone().to_owned() + "/ui/default.jpg",
+        None => environment.server_url.clone().to_owned() + "ui/default.jpg",
     };
 
     podcast_service

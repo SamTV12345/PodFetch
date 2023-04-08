@@ -5,7 +5,6 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::models::Notification;
 use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
-use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
@@ -135,7 +134,6 @@ impl PodcastEpisodeService {
         let result = client.get(podcast.clone().rssfeed).send().unwrap();
         let bytes = result.bytes().unwrap();
         let channel = Channel::read_from(&*bytes).unwrap();
-        let environment_service = EnvironmentService::new();
         self.update_podcast_fields(channel.clone(), podcast.id.clone());
 
         let mut podcast_inserted: Vec<PodcastEpisode> = Vec::new();
@@ -191,10 +189,7 @@ impl PodcastEpisodeService {
                             conn,
                             podcast.clone(),
                             item.clone(),
-                            Some(
-                                environment_service.server_url.clone().to_owned()
-                                    + "ui/default.jpg",
-                            ),
+                            Some("ui/default.jpg".parse().unwrap()),
                             duration_episode as i32,
                         );
                         podcast_inserted.push(inserted_episode);

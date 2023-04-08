@@ -178,7 +178,7 @@ export const AddPodcast = ()=>{
                          onClick={handleClick}>
                         {t('drag-here')}
                     </div>
-                    <input type={"file"} ref={fileInputRef} accept="application/xml" hidden onChange={(e)=>{
+                    <input type={"file"} ref={fileInputRef} accept="application/xml, text/xml, text/opml" hidden onChange={(e)=>{
                         handleInputChanged(e)}
                     } /></>}
                     {

@@ -19,7 +19,7 @@ use actix_web::web::{redirect, Data};
 use actix_web::{http, web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use clokwerk::{Scheduler, TimeUnits};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex};
 use std::time::Duration;
 use std::{env, thread};
 use std::env::var;
@@ -34,13 +34,12 @@ use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
-use frankenstein::Api;
 use r2d2::Pool;
 use regex::Regex;
 
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
-use crate::constants::constants::{ERROR_LOGIN_MESSAGE, TELEGRAM_API_ENABLED, TELEGRAM_BOT_TOKEN};
+use crate::constants::constants::{ERROR_LOGIN_MESSAGE, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -85,7 +84,6 @@ pub mod utils;
 pub mod mutex;
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
-pub static API: OnceLock<Api> = OnceLock::new();
 
 async fn validator(
     req: ServiceRequest,
@@ -242,13 +240,6 @@ async fn main() -> std::io::Result<()> {
             panic!("Could not create podcast root directory: {}",e);
         }
     }
-
-    if var(TELEGRAM_API_ENABLED).is_ok() {
-        API.set(Api::new(&var(TELEGRAM_BOT_TOKEN).expect("TELEGRAM_BOT_TOKEN must be set")))
-            .expect("Error creating API");
-    }
-
-
 
     insert_default_settings_if_not_present();
     check_server_config(environment_service.clone());
@@ -461,6 +452,13 @@ pub fn check_server_config(service1: EnvironmentService) {
 
     if service1.http_basic && service1.oidc_configured{
         log::error!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
+    }
+
+    if var(TELEGRAM_API_ENABLED).is_ok(){
+        if !var(TELEGRAM_BOT_TOKEN).is_ok() || !var(TELEGRAM_BOT_CHAT_ID).is_ok() {
+            log::error!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
+            std::process::exit(1);
+        }
     }
 }
 

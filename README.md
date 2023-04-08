@@ -102,8 +102,8 @@ To configure it you need to create an account on that website. After creating an
 
 | Variable            | Description                           | Default |
 |---------------------|---------------------------------------|---------|
-| PODINDEX_API_KEY    | the API key sent to you via mail      | %       |
-| PODINDEX_API_SECRET | the API secret also found in the mail | %       |
+| PODINDEX_API_KEY    | the api key sent to you via mail      | %       |
+| PODINDEX_API_SECRET | the api secret also found in the mail | %       |
 
 * % means an empty string is configured as default
 
@@ -112,7 +112,7 @@ After successful setup you should see on the settings page a green checkmark nex
 
 # Roadmap
 
-- [x] Add podcasts via Itunes API
+- [x] Add podcasts via Itunes api
 - [x] Check for new episodes.
 - [x] Download episodes.
 - [x] Play episodes.
@@ -126,6 +126,6 @@ After successful setup you should see on the settings page a green checkmark nex
 - [x] Add retrieving podcasts from Podcastindex.org.
 - [x] Basic Auth.
 - [x] Import from OPML file.
-- [x] Telegram Bot API to get alerted when new episodes are downloaded.
+- [x] Telegram Bot api to get alerted when new episodes are downloaded.
 - [ ] Like episodes.
 - [ ] Delete podcasts.
