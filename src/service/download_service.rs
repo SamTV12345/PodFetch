@@ -47,11 +47,39 @@ impl DownloadService {
         let mut resp = client.get(podcast_episode.url).send().unwrap();
         let mut image_response = client.get(podcast_episode.image_url).send().unwrap();
 
-        create_dir(format!(
+        let podcast_episode_dir = create_dir(format!(
             "podcasts/{}/{}",
             podcast.directory, podcast_episode.episode_id
-        ))
-        .expect("Error creating directory");
+        ));
+
+        match podcast_episode_dir {
+            Ok(_) => {}
+            Err(_) => {
+                match FileService::create_podcast_root_directory_exists(){
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.kind()==io::ErrorKind::AlreadyExists {
+                            log::info!("Podcast root directory already exists")
+                        }
+                        else {
+                            log::error!("Error creating podcast root directory");
+                        }
+                    }
+                }
+
+                match FileService::create_podcast_directory_exists(&podcast.directory) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.kind()==io::ErrorKind::AlreadyExists {
+                            log::info!("Podcast directory already exists")
+                        }
+                        else {
+                            log::error!("Error creating podcast directory {}",e);
+                        }
+                    }
+                }
+            }
+        }
 
         let mut podcast_out = std::fs::File::create(podcast_save_path.clone()).unwrap();
         let mut image_out = std::fs::File::create(image_save_path.clone()).unwrap();

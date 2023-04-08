@@ -43,7 +43,7 @@ pub async fn find_podcast_by_id(
     let id_num = from_str::<i32>(&id).unwrap();
     let podcast = PodcastService::get_podcast(&mut conn.get().unwrap(), id_num)
         .expect("Error getting podcast");
-    let mapping_service = mapping_service.lock().expect("Error acquiring lock");
+    let mapping_service = mapping_service.lock().ignore_poison();
     let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(&podcast);
     HttpResponse::Ok().json(mapped_podcast)
 }
@@ -113,6 +113,7 @@ pub async fn find_podcast(
 
 #[utoipa::path(
 context_path="/api/v1",
+request_body=PodCastAddModel,
 responses(
 (status = 200, description = "Adds a podcast to the database.")),
 tag="podcasts"
@@ -151,6 +152,13 @@ pub async fn add_podcast(
     HttpResponse::Ok()
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body=OpmlModel,
+responses(
+(status = 200, description = "Adds all podcasts of an opml podcast list to the database.")),
+tag="podcasts"
+)]
 #[post("/podcast/opml")]
 pub async fn import_podcasts_from_opml(
     opml: web::Json<OpmlModel>,
@@ -172,6 +180,13 @@ pub async fn import_podcasts_from_opml(
     HttpResponse::Ok()
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body=PodCastAddModel,
+responses(
+(status = 200, description = "Adds a podindex podcast to the database")),
+tag="podcasts"
+)]
 #[post("/podcast/podindex")]
 pub async fn add_podcast_from_podindex(
     id: web::Json<PodCastAddModel>,
@@ -200,6 +215,13 @@ fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteC
     });
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+params(("podcast", description="The podcast episode query parameter.")),
+responses(
+(status = 200, description = "Queries for a podcast episode by a query string ")),
+tag="podcasts"
+)]
 #[get("/podcasts/{podcast}/query")]
 pub async fn query_for_podcast(
     podcast: Path<String>,
@@ -212,6 +234,12 @@ pub async fn query_for_podcast(
     HttpResponse::Ok().json(res)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Refreshes a podcast episode")),
+tag="podcasts"
+)]
 #[post("/podcast/{id}/refresh")]
 pub async fn download_podcast(
     id: Path<String>,
@@ -230,6 +258,13 @@ pub async fn download_podcast(
     HttpResponse::Ok().json("Refreshing podcast")
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body=PodcastFavorUpdateModel,
+responses(
+(status = 200, description = "Updates favoring a podcast.", body=String)),
+tag="podcasts"
+)]
 #[put("/podcast/favored")]
 pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
@@ -242,6 +277,12 @@ pub async fn favorite_podcast(
     HttpResponse::Ok().json("Favorited podcast")
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Finds all favored podcasts.")),
+tag="podcasts"
+)]
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,
@@ -251,6 +292,13 @@ pub async fn get_favored_podcasts(
     HttpResponse::Ok().json(podcasts)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Updates the active state of a podcast. If inactive the podcast \
+will not be refreshed automatically.")),
+tag="podcasts"
+)]
 #[put("/podcast/{id}/active")]
 pub async fn update_active_podcast(
     id: Path<String>,

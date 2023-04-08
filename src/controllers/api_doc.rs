@@ -10,24 +10,40 @@ use std::future;
 use std::future::Ready;
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 use utoipa::{Modify, OpenApi};
-
-use crate::controllers::podcast_controller::__path_find_all_podcasts;
-use crate::controllers::podcast_controller::__path_find_podcast_by_id;
+use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::controllers::podcast_episode_controller::__path_find_all_podcast_episodes_of_podcast;
 use crate::controllers::watch_time_controller::*;
+use crate::controllers::podcast_controller::*;
+use crate::controllers::notification_controller::*;
+use crate::controllers::settings_controller::*;
+use crate::models::settings::Setting;
+
 #[derive(OpenApi)]
 #[openapi(
 paths(
+    find_podcast,
+    add_podcast,
+    import_podcasts_from_opml,
+    add_podcast_from_podindex,
     find_podcast_by_id,
+    query_for_podcast,
+    download_podcast,
+    favorite_podcast,
+    get_favored_podcasts,
     find_all_podcasts,
+    get_settings,
+    update_settings,
+    run_cleanup,
     find_all_podcast_episodes_of_podcast,
     log_watchtime,
     get_last_watched,
+    get_unread_notifications,
+    dismiss_notifications,
     get_watchtime
 ),
 components(
-schemas(Podcast, PodcastEpisode, ItunesModel, PodcastHistoryItem,
-PodcastWatchedEpisodeModel, PodcastWatchedPostModel, PodCastAddModel)
+schemas(Podcast, PodcastEpisode, ItunesModel, PodcastHistoryItem,PodcastFavorUpdateModel,
+PodcastWatchedEpisodeModel, PodcastWatchedPostModel, PodCastAddModel, Setting)
 ),
 tags(
 (name = "podcasts", description = "Podcast management endpoints."),

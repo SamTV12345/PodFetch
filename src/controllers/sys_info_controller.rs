@@ -8,6 +8,13 @@ use std::sync::{Mutex};
 use sysinfo::{System, SystemExt};
 use crate::mutex::LockResultExt;
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the system information",
+body = SysExtraInfo)),
+tag="sys"
+)]
 #[get("/sys/info")]
 pub async fn get_sys_info() -> impl Responder {
     let mut sys = System::new_all();
@@ -26,6 +33,13 @@ pub struct SysExtraInfo {
     pub podcast_directory: u64,
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the environment configuration",
+body=SysExtraInfo)),
+tag="sys"
+)]
 #[get("/sys/config")]
 pub async fn get_public_config() -> impl Responder {
     let mut env = EnvironmentService::new();
@@ -33,6 +47,13 @@ pub async fn get_public_config() -> impl Responder {
     HttpResponse::Ok().json(config)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Performs a login if basic auth is enabled",
+body=String)),
+tag="sys"
+)]
 #[post("/login")]
 pub async fn login(
     auth: web::Json<LoginRequest>,
