@@ -48,6 +48,7 @@ COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
 COPY --from=builder /app/src/migrations /app/migrations
 COPY --from=builder /app/src/db /app/db
 COPY --from=ui-builder /app/dist /app/static
+COPY ./docs/default.jpg /app/static/default.jpg
 
 EXPOSE 8000
 CMD ["./podgrabv2"]

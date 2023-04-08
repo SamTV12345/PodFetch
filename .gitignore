@@ -8,3 +8,5 @@ static/*
 !static/default.jpg
 podcast.db-shm
 podcast.db-wal
+
+static/*.jpg
