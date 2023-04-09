@@ -10,7 +10,7 @@ use crate::service::rust_service::PodcastService;
 use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
-use actix_web::{get, post, put, ResponseError};
+use actix_web::{get, post, put};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
 use futures::executor;
@@ -136,21 +136,22 @@ pub async fn add_podcast(
 
     let mut podcast_service = PodcastService::new();
     let mapping_service = MappingService::new();
-    podcast_service
-        .handle_insert_of_podcast(&mut conn.get().unwrap(),
-            PodcastInsertModel {
-                feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
-                title: unwrap_string(&res["results"][0]["collectionName"]),
-                id: unwrap_string(&res["results"][0]["collectionId"])
-                    .parse()
-                    .unwrap(),
-                image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
-            },
-            mapping_service,
-            lobby,
+    match  podcast_service.handle_insert_of_podcast(&mut conn.get().unwrap(),
+                                  PodcastInsertModel {
+                                      feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
+                                      title: unwrap_string(&res["results"][0]["collectionName"]),
+                                      id: unwrap_string(&res["results"][0]["collectionId"])
+                                          .parse()
+                                          .unwrap(),
+                                      image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
+                                  },
+                                  mapping_service,
+                                  lobby,
         )
-        .await;
-    HttpResponse::Ok()
+        .await{
+        Ok(_) => HttpResponse::Ok().json("Podcast added"),
+        Err(e) => HttpResponse::BadRequest().json(e.to_string())
+    }
 }
 
 #[utoipa::path(
@@ -369,5 +370,5 @@ async fn insert_outline(
             mapping_service,
             lobby.clone(),
         )
-        .await;
+        .await.expect("Error inserting podcast");
 }

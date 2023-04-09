@@ -8,3 +8,4 @@ pub mod sys_info_controller;
 pub mod watch_time_controller;
 pub mod web_socket;
 pub mod websocket_controller;
+pub mod user_controller;

@@ -1,0 +1,16 @@
+-- Your SQL goes here
+CREATE TABLE if not exists users (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR(255) NOT NULL,
+    role VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE invites (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    role VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    accepted_at DATETIME NULL,
+    expires_at DATETIME NOT NULL
+)

@@ -20,7 +20,7 @@ use std::time::SystemTime;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::config::dbconfig::establish_connection;
-use crate::exception::exceptions::{PodFetchError, PodFetchErrorTrait};
+use crate::exception::exceptions::{PodFetchError};
 
 #[derive(Clone)]
 pub struct PodcastService {

@@ -22,3 +22,9 @@ pub const ERROR_LOGIN_MESSAGE: &str = "User either not found or password is inco
 pub const TELEGRAM_BOT_TOKEN: &str = "TELEGRAM_BOT_TOKEN";
 pub const TELEGRAM_BOT_CHAT_ID: &str = "TELEGRAM_BOT_CHAT_ID";
 pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";
+
+
+// User management roles
+pub const ROLE_ADMIN: &str = "admin";
+pub const ROLE_UPLOADER: &str = "uploader";
+pub const ROLE_USER: &str = "User";

@@ -1,6 +1,16 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    invites (id) {
+        id -> Text,
+        role -> Text,
+        created_at -> Timestamp,
+        accepted_at -> Nullable<Timestamp>,
+        expires_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     notifications (id) {
         id -> Integer,
         type_of_message -> Text,
@@ -67,13 +77,25 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    users (id) {
+        id -> Integer,
+        username -> Text,
+        role -> Text,
+        password -> Nullable<Text>,
+        created_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    invites,
     notifications,
     podcast_episodes,
     podcast_history_items,
     podcasts,
     settings,
+    users,
 );

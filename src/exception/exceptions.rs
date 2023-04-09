@@ -1,8 +1,6 @@
 use std::fmt::{Display, Formatter};
-use actix_web::{error, HttpResponse, HttpResponseBuilder};
-use actix_web::http::header::ContentType;
+use actix_web::{error, HttpResponse};
 use actix_web::http::StatusCode;
-use serde_json::json;
 
 
 pub trait PodFetchErrorTrait {
@@ -51,5 +49,17 @@ impl error::ResponseError for PodFetchError {
 impl PodFetchError{
     pub fn podcast_already_exists() -> PodFetchError {
         PodFetchError::new("Podcast already exists", StatusCode::BAD_REQUEST)
+    }
+
+    pub fn no_permissions_to_onboard_user() -> PodFetchError {
+        PodFetchError::new("You do not have permissions to onboard a User", StatusCode::BAD_REQUEST)
+    }
+
+    pub fn no_permission_to_delete_user() -> PodFetchError {
+        PodFetchError::new("You do not have permissions to delete a User", StatusCode::BAD_REQUEST)
+    }
+
+    pub fn no_permission_to_onboard_user() -> PodFetchError {
+        PodFetchError::new("You do not have permissions to onboard a User", StatusCode::UNAUTHORIZED)
     }
 }

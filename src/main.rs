@@ -7,14 +7,13 @@ extern crate core;
 extern crate serde_json;
 
 use actix_web_httpauth::middleware::HttpAuthentication;
-
 use actix::Actor;
 use actix_cors::Cors;
 use actix_files::{Files, NamedFile};
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::error::ErrorUnauthorized;
-use actix_web::middleware::Condition;
+use actix_web::middleware::{Condition, Logger, NormalizePath};
 use actix_web::web::{redirect, Data};
 use actix_web::{http, web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use actix_web_httpauth::extractors::basic::BasicAuth;
@@ -37,6 +36,7 @@ use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
 
+pub mod schema;
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
 use crate::constants::constants::{ERROR_LOGIN_MESSAGE, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
@@ -61,6 +61,8 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 pub use controllers::controller_utils::*;
+use crate::controllers::user_controller::{create_invite, onboard_user, test123};
+
 mod constants;
 mod db;
 mod models;
@@ -79,7 +81,7 @@ use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
 
 mod config;
-pub mod schema;
+
 pub mod utils;
 pub mod mutex;
 mod exception;
@@ -153,9 +155,9 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_ser
     }).collect::<Vec<CustomJwk>>();
 
     let jwk = response.clone();
-    let test123 = jwk.get(0).expect("Your jwk set needs to have RS256");
+    let custom_jwk = jwk.get(0).expect("Your jwk set needs to have RS256");
 
-    let jwk_string = serde_json::to_string(&test123).unwrap();
+    let jwk_string = serde_json::to_string(&custom_jwk).unwrap();
 
     let jwk = from_str::<Jwk>(&*jwk_string).unwrap();
     let key = DecodingKey::from_jwk(&jwk).unwrap();
@@ -305,6 +307,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(Data::new(pool.clone()))
+            .wrap(Condition::new(true,Logger::default()))
     })
     .bind(("0.0.0.0", 8000))?
     .run()
@@ -313,11 +316,16 @@ async fn main() -> std::io::Result<()> {
 
 pub fn get_api_config() -> Scope {
     web::scope("/api/v1")
-        .service(login)
-        .service(get_public_config)
-        .service(get_private_api())
+        .configure(config)
 }
 
+
+fn config(cfg: &mut web::ServiceConfig){
+    cfg.service(login)
+        .service(get_public_config)
+        .service(get_private_api())
+        .service(get_user_management());
+}
 
 pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
     let base_path = var("SUB_DIRECTORY").unwrap_or("/".to_string());
@@ -427,6 +435,13 @@ pub fn get_cors_config() -> Cors {
         .allowed_header(http::header::CONNECTION)
         .allowed_header(http::header::UPGRADE)
         .max_age(3600)
+}
+
+
+pub fn get_user_management()->Scope{
+    println!("User management enabled");
+    web::scope("/users")
+        .service(web::resource("/path1").to(|| HttpResponse::Ok()))
 }
 
 pub fn insert_default_settings_if_not_present() {
