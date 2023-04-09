@@ -20,6 +20,7 @@ use std::time::SystemTime;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::config::dbconfig::establish_connection;
+use crate::exception::exceptions::{PodFetchError, PodFetchErrorTrait};
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -65,8 +66,7 @@ impl PodcastService {
     }
 
     pub async fn insert_podcast_from_podindex(&mut self, conn: &mut SqliteConnection, id: i32,
-                                              lobby:
-    Data<Addr<Lobby>>) {
+                                              lobby: Data<Addr<Lobby>>) ->Result<(), PodFetchError>{
         let mapping_service = MappingService::new();
         let resp = self
             .client
@@ -93,7 +93,7 @@ impl PodcastService {
             mapping_service,
             lobby,
         )
-        .await;
+        .await
     }
 
     pub async fn handle_insert_of_podcast(
@@ -102,7 +102,12 @@ impl PodcastService {
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
         lobby: Data<Addr<Lobby>>,
-    ) {
+    ) ->Result<(),PodFetchError>{
+        let opt_podcast = DB::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone() );
+        if opt_podcast.is_some() {
+            return Err(PodFetchError::podcast_already_exists())
+        }
+
         let fileservice = FileService::new();
         let inserted_podcast = DB::add_podcast_to_database(
             conn,
@@ -162,6 +167,7 @@ impl PodcastService {
                 })
                 .await
                 .unwrap();
+                Ok(())
             }
             None => {
                 panic!("No podcast found")

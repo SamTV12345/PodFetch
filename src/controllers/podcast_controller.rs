@@ -10,7 +10,7 @@ use crate::service::rust_service::PodcastService;
 use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
-use actix_web::{get, post, put};
+use actix_web::{get, post, put, ResponseError};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
 use futures::executor;
@@ -25,6 +25,7 @@ use std::sync::{Mutex};
 use std::thread;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
+use crate::exception::exceptions::PodFetchError;
 use crate::mutex::LockResultExt;
 
 #[utoipa::path(
@@ -200,19 +201,25 @@ pub async fn add_podcast_from_podindex(
     }
 
     spawn_blocking(move || {
-        start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap());
+        match  start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap()){
+            Ok(_) => {},
+            Err(e)=>{
+                log::error!("Error: {}", e)
+            }
+        }
     });
     HttpResponse::Ok()
 }
 
-fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection) {
+fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection)
+    ->Result<(), PodFetchError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let mut podcast_service = PodcastService::new();
         podcast_service
             .insert_podcast_from_podindex(conn, id, lobby)
-            .await;
-    });
+            .await
+    })
 }
 
 #[utoipa::path(
