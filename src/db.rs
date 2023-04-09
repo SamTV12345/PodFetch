@@ -40,6 +40,15 @@ impl DB {
         })
     }
 
+    pub fn find_by_rss_feed_url(conn:&mut SqliteConnection, feed_url: &str) -> Option<Podcast> {
+        use crate::schema::podcasts::dsl::*;
+        podcasts
+            .filter(rssfeed.eq(feed_url))
+            .first::<Podcast>(conn)
+            .optional()
+            .expect("Error loading podcast by rss feed url")
+    }
+
     pub fn get_podcasts(conn: &mut SqliteConnection) -> Result<Vec<Podcast>, String> {
         use crate::schema::podcasts::dsl::podcasts;
         let result = podcasts

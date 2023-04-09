@@ -82,6 +82,7 @@ mod config;
 pub mod schema;
 pub mod utils;
 pub mod mutex;
+mod exception;
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 

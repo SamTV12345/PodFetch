@@ -25,6 +25,7 @@ use std::sync::{Mutex};
 use std::thread;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
+use crate::exception::exceptions::PodFetchError;
 use crate::mutex::LockResultExt;
 
 #[utoipa::path(
@@ -137,18 +138,18 @@ pub async fn add_podcast(
     let mapping_service = MappingService::new();
     podcast_service
         .handle_insert_of_podcast(&mut conn.get().unwrap(),
-            PodcastInsertModel {
-                feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
-                title: unwrap_string(&res["results"][0]["collectionName"]),
-                id: unwrap_string(&res["results"][0]["collectionId"])
-                    .parse()
-                    .unwrap(),
-                image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
-            },
-            mapping_service,
-            lobby,
+                                  PodcastInsertModel {
+                                      feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
+                                      title: unwrap_string(&res["results"][0]["collectionName"]),
+                                      id: unwrap_string(&res["results"][0]["collectionId"])
+                                          .parse()
+                                          .unwrap(),
+                                      image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
+                                  },
+                                  mapping_service,
+                                  lobby,
         )
-        .await;
+        .await.expect("Error inserting podcast");
     HttpResponse::Ok()
 }
 
@@ -200,19 +201,25 @@ pub async fn add_podcast_from_podindex(
     }
 
     spawn_blocking(move || {
-        start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap());
+        match  start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap()){
+            Ok(_) => {},
+            Err(e)=>{
+                log::error!("Error: {}", e)
+            }
+        }
     });
     HttpResponse::Ok()
 }
 
-fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection) {
+fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection)
+    ->Result<(), PodFetchError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let mut podcast_service = PodcastService::new();
         podcast_service
             .insert_podcast_from_podindex(conn, id, lobby)
-            .await;
-    });
+            .await
+    })
 }
 
 #[utoipa::path(
@@ -362,5 +369,5 @@ async fn insert_outline(
             mapping_service,
             lobby.clone(),
         )
-        .await;
+        .await.expect("TODO: panic message");
 }
