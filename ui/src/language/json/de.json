@@ -51,5 +51,6 @@
   "settings-saved": "Einstellungen gespeichert",
   "new-podcast-added": "Neuer Podcast {{name}} hinzugefügt",
   "new-podcast-episode-added": "Neue Episode {{name}} hinzugefügt",
-  "error-occured": "Ein Fehler ist aufgetreten"
+  "error-occured": "Ein Fehler ist aufgetreten",
+  "create-account-podfetch": "Konto bei Podfetch erstellen"
 }

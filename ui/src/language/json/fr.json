@@ -51,5 +51,6 @@
   "settings-saved" : "Paramètres sauvegardés",
   "new-podcast-added" : "nouveau podcast {{nom}} ajouté",
   "new-podcast-episode-added" : "Nouvel épisode {{nom}} ajouté",
-  "error-occured" : "Une erreur est survenue"
+  "error-occured" : "Une erreur est survenue",
+  "create-account-podfetch": "Créer un compte Podfetch"
 }

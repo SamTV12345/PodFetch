@@ -23,6 +23,7 @@ use std::time::Duration;
 use std::{env, thread};
 use std::env::var;
 use std::io::Read;
+use std::str::FromStr;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
@@ -31,15 +32,17 @@ use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
+use actix_web::http::header::HeaderValue;
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
+use reqwest::header::HeaderName;
 
 pub mod schema;
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
-use crate::constants::constants::{ERROR_LOGIN_MESSAGE, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::constants::constants::{BASIC_AUTH, ERROR_LOGIN_MESSAGE, OIDC_AUTH, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -61,7 +64,7 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 pub use controllers::controller_utils::*;
-use crate::controllers::user_controller::{create_invite, onboard_user, test123};
+use crate::controllers::user_controller::{create_invite, get_invite, get_invites, onboard_user};
 
 mod constants;
 mod db;
@@ -89,7 +92,7 @@ mod exception;
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
 async fn validator(
-    req: ServiceRequest,
+    mut req: ServiceRequest,
     _credentials: BasicAuth,
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let authorization = req.headers().get("Authorization").unwrap().to_str();
@@ -106,6 +109,8 @@ async fn validator(
             let password = auth[1];
             let env = EnvironmentService::new();
             if username == env.username && password == env.password {
+                req.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                     HeaderValue::from_str(username).unwrap());
                 return Ok(req);
             }
         }
@@ -321,10 +326,11 @@ pub fn get_api_config() -> Scope {
 
 
 fn config(cfg: &mut web::ServiceConfig){
-    cfg.service(login)
+    cfg.service(get_invite)
+        .service(onboard_user)
+        .service(login)
         .service(get_public_config)
-        .service(get_private_api())
-        .service(get_user_management());
+        .service(get_private_api());
 }
 
 pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
@@ -348,9 +354,9 @@ pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = ()
 }
 
 fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
-    let enable_basic_auth = var("BASIC_AUTH").is_ok();
+    let enable_basic_auth = var(BASIC_AUTH).is_ok();
     let auth = HttpAuthentication::basic(validator);
-    let enable_oidc_auth = var("OIDC_AUTH").is_ok();
+    let enable_oidc_auth = var(OIDC_AUTH).is_ok();
     let jwk_service = JWKService{
         timestamp:0,
         jwk:None
@@ -361,6 +367,9 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
     });
 
     web::scope("")
+        .wrap(Condition::new(enable_basic_auth, auth))
+        .wrap(Condition::new(enable_oidc_auth, oidc_auth))
+        .configure(config_secure_user_management)
         .service(find_podcast)
         .service(add_podcast)
         .service(find_all_podcasts)
@@ -384,10 +393,13 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
         .service(import_podcasts_from_opml)
         .service(run_cleanup)
         .service(add_podcast_from_podindex)
-        .wrap(Condition::new(enable_basic_auth, auth))
-        .wrap(Condition::new(enable_oidc_auth, oidc_auth))
 }
 
+pub fn config_secure_user_management(cfg: &mut web::ServiceConfig){
+    if var(BASIC_AUTH).is_ok()||var(OIDC_AUTH).is_ok() {
+        cfg.service(get_secure_user_management());
+    }
+}
 
 pub fn get_ui_config() -> Scope {
     web::scope("/ui")
@@ -437,11 +449,17 @@ pub fn get_cors_config() -> Cors {
         .max_age(3600)
 }
 
+pub fn get_public_user_management() ->Scope{
+    web::scope("")
+        .service(onboard_user)
+        .service(get_invite)
+}
 
-pub fn get_user_management()->Scope{
-    println!("User management enabled");
+pub fn get_secure_user_management() ->Scope{
     web::scope("/users")
-        .service(web::resource("/path1").to(|| HttpResponse::Ok()))
+        .service(create_invite)
+        .service(get_invites)
+        .service(onboard_user)
 }
 
 pub fn insert_default_settings_if_not_present() {

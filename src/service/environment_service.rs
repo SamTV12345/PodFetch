@@ -2,6 +2,7 @@ use std::env;
 use crate::models::settings::ConfigModel;
 use std::env::var;
 use regex::Regex;
+use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -29,7 +30,7 @@ pub struct EnvironmentService {
 impl EnvironmentService {
     pub fn new() -> EnvironmentService {
         let mut option_oidc_config = None;
-        let oidc_configured = var("OIDC_AUTH").is_ok();
+        let oidc_configured = var(OIDC_AUTH).is_ok();
         if oidc_configured{
             option_oidc_config = Some(OidcConfig{
                 redirect_uri: var("OIDC_REDIRECT_URI").expect("OIDC redirect uri not configured"),
@@ -63,9 +64,9 @@ impl EnvironmentService {
                 .unwrap(),
             podindex_api_key: var("PODINDEX_API_KEY").unwrap_or("".to_string()),
             podindex_api_secret: var("PODINDEX_API_SECRET").unwrap_or("".to_string()),
-            http_basic: var("BASIC_AUTH").is_ok(),
-            username: var("USERNAME").unwrap_or("".to_string()),
-            password: var("PASSWORD").unwrap_or("".to_string()),
+            http_basic: var(BASIC_AUTH).is_ok(),
+            username: var(USERNAME).unwrap_or("".to_string()),
+            password: var(PASSWORD).unwrap_or("".to_string()),
             oidc_configured,
             oidc_config: option_oidc_config
         }

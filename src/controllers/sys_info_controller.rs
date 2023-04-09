@@ -5,9 +5,12 @@ use actix_web::{get, post};
 use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
 use std::sync::{Mutex};
+use sha1::digest::DynDigest;
 use sysinfo::{System, SystemExt};
+use crate::DbPool;
+use crate::models::user::User;
 use crate::mutex::LockResultExt;
-
+use sha256::{digest,try_digest};
 #[utoipa::path(
 context_path="/api/v1",
 responses(
@@ -58,14 +61,26 @@ tag="sys"
 pub async fn login(
     auth: web::Json<LoginRequest>,
     env: Data<Mutex<EnvironmentService>>,
+    db: Data<DbPool>
 ) -> impl Responder {
     let env_service = env.lock().ignore_poison();
 
     if auth.0.username == env_service.username && auth.0.password == env_service.password {
         return HttpResponse::Ok().json("Login successful");
     }
+    let db_user = User::find_by_username(&auth.0.username, &mut *db.get().unwrap());
 
-    HttpResponse::Unauthorized().json(ERROR_LOGIN_MESSAGE)
+    return match db_user {
+        Some(user) => {
+            if user.password.unwrap() == digest(auth.0.password) {
+                return HttpResponse::Ok().json("Login successful");
+            }
+            HttpResponse::Unauthorized().json(ERROR_LOGIN_MESSAGE)
+        }
+        None => {
+            HttpResponse::Unauthorized().json(ERROR_LOGIN_MESSAGE)
+        }
+    };
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

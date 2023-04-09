@@ -1,3 +1,4 @@
+use std::io::Error;
 use chrono::NaiveDateTime;
 use crate::schema::invites;
 use utoipa::ToSchema;
@@ -5,8 +6,10 @@ use diesel::{Queryable, Insertable, Identifiable, AsChangeset, SqliteConnection,
 use diesel::associations::HasTable;
 use diesel::ExpressionMethods;
 use uuid::Uuid;
+use crate::constants::constants::Role;
 
-#[derive(Queryable, Insertable, AsChangeset, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Invite{
     pub id: String,
     pub role: String,
@@ -27,20 +30,23 @@ impl Invite{
         }
     }
 
-    pub fn insert_invite(&self, conn: &mut SqliteConnection) -> Result<Invite, diesel::result::Error> {
+    pub fn insert_invite(role_to_insert: &Role, conn: &mut SqliteConnection) -> Result<Invite, Error> {
         use crate::schema::invites::dsl::*;
 
         let now = chrono::Utc::now().naive_utc();
 
-        diesel::insert_into(invites::table())
+        let created_invite = diesel::insert_into(invites::table())
             .values(
                 (
                     id.eq(Uuid::new_v4().to_string()),
-                    role.eq(self.role.clone()),
+                    role.eq(role_to_insert.to_string()),
                     created_at.eq(now),
                     expires_at.eq(now + chrono::Duration::days(7)))
             )
-            .get_result(conn)
+            .get_result::<Invite>(conn)
+            .unwrap();
+
+        Ok(created_invite)
     }
 
     pub fn find_invite(id: String, conn: &mut SqliteConnection) -> Result<Option<Invite>, diesel::result::Error> {
@@ -48,5 +54,21 @@ impl Invite{
             .filter(invites::id.eq(id))
             .first::<Invite>(conn)
             .optional()
+    }
+
+    pub fn find_all_invites(conn: &mut SqliteConnection) -> Result<Vec<Invite>, diesel::result::Error> {
+        invites::table
+            .load::<Invite>(conn)
+    }
+
+    pub fn invalidate_invite(invite_id: String, conn: &mut SqliteConnection) -> Result<(),
+        diesel::result::Error> {
+        use crate::schema::invites::dsl::*;
+
+        diesel::update(invites.filter(id.eq(invite_id)))
+            .set(accepted_at.eq(chrono::Utc::now().naive_utc()))
+            .execute(conn)?;
+
+        Ok(())
     }
 }
