@@ -10,7 +10,7 @@ use crate::service::rust_service::PodcastService;
 use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
-use actix_web::{get, post, put, ResponseError};
+use actix_web::{get, post, put};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
 use futures::executor;
@@ -138,18 +138,18 @@ pub async fn add_podcast(
     let mapping_service = MappingService::new();
     podcast_service
         .handle_insert_of_podcast(&mut conn.get().unwrap(),
-            PodcastInsertModel {
-                feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
-                title: unwrap_string(&res["results"][0]["collectionName"]),
-                id: unwrap_string(&res["results"][0]["collectionId"])
-                    .parse()
-                    .unwrap(),
-                image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
-            },
-            mapping_service,
-            lobby,
+                                  PodcastInsertModel {
+                                      feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
+                                      title: unwrap_string(&res["results"][0]["collectionName"]),
+                                      id: unwrap_string(&res["results"][0]["collectionId"])
+                                          .parse()
+                                          .unwrap(),
+                                      image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
+                                  },
+                                  mapping_service,
+                                  lobby,
         )
-        .await;
+        .await.expect("Error inserting podcast");
     HttpResponse::Ok()
 }
 
@@ -369,5 +369,5 @@ async fn insert_outline(
             mapping_service,
             lobby.clone(),
         )
-        .await;
+        .await.expect("TODO: panic message");
 }

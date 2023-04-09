@@ -1,9 +1,6 @@
 use std::fmt::{Display, Formatter};
-use actix_web::{error, HttpResponse, HttpResponseBuilder};
-use actix_web::http::header::ContentType;
+use actix_web::{error, HttpResponse};
 use actix_web::http::StatusCode;
-use serde_json::json;
-
 
 pub trait PodFetchErrorTrait {
     fn new(name: &'static str, status_code: StatusCode) -> Self;
