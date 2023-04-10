@@ -47,9 +47,7 @@ use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
-use crate::controllers::podcast_controller::{
-    add_podcast, find_all_podcasts, find_podcast, find_podcast_by_id,
-};
+use crate::controllers::podcast_controller::{add_podcast, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
@@ -393,6 +391,7 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
         .service(import_podcasts_from_opml)
         .service(run_cleanup)
         .service(add_podcast_from_podindex)
+        .service(delete_podcast)
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig){

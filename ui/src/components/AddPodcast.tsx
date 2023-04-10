@@ -126,7 +126,7 @@ export const AddPodcast = ()=>{
         })
     }
 
-    return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText={t('add-podcast')} onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
+    return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText={t('add-podcast')!} onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
         <div>
             <ul id="podcast-add-decider" className="flex flex-wrap text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:border-gray-700 dark:text-gray-400">
                 <li className="mr-2">

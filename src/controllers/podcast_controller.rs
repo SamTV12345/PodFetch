@@ -10,7 +10,7 @@ use crate::service::rust_service::PodcastService;
 use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
-use actix_web::{get, post, put};
+use actix_web::{get, post, put, delete};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
 use futures::executor;
@@ -25,8 +25,10 @@ use std::sync::{Mutex};
 use std::thread;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
+use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
 use crate::mutex::LockResultExt;
+use crate::service::file_service::FileService;
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -136,7 +138,8 @@ pub async fn add_podcast(
 
     let mut podcast_service = PodcastService::new();
     let mapping_service = MappingService::new();
-    match  podcast_service.handle_insert_of_podcast(&mut conn.get().unwrap(),
+    podcast_service
+        .handle_insert_of_podcast(&mut conn.get().unwrap(),
                                   PodcastInsertModel {
                                       feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
                                       title: unwrap_string(&res["results"][0]["collectionName"]),
@@ -148,10 +151,8 @@ pub async fn add_podcast(
                                   mapping_service,
                                   lobby,
         )
-        .await{
-        Ok(_) => HttpResponse::Ok().json("Podcast added"),
-        Err(e) => HttpResponse::BadRequest().json(e.to_string())
-    }
+        .await;
+    HttpResponse::Ok()
 }
 
 #[utoipa::path(
@@ -371,4 +372,26 @@ async fn insert_outline(
             lobby.clone(),
         )
         .await.expect("Error inserting podcast");
+}
+
+#[derive(Deserialize)]
+pub struct DeletePodcast {
+    pub delete_files: bool
+}
+
+#[delete("/podcast/{id}")]
+pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id: Path<i32>)
+                            ->impl Responder{
+    let podcast = DB::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
+        finding podcast");
+    if data.delete_files{
+        FileService::delete_podcast_files(&podcast.directory);
+    }
+
+    DB::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
+    watchtime");
+    DB::delete_episodes_of_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
+    episodes of podcast");
+    DB::delete_podcast(&mut *db.get().unwrap(), id.clone());
+    HttpResponse::Ok()
 }

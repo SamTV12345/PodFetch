@@ -6,17 +6,17 @@ import {setModalOpen} from "../store/ModalSlice";
 
 export interface ModalProps {
     children: any,
-    headerText: string,
+    headerText: string|undefined,
     onCancel: () => void,
     onAccept: () => void,
     onDelete: ()=>void
-    cancelText:string,
-    acceptText:string
+    cancelText:string|undefined,
+    acceptText:string|undefined
 }
 
 
 
-export const Modal:FC<ModalProps>  = ({headerText,children, onCancel, onAccept, cancelText,acceptText, onDelete})=>{
+export const Modal:FC<ModalProps>  = ({headerText,children})=>{
     const openModal  = useAppSelector(state=>state.modal.openModal)
     const dispatch = useAppDispatch()
     const {t} = useTranslation()

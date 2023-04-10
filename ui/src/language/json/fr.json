@@ -66,5 +66,10 @@
   "select-role": "Sélectionner un rôle",
   "change-role": "Changer le rôle",
   "change-role-user": "Changer le rôle de l'utilisateur {{name}}",
-  "role-changed": "Rôle changé"
+  "role-changed": "Rôle changé",
+  "delete-podcast-with-files": "Supprimer le podcast et les fichiers",
+  "delete-podcast": "Delete podcast",
+  "cancel": "Annuler",
+  "delete-podcast-with-files-body": "Êtes-vous sûr de vouloir supprimer le podcast {{name}} et tous les fichiers associés ?",
+  "podcast-deleted": "Podcast supprimé"
 }

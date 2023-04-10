@@ -1,7 +1,10 @@
 import axios from "axios";
 import TimeAgo from 'javascript-time-ago'
-import de from 'javascript-time-ago/locale/de'
 import sanitizeHtml,{IOptions} from 'sanitize-html'
+import en from 'javascript-time-ago/locale/en'
+import de from 'javascript-time-ago/locale/de'
+import fr from 'javascript-time-ago/locale/fr'
+import i18n from "i18next";
 
 const defaultOptions: IOptions = {
     allowedTags: [ 'b', 'i', 'em', 'strong', 'a' ],
@@ -11,8 +14,14 @@ const defaultOptions: IOptions = {
     allowedIframeHostnames: ['www.youtube.com']
 };
 
+i18n.on("languageChanged", (lng) => {
+    timeago = new TimeAgo(lng)
+})
 TimeAgo.addDefaultLocale(de)
-const timeago = new TimeAgo('de-DE')
+TimeAgo.addLocale(en)
+TimeAgo.addLocale(fr)
+
+let timeago = new TimeAgo('en-US')
 
 export const isLocalhost = Boolean(
     window.location.hostname === 'localhost' ||
