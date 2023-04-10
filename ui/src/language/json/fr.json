@@ -51,5 +51,10 @@
   "settings-saved" : "Paramètres sauvegardés",
   "new-podcast-added" : "nouveau podcast {{nom}} ajouté",
   "new-podcast-episode-added" : "Nouvel épisode {{nom}} ajouté",
-  "error-occured" : "Une erreur est survenue"
+  "error-occured" : "Une erreur est survenue",
+  "delete-podcast-with-files": "Supprimer le podcast et les fichiers",
+  "delete-podcast": "Delete podcast",
+  "cancel": "Annuler",
+  "delete-podcast-with-files-body": "Êtes-vous sûr de vouloir supprimer le podcast {{name}} et tous les fichiers associés ?",
+  "podcast-deleted": "Podcast supprimé"
 }

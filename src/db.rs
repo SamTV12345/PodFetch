@@ -12,7 +12,7 @@ use crate::utils::podcast_builder::PodcastExtra;
 use chrono::{DateTime, Duration, Utc};
 use diesel::dsl::sql;
 use diesel::prelude::*;
-use diesel::{insert_into, sql_query, RunQueryDsl};
+use diesel::{insert_into, sql_query, RunQueryDsl, delete};
 use rss::Item;
 use std::io::Error;
 use std::time::SystemTime;
@@ -73,6 +73,13 @@ impl DB {
                 "Podcast not found",
             )),
         }
+    }
+
+    pub fn delete_podcast(conn: &mut SqliteConnection, podcast_id_to_find: i32){
+        use crate::schema::podcasts::dsl::*;
+        delete(podcasts.filter(id.eq(podcast_id_to_find)))
+            .execute(conn)
+            .expect("Error deleting podcast");
     }
 
     pub fn get_podcast_episode_by_id(
@@ -258,6 +265,17 @@ impl DB {
         }
     }
 
+    pub fn delete_watchtime(conn: &mut SqliteConnection, podcast_id_to_delete: i32) -> Result<(),
+        String> {
+        use crate::schema::podcast_history_items::dsl::*;
+
+                delete(podcast_history_items)
+                    .filter(podcast_id.eq(podcast_id_to_delete))
+                    .execute(conn)
+                    .expect("Error inserting podcast episode");
+                Ok(())
+    }
+
     pub fn get_watchtime(
         conn: &mut SqliteConnection,
         podcast_id_tos_search: &str,
@@ -365,6 +383,19 @@ impl DB {
                 panic!("Podcast episode not found");
             }
         }
+    }
+
+
+    pub fn delete_episodes_of_podcast(conn: &mut SqliteConnection, podcast_id: i32) -> Result<(), String> {
+        use crate::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
+        use crate::schema::podcast_episodes::dsl::podcast_episodes;
+
+
+                delete(podcast_episodes)
+                    .filter(podcast_id_column.eq(podcast_id))
+                    .execute(conn)
+                    .expect("Error deleting podcast episodes");
+                Ok(())
     }
 
     pub fn update_podcast_image(mut self, id: &str, image_url: &str) -> Result<(), String> {

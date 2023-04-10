@@ -51,5 +51,10 @@
   "settings-saved": "Settings saved",
   "new-podcast-added": "New podcast {{name}} added",
   "new-podcast-episode-added": "New episode {{name}} added",
-  "error-occured": "An error has occurred"
+  "error-occured": "An error has occurred",
+  "delete-podcast-with-files": "Delete podcast and files",
+  "delete-podcast": "Delete podcast",
+  "cancel": "Cancel",
+  "delete-podcast-with-files-body": "Are you sure you want to delete the podcast {{name}} and all downloaded files?",
+  "podcast-deleted": "Podcast deleted"
 }

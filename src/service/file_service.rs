@@ -71,4 +71,8 @@ impl FileService {
             podcast.directory, episode.episode_id
         ))
     }
+
+    pub fn delete_podcast_files(podcast_dir: &str){
+        std::fs::remove_dir_all(format!("podcasts/{}", podcast_dir)).expect("Error deleting podcast directory");
+    }
 }

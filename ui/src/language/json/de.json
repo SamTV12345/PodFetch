@@ -51,5 +51,12 @@
   "settings-saved": "Einstellungen gespeichert",
   "new-podcast-added": "Neuer Podcast {{name}} hinzugefügt",
   "new-podcast-episode-added": "Neue Episode {{name}} hinzugefügt",
-  "error-occured": "Ein Fehler ist aufgetreten"
+  "error-occured": "Ein Fehler ist aufgetreten",
+  "delete-podcast-with-files": "Podcast mit Dateien löschen",
+  "delete-podcast": "Podcast löschen",
+  "cancel": "Abbrechen",
+  "delete-podcast-with-files-body": "Der Podcast {{name}} und alle lokalen Podcastfolgen werden gelöscht.",
+  "podcast-deleted": "Podcast {{name}} gelöscht",
+  "delete-podcast-without-files": "Podcast ohne Dateien löschen",
+  "delete-podcast-without-files-body": "Der Podcast {{name}} wird gelöscht."
 }
