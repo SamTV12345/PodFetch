@@ -212,4 +212,29 @@ impl UserManagementService {
 
         return Ok(User::find_all_users(conn))
     }
+
+    pub fn delete_invite(invite_id: String, requester: User, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
+        if !Self::may_onboard_user(requester) {
+            return Err(PodFetchError::no_permissions_to_onboard_user())
+        }
+
+        match Invite::find_invite(invite_id, conn){
+            Ok(invite) => {
+                match invite {
+                    Some(invite)=>{
+                        Invite::delete_invite(invite.id, conn).expect("Error deleting invite");
+                        Ok(())
+                    }
+                    None=>{
+                        Err(PodFetchError::new("Invite code not found",
+                                               StatusCode::NOT_FOUND))
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("The following error occured when finding an invite {}",e);
+                Err(PodFetchError::new("Invite code not found", StatusCode::NOT_FOUND))
+            }
+        }
+    }
 }

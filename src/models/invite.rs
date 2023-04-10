@@ -71,4 +71,13 @@ impl Invite{
 
         Ok(())
     }
+
+    pub fn delete_invite(invite_id: String, conn: &mut SqliteConnection) -> Result<(), diesel::result::Error> {
+        use crate::schema::invites::dsl::*;
+
+        diesel::delete(invites.filter(id.eq(invite_id)))
+            .execute(conn)?;
+
+        Ok(())
+    }
 }

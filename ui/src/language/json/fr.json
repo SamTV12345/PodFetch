@@ -74,5 +74,8 @@
   "podcast-deleted": "Podcast supprimé",
   "yes": "Oui",
   "no": "Non",
-  "are-you-sure-you-want-to-delete-this-user": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?"
+  "are-you-sure-you-want-to-delete-this-user": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
+  "add-invite": "Ajouter une invitation",
+  "create-invite": "Créer une invitation",
+  "accepted-at": "Accepté à"
 }

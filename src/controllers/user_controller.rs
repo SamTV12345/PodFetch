@@ -144,6 +144,17 @@ pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>, req: Ht
     };
 }
 
+#[delete("/invites/{invite_id}")]
+pub async fn delete_invite(conn:Data<DbPool>, invite_id: web::Path<String>, req: HttpRequest)->impl Responder{
+    let username_req  = get_user_from_request(req);
+    let user = User::find_by_username(&username_req, &mut *conn.get().unwrap()).unwrap();
+
+    return match UserManagementService::delete_invite(invite_id.into_inner(),user, &mut *conn.get().unwrap())
+    {
+        Ok(_) => HttpResponse::Ok().into(),
+        Err(e) => HttpResponse::BadRequest().body(e.to_string())
+    };
+}
 
 fn get_user_from_request(req: HttpRequest)->String{
     req.clone().headers().get(USERNAME).unwrap().to_str().unwrap().to_string()

@@ -4,7 +4,8 @@ import {Notification} from "../models/Notification";
 import {ConfigModel} from "../models/SysInfo";
 import {LoginData} from "../components/LoginComponent";
 import {User} from "../models/User";
-import {ConfirmModalProps} from "../components/DeleteConfirmModal";
+import {ConfirmModalProps} from "../components/ConfirmModal";
+import {Invite} from "../pages/InviteAdministrationUserPage";
 
 export type Podcast = {
     directory: string,
@@ -52,7 +53,9 @@ interface CommonProps {
     loginData: Partial<LoginData>|undefined,
     confirmModalData: ConfirmModalProps|undefined
     selectedUser: User|undefined,
-    users: User[]
+    users: User[],
+    addInviteModalOpen: boolean,
+    invites: Invite[]
 }
 
 // Define the initial state using that type
@@ -70,7 +73,9 @@ const initialState: CommonProps = {
     loginData: undefined,
     confirmModalData: undefined,
     selectedUser: undefined,
-    users: []
+    users: [],
+    addInviteModalOpen: false,
+    invites: []
 }
 
 export const commonSlice = createSlice({
@@ -144,11 +149,16 @@ export const commonSlice = createSlice({
         },
         setUsers: (state, action:PayloadAction<User[]>) => {
             state.users = action.payload
+        },
+        setAddInviteModalOpen: (state, action:PayloadAction<boolean>) => {
+            state.addInviteModalOpen = action.payload
+        },
+        setInvites: (state, action:PayloadAction<Invite[]>) => {
+            state.invites = action.payload
         }
-
 }})
 
-export const {setSideBarCollapsed, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
+export const {setSideBarCollapsed,setInvites,setAddInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

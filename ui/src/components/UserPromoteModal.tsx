@@ -3,7 +3,7 @@ import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useTranslation} from "react-i18next";
 import {setSelectedUser, setUsers} from "../store/CommonSlice";
 import axios from "axios";
-import {apiURL} from "../utils/Utilities";
+import {apiURL, capitalizeFirstLetter} from "../utils/Utilities";
 import {enqueueSnackbar} from "notistack";
 import {User} from "../models/User";
 
@@ -12,10 +12,7 @@ export const UserPromoteModal = () => {
     const {t} = useTranslation()
     const dispatch = useAppDispatch()
     const users = useAppSelector(state=>state.common.users)
-    function capitalizeFirstLetter(string: string|undefined) {
-        if(string === undefined) return ""
-        return string.charAt(0).toUpperCase() + string.slice(1);
-    }
+
 
     const changeRole = () => {
         axios.put(apiURL+"/users/"+selectedUser?.username+"/role", {role: capitalizeFirstLetter(selectedUser?.role)})

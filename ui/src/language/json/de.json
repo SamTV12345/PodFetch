@@ -76,5 +76,8 @@
   "delete-podcast-without-files-body": "Der Podcast {{name}} wird gelöscht.",
   "yes": "Ja",
   "no": "Nein",
-  "are-you-sure-you-want-to-delete-this-user": "Möchten Sie den Benutzer {{name}} wirklich löschen?"
+  "are-you-sure-you-want-to-delete-this-user": "Möchten Sie den Benutzer {{name}} wirklich löschen?",
+  "add-invite": "Einladung hinzufügen",
+  "create-invite": "Einladung erstellen",
+  "accepted-at": "Akzeptiert am"
 }

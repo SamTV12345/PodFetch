@@ -62,7 +62,7 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 pub use controllers::controller_utils::*;
-use crate::controllers::user_controller::{create_invite, delete_user, get_invite, get_invites, get_users, onboard_user, update_role};
+use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invites, get_users, onboard_user, update_role};
 
 mod constants;
 mod db;
@@ -462,6 +462,7 @@ pub fn get_secure_user_management() ->Scope{
         .service(get_users)
         .service(update_role)
         .service(delete_user)
+        .service(delete_invite)
 }
 
 pub fn insert_default_settings_if_not_present() {

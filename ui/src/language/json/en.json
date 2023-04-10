@@ -74,5 +74,8 @@
   "podcast-deleted": "Podcast deleted",
   "yes": "Yes",
   "no": "No",
-  "are-you-sure-you-want-to-delete-this-user": "Are you sure you want to delete  the user {{name}}?"
+  "are-you-sure-you-want-to-delete-this-user": "Are you sure you want to delete  the user {{name}}?",
+  "add-invite": "Add invite",
+  "create-invite": "Create invite",
+  "accepted-at": "Accepted at"
 }
