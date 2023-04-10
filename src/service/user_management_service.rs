@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::MutexGuard;
 use actix_web::http::StatusCode;
 use diesel::{SqliteConnection};
 use diesel::serialize::ToSql;
@@ -137,8 +138,8 @@ impl UserManagementService {
     }
 
 
-    pub fn get_invite_link(invite_id: String, requester: User, environment_service: EnvironmentService,
-                           conn: &mut SqliteConnection)->Result<String, PodFetchError>{
+    pub fn get_invite_link(invite_id: String, requester: User, environment_service: MutexGuard<EnvironmentService>,
+                           conn: &mut SqliteConnection) ->Result<String, PodFetchError>{
         match Self::may_onboard_user(requester){
             true=>{},
             false=>{return Err(PodFetchError::no_permission_to_onboard_user())}
@@ -148,7 +149,7 @@ impl UserManagementService {
             Ok(invite) => {
                 match invite {
                     Some(invite)=>{
-                        Ok(environment_service.server_url+"/ui/invite?invite="+&invite.id)
+                        Ok(environment_service.clone().server_url+"ui/invite/"+&invite.id)
                     }
                     None=>{
                         Err(PodFetchError::new("Invite code not found",

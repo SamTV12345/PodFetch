@@ -1,9 +1,12 @@
+use std::sync::Mutex;
 use actix_web::{HttpRequest, HttpResponse, post, get, put, Responder, web, delete};
 use actix_web::web::Data;
 use crate::constants::constants::{Role, USERNAME};
 use crate::DbPool;
 use crate::exception::exceptions::PodFetchErrorTrait;
 use crate::models::user::User;
+use crate::mutex::LockResultExt;
+use crate::service::environment_service::EnvironmentService;
 use crate::service::user_management_service::UserManagementService;
 
 #[derive(Deserialize)]
@@ -108,9 +111,8 @@ Responder{
     let username  = req.headers().get(USERNAME).unwrap()
         .to_str().unwrap();
     let user = User::find_by_username(username, &mut *conn.get().unwrap()).unwrap();
-    UserManagementService::create_invite(invite.role, &mut *conn.get().unwrap(), user).expect
-    ("Error creating invite");
-    HttpResponse::Ok()
+    let created_invite = UserManagementService::create_invite(invite.role, &mut *conn.get().unwrap(), user).expect("Error creating invite");
+    HttpResponse::Ok().json(created_invite)
 }
 
 #[get("/invites")]
@@ -142,6 +144,20 @@ pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>, req: Ht
         Ok(_) => HttpResponse::Ok().into(),
         Err(e) => HttpResponse::BadRequest().body(e.to_string())
     };
+}
+
+#[get("/invites/{invite_id}/link")]
+pub async fn get_invite_link(conn: Data<DbPool>, invite_id: web::Path<String>,  req: HttpRequest, environment_service: Data<Mutex<EnvironmentService>>)->
+    impl Responder{
+    let environment_service = environment_service.lock().ignore_poison();
+    let username_req  = get_user_from_request(req);
+    let user = User::find_by_username(&username_req, &mut *conn.get().unwrap()).unwrap();
+    match UserManagementService::get_invite_link(invite_id.into_inner(), user,
+                                                 environment_service,&mut *conn.get()
+        .unwrap()){
+        Ok(invite) => HttpResponse::Ok().json(invite),
+        Err(e) => HttpResponse::BadRequest().body(e.to_string())
+    }
 }
 
 #[delete("/invites/{invite_id}")]

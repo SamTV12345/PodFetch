@@ -52,6 +52,9 @@ export const InviteAdministrationUserPage = () => {
                             {t('created')}
                         </th>
                         <th scope="col" className="px-6 py-3">
+                            {t('expires-at')}
+                        </th>
+                        <th scope="col" className="px-6 py-3">
                             {t('actions')}
                         </th>
                     </tr>
@@ -70,15 +73,26 @@ export const InviteAdministrationUserPage = () => {
                             <td className="px-6 py-4">
                                 {i.role}
                             </td>
+
                             <td className="px-6 py-4">
                                 {formatTime(i.createdAt)}
                             </td>
+                                <td className="px-6 py-4">
+                                    {formatTime(i.expiresAt)}
+                                </td>
                                 <td className="">
                                     <button className="fa fa-trash bg-red-900 text-white p-3 rounded" onClick={()=>{
                                         axios.delete(apiURL+"/users/invites/"+i.id).then(()=>{
                                             dispatch(setInvites(invites.filter(v=>v.id !== i.id)))
                                         })
                                     }}></button>
+                                    <button>
+                                        <i className="fa-solid fa-copy text-2xl" onClick={()=>{
+                                            axios.get(apiURL+"/users/invites/"+i.id+"/link").then(v=>{
+                                                navigator.clipboard.writeText(v.data)
+                                            })
+                                        }}></i>
+                                    </button>
                                 </td>
                         </tr>
                         )

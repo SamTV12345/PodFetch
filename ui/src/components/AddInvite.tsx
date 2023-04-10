@@ -1,6 +1,6 @@
 import {createPortal} from "react-dom";
 import {
-    setAddInviteModalOpen,
+    setAddInviteModalOpen, setInvites,
 } from "../store/CommonSlice";
 import {apiURL} from "../utils/Utilities";
 import axios from "axios";
@@ -19,7 +19,7 @@ export const AddInvite = () => {
     const inviteModalOpen = useAppSelector(state=>state.common.addInviteModalOpen)
     const {t} = useTranslation()
     const [invite, setInvite] = useState<Invite>({role: "User"})
-
+    const invites = useAppSelector(state=>state.common.invites)
 
     return createPortal( <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setAddInviteModalOpen(false))}
                               className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 md:inset-0 h-modal md:h-full
@@ -49,7 +49,9 @@ export const AddInvite = () => {
                         <button className="bg-slate-500 text-white p-2 rounded"
                         onClick={()=>{
                             axios.post(apiURL+'/users/invites', invite)
-                                .then((_)=>{dispatch(setAddInviteModalOpen(false))
+                                .then((v)=>{
+                                    dispatch(setInvites([...invites,v.data]))
+                                    dispatch(setAddInviteModalOpen(false))
                             })
                         }}
                         >{t('create-invite')}</button>
