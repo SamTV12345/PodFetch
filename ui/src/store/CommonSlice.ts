@@ -3,6 +3,7 @@ import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
 import {Notification} from "../models/Notification";
 import {ConfigModel} from "../models/SysInfo";
 import {LoginData} from "../components/LoginComponent";
+import {ConfirmModalProps} from "../components/ConfirmModal";
 
 export type Podcast = {
     directory: string,
@@ -47,7 +48,8 @@ interface CommonProps {
     detailedAudioPlayerOpen: boolean,
     configModel: ConfigModel|undefined,
     currentDetailedPodcastId: number|undefined,
-    loginData: Partial<LoginData>|undefined
+    loginData: Partial<LoginData>|undefined,
+    confirmModalData: ConfirmModalProps|undefined
 }
 
 // Define the initial state using that type
@@ -62,7 +64,8 @@ const initialState: CommonProps = {
     detailedAudioPlayerOpen: false,
     configModel: undefined,
     currentDetailedPodcastId: undefined,
-    loginData: undefined
+    loginData: undefined,
+    confirmModalData: undefined
 }
 
 export const commonSlice = createSlice({
@@ -127,10 +130,13 @@ export const commonSlice = createSlice({
         },
         setLoginData: (state, action:PayloadAction<Partial<LoginData>>) => {
             state.loginData = action.payload
+        },
+        setConfirmModalData: (state, action:PayloadAction<ConfirmModalProps>) => {
+            state.confirmModalData = action.payload
         }
 }})
 
-export const {setSideBarCollapsed, setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
+export const {setSideBarCollapsed, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer
