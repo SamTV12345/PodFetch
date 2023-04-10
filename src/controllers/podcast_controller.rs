@@ -151,7 +151,7 @@ pub async fn add_podcast(
                                   mapping_service,
                                   lobby,
         )
-        .await;
+        .await.expect("Error handling insert of podcast");
     HttpResponse::Ok()
 }
 

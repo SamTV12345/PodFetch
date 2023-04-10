@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, HttpResponse, post,get,put, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, post, get, put, Responder, web, delete};
 use actix_web::web::Data;
 use crate::constants::constants::{Role, USERNAME};
 use crate::DbPool;
@@ -129,6 +129,19 @@ pub async fn get_invite(conn: Data<DbPool>, invite_id: web::Path<String>)->
         Ok(invite) => HttpResponse::Ok().json(invite),
         Err(e) => HttpResponse::BadRequest().body(e.to_string())
     }
+}
+
+#[delete("/{username}")]
+pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>, req: HttpRequest)->impl Responder{
+    let username_req  = get_user_from_request(req);
+    let user = User::find_by_username(&username_req, &mut *conn.get().unwrap()).unwrap();
+
+    let user_to_delete = User::find_by_username(&username, &mut *conn.get().unwrap()).unwrap();
+    return match UserManagementService::delete_user(user_to_delete,user, &mut *conn.get().unwrap())
+    {
+        Ok(_) => HttpResponse::Ok().into(),
+        Err(e) => HttpResponse::BadRequest().body(e.to_string())
+    };
 }
 
 

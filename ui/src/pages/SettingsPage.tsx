@@ -130,8 +130,7 @@ export const SettingsPage = () => {
                                            rejectText: t('cancel'),
                                            bodyText: t('delete-podcast-without-files-body', {name: p.name})
                                        }))
-                                       dispatch(setModalOpen(true))
-                                   }}>Delete podcast without deleting files</button>
+                                       dispatch(setModalOpen(true))}}>Delete podcast without deleting files</button>
                                </div>
                            </div>
                       )

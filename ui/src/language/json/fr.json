@@ -71,5 +71,8 @@
   "delete-podcast": "Delete podcast",
   "cancel": "Annuler",
   "delete-podcast-with-files-body": "Êtes-vous sûr de vouloir supprimer le podcast {{name}} et tous les fichiers associés ?",
-  "podcast-deleted": "Podcast supprimé"
+  "podcast-deleted": "Podcast supprimé",
+  "yes": "Oui",
+  "no": "Non",
+  "are-you-sure-you-want-to-delete-this-user": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?"
 }

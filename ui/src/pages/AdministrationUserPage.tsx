@@ -1,25 +1,32 @@
 import {useTranslation} from "react-i18next";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {User} from "../models/User";
 import {apiURL, formatTime} from "../utils/Utilities";
 import axios from "axios";
 import {UserPromoteModal} from "../components/UserPromoteModal";
-import {useAppDispatch} from "../store/hooks";
-import {setSelectedUser} from "../store/CommonSlice";
+import {useAppDispatch, useAppSelector} from "../store/hooks";
+import {setSelectedUser, setUsers} from "../store/CommonSlice";
 import {setModalOpen} from "../store/ModalSlice";
 
 export const AdministrationUserPage = () => {
     const {t} = useTranslation()
-    const [users, setUsers] = useState<User[]>([])
+    const users = useAppSelector(state=>state.common.users)
     const dispatch = useAppDispatch()
     useEffect(()=>{
         axios.get(apiURL+ "/users")
-            .then(c=>setUsers(c.data))
+            .then(c=>dispatch(setUsers(c.data)))
     },[])
+
+    const deleteUser = (user: User) => {
+        axios.delete(apiURL+"/users/"+user.username)
+            .then(c=>{
+                dispatch(setUsers(users.filter(u=>u.username !== user.username)))
+            })
+    }
+
     return <div className="p-5">
         <h1 className="text-3xl text-center mt-2">{t('manage-users')}</h1>
         <UserPromoteModal/>
-
 
         <div className="relative overflow-x-auto">
             <table className="w-full text-sm text-left text-gray-400 rounded">
@@ -44,7 +51,7 @@ export const AdministrationUserPage = () => {
                 </thead>
                 <tbody>
                 {
-                    users.map((v,i)=>
+                    users.map((v)=>
 
                         <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                             <th scope="row"
@@ -72,7 +79,7 @@ export const AdministrationUserPage = () => {
                                     dispatch(setModalOpen(true))
                                 }}><i className="fa fa-ranking-star text-white"></i></button>
                                 <button title="Ban/Delete user" onClick={()=>{
-
+                                    deleteUser(v)
                                 }}><i className="fa fa-ban text-red-700"></i></button>
                             </td>
                         </tr>
