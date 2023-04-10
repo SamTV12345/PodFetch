@@ -16,6 +16,7 @@ export const SideBar  = ()=>{
                 <SideBarItem highlightPath={"favorites"} translationkey={t('favorites')} icon={<i className="fa-solid fa-star"></i>}/>
                 <SideBarItem highlightPath={"info"} translationkey={t('info')} icon={<i className="fa-solid fa-info-circle fa-xl"></i>}/>
                 <SideBarItem highlightPath={"settings"} translationkey={t('settings')} icon={<i className="fa-solid fa-wrench fa-xl"/> }/>
+                <SideBarItem highlightPath={"administration"} translationkey={t('administration')} icon={<i className="fa-solid fa-gavel fa-xl"/> }/>
             </ul>
         </div>
     </aside>

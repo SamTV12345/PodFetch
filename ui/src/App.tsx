@@ -10,6 +10,8 @@ import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageId
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
 import {
+    AdministrationUserViewLazyLoad,
+    AdministrationViewLazyLoad, InviteAdministrationUserViewLazyLoad,
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
@@ -38,6 +40,11 @@ export const router = createBrowserRouter(createRoutesFromElements(
             </Route>
             <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad/></Suspense>}/>
             <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad/></Suspense>}/>
+            <Route path={"administration"}>
+                <Route index element={<Suspense><AdministrationViewLazyLoad/></Suspense>}/>
+                <Route path="users" element={<Suspense><AdministrationUserViewLazyLoad/></Suspense>}/>
+                <Route path="invites" element={<Suspense><InviteAdministrationUserViewLazyLoad/></Suspense>}/>
+            </Route>
         </Route>
         <Route path="/login" element={<LoginComponent/>}/>
         <Route path="/invite/:id" element={<InviteComponent/>}></Route>

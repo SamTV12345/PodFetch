@@ -15,3 +15,15 @@ export const PodcastInfoViewLazyLoad = lazy(()=>import('../pages/PodcastInfoPage
 export const SettingsViewLazyLoad = lazy(()=>import('../pages/SettingsPage').then(module=> {
     return{default:module["SettingsPage"]}
 }))
+
+export const AdministrationViewLazyLoad = lazy(()=>import('../pages/AdministrationPage').then(module=> {
+    return{default:module["AdministrationPage"]}
+}))
+
+export const AdministrationUserViewLazyLoad = lazy(()=>import('../pages/AdministrationUserPage').then(module=> {
+    return{default:module["AdministrationUserPage"]}
+}))
+
+export const InviteAdministrationUserViewLazyLoad = lazy(()=>import('../pages/InviteAdministrationUserPage').then(module=> {
+    return{default:module["InviteAdministrationUserPage"]}
+}))

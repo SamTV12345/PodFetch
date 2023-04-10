@@ -59,6 +59,10 @@ impl PodFetchError{
         PodFetchError::new("You do not have permissions to delete a User", StatusCode::BAD_REQUEST)
     }
 
+    pub fn no_permission_to_update_user_role() -> PodFetchError {
+        PodFetchError::new("You do not have permissions to update a User's role", StatusCode::BAD_REQUEST)
+    }
+
     pub fn no_permission_to_onboard_user() -> PodFetchError {
         PodFetchError::new("You do not have permissions to onboard a User", StatusCode::UNAUTHORIZED)
     }

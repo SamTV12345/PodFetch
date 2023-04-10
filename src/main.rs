@@ -13,7 +13,7 @@ use actix_files::{Files, NamedFile};
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::error::ErrorUnauthorized;
-use actix_web::middleware::{Condition, Logger, NormalizePath};
+use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{http, web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use actix_web_httpauth::extractors::basic::BasicAuth;
@@ -64,7 +64,7 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 pub use controllers::controller_utils::*;
-use crate::controllers::user_controller::{create_invite, get_invite, get_invites, onboard_user};
+use crate::controllers::user_controller::{create_invite, get_invite, get_invites, get_users, onboard_user, update_role};
 
 mod constants;
 mod db;
@@ -460,6 +460,8 @@ pub fn get_secure_user_management() ->Scope{
         .service(create_invite)
         .service(get_invites)
         .service(onboard_user)
+        .service(get_users)
+        .service(update_role)
 }
 
 pub fn insert_default_settings_if_not_present() {

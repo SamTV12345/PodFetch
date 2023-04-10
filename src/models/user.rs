@@ -21,6 +21,15 @@ pub struct User {
     pub created_at: NaiveDateTime
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserWithoutPassword{
+    pub id: i32,
+    pub username: String,
+    pub role: String,
+    pub created_at: NaiveDateTime
+}
+
 
 impl User{
     pub fn new(id: i32, username: String, role: Role, password: Option<String>, created_at:
@@ -71,10 +80,12 @@ impl User{
             .execute(conn)
     }
 
-    pub fn update_role(&self, conn: &mut SqliteConnection) -> Result<usize, diesel::result::Error> {
-        diesel::update(users::table.filter(users::id.eq(self.id)))
+    pub fn update_role(&self, conn: &mut SqliteConnection) -> Result<UserWithoutPassword, diesel::result::Error> {
+        let user = diesel::update(users::table.filter(users::id.eq(self.id)))
             .set(users::role.eq(self.role.clone()))
-            .execute(conn)
+            .get_result::<User>(conn);
+
+        Ok(User::map_to_dto(user.unwrap()))
     }
 
     fn create_admin_user()->User{
@@ -85,5 +96,21 @@ impl User{
             password: None,
             created_at: Default::default(),
         }
+    }
+
+    pub fn map_to_dto(user: Self) -> UserWithoutPassword{
+        UserWithoutPassword{
+            id: user.id,
+            username: user.username.clone(),
+            role: user.role.clone(),
+            created_at: user.created_at
+        }
+    }
+
+    pub fn find_all_users(conn: &mut SqliteConnection) -> Vec<UserWithoutPassword> {
+        use crate::schema::users::dsl::*;
+
+        let mut loaded_users = users.load::<User>(conn).unwrap();
+        loaded_users.into_iter().map(|user| User::map_to_dto(user)).collect()
     }
 }

@@ -1,13 +1,12 @@
-use std::io::Error;
 use std::str::FromStr;
 use actix_web::http::StatusCode;
 use diesel::{SqliteConnection};
 use diesel::serialize::ToSql;
 use crate::exception::exceptions::{PodFetchError, PodFetchErrorTrait};
 use crate::models::invite::Invite;
-use crate::models::user::User;
+use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
-use sha256::{digest, try_digest};
+use sha256::{digest};
 use crate::constants::constants::Role;
 
 pub struct UserManagementService{
@@ -119,12 +118,22 @@ impl UserManagementService {
         Err(PodFetchError::no_permission_to_delete_user())
     }
 
-    pub fn update_role(user: User, requester: User, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
-
+    pub fn update_role(user: User, requester: User, conn: &mut SqliteConnection)->Result<UserWithoutPassword,
+        PodFetchError>{
+        println!("Rolle: {}", requester.role);
         if Self::may_update_role(requester){
-            User::update_role(&user, conn).expect("Error updating User");
+            return match User::update_role(&user, conn) {
+                Ok(user) => {
+                    Ok(user)
+                }
+                Err(e) => {
+                    log::error!("The following error occured when updating a user {}",e);
+                    Err(PodFetchError::new("Error updating User",
+                                           StatusCode::INTERNAL_SERVER_ERROR))
+                }
+            }
         }
-        Err(PodFetchError::no_permission_to_delete_user())
+        Err(PodFetchError::no_permission_to_update_user_role())
     }
 
 
@@ -194,5 +203,13 @@ impl UserManagementService {
                 Err(PodFetchError::new("Invite code not found", StatusCode::NOT_FOUND))
             }
         }
+    }
+
+    pub fn get_users(requester: User, conn: &mut SqliteConnection)-> Result<Vec<UserWithoutPassword>, PodFetchError> {
+        if !Self::may_onboard_user(requester) {
+            return Err(PodFetchError::no_permissions_to_onboard_user())
+        }
+
+        return Ok(User::find_all_users(conn))
     }
 }

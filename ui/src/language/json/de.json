@@ -52,5 +52,19 @@
   "new-podcast-added": "Neuer Podcast {{name}} hinzugefügt",
   "new-podcast-episode-added": "Neue Episode {{name}} hinzugefügt",
   "error-occured": "Ein Fehler ist aufgetreten",
-  "create-account-podfetch": "Konto bei Podfetch erstellen"
+  "create-account-podfetch": "Konto bei Podfetch erstellen",
+  "administration": "Administration",
+  "users": "Nutzer:innen",
+  "invites": "Einladungen",
+  "manage-users": "Benutzer verwalten",
+  "role": "Rolle",
+  "created": "Erstellt",
+  "actions": "Aktionen",
+  "admin": "Administrator",
+  "user": "Benutzer",
+  "uploader": "Uploader",
+  "select-role": "Rolle auswählen",
+  "change-role": "Rolle ändern",
+  "change-role-user": "Rolle des Benutzers {{name}} ändern",
+  "role-changed": "Rolle geändert"
 }

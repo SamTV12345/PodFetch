@@ -2,7 +2,7 @@ use std::io::Error;
 use chrono::NaiveDateTime;
 use crate::schema::invites;
 use utoipa::ToSchema;
-use diesel::{Queryable, Insertable, Identifiable, AsChangeset, SqliteConnection, RunQueryDsl, QueryDsl, OptionalExtension};
+use diesel::{Queryable, Insertable, Identifiable, SqliteConnection, RunQueryDsl, QueryDsl, OptionalExtension};
 use diesel::associations::HasTable;
 use diesel::ExpressionMethods;
 use uuid::Uuid;

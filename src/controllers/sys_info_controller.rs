@@ -5,12 +5,11 @@ use actix_web::{get, post};
 use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
 use std::sync::{Mutex};
-use sha1::digest::DynDigest;
 use sysinfo::{System, SystemExt};
 use crate::DbPool;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
-use sha256::{digest,try_digest};
+use sha256::{digest};
 #[utoipa::path(
 context_path="/api/v1",
 responses(
