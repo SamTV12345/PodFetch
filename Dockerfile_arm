@@ -29,8 +29,8 @@ RUN apk add pkgconfig openssl-dev libc-dev
 COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
 COPY --from=dependency-cache /app/src/target/ /app/src/target/
 COPY --from=ui-builder /app/dist /app/src/static
-RUN rm -rf /app/src/target/release/deps/podgrabv2*
-RUN rm -rf /app/src/target/release/podgrabv2*
+RUN rm -rf /app/src/target/release/deps/podfetch*
+RUN rm -rf /app/src/target/release/podfetch*
 
 ADD Cargo.toml .
 ADD static ./static
@@ -48,7 +48,7 @@ WORKDIR /app/
 RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
 
-COPY --from=builder /app/src/target/release/podgrabv2 /app/podgrabv2
+COPY --from=builder /app/src/target/release/podfetch /app/podfetch
 COPY --from=builder /app/src/migrations /app/migrations
 COPY --from=builder /app/src/db /app/db
 COPY --from=ui-builder /app/dist /app/static
@@ -56,4 +56,4 @@ COPY ./docs/default.jpg /app/static/default.jpg
 
 
 EXPOSE 8000
-CMD ["./podgrabv2"]
+CMD ["./podfetch"]
