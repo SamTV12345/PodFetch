@@ -56,5 +56,14 @@
   "delete-podcast": "Delete podcast",
   "cancel": "Cancel",
   "delete-podcast-with-files-body": "Are you sure you want to delete the podcast {{name}} and all downloaded files?",
-  "podcast-deleted": "Podcast deleted"
+  "podcast-deleted": "Podcast deleted",
+  "manage-podcasts": "Manage podcasts",
+  "delete-podcasts-without-files": "Delete podcasts without files",
+  "delete-podcasts-with-files": "Delete podcasts with files",
+  "opml-export": "OPML export",
+  "local": "Local",
+  "online": "Online",
+  "i-want-to-export": "I want to export the podcasts with",
+  "export": "export",
+  "download": "Download"
 }
