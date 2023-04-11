@@ -18,7 +18,7 @@ Every time a new commit is pushed to the main branch, a new docker image is buil
 
 ### Building the app
 ```bash
-cargo.exe run --color=always --package podgrabv2 --bin podgrabv2
+cargo.exe run --color=always --package podfetch --bin podfetch
 # File just needs to be there
 touch static/index.html
 # Enable CORS headers
@@ -42,7 +42,7 @@ I would love to have a UX expert to help me with the UI. If you are interested i
 version: '3'
 services:
   podfetch:
-    image: samuel19982/podgrabv2:latest
+    image: samuel19982/podfetch:latest
     ports:
       - "80:8000"
     volumes:
@@ -78,18 +78,18 @@ Hosting options are described here: [HOSTING.md](docs/HOSTING.md)
 
 ## Audio Player
 The podcast listening tool contains an advanced audio player that can be used to listen to your podcasts,skip episodes, turn the volumes as high as 300% or skip around in the current episode.
-![Audio Player](https://raw.githubusercontent.com/SamTV12345/podgrabv2/main/docs/advanced_audio_player.png)
+![Audio Player](https://raw.githubusercontent.com/SamTV12345/podfetch/main/docs/advanced_audio_player.png)
 
 # Continue right where you stopped
 
 The tool will automatically save your progress in the current episode and will resume from where you left off even if you close the browser. 
 You can continue listening on all devices by just hitting play on any episode on your home screen.
 
-![Continue listening to episodes](https://raw.githubusercontent.com/SamTV12345/podgrabv2/main/docs/continue_listening.png)
+![Continue listening to episodes](https://raw.githubusercontent.com/SamTV12345/podfetch/main/docs/continue_listening.png)
 
 ## Search for podcasts
 You can search for podcast episodes by hitting CTRL+F and typing any word that might appear in the description or title of the podcast episode you want to listen to.
-![Audio Player](https://raw.githubusercontent.com/SamTV12345/podgrabv2/main/docs/search.png)
+![Audio Player](https://raw.githubusercontent.com/SamTV12345/podfetch/main/docs/search.png)
 
 ## Internationalization
 Podfetch is currently available in English and German. If you want to add a new language you can do so by adding a new file to the `i18n` folder and adding the translations to the file.
