@@ -19,6 +19,10 @@ Every time a new commit is pushed to the main branch, a new docker image is buil
 ### Building the app
 ```bash
 cargo.exe run --color=always --package podgrabv2 --bin podgrabv2
+# File just needs to be there
+touch static/index.html
+# Enable CORS headers
+export DEV=true
 cd ui
 <npm/yarn/pnpm> install
 <npm/yarn/pnpm> run dev
