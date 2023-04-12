@@ -1,9 +1,10 @@
 use crate::db::DB;
 use crate::models::models::PodcastWatchedPostModel;
 use actix_web::web::Data;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpResponse, Responder, HttpRequest};
 use std::sync::{Mutex};
 use crate::DbPool;
+use crate::models::user::User;
 use crate::mutex::LockResultExt;
 
 #[utoipa::path(
@@ -13,9 +14,12 @@ responses(
 tag="watchtime"
 )]
 #[post("/podcast/episode")]
-pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>, conn: Data<DbPool>) ->
+pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>, conn: Data<DbPool>,
+                           rq: HttpRequest
+) ->
                                                                                              impl
 Responder {
+    User::get_username_from_req_header(&rq);
     let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
     DB::log_watchtime(&mut conn.get().unwrap(),podcast_watch.0)
         .expect("Error logging watchtime");

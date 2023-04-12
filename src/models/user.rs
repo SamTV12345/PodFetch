@@ -1,4 +1,5 @@
 use std::io::Error;
+use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl, SqliteConnection};
@@ -9,7 +10,7 @@ use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
 use sha256::digest;
-use crate::constants::constants::{Role, USERNAME};
+use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -114,5 +115,53 @@ impl User{
 
         let mut loaded_users = users.load::<User>(conn).unwrap();
         loaded_users.into_iter().map(|user| User::map_to_dto(user)).collect()
+    }
+
+    /**
+        * Returns the username from the request header if the BASIC_AUTH environment variable is set to true
+        * Otherwise returns None
+     */
+    pub fn get_username_from_req_header(req: &actix_web::HttpRequest) -> Result<Option<String>, Error>{
+        if var(BASIC_AUTH).is_ok()|| var(OIDC_AUTH).is_ok() {
+            let auth_header = req.headers().get(USERNAME);
+            if auth_header.is_none() {
+                return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
+            }
+            return Ok(Some(auth_header.unwrap().to_str().unwrap().parse().unwrap()))
+        }
+        Ok(None)
+    }
+
+
+    pub fn check_if_admin_or_uploader(username: &Option<String>, conn: &mut SqliteConnection) ->
+                                                                                              Option<HttpResponse> {
+        if username.is_some(){
+            let found_user = User::find_by_username(&username.clone().unwrap(), conn);
+            if found_user.is_none(){
+                return Some(HttpResponse::BadRequest().json("User not found"));
+            }
+            let user = found_user.unwrap();
+
+            if user.role != Role::Admin.to_string() || user.role!= Role::Uploader.to_string(){
+                return Some(HttpResponse::BadRequest().json("User is not an admin or uploader"));
+            }
+        }
+        None
+    }
+
+    pub fn check_if_admin(username: &Option<String>, conn: &mut SqliteConnection) ->
+                                                                                              Option<HttpResponse> {
+        if username.is_some(){
+            let found_user = User::find_by_username(&username.clone().unwrap(), conn);
+            if found_user.is_none(){
+                return Some(HttpResponse::BadRequest().json("User not found"));
+            }
+            let user = found_user.unwrap();
+
+            if user.role != Role::Admin.to_string(){
+                return Some(HttpResponse::BadRequest().json("User is not an admin"));
+            }
+        }
+        None
     }
 }

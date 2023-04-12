@@ -10,7 +10,7 @@ use crate::service::rust_service::PodcastService;
 use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
-use actix_web::{get, post, put, delete};
+use actix_web::{get, post, put, delete, HttpRequest};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
 use futures::executor;
@@ -25,8 +25,10 @@ use std::sync::{Mutex};
 use std::thread;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
+use crate::constants::constants::Role;
 use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
+use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 
@@ -125,34 +127,49 @@ tag="podcasts"
 pub async fn add_podcast(
     track_id: web::Json<PodCastAddModel>,
     lobby: Data<Addr<Lobby>>,
-    conn: Data<DbPool>
-) -> impl Responder {
-    let client = AsyncClientBuilder::new().build().unwrap();
-    let res = client
-        .get("https://itunes.apple.com/lookup?id=".to_owned() + &track_id.track_id.to_string())
-        .send()
-        .await
-        .unwrap();
+    conn: Data<DbPool>, rq: HttpRequest) -> impl Responder {
 
-    let res = res.json::<Value>().await.unwrap();
+    return match  User::get_username_from_req_header(&rq){
+      Ok(username)=>{
 
-    let mut podcast_service = PodcastService::new();
-    let mapping_service = MappingService::new();
-    podcast_service
-        .handle_insert_of_podcast(&mut conn.get().unwrap(),
-                                  PodcastInsertModel {
-                                      feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
-                                      title: unwrap_string(&res["results"][0]["collectionName"]),
-                                      id: unwrap_string(&res["results"][0]["collectionId"])
-                                          .parse()
-                                          .unwrap(),
-                                      image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
-                                  },
-                                  mapping_service,
-                                  lobby,
-        )
-        .await.expect("Error handling insert of podcast");
-    HttpResponse::Ok()
+          match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()){
+              Some(err)=>{
+                  return err;
+              }
+              None=>{
+              }
+          }
+          let client = AsyncClientBuilder::new().build().unwrap();
+          let res = client
+              .get("https://itunes.apple.com/lookup?id=".to_owned() + &track_id.track_id.to_string())
+              .send()
+              .await
+              .unwrap();
+
+          let res = res.json::<Value>().await.unwrap();
+
+          let mut podcast_service = PodcastService::new();
+          let mapping_service = MappingService::new();
+          podcast_service
+              .handle_insert_of_podcast(&mut conn.get().unwrap(),
+                                        PodcastInsertModel {
+                                            feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
+                                            title: unwrap_string(&res["results"][0]["collectionName"]),
+                                            id: unwrap_string(&res["results"][0]["collectionId"])
+                                                .parse()
+                                                .unwrap(),
+                                            image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
+                                        },
+                                        mapping_service,
+                                        lobby,
+              )
+              .await.expect("Error handling insert of podcast");
+          HttpResponse::Ok()
+      },
+        Err(e)=>{
+            return HttpResponse::BadRequest().json(e.to_string()).into();
+        }
+    }.into();
 }
 
 #[utoipa::path(

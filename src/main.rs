@@ -138,7 +138,7 @@ async fn validator(
     }
 }
 
-async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService, pool: Pool<ConnectionManager<SqliteConnection>>)
+async fn validate_oidc_token(mut rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService, pool: Pool<ConnectionManager<SqliteConnection>>)
                              ->Result<ServiceRequest,
     (Error, ServiceRequest)> {
     // Check if the Authorization header exists and has a Bearer token
@@ -186,8 +186,10 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_ser
     let validation = Validation::new(Algorithm::RS256);
     match decode::<Value>(&token, &key, &validation) {
         Ok(decoded) => {
-
-            if User::find_by_username(decoded.claims.get("preferred_username").unwrap().as_str().unwrap(), &mut pool.get().unwrap()).is_some(){
+            let username = decoded.claims.get("preferred_username").unwrap().as_str().unwrap();
+            if User::find_by_username(username, &mut pool.get().unwrap()).is_some(){
+                rq.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                         HeaderValue::from_str(username).unwrap());
                 return Ok(rq);
             }
             // User is authenticated so we can onboard him if he is new
@@ -199,6 +201,8 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_ser
                 explicit_consent: false,
                 created_at:  chrono::Utc::now().naive_utc()
             }, &mut pool.get().unwrap()).expect("Error inserting user");
+            rq.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                     HeaderValue::from_str(username).unwrap());
             return Ok(rq)
         },
         Err(e) =>{

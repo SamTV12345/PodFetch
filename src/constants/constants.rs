@@ -72,3 +72,6 @@ pub const BASIC_AUTH:&str = "BASIC_AUTH";
 
 pub const USERNAME:&str = "username";
 pub const PASSWORD:&str = "password";
+
+
+pub const STANDARD_USER: &str = "user123";
