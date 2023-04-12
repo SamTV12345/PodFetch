@@ -5,7 +5,8 @@ CREATE TABLE if not exists users (
     role TEXT CHECK(role IN ('admin', 'uploader', 'user')) NOT NULL,
     password VARCHAR(255) NULL,
     explicit_consent BOOLEAN NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (username)
 );
 
 CREATE TABLE invites (

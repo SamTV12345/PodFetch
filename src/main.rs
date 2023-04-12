@@ -138,7 +138,7 @@ async fn validator(
     }
 }
 
-async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService)
+async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService, pool: Pool<ConnectionManager<SqliteConnection>>)
                              ->Result<ServiceRequest,
     (Error, ServiceRequest)> {
     // Check if the Authorization header exists and has a Bearer token
@@ -185,7 +185,22 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_ser
     let key = DecodingKey::from_jwk(&jwk).unwrap();
     let validation = Validation::new(Algorithm::RS256);
     match decode::<Value>(&token, &key, &validation) {
-        Ok(_) => Ok(rq),
+        Ok(decoded) => {
+
+            if User::find_by_username(decoded.claims.get("preferred_username").unwrap().as_str().unwrap(), &mut pool.get().unwrap()).is_some(){
+                return Ok(rq);
+            }
+            // User is authenticated so we can onboard him if he is new
+            User::insert_user(&mut User {
+                id: 0,
+                username: decoded.claims.get("preferred_username").unwrap().as_str().unwrap().to_string(),
+                role: "user".to_string(),
+                password: None,
+                explicit_consent: false,
+                created_at:  chrono::Utc::now().naive_utc()
+            }, &mut pool.get().unwrap()).expect("Error inserting user");
+            return Ok(rq)
+        },
         Err(e) =>{
             info!("Error: {:?}",e);
             Err((ErrorUnauthorized("Invalid oidc token."), rq))
@@ -373,6 +388,7 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) ->Scop
 }
 
 fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
+    let oidc_db = db.clone();
     let enable_basic_auth = var(BASIC_AUTH).is_ok();
     let auth = HttpAuthentication::basic(move |rq,serv|{
         validator(rq, serv, db.clone())
@@ -384,7 +400,7 @@ fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl 
     };
 
     let oidc_auth = HttpAuthentication::bearer(move |srv,req|{
-        validate_oidc_token(srv,req, jwk_service.clone())
+        validate_oidc_token(srv,req, jwk_service.clone(), oidc_db.clone())
     });
 
     web::scope("")
