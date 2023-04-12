@@ -78,5 +78,9 @@
   "add-invite": "Ajouter une invitation",
   "create-invite": "Créer une invitation",
   "accepted-at": "Accepté à",
-  "expires-at": "Expire à"
+  "expires-at": "Expire à",
+  "allow-explicit-content": "Autoriser le contenu explicite",
+  "explicit-content": "Contenu explicite",
+  "account-created": "Compte créé",
+  "password-too-weak": "Le mot de passe est trop faible. Il doit contenir au moins 8 caractères, dont au moins une lettre majuscule, une lettre minuscule et un chiffre."
 }

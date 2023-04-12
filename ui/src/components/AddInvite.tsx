@@ -11,15 +11,17 @@ import {useState} from "react";
 
 
 type Invite = {
-    role: string
+    role: string,
+    explicitConsent: boolean
 }
 
 export const AddInvite = () => {
     const dispatch = useAppDispatch()
     const inviteModalOpen = useAppSelector(state=>state.common.addInviteModalOpen)
     const {t} = useTranslation()
-    const [invite, setInvite] = useState<Invite>({role: "User"})
+    const [invite, setInvite] = useState<Invite>({role: "User", explicitConsent: false})
     const invites = useAppSelector(state=>state.common.invites)
+
 
     return createPortal( <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setAddInviteModalOpen(false))}
                               className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 md:inset-0 h-modal md:h-full
@@ -38,11 +40,20 @@ export const AddInvite = () => {
                 </div>
                 <div className="p-6 space-y-6 text-base leading-relaxed text-gray-400">
                     <div className="grid grid-cols-2">
-                        <select id="roles" value={invite.role} onChange={(v)=> {setInvite({role: v.target.value})}} className="border rounded-lg block w-full p-2.5 bg-gray-800 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500">
+                        <select id="roles" value={invite.role} onChange={(v)=> {setInvite({...invite,role: v.target.value})}} className="border rounded-lg block w-full p-2.5 bg-gray-800 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500">
                             <option value="Admin">{t('admin')}</option>
                             <option value="User">{t('user')}</option>
                             <option value="Uploader">{t('uploader')}</option>
                         </select>
+                    </div>
+                    <div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={invite.explicitConsent} onChange={()=>{setInvite({...invite, explicitConsent: !invite.explicitConsent})}} className="sr-only peer"/>
+                                <div
+                                    className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                <span
+                                    className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">{t('allow-explicit-content')}</span>
+                        </label>
                     </div>
                     <div className="flex">
                         <div className="flex-1"></div>

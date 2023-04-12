@@ -18,6 +18,7 @@ pub struct User {
     pub username: String,
     pub role: String,
     pub password: Option<String>,
+    pub explicit_consent: bool,
     pub created_at: NaiveDateTime
 }
 
@@ -33,13 +34,14 @@ pub struct UserWithoutPassword{
 
 impl User{
     pub fn new(id: i32, username: String, role: Role, password: Option<String>, created_at:
-    NaiveDateTime) -> Self {
+    NaiveDateTime, explicit_consent: bool) -> Self {
         User {
             id,
             username,
             role: role.to_string(),
             password,
-            created_at
+            created_at,
+            explicit_consent
         }
     }
 
@@ -63,12 +65,11 @@ impl User{
         return Err(Error::new(std::io::ErrorKind::Other, "Username already exists"));
         }
 
-        let password_to_insert = digest(self.password.clone().unwrap());
         let res = diesel::insert_into(users::table())
             .values((
                 username.eq(self.username.clone()),
                 role.eq(self.role.clone()),
-                password.eq(password_to_insert),
+                password.eq(self.password.clone()),
                 created_at.eq(chrono::Utc::now().naive_utc())
                 ))
             .get_result::<User>(conn).unwrap();
@@ -94,6 +95,7 @@ impl User{
             username: var(USERNAME).unwrap(),
             role: Role::Admin.to_string(),
             password: None,
+            explicit_consent: true,
             created_at: Default::default(),
         }
     }

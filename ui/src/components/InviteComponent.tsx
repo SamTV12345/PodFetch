@@ -6,6 +6,7 @@ import {Loading} from "./Loading";
 import {SubmitHandler, useForm} from "react-hook-form";
 import {LoginData} from "./LoginComponent";
 import {useTranslation} from "react-i18next";
+import {enqueueSnackbar} from "notistack";
 
 
 export const InviteComponent = ()=>{
@@ -20,7 +21,8 @@ export const InviteComponent = ()=>{
             role: string,
             createdAt: string,
             acceptedAt: string,
-            expiresAt: string
+            expiresAt: string,
+            explicitContent: boolean
         }
 
         useEffect(()=>{
@@ -41,10 +43,10 @@ export const InviteComponent = ()=>{
                 username: data.username,
                 password: data.password,
                 inviteId: params.id
-            }).then((res)=>{
-                console.log(res)
+            }).then(()=>{
+                enqueueSnackbar(t('account-created'), {variant: "success"})
             }).catch((e)=>{
-                console.log(e)
+                enqueueSnackbar(t('password-too-weak'), {variant: "error"})
             })
         }
 
@@ -68,22 +70,28 @@ export const InviteComponent = ()=>{
                 <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="grid grid-cols-2 gap-5 text-white">
                     <div>
-                        Rolle
+                        {t('role')}
                     </div>
                     <div>
                         {invite.role}
                     </div>
                     <div>
-                        Erstellt
+                        {t('created')}
                     </div>
                     <div>
                         {formatTime(invite.createdAt)}
                     </div>
                     <div>
-                        Läuft ab
+                        {t('expires-at')}
                     </div>
                     <div>
                         {formatTime(invite.expiresAt)}
+                    </div>
+                    <div>
+                        {t('explicit-content')}
+                    </div>
+                    <div>
+                        {invite.explicitContent?<i className="fa-solid fa-check"/>:<i className="fa-solid fa-times"></i>}
                     </div>
                     <label htmlFor="username"
                            className="block pt-2.5 pb-2.5 text-white">{t('username')!}</label>

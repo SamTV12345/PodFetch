@@ -78,5 +78,9 @@
   "add-invite": "Add invite",
   "create-invite": "Create invite",
   "accepted-at": "Accepted at",
-  "expires-at": "Expires at"
+  "expires-at": "Expires at",
+  "allow-explicit-content": "Allow explicit content",
+  "explicit-content": "Explicit content",
+  "account-created": "Account created",
+  "password-too-weak": "Password too weak. A secure password contains at least 8 characters, a number, a lowercase and an uppercase letter."
 }

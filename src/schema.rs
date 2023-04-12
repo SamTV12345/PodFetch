@@ -6,6 +6,7 @@ diesel::table! {
         role -> Text,
         created_at -> Timestamp,
         accepted_at -> Nullable<Timestamp>,
+        explicit_consent -> Bool,
         expires_at -> Timestamp,
     }
 }
@@ -83,6 +84,7 @@ diesel::table! {
         username -> Text,
         role -> Text,
         password -> Nullable<Text>,
+        explicit_consent -> Bool,
         created_at -> Timestamp,
     }
 }

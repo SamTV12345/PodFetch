@@ -18,13 +18,17 @@ pub struct UserOnboardingModel{
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct InvitePostModel{
-    role: Role
+    role: Role,
+    explicit_consent: bool
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserRoleUpdateModel{
-    role: Role
+    role: Role,
+    explicit_consent: bool
 }
 
 #[post("/users/")]
@@ -111,7 +115,9 @@ Responder{
     let username  = req.headers().get(USERNAME).unwrap()
         .to_str().unwrap();
     let user = User::find_by_username(username, &mut *conn.get().unwrap()).unwrap();
-    let created_invite = UserManagementService::create_invite(invite.role, &mut *conn.get().unwrap(), user).expect("Error creating invite");
+    let created_invite = UserManagementService::create_invite(invite.role, invite
+        .explicit_consent,&mut *conn.get()
+        .unwrap(), user).expect("Error creating invite");
     HttpResponse::Ok().json(created_invite)
 }
 

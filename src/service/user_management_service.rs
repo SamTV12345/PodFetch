@@ -9,6 +9,7 @@ use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use sha256::{digest};
 use crate::constants::constants::Role;
+use crate::schema::users::explicit_consent;
 
 pub struct UserManagementService{
 
@@ -68,7 +69,7 @@ impl UserManagementService {
 
                         let mut actual_user = User::new(1, username, Role::from_str(&invite.role).unwrap(),
                                                         Some
-                            (digest(password.clone())), chrono::Utc::now().naive_utc());
+                            (digest(password.clone())), chrono::Utc::now().naive_utc(), invite.explicit_consent);
 
 
                         // This is safe as only when basic auth is enabled, the password is set
@@ -101,10 +102,13 @@ impl UserManagementService {
         }
     }
 
-    pub fn create_invite(role: Role, conn: &mut SqliteConnection, user: User) -> Result<Invite,
+    pub fn create_invite(role: Role, explicit_consent_i: bool, conn: &mut SqliteConnection, user:
+    User)
+        -> Result<Invite,
         PodFetchError> {
         if Self::may_onboard_user(user){
-            let invite = Invite::insert_invite(&role, conn).expect("Error inserting invite");
+            let invite = Invite::insert_invite(&role,explicit_consent_i, conn).expect("Error \
+            inserting invite");
             return Ok(invite)
         }
         Err(PodFetchError::no_permissions_to_onboard_user())

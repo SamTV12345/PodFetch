@@ -38,6 +38,7 @@ use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
 use reqwest::header::HeaderName;
+use sha256::digest;
 
 pub mod schema;
 mod controllers;
@@ -70,6 +71,7 @@ mod models;
 mod service;
 use crate::db::DB;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
+use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -80,6 +82,7 @@ use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
+use crate::service::user_management_service::UserManagementService;
 
 mod config;
 
@@ -91,7 +94,7 @@ type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
 async fn validator(
     mut req: ServiceRequest,
-    _credentials: BasicAuth,
+    _credentials: BasicAuth, db: DbPool
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let authorization = req.headers().get("Authorization").unwrap().to_str();
 
@@ -106,17 +109,33 @@ async fn validator(
             let username = auth[0];
             let password = auth[1];
             let env = EnvironmentService::new();
+
+            // Check if user is admin
             if username == env.username && password == env.password {
                 req.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
-                                     HeaderValue::from_str(username).unwrap());
+                                         HeaderValue::from_str(username).unwrap());
                 return Ok(req);
+            } else {
+                match User::find_by_username(username, &mut db.get().unwrap()) {
+                    Some(user) => {
+                        if user.password.unwrap()== digest(password) {
+                            req.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                                     HeaderValue::from_str(username).unwrap());
+                            Ok(req)
+                        } else {
+                            Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req))
+                        }
+                    }
+                    None => {
+                        return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
+                    }
+                }
             }
         }
         Err(_) => {
             return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
         }
     }
-    return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
 }
 
 async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService)
@@ -299,7 +318,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
-            .service(get_global_scope())
+            .service(get_global_scope(pool.clone()))
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
@@ -317,24 +336,26 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-pub fn get_api_config() -> Scope {
+pub fn get_api_config(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Scope {
     web::scope("/api/v1")
-        .configure(config)
+        .configure(|cfg|{
+            config(cfg, pool1)
+        })
 }
 
 
-fn config(cfg: &mut web::ServiceConfig){
+fn config(cfg: &mut web::ServiceConfig, db: Pool<ConnectionManager<SqliteConnection>>){
     cfg.service(get_invite)
         .service(onboard_user)
         .service(login)
         .service(get_public_config)
-        .service(get_private_api());
+        .service(get_private_api(db));
 }
 
-pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
+pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) ->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
     let base_path = var("SUB_DIRECTORY").unwrap_or("/".to_string());
     let openapi = ApiDoc::openapi();
-    let service = get_api_config();
+    let service = get_api_config(pool1);
 
     let dev_enabled = var("DEV").is_ok();
 
@@ -351,9 +372,11 @@ pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = ()
         .service(get_rss_feed_for_podcast)
 }
 
-fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
+fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
     let enable_basic_auth = var(BASIC_AUTH).is_ok();
-    let auth = HttpAuthentication::basic(validator);
+    let auth = HttpAuthentication::basic(move |rq,serv|{
+        validator(rq, serv, db.clone())
+    });
     let enable_oidc_auth = var(OIDC_AUTH).is_ok();
     let jwk_service = JWKService{
         timestamp:0,

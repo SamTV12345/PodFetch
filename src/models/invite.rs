@@ -7,6 +7,7 @@ use diesel::associations::HasTable;
 use diesel::ExpressionMethods;
 use uuid::Uuid;
 use crate::constants::constants::Role;
+use crate::schema::users::explicit_consent;
 
 #[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -15,22 +16,27 @@ pub struct Invite{
     pub role: String,
     pub created_at: NaiveDateTime,
     pub accepted_at: Option<NaiveDateTime>,
+    pub explicit_consent: bool,
     pub expires_at: NaiveDateTime
 }
 
 
 impl Invite{
-    pub fn new(id: String, role: String, created_at: NaiveDateTime, accepted_at: Option<NaiveDateTime>, expires_at: NaiveDateTime) -> Self {
+    pub fn new(id: String, role: String, created_at: NaiveDateTime, accepted_at:
+    Option<NaiveDateTime>, expires_at: NaiveDateTime, explicit_consent_i: bool) -> Self {
         Invite {
             id,
             role,
             created_at,
             accepted_at,
+            explicit_consent:explicit_consent_i,
             expires_at
         }
     }
 
-    pub fn insert_invite(role_to_insert: &Role, conn: &mut SqliteConnection) -> Result<Invite, Error> {
+    pub fn insert_invite(role_to_insert: &Role, explicit_consent_to_insert: bool, conn: &mut
+    SqliteConnection) -> Result<Invite,
+        Error> {
         use crate::schema::invites::dsl::*;
 
         let now = chrono::Utc::now().naive_utc();
@@ -40,6 +46,7 @@ impl Invite{
                 (
                     id.eq(Uuid::new_v4().to_string()),
                     role.eq(role_to_insert.to_string()),
+                    explicit_consent.eq(explicit_consent_to_insert),
                     created_at.eq(now),
                     expires_at.eq(now + chrono::Duration::days(7)))
             )

@@ -80,5 +80,9 @@
   "add-invite": "Einladung hinzufügen",
   "create-invite": "Einladung erstellen",
   "accepted-at": "Akzeptiert am",
-  "expires-at": "Läuft ab am"
+  "expires-at": "Läuft ab am",
+  "allow-explicit-content": "Expliziten Inhalt erlauben",
+  "explicit-content": "Expliziter Inhalt",
+  "account-created": "Konto erstellt",
+  "password-too-weak": "Passwort zu schwach. Ein sicheres Passwort hat eine Länge 8 und enthält mindestens eine Zahl, einen Großbuchstaben und einen Kleinbuchstaben."
 }
