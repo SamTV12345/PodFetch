@@ -16,7 +16,7 @@ export const Card:FC<CardProps> = ({podcast})=>{
     const likePodcast = () => {
         axios.put(apiURL+"/podcast/favored", {
             id: podcast.id,
-            favored: !podcast.favored
+            favored: !podcast.favorites
         })
     }
 
@@ -29,7 +29,7 @@ export const Card:FC<CardProps> = ({podcast})=>{
         </Link>
         <div className="grid grid-cols-[1fr_auto] p-5">
                 <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{podcast.name}</h5>
-            <i ref={likeButton} className={`fa-star fa-solid text-3xl cursor-pointer ${podcast.favored?'text-amber-400': 'text-gray-500'}`} onClick={()=>{
+            <i ref={likeButton} className={`fa-star fa-solid text-3xl cursor-pointer ${podcast.favorites?'text-amber-400': 'text-gray-500'}`} onClick={()=>{
                 likeButton.current?.classList.toggle('text-amber-400')
                 likePodcast()
                 dispatch(updateLikePodcast(podcast.id))

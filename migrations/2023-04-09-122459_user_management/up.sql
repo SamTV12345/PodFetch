@@ -16,6 +16,15 @@ CREATE TABLE invites (
     accepted_at DATETIME NULL,
     explicit_consent BOOLEAN NOT NULL DEFAULT 0,
     expires_at DATETIME NOT NULL
-)
+);
 
+ALTER TABLE podcasts DROP COLUMN favored;
 
+CREATE TABLE favorites (
+    username TEXT NOT NULL,
+    podcast_id INTEGER NOT NULL,
+    favored BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (username, podcast_id),
+    FOREIGN KEY (username) REFERENCES users (username) ON DELETE CASCADE,
+    FOREIGN KEY (podcast_id) REFERENCES podcasts (id) ON DELETE CASCADE
+);

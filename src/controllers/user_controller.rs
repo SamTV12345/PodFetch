@@ -63,7 +63,7 @@ pub async fn get_users(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
 }
 
 #[get("/users/{username}")]
-pub async fn get_user(req: HttpRequest,mut conn: Data<DbPool>)->impl Responder{
+pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
     let username = get_user_from_request(req);
     let user = User::find_by_username(&username, &mut *conn.get().unwrap());
     return match user {
@@ -93,6 +93,7 @@ pub async fn update_role(req: HttpRequest, role: web::Json<UserRoleUpdateModel>,
     // Update to his/her designated role
     let mut found_user = user_to_update.unwrap();
     found_user.role = role.role.to_string();
+    found_user.explicit_consent = role.explicit_consent;
 
     let res = UserManagementService::update_role(found_user, requester.unwrap(), &mut
                                               *conn.get()

@@ -13,7 +13,7 @@ export type Podcast = {
     name: string,
     rssfeed: string,
     image_url: string,
-    favored: boolean,
+    favorites: boolean,
     summary?: string,
     language?: string,
     explicit?: boolean,
@@ -92,7 +92,7 @@ export const commonSlice = createSlice({
         updateLikePodcast:(state, action: PayloadAction<number>)=>{
           state.podcasts = state.podcasts.map((podcast) => {
                 if(podcast.id === action.payload) {
-                    podcast.favored = !podcast.favored
+                    podcast.favorites = !podcast.favorites
                 }
                 return podcast
           })

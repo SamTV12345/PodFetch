@@ -25,7 +25,7 @@ use std::sync::{Mutex};
 use std::thread;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
-use crate::constants::constants::Role;
+use crate::constants::constants::{STANDARD_USER};
 use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
@@ -63,19 +63,31 @@ tag="podcasts"
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
     mapping_service: Data<Mutex<MappingService>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>, rq: HttpRequest
 ) -> impl Responder {
     let mapping_service = mapping_service
         .lock()
         .ignore_poison();
-    let podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap())
-        .unwrap();
+    let err_username = User::get_username_from_req_header(&rq);
 
-    let mapped_podcasts = podcasts
-        .into_iter()
-        .map(|podcast| mapping_service.map_podcast_to_podcast_dto(&podcast))
-        .collect::<Vec<_>>();
-    HttpResponse::Ok().json(mapped_podcasts)
+    if err_username.is_err(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+
+    let username = err_username.unwrap();
+    let podcasts;
+
+    match username {
+        Some(u)=>{
+             podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap(), u, mapping_service).unwrap();
+        },
+        None => {
+             podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap(), STANDARD_USER
+                .to_string(), mapping_service).unwrap();
+
+        }
+    }
+    HttpResponse::Ok().json(podcasts)
 }
 
 #[utoipa::path(
@@ -141,7 +153,8 @@ pub async fn add_podcast(
           }
           let client = AsyncClientBuilder::new().build().unwrap();
           let res = client
-              .get("https://itunes.apple.com/lookup?id=".to_owned() + &track_id.track_id.to_string())
+              .get("https://itunes.apple.com/lookup?id=".to_owned() + &track_id.track_id
+                  .to_string()+ "&entity=podcast")
               .send()
               .await
               .unwrap();
@@ -185,6 +198,7 @@ pub async fn import_podcasts_from_opml(
     lobby: Data<Addr<Lobby>>,
     conn: Data<DbPool>
 ) -> impl Responder {
+    //TODO Check role
     spawn_blocking(move || {
         let rng = rand::thread_rng();
         let environment = EnvironmentService::new();
@@ -213,6 +227,7 @@ pub async fn add_podcast_from_podindex(
     lobby: Data<Addr<Lobby>>,
     conn: Data<DbPool>
 ) -> impl Responder {
+    //TODO Check role
     let mut environment = EnvironmentService::new();
 
     if !environment.get_config().podindex_configured {
@@ -295,12 +310,25 @@ tag="podcasts"
 pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
+    rq:HttpRequest
 ) -> impl Responder {
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
-
-    podcast_service.update_favor_podcast(update_model.id, update_model.favored);
-    HttpResponse::Ok().json("Favorited podcast")
+    let username = User::get_username_from_req_header(&rq).map_err(|e| {
+        log::error!("Error: {}", e);
+        HttpResponse::InternalServerError().json("Error getting username from request header")
+    }).unwrap();
+    return match username {
+        Some(username) => {
+            podcast_service.update_favor_podcast(update_model.id, update_model.favored, username);
+            HttpResponse::Ok().json("Favorited podcast")
+        },
+        None => {
+            podcast_service.update_favor_podcast(update_model.id, update_model.favored,
+                                                 STANDARD_USER.to_string());
+            HttpResponse::Ok().json("Favorited podcast")
+        }
+    }
 }
 
 #[utoipa::path(
@@ -311,10 +339,15 @@ tag="podcasts"
 )]
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
-    podcast_service_mutex: Data<Mutex<PodcastService>>,
+    podcast_service_mutex: Data<Mutex<PodcastService>>,rq: HttpRequest,
 ) -> impl Responder {
+
+    let found_username = User::get_username_from_req_header(&rq).map_err(|e| {
+        log::error!("Error: {}", e);
+        HttpResponse::InternalServerError().json("Error getting username from request header")
+    }).unwrap();
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts();
+    let podcasts = podcast_service.get_favored_podcasts(found_username);
     HttpResponse::Ok().json(podcasts)
 }
 

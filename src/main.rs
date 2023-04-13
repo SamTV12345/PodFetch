@@ -82,7 +82,6 @@ use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
-use crate::service::user_management_service::UserManagementService;
 
 mod config;
 
@@ -222,10 +221,9 @@ async fn get_jwk() -> CustomJwkSet {
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
-    mut podcast_episode_service: PodcastEpisodeService,
-) {
+    mut podcast_episode_service: PodcastEpisodeService) {
     //check for new episodes
-    let podcats_result = DB::get_podcasts(&mut establish_connection()).unwrap();
+    let podcats_result = DB::get_all_podcasts(&mut establish_connection()).unwrap();
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();

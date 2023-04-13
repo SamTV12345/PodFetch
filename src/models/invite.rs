@@ -7,7 +7,6 @@ use diesel::associations::HasTable;
 use diesel::ExpressionMethods;
 use uuid::Uuid;
 use crate::constants::constants::Role;
-use crate::schema::users::explicit_consent;
 
 #[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

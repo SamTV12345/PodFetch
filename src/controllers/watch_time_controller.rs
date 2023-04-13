@@ -19,7 +19,7 @@ pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>, co
 ) ->
                                                                                              impl
 Responder {
-    User::get_username_from_req_header(&rq);
+    User::get_username_from_req_header(&rq).expect("TODO: panic message");
     let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
     DB::log_watchtime(&mut conn.get().unwrap(),podcast_watch.0)
         .expect("Error logging watchtime");

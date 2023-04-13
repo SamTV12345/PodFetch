@@ -9,7 +9,6 @@ use crate::schema::users;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
-use sha256::digest;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq)]
@@ -113,7 +112,7 @@ impl User{
     pub fn find_all_users(conn: &mut SqliteConnection) -> Vec<UserWithoutPassword> {
         use crate::schema::users::dsl::*;
 
-        let mut loaded_users = users.load::<User>(conn).unwrap();
+        let loaded_users = users.load::<User>(conn).unwrap();
         loaded_users.into_iter().map(|user| User::map_to_dto(user)).collect()
     }
 
@@ -141,8 +140,10 @@ impl User{
                 return Some(HttpResponse::BadRequest().json("User not found"));
             }
             let user = found_user.unwrap();
-
-            if user.role != Role::Admin.to_string() || user.role!= Role::Uploader.to_string(){
+            println!("User role: {}", user.role);
+            println!("Admin role: {}", Role::Admin.to_string());
+            if user.role.ne(&Role::Admin.to_string()) || user.role.ne(&Role::Uploader.to_string
+            ()){
                 return Some(HttpResponse::BadRequest().json("User is not an admin or uploader"));
             }
         }

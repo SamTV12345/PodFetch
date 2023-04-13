@@ -1,12 +1,11 @@
 use crate::config::dbconfig::establish_connection;
-use crate::constants::constants::DEFAULT_SETTINGS;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::constants::constants::{DEFAULT_SETTINGS, STANDARD_USER};
+use crate::models::itunes_models::{Podcast, PodcastDto, PodcastEpisode};
 use crate::models::models::{
     Notification, PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode,
     PodcastWatchedPostModel,
 };
 use crate::models::settings::Setting;
-use crate::schema::podcasts::original_image_url;
 use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastExtra;
 use chrono::{DateTime, Duration, Utc};
@@ -15,7 +14,9 @@ use diesel::prelude::*;
 use diesel::{insert_into, sql_query, RunQueryDsl, delete};
 use rss::Item;
 use std::io::Error;
+use std::sync::MutexGuard;
 use std::time::SystemTime;
+use crate::models::favorites::Favorite;
 use crate::utils::do_retry::do_retry;
 
 pub struct DB {
@@ -49,7 +50,28 @@ impl DB {
             .expect("Error loading podcast by rss feed url")
     }
 
-    pub fn get_podcasts(conn: &mut SqliteConnection) -> Result<Vec<Podcast>, String> {
+    pub fn get_podcasts(conn: &mut SqliteConnection, u: String, mapping_service: MutexGuard<MappingService>)
+        -> Result<Vec<PodcastDto>, String> {
+        use crate::schema::podcasts::dsl::podcasts;
+        use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::username;
+        let result = podcasts
+            .inner_join(f_db)
+            .filter(username.eq(u))
+            .load::<(Podcast, Favorite)>(conn)
+            .expect("Error loading podcasts");
+
+        let mapped_result = result
+            .iter()
+            .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites
+            (&*podcast))
+            .collect::<Vec<PodcastDto>>();
+        Ok(mapped_result)
+    }
+
+
+    pub fn get_all_podcasts(conn: &mut SqliteConnection)
+        -> Result<Vec<Podcast>, String> {
         use crate::schema::podcasts::dsl::podcasts;
         let result = podcasts
             .load::<Podcast>(conn)
@@ -178,7 +200,7 @@ impl DB {
     ) -> Podcast {
         use crate::schema::podcasts;
         use crate::schema::podcasts::{directory, image_url, name as podcast_name, rssfeed};
-
+        use crate::schema::podcasts::{original_image_url};
         let inserted_podcast = insert_into(podcasts::table)
             .values((
                 directory.eq(collection_id.to_string()),
@@ -528,41 +550,72 @@ impl DB {
         Ok(result)
     }
 
-    pub fn update_podcast_favor(&mut self, podcast_id: &i32, favor: bool) -> Result<(), String> {
-        use crate::schema::podcasts::dsl::favored as favor_column;
-        use crate::schema::podcasts::dsl::id;
-        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+    pub fn update_podcast_favor(&mut self, podcast_id_1: &i32, favor: bool, username_1: String) ->
+                                                                                               Result<(), String> {
+        use crate::schema::favorites::dsl::favored as favor_column;
+        use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::podcast_id;
+        use crate::schema::favorites::dsl::username;
 
-        let result = dsl_podcast
-            .filter(id.eq(podcast_id))
-            .first::<Podcast>(&mut self.conn)
-            .optional()
-            .expect("Error loading podcast episode by id");
-        match result {
+        let res = f_db.filter(podcast_id.eq(podcast_id_1)).first::<Favorite>(&mut self.conn)
+            .optional().unwrap();
+
+        match res{
             Some(..) => {
-                do_retry(||{diesel::update(dsl_podcast.filter(id.eq(podcast_id)))
-                    .set(favor_column.eq(favor as i32))
-                    .execute(&mut self.conn)}).expect("Error updating podcast");
+                diesel::update(f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1))))
+                    .set(favor_column.eq(favor))
+                    .execute(&mut self.conn).expect("Error updating podcast");
                 Ok(())
             }
             None => {
-                panic!("Podcast episode not found");
+                insert_into(f_db)
+                    .values((
+                        podcast_id.eq(podcast_id_1),
+                        username.eq(username_1),
+                        favor_column.eq(favor),
+                    ))
+                    .execute(&mut self.conn).expect("Error updating podcast");
+                Ok(())
             }
         }
     }
 
-    pub fn get_favored_podcasts(&mut self) -> Result<Vec<Podcast>, String> {
-        use crate::schema::podcasts::dsl::favored as favor_column;
+    pub fn get_favored_podcasts(&mut self, found_username: Option<String>) -> Result<Vec<PodcastDto>,
+        String> {
         use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
-        let result = dsl_podcast
-            .filter(favor_column.eq(1))
-            .load::<Podcast>(&mut self.conn)
-            .expect("Error loading podcast episode by id");
+        use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::username as user_favor;
+        use crate::schema::favorites::dsl::favored as favor_column;
+        let result:Vec<(Podcast, Favorite)>;
+
+        match found_username {
+            Some(..) => {
+                 result = dsl_podcast
+                    .inner_join(f_db)
+                    .filter(
+                        favor_column.eq(true).and(
+                        user_favor.eq(found_username.unwrap())))
+                    .load::<(Podcast, Favorite)>(&mut self.conn).unwrap();
+            },
+            None =>{
+                result = dsl_podcast
+                    .inner_join(f_db)
+                    .filter((
+                        favor_column.eq(true)).and(
+                        user_favor.eq(STANDARD_USER)
+                    )
+                    )
+                    .load::<(Podcast, Favorite)>(&mut self.conn)
+                    .expect("Error loading podcast episode by id");
+            }
+        }
+
 
         let mapped_result = result
             .iter()
-            .map(|podcast| return self.mapping_service.map_podcast_to_podcast_dto(podcast))
-            .collect::<Vec<Podcast>>();
+            .map(|podcast| return self.mapping_service.map_podcast_to_podcast_dto_with_favorites
+            (&*podcast))
+            .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }
 
