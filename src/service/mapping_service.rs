@@ -36,8 +36,11 @@ impl MappingService {
 
 
     pub fn map_podcast_to_podcast_dto_with_favorites(&self, podcast_favorite_grouped: &(Podcast,
-                                                                                       Favorite)
+                                                                                       Option<Favorite>)
     ) -> PodcastDto {
+
+        let favorite = podcast_favorite_grouped.1.is_some() && podcast_favorite_grouped.1.clone()
+            .unwrap().favored;
      PodcastDto{
             id: podcast_favorite_grouped.0.id.clone(),
             name: podcast_favorite_grouped.0.name.clone(),
@@ -53,8 +56,16 @@ impl MappingService {
             author: podcast_favorite_grouped.0.author.clone(),
             active: podcast_favorite_grouped.0.active.clone(),
             original_image_url: podcast_favorite_grouped.0.original_image_url.clone(),
-            favorites: podcast_favorite_grouped.1.favored
+            favorites: favorite
      }
+    }
+
+    pub fn map_podcast_to_podcast_dto_with_favorites_option(&self, podcast_favorite_grouped: &
+    (Podcast, Favorite))->PodcastDto{
+        self.map_podcast_to_podcast_dto_with_favorites(&(
+            podcast_favorite_grouped.0.clone(),
+            Some(podcast_favorite_grouped.1.clone())
+        ))
     }
 
 

@@ -142,8 +142,7 @@ impl User{
             let user = found_user.unwrap();
             println!("User role: {}", user.role);
             println!("Admin role: {}", Role::Admin.to_string());
-            if user.role.ne(&Role::Admin.to_string()) || user.role.ne(&Role::Uploader.to_string
-            ()){
+            if user.role.ne(&Role::Admin.to_string()) || user.role.ne(&Role::Uploader.to_string()){
                 return Some(HttpResponse::BadRequest().json("User is not an admin or uploader"));
             }
         }

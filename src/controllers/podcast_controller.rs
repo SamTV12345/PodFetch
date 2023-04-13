@@ -196,22 +196,37 @@ tag="podcasts"
 pub async fn import_podcasts_from_opml(
     opml: web::Json<OpmlModel>,
     lobby: Data<Addr<Lobby>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>,
+    rq: HttpRequest
 ) -> impl Responder {
-    //TODO Check role
-    spawn_blocking(move || {
-        let rng = rand::thread_rng();
-        let environment = EnvironmentService::new();
-        let document = OPML::from_str(&opml.content).unwrap();
+    return match  User::get_username_from_req_header(&rq) {
+        Ok(username) => {
+            match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()) {
+                Some(err) => {
+                    return err;
+                }
+                None => {
+                    spawn_blocking(move || {
+                        let rng = rand::thread_rng();
+                        let environment = EnvironmentService::new();
+                        let document = OPML::from_str(&opml.content).unwrap();
 
-        for outline in document.body.outlines {
-            let client = SyncClientBuilder::new().build().unwrap();
-            executor::block_on(insert_outline(outline.clone(), client.clone(), lobby.clone(), rng
-                .clone(), environment.clone(), conn.clone()));
+                        for outline in document.body.outlines {
+                            let client = SyncClientBuilder::new().build().unwrap();
+                            executor::block_on(insert_outline(outline.clone(), client.clone(), lobby.clone(), rng
+                                .clone(), environment.clone(), conn.clone()));
+                        }
+                    });
+
+                    HttpResponse::Ok()
+                }
+            }
         }
-    });
+        Err(e)=>{
+            return HttpResponse::BadRequest().json(e.to_string()).into();
+        }
+    }.into();
 
-    HttpResponse::Ok()
 }
 
 #[utoipa::path(
@@ -225,24 +240,38 @@ tag="podcasts"
 pub async fn add_podcast_from_podindex(
     id: web::Json<PodCastAddModel>,
     lobby: Data<Addr<Lobby>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>,
+    rq: HttpRequest
 ) -> impl Responder {
-    //TODO Check role
     let mut environment = EnvironmentService::new();
 
     if !environment.get_config().podindex_configured {
-        return HttpResponse::BadRequest();
+        return HttpResponse::BadRequest().json("Podindex is not configured");
     }
 
-    spawn_blocking(move || {
-        match  start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap()){
-            Ok(_) => {},
-            Err(e)=>{
-                log::error!("Error: {}", e)
+    return match  User::get_username_from_req_header(&rq) {
+        Ok(username) => {
+            match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()) {
+                Some(err) => {
+                    return err;
+                }
+                None => {
+                    spawn_blocking(move || {
+                        match start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap()) {
+                            Ok(_) => {},
+                            Err(e) => {
+                                log::error!("Error: {}", e)
+                            }
+                        }
+                    });
+                    HttpResponse::Ok().into()
+                }
             }
         }
-    });
-    HttpResponse::Ok()
+        Err(e) => {
+            return HttpResponse::BadRequest().json(e.to_string()).into();
+        }
+    }
 }
 
 fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection)

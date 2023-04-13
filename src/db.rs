@@ -56,9 +56,8 @@ impl DB {
         use crate::schema::favorites::dsl::favorites as f_db;
         use crate::schema::favorites::dsl::username;
         let result = podcasts
-            .inner_join(f_db)
-            .filter(username.eq(u))
-            .load::<(Podcast, Favorite)>(conn)
+            .left_join(f_db.on(username.eq(u)))
+            .load::<(Podcast, Option<Favorite>)>(conn)
             .expect("Error loading podcasts");
 
         let mapped_result = result
@@ -557,7 +556,8 @@ impl DB {
         use crate::schema::favorites::dsl::podcast_id;
         use crate::schema::favorites::dsl::username;
 
-        let res = f_db.filter(podcast_id.eq(podcast_id_1)).first::<Favorite>(&mut self.conn)
+        let res = f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1.clone())))
+            .first::<Favorite>(&mut self.conn)
             .optional().unwrap();
 
         match res{
@@ -613,7 +613,7 @@ impl DB {
 
         let mapped_result = result
             .iter()
-            .map(|podcast| return self.mapping_service.map_podcast_to_podcast_dto_with_favorites
+            .map(|podcast| return self.mapping_service.map_podcast_to_podcast_dto_with_favorites_option
             (&*podcast))
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
