@@ -28,3 +28,6 @@ CREATE TABLE favorites (
     FOREIGN KEY (username) REFERENCES users (username) ON DELETE CASCADE,
     FOREIGN KEY (podcast_id) REFERENCES podcasts (id) ON DELETE CASCADE
 );
+
+
+ALTER TABLE podcast_history_items ADD COLUMN username TEXT NOT NULL DEFAULT 'user123';

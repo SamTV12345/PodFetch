@@ -54,6 +54,7 @@ diesel::table! {
         episode_id -> Text,
         watched_time -> Integer,
         date -> Text,
+        username -> Text,
     }
 }
 

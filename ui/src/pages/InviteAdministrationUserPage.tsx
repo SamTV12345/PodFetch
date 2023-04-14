@@ -2,9 +2,11 @@ import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setAddInviteModalOpen, setInvites} from "../store/CommonSlice";
 import {AddInvite} from "../components/AddInvite";
 import {useTranslation} from "react-i18next";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {apiURL, formatTime} from "../utils/Utilities";
 import axios from "axios";
+import {ErrorIcon} from "../icons/ErrorIcon";
+import {Loading} from "../components/Loading";
 
 export type Invite = {
     id: string,
@@ -18,13 +20,24 @@ export const InviteAdministrationUserPage = () => {
     const dispatch = useAppDispatch()
     const {t} = useTranslation()
     const invites = useAppSelector(state=>state.common.invites)
+    const [error,setError] = useState<boolean>()
 
     useEffect(()=>{
-        axios.get(apiURL+"/users/invites").then(v=>{
+        axios.get(apiURL+"/users/invites").then(v=> {
             dispatch(setInvites(v.data))
-        })
-    },[])
+            setError(false)
+        }).catch(()=>{
+                    setError(true)
+                })
+        }, [])
 
+    if (error === undefined){
+        return <Loading/>
+    }
+
+    if(error){
+        return <ErrorIcon text={t('not-admin')}/>
+    }
 
     return <div className="p-5">
         <AddInvite/>

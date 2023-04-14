@@ -1,5 +1,5 @@
 import {useTranslation} from "react-i18next";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {User} from "../models/User";
 import {apiURL, formatTime} from "../utils/Utilities";
 import axios from "axios";
@@ -7,21 +7,36 @@ import {UserPromoteModal} from "../components/UserPromoteModal";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setSelectedUser, setUsers} from "../store/CommonSlice";
 import {setModalOpen} from "../store/ModalSlice";
+import {Loading} from "../components/Loading";
+import {ErrorIcon} from "../icons/ErrorIcon";
 
 export const AdministrationUserPage = () => {
     const {t} = useTranslation()
     const users = useAppSelector(state=>state.common.users)
     const dispatch = useAppDispatch()
+    const [error, setError] = useState<boolean>()
+
     useEffect(()=>{
         axios.get(apiURL+ "/users")
-            .then(c=>dispatch(setUsers(c.data)))
+            .then(c=>{
+                dispatch(setUsers(c.data))
+                setError(false)
+            }).catch(()=>setError(true))
     },[])
 
     const deleteUser = (user: User) => {
         axios.delete(apiURL+"/users/"+user.username)
-            .then(c=>{
+            .then(()=>{
                 dispatch(setUsers(users.filter(u=>u.username !== user.username)))
             })
+    }
+
+    if (error === undefined){
+        return <Loading/>
+    }
+
+    if(error){
+        return <ErrorIcon text={t('not-admin')}/>
     }
 
     return <div className="p-5">

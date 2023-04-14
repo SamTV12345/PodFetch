@@ -154,3 +154,9 @@
 #root > div{
     @apply h-full;
 }
+
+
+.icon-size {
+    position: absolute;
+    bottom: 10%;
+}

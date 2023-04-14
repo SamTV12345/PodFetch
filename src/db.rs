@@ -16,6 +16,7 @@ use rss::Item;
 use std::io::Error;
 use std::sync::MutexGuard;
 use std::time::SystemTime;
+use diesel::sql_types::Text;
 use crate::models::favorites::Favorite;
 use crate::utils::do_retry::do_retry;
 
@@ -258,7 +259,7 @@ impl DB {
         }
     }
 
-    pub fn log_watchtime(conn: &mut SqliteConnection, watch_model: PodcastWatchedPostModel) -> Result<(), String> {
+    pub fn log_watchtime(conn: &mut SqliteConnection, watch_model: PodcastWatchedPostModel, designated_username: String) -> Result<(), String> {
         let result = Self::
             get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)
             .unwrap();
@@ -275,6 +276,7 @@ impl DB {
                         episode_id.eq(result.episode_id),
                         watched_time.eq(watch_model.time),
                         date.eq(&now),
+                        username.eq(designated_username),
                     ))
                     .execute(conn)
                     .expect("Error inserting podcast episode");
@@ -300,6 +302,7 @@ impl DB {
     pub fn get_watchtime(
         conn: &mut SqliteConnection,
         podcast_id_tos_search: &str,
+        username_to_find: String
     ) -> Result<PodcastHistoryItem, String> {
         let result = Self::get_podcast_episode_by_id(conn, podcast_id_tos_search)
             .unwrap();
@@ -308,7 +311,7 @@ impl DB {
         match result {
             Some(found_podcast) => {
                 let history_item = podcast_history_items
-                    .filter(episode_id.eq(podcast_id_tos_search))
+                    .filter(episode_id.eq(podcast_id_tos_search).and(username.eq(username_to_find)))
                     .order(date.desc())
                     .first::<PodcastHistoryItem>(conn)
                     .optional()
@@ -320,6 +323,7 @@ impl DB {
                         podcast_id: found_podcast.podcast_id,
                         episode_id: found_podcast.episode_id,
                         watched_time: 0,
+                        username: STANDARD_USER.to_string(),
                         date: "".to_string(),
                     }),
                 };
@@ -332,13 +336,15 @@ impl DB {
 
     pub fn get_last_watched_podcasts(
         &mut self,
-        conn: &mut SqliteConnection) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
+        conn: &mut SqliteConnection,
+        designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
         let result = sql_query(
-            "SELECT * FROM (SELECT * FROM podcast_history_items ORDER BY \
+            "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY \
         datetime\
         (date) \
         DESC) GROUP BY episode_id  LIMIT 10;",
         )
+            .bind::<Text,_>(designated_username)
         .load::<PodcastHistoryItem>(&mut self.conn)
         .unwrap();
 

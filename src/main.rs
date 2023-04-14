@@ -346,7 +346,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(Data::new(pool.clone()))
-            .wrap(Condition::new(true,Logger::default()))
+            .wrap(Condition::new(false,Logger::default()))
     })
     .bind(("0.0.0.0", 8000))?
     .run()

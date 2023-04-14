@@ -10,6 +10,7 @@ import {setModalOpen} from "../store/ModalSlice";
 import {useTranslation} from "react-i18next";
 import {FileItem, readFile} from "../utils/FileUtils";
 import {Spinner} from "./Spinner";
+import {enqueueSnackbar} from "notistack";
 
 export const AddPodcast = ()=>{
     const [searchText, setSearchText] = useState<string>("")
@@ -105,7 +106,7 @@ export const AddPodcast = ()=>{
     const addPodcast = (podcast:AddPostPostModel)=>{
         axios.post(apiURL+"/podcast/"+selectedSearchType,podcast).then(()=>{
             dispatch(setModalOpen(false))
-        })
+        }).catch(()=>enqueueSnackbar(t('not-admin-or-uploader'),{variant: "error"}))
     }
 
     const handleClick = () => {
