@@ -10,7 +10,7 @@ use crate::service::rust_service::PodcastService;
 use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
-use actix_web::{get, post, put, delete};
+use actix_web::{get, post, put, delete, HttpRequest};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
 use futures::executor;
@@ -25,8 +25,10 @@ use std::sync::{Mutex};
 use std::thread;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
+use crate::constants::constants::{STANDARD_USER};
 use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
+use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 
@@ -61,19 +63,31 @@ tag="podcasts"
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
     mapping_service: Data<Mutex<MappingService>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>, rq: HttpRequest
 ) -> impl Responder {
     let mapping_service = mapping_service
         .lock()
         .ignore_poison();
-    let podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap())
-        .unwrap();
+    let err_username = User::get_username_from_req_header(&rq);
 
-    let mapped_podcasts = podcasts
-        .into_iter()
-        .map(|podcast| mapping_service.map_podcast_to_podcast_dto(&podcast))
-        .collect::<Vec<_>>();
-    HttpResponse::Ok().json(mapped_podcasts)
+    if err_username.is_err(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+
+    let username = err_username.unwrap();
+    let podcasts;
+
+    match username {
+        Some(u)=>{
+             podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap(), u, mapping_service).unwrap();
+        },
+        None => {
+             podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap(), STANDARD_USER
+                .to_string(), mapping_service).unwrap();
+
+        }
+    }
+    HttpResponse::Ok().json(podcasts)
 }
 
 #[utoipa::path(
@@ -125,34 +139,50 @@ tag="podcasts"
 pub async fn add_podcast(
     track_id: web::Json<PodCastAddModel>,
     lobby: Data<Addr<Lobby>>,
-    conn: Data<DbPool>
-) -> impl Responder {
-    let client = AsyncClientBuilder::new().build().unwrap();
-    let res = client
-        .get("https://itunes.apple.com/lookup?id=".to_owned() + &track_id.track_id.to_string())
-        .send()
-        .await
-        .unwrap();
+    conn: Data<DbPool>, rq: HttpRequest) -> impl Responder {
 
-    let res = res.json::<Value>().await.unwrap();
+    return match  User::get_username_from_req_header(&rq){
+      Ok(username)=>{
 
-    let mut podcast_service = PodcastService::new();
-    let mapping_service = MappingService::new();
-    podcast_service
-        .handle_insert_of_podcast(&mut conn.get().unwrap(),
-                                  PodcastInsertModel {
-                                      feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
-                                      title: unwrap_string(&res["results"][0]["collectionName"]),
-                                      id: unwrap_string(&res["results"][0]["collectionId"])
-                                          .parse()
-                                          .unwrap(),
-                                      image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
-                                  },
-                                  mapping_service,
-                                  lobby,
-        )
-        .await.expect("Error inserting podcast");
-    HttpResponse::Ok()
+          match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()){
+              Some(err)=>{
+                  return err;
+              }
+              None=>{
+              }
+          }
+          let client = AsyncClientBuilder::new().build().unwrap();
+          let res = client
+              .get("https://itunes.apple.com/lookup?id=".to_owned() + &track_id.track_id
+                  .to_string()+ "&entity=podcast")
+              .send()
+              .await
+              .unwrap();
+
+          let res = res.json::<Value>().await.unwrap();
+
+          let mut podcast_service = PodcastService::new();
+          let mapping_service = MappingService::new();
+          podcast_service
+              .handle_insert_of_podcast(&mut conn.get().unwrap(),
+                                        PodcastInsertModel {
+                                            feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
+                                            title: unwrap_string(&res["results"][0]["collectionName"]),
+                                            id: unwrap_string(&res["results"][0]["collectionId"])
+                                                .parse()
+                                                .unwrap(),
+                                            image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
+                                        },
+                                        mapping_service,
+                                        lobby,
+              )
+              .await.expect("Error handling insert of podcast");
+          HttpResponse::Ok()
+      },
+        Err(e)=>{
+            return HttpResponse::BadRequest().json(e.to_string()).into();
+        }
+    }.into();
 }
 
 #[utoipa::path(
@@ -166,21 +196,37 @@ tag="podcasts"
 pub async fn import_podcasts_from_opml(
     opml: web::Json<OpmlModel>,
     lobby: Data<Addr<Lobby>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>,
+    rq: HttpRequest
 ) -> impl Responder {
-    spawn_blocking(move || {
-        let rng = rand::thread_rng();
-        let environment = EnvironmentService::new();
-        let document = OPML::from_str(&opml.content).unwrap();
+    return match  User::get_username_from_req_header(&rq) {
+        Ok(username) => {
+            match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()) {
+                Some(err) => {
+                    return err;
+                }
+                None => {
+                    spawn_blocking(move || {
+                        let rng = rand::thread_rng();
+                        let environment = EnvironmentService::new();
+                        let document = OPML::from_str(&opml.content).unwrap();
 
-        for outline in document.body.outlines {
-            let client = SyncClientBuilder::new().build().unwrap();
-            executor::block_on(insert_outline(outline.clone(), client.clone(), lobby.clone(), rng
-                .clone(), environment.clone(), conn.clone()));
+                        for outline in document.body.outlines {
+                            let client = SyncClientBuilder::new().build().unwrap();
+                            executor::block_on(insert_outline(outline.clone(), client.clone(), lobby.clone(), rng
+                                .clone(), environment.clone(), conn.clone()));
+                        }
+                    });
+
+                    HttpResponse::Ok()
+                }
+            }
         }
-    });
+        Err(e)=>{
+            return HttpResponse::BadRequest().json(e.to_string()).into();
+        }
+    }.into();
 
-    HttpResponse::Ok()
 }
 
 #[utoipa::path(
@@ -194,23 +240,38 @@ tag="podcasts"
 pub async fn add_podcast_from_podindex(
     id: web::Json<PodCastAddModel>,
     lobby: Data<Addr<Lobby>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>,
+    rq: HttpRequest
 ) -> impl Responder {
     let mut environment = EnvironmentService::new();
 
     if !environment.get_config().podindex_configured {
-        return HttpResponse::BadRequest();
+        return HttpResponse::BadRequest().json("Podindex is not configured");
     }
 
-    spawn_blocking(move || {
-        match  start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap()){
-            Ok(_) => {},
-            Err(e)=>{
-                log::error!("Error: {}", e)
+    return match  User::get_username_from_req_header(&rq) {
+        Ok(username) => {
+            match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()) {
+                Some(err) => {
+                    return err;
+                }
+                None => {
+                    spawn_blocking(move || {
+                        match start_download_podindex(id.track_id, lobby, &mut conn.get().unwrap()) {
+                            Ok(_) => {},
+                            Err(e) => {
+                                log::error!("Error: {}", e)
+                            }
+                        }
+                    });
+                    HttpResponse::Ok().into()
+                }
             }
         }
-    });
-    HttpResponse::Ok()
+        Err(e) => {
+            return HttpResponse::BadRequest().json(e.to_string()).into();
+        }
+    }
 }
 
 fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection)
@@ -278,12 +339,25 @@ tag="podcasts"
 pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
+    rq:HttpRequest
 ) -> impl Responder {
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
-
-    podcast_service.update_favor_podcast(update_model.id, update_model.favored);
-    HttpResponse::Ok().json("Favorited podcast")
+    let username = User::get_username_from_req_header(&rq).map_err(|e| {
+        log::error!("Error: {}", e);
+        HttpResponse::InternalServerError().json("Error getting username from request header")
+    }).unwrap();
+    return match username {
+        Some(username) => {
+            podcast_service.update_favor_podcast(update_model.id, update_model.favored, username);
+            HttpResponse::Ok().json("Favorited podcast")
+        },
+        None => {
+            podcast_service.update_favor_podcast(update_model.id, update_model.favored,
+                                                 STANDARD_USER.to_string());
+            HttpResponse::Ok().json("Favorited podcast")
+        }
+    }
 }
 
 #[utoipa::path(
@@ -294,10 +368,15 @@ tag="podcasts"
 )]
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
-    podcast_service_mutex: Data<Mutex<PodcastService>>,
+    podcast_service_mutex: Data<Mutex<PodcastService>>,rq: HttpRequest,
 ) -> impl Responder {
+
+    let found_username = User::get_username_from_req_header(&rq).map_err(|e| {
+        log::error!("Error: {}", e);
+        HttpResponse::InternalServerError().json("Error getting username from request header")
+    }).unwrap();
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts();
+    let podcasts = podcast_service.get_favored_podcasts(found_username);
     HttpResponse::Ok().json(podcasts)
 }
 
@@ -371,7 +450,7 @@ async fn insert_outline(
             mapping_service,
             lobby.clone(),
         )
-        .await.expect("TODO: panic message");
+        .await.expect("Error inserting podcast");
 }
 
 #[derive(Deserialize)]
@@ -381,7 +460,7 @@ pub struct DeletePodcast {
 
 #[delete("/podcast/{id}")]
 pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id: Path<i32>)
-    ->impl Responder{
+                            ->impl Responder{
     let podcast = DB::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
         finding podcast");
     if data.delete_files{

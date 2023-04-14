@@ -1,7 +1,8 @@
 use std::io::Error;
+use std::sync::MutexGuard;
 use crate::constants::constants::{PodcastType, ITUNES_URL};
 use crate::db::DB;
-use crate::models::itunes_models::Podcast;
+use crate::models::itunes_models::{Podcast, PodcastDto};
 use crate::models::messages::BroadcastMessage;
 use crate::models::models::PodcastInsertModel;
 use crate::models::web_socket_message::Lobby;
@@ -211,16 +212,16 @@ impl PodcastService {
         self.schedule_episode_download(podcast, Some(lobby), conn);
     }
 
-    pub fn update_favor_podcast(&mut self, id: i32, x: bool) {
-        self.db.update_podcast_favor(&id, x).unwrap();
+    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String) {
+        self.db.update_podcast_favor(&id, x, username).unwrap();
     }
 
     pub fn get_podcast_by_id(&mut self,conn: &mut SqliteConnection, id: i32) -> Podcast {
         DB::get_podcast(conn,id).unwrap()
     }
 
-    pub fn get_favored_podcasts(&mut self) -> Vec<Podcast> {
-        self.db.get_favored_podcasts().unwrap()
+    pub fn get_favored_podcasts(&mut self, found_username: Option<String>) -> Vec<PodcastDto> {
+        self.db.get_favored_podcasts(found_username).unwrap()
     }
 
     pub fn update_active_podcast(conn: &mut SqliteConnection, id: i32) {
@@ -263,7 +264,8 @@ impl PodcastService {
         DB::get_podcast(conn, podcast_id_to_be_searched)
     }
 
-    pub fn get_podcasts(conn: &mut SqliteConnection) -> Result<Vec<Podcast>, String> {
-        DB::get_podcasts(conn)
+    pub fn get_podcasts(conn: &mut SqliteConnection, u: String, mapping_service: MutexGuard<MappingService>) ->
+                                                                          Result<Vec<PodcastDto>, String> {
+        DB::get_podcasts(conn, u, mapping_service)
     }
 }

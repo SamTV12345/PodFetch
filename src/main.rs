@@ -7,14 +7,13 @@ extern crate core;
 extern crate serde_json;
 
 use actix_web_httpauth::middleware::HttpAuthentication;
-
 use actix::Actor;
 use actix_cors::Cors;
 use actix_files::{Files, NamedFile};
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::error::ErrorUnauthorized;
-use actix_web::middleware::Condition;
+use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{http, web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use actix_web_httpauth::extractors::basic::BasicAuth;
@@ -24,6 +23,7 @@ use std::time::Duration;
 use std::{env, thread};
 use std::env::var;
 use std::io::Read;
+use std::str::FromStr;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
@@ -32,14 +32,18 @@ use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
+use actix_web::http::header::HeaderValue;
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
+use reqwest::header::HeaderName;
+use sha256::digest;
 
+pub mod schema;
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
-use crate::constants::constants::{ERROR_LOGIN_MESSAGE, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::constants::constants::{BASIC_AUTH, ERROR_LOGIN_MESSAGE, OIDC_AUTH, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -59,12 +63,15 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 pub use controllers::controller_utils::*;
+use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users, onboard_user, update_role};
+
 mod constants;
 mod db;
 mod models;
 mod service;
 use crate::db::DB;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
+use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -77,7 +84,7 @@ use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
 
 mod config;
-pub mod schema;
+
 pub mod utils;
 pub mod mutex;
 mod exception;
@@ -85,8 +92,8 @@ mod exception;
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
 async fn validator(
-    req: ServiceRequest,
-    _credentials: BasicAuth,
+    mut req: ServiceRequest,
+    _credentials: BasicAuth, db: DbPool
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let authorization = req.headers().get("Authorization").unwrap().to_str();
 
@@ -101,18 +108,36 @@ async fn validator(
             let username = auth[0];
             let password = auth[1];
             let env = EnvironmentService::new();
+
+            // Check if user is admin
             if username == env.username && password == env.password {
+                req.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                         HeaderValue::from_str(username).unwrap());
                 return Ok(req);
+            } else {
+                match User::find_by_username(username, &mut db.get().unwrap()) {
+                    Some(user) => {
+                        if user.password.unwrap()== digest(password) {
+                            req.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                                     HeaderValue::from_str(username).unwrap());
+                            Ok(req)
+                        } else {
+                            Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req))
+                        }
+                    }
+                    None => {
+                        return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
+                    }
+                }
             }
         }
         Err(_) => {
             return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
         }
     }
-    return Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req));
 }
 
-async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService)
+async fn validate_oidc_token(mut rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService, pool: Pool<ConnectionManager<SqliteConnection>>)
                              ->Result<ServiceRequest,
     (Error, ServiceRequest)> {
     // Check if the Authorization header exists and has a Bearer token
@@ -151,15 +176,34 @@ async fn validate_oidc_token(rq: ServiceRequest, bearer: BearerAuth, mut jwk_ser
     }).collect::<Vec<CustomJwk>>();
 
     let jwk = response.clone();
-    let test123 = jwk.get(0).expect("Your jwk set needs to have RS256");
+    let custom_jwk = jwk.get(0).expect("Your jwk set needs to have RS256");
 
-    let jwk_string = serde_json::to_string(&test123).unwrap();
+    let jwk_string = serde_json::to_string(&custom_jwk).unwrap();
 
     let jwk = from_str::<Jwk>(&*jwk_string).unwrap();
     let key = DecodingKey::from_jwk(&jwk).unwrap();
     let validation = Validation::new(Algorithm::RS256);
     match decode::<Value>(&token, &key, &validation) {
-        Ok(_) => Ok(rq),
+        Ok(decoded) => {
+            let username = decoded.claims.get("preferred_username").unwrap().as_str().unwrap();
+            if User::find_by_username(username, &mut pool.get().unwrap()).is_some(){
+                rq.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                         HeaderValue::from_str(username).unwrap());
+                return Ok(rq);
+            }
+            // User is authenticated so we can onboard him if he is new
+            User::insert_user(&mut User {
+                id: 0,
+                username: decoded.claims.get("preferred_username").unwrap().as_str().unwrap().to_string(),
+                role: "user".to_string(),
+                password: None,
+                explicit_consent: false,
+                created_at:  chrono::Utc::now().naive_utc()
+            }, &mut pool.get().unwrap()).expect("Error inserting user");
+            rq.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
+                                     HeaderValue::from_str(username).unwrap());
+            return Ok(rq)
+        },
         Err(e) =>{
             info!("Error: {:?}",e);
             Err((ErrorUnauthorized("Invalid oidc token."), rq))
@@ -177,10 +221,9 @@ async fn get_jwk() -> CustomJwkSet {
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
-    mut podcast_episode_service: PodcastEpisodeService,
-) {
+    mut podcast_episode_service: PodcastEpisodeService) {
     //check for new episodes
-    let podcats_result = DB::get_podcasts(&mut establish_connection()).unwrap();
+    let podcats_result = DB::get_all_podcasts(&mut establish_connection()).unwrap();
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
@@ -292,7 +335,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
-            .service(get_global_scope())
+            .service(get_global_scope(pool.clone()))
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
@@ -303,24 +346,33 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(Data::new(pool.clone()))
+            .wrap(Condition::new(false,Logger::default()))
     })
     .bind(("0.0.0.0", 8000))?
     .run()
     .await
 }
 
-pub fn get_api_config() -> Scope {
+pub fn get_api_config(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Scope {
     web::scope("/api/v1")
-        .service(login)
-        .service(get_public_config)
-        .service(get_private_api())
+        .configure(|cfg|{
+            config(cfg, pool1)
+        })
 }
 
 
-pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
+fn config(cfg: &mut web::ServiceConfig, db: Pool<ConnectionManager<SqliteConnection>>){
+    cfg.service(get_invite)
+        .service(onboard_user)
+        .service(login)
+        .service(get_public_config)
+        .service(get_private_api(db));
+}
+
+pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) ->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
     let base_path = var("SUB_DIRECTORY").unwrap_or("/".to_string());
     let openapi = ApiDoc::openapi();
-    let service = get_api_config();
+    let service = get_api_config(pool1);
 
     let dev_enabled = var("DEV").is_ok();
 
@@ -337,22 +389,26 @@ pub fn get_global_scope()->Scope<impl ServiceFactory<ServiceRequest, Config = ()
         .service(get_rss_feed_for_podcast)
 }
 
-fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
-    let enable_basic_auth = var("BASIC_AUTH").is_ok();
-    let auth = HttpAuthentication::basic(validator);
-    let enable_oidc_auth = var("OIDC_AUTH").is_ok();
+fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
+    let oidc_db = db.clone();
+    let enable_basic_auth = var(BASIC_AUTH).is_ok();
+    let auth = HttpAuthentication::basic(move |rq,serv|{
+        validator(rq, serv, db.clone())
+    });
+    let enable_oidc_auth = var(OIDC_AUTH).is_ok();
     let jwk_service = JWKService{
         timestamp:0,
         jwk:None
     };
 
     let oidc_auth = HttpAuthentication::bearer(move |srv,req|{
-        validate_oidc_token(srv,req, jwk_service.clone())
+        validate_oidc_token(srv,req, jwk_service.clone(), oidc_db.clone())
     });
 
     web::scope("")
         .wrap(Condition::new(enable_basic_auth, auth))
         .wrap(Condition::new(enable_oidc_auth, oidc_auth))
+        .configure(config_secure_user_management)
         .service(find_podcast)
         .service(add_podcast)
         .service(find_all_podcasts)
@@ -380,6 +436,11 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
         .service(get_opml)
 }
 
+pub fn config_secure_user_management(cfg: &mut web::ServiceConfig){
+    if var(BASIC_AUTH).is_ok()||var(OIDC_AUTH).is_ok() {
+        cfg.service(get_secure_user_management());
+    }
+}
 
 pub fn get_ui_config() -> Scope {
     web::scope("/ui")
@@ -427,6 +488,24 @@ pub fn get_cors_config() -> Cors {
         .allowed_header(http::header::CONNECTION)
         .allowed_header(http::header::UPGRADE)
         .max_age(3600)
+}
+
+pub fn get_public_user_management() ->Scope{
+    web::scope("")
+        .service(onboard_user)
+        .service(get_invite)
+}
+
+pub fn get_secure_user_management() ->Scope{
+    web::scope("/users")
+        .service(create_invite)
+        .service(get_invites)
+        .service(onboard_user)
+        .service(get_users)
+        .service(update_role)
+        .service(delete_user)
+        .service(delete_invite)
+        .service(get_invite_link)
 }
 
 pub fn insert_default_settings_if_not_present() {

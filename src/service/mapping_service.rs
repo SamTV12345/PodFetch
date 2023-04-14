@@ -1,4 +1,5 @@
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::favorites::Favorite;
+use crate::models::itunes_models::{Podcast, PodcastDto, PodcastEpisode};
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 use crate::service::environment_service;
 
@@ -26,13 +27,47 @@ impl MappingService {
             keywords: podcast.keywords.clone(),
             summary: podcast.summary.clone(),
             explicit: podcast.clone().explicit,
-            favored: podcast.favored,
             last_build_date: podcast.clone().last_build_date,
             author: podcast.author.clone(),
             active: podcast.active,
             original_image_url: podcast.original_image_url.clone(),
         }
     }
+
+
+    pub fn map_podcast_to_podcast_dto_with_favorites(&self, podcast_favorite_grouped: &(Podcast,
+                                                                                       Option<Favorite>)
+    ) -> PodcastDto {
+
+        let favorite = podcast_favorite_grouped.1.is_some() && podcast_favorite_grouped.1.clone()
+            .unwrap().favored;
+     PodcastDto{
+            id: podcast_favorite_grouped.0.id.clone(),
+            name: podcast_favorite_grouped.0.name.clone(),
+            directory: podcast_favorite_grouped.0.directory.clone(),
+            rssfeed: podcast_favorite_grouped.0.rssfeed.clone(),
+            image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
+                + &podcast_favorite_grouped.0.image_url.clone(),
+            language: podcast_favorite_grouped.0.language.clone(),
+            keywords: podcast_favorite_grouped.0.keywords.clone(),
+            summary: podcast_favorite_grouped.0.summary.clone(),
+            explicit: podcast_favorite_grouped.0.clone().explicit,
+            last_build_date: podcast_favorite_grouped.0.clone().last_build_date,
+            author: podcast_favorite_grouped.0.author.clone(),
+            active: podcast_favorite_grouped.0.active.clone(),
+            original_image_url: podcast_favorite_grouped.0.original_image_url.clone(),
+            favorites: favorite
+     }
+    }
+
+    pub fn map_podcast_to_podcast_dto_with_favorites_option(&self, podcast_favorite_grouped: &
+    (Podcast, Favorite))->PodcastDto{
+        self.map_podcast_to_podcast_dto_with_favorites(&(
+            podcast_favorite_grouped.0.clone(),
+            Some(podcast_favorite_grouped.1.clone())
+        ))
+    }
+
 
     pub fn map_podcastepisode_to_dto(&self, podcast_episode: &PodcastEpisode) -> PodcastEpisode {
         let podcast_path =

@@ -5,7 +5,7 @@ import {useAppSelector} from "../store/hooks";
 export const SideBar  = ()=>{
     const sideBarCollapsed = useAppSelector(state=>state.common.sideBarCollapsed)
     const {t} = useTranslation()
-
+    const config = useAppSelector(state => state.common.configModel)
 
 
     return <aside className={`w-full h-full float-left ${sideBarCollapsed?'hidden': 'col-span-6 md:col-span-1'} z-10 w-full bg-gray-800 flex  border-none sticky`} aria-label="Sidebar">
@@ -16,6 +16,7 @@ export const SideBar  = ()=>{
                 <SideBarItem highlightPath={"favorites"} translationkey={t('favorites')} icon={<i className="fa-solid fa-star"></i>}/>
                 <SideBarItem highlightPath={"info"} translationkey={t('info')} icon={<i className="fa-solid fa-info-circle fa-xl"></i>}/>
                 <SideBarItem highlightPath={"settings"} translationkey={t('settings')} icon={<i className="fa-solid fa-wrench fa-xl"/> }/>
+                {(config?.oidcConfig|| config?.basicAuth)&&<SideBarItem highlightPath={"administration"} translationkey={t('administration')} icon={<i className="fa-solid fa-gavel fa-xl"/> }/>}
             </ul>
         </div>
     </aside>

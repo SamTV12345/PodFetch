@@ -50,6 +50,8 @@ pub struct PodcastHistoryItem {
     pub watched_time: i32,
     #[diesel(sql_type = Text)]
     pub date: String,
+    #[diesel(sql_type = Text)]
+    pub username: String
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]

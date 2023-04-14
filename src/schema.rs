@@ -1,6 +1,25 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    favorites (username, podcast_id) {
+        username -> Text,
+        podcast_id -> Integer,
+        favored -> Bool,
+    }
+}
+
+diesel::table! {
+    invites (id) {
+        id -> Text,
+        role -> Text,
+        created_at -> Timestamp,
+        accepted_at -> Nullable<Timestamp>,
+        explicit_consent -> Bool,
+        expires_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     notifications (id) {
         id -> Integer,
         type_of_message -> Text,
@@ -35,6 +54,7 @@ diesel::table! {
         episode_id -> Text,
         watched_time -> Integer,
         date -> Text,
+        username -> Text,
     }
 }
 
@@ -45,7 +65,6 @@ diesel::table! {
         directory -> Text,
         rssfeed -> Text,
         image_url -> Text,
-        favored -> Integer,
         summary -> Nullable<Text>,
         language -> Nullable<Text>,
         explicit -> Nullable<Text>,
@@ -67,13 +86,28 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    users (id) {
+        id -> Integer,
+        username -> Text,
+        role -> Text,
+        password -> Nullable<Text>,
+        explicit_consent -> Bool,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    favorites,
+    invites,
     notifications,
     podcast_episodes,
     podcast_history_items,
     podcasts,
     settings,
+    users,
 );

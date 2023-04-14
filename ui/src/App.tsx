@@ -10,6 +10,8 @@ import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageId
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
 import {
+    AdministrationUserViewLazyLoad,
+    AdministrationViewLazyLoad, InviteAdministrationUserViewLazyLoad,
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
@@ -19,40 +21,47 @@ import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities";
 import {LoginComponent} from "./components/LoginComponent";
 import {enqueueSnackbar} from "notistack";
 import {useTranslation} from "react-i18next";
+import {InviteComponent} from "./components/InviteComponent";
 
 
-export const router =  createBrowserRouter(createRoutesFromElements(
+export const router = createBrowserRouter(createRoutesFromElements(
     <>
-    <Route path="/" element={<Root/>}>
-        <Route index element={<Homepage/>}/>
-        <Route path={"podcasts"}>
-            <Route index  element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
-            <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
-            <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+        <Route path="/" element={<Root/>}>
+            <Route index element={<Homepage/>}/>
+            <Route path={"podcasts"}>
+                <Route index element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
+                <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+                <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+            </Route>
+            <Route path={"favorites"}>
+                <Route element={<PodcastViewLazyLoad onlyFavorites={true}/>} index/>
+                <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+                <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+            </Route>
+            <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad/></Suspense>}/>
+            <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad/></Suspense>}/>
+            <Route path={"administration"}>
+                <Route index element={<Suspense><AdministrationViewLazyLoad/></Suspense>}/>
+                <Route path="users" element={<Suspense><AdministrationUserViewLazyLoad/></Suspense>}/>
+                <Route path="invites" element={<Suspense><InviteAdministrationUserViewLazyLoad/></Suspense>}/>
+            </Route>
         </Route>
-        <Route path={"favorites"}>
-            <Route element={<PodcastViewLazyLoad onlyFavorites={true}/>} index/>
-            <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
-            <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
-        </Route>
-        <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad/></Suspense>}/>
-        <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad/></Suspense>}/>
-    </Route>
-    <Route path="/login" element={<LoginComponent/>}/>
+        <Route path="/login" element={<LoginComponent/>}/>
+        <Route path="/invite/:id" element={<InviteComponent/>}></Route>
     </>
 ), {
     basename: import.meta.env.BASE_URL
 })
 
-const App:FC<PropsWithChildren> = ({children}) => {
+const App: FC<PropsWithChildren> = ({children}) => {
     const dispatch = useAppDispatch()
     const podcasts = useAppSelector(state => state.common.podcasts)
     const [socket, setSocket] = useState<any>()
-    const config = useAppSelector(state=>state.common.configModel)
+    const config = useAppSelector(state => state.common.configModel)
     const {t} = useTranslation()
 
     useEffect(() => {
-        if(socket) {
+        if (socket) {
             socket.onopen = () => {
                 console.log("Connected")
             }
@@ -66,7 +75,7 @@ const App:FC<PropsWithChildren> = ({children}) => {
                 if (checkIfPodcastAdded(parsed)) {
                     const podcast = parsed.podcast
                     dispatch(addPodcast(podcast))
-                    enqueueSnackbar(t('new-podcast-added',{name: podcast.name}), {variant: "success"})
+                    enqueueSnackbar(t('new-podcast-added', {name: podcast.name}), {variant: "success"})
                 } else if (checkIfPodcastEpisodeAdded(parsed)) {
                     if (store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
                         enqueueSnackbar(t('new-podcast-episode-added', {name: parsed.podcast_episode.name}), {variant: "success"})
@@ -104,7 +113,7 @@ const App:FC<PropsWithChildren> = ({children}) => {
         }
     }, [podcasts, socket, config])
 
-    useEffect(()=> {
+    useEffect(() => {
         if (config) {
             setSocket(new WebSocket(configWSUrl(config?.serverUrl!)))
         }
@@ -121,7 +130,9 @@ const App:FC<PropsWithChildren> = ({children}) => {
         getNotifications()
     }, [])
 
-    return <Suspense><div>{children}</div></Suspense>
+    return <Suspense>
+        <div>{children}</div>
+    </Suspense>
 }
 
 export default App

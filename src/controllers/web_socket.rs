@@ -35,7 +35,6 @@ impl WsConn {
     fn hb(&self, ctx: &mut <Self as Actor>::Context) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                println!("Stopped");
                 ctx.stop();
                 return;
             }

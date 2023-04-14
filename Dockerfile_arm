@@ -12,6 +12,7 @@ USER root
 RUN apk add pkgconfig openssl-dev libc-dev
 WORKDIR /app/src
 
+ADD Cargo.lock .
 ADD Cargo.toml .
 ADD dummy.rs ./src/main.rs
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
@@ -33,6 +34,7 @@ RUN rm -rf /app/src/target/release/deps/podfetch*
 RUN rm -rf /app/src/target/release/podfetch*
 
 ADD Cargo.toml .
+ADD Cargo.lock .
 ADD static ./static
 ADD migrations ./migrations
 ADD src ./src

@@ -1,12 +1,11 @@
 use crate::config::dbconfig::establish_connection;
-use crate::constants::constants::DEFAULT_SETTINGS;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::constants::constants::{DEFAULT_SETTINGS, STANDARD_USER};
+use crate::models::itunes_models::{Podcast, PodcastDto, PodcastEpisode};
 use crate::models::models::{
     Notification, PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode,
     PodcastWatchedPostModel,
 };
 use crate::models::settings::Setting;
-use crate::schema::podcasts::original_image_url;
 use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastExtra;
 use chrono::{DateTime, Duration, Utc};
@@ -15,7 +14,10 @@ use diesel::prelude::*;
 use diesel::{insert_into, sql_query, RunQueryDsl, delete};
 use rss::Item;
 use std::io::Error;
+use std::sync::MutexGuard;
 use std::time::SystemTime;
+use diesel::sql_types::Text;
+use crate::models::favorites::Favorite;
 use crate::utils::do_retry::do_retry;
 
 pub struct DB {
@@ -49,7 +51,27 @@ impl DB {
             .expect("Error loading podcast by rss feed url")
     }
 
-    pub fn get_podcasts(conn: &mut SqliteConnection) -> Result<Vec<Podcast>, String> {
+    pub fn get_podcasts(conn: &mut SqliteConnection, u: String, mapping_service: MutexGuard<MappingService>)
+        -> Result<Vec<PodcastDto>, String> {
+        use crate::schema::podcasts::dsl::podcasts;
+        use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::username;
+        let result = podcasts
+            .left_join(f_db.on(username.eq(u)))
+            .load::<(Podcast, Option<Favorite>)>(conn)
+            .expect("Error loading podcasts");
+
+        let mapped_result = result
+            .iter()
+            .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites
+            (&*podcast))
+            .collect::<Vec<PodcastDto>>();
+        Ok(mapped_result)
+    }
+
+
+    pub fn get_all_podcasts(conn: &mut SqliteConnection)
+        -> Result<Vec<Podcast>, String> {
         use crate::schema::podcasts::dsl::podcasts;
         let result = podcasts
             .load::<Podcast>(conn)
@@ -178,7 +200,7 @@ impl DB {
     ) -> Podcast {
         use crate::schema::podcasts;
         use crate::schema::podcasts::{directory, image_url, name as podcast_name, rssfeed};
-
+        use crate::schema::podcasts::{original_image_url};
         let inserted_podcast = insert_into(podcasts::table)
             .values((
                 directory.eq(collection_id.to_string()),
@@ -237,7 +259,7 @@ impl DB {
         }
     }
 
-    pub fn log_watchtime(conn: &mut SqliteConnection, watch_model: PodcastWatchedPostModel) -> Result<(), String> {
+    pub fn log_watchtime(conn: &mut SqliteConnection, watch_model: PodcastWatchedPostModel, designated_username: String) -> Result<(), String> {
         let result = Self::
             get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)
             .unwrap();
@@ -254,6 +276,7 @@ impl DB {
                         episode_id.eq(result.episode_id),
                         watched_time.eq(watch_model.time),
                         date.eq(&now),
+                        username.eq(designated_username),
                     ))
                     .execute(conn)
                     .expect("Error inserting podcast episode");
@@ -279,6 +302,7 @@ impl DB {
     pub fn get_watchtime(
         conn: &mut SqliteConnection,
         podcast_id_tos_search: &str,
+        username_to_find: String
     ) -> Result<PodcastHistoryItem, String> {
         let result = Self::get_podcast_episode_by_id(conn, podcast_id_tos_search)
             .unwrap();
@@ -287,7 +311,7 @@ impl DB {
         match result {
             Some(found_podcast) => {
                 let history_item = podcast_history_items
-                    .filter(episode_id.eq(podcast_id_tos_search))
+                    .filter(episode_id.eq(podcast_id_tos_search).and(username.eq(username_to_find)))
                     .order(date.desc())
                     .first::<PodcastHistoryItem>(conn)
                     .optional()
@@ -299,6 +323,7 @@ impl DB {
                         podcast_id: found_podcast.podcast_id,
                         episode_id: found_podcast.episode_id,
                         watched_time: 0,
+                        username: STANDARD_USER.to_string(),
                         date: "".to_string(),
                     }),
                 };
@@ -311,13 +336,15 @@ impl DB {
 
     pub fn get_last_watched_podcasts(
         &mut self,
-        conn: &mut SqliteConnection) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
+        conn: &mut SqliteConnection,
+        designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
         let result = sql_query(
-            "SELECT * FROM (SELECT * FROM podcast_history_items ORDER BY \
+            "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY \
         datetime\
         (date) \
         DESC) GROUP BY episode_id  LIMIT 10;",
         )
+            .bind::<Text,_>(designated_username)
         .load::<PodcastHistoryItem>(&mut self.conn)
         .unwrap();
 
@@ -528,41 +555,73 @@ impl DB {
         Ok(result)
     }
 
-    pub fn update_podcast_favor(&mut self, podcast_id: &i32, favor: bool) -> Result<(), String> {
-        use crate::schema::podcasts::dsl::favored as favor_column;
-        use crate::schema::podcasts::dsl::id;
-        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+    pub fn update_podcast_favor(&mut self, podcast_id_1: &i32, favor: bool, username_1: String) ->
+                                                                                               Result<(), String> {
+        use crate::schema::favorites::dsl::favored as favor_column;
+        use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::podcast_id;
+        use crate::schema::favorites::dsl::username;
 
-        let result = dsl_podcast
-            .filter(id.eq(podcast_id))
-            .first::<Podcast>(&mut self.conn)
-            .optional()
-            .expect("Error loading podcast episode by id");
-        match result {
+        let res = f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1.clone())))
+            .first::<Favorite>(&mut self.conn)
+            .optional().unwrap();
+
+        match res{
             Some(..) => {
-                do_retry(||{diesel::update(dsl_podcast.filter(id.eq(podcast_id)))
-                    .set(favor_column.eq(favor as i32))
-                    .execute(&mut self.conn)}).expect("Error updating podcast");
+                diesel::update(f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1))))
+                    .set(favor_column.eq(favor))
+                    .execute(&mut self.conn).expect("Error updating podcast");
                 Ok(())
             }
             None => {
-                panic!("Podcast episode not found");
+                insert_into(f_db)
+                    .values((
+                        podcast_id.eq(podcast_id_1),
+                        username.eq(username_1),
+                        favor_column.eq(favor),
+                    ))
+                    .execute(&mut self.conn).expect("Error updating podcast");
+                Ok(())
             }
         }
     }
 
-    pub fn get_favored_podcasts(&mut self) -> Result<Vec<Podcast>, String> {
-        use crate::schema::podcasts::dsl::favored as favor_column;
+    pub fn get_favored_podcasts(&mut self, found_username: Option<String>) -> Result<Vec<PodcastDto>,
+        String> {
         use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
-        let result = dsl_podcast
-            .filter(favor_column.eq(1))
-            .load::<Podcast>(&mut self.conn)
-            .expect("Error loading podcast episode by id");
+        use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::username as user_favor;
+        use crate::schema::favorites::dsl::favored as favor_column;
+        let result:Vec<(Podcast, Favorite)>;
+
+        match found_username {
+            Some(..) => {
+                 result = dsl_podcast
+                    .inner_join(f_db)
+                    .filter(
+                        favor_column.eq(true).and(
+                        user_favor.eq(found_username.unwrap())))
+                    .load::<(Podcast, Favorite)>(&mut self.conn).unwrap();
+            },
+            None =>{
+                result = dsl_podcast
+                    .inner_join(f_db)
+                    .filter((
+                        favor_column.eq(true)).and(
+                        user_favor.eq(STANDARD_USER)
+                    )
+                    )
+                    .load::<(Podcast, Favorite)>(&mut self.conn)
+                    .expect("Error loading podcast episode by id");
+            }
+        }
+
 
         let mapped_result = result
             .iter()
-            .map(|podcast| return self.mapping_service.map_podcast_to_podcast_dto(podcast))
-            .collect::<Vec<Podcast>>();
+            .map(|podcast| return self.mapping_service.map_podcast_to_podcast_dto_with_favorites_option
+            (&*podcast))
+            .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }
 

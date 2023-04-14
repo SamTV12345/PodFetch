@@ -1,4 +1,4 @@
-import {FC, useEffect, useMemo} from "react";
+import {FC, useEffect} from "react";
 import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
@@ -44,7 +44,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             })
             }
             {
-            onlyFavorites&&podcasts.filter(podcast=>podcast.favored).map((podcast)=>{
+            onlyFavorites&&podcasts.filter(podcast=>podcast.favorites).map((podcast)=>{
                 return <Card podcast={podcast} key={podcast.id}/>
                 })
             }
