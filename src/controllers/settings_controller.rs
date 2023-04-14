@@ -11,7 +11,7 @@ use opml::OPML;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 use crate::db::DB;
 use crate::DbPool;
-use crate::models::itunes_models::Podcast;
+use crate::models::itunes_models::{Podcast, PodcastDto};
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
@@ -87,7 +87,7 @@ pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service: Data
                                                                                              impl
 Responder {
     let env_service = env_service.lock().ignore_poison();
-    let podcasts_found = DB::get_podcasts(&mut conn.get().unwrap()).unwrap();
+    let podcasts_found = DB::get_all_podcasts(&mut conn.get().unwrap()).unwrap();
 
     let mut xml = XMLBuilder::new().version(XMLVersion::XML1_1)
         .encoding("UTF-8".into())
@@ -126,7 +126,8 @@ fn add_body()->XMLElement {
 }
 
 
-fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<EnvironmentService>, type_of: Mode) -> XMLElement {
+fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<EnvironmentService>,
+                type_of: Mode) -> XMLElement {
     let mut body = add_body();
     for podcast in podcasts_found {
         let mut outline = XMLElement::new("outline");
