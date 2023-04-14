@@ -1,11 +1,19 @@
+use std::fmt::format;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use actix_web::web::Data;
+use actix_web::web::{Data, Path};
 use actix_web::{get, put};
 use actix_web::{web, HttpResponse, Responder};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
+use chrono::Local;
+use fs_extra::dir::DirEntryValue::SystemTime;
+use opml::OPML;
+use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
+use crate::db::DB;
 use crate::DbPool;
+use crate::models::itunes_models::Podcast;
 use crate::mutex::LockResultExt;
+use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 
 #[utoipa::path(
@@ -66,4 +74,73 @@ pub async fn run_cleanup(
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode{
+    LOCAL,ONLINE
+}
+
+#[get("/settings/opml/{type_of}")]
+pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service: Data<Mutex<EnvironmentService>>) ->
+                                                                                             impl
+Responder {
+    let env_service = env_service.lock().ignore_poison();
+    let podcasts_found = DB::get_podcasts(&mut conn.get().unwrap()).unwrap();
+
+    let mut xml = XMLBuilder::new().version(XMLVersion::XML1_1)
+        .encoding("UTF-8".into())
+        .build();
+    let mut opml = XMLElement::new("opml");
+    opml.add_attribute("version", "2.0");
+    opml.add_child(add_header()).expect("TODO: panic message");
+    opml.add_child(add_podcasts(podcasts_found, env_service,type_of.into_inner() )).expect("TODO: panic \
+    message");
+
+    xml.set_root_element(opml);
+
+
+    let mut writer: Vec<u8> = Vec::new();
+    xml.generate(&mut writer).unwrap();
+    HttpResponse::Ok().body(writer)
+}
+
+
+fn add_header()->XMLElement {
+    let mut head = XMLElement::new("head");
+    let mut title = XMLElement::new("title");
+    title.add_text("PodFetch Feed Export".to_string()).expect("Error creating title");
+    head.add_child(title).expect("TODO: panic message");
+    let mut date_created = XMLElement::new("dateCreated");
+    date_created.add_text(Local::now().to_rfc3339()).expect("Error creating dateCreated");
+
+    head.add_child(date_created).expect("TODO: panic message");
+    head
+}
+
+
+fn add_body()->XMLElement {
+    let mut body = XMLElement::new("body");
+    body
+}
+
+
+fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<EnvironmentService>, type_of: Mode) -> XMLElement {
+    let mut body = add_body();
+    for podcast in podcasts_found {
+        let mut outline = XMLElement::new("outline");
+        if podcast.summary.is_some(){
+            outline.add_attribute("text", &*podcast.summary.unwrap());
+        }
+        outline.add_attribute("title", &*podcast.name);
+        outline.add_attribute("type", "rss");
+        match type_of {
+            Mode::LOCAL => outline.add_attribute("xmlUrl", &*format!("{}rss/{}", &*env_service
+                .get_server_url(), podcast.id)),
+            Mode::ONLINE => outline.add_attribute("xmlUrl", &*podcast.rssfeed),
+        }
+        body.add_child(outline).expect("TODO: panic message");
+    }
+    body
 }

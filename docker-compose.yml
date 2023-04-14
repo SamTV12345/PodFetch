@@ -1,7 +1,7 @@
 version: '3'
 services:
   podfetch:
-    image: samuel19982/podgrabv2:latest
+    image: samuel19982/podfetch:latest
     ports:
       - "80:8000"
     volumes:
