@@ -54,12 +54,15 @@ pub async fn get_users(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
         return HttpResponse::NotFound()
             .body("User not found")
     }
-    UserManagementService::get_users(user.unwrap(),&mut *conn.get().unwrap()).map_err(|e| {
-        HttpResponse::Forbidden()
-            .body(e.name().clone())
-    }).map(|users| {
-        HttpResponse::Ok().json(users)
-    }).unwrap()
+
+    let res = UserManagementService::get_users(user.unwrap(),&mut *conn.get().unwrap());
+
+    if res.is_err() {
+        return HttpResponse::Forbidden()
+            .body(res.err().unwrap().name().clone())
+    }
+
+    HttpResponse::Ok().json(res.unwrap())
 }
 
 #[get("/users/{username}")]
@@ -126,9 +129,13 @@ Responder{
 pub async fn get_invites(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
     let username  = get_user_from_request(req);
     let user = User::find_by_username(&username, &mut *conn.get().unwrap()).unwrap();
-    let invites = UserManagementService::get_invites(user, &mut *conn.get().unwrap()).expect
-    ("Error getting invites");
-    HttpResponse::Ok().json(invites)
+    let invites = UserManagementService::get_invites(user, &mut *conn.get().unwrap());
+
+    if invites.is_err(){
+        return HttpResponse::BadRequest().body(invites.err().unwrap().name().clone())
+    }
+
+    HttpResponse::Ok().json(invites.unwrap())
 }
 
 #[get("/users/invites/{invite_id}")]

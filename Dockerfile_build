@@ -11,6 +11,7 @@ USER root
 RUN apk add pkgconfig openssl-dev libc-dev
 WORKDIR /app/src
 
+ADD Cargo.lock .
 ADD Cargo.toml .
 ADD dummy.rs ./src/main.rs
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
@@ -31,6 +32,7 @@ COPY --from=ui-builder /app/dist /app/src/static
 RUN rm -rf /app/src/target/release/deps/podgrabv2*
 RUN rm -rf /app/src/target/release/podgrabv2*
 
+ADD Cargo.lock .
 ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
