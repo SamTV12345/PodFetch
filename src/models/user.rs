@@ -48,13 +48,13 @@ impl User{
     pub fn find_by_username(username_to_find: &str, conn: &mut SqliteConnection) -> Option<User> {
         use crate::schema::users::dsl::*;
 
-        match var(USERNAME).is_ok() {
-            Some(username) => {
-                if username==username_to_find {
+        match var(USERNAME) {
+             Ok(res)=> {
+                if res==username_to_find {
                     return Some(User::create_admin_user());
                 }
-            },
-            None => {}
+            }
+            _ => {}
         }
 
         users.filter(username.eq(username_to_find))
@@ -67,8 +67,8 @@ impl User{
         use crate::schema::users::dsl::*;
 
         match  var(USERNAME){
-            Ok(username) => {
-                if username==self.username {
+            Ok(res) => {
+                if res==self.username {
                     return Err(Error::new(std::io::ErrorKind::Other, "Username already exists"));
                 }
             },

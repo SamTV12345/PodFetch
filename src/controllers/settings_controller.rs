@@ -1,4 +1,3 @@
-use std::fmt::format;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Path};
@@ -6,12 +5,10 @@ use actix_web::{get, put};
 use actix_web::{web, HttpResponse, Responder};
 use std::sync::{Mutex, MutexGuard};
 use chrono::Local;
-use fs_extra::dir::DirEntryValue::SystemTime;
-use opml::OPML;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 use crate::db::DB;
 use crate::DbPool;
-use crate::models::itunes_models::{Podcast, PodcastDto};
+use crate::models::itunes_models::{Podcast};
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
@@ -121,8 +118,7 @@ fn add_header()->XMLElement {
 
 
 fn add_body()->XMLElement {
-    let mut body = XMLElement::new("body");
-    body
+    XMLElement::new("body")
 }
 
 
