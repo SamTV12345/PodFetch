@@ -48,8 +48,13 @@ impl User{
     pub fn find_by_username(username_to_find: &str, conn: &mut SqliteConnection) -> Option<User> {
         use crate::schema::users::dsl::*;
 
-        if var(USERNAME).unwrap()==username_to_find {
-            return Some(User::create_admin_user());
+        match var(USERNAME).is_ok() {
+            Some(username) => {
+                if username==username_to_find {
+                    return Some(User::create_admin_user());
+                }
+            },
+            None => {}
         }
 
         users.filter(username.eq(username_to_find))
@@ -61,8 +66,13 @@ impl User{
     pub fn insert_user(&mut self, conn: &mut SqliteConnection) -> Result<User, Error> {
         use crate::schema::users::dsl::*;
 
-        if var(USERNAME).unwrap()==self.username {
-        return Err(Error::new(std::io::ErrorKind::Other, "Username already exists"));
+        match  var(USERNAME){
+            Ok(username) => {
+                if username==self.username {
+                    return Err(Error::new(std::io::ErrorKind::Other, "Username already exists"));
+                }
+            },
+            Err(_) => {}
         }
 
         let res = diesel::insert_into(users::table())
