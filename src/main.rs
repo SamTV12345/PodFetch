@@ -8,14 +8,13 @@ extern crate serde_json;
 
 use actix_web_httpauth::middleware::HttpAuthentication;
 use actix::Actor;
-use actix_cors::Cors;
 use actix_files::{Files, NamedFile};
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::error::ErrorUnauthorized;
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
-use actix_web::{http, web, App, Error, HttpResponse, HttpServer, Responder, Scope};
+use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use clokwerk::{Scheduler, TimeUnits};
 use std::sync::{Mutex};
@@ -369,21 +368,19 @@ fn config(cfg: &mut web::ServiceConfig, db: Pool<ConnectionManager<SqliteConnect
         .service(get_private_api(db));
 }
 
-pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) ->Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = Error, InitError = ()>>{
+pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Scope {
     let base_path = var("SUB_DIRECTORY").unwrap_or("/".to_string());
     let openapi = ApiDoc::openapi();
     let service = get_api_config(pool1);
 
-    let dev_enabled = var("DEV").is_ok();
 
     web::scope(&base_path)
+        .service(get_ui_config())
         .service(Files::new("/podcasts", "podcasts"))
         .service(redirect("/swagger-ui", "/swagger-ui/"))
         .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
-        .wrap(Condition::new(dev_enabled, get_cors_config()))
         .service(redirect("/", "./ui/"))
         .service(service)
-        .service(get_ui_config())
         .service(start_connection)
         .service(get_rss_feed)
         .service(get_rss_feed_for_podcast)
@@ -477,17 +474,6 @@ pub fn get_ui_config() -> Scope {
                 .body(content);
             Ok(ServiceResponse::new(req, res))}))
 
-}
-
-pub fn get_cors_config() -> Cors {
-    Cors::default()
-        .allow_any_origin()
-        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-        .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-        .allowed_header(http::header::CONTENT_TYPE)
-        .allowed_header(http::header::CONNECTION)
-        .allowed_header(http::header::UPGRADE)
-        .max_age(3600)
 }
 
 pub fn get_public_user_management() ->Scope{

@@ -35,12 +35,6 @@ export const isLocalhost = Boolean(
 
 export let apiURL: string
 export let uiURL: string
-
-if(isLocalhost && import.meta.env.DEV){
-    apiURL="http://localhost:8000/api/v1"
-    uiURL="http://localhost:5173/ui"
-}
-else {
     if (window.location.pathname.startsWith("/ui")) {
         apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port+"/api/v1"
     }
@@ -50,7 +44,6 @@ else {
         apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/" + regex.exec(window.location.href)![1] + "/api/v1"
     }
     uiURL =window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/ui"
-}
 
 const wsEndpoint = "ws"
 
