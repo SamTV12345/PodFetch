@@ -10,7 +10,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::unwrap_string;
+use crate::{unwrap_string};
 use actix::Addr;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -102,35 +102,32 @@ impl PodcastService {
         conn: &mut SqliteConnection,
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
-        lobby: Data<Addr<Lobby>>,
-    ) ->Result<(),PodFetchError>{
+        lobby: Data<Addr<Lobby>>) ->Result<(),PodFetchError>{
         let opt_podcast = DB::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone() );
         if opt_podcast.is_some() {
             return Err(PodFetchError::podcast_already_exists())
         }
 
         let fileservice = FileService::new();
+
+        let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),&podcast_insert.id.clone().to_string());
+
+        if podcast_directory_created.is_err() {
+                log::error!("Error creating podcast directory");
+                return Err(PodFetchError::podcast_directory_creation_error())
+        }
         let inserted_podcast = DB::add_podcast_to_database(
             conn,
             podcast_insert.title,
             podcast_insert.id.to_string(),
             podcast_insert.feed_url,
             podcast_insert.image_url.clone(),
+            podcast_directory_created.unwrap()
         );
-        let podcast_directory_created = FileService::create_podcast_directory_exists
-            (&podcast_insert.id.clone().to_string());
-        match podcast_directory_created {
-            Ok(_) => {}
-            Err(e) => {
-                log::error!("Error creating podcast directory: {}", e);
-            }
-        }
 
         fileservice
-            .download_podcast_image(
-                &podcast_insert.id.clone().to_string(),
-                &podcast_insert.image_url.clone().to_string(),
-            )
+            .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(), &podcast_insert
+                .image_url.clone().to_string(), &podcast_insert.id.clone().to_string())
             .await;
         let podcast = DB::get_podcast_by_track_id(conn, podcast_insert.id.clone())
             .unwrap();

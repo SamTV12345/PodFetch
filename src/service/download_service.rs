@@ -30,31 +30,33 @@ impl DownloadService {
 
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
         let podcast_save_path = PathService::get_podcast_episode_path(
-            &podcast.directory.clone(),
-            &podcast_episode.clone().episode_id,
+            &podcast.directory_name.clone(),
+            &podcast_episode.clone().name,
             &suffix,
         );
 
         let image_podcast_path =
-            PathService::get_image_podcast_path(&podcast.directory.clone(), &image_suffix);
+            PathService::get_image_podcast_path(&podcast.directory_name.clone(), &image_suffix);
 
         let image_save_path = PathService::get_image_path(
-            &podcast.directory.clone(),
-            &podcast_episode.clone().episode_id,
+            &podcast.directory_name.clone(),
+            &podcast_episode.clone().name,
             &image_suffix,
         );
         let client = ClientBuilder::new().build().unwrap();
         let mut resp = client.get(podcast_episode.url).send().unwrap();
         let mut image_response = client.get(podcast_episode.image_url).send().unwrap();
 
-        let podcast_episode_dir = create_dir(format!(
-            "podcasts/{}/{}",
-            podcast.directory, podcast_episode.episode_id
-        ));
+        let podcast_episode_dir = format!(
+            "{}/{}",
+            podcast.directory_name, podcast_episode.name
+        );
+        let podcast_episode_dir = create_dir(podcast_episode_dir);
 
         match podcast_episode_dir {
             Ok(_) => {}
-            Err(_) => {
+            Err(e) => {
+                log::error!("Error creating podcast episode directory {}", e);
                 match FileService::create_podcast_root_directory_exists(){
                     Ok(_) => {}
                     Err(e) => {
@@ -67,7 +69,7 @@ impl DownloadService {
                     }
                 }
 
-                match FileService::create_podcast_directory_exists(&podcast.directory) {
+                match FileService::create_podcast_directory_exists(&podcast.name, &podcast.directory_id) {
                     Ok(_) => {}
                     Err(e) => {
                         if e.kind()==io::ErrorKind::AlreadyExists {
@@ -86,7 +88,7 @@ impl DownloadService {
 
         if !self
             .file_service
-            .check_if_podcast_main_image_downloaded(&podcast.clone().directory)
+            .check_if_podcast_main_image_downloaded(&podcast.clone().directory_id)
         {
             let mut image_podcast = std::fs::File::create(image_podcast_path).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
@@ -94,8 +96,7 @@ impl DownloadService {
 
         io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
 
-        self.db
-            .update_total_podcast_time_and_image(
+        self.db.update_total_podcast_time_and_image(
                 &podcast_episode.episode_id,
                 &image_save_path,
                 &podcast_save_path.clone(),

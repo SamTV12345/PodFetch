@@ -62,7 +62,7 @@ diesel::table! {
     podcasts (id) {
         id -> Integer,
         name -> Text,
-        directory -> Text,
+        directory_id -> Text,
         rssfeed -> Text,
         image_url -> Text,
         summary -> Nullable<Text>,
@@ -73,6 +73,7 @@ diesel::table! {
         author -> Nullable<Text>,
         active -> Bool,
         original_image_url -> Text,
+        directory_name -> Text,
     }
 }
 

@@ -5,6 +5,8 @@ import en from 'javascript-time-ago/locale/en'
 import de from 'javascript-time-ago/locale/de'
 import fr from 'javascript-time-ago/locale/fr'
 import i18n from "i18next";
+import {PodcastEpisode} from "../store/CommonSlice";
+import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 
 const defaultOptions: IOptions = {
     allowedTags: [ 'b', 'i', 'em', 'strong', 'a' ],
@@ -85,3 +87,19 @@ export const capitalizeFirstLetter = (string: string|undefined)=> {
     if(string === undefined) return ""
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
+
+    export const preparePath = (path: string|undefined) => {
+        console.log(path)
+        if(path === undefined) return ""
+
+        console.log(window.location.href.substring(0,window.location.href.indexOf('ui/'))+path.replaceAll(' ','%20').replaceAll('#','%23'))
+        return window.location.href.substring(0,window.location.href.indexOf('ui/'))+path.replaceAll(' ','%20').replaceAll('#','%23')
+    }
+
+    export const preparePodcastEpisode = (episode: PodcastEpisode, response: PodcastWatchedModel) => {
+    return {...episode,
+            local_url: preparePath(episode.local_url),
+            local_image_url: preparePath(episode.local_image_url),
+            time: response.watchedTime
+    }
+    }

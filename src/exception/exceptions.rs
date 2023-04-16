@@ -66,4 +66,8 @@ impl PodFetchError{
     pub fn no_permission_to_onboard_user() -> PodFetchError {
         PodFetchError::new("You do not have permissions to onboard a User", StatusCode::UNAUTHORIZED)
     }
+
+    pub fn podcast_directory_creation_error() -> PodFetchError {
+        PodFetchError::new("Error creating podcast directory", StatusCode::INTERNAL_SERVER_ERROR)
+    }
 }

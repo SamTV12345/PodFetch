@@ -1,6 +1,6 @@
 import {PlayIcon} from "./PlayIcon";
 import axios, {AxiosResponse} from "axios";
-import {apiURL, formatTime, removeHTML} from "../utils/Utilities";
+import {apiURL, formatTime, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
@@ -27,6 +27,8 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode}) => {
         return <div>"Nicht gefunden"</div>
     }
 
+    console.log(episode)
+
     return <>
         <div key={episode.episode_id} id={"episode_" + episode.id} className="grid grid-cols-[auto_1fr_auto] mt-2 bg-slate-900 rounded p-2 mr-2">
             <div className="grid place-items-center"><img src={currentPodcast.image_url} alt={currentPodcast.name} className="h-20 rounded"/></div>
@@ -43,10 +45,7 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode}) => {
                                       podcast={currentPodcastEpisode} onClick={() => {
                                 axios.get(apiURL + "/podcast/episode/" + episode.episode_id)
                                     .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                                        store.dispatch(setCurrentPodcastEpisode({
-                                            ...episode,
-                                            time: response.data.watchedTime
-                                        }))
+                                        store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode, response.data)))
                                         dispatch(setCurrentPodcast(currentPodcast))
                                         dispatch(setPlaying(true))
                                     })

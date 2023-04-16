@@ -22,7 +22,7 @@ impl FileService {
         let podcast = self
             .db
             .clone()
-            .get_podcast_by_directory(podcast_id)
+            .get_podcast_by_directory_id(podcast_id)
             .unwrap();
         match podcast {
             Some(podcast) => {
@@ -45,18 +45,43 @@ impl FileService {
         Ok(())
     }
 
-    pub fn create_podcast_directory_exists(podcast_id: &str)->Result<(), Error> {
-        if !Path::new(&format!("podcasts/{}", podcast_id)).exists() {
-            std::fs::create_dir(&format!("podcasts/{}", podcast_id))
-                .expect("Error creating directory")
+    pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String) ->Result<String,
+        Error> {
+
+        if !Path::new(&format!("podcasts/{}", podcast_title)).exists() {
+            std::fs::create_dir(&format!("podcasts/{}", podcast_title))
+                .expect("Error creating directory");
+            Ok(format!("podcasts/{}", podcast_title))
         }
-        Ok(())
+        else{
+            // Check if this is a new podcast with the same name as an old one
+
+            let db = DB::new().unwrap();
+            let podcast = db.get_podcast_by_directory_id(podcast_id).unwrap();
+            match podcast {
+                Some(podcast)=>{
+                    // is the same podcast
+                    Ok(format!("podcasts/{}", podcast_title))
+                }
+                None=>{
+                    // has not been inserted into the database yet
+                    let mut i = 1;
+                    while Path::new(&format!("podcasts/{}-{}", podcast_title, i)).exists() {
+                        i += 1;
+                    }
+                    // This is save to insert because this directory does not exist
+                    std::fs::create_dir(&format!("podcasts/{}-{}", podcast_title, i))
+                        .expect("Error creating directory");
+                    Ok(format!("podcasts/{}-{}", podcast_title, i))
+                }
+            }
+        }
     }
 
-    pub async fn download_podcast_image(&self, podcast_id: &str, image_url: &str) {
+    pub async fn download_podcast_image(&self, podcast_path: &str, image_url: &str, podcast_id: &str) {
         let image_response = self.client.get(image_url).send().await.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(image_url);
-        let file_path = format!("podcasts/{}/image.{}", podcast_id, image_suffix);
+        let file_path = format!("{}/image.{}", podcast_path, image_suffix);
         let mut image_out = std::fs::File::create(file_path.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
@@ -68,7 +93,7 @@ impl FileService {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
         std::fs::remove_dir_all(&format!(
             "podcasts/{}/{}",
-            podcast.directory, episode.episode_id
+            podcast.directory_id, episode.episode_id
         ))
     }
 

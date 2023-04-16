@@ -464,7 +464,7 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     let podcast = DB::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
         finding podcast");
     if data.delete_files{
-        FileService::delete_podcast_files(&podcast.directory);
+        FileService::delete_podcast_files(&podcast.directory_id);
     }
 
     DB::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \

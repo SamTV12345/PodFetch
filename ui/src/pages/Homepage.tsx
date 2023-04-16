@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 import axios, {AxiosResponse} from "axios";
-import {apiURL} from "../utils/Utilities";
+import {apiURL, preparePath, preparePodcastEpisode} from "../utils/Utilities";
 import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel";
 import {PlayIcon} from "../components/PlayIcon";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
@@ -8,7 +8,6 @@ import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {useAppDispatch} from "../store/hooks";
 import {useTranslation} from "react-i18next";
-import {useLoaderData} from "react-router-dom";
 
 export const Homepage = () => {
     const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
@@ -33,15 +32,13 @@ export const Homepage = () => {
                 return <div key={v.episodeId}
                     className="max-w-sm rounded-lg shadow bg-gray-800 border-gray-700">
                     <div className="relative" key={v.episodeId}>
-                        <img src={v.podcastEpisode.local_image_url} alt="" className=""/>
+                        <img src={preparePath(v.podcastEpisode.local_image_url)} alt="" className=""/>
                         <div className="absolute left-0 top-0 w-full h-full hover:bg-gray-500 opacity-80 z-10 grid place-items-center play-button-background">
                             <PlayIcon key={v.podcastEpisode.episode_id+"icon"} podcast={v.podcastEpisode} className="w-20 h-20 opacity-0" onClick={()=>{
                                 axios.get(apiURL+"/podcast/episode/"+v.podcastEpisode.episode_id)
                                     .then((response: AxiosResponse<PodcastWatchedModel>)=>{
-                                        store.dispatch(setCurrentPodcastEpisode({
-                                            ...v.podcastEpisode,
-                                            time: response.data.watchedTime
-                                        }))
+                                        store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(v.podcastEpisode, response.data)))
+
                                         dispatch(setCurrentPodcast(v.podcast))
                                         dispatch(setPlaying(true))
                                     })

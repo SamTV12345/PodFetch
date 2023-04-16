@@ -135,10 +135,10 @@ impl DB {
     }
 
     pub fn get_podcast_by_track_id(conn: &mut SqliteConnection, podcast_id: i32) -> Result<Option<Podcast>, String> {
-        use crate::schema::podcasts::directory;
+        use crate::schema::podcasts::directory_id;
         use crate::schema::podcasts::dsl::podcasts;
         let optional_podcast = podcasts
-            .filter(directory.eq(podcast_id.to_string()))
+            .filter(directory_id.eq(podcast_id.to_string()))
             .first::<Podcast>(conn)
             .optional()
             .expect("Error loading podcast by id");
@@ -197,17 +197,20 @@ impl DB {
         collection_id: String,
         feed_url: String,
         image_url_1: String,
+        directory_name_to_insert: String
     ) -> Podcast {
         use crate::schema::podcasts;
-        use crate::schema::podcasts::{directory, image_url, name as podcast_name, rssfeed};
-        use crate::schema::podcasts::{original_image_url};
+        use crate::schema::podcasts::{directory_id, image_url, name as podcast_name, rssfeed};
+        use crate::schema::podcasts::{original_image_url, directory_name};
+
         let inserted_podcast = insert_into(podcasts::table)
             .values((
-                directory.eq(collection_id.to_string()),
+                directory_id.eq(collection_id.to_string()),
                 podcast_name.eq(collection_name.to_string()),
                 rssfeed.eq(feed_url.to_string()),
                 image_url.eq(image_url_1.to_string()),
                 original_image_url.eq(image_url_1.to_string()),
+                directory_name.eq(directory_name_to_insert.to_string())
             ))
             .get_result::<Podcast>(conn)
             .expect("Error inserting podcast");
@@ -426,18 +429,18 @@ impl DB {
     }
 
     pub fn update_podcast_image(mut self, id: &str, image_url: &str) -> Result<(), String> {
-        use crate::schema::podcasts::dsl::directory;
+        use crate::schema::podcasts::dsl::directory_id;
         use crate::schema::podcasts::dsl::image_url as image_url_column;
         use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
 
         let result = dsl_podcast
-            .filter(directory.eq(id))
+            .filter(directory_id.eq(id))
             .first::<Podcast>(&mut self.conn)
             .optional()
             .expect("Error loading podcast episode by id");
         match result {
             Some(..) => {
-                diesel::update(dsl_podcast.filter(directory.eq(id)))
+                diesel::update(dsl_podcast.filter(directory_id.eq(id)))
                     .set(image_url_column.eq(image_url))
                     .execute(&mut self.conn)
                     .expect("Error updating podcast episode");
@@ -449,11 +452,11 @@ impl DB {
         }
     }
 
-    pub fn get_podcast_by_directory(mut self, podcast_id: &str) -> Result<Option<Podcast>, String> {
-        use crate::schema::podcasts::dsl::directory;
+    pub fn get_podcast_by_directory_id(mut self, podcast_id: &str) -> Result<Option<Podcast>, String> {
+        use crate::schema::podcasts::dsl::directory_id;
         use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
         let result = dsl_podcast
-            .filter(directory.eq(podcast_id))
+            .filter(directory_id.eq(podcast_id))
             .first::<Podcast>(&mut self.conn)
             .optional()
             .expect("Error loading podcast episode by id");
