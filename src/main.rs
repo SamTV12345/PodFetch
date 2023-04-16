@@ -31,12 +31,11 @@ use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
-use actix_web::http::header::HeaderValue;
+use actix_web::http::header::{HeaderName, HeaderValue};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
-use reqwest::header::HeaderName;
 use sha256::digest;
 
 pub mod schema;

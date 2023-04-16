@@ -44,7 +44,7 @@ impl PodcastEpisodeService {
         let image_suffix = Self::get_url_file_suffix(&podcast_episode_cloned.image_url);
 
         let image_save_path = PathService::get_image_path(
-            &podcast_cloned.clone().directory_id,
+            &podcast_cloned.clone().directory_name,
             &podcast_episode_cloned.clone().name,
             &image_suffix,
         );
