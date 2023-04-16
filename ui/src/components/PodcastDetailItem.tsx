@@ -1,6 +1,6 @@
 import {PlayIcon} from "./PlayIcon";
 import axios, {AxiosResponse} from "axios";
-import {apiURL, formatTime, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
+import {apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
@@ -49,7 +49,15 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode}) => {
                                         dispatch(setCurrentPodcast(currentPodcast))
                                         dispatch(setPlaying(true))
                                     })
-                            }}/> : <CloudIcon className="text-2xl w-10 h-10 "/>
+                            }}/> : <CloudIcon className="text-2xl w-10 h-10 cursor-pointer" onClick={()=>{
+                                axios.get(apiURL + "/podcast/episode/" + episode.episode_id)
+                                    .then((response: AxiosResponse<PodcastWatchedModel>) => {
+                                        store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode, response.data)))
+                                        dispatch(setCurrentPodcast(currentPodcast))
+                                        dispatch(setPlaying(true))
+                                    })
+                            }
+                            }/>
                     }
                 </div>
                 <div className="grid place-items-center">

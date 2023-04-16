@@ -103,3 +103,13 @@ export const capitalizeFirstLetter = (string: string|undefined)=> {
             time: response.watchedTime
     }
     }
+
+    export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: PodcastWatchedModel)=>{
+        const strippedUrl = episode.url.replace(/\?.*$/, "");
+        const strippedImage = episode.image_url.replace(/\?.*$/, "");
+        return {...episode,
+            local_url: strippedUrl,
+            local_image_url: strippedImage,
+            time: response.watchedTime
+        }
+    }
