@@ -1,3 +1,4 @@
+use std::io::{Error, Read};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::models::{PodCastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -13,17 +14,21 @@ use actix_web::web::{Data, Path};
 use actix_web::{get, post, put, delete, HttpRequest};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
-use futures::executor;
+use futures::{executor, SinkExt};
 use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use reqwest::blocking::{Client, ClientBuilder as SyncClientBuilder};
-use reqwest::ClientBuilder as AsyncClientBuilder;
+use reqwest::{ClientBuilder as AsyncClientBuilder, Url};
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::sync::{Mutex};
 use std::thread;
+use actix_web::dev::PeerAddr;
+use diesel::row::NamedRow;
 use diesel::SqliteConnection;
+use futures::task::Spawn;
+use regex::internal::Input;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{STANDARD_USER};
 use crate::db::DB;
@@ -31,6 +36,7 @@ use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
+use awc::Client as AwcClient;
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -473,4 +479,37 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     episodes of podcast");
     DB::delete_podcast(&mut *db.get().unwrap(), id.clone());
     HttpResponse::Ok()
+}
+#[derive(Debug, Deserialize)]
+pub struct Params {
+    url: String,
+}
+
+#[get("/proxy/podcast")]
+pub(crate) async fn proxy_podcast(
+    req: HttpRequest,
+    payload: web::Payload,
+    params: web::Query<Params>
+) -> Result<HttpResponse, Error> {
+    let mut new_url = params.url.clone();
+
+    let forwarded_req = AwcClient::new()
+        .request_from(new_url.as_str(), req.head())
+        .no_decompress();
+
+
+    let res = forwarded_req
+        .insert_header(("x-forwarded-for", "192.168.2.2"))
+        .send_stream(payload)
+        .await
+        .unwrap();
+
+    let mut client_resp = HttpResponse::build(res.status());
+    // Remove `Connection` as per
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
+    for (header_name, header_value) in res.headers().iter().filter(|(h, _)| *h != "connection") {
+        client_resp.insert_header((header_name.clone(), header_value.clone()));
+    }
+
+    Ok(client_resp.streaming(res))
 }

@@ -92,7 +92,6 @@ export const capitalizeFirstLetter = (string: string|undefined)=> {
         console.log(path)
         if(path === undefined) return ""
 
-        console.log(window.location.href.substring(0,window.location.href.indexOf('ui/'))+path.replaceAll(' ','%20').replaceAll('#','%23'))
         return window.location.href.substring(0,window.location.href.indexOf('ui/'))+path.replaceAll(' ','%20').replaceAll('#','%23')
     }
 
@@ -107,8 +106,10 @@ export const capitalizeFirstLetter = (string: string|undefined)=> {
     export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: PodcastWatchedModel)=>{
         const strippedUrl = episode.url.replace(/\?.*$/, "");
         const strippedImage = episode.image_url.replace(/\?.*$/, "");
+        const test =  window.location.href.substring(0,window.location.href.indexOf('ui/'))+ 'proxy/podcast?url='+strippedUrl
+
         return {...episode,
-            local_url: strippedUrl,
+            local_url: test,
             local_image_url: strippedImage,
             time: response.watchedTime
         }
