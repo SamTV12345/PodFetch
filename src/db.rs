@@ -583,7 +583,7 @@ impl DB {
                         username.eq(username_1),
                         favor_column.eq(favor),
                     ))
-                    .execute(&mut self.conn).expect("Error updating podcast");
+                    .execute(&mut self.conn).map_err(|e| e.to_string()).unwrap();
                 Ok(())
             }
         }

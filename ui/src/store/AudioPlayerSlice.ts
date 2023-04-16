@@ -12,7 +12,8 @@ type AudioPlayerProps = {
     currentPodcastEpisode: PodcastEpisode|undefined,
     currentPodcast: Podcast|undefined,
     metadata: AudioMetadata|undefined,
-    volume: number
+    volume: number,
+    playBackRate: number
 }
 
 const initialState: AudioPlayerProps = {
@@ -20,7 +21,8 @@ const initialState: AudioPlayerProps = {
     currentPodcastEpisode: undefined,
     currentPodcast: undefined,
     metadata: undefined,
-    volume: 100
+    volume: 100,
+    playBackRate: 1
 }
 
 export const AudioPlayerSlice = createSlice({
@@ -53,10 +55,13 @@ export const AudioPlayerSlice = createSlice({
         },
         setVolume(state, action:PayloadAction<number>){
             state.volume = action.payload
+        },
+        setPlayBackRate(state, action:PayloadAction<number>){
+            state.playBackRate = action.payload
         }
     }
 })
 
-export const {setPlaying, setCurrentPodcastEpisode,setVolume, setMetadata, setCurrentTimeUpdate, setCurrentTimeUpdatePercentage, setCurrentPodcast} = AudioPlayerSlice.actions
+export const {setPlaying, setPlayBackRate,setCurrentPodcastEpisode,setVolume, setMetadata, setCurrentTimeUpdate, setCurrentTimeUpdatePercentage, setCurrentPodcast} = AudioPlayerSlice.actions
 
 export default AudioPlayerSlice.reducer
