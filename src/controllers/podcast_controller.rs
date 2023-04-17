@@ -23,6 +23,7 @@ use rss::Channel;
 use serde_json::{from_str, Value};
 use std::sync::{Mutex};
 use std::thread;
+use std::time::Duration;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{STANDARD_USER};
@@ -490,6 +491,7 @@ pub(crate) async fn proxy_podcast(
 
     let forwarded_req = AwcClient::new()
         .request_from(new_url.as_str(), req.head())
+        .timeout(Duration::from_secs(10))
         .no_decompress();
 
     let res = forwarded_req
