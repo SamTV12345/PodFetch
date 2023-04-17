@@ -19,7 +19,7 @@ impl MappingService {
         Podcast {
             id: podcast.id,
             name: podcast.name.clone(),
-            directory: podcast.directory.clone(),
+            directory_id: podcast.directory_id.clone(),
             rssfeed: podcast.rssfeed.clone(),
             image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
                 + &podcast.image_url.clone(),
@@ -31,6 +31,7 @@ impl MappingService {
             author: podcast.author.clone(),
             active: podcast.active,
             original_image_url: podcast.original_image_url.clone(),
+            directory_name: podcast.directory_name.clone(),
         }
     }
 
@@ -44,7 +45,7 @@ impl MappingService {
      PodcastDto{
             id: podcast_favorite_grouped.0.id.clone(),
             name: podcast_favorite_grouped.0.name.clone(),
-            directory: podcast_favorite_grouped.0.directory.clone(),
+         directory_id: podcast_favorite_grouped.0.directory_id.clone(),
             rssfeed: podcast_favorite_grouped.0.rssfeed.clone(),
             image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
                 + &podcast_favorite_grouped.0.image_url.clone(),
@@ -70,8 +71,6 @@ impl MappingService {
 
 
     pub fn map_podcastepisode_to_dto(&self, podcast_episode: &PodcastEpisode) -> PodcastEpisode {
-        let podcast_path =
-            environment_service::EnvironmentService::get_server_url(&self.env_service);
         PodcastEpisode {
             id: podcast_episode.id,
             podcast_id: podcast_episode.podcast_id,
@@ -82,8 +81,8 @@ impl MappingService {
             date_of_recording: podcast_episode.date_of_recording.clone(),
             image_url: podcast_episode.image_url.clone(),
             total_time: podcast_episode.total_time,
-            local_url: podcast_path.clone() + &podcast_episode.local_url.clone(),
-            local_image_url: podcast_path + &podcast_episode.local_image_url.clone(),
+            local_url: podcast_episode.local_url.clone(),
+            local_image_url:  podcast_episode.local_image_url.clone(),
             status: podcast_episode.status.clone(),
             download_time: podcast_episode.download_time.clone(),
         }
@@ -102,9 +101,9 @@ impl MappingService {
             podcast_id: podcast_watched_model.clone().podcast_id,
             episode_id: cloned_podcast_watched_model.episode_id,
             date: cloned_podcast_watched_model.date,
-            url: podcast_episode.clone().url,
+            url: podcast_episode.clone().local_url,
             name: podcast_episode.clone().name,
-            image_url: podcast_episode.clone().image_url,
+            image_url: podcast_episode.clone().local_image_url,
             total_time: podcast_episode.clone().total_time,
             podcast_episode,
             podcast,

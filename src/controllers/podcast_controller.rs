@@ -13,16 +13,17 @@ use actix_web::web::{Data, Path};
 use actix_web::{get, post, put, delete, HttpRequest};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
-use futures::executor;
+use futures::{executor};
 use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use reqwest::blocking::{Client, ClientBuilder as SyncClientBuilder};
-use reqwest::ClientBuilder as AsyncClientBuilder;
+use reqwest::{ClientBuilder as AsyncClientBuilder};
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::sync::{Mutex};
 use std::thread;
+use std::time::Duration;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{STANDARD_USER};
@@ -31,6 +32,7 @@ use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
+use awc::Client as AwcClient;
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -464,7 +466,7 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     let podcast = DB::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
         finding podcast");
     if data.delete_files{
-        FileService::delete_podcast_files(&podcast.directory);
+        FileService::delete_podcast_files(&podcast.directory_id);
     }
 
     DB::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
@@ -473,4 +475,36 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     episodes of podcast");
     DB::delete_podcast(&mut *db.get().unwrap(), id.clone());
     HttpResponse::Ok()
+}
+#[derive(Debug, Deserialize)]
+pub struct Params {
+    url: String,
+}
+
+#[get("/proxy/podcast")]
+pub(crate) async fn proxy_podcast(
+    req: HttpRequest,
+    payload: web::Payload,
+    params: web::Query<Params>
+) -> HttpResponse {
+    let new_url = params.url.clone();
+
+    let forwarded_req = AwcClient::new()
+        .request_from(new_url.as_str(), req.head())
+        .timeout(Duration::from_secs(10))
+        .no_decompress();
+
+    let res = forwarded_req
+        .send_stream(payload)
+        .await
+        .unwrap();
+
+    let mut client_resp = HttpResponse::build(res.status());
+    // Remove `Connection` as per
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
+    for (header_name, header_value) in res.headers().iter().filter(|(h, _)| *h != "connection") {
+        client_resp.insert_header((header_name.clone(), header_value.clone()));
+    }
+
+    client_resp.streaming(res)
 }

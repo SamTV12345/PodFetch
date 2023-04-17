@@ -56,7 +56,7 @@ pub struct Podcast {
     #[diesel(sql_type = Text)]
     pub(crate) name: String,
     #[diesel(sql_type = Text)]
-    pub directory: String,
+    pub directory_id: String,
     #[diesel(sql_type = Text)]
     pub(crate) rssfeed: String,
     #[diesel(sql_type = Text)]
@@ -75,13 +75,14 @@ pub struct Podcast {
     pub author: Option<String>,
     pub active: bool,
     pub original_image_url: String,
+    pub directory_name:String
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct PodcastDto {
     pub(crate) id: i32,
     pub(crate) name: String,
-    pub directory: String,
+    pub directory_id: String,
     pub(crate) rssfeed: String,
     pub image_url: String,
     pub summary: Option<String>,
@@ -110,5 +111,5 @@ pub struct PodcastEpisode {
     pub(crate) local_image_url: String,
     pub(crate) description: String,
     pub(crate) status: String,
-    pub(crate) download_time: Option<NaiveDateTime>,
+    pub(crate) download_time: Option<NaiveDateTime>
 }

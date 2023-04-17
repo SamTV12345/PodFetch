@@ -31,12 +31,11 @@ use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
-use actix_web::http::header::HeaderValue;
+use actix_web::http::header::{HeaderName, HeaderValue};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
-use reqwest::header::HeaderName;
 use sha256::digest;
 
 pub mod schema;
@@ -47,7 +46,7 @@ use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
-use crate::controllers::podcast_controller::{add_podcast, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id};
+use crate::controllers::podcast_controller::{add_podcast, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, proxy_podcast};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
@@ -375,6 +374,7 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Sco
 
 
     web::scope(&base_path)
+        .service(proxy_podcast)
         .service(get_ui_config())
         .service(Files::new("/podcasts", "podcasts"))
         .service(redirect("/swagger-ui", "/swagger-ui/"))
