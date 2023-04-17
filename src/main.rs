@@ -332,7 +332,6 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
 
         App::new()
-            .service(proxy_podcast)
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
             .service(get_global_scope(pool.clone()))
             .app_data(Data::new(chat_server.clone()))
@@ -375,6 +374,7 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Sco
 
 
     web::scope(&base_path)
+        .service(proxy_podcast)
         .service(get_ui_config())
         .service(Files::new("/podcasts", "podcasts"))
         .service(redirect("/swagger-ui", "/swagger-ui/"))
