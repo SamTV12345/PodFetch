@@ -1,6 +1,6 @@
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::service::file_service::FileService;
+use crate::service::file_service::{FileService, prepare_podcast_title_to_directory};
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -49,7 +49,7 @@ impl DownloadService {
 
         let podcast_episode_dir = format!(
             "{}/{}",
-            podcast.directory_name, podcast_episode.name
+            podcast.directory_name, prepare_podcast_title_to_directory(&podcast_episode.name)
         );
         let podcast_episode_dir = create_dir(podcast_episode_dir);
 

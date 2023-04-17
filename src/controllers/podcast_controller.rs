@@ -1,4 +1,3 @@
-use std::io::{Error, Read};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::models::{PodCastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -14,21 +13,18 @@ use actix_web::web::{Data, Path};
 use actix_web::{get, post, put, delete, HttpRequest};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
-use futures::{executor, SinkExt};
+use futures::{executor};
 use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use reqwest::blocking::{Client, ClientBuilder as SyncClientBuilder};
-use reqwest::{ClientBuilder as AsyncClientBuilder, Url};
+use reqwest::{ClientBuilder as AsyncClientBuilder};
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::sync::{Mutex};
 use std::thread;
-use actix_web::dev::PeerAddr;
-use diesel::row::NamedRow;
+use actix_web::http::header::USER_AGENT;
 use diesel::SqliteConnection;
-use futures::task::Spawn;
-use regex::internal::Input;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{STANDARD_USER};
 use crate::db::DB;
@@ -490,16 +486,16 @@ pub(crate) async fn proxy_podcast(
     req: HttpRequest,
     payload: web::Payload,
     params: web::Query<Params>
-) -> Result<HttpResponse, Error> {
-    let mut new_url = params.url.clone();
+) -> HttpResponse {
+    let new_url = params.url.clone();
 
     let forwarded_req = AwcClient::new()
         .request_from(new_url.as_str(), req.head())
         .no_decompress();
 
-
     let res = forwarded_req
-        .insert_header(("x-forwarded-for", "192.168.2.2"))
+        .append_header((USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
+        (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"))
         .send_stream(payload)
         .await
         .unwrap();
@@ -511,5 +507,5 @@ pub(crate) async fn proxy_podcast(
         client_resp.insert_header((header_name.clone(), header_value.clone()));
     }
 
-    Ok(client_resp.streaming(res))
+    client_resp.streaming(res)
 }

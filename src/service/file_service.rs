@@ -4,6 +4,7 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
 use std::path::Path;
+use regex::Regex;
 
 #[derive(Clone)]
 pub struct FileService {
@@ -47,11 +48,11 @@ impl FileService {
 
     pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String) ->Result<String,
         Error> {
-
-        if !Path::new(&format!("podcasts/{}", podcast_title)).exists() {
-            std::fs::create_dir(&format!("podcasts/{}", podcast_title))
+        let escaped_title = prepare_podcast_title_to_directory(podcast_title);
+        if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
+            std::fs::create_dir(&format!("podcasts/{}", escaped_title))
                 .expect("Error creating directory");
-            Ok(format!("podcasts/{}", podcast_title))
+            Ok(format!("podcasts/{}", escaped_title))
         }
         else{
             // Check if this is a new podcast with the same name as an old one
@@ -59,20 +60,20 @@ impl FileService {
             let db = DB::new().unwrap();
             let podcast = db.get_podcast_by_directory_id(podcast_id).unwrap();
             match podcast {
-                Some(podcast)=>{
+                Some(_)=>{
                     // is the same podcast
-                    Ok(format!("podcasts/{}", podcast_title))
+                    Ok(format!("podcasts/{}", escaped_title))
                 }
                 None=>{
                     // has not been inserted into the database yet
                     let mut i = 1;
-                    while Path::new(&format!("podcasts/{}-{}", podcast_title, i)).exists() {
+                    while Path::new(&format!("podcasts/{}-{}", escaped_title, i)).exists() {
                         i += 1;
                     }
                     // This is save to insert because this directory does not exist
-                    std::fs::create_dir(&format!("podcasts/{}-{}", podcast_title, i))
+                    std::fs::create_dir(&format!("podcasts/{}-{}", escaped_title, i))
                         .expect("Error creating directory");
-                    Ok(format!("podcasts/{}-{}", podcast_title, i))
+                    Ok(format!("podcasts/{}-{}", escaped_title, i))
                 }
             }
         }
@@ -100,4 +101,10 @@ impl FileService {
     pub fn delete_podcast_files(podcast_dir: &str){
         std::fs::remove_dir_all(format!("podcasts/{}", podcast_dir)).expect("Error deleting podcast directory");
     }
+}
+
+
+pub fn prepare_podcast_title_to_directory(title: &str) ->String {
+    let re = Regex::new(r"[^a-zA-Z0-9_./]").unwrap();
+    re.replace_all(title, "").to_string()
 }

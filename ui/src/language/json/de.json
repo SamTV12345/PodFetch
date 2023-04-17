@@ -95,5 +95,6 @@
   "account-created": "Konto erstellt",
   "password-too-weak": "Passwort zu schwach. Ein sicheres Passwort hat eine Länge 8 und enthält mindestens eine Zahl, einen Großbuchstaben und einen Kleinbuchstaben.",
   "not-admin": "Sie sind kein Administrator",
-  "not-admin-or-uploader": "Sie sind weder Administrator noch Uploader"
+  "not-admin-or-uploader": "Sie sind weder Administrator noch Uploader",
+  "stream-podcast-episode": "Podcast-Episode streamen"
 }

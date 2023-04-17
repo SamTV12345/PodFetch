@@ -24,6 +24,15 @@ export const Homepage = () => {
 
     }, [])
 
+    const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel) => {
+        if(podcast.podcastEpisode.local_image_url.length>1){
+            return preparePath(podcast.podcastEpisode.local_image_url)
+        }
+        else{
+            return podcast.podcastEpisode.image_url
+        }
+    }
+
     return <div className="p-3">
         <h1 className="font-bold text-2xl">{t('last-listened')}</h1>
         <div className="grid grid-cols-2 md:grid-cols-5 xs:grid-cols-1 gap-4">
@@ -32,7 +41,7 @@ export const Homepage = () => {
                 return <div key={v.episodeId}
                     className="max-w-sm rounded-lg shadow bg-gray-800 border-gray-700">
                     <div className="relative" key={v.episodeId}>
-                        <img src={preparePath(v.podcastEpisode.local_image_url)} alt="" className=""/>
+                        <img src={selectPodcastImage(v)} alt="" className=""/>
                         <div className="absolute left-0 top-0 w-full h-full hover:bg-gray-500 opacity-80 z-10 grid place-items-center play-button-background">
                             <PlayIcon key={v.podcastEpisode.episode_id+"icon"} podcast={v.podcastEpisode} className="w-20 h-20 opacity-0" onClick={()=>{
                                 axios.get(apiURL+"/podcast/episode/"+v.podcastEpisode.episode_id)

@@ -93,5 +93,6 @@
   "account-created": "Compte créé",
   "password-too-weak": "Le mot de passe est trop faible. Il doit contenir au moins 8 caractères, dont au moins une lettre majuscule, une lettre minuscule et un chiffre.",
   "not-admin": "Vous n'êtes pas administrateur",
-  "not-admin-or-uploader": "Vous n'êtes pas administrateur ou uploader"
+  "not-admin-or-uploader": "Vous n'êtes pas administrateur ou uploader",
+  "stream-podcast-episode": "Écouter l'épisode"
 }
