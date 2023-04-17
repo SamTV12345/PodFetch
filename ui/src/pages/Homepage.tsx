@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 import axios, {AxiosResponse} from "axios";
-import {apiURL, preparePath, preparePodcastEpisode} from "../utils/Utilities";
+import {apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode} from "../utils/Utilities";
 import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel";
 import {PlayIcon} from "../components/PlayIcon";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
@@ -46,7 +46,13 @@ export const Homepage = () => {
                             <PlayIcon key={v.podcastEpisode.episode_id+"icon"} podcast={v.podcastEpisode} className="w-20 h-20 opacity-0" onClick={()=>{
                                 axios.get(apiURL+"/podcast/episode/"+v.podcastEpisode.episode_id)
                                     .then((response: AxiosResponse<PodcastWatchedModel>)=>{
-                                        store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(v.podcastEpisode, response.data)))
+                                        if (v.podcastEpisode.local_image_url.trim().length>1){
+                                            store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(v.podcastEpisode, response.data)))
+                                        }
+                                        else{
+                                            store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(v.podcastEpisode, response.data)))
+                                        }
+
 
                                         dispatch(setCurrentPodcast(v.podcast))
                                         dispatch(setPlaying(true))
