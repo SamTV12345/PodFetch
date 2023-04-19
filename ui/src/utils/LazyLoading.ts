@@ -27,3 +27,7 @@ export const AdministrationUserViewLazyLoad = lazy(()=>import('../pages/Administ
 export const InviteAdministrationUserViewLazyLoad = lazy(()=>import('../pages/InviteAdministrationUserPage').then(module=> {
     return{default:module["InviteAdministrationUserPage"]}
 }))
+
+export const TimeLineViewLazyLoad = lazy(()=>import('../pages/Timeline').then(module=> {
+    return{default:module["Timeline"]}
+}))

@@ -1,7 +1,8 @@
 use crate::schema::*;
 use chrono::NaiveDateTime;
-use diesel::prelude::{Insertable, Queryable, Identifiable, Selectable};
+use diesel::prelude::{Insertable, Queryable, Identifiable, Selectable, QueryableByName};
 use utoipa::ToSchema;
+use diesel::sql_types::{Integer, Text, Nullable, Bool, Date};
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -49,7 +50,8 @@ pub struct ResponseModel {
     pub results: Vec<ItunesModel>,
 }
 
-#[derive(Queryable, Identifiable, Selectable, Debug, PartialEq, Clone, ToSchema,Serialize, Deserialize)]
+#[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
+Serialize, Deserialize)]
 pub struct Podcast {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
@@ -73,8 +75,12 @@ pub struct Podcast {
     pub last_build_date: Option<String>,
     #[diesel(sql_type = Nullable<Text>)]
     pub author: Option<String>,
+    #[diesel(sql_type = Bool)]
     pub active: bool,
+    #[diesel(sql_type = Text)]
     pub original_image_url: String,
+    #[diesel(sql_type = Text)]
+
     pub directory_name:String
 }
 
@@ -97,19 +103,33 @@ pub struct PodcastDto {
 }
 
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug, ToSchema)]
+#[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
+Serialize, Deserialize)]
 pub struct PodcastEpisode {
+    #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
+    #[diesel(sql_type = Integer)]
     pub(crate) podcast_id: i32,
+    #[diesel(sql_type = Text)]
     pub(crate) episode_id: String,
+    #[diesel(sql_type = Text)]
     pub(crate) name: String,
+    #[diesel(sql_type = Text)]
     pub(crate) url: String,
+    #[diesel(sql_type = Text)]
     pub(crate) date_of_recording: String,
+    #[diesel(sql_type = Text)]
     pub image_url: String,
+    #[diesel(sql_type = Integer)]
     pub total_time: i32,
+    #[diesel(sql_type = Text)]
     pub(crate) local_url: String,
+    #[diesel(sql_type = Text)]
     pub(crate) local_image_url: String,
+    #[diesel(sql_type = Text)]
     pub(crate) description: String,
+    #[diesel(sql_type = Text)]
     pub(crate) status: String,
+    #[diesel(sql_type = Nullable<Date>)]
     pub(crate) download_time: Option<NaiveDateTime>
 }

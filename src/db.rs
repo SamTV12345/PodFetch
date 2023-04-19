@@ -18,6 +18,7 @@ use std::sync::MutexGuard;
 use std::time::SystemTime;
 use diesel::sql_types::Text;
 use crate::models::favorites::Favorite;
+use crate::schema::podcast_episodes::dsl::podcast_episodes;
 use crate::utils::do_retry::do_retry;
 
 pub struct DB {
@@ -740,5 +741,21 @@ impl DB {
             .filter(status.eq("D"))
             .load::<PodcastEpisode>(&mut self.conn)
             .expect("Error loading podcast episode by id")
+    }
+
+
+    pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection) {
+        let podcast_timeline = sql_query("SELECT podcast_episodes FROM podcasts, podcast_episodes, \
+        favorites \
+        WHERE podcasts.id = podcast_episodes.podcast_id AND podcasts.id = favorites.podcast_id AND favorites.username=? AND favored=1 ORDER BY podcast_episodes.date_of_recording DESC");
+
+        let res = podcast_timeline.bind::<Text, _>(&username_to_search);
+
+
+        let res1 = res.load::<PodcastEpisode>(conn).expect("Error loading \
+        podcast \
+        episode by id");
+
+
     }
 }
