@@ -2,7 +2,7 @@ use crate::schema::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable, Identifiable, Selectable, QueryableByName};
 use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Bool, Date};
+use diesel::sql_types::{Integer, Text, Nullable, Bool, Timestamp};
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -130,6 +130,6 @@ pub struct PodcastEpisode {
     pub(crate) description: String,
     #[diesel(sql_type = Text)]
     pub(crate) status: String,
-    #[diesel(sql_type = Nullable<Date>)]
+    #[diesel(sql_type = Nullable<Timestamp>)]
     pub(crate) download_time: Option<NaiveDateTime>
 }
