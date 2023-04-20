@@ -7,7 +7,6 @@ use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
-use crate::constants::constants::{STANDARD_USER};
 use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
@@ -65,9 +64,8 @@ Responder {
         return HttpResponse::BadRequest().json("Username not found");
     }
 
-    let username_to_search = STANDARD_USER;
 
-    let res = DB::get_timeline(username_to_search.to_string(),&mut conn.get().unwrap());
+    let res = DB::get_timeline(username.unwrap(),&mut conn.get().unwrap());
 
     let mapped_timeline = res.iter().map(|podcast_episode| {
         let (podcast_episode, podcast) = podcast_episode;
