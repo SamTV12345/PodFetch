@@ -8,7 +8,32 @@ import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {useAppDispatch} from "../store/hooks";
 import {useTranslation} from "react-i18next";
+import {PodcastEpisode} from "../store/CommonSlice";
 
+const isPodcastWatchedEpisodeModel = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode): podcast is PodcastWatchedEpisodeModel => {
+    return (podcast as PodcastWatchedEpisodeModel).watchedTime !== undefined;
+}
+
+export   const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode) => {
+    if (isPodcastWatchedEpisodeModel(podcast)){
+        if(podcast.podcastEpisode.local_image_url.length>1){
+            return preparePath(podcast.podcastEpisode.local_image_url)
+        }
+        else{
+            return podcast.podcastEpisode.image_url
+        }
+    }
+    else{
+        console.log(podcast.image_url)
+        if(podcast.local_image_url.trim().length>1){
+            return preparePath(podcast.local_image_url)
+        }
+        else{
+            return podcast.image_url
+        }
+    }
+
+}
 export const Homepage = () => {
     const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
     const dispatch = useAppDispatch()
@@ -24,14 +49,7 @@ export const Homepage = () => {
 
     }, [])
 
-    const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel) => {
-        if(podcast.podcastEpisode.local_image_url.length>1){
-            return preparePath(podcast.podcastEpisode.local_image_url)
-        }
-        else{
-            return podcast.podcastEpisode.image_url
-        }
-    }
+
 
     return <div className="p-3">
         <h1 className="font-bold text-2xl">{t('last-listened')}</h1>

@@ -1,6 +1,6 @@
 use crate::schema::*;
 use chrono::NaiveDateTime;
-use diesel::prelude::{Insertable, Queryable, Identifiable, Selectable, QueryableByName};
+use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Bool, Timestamp};
 

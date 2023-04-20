@@ -7,9 +7,10 @@ use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
-use crate::constants::constants::{STANDARD_USER, USERNAME};
+use crate::constants::constants::{STANDARD_USER};
 use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::mutex::LockResultExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -47,6 +48,11 @@ pub async fn find_all_podcast_episodes_of_podcast(
     HttpResponse::Ok().json(mapped_podcasts)
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct TimeLinePodcastEpisode {
+    podcast_episode: PodcastEpisode,
+    podcast: Podcast,
+}
 
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(conn: Data<DbPool>, req: HttpRequest, mapping_service:
@@ -61,11 +67,18 @@ Responder {
 
     let username_to_search = STANDARD_USER;
 
-    /*let res = DB::get_timeline(username_to_search.to_string(),&mut conn.get().unwrap())
-        .iter().map(|podcast_episode| mapping_service.map_podcastepisode_to_dto(&podcast_episode)).collect::<Vec<_>>();
+    let res = DB::get_timeline(username_to_search.to_string(),&mut conn.get().unwrap());
 
-     */
-    HttpResponse::Ok().json("test")
+    let mapped_timeline = res.iter().map(|podcast_episode| {
+        let (podcast_episode, podcast) = podcast_episode;
+        let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(podcast_episode);
+
+        TimeLinePodcastEpisode{
+            podcast_episode: mapped_podcast_episode,
+            podcast: podcast.clone()
+        }
+    }).collect::<Vec<TimeLinePodcastEpisode>>();
+    HttpResponse::Ok().json(mapped_timeline)
 }
 
 /**
