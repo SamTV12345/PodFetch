@@ -55,9 +55,11 @@ impl DB {
         -> Result<Vec<PodcastDto>, String> {
         use crate::schema::podcasts::dsl::podcasts;
         use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::podcast_id as f_id;
+        use crate::schema::podcasts::id as p_id;
         use crate::schema::favorites::dsl::username;
         let result = podcasts
-            .left_join(f_db.on(username.eq(u)))
+            .left_join(f_db.on(username.eq(u).and(f_id.eq(p_id))))
             .load::<(Podcast, Option<Favorite>)>(conn)
             .expect("Error loading podcasts");
 
@@ -740,5 +742,20 @@ impl DB {
             .filter(status.eq("D"))
             .load::<PodcastEpisode>(&mut self.conn)
             .expect("Error loading podcast episode by id")
+    }
+
+
+    pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection) -> Vec<
+        (PodcastEpisode, Podcast)> {
+        let podcast_timeline = sql_query("SELECT * FROM podcast_episodes,podcasts, \
+        favorites \
+        WHERE podcasts.id = podcast_episodes.podcast_id AND podcasts.id = favorites.podcast_id \
+        AND favorites.username=? AND favored=1 ORDER BY podcast_episodes.date_of_recording DESC \
+        LIMIT 20");
+
+        let res = podcast_timeline.bind::<Text, _>(&username_to_search);
+
+
+        res.load::<(PodcastEpisode, Podcast)>(conn).expect("Error loading podcast episode by id")
     }
 }

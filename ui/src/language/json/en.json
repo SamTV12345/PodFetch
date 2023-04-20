@@ -94,5 +94,6 @@
   "password-too-weak": "Password too weak. A secure password contains at least 8 characters, a number, a lowercase and an uppercase letter.",
   "not-admin": "You are not an admin",
   "not-admin-or-uploader": "You are not an admin or an uploader",
-  "stream-podcast-episode": "Stream podcast episode"
+  "stream-podcast-episode": "Stream podcast episode",
+  "timeline": "Timeline"
 }

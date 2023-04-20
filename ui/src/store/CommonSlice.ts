@@ -6,6 +6,7 @@ import {LoginData} from "../components/LoginComponent";
 import {User} from "../models/User";
 import {ConfirmModalProps} from "../components/ConfirmModal";
 import {Invite} from "../pages/InviteAdministrationUserPage";
+import {TimeLineModel} from "../models/TimeLineModel";
 
 export type Podcast = {
     directory: string,
@@ -55,7 +56,8 @@ interface CommonProps {
     selectedUser: User|undefined,
     users: User[],
     addInviteModalOpen: boolean,
-    invites: Invite[]
+    invites: Invite[],
+    timeLineEpisodes: TimeLineModel[]
 }
 
 // Define the initial state using that type
@@ -75,7 +77,8 @@ const initialState: CommonProps = {
     selectedUser: undefined,
     users: [],
     addInviteModalOpen: false,
-    invites: []
+    invites: [],
+    timeLineEpisodes:[]
 }
 
 export const commonSlice = createSlice({
@@ -155,10 +158,13 @@ export const commonSlice = createSlice({
         },
         setInvites: (state, action:PayloadAction<Invite[]>) => {
             state.invites = action.payload
+        },
+        setTimeLineEpisodes: (state, action:PayloadAction<TimeLineModel[]>) => {
+            state.timeLineEpisodes = action.payload
         }
 }})
 
-export const {setSideBarCollapsed,setInvites,setAddInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
+export const {setSideBarCollapsed, setTimeLineEpisodes,setInvites,setAddInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

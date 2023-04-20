@@ -15,13 +15,14 @@ import {
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
-    SettingsViewLazyLoad
+    SettingsViewLazyLoad, TimeLineViewLazyLoad
 } from "./utils/LazyLoading";
 import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities";
 import {LoginComponent} from "./components/LoginComponent";
 import {enqueueSnackbar} from "notistack";
 import {useTranslation} from "react-i18next";
 import {InviteComponent} from "./components/InviteComponent";
+import {Timeline} from "./pages/Timeline";
 
 
 export const router = createBrowserRouter(createRoutesFromElements(
@@ -33,6 +34,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
             </Route>
+            <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad/></Suspense>}/>
             <Route path={"favorites"}>
                 <Route element={<PodcastViewLazyLoad onlyFavorites={true}/>} index/>
                 <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>

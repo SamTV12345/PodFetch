@@ -2,12 +2,14 @@ use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
-use actix_web::{get, put};
+use actix_web::{get, HttpRequest, put};
 use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
+use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::mutex::LockResultExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -43,6 +45,38 @@ pub async fn find_all_podcast_episodes_of_podcast(
         .map(|podcast| mapping_service.map_podcastepisode_to_dto(&podcast))
         .collect::<Vec<_>>();
     HttpResponse::Ok().json(mapped_podcasts)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TimeLinePodcastEpisode {
+    podcast_episode: PodcastEpisode,
+    podcast: Podcast,
+}
+
+#[get("/podcasts/timeline")]
+pub async fn get_timeline(conn: Data<DbPool>, req: HttpRequest, mapping_service:
+Data<Mutex<MappingService>>) ->
+                                                                                             impl
+Responder {
+    let mapping_service = mapping_service.lock().ignore_poison();
+    let username = get_username(req);
+    if username.is_err(){
+        return HttpResponse::BadRequest().json("Username not found");
+    }
+
+
+    let res = DB::get_timeline(username.unwrap(),&mut conn.get().unwrap());
+
+    let mapped_timeline = res.iter().map(|podcast_episode| {
+        let (podcast_episode, podcast) = podcast_episode;
+        let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(podcast_episode);
+
+        TimeLinePodcastEpisode{
+            podcast_episode: mapped_podcast_episode,
+            podcast: podcast.clone()
+        }
+    }).collect::<Vec<TimeLinePodcastEpisode>>();
+    HttpResponse::Ok().json(mapped_timeline)
 }
 
 /**

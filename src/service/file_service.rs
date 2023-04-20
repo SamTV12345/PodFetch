@@ -106,5 +106,6 @@ impl FileService {
 
 pub fn prepare_podcast_title_to_directory(title: &str) ->String {
     let re = Regex::new(r"[^a-zA-Z0-9_./]").unwrap();
-    re.replace_all(title, "").to_string()
+    let res = re.replace_all(title, "").to_string();
+    res.replace("..","")
 }
