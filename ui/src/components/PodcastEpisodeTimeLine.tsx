@@ -18,7 +18,7 @@ export const PodcastEpisodeTimeLine:FC<PodcastEpisodeTimeLineProps> = ({podcastE
     const dispatch = useAppDispatch()
 
     return <div key={podcastEpisode.podcast_episode.episode_id+"dv"}
-                className="max-w-sm rounded-lg shadow bg-gray-800 border-gray-700">
+                className="max-w-sm rounded-lg shadow bg-slate-700 border-gray-700">
         <div className="relative" key={podcastEpisode.podcast_episode.episode_id}>
             <img src={selectPodcastImage(podcastEpisode.podcast_episode)} alt="" className=""/>
             <div className="absolute left-0 top-0 w-full h-full hover:bg-gray-500 opacity-80 z-10 grid place-items-center play-button-background">

@@ -34,7 +34,7 @@ export const SettingsPage = () => {
             <h1 className="text-2xl text-center font-bold">{t('settings')}</h1>
             <div className="grid gap-5">
             <div className="bg-slate-900 rounded p-5 text-white">
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="">{t('auto-cleanup')}</div>
                     <div><Switcher checked={settings.autoCleanup} setChecked={()=>{
                         setSettings({...settings, autoCleanup: !settings?.autoCleanup})
@@ -55,7 +55,7 @@ export const SettingsPage = () => {
                     <div>
                         {t('auto-download')}
                     </div>
-                    <div>
+                    <div className="mb-4">
                         <Switcher checked={settings.autoDownload} setChecked={()=>{
                             setSettings({...settings, autoDownload: !settings?.autoDownload})
                         }}/>
@@ -66,7 +66,7 @@ export const SettingsPage = () => {
                 </div>
                 <div className="flex">
                     <div className="flex-1"></div>
-                    <button className=" p-2 bg-blue-600 rounded hover:bg-blue-500" onClick={()=>{
+                    <button className="p-2 bg-blue-600 rounded hover:bg-blue-500" onClick={()=>{
                         axios.put(apiURL+"/settings", settings)
                             .then(()=>{
                                 enqueueSnackbar(t('settings-saved'), {variant: "success"})

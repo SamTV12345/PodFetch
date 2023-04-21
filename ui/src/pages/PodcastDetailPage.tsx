@@ -78,10 +78,10 @@ export const PodcastDetailPage = () => {
         <div className="pl-5 pt-5 overflow-y-scroll">
             <PodcastInfoModal/>
             <div className="grid grid-cols-[auto_1fr] gap-3">
-                <div className="grid place-items-center">
+                    <div className="hidden sm:grid place-items-center">
                     <img className="w-60 rounded" src={currentPodcast.image_url} alt=""/>
                 </div>
-                <div className="grid place-items-center">
+                <div className="md:grid place-items-center">
                     <div className=" w-full">
                         <h1 className="movie-text">{currentPodcast.name}
                             <i className="fa-solid fa-arrows-rotate hover:text-slate-400 active:text-slate-800 active:scale-95 ml-1"

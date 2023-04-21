@@ -39,14 +39,14 @@ export const Timeline = ()=>{
 
     return <div className="p-3">
         <h1 className="font-bold text-3xl">{t('timeline')}</h1>
-        {
+        <div className="">{
             Object.keys(mappedEpisodes).map((e)=> {
                 // @ts-ignore
                 let episodesOnDate = mappedEpisodes[e] as TimeLineModel[]
-                return <div key={e}><h2 className="text-xl">{formatTime(e)}</h2><div className="flex gap-4">{episodesOnDate.map((v)=><PodcastEpisodeTimeLine podcastEpisode={v} key={v.podcast_episode.episode_id+"Parent"}/>)}</div></div>
+                return <div key={e} className="bg-gray-800 mb-5 p-3 rounded"><h2 className="text-xl text-white">{formatTime(e)}</h2><div className="flex gap-4">{episodesOnDate.map((v)=><PodcastEpisodeTimeLine podcastEpisode={v} key={v.podcast_episode.episode_id+"Parent"}/>)}</div></div>
                 }
             )
 
-        }
+        }</div>
     </div>
 }
