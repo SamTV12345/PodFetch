@@ -20,19 +20,22 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
 
     return createPortal(<div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setDetailedAudioPlayerOpen(false))}
-                                           className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-60 md:inset-0 h-modal md:h-full
+                                           className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-60 md:inset-0 h-modal h-full 
              ${!detailedAudioPlayerOpen&&'pointer-events-none'}
               z-40 ${detailedAudioPlayerOpen?'opacity-100':'animate-opacity'} duration-75`}>
         <div className="bg-gray-800 h-full grid grid-rows-[1fr_auto]"  onClick={event => event.stopPropagation()}>
             <div className="grid grid-cols-[1fr_2fr]">
+                <div  className="block ml-1 mr-1 md:hidden absolute mt-9 text-2xl text-center font-bold text-white">
+                    <div>{selectedPodcast?.name}</div>
+                    <div className="text-sm font-normal">{currentPodcast&&currentPodcast.name}</div>
+                </div>
                 <div className="grid place-items-center">
                     <div className="relative">
-                    <img src={selectedPodcast?.local_image_url} alt={selectedPodcast?.name} className="h-80 object-cover shadow-lg shadow-amber-600"/>
-                        <div  className="absolute mt-2 text-2xl font-bold text-white">
+                    <img src={selectedPodcast?.local_image_url} alt={selectedPodcast?.name} className="h-24 md:h-80 object-cover shadow-lg shadow-amber-600"/>
+                        <div  className="hidden md:block absolute mt-2 text-2xl font-bold text-white">
                             <div>{selectedPodcast?.name}</div>
                             <div className="text-sm font-normal">{currentPodcast&&currentPodcast.name}</div>
                         </div>
-
                     </div>
                 </div>
                 <div className="grid place-items-center text-white text-2xl">

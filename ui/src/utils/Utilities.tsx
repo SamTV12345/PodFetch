@@ -23,6 +23,7 @@ TimeAgo.addDefaultLocale(de)
 TimeAgo.addLocale(en)
 TimeAgo.addLocale(fr)
 
+export const SKIPPED_TIME = 30
 let timeago = new TimeAgo('en-US')
 
 export const isLocalhost = Boolean(
