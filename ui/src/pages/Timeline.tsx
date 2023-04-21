@@ -43,7 +43,7 @@ export const Timeline = ()=>{
             Object.keys(mappedEpisodes).map((e)=> {
                 // @ts-ignore
                 let episodesOnDate = mappedEpisodes[e] as TimeLineModel[]
-                return <div key={e} className="bg-gray-800 mb-5 p-3 rounded"><h2 className="text-xl text-white">{formatTime(e)}</h2><div className="flex gap-4">{episodesOnDate.map((v)=><PodcastEpisodeTimeLine podcastEpisode={v} key={v.podcast_episode.episode_id+"Parent"}/>)}</div></div>
+                return <div key={e} className="bg-gray-800 mb-5 p-3 rounded"><h2 className="text-xl text-white">{formatTime(e)}</h2><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">{episodesOnDate.map((v)=><PodcastEpisodeTimeLine podcastEpisode={v} key={v.podcast_episode.episode_id+"Parent"}/>)}</div></div>
                 }
             )
 
