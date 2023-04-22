@@ -129,7 +129,7 @@ export const AddPodcast = ()=>{
 
     return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText={t('add-podcast')!} onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
         <div>
-            <ul id="podcast-add-decider" className="flex flex-wrap text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:border-gray-700 dark:text-gray-400">
+            <ul id="podcast-add-decider" className="flex flex-wrap text-sm font-medium text-center border-b border-gray-700 text-gray-400">
                 <li className="mr-2">
                     <div className={`cursor-pointer inline-block p-4 rounded-t-lg ${selectedSearchType=== "itunes"&& 'active'}`} onClick={()=>setSelectedSearchType("itunes")}>iTunes</div>
                 </li>

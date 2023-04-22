@@ -75,9 +75,9 @@ export const InviteAdministrationUserPage = () => {
                     <tbody>
                     {
                         invites.map(i=>
-                            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                            <tr className="border-b bg-gray-800 border-gray-700">
                             <th scope="row"
-                                className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                className="px-6 py-4 font-medium whitespace-nowrap text-white">
                                 {i.id}
                             </th>
                             <td className="px-6 py-4">

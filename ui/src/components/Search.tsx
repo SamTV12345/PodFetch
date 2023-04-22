@@ -50,7 +50,7 @@ export const Search = () => {
                     </div>
                     <div className="overflow-auto max-h-72 searchfield">
                     {
-                        podcastEpisode.length>0&& <hr className="h-px bg-gray-200 border-0 dark:bg-gray-700"/>
+                        podcastEpisode.length>0&& <hr className="h-px border-0 bg-gray-700"/>
                     }
                         { searching?<div className="grid place-items-center"><Spinner className="w-12 h-12"/></div>:
                         podcastEpisode.map((v, i)=>{

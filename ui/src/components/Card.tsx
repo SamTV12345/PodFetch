@@ -20,7 +20,7 @@ export const Card:FC<CardProps> = ({podcast})=>{
         })
     }
 
-    return <div className="max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+    return <div className="max-w-sm border rounded-lg shadow bg-gray-800 border-gray-700">
         <Link to={podcast.id+"/episodes"}>
             <div className="relative">
             <img className="rounded-t-lg" src={podcast.image_url} alt=""/>
@@ -28,7 +28,7 @@ export const Card:FC<CardProps> = ({podcast})=>{
             </div>
         </Link>
         <div className="grid grid-cols-[1fr_auto] p-5">
-                <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{podcast.name}</h5>
+                <h5 className="mb-2 text-2xl font-bold tracking-tight text-white">{podcast.name}</h5>
             <i ref={likeButton} className={`fa-star fa-solid text-3xl cursor-pointer ${podcast.favorites?'text-amber-400': 'text-gray-500'}`} onClick={()=>{
                 likeButton.current?.classList.toggle('text-amber-400')
                 likePodcast()
