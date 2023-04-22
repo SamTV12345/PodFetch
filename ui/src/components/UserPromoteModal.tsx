@@ -32,7 +32,7 @@ export const UserPromoteModal = () => {
     }
 
     return <Modal headerText={t('change-role-user', {name: selectedUser?.username})!} onCancel={()=>{}} onAccept={()=>{}} onDelete={()=>{}} cancelText="Test" acceptText="Test123">
-        <label htmlFor="countries" className="block mb-2 font-medium text-gray-900 dark:text-white">{t('select-role')}</label>
+        <label htmlFor="countries" className="block mb-2 font-medium text-white">{t('select-role')}</label>
         <select id="countries" value={selectedUser?.role} onChange={(v)=> {
          dispatch(setSelectedUser({...selectedUser!, role: v.target.value}))
         }} className="border rounded-lg block w-full p-2.5 bg-gray-800 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500">

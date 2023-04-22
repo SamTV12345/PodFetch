@@ -1,8 +1,7 @@
-import {PlayIcon} from "./PlayIcon";
 import {setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {FC, RefObject} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {logCurrentPlaybackTime} from "../utils/Utilities";
+import {logCurrentPlaybackTime, SKIPPED_TIME} from "../utils/Utilities";
 
 type MenuBarPlayerProps = {
     refItem: RefObject<HTMLAudioElement>
@@ -70,7 +69,16 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
 
     return  <div className="grid place-items-center mr-5 md:mr-0 mb-1">
         <div className="flex gap-5 align-baseline">
-            <div className="place-items-center hidden md:grid">
+            <div className="place-items-center grid">
+                        <i className="text-2xl fa fa-clock-rotate-left text-white active:scale-75 hover:text-blue-500" onClick={()=>{
+                            if (refItem.current===undefined||refItem.current===null){
+                                return
+                            }
+                            if(refItem.current.currentTime-SKIPPED_TIME>0){
+                                refItem.current.currentTime-=SKIPPED_TIME
+                            }}}/>
+            </div>
+            <div className="place-items-center grid">
             <i className="fa-solid fa-backward text-xl text-white text-3xl hover:text-blue-500" onClick={()=>skipToPreviousEpisode()}></i>
             </div>
             <div className="relative rounded-full bg-black w-12 h-12 p-2 grid place-items-center bg-gray-900 hover:bg-gray-600 active:scale-75" onClick={()=>handleButton()}>
@@ -82,7 +90,15 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
             <div className="grid place-items-center">
                 <i className="fa-solid fa-forward h-6 text-xl text-white text-3xl hover:text-blue-500" onClick={()=>{skipToNextEpisode()}}></i>
             </div>
-
+            <div className="place-items-center grid">
+                <i className="text-2xl fa fa-clock-rotate-left fa-flip-horizontal  text-white active:scale-75 hover:text-blue-500" onClick={()=>{
+                    if (refItem.current===undefined||refItem.current===null){
+                        return
+                    }
+                    if(refItem.current.currentTime+SKIPPED_TIME<refItem.current.duration){
+                   refItem.current.currentTime+=SKIPPED_TIME
+                }}}/>
+            </div>
         </div>
     </div>
 }

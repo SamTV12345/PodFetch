@@ -10,3 +10,4 @@ podcast.db-shm
 podcast.db-wal
 
 static/*.jpg
+local-configs

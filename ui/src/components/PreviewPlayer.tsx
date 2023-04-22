@@ -21,7 +21,7 @@ export const PreviewPlayer:FC<PreviewPlayerProps> = ({podcastEpisode, podcast}) 
                 </div>
                 </div>
             <div>
-                <div className="text-white">{podcastEpisode?.name}</div>
+                <div className="text-white line-clamp-1 mr-5 md:mr-0">{podcastEpisode?.name}</div>
                 <div className="text-white text-sm">{podcast?.name}</div>
             </div>
         </div>

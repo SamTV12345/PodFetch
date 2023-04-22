@@ -35,8 +35,8 @@ export const PodcastDelete = () => {
                 podcasts.map(p=>
                     <div className="border-2 border-b-indigo-100 p-4">
                         <h2>{p.name}</h2>
-                        <div className="grid grid-cols-2 gap-5">
-                            <button className="bg-red-500" onClick={()=>{
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <button className="p-2 bg-red-500" onClick={()=>{
                                 dispatch(setConfirmModalData({
                                     headerText: t('delete-podcast-with-files'),
                                     onAccept:()=>{
@@ -51,7 +51,7 @@ export const PodcastDelete = () => {
                                 }))
                                 dispatch(setModalOpen(true))
                             }}>{t('delete-podcasts-without-files')}</button>
-                            <button className="bg-red-500" onClick={()=>{
+                            <button className="p-2 bg-red-500" onClick={()=>{
                                 dispatch(setConfirmModalData({
                                     headerText: t('delete-podcast-without-files'),
                                     onAccept:()=>{

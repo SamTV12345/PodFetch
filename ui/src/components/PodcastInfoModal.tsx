@@ -28,12 +28,12 @@ export const PodcastInfoModal = () => {
               z-40 ${infoModalOpen?'opacity-100':'opacity-0'}`}>
         <div className="grid place-items-center h-screen ">
             <div className={`bg-gray-800 max-w-5xl ${infoModalOpen?'opacity-100':'opacity-0'}`} onClick={e=>e.stopPropagation()}>
-                <div className="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-600">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <div className="flex items-start justify-between p-4 border-b rounded-t border-gray-600">
+                    <h3 className="text-xl font-semibold text-white">
                         {selectedPodcastEpisode?.name}
                     </h3>
                     <button type="button" onClick={()=>dispatch(setInfoModalPodcastOpen(false))}
-                            className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                            className="text-gray-400 bg-transparent rounded-lg text-sm p-1.5 ml-auto inline-flex items-center hover:bg-gray-600 hover:text-white"
                             data-modal-hide="defaultModal">
                         <svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
                              xmlns="http://www.w3.org/2000/svg">
@@ -45,7 +45,7 @@ export const PodcastInfoModal = () => {
                     </button>
                 </div>
                 <div className="p-6 space-y-6">
-                    {selectedPodcastEpisode&&<p className="text-base leading-relaxed text-gray-500 dark:text-gray-400" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
+                    {selectedPodcastEpisode&&<p className="text-base leading-relaxed text-gray-400" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
 
                     </p>}
                     <div className="flex gap-4">
