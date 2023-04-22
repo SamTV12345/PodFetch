@@ -134,6 +134,14 @@
     overflow: hidden;
 }
 
+.line-clamp-1{
+    position: relative;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+}
+
 .podcast-summary a{
     @apply text-gray-900 hover:underline ;
     text-underline: steelblue ;
