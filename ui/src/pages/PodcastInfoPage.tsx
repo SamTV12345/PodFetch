@@ -149,7 +149,7 @@ export const PodcastInfoPage = () => {
                 }]
             }}/>}/>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
             <SysCard title={t('podfetch-status')}>
                 <div className="grid grid-cols-2 text-white gap-4">
                     <div className="text-xl">{t('podindex-configured')}</div>
