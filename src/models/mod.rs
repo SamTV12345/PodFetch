@@ -10,3 +10,4 @@ pub mod oidc_model;
 pub mod user;
 pub mod invite;
 pub mod favorites;
+pub mod device;

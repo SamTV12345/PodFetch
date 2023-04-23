@@ -1,6 +1,16 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    devices (id) {
+        id -> Integer,
+        deviceid -> Text,
+        kind -> Text,
+        name -> Text,
+        username -> Text,
+    }
+}
+
+diesel::table! {
     favorites (username, podcast_id) {
         username -> Text,
         podcast_id -> Integer,
@@ -103,6 +113,7 @@ diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    devices,
     favorites,
     invites,
     notifications,

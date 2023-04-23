@@ -66,6 +66,8 @@ mod db;
 mod models;
 mod service;
 use crate::db::DB;
+use crate::gpodder::parametrization::get_client_parametrization;
+use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
@@ -84,6 +86,7 @@ mod config;
 pub mod utils;
 pub mod mutex;
 mod exception;
+mod gpodder;
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
@@ -331,6 +334,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
+            .service(get_gpodder_api(pool.clone()))
             .service(get_global_scope(pool.clone()))
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
@@ -372,6 +376,7 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Sco
 
 
     web::scope(&base_path)
+        .service(get_client_parametrization)
         .service(proxy_podcast)
         .service(get_ui_config())
         .service(Files::new("/podcasts", "podcasts"))
