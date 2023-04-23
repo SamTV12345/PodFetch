@@ -1,8 +1,10 @@
+use actix_session::{Session, SessionExt};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::device::Device;
 use actix_web::{post, get};
 use actix_web::web::Data;
+use serde::de::Unexpected::Str;
 use crate::controllers::user_controller::get_user;
 use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
@@ -13,20 +15,18 @@ pub async fn post_device(
     query: web::Path<(String, String)>,
     device_post: web::Json<DevicePost>,
     conn: Data<DbPool>,
+    session:Session,
     rq: HttpRequest
 ) -> impl Responder {
 
-    let username = User::get_gpodder_req_header(&rq);
+    let headers = rq.get_session();
 
-    if username.is_err(){
+
+    let username:Option<String> = session.get("test").unwrap();
+
+    if username.is_none() {
         return HttpResponse::Unauthorized().finish();
     }
-    let username = username.unwrap();
-
-    if query.clone().0 != username {
-        return HttpResponse::Unauthorized().finish();
-    }
-
     let username = query.clone().0;
     let deviceid = query.clone().1;
 
