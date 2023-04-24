@@ -33,19 +33,6 @@ pub fn get_gpodder_api(pool: DbPool) ->Scope<impl ServiceFactory<ServiceRequest,
 
 pub fn get_authenticated_api(pool: DbPool) ->actix_web::Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse, Error = actix_web::Error, InitError = ()>>{
     web::scope("")
-        .wrap_fn(|rq, srv|{
-            let srv1  = srv;
-            let res = rq.cookie("sessionid").clone();
-            async move {
-                if res.is_none(){
-                let mut resp = rq.into_response(HttpResponse::Unauthorized().finish());
-                return Ok(resp);
-            }
-                let fut = srv1.call(rq).await;
-
-            Ok(fut.unwrap())
-            }
-        })
         .service(post_device)
         .service(get_devices_of_user)
 }

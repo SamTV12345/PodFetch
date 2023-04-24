@@ -106,6 +106,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    subscriptions (username, device, podcast_id) {
+        username -> Text,
+        device -> Text,
+        podcast_id -> Integer,
+        created -> Timestamp,
+        deleted -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Integer,
         username -> Text,
@@ -130,5 +140,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     podcasts,
     sessions,
     settings,
+    subscriptions,
     users,
 );

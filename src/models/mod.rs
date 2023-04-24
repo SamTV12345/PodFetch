@@ -12,3 +12,6 @@ pub mod invite;
 pub mod favorites;
 pub mod device;
 pub mod session;
+pub mod subscription;
+pub mod subscription_changes_from_client;
+pub mod device_subscription;
