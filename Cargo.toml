@@ -25,7 +25,7 @@ env_logger = "0.10.0"
 chrono = {version  = "0.4.23", default-features=false, features = ["serde"]}
 actix-web-actors = "4.2.0"
 rss = "2.0.2"
-frankenstein = "0.24.1"
+frankenstein = "0.25.0"
 regex = "1.7.1"
 xml-builder = "0.5.2"
 diesel = { version = "2.0.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "chrono", "r2d2"] }
