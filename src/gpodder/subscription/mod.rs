@@ -1,1 +1,1 @@
-mod subscriptions;
+pub mod subscriptions;
