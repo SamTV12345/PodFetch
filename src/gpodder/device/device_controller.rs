@@ -18,18 +18,7 @@ use crate::mutex::LockResultExt;
 pub async fn post_device(
     query: web::Path<(String, String)>,
     device_post: web::Json<DevicePost>,
-    conn: Data<DbPool>,
-    session:Data<Mutex<HashMap<String, String>>>,
-    rq: HttpRequest) -> impl Responder {
-    let sessions = session.lock().ignore_poison();
-    let username = rq.cookie("sessionid").unwrap().value().to_string();
-
-    sessions.keys().for_each(|key| {
-        println!("key: {}", key);
-    });
-
-    println!("username: {}", username);
-    let username:Option<&String> = sessions.get(&*username);
+    conn: Data<DbPool>) -> impl Responder {
 
     let username = query.clone().0;
     let deviceid = query.clone().1;
