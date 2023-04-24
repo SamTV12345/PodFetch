@@ -12,11 +12,12 @@ use uuid::Uuid;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use actix_session::Session;
-use awc::cookie::Cookie;
+use awc::cookie::{Cookie, SameSite};
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool>,
-                   env_service: Data<Mutex<EnvironmentService>>, session:Session)
+                   env_service: Data<Mutex<EnvironmentService>>, session:Data<Mutex<HashMap<String,
+        String>>>)
     ->impl
 Responder {
     let authorization = rq.headers().get("Authorization").unwrap().to_str().unwrap();
@@ -34,9 +35,11 @@ Responder {
             Some(user) => {
                 if user.clone().password.unwrap()== digest(password) {
                     let token = Uuid::new_v4().to_string();
-                    session.insert(token.clone(),user.clone().username).expect("TODO: panic \
-                    message");
-                    let user_cookie = Cookie::new("sessionid", token);
+                    session.lock().ignore_poison().insert(token.clone(), user.username);
+                    let user_cookie = Cookie::build("sessionid", token)
+                        .http_only(true).secure
+                    (false).same_site
+                    (SameSite::Strict).path("/api").finish();
                     HttpResponse::Ok().cookie(user_cookie).finish()
                 } else {
                     HttpResponse::Unauthorized().finish()

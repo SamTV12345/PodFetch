@@ -88,6 +88,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    sessions (username, session_id) {
+        username -> Text,
+        session_id -> Text,
+        expires -> Timestamp,
+    }
+}
+
+diesel::table! {
     settings (id) {
         id -> Integer,
         auto_download -> Bool,
@@ -120,6 +128,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     podcast_episodes,
     podcast_history_items,
     podcasts,
+    sessions,
     settings,
     users,
 );

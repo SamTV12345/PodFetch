@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::sync::Mutex;
 use actix_session::{Session, SessionExt};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use crate::gpodder::device::dto::device_post::DevicePost;
@@ -9,24 +12,25 @@ use crate::controllers::user_controller::get_user;
 use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
 use crate::models::user::User;
+use crate::mutex::LockResultExt;
 
 #[post("/devices/{username}/{deviceid}.json")]
 pub async fn post_device(
     query: web::Path<(String, String)>,
     device_post: web::Json<DevicePost>,
     conn: Data<DbPool>,
-    session:Session,
-    rq: HttpRequest
-) -> impl Responder {
+    session:Data<Mutex<HashMap<String, String>>>,
+    rq: HttpRequest) -> impl Responder {
+    let sessions = session.lock().ignore_poison();
+    let username = rq.cookie("sessionid").unwrap().value().to_string();
 
-    let headers = rq.get_session();
+    sessions.keys().for_each(|key| {
+        println!("key: {}", key);
+    });
 
+    println!("username: {}", username);
+    let username:Option<&String> = sessions.get(&*username);
 
-    let username:Option<String> = session.get("test").unwrap();
-
-    if username.is_none() {
-        return HttpResponse::Unauthorized().finish();
-    }
     let username = query.clone().0;
     let deviceid = query.clone().1;
 

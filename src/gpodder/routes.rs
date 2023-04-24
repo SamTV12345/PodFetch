@@ -16,20 +16,20 @@ use crate::constants::constants::ERROR_LOGIN_MESSAGE;
 use crate::gpodder::auth::auth::login;
 use crate::gpodder::parametrization::get_client_parametrization;
 
-pub fn get_gpodder_api(pool: DbPool) ->Scope{
+pub fn get_gpodder_api(pool: DbPool) ->Scope<impl ServiceFactory<ServiceRequest, Config =
+(), Response = ServiceResponse, Error = Error, InitError = ()>>{
+    let secret_key = Key::generate();
 
     web::scope("/api/2")
+        .wrap(SessionMiddleware::new(CookieSessionStore::default(),secret_key))
         .service(login)
         .service(get_authenticated_api(pool.clone()))
 
 }
 
 
-pub fn get_authenticated_api(pool: DbPool) ->Scope<impl ServiceFactory<ServiceRequest, Config =
-(), Response = ServiceResponse, Error = Error, InitError = ()>>{
-    let secret_key = Key::generate();
+pub fn get_authenticated_api(pool: DbPool) ->Scope{
     web::scope("")
-        .wrap(SessionMiddleware::new(CookieSessionStore::default(),secret_key))
         .service(post_device)
         .service(get_devices_of_user)
 }
