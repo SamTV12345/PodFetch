@@ -27,7 +27,6 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode}) => {
         return <div>"Nicht gefunden"</div>
     }
 
-    console.log(episode)
 
     return <>
         <div key={episode.episode_id} id={"episode_" + episode.id} className="grid grid-cols-[auto_1fr_auto] mt-2 bg-slate-900 rounded p-2 mr-2">

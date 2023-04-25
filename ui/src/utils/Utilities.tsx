@@ -90,7 +90,6 @@ export const capitalizeFirstLetter = (string: string|undefined)=> {
 }
 
     export const preparePath = (path: string|undefined) => {
-        console.log(path)
         if(path === undefined) return ""
 
         return window.location.href.substring(0,window.location.href.indexOf('ui/'))+path.replaceAll(' ','%20').replaceAll('#','%23')
