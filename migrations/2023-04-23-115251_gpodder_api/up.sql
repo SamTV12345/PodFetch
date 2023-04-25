@@ -46,5 +46,6 @@ CREATE TABLE episodes(
     action VARCHAR(255) NOT NULL,
     started INTEGER,
     position INTEGER,
-    total INTEGER
+    total INTEGER,
+    UNIQUE (username, device, podcast, episode, timestamp)
 );

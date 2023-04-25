@@ -8,6 +8,7 @@ use crate::DbPool;
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
 use crate::models::models::PodcastWatchedPostModel;
 use std::borrow::Borrow;
+use chrono::NaiveDateTime;
 use crate::utils::time::get_current_timestamp;
 
 #[derive(Serialize, Deserialize)]
@@ -16,10 +17,18 @@ pub struct EpisodeActionResponse{
     timestamp: i64
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct EpisodeSinceRequest{
+    since: i64
+}
+
 #[get("/episodes/{username}.json")]
-pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>) -> impl Responder {
-    let actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap()).await;
-    println!("actions: {:?}", actions);
+pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>, since: web::Query<EpisodeSinceRequest>) ->
+                                                                                             impl Responder {
+    let since_date = NaiveDateTime::from_timestamp_opt(since.since as i64, 0);
+    let actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap(), since_date)
+        .await;
+
     HttpResponse::Ok().json(EpisodeActionResponse{
         actions,
         timestamp: get_current_timestamp()
@@ -62,6 +71,6 @@ Responder {
     });
     HttpResponse::Ok().json(EpisodeActionResponse{
         actions: vec![],
-        timestamp: 0
+        timestamp: get_current_timestamp()
     })
 }

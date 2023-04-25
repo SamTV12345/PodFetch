@@ -82,14 +82,26 @@ impl Episode{
             total: episode_dto.total,
         }
     }
-    pub async fn get_actions_by_username(username1: String, conn: &mut SqliteConnection)->Vec<Episode>{
+    pub async fn get_actions_by_username(username1: String, conn: &mut SqliteConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
         use crate::schema::episodes::username;
         use crate::schema::episodes::dsl::episodes;
+        use crate::schema::episodes::dsl::timestamp;
+        match since_date {
+            Some(e)=>{
+                episodes
+                    .filter(username.eq(username1))
+                    .filter(timestamp.gt(e))
+                    .load::<Episode>(conn)
+                    .expect("")
+            },
+            None=>{
+                episodes
+                    .filter(username.eq(username1))
+                    .load::<Episode>(conn)
+                    .expect("")
+            }
+        }
 
-        episodes
-            .filter(username.eq(username1))
-            .load::<Episode>(conn)
-            .expect("")
     }
 }
 
