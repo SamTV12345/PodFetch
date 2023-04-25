@@ -1,7 +1,7 @@
 import {createPortal} from "react-dom";
 import {setDetailedAudioPlayerOpen} from "../store/CommonSlice";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {removeHTML} from "../utils/Utilities";
+import {preparePath, removeHTML} from "../utils/Utilities";
 import ProgressBar from "./AudioProgressBar";
 import {MenuBarPlayer} from "./MenuBarPlayer";
 import {FC, RefObject} from "react";
@@ -19,6 +19,7 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
     const selectedPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
 
+    console.log("Podcast"+selectedPodcast?.local_image_url)
     return createPortal(<div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setDetailedAudioPlayerOpen(false))}
                                            className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-60 md:inset-0 h-modal h-full 
              ${!detailedAudioPlayerOpen&&'pointer-events-none'}
@@ -31,7 +32,7 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
                 </div>
                 <div className="grid place-items-center">
                     <div className="relative">
-                    <img src={selectedPodcast?.local_image_url} alt={selectedPodcast?.name} className="h-24 md:h-80 object-cover shadow-lg shadow-amber-600"/>
+                    <img src={preparePath(selectedPodcast?.local_image_url)} alt={selectedPodcast?.name} className="h-24 md:h-80 object-cover shadow-lg shadow-amber-600"/>
                         <div  className="hidden md:block absolute mt-2 text-2xl font-bold text-white">
                             <div>{selectedPodcast?.name}</div>
                             <div className="text-sm font-normal">{currentPodcast&&currentPodcast.name}</div>

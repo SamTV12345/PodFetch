@@ -15,7 +15,6 @@ export interface MyFile{
 
 export const readFile = (file: File): Promise<FileItem> => {
 
-    console.log("Test123")
     return new Promise((res, rej) => {
         const fileItem: FileItem = {
             name: file.name,
