@@ -1,7 +1,6 @@
 use actix_web::{HttpResponse, Responder, web};
 use actix_web::{get, post};
 use actix_web::web::Data;
-use chrono::NaiveDateTime;
 use crate::DbPool;
 use crate::models::subscription::SubscriptionChangesToClient;
 use crate::utils::time::get_current_timestamp;
@@ -39,7 +38,7 @@ Responder {
         Ok(res) => {
             HttpResponse::Ok().json(res)
         },
-        Err(e) => HttpResponse::InternalServerError().finish()
+        Err(_) => HttpResponse::InternalServerError().finish()
     }
 }
 

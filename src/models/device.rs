@@ -1,5 +1,4 @@
 use diesel::{Queryable, QueryableByName, RunQueryDsl, Insertable, SqliteConnection};
-use diesel::associations::HasTable;
 use utoipa::ToSchema;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::schema::devices;

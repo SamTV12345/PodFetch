@@ -1,18 +1,10 @@
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::sync::Mutex;
-use actix_session::{Session, SessionExt};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::device::Device;
 use actix_web::{post, get};
 use actix_web::web::Data;
-use serde::de::Unexpected::Str;
-use crate::controllers::user_controller::get_user;
 use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
-use crate::models::user::User;
-use crate::mutex::LockResultExt;
 
 #[post("/devices/{username}/{deviceid}.json")]
 pub async fn post_device(

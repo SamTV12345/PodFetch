@@ -1,6 +1,4 @@
 use std::io::Error;
-use std::ops::Deref;
-use std::time::SystemTime;
 use actix_web::web;
 use chrono::{NaiveDateTime, Utc};
 use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl, sql_query, SqliteConnection};

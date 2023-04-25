@@ -14,10 +14,9 @@ use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse
 use actix_web::error::ErrorUnauthorized;
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
-use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder, Scope, HttpRequest};
-use actix_web_httpauth::extractors::basic::BasicAuth;
+use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::sync::{Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 use std::{env, thread};
 use std::collections::HashMap;
@@ -70,8 +69,10 @@ use crate::db::DB;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
+use crate::models::session::Session;
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
+use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::jwkservice::JWKService;
@@ -269,8 +270,6 @@ async fn main() -> std::io::Result<()> {
     let environment_service = EnvironmentService::new();
     let notification_service = NotificationService::new();
     let settings_service = SettingsService::new();
-    let session_ids:HashMap<String, String> = HashMap::new();
-
     let lobby = Lobby::default();
     let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
 
@@ -314,7 +313,10 @@ async fn main() -> std::io::Result<()> {
             }
         });
 
-        scheduler.every(1.day()).run(|| {
+        scheduler.every(1.day()).run(move || {
+            // Clears the session ids once per day
+            Session::cleanup_sessions(&mut establish_connection()).expect("Error clearing old \
+            sessions");
             let mut db = DB::new().unwrap();
             let mut podcast_episode_service = PodcastEpisodeService::new();
             let settings = db.get_settings();
@@ -352,7 +354,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(environment_service.clone())))
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
-            .app_data(Data::new(Mutex::new(session_ids.clone())))
             .app_data(Data::new(pool.clone()))
             .wrap(Condition::new(true,Logger::default()))
     })
@@ -400,7 +401,7 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Sco
 fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
     let oidc_db = db.clone();
     let enable_basic_auth = var(BASIC_AUTH).is_ok();
-    let auth = HttpAuthentication::basic(move |rq,serv|{
+    let auth = HttpAuthentication::basic(move |rq,_|{
         validator(rq, db.clone())
     });
     let enable_oidc_auth = var(OIDC_AUTH).is_ok();

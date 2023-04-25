@@ -1,24 +1,12 @@
 use actix_session::SessionMiddleware;
 use actix_session::storage::CookieSessionStore;
-use actix_web::{Either, Error, Handler, HttpRequest, HttpResponse, Scope, web};
-use actix_web::body::{BoxBody, EitherBody};
-use actix_web::dev::{Service, ServiceFactory, ServiceRequest, ServiceResponse};
-use actix_web::error::ErrorUnauthorized;
-use actix_web::http::header::HeaderMap;
-use actix_web_httpauth::middleware::HttpAuthentication;
+use actix_web::{Error, Scope, web};
+use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use awc::cookie::Key;
-use futures::TryFutureExt;
-use futures_util::future::LocalBoxFuture;
-use futures_util::FutureExt;
-use serde_json::json;
-use utoipa::openapi::security::Scopes;
-use crate::config::dbconfig::establish_connection;
 use crate::gpodder::device::device_controller::{get_devices_of_user, post_device};
-use crate::{DbPool, extract_basic_auth, validator};
-use crate::constants::constants::ERROR_LOGIN_MESSAGE;
+use crate::{DbPool};
 use crate::gpodder::auth::auth::login;
 use crate::gpodder::episodes::episodes::{get_episode_actions, upload_episode_actions};
-use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::subscription::subscriptions::{get_subscriptions, upload_subscription_changes};
 
 pub fn get_gpodder_api(pool: DbPool) ->Scope<impl ServiceFactory<ServiceRequest, Config =
@@ -33,7 +21,8 @@ pub fn get_gpodder_api(pool: DbPool) ->Scope<impl ServiceFactory<ServiceRequest,
 }
 
 
-pub fn get_authenticated_api(pool: DbPool) ->actix_web::Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse, Error = actix_web::Error, InitError = ()>>{
+pub fn get_authenticated_api(_: DbPool) ->Scope<impl ServiceFactory<ServiceRequest,
+    Config = (), Response = ServiceResponse, Error = Error, InitError = ()>>{
     web::scope("")
         .service(post_device)
         .service(get_devices_of_user)

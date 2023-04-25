@@ -1,7 +1,6 @@
-use std::ops::Deref;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl};
+use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension};
 use crate::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
@@ -37,6 +36,20 @@ pub struct Episode{
 impl Episode{
     pub fn insert_episode(&self, conn: &mut SqliteConnection) -> Result<Episode, diesel::result::Error> {
         use crate::schema::episodes::dsl::*;
+
+        let res = episodes.filter(timestamp.eq(self.clone().timestamp)
+            .and(device.eq(self.clone().device))
+            .and(podcast.eq(self.clone().podcast))
+            .and(episode.eq(self.clone().episode))
+            .and(timestamp.eq(self.clone().timestamp)))
+            .first::<Episode>(conn)
+            .optional()
+            .expect("");
+
+        if res.is_some() {
+            return Ok(res.unwrap())
+        }
+
         diesel::insert_into(episodes)
             .values((
                 username.eq(&self.username),
@@ -151,8 +164,8 @@ impl EpisodeAction{
     }
 }
 
-#[serde(rename_all = "lowercase")]
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum EpisodeActionRaw {
     New,
     Download,

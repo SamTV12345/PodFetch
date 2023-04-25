@@ -1,25 +1,34 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
-use actix_web::dev::ServiceRequest;
+use std::sync::{Arc, Mutex, RwLock};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use actix_web::web::Data;
 use sha256::digest;
-use crate::{DbPool, extract_basic_auth, validator};
+use crate::{DbPool, extract_basic_auth};
 use crate::models::user::User;
 use actix_web::{post};
-use utoipa::openapi::HeaderBuilder;
 use uuid::Uuid;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
-use actix_session::Session;
 use awc::cookie::{Cookie, SameSite};
+use crate::models::session::Session;
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool>,
-                   env_service: Data<Mutex<EnvironmentService>>, session:Data<Mutex<HashMap<String,
-        String>>>)
+                   env_service: Data<Mutex<EnvironmentService>>)
     ->impl
 Responder {
+    match rq.clone().cookie("sessionid") {
+        Some(cookie) => {
+            let session_id = cookie.value();
+            let opt_session = Session::find_by_session_id(session_id, &mut conn.get().unwrap());
+                if opt_session.is_ok(){
+                    let user_cookie = create_session_cookie(opt_session.unwrap());
+                    return HttpResponse::Ok().cookie(user_cookie).finish();
+                }
+        }
+        None=>{}
+    }
+
     let authorization = rq.headers().get("Authorization").unwrap().to_str().unwrap();
     let unwrapped_username = username.into_inner();
     let (username_basic, password) = basic_auth_login(authorization.to_string());
@@ -27,19 +36,15 @@ Responder {
     if username_basic != unwrapped_username {
         return HttpResponse::Unauthorized().finish();
     }
-
     if unwrapped_username == env.username && password == env.password {
         return HttpResponse::Ok().finish();
     } else {
         match User::find_by_username(&unwrapped_username, &mut conn.get().unwrap()) {
             Some(user) => {
                 if user.clone().password.unwrap()== digest(password) {
-                    let token = Uuid::new_v4().to_string();
-                    session.lock().ignore_poison().insert(token.clone(), user.username);
-                    let user_cookie = Cookie::build("sessionid", token)
-                        .http_only(true).secure
-                    (false).same_site
-                    (SameSite::Strict).path("/api").finish();
+                    let session = Session::new(user.username);
+                    Session::insert_session(&session, &mut conn.get().unwrap()).expect("Error inserting session");
+                    let user_cookie = create_session_cookie(session);
                     HttpResponse::Ok().cookie(user_cookie).finish()
                 } else {
                     HttpResponse::Unauthorized().finish()
@@ -50,6 +55,14 @@ Responder {
             }
         }
     }
+}
+
+fn create_session_cookie(session: Session) -> Cookie<'static> {
+    let user_cookie = Cookie::build("sessionid", session.session_id)
+        .http_only(true).secure
+    (false).same_site
+    (SameSite::Strict).path("/api").finish();
+    user_cookie
 }
 
 pub fn basic_auth_login(rq: String) -> (String, String) {
