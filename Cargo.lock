@@ -1800,6 +1800,7 @@ dependencies = [
  "frankenstein",
  "fs_extra",
  "futures",
+ "futures-util",
  "jsonwebtoken",
  "libsqlite3-sys",
  "log",

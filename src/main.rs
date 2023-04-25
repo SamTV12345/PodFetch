@@ -15,7 +15,6 @@ use actix_web::error::ErrorUnauthorized;
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder, Scope};
-use actix_web_httpauth::extractors::basic::BasicAuth;
 use clokwerk::{Scheduler, TimeUnits};
 use std::sync::{Mutex};
 use std::time::Duration;
@@ -66,7 +65,10 @@ mod db;
 mod models;
 mod service;
 use crate::db::DB;
+use crate::gpodder::parametrization::get_client_parametrization;
+use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
+use crate::models::session::Session;
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
@@ -84,38 +86,32 @@ mod config;
 pub mod utils;
 pub mod mutex;
 mod exception;
+mod gpodder;
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
 async fn validator(
-    mut req: ServiceRequest,
-    _credentials: BasicAuth, db: DbPool
+    mut req: ServiceRequest, db: DbPool
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
-    let authorization = req.headers().get("Authorization").unwrap().to_str();
+    let headers = req.headers().clone();
+    let authorization = headers.get("Authorization").unwrap().to_str();
 
     match authorization {
         Ok(auth) => {
-            let auth = auth.to_string();
-            let auth = auth.split(" ").collect::<Vec<&str>>();
-            let auth = auth[1];
-            let auth = general_purpose::STANDARD.decode(auth).unwrap();
-            let auth = String::from_utf8(auth).unwrap();
-            let auth = auth.split(":").collect::<Vec<&str>>();
-            let username = auth[0];
-            let password = auth[1];
+            let (username, password) = extract_basic_auth(auth);
             let env = EnvironmentService::new();
 
             // Check if user is admin
             if username == env.username && password == env.password {
                 req.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
-                                         HeaderValue::from_str(username).unwrap());
+                                         HeaderValue::from_str(username.as_str()).unwrap());
                 return Ok(req);
             } else {
-                match User::find_by_username(username, &mut db.get().unwrap()) {
+                match User::find_by_username(username.as_str(), &mut db.get().unwrap()) {
                     Some(user) => {
                         if user.password.unwrap()== digest(password) {
                             req.headers_mut().append(HeaderName::from_str(USERNAME).unwrap(),
-                                                     HeaderValue::from_str(username).unwrap());
+                                                     HeaderValue::from_str(username.as_str()).unwrap());
                             Ok(req)
                         } else {
                             Err((ErrorUnauthorized(ERROR_LOGIN_MESSAGE), req))
@@ -132,6 +128,19 @@ async fn validator(
         }
     }
 }
+
+pub fn extract_basic_auth(auth: &str) -> (String, String) {
+    let auth = auth.to_string();
+    let auth = auth.split(" ").collect::<Vec<&str>>();
+    let auth = auth[1];
+    let auth = general_purpose::STANDARD.decode(auth).unwrap();
+    let auth = String::from_utf8(auth).unwrap();
+    let auth = auth.split(":").collect::<Vec<&str>>();
+    let username = auth[0];
+    let password = auth[1];
+    (username.to_string(), password.to_string())
+}
+
 
 async fn validate_oidc_token(mut rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService, pool: Pool<ConnectionManager<SqliteConnection>>)
                              ->Result<ServiceRequest,
@@ -259,8 +268,6 @@ async fn main() -> std::io::Result<()> {
     let environment_service = EnvironmentService::new();
     let notification_service = NotificationService::new();
     let settings_service = SettingsService::new();
-
-
     let lobby = Lobby::default();
     let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
 
@@ -304,7 +311,10 @@ async fn main() -> std::io::Result<()> {
             }
         });
 
-        scheduler.every(1.day()).run(|| {
+        scheduler.every(1.day()).run(move || {
+            // Clears the session ids once per day
+            Session::cleanup_sessions(&mut establish_connection()).expect("Error clearing old \
+            sessions");
             let mut db = DB::new().unwrap();
             let mut podcast_episode_service = PodcastEpisodeService::new();
             let settings = db.get_settings();
@@ -331,6 +341,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
+            .service(get_gpodder_api(pool.clone(), environment_service.clone()))
             .service(get_global_scope(pool.clone()))
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
@@ -342,7 +353,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(Data::new(pool.clone()))
-            .wrap(Condition::new(false,Logger::default()))
+            .wrap(Condition::new(true,Logger::default()))
     })
     .bind(("0.0.0.0", 8000))?
     .run()
@@ -372,6 +383,7 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Sco
 
 
     web::scope(&base_path)
+        .service(get_client_parametrization)
         .service(proxy_podcast)
         .service(get_ui_config())
         .service(Files::new("/podcasts", "podcasts"))
@@ -387,8 +399,8 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Sco
 fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<EitherBody<EitherBody<BoxBody>>>, EitherBody<EitherBody<BoxBody>>>>, Error = Error, InitError = ()>> {
     let oidc_db = db.clone();
     let enable_basic_auth = var(BASIC_AUTH).is_ok();
-    let auth = HttpAuthentication::basic(move |rq,serv|{
-        validator(rq, serv, db.clone())
+    let auth = HttpAuthentication::basic(move |rq,_|{
+        validator(rq, db.clone())
     });
     let enable_oidc_auth = var(OIDC_AUTH).is_ok();
     let jwk_service = JWKService{
