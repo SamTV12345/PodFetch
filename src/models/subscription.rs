@@ -1,8 +1,7 @@
 use std::io::Error;
 use actix_web::web;
 use chrono::{NaiveDateTime, Utc};
-use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl, sql_query, SqliteConnection};
-use crate::models::itunes_models::Podcast;
+use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
 use crate::gpodder::subscription::subscriptions::SubscriptionUpdateRequest;
 use diesel::ExpressionMethods;
 
@@ -129,7 +128,6 @@ impl SubscriptionChangesToClient {
 
    pub fn  find_by_podcast(username_1: String, deviceid_1: String, podcast_1: String, conn:
    &mut SqliteConnection) -> Result<Option<Subscription>, Error>{
-       use crate::schema::subscriptions::dsl as dsl_types;
        use crate::schema::subscriptions::dsl::*;
 
        let res = subscriptions.filter(username.eq(username_1).and(device.eq

@@ -3,7 +3,6 @@ use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::device::{Device, DeviceResponse};
 use actix_web::{post, get};
 use actix_web::web::Data;
-use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
 use crate::gpodder::auth::auth::{auth_checker, extract_from_http_request};
 

@@ -16,10 +16,9 @@ use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex};
 use std::time::Duration;
 use std::{env, thread};
-use std::collections::HashMap;
 use std::env::var;
 use std::io::Read;
 use std::str::FromStr;
@@ -72,7 +71,6 @@ use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::session::Session;
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
-use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::jwkservice::JWKService;
@@ -343,7 +341,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
-            .service(get_gpodder_api(pool.clone()))
+            .service(get_gpodder_api(pool.clone(), environment_service.clone()))
             .service(get_global_scope(pool.clone()))
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))

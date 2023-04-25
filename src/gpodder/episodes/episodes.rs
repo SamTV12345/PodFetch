@@ -9,7 +9,7 @@ use crate::models::models::PodcastWatchedPostModel;
 use std::borrow::Borrow;
 use chrono::NaiveDateTime;
 use crate::gpodder::auth::auth::{auth_checker, extract_from_http_request};
-use crate::utils::time::{get_current_timestamp, get_current_timestamp_str};
+use crate::utils::time::{get_current_timestamp};
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeActionResponse{

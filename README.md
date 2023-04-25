@@ -3,6 +3,7 @@
 Podfetch is a self-hosted podcast manager. 
 It is a web app that lets you download podcasts and listen to them online.
 It is written in Rust and uses React for the frontend.
+It also contains a GPodder integration so you can continue using your current podcast app.
 
 Every time a new commit is pushed to the main branch, a new docker image is built and pushed to docker hub. So it is best to use something like [watchtower](https://github.com/containrrr/watchtower) to automatically update the docker image.
 
@@ -113,6 +114,17 @@ To configure it you need to create an account on that website. After creating an
 
 
 After successful setup you should see on the settings page a green checkmark next to the Podindex config section.
+
+# GPodder
+
+Podfetch also supports the GPodder api. You can use your current GPodder account to login to Podfetch and continue using your current podcast app.
+To do that just go to the settings page and enter your GPodder username and password.
+
+To enable it you need to set the following environment variables:
+| Variable            | Description                           | Default |
+|---------------------|---------------------------------------|---------|
+| GPODDER_INTEGRATION_ENABLED    | Activates the GPodder integration via your server url  | false|
+
 
 # Roadmap
 

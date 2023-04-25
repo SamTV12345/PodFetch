@@ -25,6 +25,7 @@ pub struct EnvironmentService {
     pub password: String,
     pub oidc_config: Option<OidcConfig>,
     pub oidc_configured: bool,
+    pub gpodder_integration_enabled: bool
 }
 
 impl EnvironmentService {
@@ -68,7 +69,8 @@ impl EnvironmentService {
             username: var(USERNAME).unwrap_or("".to_string()),
             password: var(PASSWORD).unwrap_or("".to_string()),
             oidc_configured,
-            oidc_config: option_oidc_config
+            oidc_config: option_oidc_config,
+            gpodder_integration_enabled: var("GPODDER_INTEGRATION_ENABLED").is_ok()
         }
     }
 
@@ -98,6 +100,7 @@ impl EnvironmentService {
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
+        println!("GPodder integration enabled: {}", self.gpodder_integration_enabled);
         println!("Database url is set to: {}", var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
         println!(
             "Podindex API key&secret configured: {}",
