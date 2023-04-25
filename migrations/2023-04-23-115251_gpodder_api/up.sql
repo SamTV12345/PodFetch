@@ -20,19 +20,10 @@ CREATE TABLE subscriptions(
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     username TEXT NOT NULL,
     device TEXT NOT NULL,
-    podcast_id INTEGER NOT NULL,
+    podcast TEXT NOT NULL,
     created Datetime NOT NULL,
     deleted Datetime,
-    UNIQUE (username, device, podcast_id)
-);
-
-
-CREATE TABLE subscription_devices(
-    subscription_id INTEGER NOT NULL,
-    device_id INTEGER NOT NULL,
-    foreign key(subscription_id) references subscriptions(id),
-    foreign key(device_id) references devices(id),
-    PRIMARY KEY (subscription_id, device_id)
+    UNIQUE (username, device, podcast)
 );
 
 CREATE TABLE episodes(

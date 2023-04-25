@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, Responder, web};
 
 use actix_web::{get,post};
 use actix_web::web::Data;
@@ -8,6 +8,7 @@ use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
 use crate::models::models::PodcastWatchedPostModel;
 use std::borrow::Borrow;
 use chrono::NaiveDateTime;
+use crate::gpodder::auth::auth::{auth_checker, extract_from_http_request};
 use crate::utils::time::{get_current_timestamp, get_current_timestamp_str};
 
 #[derive(Serialize, Deserialize)]
@@ -29,8 +30,15 @@ pub struct EpisodeSinceRequest{
 }
 
 #[get("/episodes/{username}.json")]
-pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>, since: web::Query<EpisodeSinceRequest>) ->
+pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>, since:
+web::Query<EpisodeSinceRequest>, rq: HttpRequest) ->
                                                                                              impl Responder {
+
+    let auth_check_res= auth_checker(&mut *pool.get().unwrap(), extract_from_http_request(rq),
+                                     username.clone()).await;
+    if auth_check_res.is_err(){
+        return HttpResponse::Unauthorized().body(auth_check_res.err().unwrap().to_string());
+    }
     let since_date = NaiveDateTime::from_timestamp_opt(since.since as i64, 0);
     let actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap(), since_date)
         .await;
@@ -43,8 +51,13 @@ pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>
 
 #[post("/episodes/{username}.json")]
 pub async fn upload_episode_actions(username: web::Path<String>, podcast_episode:
-web::Json<Vec<EpisodeDto>>, conn: Data<DbPool>) -> impl
+web::Json<Vec<EpisodeDto>>, conn: Data<DbPool>, rq:HttpRequest) -> impl
 Responder {
+    let auth_check_res= auth_checker(&mut *conn.get().unwrap(), extract_from_http_request(rq),
+                                     username.clone()).await;
+    if auth_check_res.is_err(){
+        return HttpResponse::Unauthorized().body(auth_check_res.err().unwrap().to_string());
+    }
 
     let mut inserted_episodes:Vec<Episode> = vec![];
     podcast_episode.iter().for_each(|episode| {

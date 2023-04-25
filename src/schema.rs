@@ -122,18 +122,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    subscription_devices (subscription_id, device_id) {
-        subscription_id -> Integer,
-        device_id -> Integer,
-    }
-}
-
-diesel::table! {
     subscriptions (id) {
         id -> Integer,
         username -> Text,
         device -> Text,
-        podcast_id -> Integer,
+        podcast -> Text,
         created -> Timestamp,
         deleted -> Nullable<Timestamp>,
     }
@@ -153,8 +146,6 @@ diesel::table! {
 diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
-diesel::joinable!(subscription_devices -> devices (device_id));
-diesel::joinable!(subscription_devices -> subscriptions (subscription_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     devices,
@@ -167,7 +158,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     podcasts,
     sessions,
     settings,
-    subscription_devices,
     subscriptions,
     users,
 );

@@ -16,6 +16,15 @@ pub struct Device {
     pub username: String
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DeviceResponse{
+    id: String,
+    caption: String,
+    #[serde(rename = "type")]
+    type_: String,
+    subscriptions: u32
+}
+
 impl Device {
 
     pub fn new(device_post: DevicePost, device_id: String, username: String) -> Device {
@@ -40,5 +49,14 @@ impl Device {
         use crate::schema::devices::dsl::*;
         devices.filter(username.eq(username_to_insert))
             .load::<Device>(conn)
+    }
+
+    pub fn to_dto(&self) -> DeviceResponse {
+        DeviceResponse{
+            id: self.deviceid.clone(),
+            caption: self.name.clone(),
+            type_: self.kind.clone(),
+            subscriptions: 0
+        }
     }
 }

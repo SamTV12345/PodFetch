@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Error;
 use std::sync::{Arc, Mutex, RwLock};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use actix_web::web::Data;
@@ -10,7 +11,9 @@ use uuid::Uuid;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use awc::cookie::{Cookie, SameSite};
+use diesel::SqliteConnection;
 use crate::models::session::Session;
+use crate::schema::sessions::session_id;
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool>,
@@ -19,8 +22,8 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
 Responder {
     match rq.clone().cookie("sessionid") {
         Some(cookie) => {
-            let session_id = cookie.value();
-            let opt_session = Session::find_by_session_id(session_id, &mut conn.get().unwrap());
+            let session = cookie.value();
+            let opt_session = Session::find_by_session_id(session, &mut conn.get().unwrap());
                 if opt_session.is_ok(){
                     let user_cookie = create_session_cookie(opt_session.unwrap());
                     return HttpResponse::Ok().cookie(user_cookie).finish();
@@ -71,3 +74,24 @@ pub fn basic_auth_login(rq: String) -> (String, String) {
     return (u.to_string(),p.to_string())
 }
 
+pub async fn auth_checker(conn: &mut SqliteConnection, session: Option<String>, username: String)
+    ->Result<(),
+    Error>{
+    return match session {
+        Some(session) => {
+            let session = Session::find_by_session_id(&session, conn).unwrap();
+            if session.username != username {
+                return Err(Error::new(std::io::ErrorKind::Other, "User and session not matching"))
+            }
+            Ok(())
+        }
+        None => {
+            Err(Error::new(std::io::ErrorKind::Other, "No session"))
+        }
+    }
+}
+
+pub fn extract_from_http_request(rq: HttpRequest)->Option<String>{
+    rq.cookie("sessionid")
+        .map(|cookie|cookie.value().to_string())
+}
