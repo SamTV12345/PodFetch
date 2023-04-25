@@ -2,3 +2,4 @@
 DROP TABLE devices;
 DROP TABLE sessions;
 DROP TABLE subscriptions;
+DROP TABLE subscription_devices;

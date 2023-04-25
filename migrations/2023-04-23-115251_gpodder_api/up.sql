@@ -17,10 +17,34 @@ CREATE TABLE sessions(
 );
 
 CREATE TABLE subscriptions(
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     username TEXT NOT NULL,
     device TEXT NOT NULL,
     podcast_id INTEGER NOT NULL,
     created Datetime NOT NULL,
     deleted Datetime,
-    PRIMARY KEY (username, device, podcast_id)
+    UNIQUE (username, device, podcast_id)
+);
+
+
+CREATE TABLE subscription_devices(
+    subscription_id INTEGER NOT NULL,
+    device_id INTEGER NOT NULL,
+    foreign key(subscription_id) references subscriptions(id),
+    foreign key(device_id) references devices(id),
+    PRIMARY KEY (subscription_id, device_id)
+);
+
+CREATE TABLE episodes(
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    device VARCHAR(255) NOT NULL,
+    podcast VARCHAR(255) NOT NULL,
+    episode VARCHAR(255) NOT NULL,
+    timestamp DATETIME NOT NULL,
+    guid VARCHAR(255),
+    action VARCHAR(255) NOT NULL,
+    started INTEGER,
+    position INTEGER,
+    total INTEGER
 );

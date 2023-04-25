@@ -136,6 +136,21 @@ impl DB {
         Ok(found_podcast_episode)
     }
 
+    pub fn query_podcast_episode_by_url(
+        conn: &mut SqliteConnection,
+        podcas_episode_url_to_be_found: &str,
+    ) -> Result<Option<PodcastEpisode>, String> {
+        use crate::schema::podcast_episodes::dsl::*;
+
+        let found_podcast_episode = podcast_episodes
+            .filter(url.like("%".to_owned()+podcas_episode_url_to_be_found+"%"))
+            .first::<PodcastEpisode>(conn)
+            .optional()
+            .expect("Error loading podcast by id");
+
+        Ok(found_podcast_episode)
+    }
+
     pub fn get_podcast_by_track_id(conn: &mut SqliteConnection, podcast_id: i32) -> Result<Option<Podcast>, String> {
         use crate::schema::podcasts::directory_id;
         use crate::schema::podcasts::dsl::podcasts;

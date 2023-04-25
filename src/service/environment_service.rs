@@ -98,6 +98,7 @@ impl EnvironmentService {
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
+        println!("Database url is set to: {}", var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
         println!(
             "Podindex API key&secret configured: {}",
             self.podindex_api_key.len() > 0 && self.podindex_api_secret.len() > 0

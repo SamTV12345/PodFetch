@@ -11,7 +11,7 @@ pub struct SubscriptionRetrieveRequest {
     pub since: i32
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct SubscriptionUpdateRequest {
     pub add: Vec<String>,
     pub remove: Vec<String>,

@@ -11,6 +11,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    episodes (id) {
+        id -> Integer,
+        username -> Text,
+        device -> Text,
+        podcast -> Text,
+        episode -> Text,
+        timestamp -> Timestamp,
+        guid -> Nullable<Text>,
+        action -> Text,
+        started -> Nullable<Integer>,
+        position -> Nullable<Integer>,
+        total -> Nullable<Integer>,
+    }
+}
+
+diesel::table! {
     favorites (username, podcast_id) {
         username -> Text,
         podcast_id -> Integer,
@@ -106,7 +122,15 @@ diesel::table! {
 }
 
 diesel::table! {
-    subscriptions (username, device, podcast_id) {
+    subscription_devices (subscription_id, device_id) {
+        subscription_id -> Integer,
+        device_id -> Integer,
+    }
+}
+
+diesel::table! {
+    subscriptions (id) {
+        id -> Integer,
         username -> Text,
         device -> Text,
         podcast_id -> Integer,
@@ -129,9 +153,12 @@ diesel::table! {
 diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
+diesel::joinable!(subscription_devices -> devices (device_id));
+diesel::joinable!(subscription_devices -> subscriptions (subscription_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     devices,
+    episodes,
     favorites,
     invites,
     notifications,
@@ -140,6 +167,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     podcasts,
     sessions,
     settings,
+    subscription_devices,
     subscriptions,
     users,
 );

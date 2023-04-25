@@ -81,7 +81,7 @@ impl SubscriptionChangesToClient {
     web::Json<SubscriptionUpdateRequest>, conn: &mut SqliteConnection)-> Result<Vec<String>, Error>{
         use crate::schema::subscriptions::dsl as dsl_types;
         use crate::schema::subscriptions::dsl::subscriptions;
-
+        println!("Update:{:?}", upload_request.0);
         let res = sql_query("SELECT * FROM subscriptions INNER JOIN podcasts ON subscriptions\
       .podcast_id = podcasts.id WHERE subscriptions.device = ? AND username = ?")
             .bind::<Text, _>(device_id)
@@ -90,7 +90,12 @@ impl SubscriptionChangesToClient {
 
         // Add subscriptions
         upload_request.clone().add.iter().for_each(|c| {
-            let podcast = Podcast::get_by_rss_feed(c, conn).unwrap();
+            let podcast = Podcast::get_by_rss_feed(c, conn);
+            if podcast.is_err() {
+                return;
+            }
+
+            let podcast = podcast.unwrap();
             let subscription = Subscription::new(username.to_string(), device_id.to_string(), podcast.id);
 
             let option_sub = res.iter().find(|&x| x.0.username == subscription.username&& x.0.device == subscription.device && x.0.podcast_id == subscription.podcast_id);
