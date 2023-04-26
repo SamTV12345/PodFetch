@@ -59,10 +59,10 @@ Responder {
 }
 
 fn create_session_cookie(session: Session, env: MutexGuard<EnvironmentService>) -> Cookie<'static> {
-    let secure = env.server_url.starts_with("https");
     let user_cookie = Cookie::build("sessionid", session.session_id)
-        .http_only(true).secure
-    (secure).same_site
+        .http_only(true)
+        .secure(false)
+        .same_site
     (SameSite::Strict).path("/api").finish();
     user_cookie
 }
