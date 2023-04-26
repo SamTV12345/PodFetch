@@ -51,14 +51,14 @@ pub fn read_user_account()->User{
 
 pub fn retry_read(prompt: &str, input: &mut String){
     print!("{}",prompt);
-    match  stdin().read_line(input).unwrap().len()>0{
-        Ok(e) => {
+    stdin().read_line(input).unwrap();
+    match  input.len()>0{
+        true => {
             if input.trim().len()>0{
                 retry_read(prompt, input);
             }
         }
-        Err(e) => {
-            print!("Error reading input: {}", e);
+        false => {
             retry_read(prompt, input);
         }
     }
