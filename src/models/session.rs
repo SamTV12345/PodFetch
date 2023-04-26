@@ -6,7 +6,7 @@ use crate::schema::sessions;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 
-#[derive(Queryable, Insertable, Clone, ToSchema, PartialEq)]
+#[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
 pub struct Session{
     pub username: String,
     pub session_id: String,
