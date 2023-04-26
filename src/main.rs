@@ -19,8 +19,9 @@ use clokwerk::{Scheduler, TimeUnits};
 use std::sync::{Mutex};
 use std::time::Duration;
 use std::{env, thread};
-use std::env::var;
+use std::env::{args, var};
 use std::io::Read;
+use std::process::exit;
 use std::str::FromStr;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
@@ -58,6 +59,7 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 pub use controllers::controller_utils::*;
+use crate::command_line_runner::start_command_line;
 use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users, onboard_user, update_role};
 
 mod constants;
@@ -87,6 +89,7 @@ pub mod utils;
 pub mod mutex;
 mod exception;
 mod gpodder;
+mod command_line_runner;
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
@@ -259,6 +262,11 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+
+    if args().len()>1 {
+        start_command_line(args());
+        exit(0)
+    }
     //services
     let podcast_episode_service = PodcastEpisodeService::new();
     let podcast_service = PodcastService::new();
