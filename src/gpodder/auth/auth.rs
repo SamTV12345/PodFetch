@@ -1,5 +1,5 @@
 use std::io::Error;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use actix_web::web::Data;
 use sha256::digest;
@@ -24,7 +24,7 @@ Responder {
             let session = cookie.value();
             let opt_session = Session::find_by_session_id(session, &mut conn.get().unwrap());
                 if opt_session.is_ok(){
-                    let user_cookie = create_session_cookie(opt_session.unwrap(), env);
+                    let user_cookie = create_session_cookie(opt_session.unwrap());
                     return HttpResponse::Ok().cookie(user_cookie).finish();
                 }
         }
@@ -45,7 +45,7 @@ Responder {
                 if user.clone().password.unwrap()== digest(password) {
                     let session = Session::new(user.username);
                     Session::insert_session(&session, &mut conn.get().unwrap()).expect("Error inserting session");
-                    let user_cookie = create_session_cookie(session, env);
+                    let user_cookie = create_session_cookie(session);
                     HttpResponse::Ok().cookie(user_cookie).finish()
                 } else {
                     HttpResponse::Unauthorized().finish()
@@ -58,7 +58,7 @@ Responder {
     }
 }
 
-fn create_session_cookie(session: Session, env: MutexGuard<EnvironmentService>) -> Cookie<'static> {
+fn create_session_cookie(session: Session) -> Cookie<'static> {
     let user_cookie = Cookie::build("sessionid", session.session_id)
         .http_only(true)
         .secure(false)

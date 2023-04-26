@@ -21,7 +21,7 @@ pub struct SubscriptionUpdateRequest {
 #[derive(Deserialize, Serialize)]
 pub struct SubscriptionPostResponse {
     pub timestamp: i64,
-    pub update_urls: Vec<String>
+    pub update_urls: Vec<Vec<String>>
 }
 
 #[get("/subscriptions/{username}/{deviceid}.json")]
@@ -71,12 +71,12 @@ pub async fn upload_subscription_changes(upload_request: web::Json<SubscriptionU
             if auth_check_res.is_err() {
                 return HttpResponse::Unauthorized().body(auth_check_res.err().unwrap().to_string());
             }
-            SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
+            let res = SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
                                                               upload_request,
                                                               &mut *conn.get().unwrap()).await.expect("TODO: panic message");
 
             HttpResponse::Ok().json(SubscriptionPostResponse {
-                update_urls: vec![],
+                update_urls: res,
                 timestamp: get_current_timestamp()
             })
         }

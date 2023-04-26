@@ -1,19 +1,14 @@
-use std::ops::DerefMut;
 use std::rc::Rc;
-use actix::ActorFutureExt;
-use actix::fut::{err, ok};
+use actix::fut::{ok};
 use futures_util::FutureExt;
-use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage, HttpResponse};
+use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage};
 use actix_web::body::{EitherBody, MessageBody};
 use actix_web::error::{ErrorForbidden, ErrorUnauthorized};
-use actix_web::web::Data;
-use awc::body::BoxBody;
-use diesel::{OptionalExtension, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{OptionalExtension, QueryDsl, RunQueryDsl};
 use futures_util::future::{LocalBoxFuture, Ready};
 use crate::models::session::Session;
 use diesel::ExpressionMethods;
 use crate::config::dbconfig::establish_connection;
-use crate::DbPool;
 
 pub struct CookieFilter {
 }

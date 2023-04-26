@@ -76,12 +76,17 @@ impl SubscriptionChangesToClient {
     }
 
     pub async fn update_subscriptions(device_id: &str, username: &str, upload_request:
-    web::Json<SubscriptionUpdateRequest>, conn: &mut SqliteConnection)-> Result<Vec<String>, Error>{
+    web::Json<SubscriptionUpdateRequest>, conn: &mut SqliteConnection)-> Result<Vec<Vec<String>>,
+        Error>{
         use crate::schema::subscriptions::dsl as dsl_types;
         use crate::schema::subscriptions::dsl::subscriptions;
-
+        let mut rewritten_urls:Vec<Vec<String>> = vec![vec![]];
         // Add subscriptions
         upload_request.clone().add.iter().for_each(|c| {
+            if !c.starts_with("http")||!c.starts_with("https"){
+                rewritten_urls.push(vec![c.to_string(), "".to_string()]);
+                return
+            }
 
             let opt_sub = Self::find_by_podcast(username.to_string(), device_id.to_string(), c
                                              .to_string(), conn).expect("Error retrieving \
@@ -109,6 +114,10 @@ impl SubscriptionChangesToClient {
 
         });
         upload_request.clone().remove.iter().for_each(|c|{
+            if !c.starts_with("http")||!c.starts_with("https"){
+                rewritten_urls.push(vec![c.to_string(), "".to_string()]);
+                return
+            }
             let opt_sub = Self::find_by_podcast(username.to_string(), device_id.to_string(), c
                 .to_string(), conn).expect("Error retrieving \
                                              subscription");
@@ -123,7 +132,7 @@ impl SubscriptionChangesToClient {
             }
         });
 
-        Ok(upload_request.clone().add)
+        Ok(rewritten_urls)
     }
 
    pub fn  find_by_podcast(username_1: String, deviceid_1: String, podcast_1: String, conn:

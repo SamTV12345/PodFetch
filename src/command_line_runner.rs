@@ -1,7 +1,5 @@
 use std::env::Args;
-use std::fmt::format;
 use std::io::stdin;
-use diesel::result::Error::RollbackErrorOnCommit;
 use crate::constants::constants::Role;
 use crate::models::user::User;
 

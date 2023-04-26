@@ -1,10 +1,9 @@
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, Responder, web};
+use actix_web::{HttpResponse, Responder, web};
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::device::{Device, DeviceResponse};
 use actix_web::{post, get};
 use actix_web::web::Data;
 use crate::DbPool;
-use crate::gpodder::auth::auth::{auth_checker, extract_from_http_request};
 use crate::models::session::Session;
 
 

@@ -349,7 +349,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
-            .service(get_gpodder_api(pool.clone(), environment_service.clone()))
+            .service(get_gpodder_api(environment_service.clone()))
             .service(get_global_scope(pool.clone()))
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
@@ -531,7 +531,7 @@ pub fn check_server_config(service1: EnvironmentService) {
     if service1.http_basic {
         if service1.password.is_empty() || service1.username.is_empty() {
             log::error!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
-            std::process::exit(1);
+            exit(1);
         }
     }
 
@@ -542,7 +542,7 @@ pub fn check_server_config(service1: EnvironmentService) {
     if var(TELEGRAM_API_ENABLED).is_ok(){
         if !var(TELEGRAM_BOT_TOKEN).is_ok() || !var(TELEGRAM_BOT_CHAT_ID).is_ok() {
             log::error!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
-            std::process::exit(1);
+            exit(1);
         }
     }
 }

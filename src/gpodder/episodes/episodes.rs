@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use actix_web::{HttpResponse, Responder, web};
 
 use actix_web::{get,post};
 use actix_web::web::Data;
@@ -8,7 +8,6 @@ use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
 use crate::models::models::PodcastWatchedPostModel;
 use std::borrow::Borrow;
 use chrono::NaiveDateTime;
-use crate::gpodder::auth::auth::{auth_checker, extract_from_http_request};
 use crate::models::session::Session;
 use crate::utils::time::{get_current_timestamp};
 
@@ -95,7 +94,6 @@ Responder {
                     println!("episode: {:?}", episode);
                 }
             });
-            // TODO What is rewriting urls https://buildmedia.readthedocs.org/media/pdf/gpoddernet/latest/gpoddernet.pdf
             HttpResponse::Ok().json(EpisodeActionPostResponse {
                 update_urls: vec![],
                 timestamp: get_current_timestamp()
