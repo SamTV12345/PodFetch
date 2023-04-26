@@ -73,8 +73,7 @@ pub async fn upload_subscription_changes(upload_request: web::Json<SubscriptionU
             }
             SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
                                                               upload_request,
-                                                              &mut *conn.get().unwrap()).await.expect
-            ("TODO: panic message");
+                                                              &mut *conn.get().unwrap()).await.expect("TODO: panic message");
 
             HttpResponse::Ok().json(SubscriptionPostResponse {
                 update_urls: vec![],
