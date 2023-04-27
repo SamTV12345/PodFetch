@@ -70,8 +70,8 @@ pub const OIDC_AUTH:&str = "OIDC_AUTH";
 pub const BASIC_AUTH:&str = "BASIC_AUTH";
 
 
-pub const USERNAME:&str = "username";
-pub const PASSWORD:&str = "password";
+pub const USERNAME:&str = "USERNAME";
+pub const PASSWORD:&str = "PASSWORD";
 
 
 pub const STANDARD_USER: &str = "user123";
