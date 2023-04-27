@@ -11,7 +11,7 @@ use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
