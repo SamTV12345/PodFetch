@@ -32,7 +32,7 @@ jobs:
       - name: Copy to root
         run: cp target/release/podfetch_amd64 .
       - name: zip
-        run: zip -r podfetch-linux.zip podfetch_amd64 db static migrations LICENSE README.md
+        run: zip -r podfetch-linux.zip podfetch_amd64 db static migrations LICENSE README.md build.rs
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -68,7 +68,7 @@ jobs:
       - name: Copy to root
         run: cp target/release/podfetch.exe .
       - name: Zip
-        run: Compress-Archive -Path podfetch.exe,db,static,migrations,LICENSE,README.md -DestinationPath podfetch-win.zip
+        run: Compress-Archive -Path podfetch.exe,db,static,migrations,LICENSE,README.md -DestinationPath podfetch-win.zip build.rs
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -105,7 +105,7 @@ jobs:
       - name: Copy to root
         run: cp target/release/podfetch_darwin .
       - name: Zip
-        run: zip -r podfetch-apple.zip podfetch_darwin db static migrations LICENSE README.md
+        run: zip -r podfetch-apple.zip podfetch_darwin db static migrations LICENSE README.md build.rs
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

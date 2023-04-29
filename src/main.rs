@@ -6,6 +6,8 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
+
+
 use actix_web_httpauth::middleware::HttpAuthentication;
 use actix::Actor;
 use actix_files::{Files, NamedFile};
@@ -26,7 +28,7 @@ use std::str::FromStr;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
-use log::{info};
+use log::{info, log};
 use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -53,7 +55,7 @@ use crate::controllers::podcast_controller::{
 };
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_timeline};
 use crate::controllers::settings_controller::{get_opml, get_settings, run_cleanup, update_settings};
-use crate::controllers::sys_info_controller::{get_public_config, get_sys_info, login};
+use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
@@ -262,6 +264,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("Debug file located at {}", concat!(env!("OUT_DIR"), "/built.rs"));
 
     if args().len()>1 {
         start_command_line(args());
@@ -344,9 +347,7 @@ async fn main() -> std::io::Result<()> {
             thread::sleep(Duration::from_millis(1000));
         }
     });
-
     HttpServer::new(move || {
-
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
             .service(get_gpodder_api(environment_service.clone()))
@@ -361,7 +362,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(Data::new(pool.clone()))
-            .wrap(Condition::new(true,Logger::default()))
+            .wrap(Condition::new(cfg!(debug_assertions),Logger::default()))
     })
     .bind(("0.0.0.0", 8000))?
     .run()
@@ -423,6 +424,7 @@ fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl 
     web::scope("")
         .wrap(Condition::new(enable_basic_auth, auth))
         .wrap(Condition::new(enable_oidc_auth, oidc_auth))
+        .service(get_info)
         .service(get_timeline)
         .configure(config_secure_user_management)
         .service(find_podcast)

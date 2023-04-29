@@ -6,10 +6,15 @@ use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
 use std::sync::{Mutex};
 use sysinfo::{System, SystemExt};
-use crate::DbPool;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use sha256::{digest};
+use crate::DbPool;
+pub mod built_info {
+    // The file has been placed there by the build script.
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
 #[utoipa::path(
 context_path="/api/v1",
 responses(
@@ -86,4 +91,27 @@ pub async fn login(
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VersionInfo {
+    pub version: &'static str,
+    pub r#ref: &'static str,
+    pub commit: &'static str,
+    pub ci: &'static str,
+    pub time:&'static str,
+    pub os: &'static str,
+}
+
+#[get("/info")]
+pub async fn get_info() -> impl Responder {
+    let version = VersionInfo{
+        commit: built_info::GIT_COMMIT_HASH.unwrap_or("No commit hash"),
+        version: built_info::GIT_VERSION.unwrap_or("No git version"),
+        r#ref: built_info::GIT_HEAD_REF.unwrap_or("No github ref"),
+        ci: built_info::CI_PLATFORM.unwrap_or("No CI platform"),
+        time: built_info::BUILT_TIME_UTC,
+        os: built_info::CFG_OS,
+    };
+    HttpResponse::Ok().json(version)
 }

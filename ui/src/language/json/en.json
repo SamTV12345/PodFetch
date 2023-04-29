@@ -95,5 +95,11 @@
   "not-admin": "You are not an admin",
   "not-admin-or-uploader": "You are not an admin or an uploader",
   "stream-podcast-episode": "Stream podcast episode",
-  "timeline": "Timeline"
+  "timeline": "Timeline",
+  "version": "Version",
+  "commit": "Commit",
+  "ci-build": "CI build",
+  "build-date": "Build date",
+  "branch": "Branch",
+  "os": "OS"
 }

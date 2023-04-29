@@ -97,5 +97,11 @@
   "not-admin": "Sie sind kein Administrator",
   "not-admin-or-uploader": "Sie sind weder Administrator noch Uploader",
   "stream-podcast-episode": "Podcast-Episode streamen",
-  "timeline": "Zeitleiste"
+  "timeline": "Zeitleiste",
+  "version": "Version",
+  "commit": "Commit",
+  "ci-build": "CI Build",
+  "build-date": "Builddatum",
+  "branch": "Branch",
+  "os": "Betriebssystem"
 }

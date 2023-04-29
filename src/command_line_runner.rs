@@ -9,6 +9,8 @@ use crate::constants::constants::Role;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::utils::time::get_current_timestamp_str;
 use rpassword::read_password;
+use crate::controllers::sys_info_controller::built_info;
+use crate::db::DB;
 use crate::models::device::Device;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -20,7 +22,6 @@ use crate::models::subscription::Subscription;
 pub fn start_command_line(mut args: Args){
     println!("Starting from command line");
     match args.nth(1).unwrap().as_str() {
-
         "help"|"--help"=>{
             println!(r" The following commands are available:
             users => Handles user management
@@ -124,6 +125,9 @@ pub fn start_command_line(mut args: Args){
                     error!("Command not found")
                 }
             }
+        },
+        "debug"=>{
+            create_debug_message();
         }
         _ => {
             error!("Command not found")
@@ -267,6 +271,40 @@ fn do_user_update(mut user:User){
         }
         _=>{
             println!("Field not found");
+        }
+    }
+
+}
+
+
+pub fn create_debug_message() {
+    println!("OS: {}", built_info::CFG_OS);
+    println!("Target: {}", built_info::TARGET);
+    println!("Endian: {}", built_info::CFG_ENDIAN);
+    println!("Debug: {}", built_info::DEBUG);
+    println!("Git Version: {:?}", built_info::GIT_VERSION);
+    println!("Git Commit Hash: {:?}", built_info::GIT_COMMIT_HASH);
+    println!("Git Head Ref: {:?}", built_info::GIT_HEAD_REF);
+    println!("Build Time: {}", built_info::BUILT_TIME_UTC);
+    println!("Version: {}", built_info::PKG_VERSION);
+    println!("Authors: {}", built_info::PKG_AUTHORS);
+    println!("Name: {}", built_info::PKG_NAME);
+    println!("Description: {}", built_info::PKG_DESCRIPTION);
+    println!("Homepage: {}", built_info::PKG_HOMEPAGE);
+    println!("Repository: {}", built_info::PKG_REPOSITORY);
+    println!("Rustc Version: {}", built_info::RUSTC_VERSION);
+    println!("Rustc: {}", built_info::RUSTC_VERSION);
+
+    let podcasts  = DB::get_all_podcasts(&mut establish_connection());
+
+    match podcasts {
+        Ok(podcasts) => {
+            podcasts.iter().for_each(|p|{
+                println!("Podcast: {:?}", p);
+            });
+        },
+        Err(e) => {
+            println!("Error: {:?}", e);
         }
     }
 

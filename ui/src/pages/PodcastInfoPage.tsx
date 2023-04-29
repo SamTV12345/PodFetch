@@ -10,8 +10,18 @@ import {useTranslation} from "react-i18next";
 import {Loading} from "../components/Loading";
 import {useAppSelector} from "../store/hooks";
 
+type VersionInfoModel = {
+    commit: string,
+    version: string,
+    ref: string,
+    ci: string,
+    time: string,
+    os: string
+}
+
 export const PodcastInfoPage = () => {
     const [systemInfo, setSystemInfo] = useState<SysExtraInfo>()
+    const [versionInfo, setVersionInfo] = useState<VersionInfoModel>()
     const gigaByte = Math.pow(10,9)
     const megaByte = Math.pow(10,6)
     const teraByte = Math.pow(10,12)
@@ -21,6 +31,8 @@ export const PodcastInfoPage = () => {
     useEffect(()=>{
         axios.get(apiURL+"/sys/info")
             .then((response:AxiosResponse<SysExtraInfo>) => setSystemInfo(response.data))
+        axios.get(apiURL+"/info")
+            .then(c=>setVersionInfo(c.data))
     },[])
 
     if(!systemInfo){
@@ -151,14 +163,30 @@ export const PodcastInfoPage = () => {
 
             <div className="col-span-1 sm:col-span-2">
             <SysCard title={t('podfetch-status')}>
-                <div className="grid grid-cols-2 text-white gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 text-white gap-4">
                     <div className="text-xl">{t('podindex-configured')}</div>
                     <div>{configModel?.podindexConfigured?<i className="fa-solid fa-check fa-2xl text-green-700"></i>:<i className="fa-solid fa-x fa-2xl text-red-700"></i>}</div>
                 </div>
-                <div className="grid grid-cols-2 text-white gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 text-white gap-4">
                     <div className="text-xl">{t('rss-feed')}</div>
                     <div><a className="text-white hover:underline" href={configModel?.rssFeed} target="_blank">{configModel?.rssFeed}</a></div>
                 </div>
+                <h2 className="text-2xl text-white mt-7">Versionsinfos</h2>
+                {versionInfo&&<div className="grid grid-cols-1 md:grid-cols-2 text-white gap-4">
+                    <div className="text-xl">{t('version')}</div>
+                    <div className="text-xl">{versionInfo.version}</div>
+                    <div className="text-xl">{t('commit')}</div>
+                    <div className="text-xl">{versionInfo.commit}</div>
+                    <div className="text-xl">{t('ci-build')}</div>
+                    <div className="text-xl">{versionInfo.ci}</div>
+                    <div className="text-xl">{t('build-date')}</div>
+                    <div className="text-xl">{versionInfo.time}</div>
+                    <div className="text-xl">{t('branch')}</div>
+                    <div className="text-xl">{versionInfo.ref}</div>
+                    <div className="text-xl">{t('os')}</div>
+                    <div className="text-xl">{versionInfo.os}</div>
+                    </div>
+                }
             </SysCard>
             </div>
         </div>

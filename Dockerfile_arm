@@ -14,6 +14,7 @@ WORKDIR /app/src
 
 ADD Cargo.toml .
 ADD dummy.rs ./src/main.rs
+ADD build.rs .
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
@@ -37,6 +38,7 @@ ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
 ADD src ./src
+ADD build.rs .
 ADD db ./db
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     chmod 777 /usr/local/cargo/registry/index && \
