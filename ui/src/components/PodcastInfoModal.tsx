@@ -1,5 +1,5 @@
 import {createPortal} from "react-dom";
-import {apiURL, prepareOnlinePodcastEpisode, preparePath, removeHTML} from "../utils/Utilities";
+import {apiURL, preparePath, removeHTML} from "../utils/Utilities";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {setInfoModalDownloaded, setInfoModalPodcastOpen} from "../store/CommonSlice";
 import axios from "axios";
@@ -51,7 +51,7 @@ export const PodcastInfoModal = () => {
                     <div className="flex gap-4">
                         <button disabled={!selectedPodcastEpisode} className="bg-blue-500 p-1 rounded disabled:bg-blue-900 hover:bg-blue-400" onClick={()=>{
                             if(selectedPodcastEpisode) {
-                                selectedPodcastEpisode.status == 'D'?download(preparePath(selectedPodcastEpisode.local_url), selectedPodcastEpisode?.name):download(selectedPodcastEpisode?.url, selectedPodcastEpisode?.name)
+                                selectedPodcastEpisode.status == 'D'?download(preparePath(selectedPodcastEpisode.local_url), selectedPodcastEpisode?.name+".mp3"):download(selectedPodcastEpisode?.url, selectedPodcastEpisode?.name)
 
                             }
                         }}>{t('download-computer')}</button>
