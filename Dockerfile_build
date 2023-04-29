@@ -37,6 +37,7 @@ ADD migrations ./migrations
 ADD src ./src
 ADD db ./db
 ADD build.rs .
+ADD .git .
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM talk.schwanzer.online/dockerhub_proxy/library/alpine:latest
