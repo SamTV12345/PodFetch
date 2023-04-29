@@ -54,11 +54,12 @@ Responder {
     let mut db = db.lock().ignore_poison();
     let last_watched = db.get_last_watched_podcasts(&mut conn.get().unwrap(), designated_username
         .clone()).unwrap();
-    let episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap
+
+    let mut episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap
         (),
     );
 
-    let episodes_with_logs = last_watched.iter().map(|e|{
+    let mut episodes_with_logs = last_watched.iter().map(|e|{
         let episode = episodes.iter().find(|e1| e1.episode_id == e.episode_id);
         match episode {
             Some(episode) => {
@@ -72,6 +73,12 @@ Responder {
             }
         }
     }).collect::<Vec<&PodcastWatchedEpisodeModelWithPodcastEpisode>>();
+
+    episodes.iter().for_each(|x|{
+        if episodes_with_logs.iter().find(|e| e.episode_id == x.episode_id).is_none(){
+            episodes_with_logs.push(x);
+        }
+    });
     HttpResponse::Ok().json(episodes_with_logs)
 }
 

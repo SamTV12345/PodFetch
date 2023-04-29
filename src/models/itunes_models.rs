@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::schema::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
@@ -54,7 +55,7 @@ pub struct ResponseModel {
 }
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
-Serialize, Deserialize)]
+Serialize, Deserialize,)]
 pub struct Podcast {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
@@ -86,7 +87,6 @@ pub struct Podcast {
 
     pub directory_name:String
 }
-
 
 impl Podcast{
     pub fn get_by_rss_feed(rssfeed_i: &str, conn: &mut SqliteConnection) -> Result<Podcast,

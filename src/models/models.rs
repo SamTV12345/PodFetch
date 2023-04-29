@@ -70,7 +70,7 @@ pub struct PodcastWatchedEpisodeModel {
     pub total_time: i32,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub id: i32,

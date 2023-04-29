@@ -379,10 +379,8 @@ impl DB {
         conn: &mut SqliteConnection,
         designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
         let result = sql_query(
-            "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY \
-        datetime\
-        (date) \
-        DESC) GROUP BY episode_id  LIMIT 10;",
+            "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY date \
+            DESC) GROUP BY episode_id  LIMIT 10;",
         )
             .bind::<Text,_>(designated_username)
         .load::<PodcastHistoryItem>(&mut self.conn)
@@ -810,5 +808,14 @@ impl DB {
             .expect("Error loading watch logs");
 
         res
+    }
+
+    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut SqliteConnection) -> Podcast {
+        use crate::schema::podcasts::dsl::*;
+
+        podcasts
+            .filter(rssfeed.eq(rss_feed_1))
+            .first::<Podcast>(conn)
+            .expect("Error loading podcast by rss feed")
     }
 }

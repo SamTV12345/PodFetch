@@ -66,7 +66,7 @@ impl SubscriptionChangesToClient {
       let (deleted_subscriptions,created_subscriptions):(Vec<Subscription>,
                                                         Vec<Subscription> ) = res
           .into_iter()
-          .partition(|c| c.deleted.is_none());
+          .partition(|c| c.deleted.is_some());
 
         Ok(SubscriptionChangesToClient{
             add: created_subscriptions.into_iter().map(|c| c.podcast).collect(),
