@@ -66,6 +66,10 @@ Several Auth methods are described here: [AUTH.md](docs/AUTH.md)
 
 Hosting options are described here: [HOSTING.md](docs/HOSTING.md)
 
+# CLI usage
+
+The cli usage is described here: [CLI.md](docs/CLI.md)
+
 # Environment Variables
 
 | Variable         | Description                                   | Default                  |
