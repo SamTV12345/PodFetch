@@ -81,7 +81,7 @@ The cli usage is described here: [CLI.md](docs/CLI.md)
 
 # UI
 
-
+[UI Documentation](docs/UIWalkthrough.md)
 
 ## Internationalization
 Podfetch is currently available in English and German. If you want to add a new language you can do so by adding a new file to the `i18n` folder and adding the translations to the file.
