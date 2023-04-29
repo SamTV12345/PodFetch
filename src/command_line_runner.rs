@@ -110,7 +110,7 @@ pub fn read_user_account()->User{
     }).join(", ");
     retry_read("Enter your username: ", &mut username);
 
-    let user_exists = User::find_by_username(&username, &mut establish_connection()--h).is_some();
+    let user_exists = User::find_by_username(&username, &mut establish_connection()).is_some();
     if user_exists{
         println!("User already exists");
         exit(1);
