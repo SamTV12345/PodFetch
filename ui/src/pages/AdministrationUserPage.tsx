@@ -68,7 +68,7 @@ export const AdministrationUserPage = () => {
                 {
                     users.map((v)=>
 
-                        <tr className="border-b border-gray-700">
+                        <tr className="border-b bg-gray-800 border-gray-700">
                             <th scope="row"
                                 className="px-6 py-4 font-medium whitespace-nowrap text-white">
                                 {v.id}
