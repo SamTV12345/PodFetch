@@ -2,7 +2,7 @@ use std::io::Error;
 use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable};
-use diesel::{OptionalExtension, RunQueryDsl, SqliteConnection};
+use diesel::{OptionalExtension, RunQueryDsl, SqliteConnection, AsChangeset};
 use diesel::associations::HasTable;
 use utoipa::ToSchema;
 use crate::schema::users;
@@ -11,7 +11,8 @@ use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug,
+AsChangeset)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
@@ -28,7 +29,8 @@ pub struct UserWithoutPassword{
     pub id: i32,
     pub username: String,
     pub role: String,
-    pub created_at: NaiveDateTime
+    pub created_at: NaiveDateTime,
+    pub explicit_consent: bool
 }
 
 
@@ -113,6 +115,7 @@ impl User{
     pub fn map_to_dto(user: Self) -> UserWithoutPassword{
         UserWithoutPassword{
             id: user.id,
+            explicit_consent: user.explicit_consent,
             username: user.username.clone(),
             role: user.role.clone(),
             created_at: user.created_at
@@ -139,6 +142,14 @@ impl User{
             return Ok(Some(auth_header.unwrap().to_str().unwrap().parse().unwrap()))
         }
         Ok(None)
+    }
+
+    pub fn get_gpodder_req_header(req: &actix_web::HttpRequest) -> Result<String, Error>{
+            let auth_header = req.headers().get(USERNAME);
+            if auth_header.is_none() {
+                return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
+            }
+            return Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap())
     }
 
 
@@ -171,5 +182,20 @@ impl User{
             }
         }
         None
+    }
+
+    pub fn delete_by_username(username_to_search: String, conn: &mut SqliteConnection)->Result<(), Error>{
+        use crate::schema::users::dsl::*;
+        diesel::delete(users.filter(username.eq(username_to_search))).execute(conn)
+            .expect("Error deleting user");
+        Ok(())
+    }
+
+    pub fn update_user(user: User, conn: &mut SqliteConnection)->Result<(), Error>{
+        use crate::schema::users::dsl::*;
+        diesel::update(users.filter(id.eq(user.clone().id)))
+            .set(user).execute(conn)
+            .expect("Error updating user");
+        Ok(())
     }
 }

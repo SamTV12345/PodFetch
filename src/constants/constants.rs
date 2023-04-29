@@ -64,6 +64,9 @@ impl FromStr for Role{
         }
     }
 }
+impl Role{
+    pub const VALUES: [Self; 3] = [Self::User, Self::Admin, Self::Uploader];
+}
 
 // environment keys
 pub const OIDC_AUTH:&str = "OIDC_AUTH";

@@ -8,7 +8,7 @@ use crate::models::models::{
 use crate::models::settings::Setting;
 use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastExtra;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::{insert_into, sql_query, RunQueryDsl, delete};
@@ -16,7 +16,8 @@ use rss::Item;
 use std::io::Error;
 use std::sync::MutexGuard;
 use std::time::SystemTime;
-use diesel::sql_types::Text;
+use diesel::sql_types::{Text, Timestamp};
+use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
 use crate::utils::do_retry::do_retry;
 
@@ -136,6 +137,21 @@ impl DB {
         Ok(found_podcast_episode)
     }
 
+    pub fn query_podcast_episode_by_url(
+        conn: &mut SqliteConnection,
+        podcas_episode_url_to_be_found: &str,
+    ) -> Result<Option<PodcastEpisode>, String> {
+        use crate::schema::podcast_episodes::dsl::*;
+
+        let found_podcast_episode = podcast_episodes
+            .filter(url.like("%".to_owned()+podcas_episode_url_to_be_found+"%"))
+            .first::<PodcastEpisode>(conn)
+            .optional()
+            .expect("Error loading podcast by id");
+
+        Ok(found_podcast_episode)
+    }
+
     pub fn get_podcast_by_track_id(conn: &mut SqliteConnection, podcast_id: i32) -> Result<Option<Podcast>, String> {
         use crate::schema::podcasts::directory_id;
         use crate::schema::podcasts::dsl::podcasts;
@@ -238,8 +254,8 @@ impl DB {
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
     ) -> Result<Vec<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::dsl::podcast_episodes;
         use crate::schema::podcast_episodes::*;
+        use crate::schema::podcast_episodes::dsl::podcast_episodes;
         match last_id {
             Some(last_id) => {
                 let podcasts_found = podcast_episodes
@@ -316,20 +332,38 @@ impl DB {
         match result {
             Some(found_podcast) => {
                 let history_item = podcast_history_items
-                    .filter(episode_id.eq(podcast_id_tos_search).and(username.eq(username_to_find)))
+                    .filter(episode_id.eq(podcast_id_tos_search).and(username.eq(username_to_find
+                        .clone())))
                     .order(date.desc())
                     .first::<PodcastHistoryItem>(conn)
                     .optional()
                     .expect("Error loading podcast episode by id");
+
                 return match history_item {
-                    Some(found_history_item) => Ok(found_history_item),
+                    Some(found_history_item) => {
+                         let option_episode = Episode::get_watch_log_by_username_and_episode
+                             (username_to_find.clone(), conn, found_podcast.clone().url);
+                        if option_episode.is_some(){
+                            let episode = option_episode.unwrap();
+                            if episode.action == EpisodeAction::Play.to_string() && episode
+                                .position.unwrap()>found_history_item.watched_time && episode.timestamp>found_history_item.date{
+
+                                let found_podcast_item = Self::get_podcast(conn, found_history_item
+                                    .podcast_id).unwrap();
+                                return Ok(Episode::convert_to_podcast_history_item(&episode,
+                                                                             found_podcast_item,
+                                                                                   found_podcast));
+                            }
+                        }
+                        Ok(found_history_item)
+                    },
                     None => Ok(PodcastHistoryItem {
                         id: 0,
                         podcast_id: found_podcast.podcast_id,
                         episode_id: found_podcast.episode_id,
                         watched_time: 0,
                         username: STANDARD_USER.to_string(),
-                        date: "".to_string(),
+                        date: Utc::now().naive_utc()
                     }),
                 };
             }
@@ -344,10 +378,8 @@ impl DB {
         conn: &mut SqliteConnection,
         designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
         let result = sql_query(
-            "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY \
-        datetime\
-        (date) \
-        DESC) GROUP BY episode_id  LIMIT 10;",
+            "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY date \
+            DESC) GROUP BY episode_id  LIMIT 10;",
         )
             .bind::<Text,_>(designated_username)
         .load::<PodcastHistoryItem>(&mut self.conn)
@@ -757,5 +789,31 @@ impl DB {
 
 
         res.load::<(PodcastEpisode, Podcast)>(conn).expect("Error loading podcast episode by id")
+    }
+
+    pub fn get_watch_logs_by_username(username_to_search: String, conn: &mut SqliteConnection,
+                                      since: NaiveDateTime)
+        ->
+    Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)> {
+
+
+        let res = sql_query("SELECT * FROM podcast_history_items,podcast_episodes, podcasts WHERE \
+        podcast_history_items.episode_id = podcast_episodes.episode_id AND podcast_history_items\
+        .podcast_id= podcasts.id AND username=? AND date >= ?")
+            .bind::<Text, _>(&username_to_search)
+            .bind::<Timestamp, _>(&since)
+            .load::<(PodcastHistoryItem, PodcastEpisode, Podcast)>(conn)
+            .expect("Error loading watch logs");
+
+        res
+    }
+
+    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut SqliteConnection) -> Podcast {
+        use crate::schema::podcasts::dsl::*;
+
+        podcasts
+            .filter(rssfeed.eq(rss_feed_1))
+            .first::<Podcast>(conn)
+            .expect("Error loading podcast by rss feed")
     }
 }

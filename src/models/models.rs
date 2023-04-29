@@ -2,6 +2,8 @@ use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
 use utoipa::ToSchema;
+use chrono::NaiveDateTime;
+use diesel::sql_types::Timestamp;
 
 // decode request data
 #[derive(Deserialize)]
@@ -48,10 +50,20 @@ pub struct PodcastHistoryItem {
     pub episode_id: String,
     #[diesel(sql_type = Integer)]
     pub watched_time: i32,
-    #[diesel(sql_type = Text)]
-    pub date: String,
+    #[diesel(sql_type = Timestamp)]
+    pub date: NaiveDateTime,
     #[diesel(sql_type = Text)]
     pub username: String
+}
+
+impl PodcastHistoryItem{
+    pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<(),
+        diesel::result::Error>{
+        use crate::schema::podcast_history_items::dsl::*;
+        diesel::delete(podcast_history_items.filter(username.eq(username1)))
+            .execute(conn)?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -68,7 +80,7 @@ pub struct PodcastWatchedEpisodeModel {
     pub total_time: i32,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub id: i32,
@@ -78,7 +90,7 @@ pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub name: String,
     pub image_url: String,
     pub watched_time: i32,
-    pub date: String,
+    pub date: NaiveDateTime,
     pub total_time: i32,
     pub podcast_episode: PodcastEpisode,
     pub podcast: Podcast,

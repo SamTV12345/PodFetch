@@ -12,3 +12,4 @@ pub mod notification_service;
 pub mod settings_service;
 pub mod telegram_api;
 pub mod user_management_service;
+pub mod subscription;
