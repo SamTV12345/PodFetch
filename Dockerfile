@@ -13,6 +13,7 @@ WORKDIR /app/src
 
 ADD Cargo.lock .
 ADD Cargo.toml .
+ADD build.rs .
 ADD dummy.rs ./src/main.rs
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
@@ -37,6 +38,7 @@ ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
 ADD db ./db
+ADD build.rs .
 ADD src ./src
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
