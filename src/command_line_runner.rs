@@ -1,9 +1,7 @@
-use std::alloc::System;
 use std::env::Args;
-use std::io::{Error, ErrorKind, Read, stdin, stdout, Write};
+use std::io::{Error, ErrorKind, stdin, stdout, Write};
 use std::process::exit;
 use std::str::FromStr;
-use diesel::SqliteConnection;
 use log::error;
 use sha256::digest;
 use crate::config::dbconfig::establish_connection;
@@ -16,12 +14,10 @@ use rpassword::read_password;
 pub fn start_command_line(mut args: Args){
     println!("Starting from command line");
     match args.nth(1).unwrap().as_str() {
+
         "help"|"--help"=>{
             println!(r" The following commands are available:
-            add => Adds a user
-            remove => Removes a user
-            update => Updates a user
-            list => Lists all users
+            users => Handles user management
             ")
         }
         "users"=>{
@@ -34,10 +30,10 @@ pub fn start_command_line(mut args: Args){
                     println!("Should a user with the following settings be applied {:?}",user);
 
                     match ask_for_confirmation(){
-                        Ok(e)=>{
+                        Ok(..)=>{
                             user.password = Some(digest(user.password.unwrap()));
                             match User::insert_user(&mut user, &mut establish_connection()){
-                                Ok(e)=>{
+                                Ok(..)=>{
                                     println!("User succesfully created")
                                 },
                                 Err(..)=>{
@@ -58,7 +54,7 @@ pub fn start_command_line(mut args: Args){
                     username = trim_string(username);
                     println!("{}", username);
                     match available_users.iter().find(|u|u.username==username){
-                        Some(u)=>{
+                        Some(..)=>{
                             User::delete_by_username(trim_string(username),
                                                      &mut establish_connection())
                                 .expect("Error deleting user");
@@ -74,15 +70,18 @@ pub fn start_command_line(mut args: Args){
 
                     list_users();
                 }
+                "help"|"--help"=>{
+                    println!(r" The following commands are available:
+                    add => Adds a user
+                    remove => Removes a user
+                    update => Updates a user
+                    list => Lists all users
+                    ")
+                }
                 _ => {
                     error!("Command not found")
                 }
             }
-        }
-        "help"|"--help"=>{
-            println!(r" The following commands are available:
-            users => Handles user management
-            ")
         }
         _ => {
             error!("Command not found")
@@ -103,7 +102,7 @@ fn list_users() -> Vec<UserWithoutPassword> {
 
 pub fn read_user_account()->User{
     let mut username = String::new();
-    let mut password = String::new();
+    let password;
 
     let role = Role::VALUES.map(|v|{
         return v.to_string()
@@ -118,7 +117,7 @@ pub fn read_user_account()->User{
     password = retry_read_secret("Enter your password: ");
     let assigned_role = retry_read_role(&format!("Select your role {}",&role));
 
-    let mut user = User{
+    let user = User{
         id: 0,
         username: username.trim_end_matches("\n").parse().unwrap(),
         role: assigned_role.to_string(),

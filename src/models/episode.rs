@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use std::ops::Deref;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods, sql_query};
+use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
 use crate::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
@@ -123,11 +122,6 @@ impl Episode{
 
     pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut SqliteConnection,
                                                  episode_1: String) ->Option<Episode>{
-        use crate::schema::episodes::username;
-        use crate::schema::episodes::dsl::episodes;
-        use crate::schema::episodes::dsl::timestamp;
-        use crate::schema::episodes::dsl::action;
-        use crate::schema::episodes::dsl::episode;
 
         let res = sql_query(
             "SELECT * FROM (SELECT * FROM episodes,podcasts WHERE username=? AND episodes\
@@ -159,10 +153,8 @@ impl Episode{
 
     pub fn get_last_watched_episodes(username1: String, conn: &mut SqliteConnection)
         ->Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>{
-        use crate::schema::episodes::username;
-        use crate::schema::episodes::dsl::episodes;
-        use crate::schema::episodes::dsl::timestamp;
-        use crate::schema::episodes::dsl::action;
+
+
         let mut map:HashMap<String,Podcast> = HashMap::new();
         let res = sql_query(
             r"SELECT * FROM (SELECT * FROM episodes e, podcast_episodes pe WHERE
@@ -173,11 +165,10 @@ impl Episode{
             .expect("");
 
         res.iter().map(|e|{
-            let mut opt_podcast = map.get(&*e.clone().0.podcast);
+            let opt_podcast = map.get(&*e.clone().0.podcast);
             if opt_podcast.is_none(){
                 let podcast = DB::get_podcast_by_rss_feed(e.clone().0.podcast, conn);
                 map.insert(e.clone().0.podcast.clone(),podcast.clone());
-                opt_podcast = Some(&podcast.clone())
             }
             let found_podcast = map.get(&e.clone().0.podcast).cloned().unwrap();
             PodcastWatchedEpisodeModelWithPodcastEpisode{

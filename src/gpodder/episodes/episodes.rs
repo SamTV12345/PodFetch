@@ -5,7 +5,6 @@ use actix_web::web::Data;
 use crate::db::DB;
 use crate::DbPool;
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
-use crate::models::models::{PodcastWatchedEpisodeModel, PodcastWatchedPostModel};
 use std::borrow::Borrow;
 use chrono::NaiveDateTime;
 use crate::models::session::Session;

@@ -13,10 +13,6 @@ pub struct UserManagementService{
 }
 
 impl UserManagementService {
-    pub fn may_add_podcast(user: User)->bool{
-        Role::from_str(&user.role).unwrap() == Role::Uploader|| Role::from_str(&user.role).unwrap() ==
-            Role::Admin
-    }
 
     pub fn may_onboard_user(user: User)->bool{
         Role::from_str(&user.role).unwrap() == Role::Admin

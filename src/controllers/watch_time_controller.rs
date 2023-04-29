@@ -55,7 +55,7 @@ Responder {
     let last_watched = db.get_last_watched_podcasts(&mut conn.get().unwrap(), designated_username
         .clone()).unwrap();
 
-    let mut episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap
+    let episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap
         (),
     );
 

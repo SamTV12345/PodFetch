@@ -19,7 +19,6 @@ use std::time::SystemTime;
 use diesel::sql_types::{Text, Timestamp};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
-use crate::schema::podcast_episodes::dsl::podcast_episodes;
 use crate::utils::do_retry::do_retry;
 
 pub struct DB {
@@ -255,8 +254,8 @@ impl DB {
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
     ) -> Result<Vec<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::dsl::podcast_episodes;
         use crate::schema::podcast_episodes::*;
+        use crate::schema::podcast_episodes::dsl::podcast_episodes;
         match last_id {
             Some(last_id) => {
                 let podcasts_found = podcast_episodes
@@ -796,7 +795,6 @@ impl DB {
                                       since: NaiveDateTime)
         ->
     Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)> {
-        use crate::schema::podcast_history_items::dsl::*;
 
 
         let res = sql_query("SELECT * FROM podcast_history_items,podcast_episodes, podcasts WHERE \

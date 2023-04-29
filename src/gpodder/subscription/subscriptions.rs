@@ -1,8 +1,7 @@
-use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use actix_web::{HttpResponse, Responder, web};
 use actix_web::{get, post};
 use actix_web::web::Data;
 use crate::DbPool;
-use crate::gpodder::auth::auth::{auth_checker, extract_from_http_request};
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
 use crate::utils::time::get_current_timestamp;
@@ -57,8 +56,7 @@ Responder {
 #[post("/subscriptions/{username}/{deviceid}.json")]
 pub async fn upload_subscription_changes(upload_request: web::Json<SubscriptionUpdateRequest>,
                                          opt_flag: Option<web::ReqData<Session>>,
-                                         paths: web::Path<(String, String)>, conn: Data<DbPool>,
-                                         rq:HttpRequest)->impl Responder {
+                                         paths: web::Path<(String, String)>, conn: Data<DbPool>)->impl Responder {
     match opt_flag {
         Some(flag) => {
             let username = paths.clone().0;
@@ -66,7 +64,7 @@ pub async fn upload_subscription_changes(upload_request: web::Json<SubscriptionU
             if flag.username != username.clone() {
                 return HttpResponse::Unauthorized().finish();
             }
-            let res = SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
+            SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
                                                               upload_request,
                                                               &mut *conn.get().unwrap()).await.expect("TODO: panic message");
 

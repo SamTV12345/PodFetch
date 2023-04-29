@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use crate::schema::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};

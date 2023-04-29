@@ -1,4 +1,3 @@
-use std::io::Error;
 use std::sync::{Mutex};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use actix_web::web::Data;
@@ -9,7 +8,6 @@ use actix_web::{post};
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use awc::cookie::{Cookie, SameSite};
-use diesel::SqliteConnection;
 use crate::models::session::Session;
 
 #[post("/auth/{username}/login.json")]
@@ -71,26 +69,4 @@ pub fn basic_auth_login(rq: String) -> (String, String) {
     let (u,p) = extract_basic_auth(rq.as_str());
 
     return (u.to_string(),p.to_string())
-}
-
-pub async fn auth_checker(conn: &mut SqliteConnection, session: Option<String>, username: String)
-    ->Result<(),
-    Error>{
-    return match session {
-        Some(session) => {
-            let session = Session::find_by_session_id(&session, conn).unwrap();
-            if session.username != username {
-                return Err(Error::new(std::io::ErrorKind::Other, "User and session not matching"))
-            }
-            Ok(())
-        }
-        None => {
-            Err(Error::new(std::io::ErrorKind::Other, "No session"))
-        }
-    }
-}
-
-pub fn extract_from_http_request(rq: HttpRequest)->Option<String>{
-    rq.cookie("sessionid")
-        .map(|cookie|cookie.value().to_string())
 }
