@@ -6,10 +6,12 @@ use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
 use std::sync::{Mutex};
 use sysinfo::{System, SystemExt};
-use crate::DbPool;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use sha256::{digest};
+use crate::DbPool;
+
+
 #[utoipa::path(
 context_path="/api/v1",
 responses(
@@ -86,4 +88,16 @@ pub async fn login(
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VersionInfo {
+    pub version: String,
+    pub r#ref: String,
+    pub commit: String
+}
+
+#[get("/info")]
+pub async fn get_info() -> impl Responder {
+    HttpResponse::Ok()
 }

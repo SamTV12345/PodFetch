@@ -6,6 +6,11 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
+pub mod built_info {
+    // The file has been placed there by the build script.
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
 use actix_web_httpauth::middleware::HttpAuthentication;
 use actix::Actor;
 use actix_files::{Files, NamedFile};
@@ -26,7 +31,7 @@ use std::str::FromStr;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
-use log::{info};
+use log::{info, log};
 use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -90,6 +95,7 @@ pub mod mutex;
 mod exception;
 mod gpodder;
 mod command_line_runner;
+
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
@@ -262,6 +268,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("Debug file located at {}", concat!(env!("OUT_DIR"), "/built.rs"));
 
     if args().len()>1 {
         start_command_line(args());
