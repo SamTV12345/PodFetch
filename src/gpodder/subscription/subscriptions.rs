@@ -66,17 +66,12 @@ pub async fn upload_subscription_changes(upload_request: web::Json<SubscriptionU
             if flag.username != username.clone() {
                 return HttpResponse::Unauthorized().finish();
             }
-            let auth_check_res = auth_checker(&mut *conn.get().unwrap(), extract_from_http_request(rq),
-                                              username.clone()).await;
-            if auth_check_res.is_err() {
-                return HttpResponse::Unauthorized().body(auth_check_res.err().unwrap().to_string());
-            }
             let res = SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
                                                               upload_request,
                                                               &mut *conn.get().unwrap()).await.expect("TODO: panic message");
 
             HttpResponse::Ok().json(SubscriptionPostResponse {
-                update_urls: res,
+                update_urls: vec![],
                 timestamp: get_current_timestamp()
             })
         }

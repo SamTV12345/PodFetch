@@ -79,7 +79,7 @@ diesel::table! {
         podcast_id -> Integer,
         episode_id -> Text,
         watched_time -> Integer,
-        date -> Text,
+        date -> Timestamp,
         username -> Text,
     }
 }

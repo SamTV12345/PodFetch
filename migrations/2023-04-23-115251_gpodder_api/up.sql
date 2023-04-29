@@ -8,7 +8,6 @@ CREATE TABLE devices(
     FOREIGN KEY (username) REFERENCES users(username)
 );
 
-
 CREATE TABLE sessions(
     username VARCHAR(255) NOT NULL,
     session_id VARCHAR(255) NOT NULL,
@@ -40,3 +39,18 @@ CREATE TABLE episodes(
     total INTEGER,
     UNIQUE (username, device, podcast, episode, timestamp)
 );
+
+
+CREATE table if not exists podcast_history_items2 (
+                                                     id integer primary key not null,
+                                                     podcast_id integer not null,
+                                                     episode_id TEXT not null,
+                                                     watched_time integer not null,
+                                                     date DATETIME not null,
+                                                     username text not null,
+                                                     FOREIGN KEY (podcast_id) REFERENCES podcasts(id));
+
+INSERT INTO podcast_history_items2 SELECT * FROM podcast_history_items;
+
+DROP TABLE podcast_history_items;
+ALTER TABLE podcast_history_items2 RENAME TO podcast_history_items;

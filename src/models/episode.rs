@@ -1,10 +1,12 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension};
+use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods, sql_query};
 use crate::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 
 #[derive(Serialize, Deserialize, Debug,Queryable, QueryableByName,Insertable, Clone, ToSchema)]
 pub struct Episode{
@@ -114,7 +116,74 @@ impl Episode{
                     .expect("")
             }
         }
+    }
 
+    pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut SqliteConnection,
+                                                 episode_1: String) ->Option<Episode>{
+        use crate::schema::episodes::username;
+        use crate::schema::episodes::dsl::episodes;
+        use crate::schema::episodes::dsl::timestamp;
+        use crate::schema::episodes::dsl::action;
+        use crate::schema::episodes::dsl::episode;
+
+        let res = sql_query(
+            "SELECT * FROM (SELECT * FROM episodes,podcasts WHERE username=? AND episodes\
+            .podcast=podcasts.rssfeed AND episodes.episode = ? ORDER BY timestamp DESC) GROUP BY \
+            episode  LIMIT 10;")
+            .bind::<Text, _>(username1.clone())
+            .bind::<Text,_>(episode_1)
+            .load::<Episode>(conn)
+            .expect("");
+        return if res.len() > 0 {
+            Some(res[0].clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn convert_to_podcast_history_item(&self, podcast_1: Podcast,pod_episode: PodcastEpisode)
+        ->
+                                                                              PodcastHistoryItem {
+        PodcastHistoryItem {
+            id: self.id,
+            podcast_id: podcast_1.id,
+            episode_id: pod_episode.episode_id,
+            watched_time: self.position.unwrap(),
+            date: self.timestamp,
+            username: self.username.clone(),
+        }
+    }
+
+    pub fn get_last_watched_episodes(username1: String, conn: &mut SqliteConnection)
+        ->Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>{
+        use crate::schema::episodes::username;
+        use crate::schema::episodes::dsl::episodes;
+        use crate::schema::episodes::dsl::timestamp;
+        use crate::schema::episodes::dsl::action;
+
+        let res = sql_query(
+            r"SELECT * FROM (SELECT * FROM episodes,podcasts, podcast_episodes WHERE
+            episodes.podcast LIKE podcasts.rssfeed AND episodes.episode=podcast_episodes.url AND
+            episodes.username=?  ORDER BY timestamp DESC) GROUP BY episode  LIMIT 10;")
+            .bind::<Text, _>(username1.clone())
+            .load::<(Episode, Podcast,PodcastEpisode)>(conn)
+            .expect("");
+
+        res.iter().map(|e|{
+            PodcastWatchedEpisodeModelWithPodcastEpisode{
+                id: e.clone().0.id,
+                podcast_id: e.clone().1.id,
+                episode_id: e.clone().2.episode_id,
+                url: e.clone().2.url,
+                name: e.clone().2.name,
+                image_url: e.clone().2.image_url,
+                watched_time: e.clone().0.position.unwrap(),
+                date: e.clone().0.timestamp,
+                total_time: e.clone().2.total_time,
+                podcast_episode: e.clone().2,
+                podcast: e.clone().1,
+            }
+        }).collect()
     }
 }
 

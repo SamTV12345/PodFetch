@@ -5,7 +5,7 @@ use actix_web::web::Data;
 use crate::db::DB;
 use crate::DbPool;
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
-use crate::models::models::PodcastWatchedPostModel;
+use crate::models::models::{PodcastWatchedEpisodeModel, PodcastWatchedPostModel};
 use std::borrow::Borrow;
 use chrono::NaiveDateTime;
 use crate::models::session::Session;
@@ -41,8 +41,27 @@ pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>
             }
 
             let since_date = NaiveDateTime::from_timestamp_opt(since.since as i64, 0);
-            let actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap(), since_date)
+            println!("{}",since_date.unwrap());
+            let mut actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap(), since_date)
                 .await;
+            let watch_logs = DB::get_watch_logs_by_username(username.clone(), &mut *pool.get()
+                .unwrap(), since_date.unwrap()).iter().map(|watch_log| {
+                Episode{
+                    id: 0,
+                    username: watch_log.clone().0.username,
+                    device: "".to_string(),
+                    podcast: watch_log.clone().2.rssfeed,
+                    episode: watch_log.clone().1.url,
+                    timestamp: watch_log.clone().0.date,
+                    guid: None,
+                    action: EpisodeAction::Play.to_string(),
+                    started: Option::from(watch_log.clone().0.watched_time),
+                    position: Option::from(watch_log.clone().0.watched_time),
+                    total: Option::from(watch_log.clone().1.total_time),
+                }
+            }).collect::<Vec<Episode>>();
+
+            actions.append(&mut watch_logs.clone().to_vec());
             HttpResponse::Ok().json(EpisodeActionResponse {
                 actions,
                 timestamp: get_current_timestamp()
@@ -84,14 +103,6 @@ Responder {
                     if podcast_episode.clone().unwrap().is_none() {
                         return;
                     }
-
-                    let model = PodcastWatchedPostModel {
-                        podcast_episode_id: podcast_episode.clone().unwrap().unwrap().episode_id,
-                        time: episode.position.unwrap() as i32,
-                    };
-                    DB::log_watchtime(&mut *conn.get().unwrap(), model, "admin".to_string())
-                        .expect("TODO: panic message");
-                    println!("episode: {:?}", episode);
                 }
             });
             HttpResponse::Ok().json(EpisodeActionPostResponse {

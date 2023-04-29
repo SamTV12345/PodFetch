@@ -2,6 +2,8 @@ use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
 use utoipa::ToSchema;
+use chrono::NaiveDateTime;
+use diesel::sql_types::Timestamp;
 
 // decode request data
 #[derive(Deserialize)]
@@ -48,8 +50,8 @@ pub struct PodcastHistoryItem {
     pub episode_id: String,
     #[diesel(sql_type = Integer)]
     pub watched_time: i32,
-    #[diesel(sql_type = Text)]
-    pub date: String,
+    #[diesel(sql_type = Timestamp)]
+    pub date: NaiveDateTime,
     #[diesel(sql_type = Text)]
     pub username: String
 }
@@ -78,7 +80,7 @@ pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub name: String,
     pub image_url: String,
     pub watched_time: i32,
-    pub date: String,
+    pub date: NaiveDateTime,
     pub total_time: i32,
     pub podcast_episode: PodcastEpisode,
     pub podcast: Podcast,

@@ -535,6 +535,13 @@ pub fn check_server_config(service1: EnvironmentService) {
         }
     }
 
+    if service1.gpodder_integration_enabled{
+        if !(service1.http_basic || service1.oidc_configured){
+            log::error!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
+            exit(1);
+        }
+    }
+
     if service1.http_basic && service1.oidc_configured{
         log::error!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
     }
