@@ -38,7 +38,6 @@ ADD src ./src
 ADD db ./db
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
-
 FROM talk.schwanzer.online/dockerhub_proxy/library/alpine:latest
 WORKDIR /app/
 RUN apk add libgcc tzdata
