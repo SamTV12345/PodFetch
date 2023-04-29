@@ -33,6 +33,8 @@ use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
+use actix_web::guard::Header;
+use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
@@ -145,7 +147,6 @@ pub fn extract_basic_auth(auth: &str) -> (String, String) {
     let password = auth[1];
     (username.to_string(), password.to_string())
 }
-
 
 async fn validate_oidc_token(mut rq: ServiceRequest, bearer: BearerAuth, mut jwk_service: JWKService, pool: Pool<ConnectionManager<SqliteConnection>>)
                              ->Result<ServiceRequest,
@@ -395,7 +396,8 @@ pub fn get_global_scope(pool1: Pool<ConnectionManager<SqliteConnection>>) -> Sco
         .service(get_client_parametrization)
         .service(proxy_podcast)
         .service(get_ui_config())
-        .service(Files::new("/podcasts", "podcasts"))
+        .service(Files::new("/podcasts", "podcasts")
+            .disable_content_disposition())
         .service(redirect("/swagger-ui", "/swagger-ui/"))
         .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
         .service(redirect("/", "./ui/"))
