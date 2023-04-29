@@ -41,6 +41,13 @@ impl Subscription{
             deleted: None
         }
     }
+    pub fn delete_by_username(username1: &str, conn: &mut SqliteConnection) ->
+                                                                                         Result<(), Error>{
+        use crate::schema::subscriptions::dsl::*;
+        diesel::delete(subscriptions.filter(username.eq(username1)))
+            .execute(conn).expect("Error deleting subscriptions of user");
+        Ok(())
+    }
 }
 
 

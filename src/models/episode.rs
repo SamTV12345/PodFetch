@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
@@ -185,6 +186,14 @@ impl Episode{
                 podcast: found_podcast.clone(),
             }
         }).collect()
+    }
+
+    pub fn delete_by_username_and_episode(username1: String, conn: &mut SqliteConnection) ->Result<(),Error>{
+        use crate::schema::episodes::username;
+        use crate::schema::episodes::dsl::episodes;
+        diesel::delete(episodes.filter(username.eq(username1)))
+                                   .execute(conn).expect("");
+        Ok(())
     }
 }
 

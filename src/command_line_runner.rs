@@ -3,12 +3,18 @@ use std::io::{Error, ErrorKind, stdin, stdout, Write};
 use std::process::exit;
 use std::str::FromStr;
 use log::error;
-use sha256::digest;
+use sha256::{digest};
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::Role;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::utils::time::get_current_timestamp_str;
 use rpassword::read_password;
+use crate::models::device::Device;
+use crate::models::episode::Episode;
+use crate::models::favorites::Favorite;
+use crate::models::models::PodcastHistoryItem;
+use crate::models::session::Session;
+use crate::models::subscription::Subscription;
 
 
 pub fn start_command_line(mut args: Args){
@@ -55,9 +61,45 @@ pub fn start_command_line(mut args: Args){
                     println!("{}", username);
                     match available_users.iter().find(|u|u.username==username){
                         Some(..)=>{
-                            User::delete_by_username(trim_string(username),
+                            PodcastHistoryItem::delete_by_username(trim_string(username.clone()),
+                                                                   &mut establish_connection())
+                                .expect("Error deleting entries for podcast history item");
+                            Device::delete_by_username(username.clone(), &mut
+                                establish_connection())
+                                .expect("Error deleting devices");
+                            Episode::delete_by_username_and_episode(trim_string(username.clone()),
+                                                                    &mut establish_connection())
+                                .expect("Error deleting episodes");
+                            Favorite::delete_by_username(trim_string(username.clone()),
+                                                         &mut establish_connection())
+                                .expect("Error deleting favorites");
+                            Session::delete_by_username(&trim_string(username.clone()),
+                                                        &mut establish_connection())
+                                .expect("Error deleting sessions");
+                            Subscription::delete_by_username(&trim_string(username.clone()),
+                                                             &mut establish_connection()).expect("TODO: panic message");
+                            User::delete_by_username(trim_string(username.clone()),
                                                      &mut establish_connection())
                                 .expect("Error deleting user");
+                        println!("User deleted")
+                        },
+                        None=>{
+                            println!("Username not found")
+                        }
+                    }
+                }
+                "update"=>{
+                    //update a user
+                    list_users();
+                    let mut username = String::new();
+
+                    retry_read("Please enter the username of the user you want to delete",
+                               &mut username);
+                    username = trim_string(username);
+                    println!(">{}<", username);
+                    match User::find_by_username(username.as_str(), &mut establish_connection()){
+                        Some(user)=>{
+                            do_user_update(user)
                         },
                         None=>{
                             println!("Username not found")
@@ -119,9 +161,9 @@ pub fn read_user_account()->User{
 
     let user = User{
         id: 0,
-        username: username.trim_end_matches("\n").parse().unwrap(),
+        username: trim_string(username.clone()),
         role: assigned_role.to_string(),
-        password: Some(password.trim_end_matches("\n").parse().unwrap()),
+        password: Some(trim_string(password)),
         explicit_consent: false,
         created_at: get_current_timestamp_str(),
     };
@@ -148,15 +190,15 @@ pub fn retry_read(prompt: &str, input: &mut String){
 pub fn retry_read_secret(prompt: &str)->String{
     println!("{}",prompt);
     stdout().flush().unwrap();
-    let mut input = read_password().unwrap();
+    let input = read_password().unwrap();
     match  input.len()>0{
         true => {
             if input.trim().len()==0{
-                retry_read(prompt, &mut input);
+                retry_read_secret(prompt);
             }
         }
         false => {
-            retry_read(prompt, &mut input);
+            retry_read_secret(prompt);
         }
     }
     input
@@ -166,7 +208,7 @@ pub fn retry_read_role(prompt: &str)->Role{
     let mut input = String::new();
     println!("{}",prompt);
     stdin().read_line(&mut input).unwrap();
-    let res = Role::from_str(input.as_str().trim_end_matches("\n"));
+    let res = Role::from_str(&trim_string(input));
     match res{
         Err(..)=> {
             println!("Error setting role. Please choose one of the possible roles.");
@@ -190,5 +232,42 @@ fn ask_for_confirmation()->Result<(),Error>{
 
 
 fn trim_string(string_to_trim: String)->String{
-    string_to_trim.trim_end_matches("\n").parse().unwrap()
+    string_to_trim.trim_end_matches("\n").trim().parse().unwrap()
+}
+
+
+fn do_user_update(mut user:User){
+    let mut input = String::new();
+    println!("The following settings of a user should be updated: {:?}",user);
+    println!("Enter which field of a user should be updated [role, password, \
+    explicit_consent]");
+    stdin().read_line(&mut input)
+        .expect("Error reading from terminal");
+    input = trim_string(input);
+    match input.as_str() {
+        "role" =>{
+            user.role = Role::to_string(&retry_read_role("Enter the new role [user,admin]"));
+            User::update_user(user, &mut establish_connection())
+                .expect("Error updating role");
+            println!("Role updated");
+        },
+        "password"=>{
+            let mut password = retry_read_secret("Enter the new username");
+            password = digest(password);
+            user.password = Some(password);
+            User::update_user(user, &mut establish_connection())
+                .expect("Error updating username");
+            println!("Password updated");
+        },
+        "explicit_consent"=>{
+            user.explicit_consent = !user.explicit_consent;
+            User::update_user(user, &mut establish_connection())
+                .expect("Error updating explicit_consent");
+            println!("Explicit consent updated");
+        }
+        _=>{
+            println!("Field not found");
+        }
+    }
+
 }

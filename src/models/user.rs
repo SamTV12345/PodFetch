@@ -2,7 +2,7 @@ use std::io::Error;
 use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable};
-use diesel::{OptionalExtension, RunQueryDsl, SqliteConnection};
+use diesel::{OptionalExtension, RunQueryDsl, SqliteConnection, AsChangeset};
 use diesel::associations::HasTable;
 use utoipa::ToSchema;
 use crate::schema::users;
@@ -11,7 +11,8 @@ use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug,
+AsChangeset)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
@@ -187,6 +188,14 @@ impl User{
         use crate::schema::users::dsl::*;
         diesel::delete(users.filter(username.eq(username_to_search))).execute(conn)
             .expect("Error deleting user");
+        Ok(())
+    }
+
+    pub fn update_user(user: User, conn: &mut SqliteConnection)->Result<(), Error>{
+        use crate::schema::users::dsl::*;
+        diesel::update(users.filter(id.eq(user.clone().id)))
+            .set(user).execute(conn)
+            .expect("Error updating user");
         Ok(())
     }
 }

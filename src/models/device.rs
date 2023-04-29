@@ -59,4 +59,9 @@ impl Device {
             subscriptions: 0
         }
     }
+    pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<usize,
+        diesel::result::Error> {
+        use crate::schema::devices::dsl::*;
+        diesel::delete(devices.filter(username.eq(username1))).execute(conn)
+    }
 }

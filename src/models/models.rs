@@ -56,6 +56,16 @@ pub struct PodcastHistoryItem {
     pub username: String
 }
 
+impl PodcastHistoryItem{
+    pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<(),
+        diesel::result::Error>{
+        use crate::schema::podcast_history_items::dsl::*;
+        diesel::delete(podcast_history_items.filter(username.eq(username1)))
+            .execute(conn)?;
+        Ok(())
+    }
+}
+
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModel {

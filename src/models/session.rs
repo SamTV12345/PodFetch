@@ -41,4 +41,11 @@ impl Session{
             .filter(sessions::session_id.eq(session_id))
             .get_result(conn)
     }
+
+    pub fn delete_by_username(username1: &str, conn: &mut diesel::SqliteConnection) ->
+                                                                                    Result<usize, diesel::result::Error>{
+        diesel::delete(sessions::table
+            .filter(sessions::username.eq(username1)))
+            .execute(conn)
+    }
 }

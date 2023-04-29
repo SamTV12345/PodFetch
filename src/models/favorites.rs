@@ -12,3 +12,12 @@ pub struct Favorite{
     pub podcast_id: i32,
     pub favored: bool
 }
+
+impl Favorite{
+    pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<(),
+        diesel::result::Error>{
+        use crate::schema::favorites::dsl::*;
+        diesel::delete(favorites.filter(username.eq(username1))).execute(conn)?;
+        Ok(())
+    }
+}
