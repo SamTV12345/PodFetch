@@ -171,7 +171,7 @@ export const PodcastInfoPage = () => {
                     <div className="text-xl">{t('rss-feed')}</div>
                     <div><a className="text-white hover:underline" href={configModel?.rssFeed} target="_blank">{configModel?.rssFeed}</a></div>
                 </div>
-                <h2 className="text-2xl text-white mt-7">Versionsinfos</h2>
+                <h2 className="text-2xl text-white mt-7">{t('version-infos')}</h2>
                 {versionInfo&&<div className="grid grid-cols-1 md:grid-cols-2 text-white gap-4">
                     <div className="text-xl">{t('version')}</div>
                     <div className="text-xl">{versionInfo.version}</div>

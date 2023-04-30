@@ -104,5 +104,6 @@
   "build-date": "Builddatum",
   "branch": "Branch",
   "os": "Betriebssystem",
-  "podcast-refreshed": "Podcast {{name}} aktualisiert"
+  "podcast-refreshed": "Podcast {{name}} aktualisiert",
+  "version-infos": "Versionsinfo"
 }
