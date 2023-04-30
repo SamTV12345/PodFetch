@@ -28,13 +28,11 @@ use std::str::FromStr;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::{Jwk};
-use log::{info, log};
+use log::{info};
 use serde_json::{from_str, Value};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use std::time::{SystemTime, UNIX_EPOCH};
-use actix_web::guard::Header;
-use actix_web::http::header;
 use actix_web::http::header::{HeaderName, HeaderValue};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
@@ -50,7 +48,7 @@ use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
-use crate::controllers::podcast_controller::{add_podcast, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, proxy_podcast};
+use crate::controllers::podcast_controller::{add_podcast, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, proxy_podcast, refresh_all_podcasts};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
@@ -426,6 +424,7 @@ fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl 
     web::scope("")
         .wrap(Condition::new(enable_basic_auth, auth))
         .wrap(Condition::new(enable_oidc_auth, oidc_auth))
+        .service(refresh_all_podcasts)
         .service(get_info)
         .service(get_timeline)
         .configure(config_secure_user_management)

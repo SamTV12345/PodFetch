@@ -101,5 +101,7 @@
   "ci-build": "CI build",
   "build-date": "Build date",
   "branch": "Branch",
-  "os": "OS"
+  "os": "OS",
+  "podcast-refreshed": "Podcast {{name}} refreshed."
+
 }

@@ -11,6 +11,9 @@ export interface PodcastAdded extends BroadcastMesage {
     podcast: Podcast
 }
 
+export interface PodcastRefreshed extends BroadcastMesage {
+    podcast: Podcast
+}
 export interface PodcastEpisodeAdded extends BroadcastMesage, PodcastAdded {
     podcast_episode: PodcastEpisode
 }

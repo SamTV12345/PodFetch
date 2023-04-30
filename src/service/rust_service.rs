@@ -206,7 +206,7 @@ impl PodcastService {
         log::info!("Refreshing podcast: {}", podcast.name);
         self.podcast_episode_service
             .insert_podcast_episodes(conn, podcast.clone());
-        self.schedule_episode_download(podcast, Some(lobby), conn);
+        self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn);
     }
 
     pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String) {
