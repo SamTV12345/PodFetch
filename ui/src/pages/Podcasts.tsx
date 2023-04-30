@@ -7,6 +7,7 @@ import {Card} from "../components/Card";
 import {AddPodcast} from "../components/AddPodcast";
 import {setModalOpen} from "../store/ModalSlice";
 import {useLocation} from "react-router-dom";
+import {RefreshIcon} from "../components/RefreshIcon";
 
 
 interface PodcastsProps {
@@ -17,6 +18,10 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
     const podcasts = useAppSelector(state=>state.common.podcasts)
     const dispatch = useAppDispatch()
     let location = useLocation();
+
+    const refreshAllPodcasts = ()=>{
+        axios.post(apiURL+"/podcast/all")
+    }
 
     useEffect(()=>{
         let url = apiURL+"/podcasts"
@@ -33,6 +38,9 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
         <AddPodcast/>
         <div className="flex flex-1">
             <div className="flex-1"></div>
+            <RefreshIcon onClick={()=>{
+                refreshAllPodcasts()
+            }}/>
         <button className="fa fa-plus bg-blue-900 text-white p-3" onClick={()=>{
             dispatch(setModalOpen(true))
         }}></button>

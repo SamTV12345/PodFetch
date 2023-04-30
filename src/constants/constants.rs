@@ -10,6 +10,7 @@ pub enum PodcastType {
     AddPodcast,
     AddPodcastEpisode,
     AddPodcastEpisodes,
+    RefreshPodcast
 }
 
 pub const DEFAULT_SETTINGS: Setting = Setting {

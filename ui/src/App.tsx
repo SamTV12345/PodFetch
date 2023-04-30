@@ -6,7 +6,7 @@ import axios, {AxiosResponse} from "axios";
 import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
 import {addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes} from "./store/CommonSlice";
-import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded} from "./utils/MessageIdentifier";
+import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded, checkIfPodcastRefreshed} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
 import {
@@ -22,7 +22,6 @@ import {LoginComponent} from "./components/LoginComponent";
 import {enqueueSnackbar} from "notistack";
 import {useTranslation} from "react-i18next";
 import {InviteComponent} from "./components/InviteComponent";
-import {Timeline} from "./pages/Timeline";
 
 
 export const router = createBrowserRouter(createRoutesFromElements(
@@ -101,6 +100,10 @@ const App: FC<PropsWithChildren> = ({children}) => {
                         })
                         dispatch(setSelectedEpisodes(podcastUpdated))
                     }
+                }
+                else if (checkIfPodcastRefreshed(parsed)){
+                    const podcast = parsed.podcast
+                    enqueueSnackbar(t('podcast-refreshed', {name: podcast.name}), {variant: "success"})
                 }
             }
 

@@ -26,13 +26,14 @@ use std::thread;
 use std::time::Duration;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
-use crate::constants::constants::{STANDARD_USER};
+use crate::constants::constants::{PodcastType, STANDARD_USER};
 use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
+use crate::models::messages::BroadcastMessage;
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -304,6 +305,26 @@ pub async fn query_for_podcast(
     let res = podcast_service.query_for_podcast(&podcast);
 
     HttpResponse::Ok().json(res)
+}
+
+#[post("/podcast/all")]
+pub async fn refresh_all_podcasts(lobby:Data<Addr<Lobby>>, podcast_service:
+Data<Mutex<PodcastService>>, conn: Data<DbPool>)->impl Responder {
+    let podcasts = DB::get_all_podcasts(&mut conn.get().unwrap());
+    thread::spawn(move || {
+    for podcast in podcasts.unwrap() {
+        podcast_service.lock().ignore_poison().refresh_podcast(podcast.clone(), lobby.clone(), &mut conn.get()
+            .unwrap());
+        lobby.clone().do_send(BroadcastMessage {
+            podcast_episode: None,
+            type_of: PodcastType::RefreshPodcast,
+            message: format!("Refreshed podcast: {}", podcast.name),
+            podcast: Option::from(podcast.clone()),
+            podcast_episodes: None,
+        });
+        }
+    });
+    HttpResponse::Ok()
 }
 
 #[utoipa::path(
