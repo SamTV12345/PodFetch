@@ -111,7 +111,8 @@ impl PodcastService {
 
         let fileservice = FileService::new();
 
-        let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),&podcast_insert.id.clone().to_string());
+        let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),
+                                                                                     &podcast_insert.id.clone().to_string());
 
         if podcast_directory_created.is_err() {
                 log::error!("Error creating podcast directory");

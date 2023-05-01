@@ -207,7 +207,7 @@ export const AddPodcast = ()=>{
                     {
                         opmlUploading&& <>
                             <div className="mt-4">
-                                {t('progress')}
+                                {t('progress')}: {progress.length}/{podcastsToUpload}
                             </div>{ podcastsToUpload>0 && progress.length>0&&<div className="mt-2 w-full rounded-full h-2.5 bg-gray-700">
 
                             <div className="bg-blue-600 h-2.5 rounded-full" style={{width:`${(progress.length/podcastsToUpload)*100}%`}}></div>
