@@ -33,6 +33,7 @@ use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
+use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
 
 #[utoipa::path(
@@ -278,7 +279,7 @@ pub async fn add_podcast_from_podindex(
 }
 
 fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection)
-    ->Result<(), PodFetchError> {
+    ->Result<Podcast, PodFetchError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let mut podcast_service = PodcastService::new();
@@ -447,33 +448,68 @@ async fn insert_outline(
 
     let content = client.get(feed_url).send().unwrap().bytes().unwrap();
 
-    let channel = Channel::read_from(&content[..]).expect("Error parsing feed");
+    let channel = Channel::read_from(&content[..]);
 
-    let mut podcast_service = PodcastService::new();
-    let mapping_service = MappingService::new();
+    match channel{
+        Ok(channel)=>{
+            let mut podcast_service = PodcastService::new();
+            let mapping_service = MappingService::new();
 
-    let image_url = match channel.image {
-        Some(image) => image.url,
-        None => {
-            println!("No image found for podcast. Downloading from {}",environment.server_url
-                .clone().to_owned() + "ui/default.jpg");
-            environment.server_url.clone().to_owned() + "ui/default.jpg"
-        },
-    };
+            let image_url = match channel.image {
+                Some(image) => image.url,
+                None => {
+                    println!("No image found for podcast. Downloading from {}",environment.server_url
+                        .clone().to_owned() + "ui/default.jpg");
+                    environment.server_url.clone().to_owned() + "ui/default.jpg"
+                },
+            };
 
-    podcast_service
-        .handle_insert_of_podcast(
-            &mut conn.get().unwrap(),
-            PodcastInsertModel {
-                feed_url: podcast.clone().xml_url.expect("No feed url"),
-                title: channel.title,
-                id: rng.gen::<i32>(),
-                image_url,
-            },
-            mapping_service,
-            lobby.clone(),
-        )
-        .await.expect("Error inserting podcast");
+            let inserted_podcast = podcast_service
+                .handle_insert_of_podcast(
+                    &mut conn.get().unwrap(),
+                    PodcastInsertModel {
+                        feed_url: podcast.clone().xml_url.expect("No feed url"),
+                        title: channel.title,
+                        id: rng.gen::<i32>(),
+                        image_url,
+                    },
+                    mapping_service,
+                    lobby.clone(),
+                )
+                .await;
+            match inserted_podcast {
+                Ok(podcast)=>{
+                    lobby.do_send(BroadcastMessage{
+                        type_of: PodcastType::OpmlAdded,
+                        message: "Refreshed podcasts".to_string(),
+                        podcast: Option::from(podcast),
+                        podcast_episodes: None,
+                        podcast_episode: None,
+                    })
+                }
+                Err(e)=>{
+                    lobby.do_send(BroadcastMessage{
+                        type_of: PodcastType::OpmlErrored,
+                        message: e.to_string(),
+                        podcast: None,
+                        podcast_episodes: None,
+                        podcast_episode: None,
+                    })
+                }
+            }
+        }
+        Err(e)=>{
+            lobby.do_send(BroadcastMessage{
+                type_of: PodcastType::OpmlErrored,
+                message: e.to_string(),
+                podcast: None,
+                podcast_episodes: None,
+                podcast_episode: None,
+            })
+        }
+    }
+
+
 }
 
 #[derive(Deserialize)]

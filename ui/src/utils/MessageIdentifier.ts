@@ -1,8 +1,7 @@
 import {
     BroadcastMesage,
     PodcastAdded,
-    PodcastEpisodeAdded,
-    PodcastEpisodesAdded, PodcastRefreshed
+    PodcastEpisodeAdded, PodcastRefreshed
 } from "../models/messages/BroadcastMesage";
 
 export const checkIfPodcastAdded = (message: BroadcastMesage): message is PodcastAdded => {
@@ -21,9 +20,19 @@ export const checkIfPodcastRefreshed = (message: BroadcastMesage): message is Po
     return message.type_of === MessageType.REFRESH_PODCAST
 }
 
+export const checkIfOpmlAdded = (message: BroadcastMesage): message is PodcastAdded => {
+    return message.type_of === MessageType.OpmlAdded
+}
+
+export const checkIfOpmlErrored = (message: BroadcastMesage): message is PodcastAdded => {
+    return message.type_of === MessageType.OpmlErrored
+}
+
 enum MessageType {
     ADD_PODCAST = "AddPodcast",
     ADD_PODCAST_EPISODE = "AddPodcastEpisode",
     ADD_PODCAST_EPISODES = "AddPodcastEpisodes",
-    REFRESH_PODCAST = "RefreshPodcast"
+    REFRESH_PODCAST = "RefreshPodcast",
+    OpmlAdded  = "OpmlAdded",
+    OpmlErrored = "OpmlErrored"
 }

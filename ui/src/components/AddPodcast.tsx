@@ -1,5 +1,5 @@
 import {Modal} from "./Modal";
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {useDebounce} from "../utils/useDebounce";
 import {apiURL} from "../utils/Utilities";
 import axios, {AxiosResponse} from "axios";
@@ -11,6 +11,7 @@ import {useTranslation} from "react-i18next";
 import {FileItem, readFile} from "../utils/FileUtils";
 import {Spinner} from "./Spinner";
 import {enqueueSnackbar} from "notistack";
+import {setInProgress} from "../store/opmlImportSlice";
 
 export const AddPodcast = ()=>{
     const [searchText, setSearchText] = useState<string>("")
@@ -24,6 +25,16 @@ export const AddPodcast = ()=>{
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [files, setFiles] = useState<FileItem[]>([])
     const [loading, setLoading] = useState<boolean>()
+    const opmlUploading = useAppSelector(state=>state.opmlImport.inProgress)
+    const progress  = useAppSelector(state => state.opmlImport.progress)
+    const  messages = useAppSelector(state=>state.opmlImport.messages)
+    const [podcastsToUpload, setPodcastsToUpload] = useState<number>(0)
+
+    useEffect(()=>{
+        if (progress.length===podcastsToUpload){
+            dispatch(setInProgress(false))
+        }
+    },[progress])
 
     type AddPostPostModel = {
         trackId: number,
@@ -46,11 +57,13 @@ export const AddPodcast = ()=>{
     }
 
     const uploadOpml = ()=>{
+        let content = files[0].content
+        const count = (content.match(/type="rss"/g) || []).length;
+        setPodcastsToUpload(count)
         axios.post(apiURL+"/podcast/opml", {
             content: files[0].content
         })
             .then((v)=>{
-
                 console.log(v)
             })
             .catch((e)=>{
@@ -127,6 +140,9 @@ export const AddPodcast = ()=>{
         })
     }
 
+    console.log("Länge: "+podcastsToUpload)
+    console.log("Progress: "+progress.length)
+    console.log((progress.length/podcastsToUpload)*100)
     return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText={t('add-podcast')!} onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
         <div>
             <ul id="podcast-add-decider" className="flex flex-wrap text-sm font-medium text-center border-b border-gray-700 text-gray-400">
@@ -183,14 +199,26 @@ export const AddPodcast = ()=>{
                         handleInputChanged(e)}
                     } /></>}
                     {
-                        files.length > 0 && <div>
+                        files.length > 0&& !opmlUploading && <div>
                             {t('following-file-uploaded')}
                             <div className="ml-4" onClick={()=>{setFiles([])}}>{files[0].name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i></div>
                         </div>
                     }
+                    {
+                        opmlUploading&& <>
+                            <div className="mt-4">
+                                {t('progress')}
+                            </div>{ podcastsToUpload>0 && progress.length>0&&<div className="mt-2 w-full rounded-full h-2.5 bg-gray-700">
+
+                            <div className="bg-blue-600 h-2.5 rounded-full" style={{width:`${(progress.length/podcastsToUpload)*100}%`}}></div>
+                        </div>}
+                        </>
+                    }
                     <div className="flex">
                         <div className="flex-1"/>
-                        <button className="bg-blue-800 p-2 disabled:bg-gray-800" disabled={files.length==0} onClick={()=>{uploadOpml()}}>Upload OPML</button>
+                        <button className="bg-blue-800 p-2 disabled:bg-gray-800" disabled={files.length==0} onClick={()=>{
+                            dispatch(setInProgress(true))
+                            uploadOpml()}}>Upload OPML</button>
                     </div>
                 </div>
             }

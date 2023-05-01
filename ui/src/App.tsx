@@ -6,7 +6,12 @@ import axios, {AxiosResponse} from "axios";
 import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
 import {addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes} from "./store/CommonSlice";
-import {checkIfPodcastAdded, checkIfPodcastEpisodeAdded, checkIfPodcastRefreshed} from "./utils/MessageIdentifier";
+import {
+    checkIfOpmlAdded, checkIfOpmlErrored,
+    checkIfPodcastAdded,
+    checkIfPodcastEpisodeAdded,
+    checkIfPodcastRefreshed
+} from "./utils/MessageIdentifier";
 import {store} from "./store/store";
 import {Root} from "./routing/Root";
 import {
@@ -22,6 +27,7 @@ import {LoginComponent} from "./components/LoginComponent";
 import {enqueueSnackbar} from "notistack";
 import {useTranslation} from "react-i18next";
 import {InviteComponent} from "./components/InviteComponent";
+import {setMessages, setProgress} from "./store/opmlImportSlice";
 
 
 export const router = createBrowserRouter(createRoutesFromElements(
@@ -104,6 +110,14 @@ const App: FC<PropsWithChildren> = ({children}) => {
                 else if (checkIfPodcastRefreshed(parsed)){
                     const podcast = parsed.podcast
                     enqueueSnackbar(t('podcast-refreshed', {name: podcast.name}), {variant: "success"})
+                }
+                else if (checkIfOpmlAdded(parsed)){
+                    dispatch(setProgress([...store.getState().opmlImport.progress,true]))
+                }
+                else if (checkIfOpmlErrored(parsed)){
+                    const podcast = parsed
+                    dispatch(setProgress([...store.getState().opmlImport.progress,false]))
+                    dispatch(setMessages([...store.getState().opmlImport.messages, podcast.message]))
                 }
             }
 
