@@ -67,7 +67,8 @@ impl PodcastService {
     }
 
     pub async fn insert_podcast_from_podindex(&mut self, conn: &mut SqliteConnection, id: i32,
-                                              lobby: Data<Addr<Lobby>>) ->Result<(), PodFetchError>{
+                                              lobby: Data<Addr<Lobby>>) ->Result<Podcast,
+        PodFetchError>{
         let mapping_service = MappingService::new();
         let resp = self
             .client
@@ -102,7 +103,7 @@ impl PodcastService {
         conn: &mut SqliteConnection,
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
-        lobby: Data<Addr<Lobby>>) ->Result<(),PodFetchError>{
+        lobby: Data<Addr<Lobby>>) ->Result<Podcast,PodFetchError>{
         let opt_podcast = DB::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone() );
         if opt_podcast.is_some() {
             return Err(PodFetchError::podcast_already_exists())
@@ -110,7 +111,8 @@ impl PodcastService {
 
         let fileservice = FileService::new();
 
-        let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),&podcast_insert.id.clone().to_string());
+        let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),
+                                                                                     &podcast_insert.id.clone().to_string());
 
         if podcast_directory_created.is_err() {
                 log::error!("Error creating podcast directory");
@@ -165,7 +167,7 @@ impl PodcastService {
                 })
                 .await
                 .unwrap();
-                Ok(())
+                Ok(inserted_podcast)
             }
             None => {
                 panic!("No podcast found")

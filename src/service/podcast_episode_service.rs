@@ -149,38 +149,48 @@ impl PodcastEpisodeService {
 
             match itunes_ext {
                 Some(itunes_ext) => {
-                    let result =
-                        DB::get_podcast_episode_by_url(conn, &item.enclosure().unwrap().url
-                            .to_string());
-                    let mut duration_episode = 0;
+                    let enclosure = item.enclosure();
+                    match enclosure {
+                        Some(enclosure)=>{
+                            let result =
+                                DB::get_podcast_episode_by_url(conn, &enclosure.url
+                                    .to_string());
+                            let mut duration_episode = 0;
 
-                    if result.unwrap().is_none() {
-                        // Insert new podcast episode
-                        match itunes_ext.clone().duration {
-                            Some(duration) => {
-                                duration_episode = Self::parse_duration(&duration);
+                            if result.unwrap().is_none() {
+                                // Insert new podcast episode
+                                match itunes_ext.clone().duration {
+                                    Some(duration) => {
+                                        duration_episode = Self::parse_duration(&duration);
+                                    }
+                                    None => {}
+                                }
+
+                                let inserted_episode = DB::insert_podcast_episodes(conn,
+                                                                                   podcast.clone(),
+                                                                                   item.clone(),
+                                                                                   itunes_ext.image,
+                                                                                   duration_episode as i32,
+                                );
+                                podcast_inserted.push(inserted_episode);
                             }
-                            None => {}
                         }
-
-                        let inserted_episode = DB::insert_podcast_episodes(conn,
-                            podcast.clone(),
-                            item.clone(),
-                            itunes_ext.image,
-                            duration_episode as i32,
-                        );
-                        podcast_inserted.push(inserted_episode);
+                        None => {
+                            log::info!("Skipping episode {} without enclosure.", item.clone().title
+                                .unwrap_or("with no title".to_string()));
+                            continue;
+                        }
                     }
+
                 }
                 None => {
+                    let opt_enclosure = &item.enclosure;
+                    if opt_enclosure.is_none() {
+                        log::info!("Skipping episode {} without enclosure.", item.clone().title.unwrap_or("with no title".to_string()));
+                        continue;
+                    }
                     let result = DB::get_podcast_episode_by_url(
-                        conn,
-                        &item
-                            .enclosure()
-                            .expect("A podcast episode needs to have a podcast url")
-                            .url
-                            .to_string(),
-                    );
+                        conn, &opt_enclosure.clone().unwrap().url);
                     // We can't retrieve the duration of the podcast episode, so we set it to 0
 
                     if result.unwrap().is_none() {

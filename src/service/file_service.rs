@@ -51,7 +51,7 @@ impl FileService {
         let escaped_title = prepare_podcast_title_to_directory(podcast_title);
         if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
             std::fs::create_dir(&format!("podcasts/{}", escaped_title))
-                .expect("Error creating directory");
+                .expect(&*("Error creating directory when inserting ".to_owned() + &escaped_title));
             Ok(format!("podcasts/{}", escaped_title))
         }
         else{
@@ -105,7 +105,7 @@ impl FileService {
 
 
 pub fn prepare_podcast_title_to_directory(title: &str) ->String {
-    let re = Regex::new(r"[^a-zA-Z0-9_./]").unwrap();
+    let re = Regex::new(r"[^a-zA-Z0-9_]").unwrap();
     let res = re.replace_all(title, "").to_string();
     res.replace("..","")
 }

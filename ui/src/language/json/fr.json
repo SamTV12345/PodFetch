@@ -103,5 +103,6 @@
   "branch": "Branche",
   "os": "OS",
   "podcast-refreshed": "Podcast {{name}} rafraîchi",
-  "version-infos": "Info sur la version"
+  "version-infos": "Info sur la version",
+  "progress": "Progression"
 }

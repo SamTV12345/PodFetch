@@ -10,3 +10,11 @@ pub fn get_current_timestamp()->i64{
 pub fn get_current_timestamp_str()->NaiveDateTime{
     Utc::now().naive_utc()
 }
+
+
+pub fn opt_or_empty_string(opt: Option<String>) -> String {
+    match opt {
+        Some(s) => s,
+        None => "".to_string(),
+    }
+}
