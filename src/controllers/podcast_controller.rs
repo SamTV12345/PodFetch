@@ -553,15 +553,19 @@ pub(crate) async fn proxy_podcast(
 
     let res = forwarded_req
         .send_stream(payload)
-        .await
-        .unwrap();
+        .await;
 
-    let mut client_resp = HttpResponse::build(res.status());
+    if res.is_err() {
+        return HttpResponse::InternalServerError().json("Error proxying podcast");
+    }
+
+    let unwrapped_res = res.unwrap();
+    let mut client_resp = HttpResponse::build(unwrapped_res.status());
     // Remove `Connection` as per
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
-    for (header_name, header_value) in res.headers().iter().filter(|(h, _)| *h != "connection") {
+    for (header_name, header_value) in unwrapped_res.headers().iter().filter(|(h, _)| *h != "connection") {
         client_resp.insert_header((header_name.clone(), header_value.clone()));
     }
 
-    client_resp.streaming(res)
+    client_resp.streaming(unwrapped_res)
 }

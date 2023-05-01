@@ -20,6 +20,7 @@ use diesel::sql_types::{Text, Timestamp};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
 use crate::utils::do_retry::do_retry;
+use crate::utils::time::opt_or_empty_string;
 
 pub struct DB {
     conn: SqliteConnection,
@@ -202,7 +203,7 @@ impl DB {
                 url.eq(item.enclosure.unwrap().url),
                 date_of_recording.eq(inserted_date),
                 image_url.eq(inserted_image_url),
-                description.eq(item.description.unwrap()),
+                description.eq(opt_or_empty_string(item.description)),
             ))
             .get_result::<PodcastEpisode>(conn)
             .expect("Error inserting podcast episode");
