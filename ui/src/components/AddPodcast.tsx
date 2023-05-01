@@ -199,7 +199,7 @@ export const AddPodcast = ()=>{
                         handleInputChanged(e)}
                     } /></>}
                     {
-                        files.length > 0&& !opmlUploading && <div>
+                        files.length > 0&& !opmlUploading && files.length===0 && <div>
                             {t('following-file-uploaded')}
                             <div className="ml-4" onClick={()=>{setFiles([])}}>{files[0].name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i></div>
                         </div>
@@ -211,9 +211,18 @@ export const AddPodcast = ()=>{
                             </div>{ podcastsToUpload>0 && progress.length>0&&<div className="mt-2 w-full rounded-full h-2.5 bg-gray-700">
 
                             <div className="bg-blue-600 h-2.5 rounded-full" style={{width:`${(progress.length/podcastsToUpload)*100}%`}}></div>
-                        </div>}
+                                {
+                                    !opmlUploading && <div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} className="w-6 h-6 text-slate-800">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </div>
+                                }
+                        </div>
+                            }
                         </>
                     }
+
                     <div className="flex">
                         <div className="flex-1"/>
                         <button className="bg-blue-800 p-2 disabled:bg-gray-800" disabled={files.length==0} onClick={()=>{

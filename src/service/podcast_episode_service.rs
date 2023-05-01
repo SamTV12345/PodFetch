@@ -184,14 +184,13 @@ impl PodcastEpisodeService {
 
                 }
                 None => {
+                    let opt_enclosure = &item.enclosure;
+                    if opt_enclosure.is_none() {
+                        log::info!("Skipping episode {} without enclosure.", item.clone().title.unwrap_or("with no title".to_string()));
+                        continue;
+                    }
                     let result = DB::get_podcast_episode_by_url(
-                        conn,
-                        &item
-                            .enclosure()
-                            .expect("A podcast episode needs to have a podcast url")
-                            .url
-                            .to_string(),
-                    );
+                        conn, &opt_enclosure.clone().unwrap().url);
                     // We can't retrieve the duration of the podcast episode, so we set it to 0
 
                     if result.unwrap().is_none() {
