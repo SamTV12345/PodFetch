@@ -16,3 +16,4 @@ pub mod subscription;
 pub mod subscription_changes_from_client;
 pub mod device_subscription;
 pub mod episode;
+pub mod podcast_rssadd_model;

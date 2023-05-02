@@ -104,5 +104,8 @@
   "os": "OS",
   "podcast-refreshed": "Podcast {{name}} refreshed.",
   "version-infos": "Version Info",
-  "progress": "Progress"
+  "progress": "Progress",
+  "opml-file": "OPML file",
+  "rss-feed-url": "RSS feed URL",
+  "upload-opml-file": "Upload OPML file"
 }

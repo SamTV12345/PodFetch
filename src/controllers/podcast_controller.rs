@@ -35,6 +35,7 @@ use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
 use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
+use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -187,6 +188,50 @@ pub async fn add_podcast(
             return HttpResponse::BadRequest().json(e.to_string()).into();
         }
     }.into();
+}
+
+#[post("/podcast/feed")]
+pub async fn add_podcast_by_feed(
+    rss_feed: web::Json<PodcastRSSAddModel>,
+    lobby: Data<Addr<Lobby>>,
+    podcast_service: Data<Mutex<PodcastService>>,
+    conn: Data<DbPool>, rq: HttpRequest) -> impl Responder {
+    let mut podcast_service = podcast_service
+        .lock()
+        .ignore_poison();
+    return match User::get_username_from_req_header(&rq) {
+        Ok(username) => {
+            match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()) {
+                Some(err) => {
+                    return err;
+                }
+                None => {
+                    let client = AsyncClientBuilder::new().build().unwrap();
+                    let result = client.get(rss_feed.clone().rss_feed_url).send().await.unwrap();
+                    let bytes = result.bytes().await.unwrap();
+                    let channel = Channel::read_from(&*bytes).unwrap();
+                    let num = rand::thread_rng().gen_range(100..10000000);
+
+                    let res = podcast_service.handle_insert_of_podcast(
+                        &mut conn.get().unwrap(),
+                        PodcastInsertModel {
+                            feed_url: rss_feed.clone().rss_feed_url.clone(),
+                            title: channel.title.clone(),
+                            id: num,
+                            image_url: channel.image.map(|i| i.url).unwrap_or("".to_string()),
+                        },
+                        MappingService::new(),
+                        lobby,
+                    ).await.expect("Error handling insert of podcast");
+
+                    HttpResponse::Ok().json(res)
+                }
+            }
+        }
+        Err(e) => {
+            return HttpResponse::BadRequest().json(e.to_string()).into();
+        }
+    }.into()
 }
 
 #[utoipa::path(
