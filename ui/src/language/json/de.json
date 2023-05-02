@@ -106,5 +106,7 @@
   "os": "Betriebssystem",
   "podcast-refreshed": "Podcast {{name}} aktualisiert",
   "version-infos": "Versionsinfo",
-  "progress": "Fortschritt"
+  "progress": "Fortschritt",
+  "opml-file": "OPML-Datei",
+  "rss-feed-url": "RSS Feed URL"
 }
