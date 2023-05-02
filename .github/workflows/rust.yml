@@ -68,7 +68,7 @@ jobs:
       - name: Copy to root
         run: cp target/release/podfetch.exe .
       - name: Zip
-        run: Compress-Archive -Path podfetch.exe,db,static,migrations,LICENSE,README.md -DestinationPath podfetch-win.zip build.rs
+        run: Compress-Archive -Path podfetch.exe,db,static,migrations,LICENSE,README.md,build.rs -DestinationPath podfetch-win.zip
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
