@@ -16,9 +16,6 @@ export const AddPodcast = ()=>{
     const [selectedSearchType, setSelectedSearchType] = useState<AddTypes>(AddTypes.ITUNES)
     const configModel = useAppSelector(state=>state.common.configModel)
 
-
-
-
     return <Modal onCancel={()=>{}} onAccept={()=>{}} headerText={t('add-podcast')!} onDelete={()=>{}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"} >
         <div>
             <AddHeader selectedSearchType={selectedSearchType} setSelectedSearchType={setSelectedSearchType} configModel={configModel}/>

@@ -106,5 +106,6 @@
   "version-infos": "Version Info",
   "progress": "Progress",
   "opml-file": "OPML file",
-  "rss-feed-url": "RSS feed URL"
+  "rss-feed-url": "RSS feed URL",
+  "upload-opml-file": "Upload OPML file"
 }

@@ -132,7 +132,7 @@ export const OpmlAdd:FC<OpmlAddProps> = ({})=>{
             <div className="flex-1"/>
             <button className="bg-blue-800 p-2 disabled:bg-gray-800" disabled={files.length==0} onClick={()=>{
                 dispatch(setInProgress(true))
-                uploadOpml()}}>Upload OPML</button>
+                uploadOpml()}}>{t('upload-opml')}</button>
         </div>
     </div>
 }
