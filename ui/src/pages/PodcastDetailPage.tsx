@@ -125,7 +125,7 @@ export const PodcastDetailPage = () => {
             <div>
                 {
                     selectedEpisodes.map((episode, index) => {
-                        return <PodcastDetailItem episode={episode} key={index} index={index}/>
+                        return <PodcastDetailItem episode={episode} key={index} index={index} episodesLength={selectedEpisodes.length}/>
                     })
                 }
             </div>

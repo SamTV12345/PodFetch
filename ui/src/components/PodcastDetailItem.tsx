@@ -7,17 +7,23 @@ import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/
 import {CloudIcon} from "./CloudIcon";
 import {InfoIcon} from "./InfoIcon";
 import {
+    addPodcastEpisodes,
     PodcastEpisode,
     setInfoModalPodcast,
-    setInfoModalPodcastOpen} from "../store/CommonSlice";
+    setInfoModalPodcastOpen}
+    from "../store/CommonSlice";
 import {FC} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
+import {Waypoint} from "react-waypoint";
+import {useParams} from "react-router-dom";
 
 type PodcastDetailItemProps = {
     episode: PodcastEpisode,
-    index: number
+    index: number,
+    episodesLength: number
 }
-export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode}) => {
+export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,episodesLength}) => {
+    const params = useParams()
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
     const currentPodcastEpisode = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
     const dispatch = useAppDispatch()
@@ -64,6 +70,15 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode}) => {
                 dispatch(setInfoModalPodcast(episode))
                 dispatch(setInfoModalPodcastOpen(true))
             }}/></div></div>
+            {
+                index===episodesLength-5&&<Waypoint key={index+"waypoint"} onEnter={()=>{
+                    axios.get(apiURL+"/podcast/"+params.id+"/episodes?last_podcast_episode="+episode.date_of_recording)
+                        .then((response)=>{
+                            dispatch(addPodcastEpisodes(response.data))
+                        })
+                }
+                }/>
+            }
         </div>
     </>
 }
