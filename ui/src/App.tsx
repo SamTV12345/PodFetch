@@ -16,7 +16,7 @@ import {store} from "./store/store";
 import {Root} from "./routing/Root";
 import {
     AdministrationUserViewLazyLoad,
-    AdministrationViewLazyLoad, InviteAdministrationUserViewLazyLoad,
+    AdministrationViewLazyLoad, InviteAdministrationUserViewLazyLoad, MobileSearchViewLazyLoad,
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
@@ -38,6 +38,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route index element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
+                <Route path={"search"} element={<Suspense><MobileSearchViewLazyLoad/></Suspense>}/>
             </Route>
             <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad/></Suspense>}/>
             <Route path={"favorites"}>

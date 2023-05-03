@@ -31,3 +31,6 @@ export const InviteAdministrationUserViewLazyLoad = lazy(()=>import('../pages/In
 export const TimeLineViewLazyLoad = lazy(()=>import('../pages/Timeline').then(module=> {
     return{default:module["Timeline"]}
 }))
+export const MobileSearchViewLazyLoad = lazy(()=>import('../pages/MobileSearchPage').then(module=> {
+    return{default:module["MobileSearchPage"]}
+}))

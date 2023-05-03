@@ -107,5 +107,7 @@
   "progress": "Progress",
   "opml-file": "OPML file",
   "rss-feed-url": "RSS feed URL",
-  "upload-opml-file": "Upload OPML file"
+  "upload-opml-file": "Upload OPML file",
+  "search-podcasts": "Search podcasts",
+  "no-data-found": "No data found"
 }

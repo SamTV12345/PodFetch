@@ -168,3 +168,13 @@
     position: absolute;
     bottom: 10%;
 }
+
+.display-only-mobile{
+    @apply hidden;
+}
+
+@media (pointer: coarse) {
+    .display-only-mobile{
+        @apply block;
+    }
+}

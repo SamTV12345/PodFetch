@@ -17,6 +17,7 @@ export const SideBar  = ()=>{
                 <SideBarItem highlightPath={"timeline"} translationkey={t('timeline')} icon={<i className="fa-solid fa-timeline fa-xl"/> }/>
                 <SideBarItem highlightPath={"info"} translationkey={t('info')} icon={<i className="fa-solid fa-info-circle fa-xl"></i>}/>
                 <SideBarItem highlightPath={"settings"} translationkey={t('settings')} icon={<i className="fa-solid fa-wrench fa-xl"/> }/>
+                {<div className="display-only-mobile"><SideBarItem highlightPath={"/podcasts/search"} translationkey={t('search-podcasts')} icon={<i className="fa-solid fa-search" />}/></div>}
                 {(config?.oidcConfig|| config?.basicAuth)&&<SideBarItem highlightPath={"administration"} translationkey={t('administration')} icon={<i className="fa-solid fa-gavel fa-xl"/> }/>}
             </ul>
         </div>
