@@ -37,6 +37,32 @@ use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PodcastSearchModel{
+    order: Option<bool>,
+    title: Option<String>,
+    latest_pub: Option<bool>
+}
+
+#[get("/podcasts/search")]
+pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
+                             podcast_service: Data<Mutex<PodcastService>>,
+                             mapping_service:Data<Mutex<MappingService>>)
+    ->impl Responder{
+    let query = query.into_inner();
+    let order = query.order.unwrap_or(false);
+    let latest_pub = query.latest_pub.unwrap_or(false);
+    let podcasts = podcast_service.lock().ignore_poison().search_podcasts( order, query.title,
+                                                                           latest_pub,
+                                                                           mapping_service.lock()
+                                                                               .ignore_poison(),
+                                                                           &mut conn.get().unwrap()).unwrap();
+    HttpResponse::Ok().json(podcasts)
+}
+
+
+
 #[utoipa::path(
 context_path="/api/v1",
 responses(

@@ -817,4 +817,48 @@ impl DB {
             .first::<Podcast>(conn)
             .expect("Error loading podcast by rss feed")
     }
+
+    pub fn search_podcasts(conn: &mut SqliteConnection, order_desc: bool, title: Option<String>,
+                           latest_pub: bool) ->Vec<Podcast>{
+        let returned_podcasts: Vec<Podcast>;
+        if latest_pub && title.is_none() && !order_desc {
+            returned_podcasts = sql_query("SELECT * FROM podcasts,podcast_episodes WHERE podcasts.id=podcast_episodes.podcast_id GROUP BY podcasts.id ORDER BY podcast_episodes.date_of_recording DESC")
+                .load::<Podcast>(conn)
+                .expect("Error loading podcasts");
+        } else if latest_pub && title.is_some() && !order_desc {
+            returned_podcasts = sql_query("SELECT * FROM podcasts,podcast_episodes WHERE podcasts\
+            .id=podcast_episodes.podcast_id AND podcasts.name LIKE CONCAT('%',?,'%') GROUP BY \
+            podcasts.id ORDER BY podcast_episodes.date_of_recording DESC")
+                .bind::<Text,_>(title.unwrap())
+                .load::<Podcast>(conn)
+                .expect("Error loading podcasts");
+        }
+        else if latest_pub && title.is_none() && order_desc {
+            returned_podcasts = sql_query("SELECT * FROM podcasts,podcast_episodes WHERE podcasts\
+            .id=podcast_episodes.podcast_id GROUP BY podcasts.id ORDER BY podcast_episodes\
+            .date_of_recording,podcasts.name DESC")
+                .load::<Podcast>(conn)
+                .expect("Error loading podcasts");
+        }
+        else if !latest_pub && title.is_none() && !order_desc {
+            returned_podcasts = sql_query("SELECT * FROM podcasts ORDER BY podcasts.name")
+                .load::<Podcast>(conn)
+                .expect("Error loading podcasts");
+        }
+        else if !latest_pub && title.is_none() && order_desc {
+            returned_podcasts = sql_query("SELECT * FROM podcasts ORDER BY podcasts.name DESC")
+                .load::<Podcast>(conn)
+                .expect("Error loading podcasts");
+        }
+        else{
+            // only left possibility 010
+            returned_podcasts = sql_query("SELECT * FROM podcasts WHERE podcasts.name LIKE CONCAT\
+            ('%',?,'%') ORDER BY podcasts.name ASC")
+                .bind::<Text, _>(title.unwrap())
+                .load::<Podcast>(conn)
+                .expect("Error loading podcasts");
+        }
+
+        returned_podcasts
+    }
 }
