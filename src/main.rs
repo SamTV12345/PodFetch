@@ -284,7 +284,11 @@ async fn main() -> std::io::Result<()> {
     let chat_server = lobby.start();
 
     let mut connection = establish_connection();
-    connection.run_pending_migrations(MIGRATIONS).unwrap();
+    let res_migration = connection.run_pending_migrations(MIGRATIONS);
+
+    if res_migration.is_err(){
+        panic!("Could not run migrations: {}",res_migration.err().unwrap());
+    }
 
     EnvironmentService::print_banner();
     init_logging();

@@ -1,5 +1,8 @@
 -- Your SQL goes here
-PRAGMA foreign_keys = 0;
+PRAGMA foreign_keys = off;
+PRAGMA defer_foreign_keys=on;
+PRAGMA ignore_check_constraints=on;
+
 create table podcasts2
 (
     id                 integer                   not null primary key,
@@ -23,4 +26,6 @@ INSERT INTO podcasts2 SELECT * FROM podcasts;
 DROP TABLE podcasts;
 ALTER TABLE podcasts2 RENAME TO podcasts;
 
-PRAGMA foreign_keys = 1;
+PRAGMA foreign_keys=on;
+PRAGMA defer_foreign_keys=off;
+PRAGMA ignore_check_constraints=off;
