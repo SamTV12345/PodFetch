@@ -822,7 +822,13 @@ impl DB {
                            latest_pub: bool) ->Vec<Podcast>{
         let returned_podcasts: Vec<Podcast>;
         if latest_pub && title.is_none() && !order_desc {
-            returned_podcasts = sql_query("SELECT * FROM podcasts,podcast_episodes WHERE podcasts.id=podcast_episodes.podcast_id GROUP BY podcasts.id ORDER BY podcast_episodes.date_of_recording DESC")
+            returned_podcasts = sql_query(r"
+                SELECT   *
+                FROM     podcasts, podcast_episodes
+                WHERE    podcasts.id = podcast_episodes.podcast_id
+                GROUP BY podcasts.id
+                ORDER BY MAX(podcast_episodes.date_of_recording) DESC
+                ")
                 .load::<Podcast>(conn)
                 .expect("Error loading podcasts");
         } else if latest_pub && title.is_some() && !order_desc {
@@ -838,26 +844,42 @@ impl DB {
                 .expect("Error loading podcasts");
         }
         else if latest_pub && title.is_none() && order_desc {
-            returned_podcasts = sql_query("SELECT * FROM podcasts,podcast_episodes WHERE podcasts\
-            .id=podcast_episodes.podcast_id GROUP BY podcasts.id ORDER BY podcast_episodes\
-            .date_of_recording,podcasts.name DESC")
+            returned_podcasts = sql_query(r"
+                SELECT   *
+                FROM     podcasts, podcast_episodes
+                WHERE    podcasts.id = podcast_episodes.podcast_id
+                GROUP BY podcasts.id
+                ORDER BY MAX(podcast_episodes.date_of_recording), podcasts.name DESC
+                ")
                 .load::<Podcast>(conn)
                 .expect("Error loading podcasts");
         }
         else if !latest_pub && title.is_none() && !order_desc {
-            returned_podcasts = sql_query("SELECT * FROM podcasts ORDER BY podcasts.name")
+            returned_podcasts = sql_query(r"
+                SELECT   *
+                FROM     podcasts
+                ORDER BY podcasts.name
+                ")
                 .load::<Podcast>(conn)
                 .expect("Error loading podcasts");
         }
         else if !latest_pub && title.is_none() && order_desc {
-            returned_podcasts = sql_query("SELECT * FROM podcasts ORDER BY podcasts.name DESC")
+            returned_podcasts = sql_query(r"
+                SELECT   *
+                FROM     podcasts
+                ORDER BY podcasts.name DESC
+                ")
                 .load::<Podcast>(conn)
                 .expect("Error loading podcasts");
         }
         else{
             // only left possibility 010
-            returned_podcasts = sql_query("SELECT * FROM podcasts WHERE podcasts.name LIKE CONCAT\
-            ('%',?,'%') ORDER BY podcasts.name ASC")
+            returned_podcasts = sql_query(r"
+                SELECT   *
+                FROM     podcasts
+                WHERE    LOWER(podcasts.name) LIKE '%' || LOWER(?)  ||'%' 
+                ORDER BY podcasts.name ASC
+                ")
                 .bind::<Text, _>(title.unwrap())
                 .load::<Podcast>(conn)
                 .expect("Error loading podcasts");
