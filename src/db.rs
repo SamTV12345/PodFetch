@@ -826,9 +826,6 @@ impl DB {
                 .load::<Podcast>(conn)
                 .expect("Error loading podcasts");
         } else if latest_pub && title.is_some() && !order_desc {
-
-            println!("Foo!!!");
-
             returned_podcasts = sql_query(r"
                 SELECT   *
                 FROM     podcasts, podcast_episodes
