@@ -827,8 +827,8 @@ impl DB {
                 .expect("Error loading podcasts");
         } else if latest_pub && title.is_some() && !order_desc {
             returned_podcasts = sql_query("SELECT * FROM podcasts,podcast_episodes WHERE podcasts\
-            .id=podcast_episodes.podcast_id AND podcasts.name LIKE CONCAT('%',?,'%') GROUP BY \
-            podcasts.id ORDER BY podcast_episodes.date_of_recording DESC")
+            .id=podcast_episodes.podcast_id AND LOWER(podcasts.name) LIKE '%'+LOWER(?)+'%' ORDER \
+            BY podcast_episodes.date_of_recording DESC")
                 .bind::<Text,_>(title.unwrap())
                 .load::<Podcast>(conn)
                 .expect("Error loading podcasts");
