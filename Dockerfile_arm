@@ -9,7 +9,7 @@ RUN  npm install && npm run build
 
 FROM samuel19982/rust-builder as dependency-cache
 USER root
-RUN apk add pkgconfig openssl-dev libc-dev
+RUN apk add pkgconfig openssl-dev libc-dev git
 WORKDIR /app/src
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
@@ -25,7 +25,7 @@ USER root
 
 WORKDIR /app/src
 
-RUN apk add pkgconfig openssl-dev libc-dev
+RUN apk add pkgconfig openssl-dev libc-dev git
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 
