@@ -11,6 +11,7 @@ FROM samuel19982/rust-builder as dependency-cache
 USER root
 RUN apk add pkgconfig openssl-dev libc-dev
 WORKDIR /app/src
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 ADD Cargo.toml .
 ADD dummy.rs ./src/main.rs
@@ -25,6 +26,7 @@ USER root
 WORKDIR /app/src
 
 RUN apk add pkgconfig openssl-dev libc-dev
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 
 COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
