@@ -16,10 +16,13 @@ use rss::Item;
 use std::io::Error;
 use std::sync::MutexGuard;
 use std::time::SystemTime;
+use diesel::query_dsl::methods::GroupByDsl;
 use diesel::sql_types::{Text, Timestamp};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
+use crate::schema::podcasts;
 use crate::utils::do_retry::do_retry;
+use crate::utils::dyn_query::{ExtendedQueryDsl, QueryOrdering};
 use crate::utils::time::opt_or_empty_string;
 
 pub struct DB {
@@ -820,71 +823,34 @@ impl DB {
 
     pub fn search_podcasts(conn: &mut SqliteConnection, order_desc: bool, title: Option<String>,
                            latest_pub: bool) ->Vec<Podcast>{
-        let returned_podcasts: Vec<Podcast>;
-        if latest_pub && title.is_none() && !order_desc {
-            returned_podcasts = sql_query(r"
-                SELECT   *
-                FROM     podcasts, podcast_episodes
-                WHERE    podcasts.id = podcast_episodes.podcast_id
-                GROUP BY podcasts.id
-                ORDER BY MAX(podcast_episodes.date_of_recording) DESC
-                ")
-                .load::<Podcast>(conn)
-                .expect("Error loading podcasts");
-        } else if latest_pub && title.is_some() && !order_desc {
-            returned_podcasts = sql_query(r"
-                SELECT   *
-                FROM     podcasts, podcast_episodes
-                WHERE    podcasts.id = podcast_episodes.podcast_id AND LOWER(podcasts.name) LIKE '%' || LOWER(?) || '%'
-                GROUP BY podcasts.id
-                ORDER BY MAX(podcast_episodes.date_of_recording) DESC
-                ")
-                .bind::<Text,_>(title.unwrap())
-                .load::<Podcast>(conn)
-                .expect("Error loading podcasts");
-        }
-        else if latest_pub && title.is_none() && order_desc {
-            returned_podcasts = sql_query(r"
-                SELECT   *
-                FROM     podcasts, podcast_episodes
-                WHERE    podcasts.id = podcast_episodes.podcast_id
-                GROUP BY podcasts.id
-                ORDER BY MAX(podcast_episodes.date_of_recording), podcasts.name DESC
-                ")
-                .load::<Podcast>(conn)
-                .expect("Error loading podcasts");
-        }
-        else if !latest_pub && title.is_none() && !order_desc {
-            returned_podcasts = sql_query(r"
-                SELECT   *
-                FROM     podcasts
-                ORDER BY podcasts.name
-                ")
-                .load::<Podcast>(conn)
-                .expect("Error loading podcasts");
-        }
-        else if !latest_pub && title.is_none() && order_desc {
-            returned_podcasts = sql_query(r"
-                SELECT   *
-                FROM     podcasts
-                ORDER BY podcasts.name DESC
-                ")
-                .load::<Podcast>(conn)
-                .expect("Error loading podcasts");
-        }
-        else{
-            // only left possibility 010
-            returned_podcasts = sql_query(r"
-                SELECT   *
-                FROM     podcasts
-                WHERE    LOWER(podcasts.name) LIKE '%' || LOWER(?)  ||'%' 
-                ORDER BY podcasts.name ASC
-                ")
-                .bind::<Text, _>(title.unwrap())
-                .load::<Podcast>(conn)
-                .expect("Error loading podcasts");
+        use crate::schema::podcasts::dsl::*;
+        use crate::schema::podcast_episodes::dsl::*;
+        use crate::schema::podcasts::dsl::id as podcastsid;
+
+        let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id))).group_by(podcastsid)
+            .into_boxed();
+
+        if latest_pub{
+            query = query.order_by(date_of_recording.desc());
         }
 
-        returned_podcasts
+        if order_desc {
+            use crate::schema::podcasts::dsl::name as podcasttitle;
+            query = query.order_by(podcasttitle.desc());
+        } else {
+            use crate::schema::podcasts::dsl::name as podcasttitle;
+            query = query.order_by(podcasttitle.asc());
+        }
+
+        if title.is_some() {
+            use crate::schema::podcasts::dsl::name as podcasttitle;
+            query = query
+                .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+        }
+
+        let pr = query
+            .load::<(Podcast, PodcastEpisode)>(conn).expect("Error loading podcasts");
+
+        pr.into_iter().map(|(podcast, _)| podcast).collect()
     }
 }
