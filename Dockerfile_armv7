@@ -7,8 +7,8 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM arm32v7/rust:1.69.0-slim-bookworm as dependency-cache
-RUN apk add pkgconfig openssl-dev libc-dev git curl
+FROM alpine as dependency-cache
+RUN apk add rust pkgconfig openssl-dev libc-dev git curl
 RUN --security=insecure curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 USER root
@@ -23,9 +23,9 @@ RUN cargo update
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM arm32v7/rust:1.69.0-slim-bookworm as builder
+FROM alpine as builder
 
-RUN apk add pkgconfig openssl-dev libc-dev git curl
+RUN apk add rust pkgconfig openssl-dev libc-dev git curl
 
 RUN --security=insecure curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 USER root
