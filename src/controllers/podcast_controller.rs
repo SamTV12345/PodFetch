@@ -40,6 +40,7 @@ use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastSearchModel{
+    #[serde(rename="orderOfPodcasts")]
     order: Option<bool>,
     title: Option<String>,
     latest_pub: Option<bool>
