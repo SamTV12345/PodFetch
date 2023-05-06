@@ -19,6 +19,7 @@ use std::time::SystemTime;
 use diesel::sql_types::{Text, Timestamp};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
+use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 
@@ -126,14 +127,25 @@ impl DB {
     pub fn get_podcast_episode_by_url(
         conn: &mut SqliteConnection,
         podcas_episode_url_to_be_found: &str,
+        i: Option<i32>,
     ) -> Result<Option<PodcastEpisode>, String> {
         use crate::schema::podcast_episodes::dsl::*;
+        let found_podcast_episode;
+        if i.is_some(){
+            found_podcast_episode = podcast_episodes
+                .filter(url.eq(podcas_episode_url_to_be_found).and(podcast_id.eq(i.unwrap())))
+                .first::<PodcastEpisode>(conn)
+                .optional()
+                .expect("Error loading podcast by id");
+        }
+        else{
+            found_podcast_episode = podcast_episodes
+                .filter(url.eq(podcas_episode_url_to_be_found))
+                .first::<PodcastEpisode>(conn)
+                .optional()
+                .expect("Error loading podcast by id");
+        }
 
-        let found_podcast_episode = podcast_episodes
-            .filter(url.eq(podcas_episode_url_to_be_found))
-            .first::<PodcastEpisode>(conn)
-            .optional()
-            .expect("Error loading podcast by id");
 
         Ok(found_podcast_episode)
     }
@@ -816,5 +828,121 @@ impl DB {
             .filter(rssfeed.eq(rss_feed_1))
             .first::<Podcast>(conn)
             .expect("Error loading podcast by rss feed")
+    }
+
+    pub fn search_podcasts_favored(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
+                                   latest_pub: OrderOption) ->Vec<(Podcast, Favorite)>{
+        use crate::schema::podcasts::dsl::*;
+        use crate::schema::podcast_episodes::dsl::*;
+        use crate::schema::podcasts::dsl::id as podcastsid;
+        use crate::schema::favorites;
+
+
+        let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
+            .inner_join(favorites::table.on(podcastsid.eq(favorites::dsl::podcast_id)))
+            .into_boxed();
+
+        match latest_pub {
+            OrderOption::Title=> {
+                use crate::schema::podcasts::dsl::name as podcasttitle;
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(podcasttitle.asc());
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(podcasttitle.desc());
+                    }
+                }
+            }
+            OrderOption::PublishedDate => {
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(date_of_recording.asc());
+
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(date_of_recording.desc());
+                    }
+                }
+            }
+        }
+
+        if title.is_some() {
+            use crate::schema::podcasts::dsl::name as podcasttitle;
+            query = query
+                .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+        }
+
+        let mut matching_podcast_ids = vec![];
+        let pr = query
+            .load::<(Podcast, PodcastEpisode, Favorite)>(conn).expect("Error loading podcasts");
+        let distinct_podcasts:Vec<(Podcast, Favorite)> = pr.iter()
+            .filter(|c|{
+                if matching_podcast_ids.contains(&c.0.id){
+                    return false;
+                }
+                matching_podcast_ids.push(c.0.id);
+                true
+            }).map(|c|{
+            (c.clone().0, c.clone().2)
+        }).collect::<Vec<(Podcast, Favorite)>>();
+        distinct_podcasts
+    }
+
+    pub fn search_podcasts(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
+                                   latest_pub: OrderOption) ->Vec<Podcast>{
+        use crate::schema::podcasts::dsl::*;
+        use crate::schema::podcast_episodes::dsl::*;
+        use crate::schema::podcasts::dsl::id as podcastsid;
+
+
+        let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
+            .into_boxed();
+
+        match latest_pub {
+            OrderOption::Title=> {
+                use crate::schema::podcasts::dsl::name as podcasttitle;
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(podcasttitle.asc());
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(podcasttitle.desc());
+                    }
+                }
+            }
+            OrderOption::PublishedDate => {
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(date_of_recording.asc());
+
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(date_of_recording.desc());
+                    }
+                }
+            }
+        }
+
+        if title.is_some() {
+            use crate::schema::podcasts::dsl::name as podcasttitle;
+            query = query
+                .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+        }
+
+        let mut matching_podcast_ids = vec![];
+        let pr = query
+            .load::<(Podcast, PodcastEpisode)>(conn).expect("Error loading podcasts");
+        let distinct_podcasts:Vec<Podcast> = pr.iter()
+            .filter(|c|{
+                if matching_podcast_ids.contains(&c.0.id){
+                    return false;
+                }
+                matching_podcast_ids.push(c.0.id);
+                true
+            }).map(|c|{
+            c.clone().0
+        }).collect::<Vec<Podcast>>();
+        distinct_podcasts
     }
 }

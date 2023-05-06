@@ -83,7 +83,6 @@ pub struct Podcast {
     #[diesel(sql_type = Text)]
     pub original_image_url: String,
     #[diesel(sql_type = Text)]
-
     pub directory_name:String
 }
 

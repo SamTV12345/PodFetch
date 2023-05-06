@@ -111,5 +111,8 @@
   "rss-feed-url": "RSS Feed URL",
   "upload-opml-file": "OPML-Datei hochladen",
   "search-podcasts": "Podcasts suchen",
-  "no-data-found": "Keine Daten gefunden"
+  "no-data-found": "Keine Daten gefunden",
+  "descendant": "Absteigend",
+  "sort-by-published-date": "Nach Veröffentlichungsdatum sortieren",
+  "sort-by-title": "Nach Titel sortieren"
 }
