@@ -127,14 +127,25 @@ impl DB {
     pub fn get_podcast_episode_by_url(
         conn: &mut SqliteConnection,
         podcas_episode_url_to_be_found: &str,
+        i: Option<i32>,
     ) -> Result<Option<PodcastEpisode>, String> {
         use crate::schema::podcast_episodes::dsl::*;
+        let found_podcast_episode;
+        if i.is_some(){
+            found_podcast_episode = podcast_episodes
+                .filter(url.eq(podcas_episode_url_to_be_found).and(podcast_id.eq(i.unwrap())))
+                .first::<PodcastEpisode>(conn)
+                .optional()
+                .expect("Error loading podcast by id");
+        }
+        else{
+            found_podcast_episode = podcast_episodes
+                .filter(url.eq(podcas_episode_url_to_be_found))
+                .first::<PodcastEpisode>(conn)
+                .optional()
+                .expect("Error loading podcast by id");
+        }
 
-        let found_podcast_episode = podcast_episodes
-            .filter(url.eq(podcas_episode_url_to_be_found))
-            .first::<PodcastEpisode>(conn)
-            .optional()
-            .expect("Error loading podcast by id");
 
         Ok(found_podcast_episode)
     }

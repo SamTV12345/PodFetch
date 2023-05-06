@@ -402,7 +402,9 @@ Data<Mutex<PodcastService>>, conn: Data<DbPool>)->impl Responder {
     let podcasts = DB::get_all_podcasts(&mut conn.get().unwrap());
     thread::spawn(move || {
     for podcast in podcasts.unwrap() {
-        podcast_service.lock().ignore_poison().refresh_podcast(podcast.clone(), lobby.clone(), &mut conn.get()
+        podcast_service.lock()
+            .ignore_poison()
+            .refresh_podcast(podcast.clone(), lobby.clone(), &mut conn.get()
             .unwrap());
         lobby.clone().do_send(BroadcastMessage {
             podcast_episode: None,

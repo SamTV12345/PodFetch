@@ -136,7 +136,7 @@ impl PodcastEpisodeService {
         let channel = Channel::read_from(&*bytes).unwrap();
         self.update_podcast_fields(channel.clone(), podcast.id.clone());
 
-        let mut podcast_inserted: Vec<PodcastEpisode> = Vec::new();
+        let mut podcast_inserted = Vec::new();
 
         // insert original podcast image url
         if podcast.original_image_url.is_empty() {
@@ -153,11 +153,31 @@ impl PodcastEpisodeService {
                     match enclosure {
                         Some(enclosure)=>{
                             let result =
-                                DB::get_podcast_episode_by_url(conn, &enclosure.url
-                                    .to_string());
+                                DB::get_podcast_episode_by_url(conn, &enclosure.url.to_string(),
+                                                               Some(podcast.id));
                             let mut duration_episode = 0;
 
-                            if result.unwrap().is_none() {
+                            if result.is_err(){
+                                log::info!("Skipping episode {} with error: {}", item.clone().title
+                                    .unwrap_or("with no title".to_string()), result.err().unwrap());
+                                continue;
+                            }
+
+                            let result_unwrapped = result.clone().unwrap();
+
+                            if result_unwrapped.is_some()  && result_unwrapped.clone().unwrap()
+                                .podcast_id != podcast.id {
+
+                                let inserted_episode = DB::insert_podcast_episodes(conn,
+                                                                                   podcast.clone(),
+                                                                                   item.clone(),
+                                                                                   Some(result_unwrapped.unwrap().image_url),
+                                                                                   duration_episode as i32,
+                                );
+                                podcast_inserted.push(inserted_episode);
+                            }
+
+                            if result.clone().unwrap().is_none() {
                                 // Insert new podcast episode
                                 match itunes_ext.clone().duration {
                                     Some(duration) => {
@@ -190,7 +210,7 @@ impl PodcastEpisodeService {
                         continue;
                     }
                     let result = DB::get_podcast_episode_by_url(
-                        conn, &opt_enclosure.clone().unwrap().url);
+                        conn, &opt_enclosure.clone().unwrap().url, Option::None);
                     // We can't retrieve the duration of the podcast episode, so we set it to 0
 
                     if result.unwrap().is_none() {
