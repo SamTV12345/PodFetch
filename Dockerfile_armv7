@@ -9,10 +9,10 @@ RUN  npm install && npm run build
 
 FROM alpine as dependency-cache
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
 USER root
-RUN apk add pkgconfig openssl-dev libc-dev git
+RUN apk add pkgconfig openssl-dev libc-dev git curl
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 WORKDIR /app/src
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
@@ -24,13 +24,15 @@ RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM alpine as builder
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 USER root
 
 WORKDIR /app/src
 
-RUN apk add pkgconfig openssl-dev libc-dev git
+RUN apk add pkgconfig openssl-dev libc-dev git curl
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 
