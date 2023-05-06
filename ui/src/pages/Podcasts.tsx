@@ -36,7 +36,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
                 title: searchText,
                 order: orderOfPodcasts,
                 orderOption:latestPub,
-                favoredOnly: onlyFavorites
+                favoredOnly: !!onlyFavorites
             }
         })
             .then((v:AxiosResponse<Podcast[]>)=>{
