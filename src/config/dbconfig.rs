@@ -1,5 +1,4 @@
 use diesel::prelude::*;
-use dotenvy::dotenv;
 use std::env;
 use std::time::Duration;
 use diesel::connection::SimpleConnection;
@@ -31,7 +30,6 @@ for ConnectionOptions
     }
 }
 pub fn establish_connection() -> SqliteConnection {
-    dotenv().ok();
     let database_url = &get_database_url();
     SqliteConnection::establish(database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
