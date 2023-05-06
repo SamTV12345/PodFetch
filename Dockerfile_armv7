@@ -53,7 +53,7 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
 
 FROM ubuntu:jammy AS Runtime
 WORKDIR /app/
-RUN apt update -y && apt install libgcc tzdata -y
+RUN apt update -y && apt install gcc tzdata -y
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podfetch /app/podfetch
