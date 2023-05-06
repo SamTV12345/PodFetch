@@ -10,7 +10,7 @@ RUN  npm install && npm run build
 FROM library/rust@sha256:0aee1bb9ca6a25f76bb3de7d7e707132a72b9358125e8dd4c98573fcfa032e49 as dependency-cache
 
 USER root
-RUN apt update -y && apt install pkgconfig openssl-dev libc-dev git -y
+RUN apt update -y && apt install git -y
 WORKDIR /app/src
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
@@ -27,7 +27,7 @@ USER root
 
 WORKDIR /app/src
 
-RUN apt update -y && apt install pkgconfig openssl-dev libc-dev git -y
+RUN apt update -y && apt install git -y
 
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
