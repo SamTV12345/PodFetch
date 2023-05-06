@@ -24,6 +24,7 @@ use serde_json::{from_str, Value};
 use std::sync::{Mutex};
 use std::thread;
 use std::time::Duration;
+use actix_web::http::header::LOCATION;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType, STANDARD_USER};
@@ -657,5 +658,9 @@ pub(crate) async fn proxy_podcast(
         client_resp.insert_header((header_name.clone(), header_value.clone()));
     }
 
-    client_resp.streaming(unwrapped_res)
+    let streaming_res = client_resp.streaming(unwrapped_res);
+    if streaming_res.status()==400{
+        return HttpResponse::TemporaryRedirect().append_header((LOCATION,new_url)).finish()
+    }
+    streaming_res
 }
