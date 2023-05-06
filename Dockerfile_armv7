@@ -7,12 +7,10 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM alpine as dependency-cache
+FROM library/rust@sha256:0aee1bb9ca6a25f76bb3de7d7e707132a72b9358125e8dd4c98573fcfa032e49 as dependency-cache
 
 USER root
-RUN apk add pkgconfig openssl-dev libc-dev git curl
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+RUN apk add pkgconfig openssl-dev libc-dev git
 WORKDIR /app/src
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
@@ -22,16 +20,14 @@ ADD build.rs .
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM alpine as builder
+FROM library/rust@sha256:0aee1bb9ca6a25f76bb3de7d7e707132a72b9358125e8dd4c98573fcfa032e49 as builder
 
 
 USER root
 
 WORKDIR /app/src
 
-RUN apk add pkgconfig openssl-dev libc-dev git curl
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+RUN apk add pkgconfig openssl-dev libc-dev git
 
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
@@ -55,7 +51,7 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM library/alpine:3.17 AS Runtime
+FROM ubuntu:jammy AS Runtime
 WORKDIR /app/
 RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
