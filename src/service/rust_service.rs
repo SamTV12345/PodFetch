@@ -19,9 +19,11 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use diesel::SqliteConnection;
+use serde::Serialize;
 use tokio::task::spawn_blocking;
 use crate::config::dbconfig::establish_connection;
 use crate::exception::exceptions::{PodFetchError};
+use crate::models::order_criteria::{OrderCriteria, OrderOption};
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -268,14 +270,29 @@ impl PodcastService {
         DB::get_podcasts(conn, u, mapping_service)
     }
 
-    pub fn search_podcasts(&mut self, order:bool, title: Option<String>, latest_pub: bool,
-                           mapping_service: MutexGuard<MappingService>, conn: &mut SqliteConnection) ->
-                                                                                                       Result<Vec<Podcast>, String>{
+    pub fn search_podcasts_favored(
+        &mut self, order:OrderCriteria, title: Option<String>, latest_pub: OrderOption,
+        mapping_service: MutexGuard<MappingService>, conn: &mut
+        SqliteConnection) -> Result<Vec<impl Serialize>, String>{
+        let podcasts = DB::search_podcasts_favored(conn, order, title, latest_pub);
+        let mut podcast_dto_vec = Vec::new();
+        for podcast in podcasts {
+            let podcast_dto = mapping_service.map_podcast_to_podcast_dto_with_favorites_option(&podcast);
+            podcast_dto_vec.push(podcast_dto);
+        }
+        Ok(podcast_dto_vec)
+    }
+
+
+    pub fn search_podcasts(&mut self, order:OrderCriteria, title: Option<String>, latest_pub: OrderOption,
+                           mapping_service: MutexGuard<MappingService>, conn: &mut
+        SqliteConnection) -> Result<Vec<impl Serialize>, String>{
+
         let podcasts = DB::search_podcasts(conn, order, title, latest_pub);
         let mut podcast_dto_vec = Vec::new();
         for podcast in podcasts {
-            let podcast_dto = mapping_service.map_podcast_to_podcast_dto(&podcast);
-            podcast_dto_vec.push(podcast_dto);
+                    let podcast_dto = mapping_service.map_podcast_to_podcast_dto(&podcast);
+                    podcast_dto_vec.push(podcast_dto);
         }
         Ok(podcast_dto_vec)
     }

@@ -16,13 +16,11 @@ use rss::Item;
 use std::io::Error;
 use std::sync::MutexGuard;
 use std::time::SystemTime;
-use diesel::query_dsl::methods::GroupByDsl;
 use diesel::sql_types::{Text, Timestamp};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
-use crate::schema::podcasts;
+use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::utils::do_retry::do_retry;
-use crate::utils::dyn_query::{ExtendedQueryDsl, QueryOrdering};
 use crate::utils::time::opt_or_empty_string;
 
 pub struct DB {
@@ -821,25 +819,98 @@ impl DB {
             .expect("Error loading podcast by rss feed")
     }
 
-    pub fn search_podcasts(conn: &mut SqliteConnection, order_desc: bool, title: Option<String>,
-                           latest_pub: bool) ->Vec<Podcast>{
+    pub fn search_podcasts_favored(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
+                                   latest_pub: OrderOption) ->Vec<(Podcast, Favorite)>{
+        use crate::schema::podcasts::dsl::*;
+        use crate::schema::podcast_episodes::dsl::*;
+        use crate::schema::podcasts::dsl::id as podcastsid;
+        use crate::schema::favorites;
+
+
+        let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
+            .inner_join(favorites::table.on(podcastsid.eq(favorites::dsl::podcast_id)))
+            .into_boxed();
+
+        match latest_pub {
+            OrderOption::Title=> {
+                use crate::schema::podcasts::dsl::name as podcasttitle;
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(podcasttitle.asc());
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(podcasttitle.desc());
+                    }
+                }
+            }
+            OrderOption::PublishedDate => {
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(date_of_recording.asc());
+
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(date_of_recording.desc());
+                    }
+                }
+            }
+        }
+
+        if title.is_some() {
+            use crate::schema::podcasts::dsl::name as podcasttitle;
+            query = query
+                .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+        }
+
+        let mut matching_podcast_ids = vec![];
+        let pr = query
+            .load::<(Podcast, PodcastEpisode, Favorite)>(conn).expect("Error loading podcasts");
+        let distinct_podcasts:Vec<(Podcast, Favorite)> = pr.iter()
+            .filter(|c|{
+                if matching_podcast_ids.contains(&c.0.id){
+                    return false;
+                }
+                matching_podcast_ids.push(c.0.id);
+                true
+            }).map(|c|{
+            (c.clone().0, c.clone().2)
+        }).collect::<Vec<(Podcast, Favorite)>>();
+        distinct_podcasts
+    }
+
+    pub fn search_podcasts(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
+                                   latest_pub: OrderOption) ->Vec<Podcast>{
         use crate::schema::podcasts::dsl::*;
         use crate::schema::podcast_episodes::dsl::*;
         use crate::schema::podcasts::dsl::id as podcastsid;
 
+
         let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
             .into_boxed();
 
-        if latest_pub{
-            query = query.order_by(date_of_recording.desc());
-        }
+        match latest_pub {
+            OrderOption::Title=> {
+                use crate::schema::podcasts::dsl::name as podcasttitle;
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(podcasttitle.asc());
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(podcasttitle.desc());
+                    }
+                }
+            }
+            OrderOption::PublishedDate => {
+                match order {
+                    OrderCriteria::ASC => {
+                        query = query.order_by(date_of_recording.asc());
 
-        if order_desc {
-            use crate::schema::podcasts::dsl::name as podcasttitle;
-            query = query.order_by(podcasttitle.desc());
-        } else {
-            use crate::schema::podcasts::dsl::name as podcasttitle;
-            query = query.order_by(podcasttitle.asc());
+                    }
+                    OrderCriteria::DESC => {
+                        query = query.order_by(date_of_recording.desc());
+                    }
+                }
+            }
         }
 
         if title.is_some() {

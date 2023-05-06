@@ -111,5 +111,6 @@
   "search-podcasts": "Rechercher des podcasts",
   "no-data-found": "Aucune donnée trouvée",
   "descendant": "Descendant",
-  "sort-by-published-date": "Trier par date de publication"
+  "sort-by-published-date": "Trier par date de publication",
+  "sort-by-title": "Trier par titre"
 }

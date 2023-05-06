@@ -35,15 +35,16 @@ use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
 use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
+use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastSearchModel{
-    #[serde(rename="orderOfPodcasts")]
-    order: Option<bool>,
+    order: Option<OrderCriteria>,
     title: Option<String>,
-    latest_pub: Option<bool>
+    order_option: Option<OrderOption>,
+    favored_only: bool
 }
 
 #[get("/podcasts/search")]
@@ -52,14 +53,29 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
                              mapping_service:Data<Mutex<MappingService>>)
     ->impl Responder{
     let query = query.into_inner();
-    let order = query.order.unwrap_or(false);
-    let latest_pub = query.latest_pub.unwrap_or(false);
-    let podcasts = podcast_service.lock().ignore_poison().search_podcasts( order, query.title,
-                                                                           latest_pub,
-                                                                           mapping_service.lock()
-                                                                               .ignore_poison(),
-                                                                           &mut conn.get().unwrap()).unwrap();
-    HttpResponse::Ok().json(podcasts)
+    let order = query.order.unwrap_or(OrderCriteria::ASC);
+    let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    match query.favored_only {
+        true => {
+            let podcasts = podcast_service.lock().ignore_poison().search_podcasts_favored( order, query.title,
+                                                                                   latest_pub,
+                                                                                   mapping_service.lock()
+                                                                                       .ignore_poison(),
+                                                                                   &mut conn.get().unwrap
+                                                                                   ()).unwrap();
+            HttpResponse::Ok().json(podcasts)
+        }
+        false => {
+            let podcasts = podcast_service.lock().ignore_poison().search_podcasts( order, query.title,
+                                                                                   latest_pub,
+                                                                                   mapping_service.lock()
+                                                                                       .ignore_poison(),
+                                                                                   &mut conn.get().unwrap
+                                                                                   ()).unwrap();
+            HttpResponse::Ok().json(podcasts)
+        }
+    }
+
 }
 
 
