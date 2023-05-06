@@ -9,7 +9,7 @@ RUN  npm install && npm run build
 
 FROM alpine as dependency-cache
 
-RUN apk add rust cargo pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
+RUN apk add rustup pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
 
 USER root
 
@@ -25,7 +25,7 @@ RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM alpine as builder
 
-RUN apk add rust cargo pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
+RUN apk add rustup pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
 
 USER root
 
