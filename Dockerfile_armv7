@@ -7,7 +7,10 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM blackdex/rust-musl:armv7-musleabihf-stable-1.69.0 as dependency-cache
+FROM alpine
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
 USER root
 RUN apk add pkgconfig openssl-dev libc-dev git
 WORKDIR /app/src
@@ -19,7 +22,9 @@ ADD build.rs .
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM blackdex/rust-musl:armv7-musleabihf-stable-1.69.0 as  builder
+FROM alpine
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 USER root
 
