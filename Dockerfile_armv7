@@ -7,27 +7,32 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM library/rust@sha256:0aee1bb9ca6a25f76bb3de7d7e707132a72b9358125e8dd4c98573fcfa032e49 as dependency-cache
+FROM alpine as dependency-cache
+RUN apk add pkgconfig openssl-dev libc-dev git curl
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 USER root
-RUN apt update -y && apt install git -y
+
 WORKDIR /app/src
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 ADD Cargo.toml .
 ADD dummy.rs ./src/main.rs
 ADD build.rs .
+RUN cargo update
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM library/rust@sha256:0aee1bb9ca6a25f76bb3de7d7e707132a72b9358125e8dd4c98573fcfa032e49 as builder
+FROM alpine as builder
 
+RUN apk add pkgconfig openssl-dev libc-dev git curl
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 USER root
 
 WORKDIR /app/src
 
-RUN apt update -y && apt install git -y
 
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
@@ -45,15 +50,16 @@ ADD migrations ./migrations
 ADD src ./src
 ADD build.rs .
 ADD db ./db
+RUN cargo update
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     chmod 777 /usr/local/cargo/registry/index && \
     mount -t tmpfs none /usr/local/cargo/registry/index && \
     RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM ubuntu:jammy AS Runtime
+FROM library/alpine:3.17 AS Runtime
 WORKDIR /app/
-RUN apt update -y && apt install gcc tzdata -y
+RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podfetch /app/podfetch
