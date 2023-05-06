@@ -7,7 +7,7 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM samuel19982/rust-builder as dependency-cache
+FROM arm32v7/rust:slim-bookworm as dependency-cache
 USER root
 RUN apk add pkgconfig openssl-dev libc-dev git
 WORKDIR /app/src
@@ -19,7 +19,7 @@ ADD build.rs .
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM samuel19982/rust-builder as builder
+FROM arm32v7/rust:slim-bookworm as builder
 
 USER root
 
