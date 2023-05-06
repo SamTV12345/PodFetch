@@ -9,7 +9,6 @@ RUN  npm install && npm run build
 
 FROM alpine as dependency-cache
 RUN apk add rust pkgconfig openssl-dev libc-dev git curl
-RUN --security=insecure curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 USER root
 
@@ -27,7 +26,6 @@ FROM alpine as builder
 
 RUN apk add rust pkgconfig openssl-dev libc-dev git curl
 
-RUN --security=insecure curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 USER root
 
 WORKDIR /app/src
