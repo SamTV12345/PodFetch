@@ -7,7 +7,7 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM alpine
+FROM alpine as dependency-cache
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
@@ -22,7 +22,7 @@ ADD build.rs .
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM alpine
+FROM alpine as builder
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
