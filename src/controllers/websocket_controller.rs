@@ -137,11 +137,14 @@ pub async fn get_rss_feed_for_podcast(
 }
 
 fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> {
+    let env = EnvironmentService::new();
+    let server_url = env.server_url;
+
     downloaded_episodes
         .iter()
         .map(|episode| {
             let enclosure = EnclosureBuilder::default()
-                .url(&episode.clone().local_url)
+                .url(format!("{}{}",server_url,&episode.clone().local_url))
                 .length(episode.clone().total_time.to_string())
                 .mime_type(format!(
                     "{}/{}",
@@ -152,7 +155,7 @@ fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> 
 
             let itunes_extension = ITunesItemExtensionBuilder::default()
                 .duration(Some(episode.clone().total_time.to_string()))
-                .image(Some(episode.clone().local_image_url))
+                .image(Some(format!("{}{}",server_url,episode.clone().local_image_url)))
                 .build();
 
             let guid = GuidBuilder::default()
