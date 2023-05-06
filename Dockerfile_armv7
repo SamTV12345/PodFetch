@@ -8,7 +8,7 @@ RUN  npm install && npm run build
 
 
 FROM alpine as dependency-cache
-RUN apk add rust pkgconfig openssl-dev libc-dev git curl
+RUN apk add rust cargo pkgconfig openssl-dev libc-dev git curl
 
 USER root
 
@@ -24,7 +24,7 @@ RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 FROM alpine as builder
 
-RUN apk add rust pkgconfig openssl-dev libc-dev git curl
+RUN apk add rust cargo pkgconfig openssl-dev libc-dev git curl
 
 USER root
 
