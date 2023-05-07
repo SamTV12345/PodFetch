@@ -36,11 +36,11 @@ export const LoginComponent = () => {
                     sessionStorage.setItem("auth", basicAuthString)
                 }
                 dispatch(setLoginData(data))
-                axios.defaults.headers.common['Authorization'] = 'Basic ' + btoa(basicAuthString);
-                navigate('/')
+                axios.defaults.headers.common['Authorization'] = 'Basic ' + basicAuthString;
+                setTimeout(()=>navigate('/'), 100)
+
             })
             .catch((e: AxiosError) => {
-                console.log(e)
                setAlert(e.response!.data as string)
             })
     }

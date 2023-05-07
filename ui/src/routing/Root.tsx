@@ -19,7 +19,6 @@ export const Root = () => {
     const auth = useAppSelector(state => state.common.loginData)
 
 
-
     const extractLoginData = (auth_local: string)=>{
         const test = atob(auth_local)
         const res = test.split(":")
