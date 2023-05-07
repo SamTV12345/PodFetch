@@ -36,6 +36,7 @@ export const LoginComponent = () => {
                     sessionStorage.setItem("auth", basicAuthString)
                 }
                 dispatch(setLoginData(data))
+                axios.defaults.headers.common['Authorization'] = 'Basic ' + btoa(basicAuthString);
                 navigate('/')
             })
             .catch((e: AxiosError) => {

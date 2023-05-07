@@ -8,7 +8,6 @@ export const OIDCRefresher:FC<PropsWithChildren> = ({children})=>{
     const refreshInterval = 1000*60
 
     useOnMount(()=>{
-        console.log("Installing refresher")
         const interval = setInterval(()=> {
             if (auth.user &&auth.user.expires_in&& auth.user.expires_in<70){
                 auth.signinSilent()
