@@ -48,7 +48,7 @@ use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, proxy_podcast, refresh_all_podcasts, search_podcasts};
+use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, proxy_podcast, refresh_all_podcasts, search_podcasts};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
@@ -428,6 +428,7 @@ fn get_private_api(db: Pool<ConnectionManager<SqliteConnection>>) -> Scope<impl 
     web::scope("")
         .wrap(Condition::new(enable_basic_auth, auth))
         .wrap(Condition::new(enable_oidc_auth, oidc_auth))
+        .service(get_filter)
         .service(search_podcasts)
         .service(add_podcast_by_feed)
         .service(refresh_all_podcasts)
