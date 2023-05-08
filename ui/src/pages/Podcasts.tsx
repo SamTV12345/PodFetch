@@ -32,18 +32,22 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
         axios.post(apiURL+"/podcast/all")
     }
 
-    useDebounce(()=> {
-        axios.get(apiURL+"/podcasts/search",{
-            params:{
+    const performFilter =()=>{
+        axios.get(apiURL + "/podcasts/search", {
+            params: {
                 title: searchText,
                 order: orderOfPodcasts,
-                orderOption:latestPub,
+                orderOption: latestPub,
                 favoredOnly: !!onlyFavorites
             }
         })
-            .then((v:AxiosResponse<Podcast[]>)=>{
+            .then((v: AxiosResponse<Podcast[]>) => {
                 dispatch(setPodcasts(v.data))
-                })
+            })
+    }
+
+    useDebounce(()=> {
+        performFilter();
     },500, [searchText, orderOfPodcasts, latestPub])
 
     useEffect(()=>{
@@ -51,6 +55,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             if(c.data === null){
                 setLatestPub(OrderCriteria.TITLE)
                 setOrderOfPodcasts(Order.ASC)
+                performFilter()
             }
             else{
                 setLatestPub(c.data.filter === "PublishedDate"?OrderCriteria.PUBLISHEDDATE:OrderCriteria.TITLE)
