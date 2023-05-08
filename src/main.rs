@@ -7,7 +7,7 @@ extern crate serde_json;
 
 use actix::Actor;
 use actix_files::{Files, NamedFile};
-use actix_web::dev::{fn_service, ServiceRequest, ServiceResponse};
+use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
@@ -18,6 +18,7 @@ use std::{env, thread};
 use std::env::{args, var};
 use std::io::Read;
 use std::process::exit;
+use actix_web::body::{BoxBody, EitherBody};
 use log::{info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -47,6 +48,7 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 pub use controllers::controller_utils::*;
+use crate::auth_middleware::{AuthFilter};
 use crate::command_line_runner::start_command_line;
 use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users, onboard_user, update_role};
 
@@ -264,8 +266,11 @@ pub fn get_global_scope() -> Scope {
         .service(get_rss_feed_for_podcast)
 }
 
-fn get_private_api() -> Scope {
+fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = actix_web::Error, InitError = ()>> {
+    let is_auth = var(BASIC_AUTH).is_ok()||var(OIDC_AUTH).is_ok();
+    let middleware = AuthFilter::new();
     web::scope("")
+        .wrap(Condition::new(is_auth,middleware))
         .service(get_filter)
         .service(search_podcasts)
         .service(add_podcast_by_feed)

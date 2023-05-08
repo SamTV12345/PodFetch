@@ -49,7 +49,6 @@ impl User{
 
     pub fn find_by_username(username_to_find: &str, conn: &mut SqliteConnection) -> Option<User> {
         use crate::schema::users::dsl::*;
-
         match var(USERNAME) {
              Ok(res)=> {
                 if res==username_to_find {

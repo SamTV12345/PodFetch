@@ -15,7 +15,7 @@ use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::Jwk;
 use log::info;
 use serde_json::{from_str, Value};
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH};
+use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
 use crate::{DbPool};
 use crate::models::user::User;
 use sha256::digest;
@@ -91,7 +91,11 @@ impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
 impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>, S::Future: 'static {
     fn handle_basic_auth(&self, req: ServiceRequest) ->
     Pin<Box<dyn futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>> {
-        let authorization = req.headers().get("Authorization").unwrap().to_str();
+        let opt_auth_header = req.headers().get("Authorization");
+        if opt_auth_header.is_none() {
+            return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
+        }
+        let authorization = opt_auth_header.unwrap().to_str();
         return match authorization {
             Ok(auth) => {
                 let (username, password) = AuthFilter::extract_basic_auth(auth);
@@ -102,6 +106,27 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                         .map_into_right_body()))
                 }
                 let unwrapped_user = found_user.unwrap();
+
+                if unwrapped_user.clone().username == var(USERNAME).unwrap(){
+                    return match password == var(PASSWORD).unwrap() {
+                        true => {
+                            req.extensions_mut().insert(unwrapped_user);
+                            let service = Rc::clone(&self.service);
+                            async move {
+                                return service
+                                    .call(req)
+                                    .await
+                                    .map(|res| res.map_into_left_body())
+                            }
+                                .boxed_local()
+                        },
+                        false => {
+                            Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized"))
+                                .map_into_right_body()))
+                        }
+                    }
+                }
+
                 if unwrapped_user.password.clone().unwrap() == digest(password) {
                     req.extensions_mut().insert(unwrapped_user);
                     let service = Rc::clone(&self.service);
@@ -134,7 +159,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards").as_secs();
 
-        let mut response:CustomJwkSet;
+        let response:CustomJwkSet;
         let binding = req.app_data::<web::Data<Mutex<JWKService>>>().cloned().unwrap();
         let mut jwk_service = binding.lock()
             .ignore_poison();
