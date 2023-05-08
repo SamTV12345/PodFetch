@@ -84,7 +84,10 @@ impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
         else if var(OIDC_AUTH).is_ok(){
             return self.handle_oidc_auth(req)
         }
-        return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
+        else{
+            // It can only be no auth
+            return self.handle_no_auth(req);
+        }
     }
 }
 
@@ -242,6 +245,20 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                     .map_into_right_body()))
             }
         }
+    }
+
+    fn handle_no_auth(&self, req: ServiceRequest) -> Pin<Box<dyn
+    futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>>{
+        let user = User::create_admin_user();
+        req.extensions_mut().insert(user);
+        let service = Rc::clone(&self.service);
+        async move {
+            return service
+                .call(req)
+                .await
+                .map(|res| res.map_into_left_body())
+        }
+            .boxed_local()
     }
 }
 

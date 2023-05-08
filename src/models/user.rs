@@ -11,8 +11,7 @@ use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug,
-AsChangeset)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
@@ -100,7 +99,7 @@ impl User{
         Ok(User::map_to_dto(user.unwrap()))
     }
 
-    fn create_admin_user()->User{
+    pub(crate) fn create_admin_user() ->User{
         User{
             id: 9999,
             username: var(USERNAME).unwrap(),

@@ -34,6 +34,7 @@ use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
+use crate::constants::constants::Role::{User as UserRole};
 use crate::models::filter::Filter;
 use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
@@ -50,62 +51,26 @@ pub struct PodcastSearchModel{
 }
 
 #[get("/podcasts/filter")]
-pub async fn get_filter(conn:Data<DbPool>, rq: HttpRequest) -> impl Responder{
-    let err_username = User::get_username_from_req_header(&rq);
-
-    if err_username.is_err(){
-        return HttpResponse::Unauthorized().json("Unauthorized");
-    }
-
-    let username = err_username.unwrap();
-    match username {
-        Some(username)=>{
-            let filter = Filter::get_filter_by_username(username,
+pub async fn get_filter(conn:Data<DbPool>, requester: Option<web::ReqData<User>>) -> impl
+Responder{
+            let filter = Filter::get_filter_by_username(requester.unwrap().username.clone(),
                                                         &mut *conn.get().unwrap()).expect("Error getting filter");
             HttpResponse::Ok().json(filter)
-        },
-        None=>{
-            let filter = Filter::get_filter_by_username(STANDARD_USER.to_string(), &mut *conn.get().unwrap()
-            ).expect
-            ("Error getting filter");
-            HttpResponse::Ok().json(filter)
-        }
-    }
 }
 
 #[get("/podcasts/search")]
 pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
                              podcast_service: Data<Mutex<PodcastService>>,
-                             mapping_service:Data<Mutex<MappingService>>, rq: HttpRequest)
+                             mapping_service:Data<Mutex<MappingService>> , requester: Option<web::ReqData<User>>)
     ->impl Responder{
     let query = query.into_inner();
     let order = query.order.unwrap_or(OrderCriteria::ASC);
     let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
 
-    let err_username = User::get_username_from_req_header(&rq);
-
-    if err_username.is_err(){
-        return HttpResponse::Unauthorized().json("Unauthorized");
-    }
-
-    let username = err_username.unwrap();
-    let filter;
-    let designated_username;
-    match username {
-        Some(username)=>{
-            designated_username = username.clone();
-            filter = Filter::new(username, query.title.clone(), order.clone().to_bool(),Some
+    let username = requester.unwrap().username.clone();
+    let filter = Filter::new(username.clone(), query.title.clone(), order.clone().to_bool(),Some
                 (latest_pub.clone()
                 .to_string()));
-        },
-        None=>{
-            designated_username = STANDARD_USER.to_string();
-            filter = Filter::new(STANDARD_USER.to_string(), query.title.clone(), order.clone()
-                .to_bool(),Some
-                (latest_pub.clone()
-                .to_string()));
-        }
-    }
     Filter::save_filter(filter, &mut *conn.get().unwrap()).expect("Error saving filter");
 
     match query.favored_only {
@@ -116,7 +81,8 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
                                                                                    mapping_service.lock()
                                                                                        .ignore_poison(),
                                                                                    &mut conn.get().unwrap
-                                                                                   (),designated_username).unwrap();
+                                                                                   (),username)
+                .unwrap();
             HttpResponse::Ok().json(podcasts)
         }
         false => {
@@ -125,7 +91,8 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
                                                                                    query.title,
                                                                                    latest_pub.clone(),
                                                                                    &mut conn.get().unwrap
-                                                                                   (), designated_username).unwrap();
+                                                                                   (), username)
+                .unwrap();
             HttpResponse::Ok().json(podcasts)
         }
     }
@@ -292,24 +259,22 @@ pub async fn add_podcast_by_feed(
     rss_feed: web::Json<PodcastRSSAddModel>,
     lobby: Data<Addr<Lobby>>,
     podcast_service: Data<Mutex<PodcastService>>,
-    conn: Data<DbPool>, rq: HttpRequest) -> impl Responder {
+    conn: Data<DbPool>,
+    requester: Option<web::ReqData<User>>) -> impl Responder {
     let mut podcast_service = podcast_service
         .lock()
         .ignore_poison();
-    return match User::get_username_from_req_header(&rq) {
-        Ok(username) => {
-            match User::check_if_admin_or_uploader(&username, &mut conn.get().unwrap()) {
-                Some(err) => {
-                    return err;
-                }
-                None => {
-                    let client = AsyncClientBuilder::new().build().unwrap();
-                    let result = client.get(rss_feed.clone().rss_feed_url).send().await.unwrap();
-                    let bytes = result.bytes().await.unwrap();
-                    let channel = Channel::read_from(&*bytes).unwrap();
-                    let num = rand::thread_rng().gen_range(100..10000000);
 
-                    let res = podcast_service.handle_insert_of_podcast(
+    if requester.unwrap().role == UserRole.to_string() {
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+    let client = AsyncClientBuilder::new().build().unwrap();
+    let result = client.get(rss_feed.clone().rss_feed_url).send().await.unwrap();
+    let bytes = result.bytes().await.unwrap();
+    let channel = Channel::read_from(&*bytes).unwrap();
+    let num = rand::thread_rng().gen_range(100..10000000);
+
+    let res = podcast_service.handle_insert_of_podcast(
                         &mut conn.get().unwrap(),
                         PodcastInsertModel {
                             feed_url: rss_feed.clone().rss_feed_url.clone(),
@@ -321,14 +286,7 @@ pub async fn add_podcast_by_feed(
                         lobby,
                     ).await.expect("Error handling insert of podcast");
 
-                    HttpResponse::Ok().json(res)
-                }
-            }
-        }
-        Err(e) => {
-            return HttpResponse::BadRequest().json(e.to_string()).into();
-        }
-    }.into()
+    HttpResponse::Ok().json(res)
 }
 
 #[utoipa::path(
