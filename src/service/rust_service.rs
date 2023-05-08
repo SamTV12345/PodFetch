@@ -188,7 +188,7 @@ impl PodcastService {
             Some(settings) => {
                 if settings.auto_download {
                     let result = PodcastEpisodeService::
-                        get_last_5_podcast_episodes(conn, podcast.clone());
+                    get_last_n_podcast_episodes(conn, podcast.clone());
                     for podcast_episode in result {
                         self.podcast_episode_service
                             .download_podcast_episode_if_not_locally_available(

@@ -1,4 +1,4 @@
-use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
+use crate::constants::constants::{DEFAULT_SETTINGS, PodcastType, TELEGRAM_API_ENABLED};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::messages::BroadcastMessage;
@@ -16,6 +16,7 @@ use dotenv::var;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use rss::Channel;
+use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 
 #[derive(Clone)]
@@ -122,9 +123,13 @@ impl PodcastEpisodeService {
         return podcast;
     }
 
-    pub fn get_last_5_podcast_episodes(conn: &mut SqliteConnection, podcast: Podcast) ->
+    pub fn get_last_n_podcast_episodes(conn: &mut SqliteConnection, podcast: Podcast) ->
                                                                              Vec<PodcastEpisode> {
-        DB::get_last_5_podcast_episodes(conn, podcast.id).unwrap()
+
+        let mut settings_service = SettingsService::new();
+        let settings = settings_service.get_settings().unwrap_or(DEFAULT_SETTINGS);
+        DB::get_last_n_podcast_episodes(conn, podcast.id,
+                                        settings.podcast_prefill).unwrap()
     }
 
     // Used for creating/updating podcasts
@@ -210,7 +215,7 @@ impl PodcastEpisodeService {
                         continue;
                     }
                     let result = DB::get_podcast_episode_by_url(
-                        conn, &opt_enclosure.clone().unwrap().url, Option::None);
+                        conn, &opt_enclosure.clone().unwrap().url, None);
                     // We can't retrieve the duration of the podcast episode, so we set it to 0
 
                     if result.unwrap().is_none() {

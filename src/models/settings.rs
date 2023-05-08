@@ -2,6 +2,7 @@ use crate::schema::*;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use crate::service::environment_service::OidcConfig;
 use utoipa::ToSchema;
+
 #[derive(
     Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,ToSchema
 )]
@@ -12,6 +13,7 @@ pub struct Setting {
     pub auto_update: bool,
     pub auto_cleanup: bool,
     pub auto_cleanup_days: i32,
+    pub podcast_prefill: i32
 }
 
 #[derive(Serialize, Deserialize)]

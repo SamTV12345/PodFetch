@@ -127,6 +127,7 @@ diesel::table! {
         auto_update -> Bool,
         auto_cleanup -> Bool,
         auto_cleanup_days -> Integer,
+        podcast_prefill -> Integer,
     }
 }
 

@@ -47,11 +47,18 @@ export const SettingsPage = () => {
                     <div className="">
                         {t('auto-update')}
                     </div>
+
                     <div>
                         <Switcher checked={settings.autoUpdate} setChecked={()=>{
                             setSettings({...settings, autoUpdate: !settings?.autoUpdate})
                         }}/>
                     </div>
+                    <div className="">
+                        {t('number-of-podcasts-to-download')}
+                    </div>
+                    <div><input type="number" className="bg-gray-600 p-2 rounded" value={settings.podcastPrefill} onChange={(e)=>{
+                        setSettings({...settings, podcastPrefill: parseInt(e.target.value)})
+                    }}/></div>
                     <div>
                         {t('auto-download')}
                     </div>
