@@ -28,7 +28,7 @@ export const Card:FC<CardProps> = ({podcast})=>{
             </div>
         </Link>
         <div className="grid grid-cols-[1fr_auto] p-5">
-                <h5 className="mb-2 text-2xl font-bold tracking-tight text-white">{podcast.name}</h5>
+                <h5 className="mb-2 text-2xl font-bold tracking-tight text-white break-all">{podcast.name}</h5>
             <i ref={likeButton} className={`fa-star fa-solid text-3xl cursor-pointer ${podcast.favorites?'text-amber-400': 'text-gray-500'}`} onClick={()=>{
                 likeButton.current?.classList.toggle('text-amber-400')
                 likePodcast()
