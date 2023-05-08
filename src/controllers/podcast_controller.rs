@@ -34,6 +34,7 @@ use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
+use crate::models::filter::Filter;
 use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
@@ -48,31 +49,83 @@ pub struct PodcastSearchModel{
     favored_only: bool
 }
 
+#[get("/podcasts/filter")]
+pub async fn get_filter(conn:Data<DbPool>, rq: HttpRequest) -> impl Responder{
+    let err_username = User::get_username_from_req_header(&rq);
+
+    if err_username.is_err(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+
+    let username = err_username.unwrap();
+    match username {
+        Some(username)=>{
+            let filter = Filter::get_filter_by_username(username,
+                                                        &mut *conn.get().unwrap()).expect("Error getting filter");
+            HttpResponse::Ok().json(filter)
+        },
+        None=>{
+            let filter = Filter::get_filter_by_username(STANDARD_USER.to_string(), &mut *conn.get().unwrap()
+            ).expect
+            ("Error getting filter");
+            HttpResponse::Ok().json(filter)
+        }
+    }
+}
+
 #[get("/podcasts/search")]
 pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
                              podcast_service: Data<Mutex<PodcastService>>,
-                             mapping_service:Data<Mutex<MappingService>>)
+                             mapping_service:Data<Mutex<MappingService>>, rq: HttpRequest)
     ->impl Responder{
     let query = query.into_inner();
     let order = query.order.unwrap_or(OrderCriteria::ASC);
     let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+
+    let err_username = User::get_username_from_req_header(&rq);
+
+    if err_username.is_err(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+
+    let username = err_username.unwrap();
+    let filter;
+    let designated_username;
+    match username {
+        Some(username)=>{
+            designated_username = username.clone();
+            filter = Filter::new(username, query.title.clone(), order.clone().to_bool(),Some
+                (latest_pub.clone()
+                .to_string()));
+        },
+        None=>{
+            designated_username = STANDARD_USER.to_string();
+            filter = Filter::new(STANDARD_USER.to_string(), query.title.clone(), order.clone()
+                .to_bool(),Some
+                (latest_pub.clone()
+                .to_string()));
+        }
+    }
+    Filter::save_filter(filter, &mut *conn.get().unwrap()).expect("Error saving filter");
+
     match query.favored_only {
         true => {
-            let podcasts = podcast_service.lock().ignore_poison().search_podcasts_favored( order, query.title,
-                                                                                   latest_pub,
+            let podcasts = podcast_service.lock().ignore_poison().search_podcasts_favored( order
+                                                                                               .clone(), query.title,
+                                                                                   latest_pub.clone(),
                                                                                    mapping_service.lock()
                                                                                        .ignore_poison(),
                                                                                    &mut conn.get().unwrap
-                                                                                   ()).unwrap();
+                                                                                   (),designated_username).unwrap();
             HttpResponse::Ok().json(podcasts)
         }
         false => {
-            let podcasts = podcast_service.lock().ignore_poison().search_podcasts( order, query.title,
-                                                                                   latest_pub,
-                                                                                   mapping_service.lock()
-                                                                                       .ignore_poison(),
+            let podcasts = podcast_service.lock().ignore_poison().search_podcasts( order.clone(),
+                                                                                   mapping_service.lock().ignore_poison(),
+                                                                                   query.title,
+                                                                                   latest_pub.clone(),
                                                                                    &mut conn.get().unwrap
-                                                                                   ()).unwrap();
+                                                                                   (), designated_username).unwrap();
             HttpResponse::Ok().json(podcasts)
         }
     }

@@ -273,8 +273,10 @@ impl PodcastService {
     pub fn search_podcasts_favored(
         &mut self, order:OrderCriteria, title: Option<String>, latest_pub: OrderOption,
         mapping_service: MutexGuard<MappingService>, conn: &mut
-        SqliteConnection) -> Result<Vec<impl Serialize>, String>{
-        let podcasts = DB::search_podcasts_favored(conn, order, title, latest_pub);
+        SqliteConnection,
+        designated_username: String) -> Result<Vec<impl Serialize>, String>{
+        let podcasts = DB::search_podcasts_favored(conn, order, title, latest_pub,
+                                                   designated_username);
         let mut podcast_dto_vec = Vec::new();
         for podcast in podcasts {
             let podcast_dto = mapping_service.map_podcast_to_podcast_dto_with_favorites_option(&podcast);
@@ -284,16 +286,18 @@ impl PodcastService {
     }
 
 
-    pub fn search_podcasts(&mut self, order:OrderCriteria, title: Option<String>, latest_pub: OrderOption,
-                           mapping_service: MutexGuard<MappingService>, conn: &mut
-        SqliteConnection) -> Result<Vec<impl Serialize>, String>{
+    pub fn search_podcasts(&mut self, order:OrderCriteria, mapping_service:
+    MutexGuard<MappingService>,title:
+                           Option<String>, latest_pub: OrderOption,conn: &mut
+        SqliteConnection,
+                           designated_username: String) -> Result<Vec<PodcastDto>, String>{
 
-        let podcasts = DB::search_podcasts(conn, order, title, latest_pub);
-        let mut podcast_dto_vec = Vec::new();
-        for podcast in podcasts {
-                    let podcast_dto = mapping_service.map_podcast_to_podcast_dto(&podcast);
-                    podcast_dto_vec.push(podcast_dto);
-        }
-        Ok(podcast_dto_vec)
+        let podcasts = DB::search_podcasts(conn, order, title, latest_pub, designated_username);
+        let mapped_result = podcasts
+            .iter()
+            .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites
+            (&*podcast))
+            .collect::<Vec<PodcastDto>>();
+        Ok(mapped_result)
     }
 }

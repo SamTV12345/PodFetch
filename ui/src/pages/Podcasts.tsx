@@ -12,6 +12,7 @@ import {MaginifyingGlassIcon} from "../icons/MaginifyingGlassIcon";
 import {useDebounce} from "../utils/useDebounce";
 import {useTranslation} from "react-i18next";
 import {Order, OrderCriteria} from "../models/Order";
+import {Filter} from "../models/Filter";
 
 
 interface PodcastsProps {
@@ -26,6 +27,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
     const [orderOfPodcasts, setOrderOfPodcasts] = useState<Order>(Order.ASC)
     const [latestPub, setLatestPub] = useState<OrderCriteria>(OrderCriteria.TITLE)
     const {t} = useTranslation()
+
     const refreshAllPodcasts = ()=>{
         axios.post(apiURL+"/podcast/all")
     }
@@ -45,15 +47,19 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
     },500, [searchText, orderOfPodcasts, latestPub])
 
     useEffect(()=>{
-        let url = apiURL+"/podcasts"
-        if(onlyFavorites){
-            url = apiURL+"/podcasts/favored"
-        }
-        axios.get(url)
-            .then((response:AxiosResponse<Podcast[]>)=>{
-                dispatch(setPodcasts(response.data))
-            })
+        axios.get(apiURL+"/podcasts/filter").then((c:AxiosResponse<Filter>)=>{
+            if(c.data === null){
+                setLatestPub(OrderCriteria.TITLE)
+                setOrderOfPodcasts(Order.ASC)
+            }
+            else{
+                setLatestPub(c.data.filter === "PublishedDate"?OrderCriteria.PUBLISHEDDATE:OrderCriteria.TITLE)
+                setOrderOfPodcasts(c.data.ascending?Order.ASC:Order.DESC)
+                c.data.title&&setSearchText(c.data.title)
+            }
+        })
     },[location])
+
 
     return <div className="p-5">
         <AddPodcast/>
@@ -68,7 +74,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             <select  className="border text-sm rounded-lg block p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
                      onChange={(v)=> {
                        setLatestPub(v.target.value as OrderCriteria)
-                     }}>
+                     }} value={latestPub}>
                 <option value={OrderCriteria.PUBLISHEDDATE}>{t('sort-by-published-date')}</option>
                 <option value={OrderCriteria.TITLE}>{t('sort-by-title')}</option>
             </select>

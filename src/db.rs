@@ -831,7 +831,8 @@ impl DB {
     }
 
     pub fn search_podcasts_favored(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
-                                   latest_pub: OrderOption) ->Vec<(Podcast, Favorite)>{
+                                   latest_pub: OrderOption,
+                                   designated_username: String) ->Vec<(Podcast, Favorite)>{
         use crate::schema::podcasts::dsl::*;
         use crate::schema::podcast_episodes::dsl::*;
         use crate::schema::podcasts::dsl::id as podcastsid;
@@ -839,7 +840,8 @@ impl DB {
 
 
         let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
-            .inner_join(favorites::table.on(podcastsid.eq(favorites::dsl::podcast_id)))
+            .inner_join(favorites::table.on(podcastsid.eq(favorites::dsl::podcast_id).and
+            (favorites::dsl::username.eq(designated_username))))
             .into_boxed();
 
         match latest_pub {
@@ -890,14 +892,17 @@ impl DB {
     }
 
     pub fn search_podcasts(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
-                           latest_pub: OrderOption) ->Vec<Podcast>{
+                           latest_pub: OrderOption,
+                           designated_username: String) -> Vec<(Podcast, Option<Favorite>)> {
         use crate::schema::podcasts::dsl::*;
         use crate::schema::podcast_episodes::dsl::*;
         use crate::schema::podcasts::dsl::id as podcastsid;
+        use crate::schema::favorites::dsl::favorites as f_db;
+        use crate::schema::favorites::dsl::podcast_id as f_id;
+        use crate::schema::favorites::dsl::username as f_username;
 
-
-        let mut query = QueryDsl::group_by(podcasts.select(podcasts::all_columns())
-                                               .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id))), podcastsid)
+        let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
+            .left_join(f_db.on(f_username.eq(designated_username).and(f_id.eq(podcast_id))))
             .into_boxed();
 
         match latest_pub {
@@ -931,8 +936,20 @@ impl DB {
                 .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
         }
 
+        let mut matching_podcast_ids = vec![];
         let pr = query
-            .load::<Podcast>(conn).expect("Error loading podcasts");
-        pr
+            .load::<(Podcast, PodcastEpisode, Option<Favorite>)>(conn).expect("Error loading \
+            podcasts");
+        let distinct_podcasts = pr.iter()
+            .filter(|c|{
+                if matching_podcast_ids.contains(&c.0.id){
+                    return false;
+                }
+                matching_podcast_ids.push(c.0.id);
+                true
+            }).map(|c|{
+            (c.clone().0, c.clone().2)
+        }).collect::<Vec<(Podcast, Option<Favorite>)>>();
+        distinct_podcasts
     }
 }

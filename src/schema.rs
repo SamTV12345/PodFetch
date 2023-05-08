@@ -35,6 +35,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    filters (username) {
+        username -> Text,
+        title -> Nullable<Text>,
+        ascending -> Bool,
+        filter -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     invites (id) {
         id -> Text,
         role -> Text,
@@ -151,6 +160,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     devices,
     episodes,
     favorites,
+    filters,
     invites,
     notifications,
     podcast_episodes,
