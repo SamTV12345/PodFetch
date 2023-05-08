@@ -294,7 +294,6 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
         .service(get_sys_info)
         .service(get_favored_podcasts)
         .service(favorite_podcast)
-        .service(get_watchtime)
         .service(get_settings)
         .service(update_settings)
         .service(update_active_podcast)

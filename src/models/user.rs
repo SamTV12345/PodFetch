@@ -196,4 +196,12 @@ impl User{
             .expect("Error updating user");
         Ok(())
     }
+
+    pub fn is_privileged_user(&self) ->bool{
+        self.role.eq(&Role::Admin.to_string()) || self.role.eq(&Role::Uploader.to_string())
+    }
+
+    pub fn is_admin(&self) ->bool{
+        self.role.eq(&Role::Admin.to_string())
+    }
 }
