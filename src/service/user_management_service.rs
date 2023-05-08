@@ -18,14 +18,6 @@ impl UserManagementService {
         Role::from_str(&user.role).unwrap() == Role::Admin
     }
 
-    pub fn may_delete_user(user: User)->bool{
-        Role::from_str(&user.role).unwrap() == Role::Admin
-    }
-
-    pub fn may_update_role(user: User)->bool{
-        Role::from_str(&user.role).unwrap() == Role::Admin
-    }
-
     pub fn is_valid_password(password: String) ->bool{
         let mut has_whitespace = false;
         let mut has_upper = false;
@@ -107,19 +99,14 @@ impl UserManagementService {
         Err(PodFetchError::no_permissions_to_onboard_user())
     }
 
-    pub fn delete_user(user: User, requester: User, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
+    pub fn delete_user(user: User, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
 
-        if Self::may_delete_user(requester){
-            User::delete_user(&user, conn).expect("Error deleting User");
-            return Ok(())
-        }
-        Err(PodFetchError::no_permission_to_delete_user())
+        User::delete_user(&user, conn).expect("Error deleting User");
+        return Ok(())
     }
 
-    pub fn update_role(user: User, requester: User, conn: &mut SqliteConnection)->Result<UserWithoutPassword,
+    pub fn update_role(user: User, conn: &mut SqliteConnection)->Result<UserWithoutPassword,
         PodFetchError>{
-        println!("Rolle: {}", requester.role);
-        if Self::may_update_role(requester){
             return match User::update_role(&user, conn) {
                 Ok(user) => {
                     Ok(user)
@@ -131,16 +118,10 @@ impl UserManagementService {
                 }
             }
         }
-        Err(PodFetchError::no_permission_to_update_user_role())
-    }
 
 
-    pub fn get_invite_link(invite_id: String, requester: User, environment_service: MutexGuard<EnvironmentService>,
+    pub fn get_invite_link(invite_id: String, environment_service: MutexGuard<EnvironmentService>,
                            conn: &mut SqliteConnection) ->Result<String, PodFetchError>{
-        match Self::may_onboard_user(requester){
-            true=>{},
-            false=>{return Err(PodFetchError::no_permission_to_onboard_user())}
-        }
 
         match Invite::find_invite(invite_id, conn){
             Ok(invite) => {
@@ -186,12 +167,7 @@ impl UserManagementService {
         }
     }
 
-    pub fn get_invites(requester: User, conn: &mut SqliteConnection)->Result<Vec<Invite>, PodFetchError>{
-        match Self::may_onboard_user(requester){
-            true=>{},
-            false=>{return Err(PodFetchError::no_permission_to_onboard_user())}
-        }
-
+    pub fn get_invites(conn: &mut SqliteConnection)->Result<Vec<Invite>, PodFetchError>{
         match Invite::find_all_invites(conn){
             Ok(invites) => {
                 Ok(invites)
@@ -211,10 +187,7 @@ impl UserManagementService {
         return Ok(User::find_all_users(conn))
     }
 
-    pub fn delete_invite(invite_id: String, requester: User, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
-        if !Self::may_onboard_user(requester) {
-            return Err(PodFetchError::no_permissions_to_onboard_user())
-        }
+    pub fn delete_invite(invite_id: String, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
 
         match Invite::find_invite(invite_id, conn){
             Ok(invite) => {

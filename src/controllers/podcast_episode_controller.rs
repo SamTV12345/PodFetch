@@ -2,12 +2,11 @@ use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
-use actix_web::{get, HttpRequest, put};
+use actix_web::{get, put};
 use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
-use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::user::User;
@@ -85,9 +84,14 @@ responses(
 tag="podcast_episodes"
 )]
 #[put("/podcast/{id}/episodes/download")]
-pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>) ->
+pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>,
+                                                  requester: Option<web::ReqData<User>>) ->
                                                                                              impl
 Responder {
+    if !requester.unwrap().is_privileged_user(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+
     thread::spawn(move || {
         let mut db = DB::new().unwrap();
         let res = DB::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())

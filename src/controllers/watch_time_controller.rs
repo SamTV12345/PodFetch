@@ -1,9 +1,8 @@
 use crate::db::DB;
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
-use actix_web::{get, post, web, HttpResponse, Responder, HttpRequest};
+use actix_web::{get, post, web, HttpResponse, Responder};
 use std::sync::{Mutex};
-use crate::constants::constants::STANDARD_USER;
 use crate::DbPool;
 use crate::models::episode::Episode;
 use crate::models::user::User;
@@ -82,23 +81,4 @@ pub async fn get_watchtime(id: web::Path<String>, conn: Data<DbPool>, requester:
     let designated_username = requester.unwrap().username.clone();
     let watchtime = DB::get_watchtime(&mut conn.get().unwrap(),&id, designated_username).unwrap();
     HttpResponse::Ok().json(watchtime)
-}
-
-
-pub fn get_username(rq: HttpRequest) -> Result<String, HttpResponse> {
-    let res = User::get_username_from_req_header(&rq);
-    if res.is_err() {
-        return Err(HttpResponse::Unauthorized().body("Unauthorized"))
-    }
-    let designated_username: String;
-
-    match res.unwrap(){
-        Some(username) => {
-            designated_username = username;
-        },
-        None => {
-            designated_username = STANDARD_USER.to_string();
-        }
-    }
-    Ok(designated_username)
 }

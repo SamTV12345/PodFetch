@@ -347,17 +347,10 @@ pub fn get_ui_config() -> Scope {
 
 }
 
-pub fn get_public_user_management() ->Scope{
-    web::scope("")
-        .service(onboard_user)
-        .service(get_invite)
-}
-
 pub fn get_secure_user_management() ->Scope{
     web::scope("/users")
         .service(create_invite)
         .service(get_invites)
-        .service(onboard_user)
         .service(get_users)
         .service(update_role)
         .service(delete_user)

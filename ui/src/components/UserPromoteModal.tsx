@@ -31,6 +31,8 @@ export const UserPromoteModal = () => {
             })
     }
 
+    //TODO do explicit consent switch.
+
     return <Modal headerText={t('change-role-user', {name: selectedUser?.username})!} onCancel={()=>{}} onAccept={()=>{}} onDelete={()=>{}} cancelText="Test" acceptText="Test123">
         <label htmlFor="countries" className="block mb-2 font-medium text-white">{t('select-role')}</label>
         <select id="countries" value={selectedUser?.role} onChange={(v)=> {
@@ -40,6 +42,7 @@ export const UserPromoteModal = () => {
             <option value="user">{t('user')}</option>
             <option value="uploader">{t('uploader')}</option>
         </select>
+        <label htmlFor="countries" className="block mb-2 font-medium text-white">{t('allow-explicit-content')}</label>
         <div className="flex">
             <div className=" flex-1"></div>
             <button className="bg-blue-700 p-2 text-white" onClick={changeRole}>{t('change-role')}</button>

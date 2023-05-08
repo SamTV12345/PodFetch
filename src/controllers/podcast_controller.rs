@@ -27,14 +27,13 @@ use std::time::Duration;
 use actix_web::http::header::LOCATION;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
-use crate::constants::constants::{PodcastType, STANDARD_USER};
+use crate::constants::constants::{PodcastType};
 use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
-use crate::constants::constants::Role::{User as UserRole};
 use crate::models::filter::Filter;
 use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
@@ -316,13 +315,12 @@ pub async fn add_podcast_from_podindex(
     requester: Option<web::ReqData<User>>
 ) -> impl Responder {
     let mut environment = EnvironmentService::new();
+    if !requester.unwrap().is_privileged_user(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
 
     if !environment.get_config().podindex_configured {
         return HttpResponse::BadRequest().json("Podindex is not configured");
-    }
-
-    if !requester.unwrap().is_privileged_user(){
-        return HttpResponse::Unauthorized().json("Unauthorized");
     }
 
     spawn_blocking(move || {
@@ -403,8 +401,13 @@ pub async fn download_podcast(
     id: Path<String>,
     lobby: Data<Addr<Lobby>>,
     podcast_service: Data<Mutex<PodcastService>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>,
+    requester: Option<web::ReqData<User>>
 ) -> impl Responder {
+    if !requester.unwrap().is_privileged_user(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+
     let id_num = from_str::<i32>(&id).unwrap();
     let mut podcast_service = podcast_service.lock()
         .ignore_poison();

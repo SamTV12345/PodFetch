@@ -37,7 +37,7 @@ pub async fn onboard_user(user_onboarding: web::Json<UserOnboardingModel>, conn:
 
     let res = UserManagementService::onboard_user(user_to_onboard.username, user_to_onboard
         .password,
-                                        user_to_onboard.invite_id, &mut *conn.get().unwrap());
+                                                  user_to_onboard.invite_id, &mut *conn.get().unwrap());
 
     return match res {
         Ok(user) => HttpResponse::Ok().json(User::map_to_dto(user)),
@@ -47,15 +47,9 @@ pub async fn onboard_user(user_onboarding: web::Json<UserOnboardingModel>, conn:
 }
 
 #[get("")]
-pub async fn get_users(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
-    let username = get_user_from_request(req);
-    let user = User::find_by_username(&username, &mut *conn.get().unwrap());
-    if user.is_none() {
-        return HttpResponse::NotFound()
-            .body("User not found")
-    }
+pub async fn get_users(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder{
 
-    let res = UserManagementService::get_users(user.unwrap(),&mut *conn.get().unwrap());
+    let res = UserManagementService::get_users(requester.unwrap().into_inner(),&mut *conn.get().unwrap());
 
     if res.is_err() {
         return HttpResponse::Forbidden()
@@ -77,14 +71,13 @@ pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
 }
 
 #[put("/{username}/role")]
-pub async fn update_role(req: HttpRequest, role: web::Json<UserRoleUpdateModel>, conn: Data<DbPool>, username: web::Path<String>)
+pub async fn update_role(role: web::Json<UserRoleUpdateModel>, conn: Data<DbPool>, username:
+web::Path<String>, requester: Option<web::ReqData<User>>)
     ->impl Responder{
 
-    let requester_username = get_user_from_request(req);
-    let requester = User::find_by_username(&requester_username, &mut *conn.get().unwrap());
-    if requester.is_none() {
-        return HttpResponse::NotFound()
-            .body("User not found")
+    if !requester.unwrap().is_admin(){
+        return HttpResponse::Forbidden()
+            .body("You are not authorized to perform this action")
     }
     let user_to_update = User::find_by_username(&username, &mut *conn.get().unwrap());
 
@@ -98,8 +91,7 @@ pub async fn update_role(req: HttpRequest, role: web::Json<UserRoleUpdateModel>,
     found_user.role = role.role.to_string();
     found_user.explicit_consent = role.explicit_consent;
 
-    let res = UserManagementService::update_role(found_user, requester.unwrap(), &mut
-                                              *conn.get()
+    let res = UserManagementService::update_role(found_user,  &mut *conn.get()
         .unwrap());
 
     match res {
@@ -112,24 +104,25 @@ pub async fn update_role(req: HttpRequest, role: web::Json<UserRoleUpdateModel>,
 }
 
 #[post("/invites")]
-pub async fn create_invite(req: HttpRequest, invite: web::Json<InvitePostModel>, conn: Data<DbPool>)
+pub async fn create_invite(invite: web::Json<InvitePostModel>, conn:
+Data<DbPool>, requester: Option<web::ReqData<User>>)
     ->impl
 Responder{
     let invite = invite.into_inner();
-    let username  = req.headers().get(USERNAME).unwrap()
-        .to_str().unwrap();
-    let user = User::find_by_username(username, &mut *conn.get().unwrap()).unwrap();
+
     let created_invite = UserManagementService::create_invite(invite.role, invite
         .explicit_consent,&mut *conn.get()
-        .unwrap(), user).expect("Error creating invite");
+        .unwrap(), requester.unwrap().into_inner()).expect("Error creating invite");
     HttpResponse::Ok().json(created_invite)
 }
 
 #[get("/invites")]
-pub async fn get_invites(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
-    let username  = get_user_from_request(req);
-    let user = User::find_by_username(&username, &mut *conn.get().unwrap()).unwrap();
-    let invites = UserManagementService::get_invites(user, &mut *conn.get().unwrap());
+pub async fn get_invites(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder{
+    if !requester.unwrap().is_admin(){
+        return HttpResponse::Forbidden().body("You are not authorized to perform this action")
+    }
+
+    let invites = UserManagementService::get_invites( &mut *conn.get().unwrap());
 
     if invites.is_err(){
         return HttpResponse::BadRequest().body(invites.err().unwrap().name().clone())
@@ -148,12 +141,14 @@ pub async fn get_invite(conn: Data<DbPool>, invite_id: web::Path<String>)->
 }
 
 #[delete("/{username}")]
-pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>, req: HttpRequest)->impl Responder{
-    let username_req  = get_user_from_request(req);
-    let user = User::find_by_username(&username_req, &mut *conn.get().unwrap()).unwrap();
+pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>,  requester: Option<web::ReqData<User>>)->impl
+Responder{
+    if !requester.unwrap().is_admin(){
+        return HttpResponse::Forbidden().body("You are not authorized to perform this action")
+    }
 
     let user_to_delete = User::find_by_username(&username, &mut *conn.get().unwrap()).unwrap();
-    return match UserManagementService::delete_user(user_to_delete,user, &mut *conn.get().unwrap())
+    return match UserManagementService::delete_user(user_to_delete, &mut *conn.get().unwrap())
     {
         Ok(_) => HttpResponse::Ok().into(),
         Err(e) => HttpResponse::BadRequest().body(e.to_string())
@@ -161,12 +156,16 @@ pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>, req: Ht
 }
 
 #[get("/invites/{invite_id}/link")]
-pub async fn get_invite_link(conn: Data<DbPool>, invite_id: web::Path<String>,  req: HttpRequest, environment_service: Data<Mutex<EnvironmentService>>)->
+pub async fn get_invite_link(conn: Data<DbPool>, invite_id: web::Path<String>,
+                             environment_service: Data<Mutex<EnvironmentService>>, requester: Option<web::ReqData<User>>)->
     impl Responder{
+    if !requester.unwrap().is_admin(){
+        return HttpResponse::Forbidden().body("You are not authorized to perform this action")
+    }
     let environment_service = environment_service.lock().ignore_poison();
-    let username_req  = get_user_from_request(req);
-    let user = User::find_by_username(&username_req, &mut *conn.get().unwrap()).unwrap();
-    match UserManagementService::get_invite_link(invite_id.into_inner(), user,
+
+
+    match UserManagementService::get_invite_link(invite_id.into_inner(),
                                                  environment_service,&mut *conn.get()
         .unwrap()){
         Ok(invite) => HttpResponse::Ok().json(invite),
@@ -175,11 +174,12 @@ pub async fn get_invite_link(conn: Data<DbPool>, invite_id: web::Path<String>,  
 }
 
 #[delete("/invites/{invite_id}")]
-pub async fn delete_invite(conn:Data<DbPool>, invite_id: web::Path<String>, req: HttpRequest)->impl Responder{
-    let username_req  = get_user_from_request(req);
-    let user = User::find_by_username(&username_req, &mut *conn.get().unwrap()).unwrap();
+pub async fn delete_invite(conn:Data<DbPool>, invite_id: web::Path<String>,requester: Option<web::ReqData<User>>)->impl Responder{
+    if !requester.unwrap().is_admin(){
+        return HttpResponse::Forbidden().body("You are not authorized to perform this action")
+    }
 
-    return match UserManagementService::delete_invite(invite_id.into_inner(),user, &mut *conn.get().unwrap())
+    return match UserManagementService::delete_invite(invite_id.into_inner(), &mut *conn.get().unwrap())
     {
         Ok(_) => HttpResponse::Ok().into(),
         Err(e) => HttpResponse::BadRequest().body(e.to_string())
