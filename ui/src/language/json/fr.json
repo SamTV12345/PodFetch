@@ -112,5 +112,6 @@
   "no-data-found": "Aucune donnée trouvée",
   "descendant": "Descendant",
   "sort-by-published-date": "Trier par date de publication",
-  "sort-by-title": "Trier par titre"
+  "sort-by-title": "Trier par titre",
+  "number-of-podcasts-to-download": "Nombre de podcasts à télécharger"
 }

@@ -21,6 +21,7 @@ pub const DEFAULT_SETTINGS: Setting = Setting {
     auto_update: true,
     auto_cleanup: true,
     auto_cleanup_days: 30,
+    podcast_prefill: 5,
 };
 
 pub const ERROR_LOGIN_MESSAGE: &str = "User either not found or password is incorrect";

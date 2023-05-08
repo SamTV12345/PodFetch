@@ -4,4 +4,5 @@ export type Setting = {
     autoUpdate: boolean,
     autoCleanup: boolean,
     autoCleanupDays: number,
+    podcastPrefill: number
 }

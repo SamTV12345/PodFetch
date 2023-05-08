@@ -248,14 +248,15 @@ impl DB {
         return inserted_podcast;
     }
 
-    pub fn get_last_5_podcast_episodes(
+    pub fn get_last_n_podcast_episodes(
         conn: &mut SqliteConnection,
         podcast_episode_id: i32,
+        number_to_download: i32
     ) -> Result<Vec<PodcastEpisode>, String> {
         use crate::schema::podcast_episodes::dsl::*;
         let podcasts = podcast_episodes
             .filter(podcast_id.eq(podcast_episode_id))
-            .limit(5)
+            .limit(number_to_download as i64)
             .order(date_of_recording.desc())
             .load::<PodcastEpisode>(conn)
             .expect("Error loading podcasts");
@@ -345,8 +346,7 @@ impl DB {
         match result {
             Some(found_podcast) => {
                 let history_item = podcast_history_items
-                    .filter(episode_id.eq(podcast_id_tos_search).and(username.eq(username_to_find
-                        .clone())))
+                    .filter(episode_id.eq(podcast_id_tos_search).and(username.eq(username_to_find.clone())))
                     .order(date.desc())
                     .first::<PodcastHistoryItem>(conn)
                     .optional()
