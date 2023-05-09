@@ -38,6 +38,7 @@ use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
 use futures_util::{FutureExt, StreamExt};
 use regex::internal::Input;
+use reqwest::header::HeaderMap;
 use tokio::sync::mpsc;
 use crate::models::filter::Filter;
 use crate::models::itunes_models::Podcast;
@@ -610,8 +611,10 @@ pub(crate) async fn proxy_podcast(
     params: web::Query<Params>,
     peer_addr: Option<PeerAddr>,
     method: Method,
+    rq: HttpRequest
 ) -> Result<HttpResponse, Error> {
 
+    println!("Proxying podcast: {:?}", rq.headers().clone());
     let (tx, rx) = mpsc::unbounded_channel();
 
     actix_web::rt::spawn(async move {
@@ -620,8 +623,24 @@ pub(crate) async fn proxy_podcast(
         }
     });
 
+    let mut header_map = HeaderMap::new();
+
+    println!("{:?}", rq.headers().clone());
+
+    for x in rq.headers() {
+        if x.0 == "host"||x.0 == "referer"||x.0 == "sec-fetch-site"||x.0 == "sec-fetch-mode" {
+            continue;
+        }
+        header_map.append(x.0.clone(), x.1.clone());
+    }
+
+    // Required to not generate a 302 redirect
+    header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
+    header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
+
     let forwarded_req = reqwest::Client::new()
         .request(method, params.url.clone())
+        .headers(header_map)
         .fetch_mode_no_cors()
         .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
 
