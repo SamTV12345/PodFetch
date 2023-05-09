@@ -267,10 +267,9 @@ pub fn get_global_scope() -> Scope {
 }
 
 fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = actix_web::Error, InitError = ()>> {
-    let is_auth = var(BASIC_AUTH).is_ok()||var(OIDC_AUTH).is_ok();
     let middleware = AuthFilter::new();
     web::scope("")
-        .wrap(Condition::new(is_auth,middleware))
+        .wrap(middleware)
         .service(get_filter)
         .service(search_podcasts)
         .service(add_podcast_by_feed)
