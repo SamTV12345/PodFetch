@@ -1,5 +1,7 @@
 # Podfetch
 
+[![dependency status](https://deps.rs/repo/github/SamTV12345/PodFetch/status.svg)](https://deps.rs/repo/github/SamTV12345/PodFetch)
+
 Podfetch is a self-hosted podcast manager. 
 It is a web app that lets you download podcasts and listen to them online.
 It is written in Rust and uses React for the frontend.
