@@ -10,7 +10,7 @@ use crate::service::rust_service::PodcastService;
 use crate::{DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
-use actix_web::{get, post, put, delete, HttpRequest};
+use actix_web::{get, post, put, delete, HttpRequest, error, Error};
 use actix_web::{web, HttpResponse, Responder};
 use async_recursion::async_recursion;
 use futures::{executor};
@@ -24,7 +24,9 @@ use serde_json::{from_str, Value};
 use std::sync::{Mutex};
 use std::thread;
 use std::time::Duration;
+use actix_web::dev::PeerAddr;
 use actix_web::http::header::LOCATION;
+use actix_web::http::{Method, StatusCode};
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
@@ -34,11 +36,14 @@ use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
+use futures_util::{FutureExt, StreamExt};
+use tokio::sync::mpsc;
 use crate::models::filter::Filter;
 use crate::models::itunes_models::Podcast;
 use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -600,36 +605,43 @@ pub struct Params {
 
 #[get("/proxy/podcast")]
 pub(crate) async fn proxy_podcast(
-    req: HttpRequest,
-    payload: web::Payload,
-    params: web::Query<Params>
-) -> HttpResponse {
-    let new_url = params.url.clone();
+    mut payload: web::Payload,
+    params: web::Query<Params>,
+    peer_addr: Option<PeerAddr>,
+    method: Method,
+) -> Result<HttpResponse, Error> {
 
-    let forwarded_req = AwcClient::new()
-        .request_from(new_url.as_str(), req.head())
-        .timeout(Duration::from_secs(10))
-        .no_decompress();
+    let (tx, rx) = mpsc::unbounded_channel();
+
+    actix_web::rt::spawn(async move {
+        while let Some(chunk) = payload.next().await {
+            tx.send(chunk).unwrap();
+        }
+    });
+
+    let forwarded_req = reqwest::Client::new()
+        .request(method, params.url.clone())
+        .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
+
+    let forwarded_req = match peer_addr {
+        Some(PeerAddr(addr)) => forwarded_req.header("x-forwarded-for", addr.ip().to_string()),
+        None => forwarded_req,
+    };
 
     let res = forwarded_req
-        .send_stream(payload)
-        .await;
+        .send()
+        .await
+        .map_err(error::ErrorInternalServerError)?;
 
-    if res.is_err() {
-        return HttpResponse::InternalServerError().json("Error proxying podcast");
-    }
-
-    let unwrapped_res = res.unwrap();
-    let mut client_resp = HttpResponse::build(unwrapped_res.status());
+    println!("{:?}",res.headers());
+    let mut client_resp = HttpResponse::build(res.status());
     // Remove `Connection` as per
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
-    for (header_name, header_value) in unwrapped_res.headers().iter().filter(|(h, _)| *h != "connection") {
+
+    for (header_name, header_value) in res.headers().iter() {
+        println!("Key: {:?}, Value: {:?}", header_name, header_value);
         client_resp.insert_header((header_name.clone(), header_value.clone()));
     }
 
-    let streaming_res = client_resp.streaming(unwrapped_res);
-    if streaming_res.status()==400{
-        return HttpResponse::TemporaryRedirect().append_header((LOCATION,new_url)).finish()
-    }
-    streaming_res
+    Ok(client_resp.streaming(res.bytes_stream()))
 }
