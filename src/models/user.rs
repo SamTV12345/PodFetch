@@ -9,10 +9,9 @@ use crate::schema::users;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
+use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug,
-AsChangeset)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
@@ -49,7 +48,6 @@ impl User{
 
     pub fn find_by_username(username_to_find: &str, conn: &mut SqliteConnection) -> Option<User> {
         use crate::schema::users::dsl::*;
-
         match var(USERNAME) {
              Ok(res)=> {
                 if res==username_to_find {
@@ -101,10 +99,21 @@ impl User{
         Ok(User::map_to_dto(user.unwrap()))
     }
 
-    fn create_admin_user()->User{
+    pub(crate) fn create_admin_user() ->User{
+        let username;
+        let opt_username = var(USERNAME);
+
+        match opt_username {
+            Ok(res) => {
+                username = res;
+            },
+            Err(_) => {
+                username = STANDARD_USER.to_string()
+            }
+        }
         User{
             id: 9999,
-            username: var(USERNAME).unwrap(),
+            username,
             role: Role::Admin.to_string(),
             password: None,
             explicit_consent: true,
@@ -197,5 +206,13 @@ impl User{
             .set(user).execute(conn)
             .expect("Error updating user");
         Ok(())
+    }
+
+    pub fn is_privileged_user(&self) ->bool{
+        self.role.eq(&Role::Admin.to_string()) || self.role.eq(&Role::Uploader.to_string())
+    }
+
+    pub fn is_admin(&self) ->bool{
+        self.role.eq(&Role::Admin.to_string())
     }
 }

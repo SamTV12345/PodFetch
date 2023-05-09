@@ -221,7 +221,7 @@ impl PodcastService {
         DB::get_podcast(conn,id).unwrap()
     }
 
-    pub fn get_favored_podcasts(&mut self, found_username: Option<String>) -> Vec<PodcastDto> {
+    pub fn get_favored_podcasts(&mut self, found_username: String) -> Vec<PodcastDto> {
         self.db.get_favored_podcasts(found_username).unwrap()
     }
 

@@ -2,12 +2,13 @@ use std::sync::{Mutex};
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use actix_web::web::Data;
 use sha256::digest;
-use crate::{DbPool, extract_basic_auth};
+use crate::{DbPool};
 use crate::models::user::User;
 use actix_web::{post};
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use awc::cookie::{Cookie, SameSite};
+use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 
 #[post("/auth/{username}/login.json")]
@@ -31,7 +32,7 @@ Responder {
 
     let authorization = rq.headers().get("Authorization").unwrap().to_str().unwrap();
     let unwrapped_username = username.into_inner();
-    let (username_basic, password) = basic_auth_login(authorization.to_string());
+    let (username_basic, password) = AuthFilter::basic_auth_login(authorization.to_string());
     if username_basic != unwrapped_username {
         return HttpResponse::Unauthorized().finish();
     }
@@ -63,10 +64,4 @@ fn create_session_cookie(session: Session) -> Cookie<'static> {
         .same_site
     (SameSite::Strict).path("/api").finish();
     user_cookie
-}
-
-pub fn basic_auth_login(rq: String) -> (String, String) {
-    let (u,p) = extract_basic_auth(rq.as_str());
-
-    return (u.to_string(),p.to_string())
 }

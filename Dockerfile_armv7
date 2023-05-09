@@ -47,6 +47,7 @@ ADD static ./static
 ADD migrations ./migrations
 ADD src ./src
 ADD build.rs .
+ADD .git .
 ADD db ./db
 RUN cargo update
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \

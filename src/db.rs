@@ -636,7 +636,7 @@ impl DB {
         }
     }
 
-    pub fn get_favored_podcasts(&mut self, found_username: Option<String>) -> Result<Vec<PodcastDto>,
+    pub fn get_favored_podcasts(&mut self, found_username: String) -> Result<Vec<PodcastDto>,
         String> {
         use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
         use crate::schema::favorites::dsl::favorites as f_db;
@@ -644,27 +644,13 @@ impl DB {
         use crate::schema::favorites::dsl::favored as favor_column;
         let result:Vec<(Podcast, Favorite)>;
 
-        match found_username {
-            Some(..) => {
-                 result = dsl_podcast
+         result = dsl_podcast
                     .inner_join(f_db)
                     .filter(
                         favor_column.eq(true).and(
-                        user_favor.eq(found_username.unwrap())))
+                        user_favor.eq(found_username)))
                     .load::<(Podcast, Favorite)>(&mut self.conn).unwrap();
-            },
-            None =>{
-                result = dsl_podcast
-                    .inner_join(f_db)
-                    .filter((
-                        favor_column.eq(true)).and(
-                        user_favor.eq(STANDARD_USER)
-                    )
-                    )
-                    .load::<(Podcast, Favorite)>(&mut self.conn)
-                    .expect("Error loading podcast episode by id");
-            }
-        }
+
 
 
         let mapped_result = result

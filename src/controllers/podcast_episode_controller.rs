@@ -2,14 +2,14 @@ use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
-use actix_web::{get, HttpRequest, put};
+use actix_web::{get, put};
 use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
-use crate::controllers::watch_time_controller::get_username;
 use crate::DbPool;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::user::User;
 use crate::mutex::LockResultExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -31,8 +31,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
     last_podcast_episode: Query<OptionalId>,
     mapping_service: Data<Mutex<MappingService>>,
-    conn: Data<DbPool>
-) -> impl Responder {
+    conn: Data<DbPool>) -> impl Responder {
     let mapping_service = mapping_service.lock() .ignore_poison();
 
     let last_podcast_episode = last_podcast_episode.into_inner();
@@ -54,18 +53,14 @@ pub struct TimeLinePodcastEpisode {
 }
 
 #[get("/podcasts/timeline")]
-pub async fn get_timeline(conn: Data<DbPool>, req: HttpRequest, mapping_service:
+pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<User>>, mapping_service:
 Data<Mutex<MappingService>>) ->
                                                                                              impl
 Responder {
     let mapping_service = mapping_service.lock().ignore_poison();
-    let username = get_username(req);
-    if username.is_err(){
-        return HttpResponse::BadRequest().json("Username not found");
-    }
 
 
-    let res = DB::get_timeline(username.unwrap(),&mut conn.get().unwrap());
+    let res = DB::get_timeline(requester.unwrap().username.clone(),&mut conn.get().unwrap());
 
     let mapped_timeline = res.iter().map(|podcast_episode| {
         let (podcast_episode, podcast) = podcast_episode;
@@ -89,9 +84,14 @@ responses(
 tag="podcast_episodes"
 )]
 #[put("/podcast/{id}/episodes/download")]
-pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>) ->
+pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>,
+                                                  requester: Option<web::ReqData<User>>) ->
                                                                                              impl
 Responder {
+    if !requester.unwrap().is_privileged_user(){
+        return HttpResponse::Unauthorized().json("Unauthorized");
+    }
+
     thread::spawn(move || {
         let mut db = DB::new().unwrap();
         let res = DB::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())

@@ -9,6 +9,7 @@ use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 use crate::db::DB;
 use crate::DbPool;
 use crate::models::itunes_models::{Podcast};
+use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
@@ -38,7 +39,12 @@ responses(
 tag="settings"
 )]
 #[put("/settings")]
-pub async fn update_settings(db: Data<Mutex<SettingsService>>, settings: web::Json<Setting>) -> impl Responder {
+pub async fn update_settings(db: Data<Mutex<SettingsService>>, settings: web::Json<Setting>,
+                             requester: Option<web::ReqData<User>>) -> impl Responder {
+    if !requester.unwrap().is_admin() {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     let mut db = db.lock().ignore_poison();
 
     let settings = db.update_settings(settings.into_inner());
@@ -55,8 +61,14 @@ tag="settings"
 pub async fn run_cleanup(
     pdservice: Data<Mutex<PodcastEpisodeService>>,
     db: Data<Mutex<SettingsService>>,
-    conn: Data<DbPool>
+    conn: Data<DbPool>,
+    requester: Option<web::ReqData<User>>
 ) -> impl Responder {
+
+    if !requester.unwrap().is_admin() {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     let settings = db.lock().ignore_poison().get_settings();
     match settings {
         Some(settings) => {
@@ -87,7 +99,7 @@ Responder {
     let podcasts_found = DB::get_all_podcasts(&mut conn.get().unwrap()).unwrap();
 
     let mut xml = XMLBuilder::new().version(XMLVersion::XML1_1)
-        .encoding("UTF-8".into())
+        .encoding("UTF-8".to_string())
         .build();
     let mut opml = XMLElement::new("opml");
     opml.add_attribute("version", "2.0");

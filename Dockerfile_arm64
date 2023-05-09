@@ -40,6 +40,7 @@ ADD Cargo.toml .
 ADD static ./static
 ADD migrations ./migrations
 ADD src ./src
+ADD .git .
 ADD build.rs .
 ADD db ./db
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
