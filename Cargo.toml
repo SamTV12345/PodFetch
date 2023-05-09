@@ -11,7 +11,8 @@ built = {version="0.6.0", features=["git2", "chrono", "semver"]}
 [dependencies]
 awc =  {version="3.1.1", features = ["rustls"]}
 rpassword = "7.2.0"
-reqwest = {version="0.11.14", features = ["blocking", "json", "async-compression", "rustls"]}
+reqwest = {version="0.11.14", features = ["blocking", "json", "async-compression", "rustls", "stream"]}
+tokio-stream = { version = "0.1.14", features = ["sync"] }
 actix = "0.13.0"
 async-recursion = "1.0.2"
 base64 = "0.21.0"
