@@ -9,7 +9,7 @@ use crate::schema::users;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, USERNAME};
+use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]
@@ -100,6 +100,17 @@ impl User{
     }
 
     pub(crate) fn create_admin_user() ->User{
+        let username;
+        let opt_username = var(USERNAME);
+
+        match opt_username {
+            Ok(res) => {
+                username = res;
+            },
+            Err(_) => {
+                username = STANDARD_USER.to_string()
+            }
+        }
         User{
             id: 9999,
             username: var(USERNAME).unwrap(),
