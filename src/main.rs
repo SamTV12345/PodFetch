@@ -266,7 +266,7 @@ pub fn get_global_scope() -> Scope {
         .service(get_rss_feed_for_podcast)
 }
 
-fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<EitherBody<BoxBody>>>, Error = actix_web::Error, InitError = ()>> {
+fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<BoxBody>>, Error = actix_web::Error, InitError = ()>> {
     let middleware = AuthFilter::new();
     web::scope("")
         .wrap(middleware)
