@@ -23,10 +23,8 @@ use rss::Channel;
 use serde_json::{from_str, Value};
 use std::sync::{Mutex};
 use std::thread;
-use std::time::Duration;
 use actix_web::dev::PeerAddr;
-use actix_web::http::header::LOCATION;
-use actix_web::http::{Method, StatusCode};
+use actix_web::http::{Method};
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
@@ -35,9 +33,7 @@ use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
-use awc::Client as AwcClient;
-use futures_util::{FutureExt, StreamExt};
-use regex::internal::Input;
+use futures_util::{StreamExt};
 use reqwest::header::HeaderMap;
 use tokio::sync::mpsc;
 use crate::models::filter::Filter;
@@ -614,7 +610,6 @@ pub(crate) async fn proxy_podcast(
     rq: HttpRequest
 ) -> Result<HttpResponse, Error> {
 
-    println!("Proxying podcast: {:?}", rq.headers().clone());
     let (tx, rx) = mpsc::unbounded_channel();
 
     actix_web::rt::spawn(async move {
@@ -624,8 +619,6 @@ pub(crate) async fn proxy_podcast(
     });
 
     let mut header_map = HeaderMap::new();
-
-    println!("{:?}", rq.headers().clone());
 
     for x in rq.headers() {
         if x.0 == "host"||x.0 == "referer"||x.0 == "sec-fetch-site"||x.0 == "sec-fetch-mode" {
