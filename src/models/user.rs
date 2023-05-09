@@ -113,7 +113,7 @@ impl User{
         }
         User{
             id: 9999,
-            username: var(USERNAME).unwrap(),
+            username,
             role: Role::Admin.to_string(),
             password: None,
             explicit_consent: true,
