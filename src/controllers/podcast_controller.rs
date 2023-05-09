@@ -37,6 +37,7 @@ use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use awc::Client as AwcClient;
 use futures_util::{FutureExt, StreamExt};
+use regex::internal::Input;
 use tokio::sync::mpsc;
 use crate::models::filter::Filter;
 use crate::models::itunes_models::Podcast;
@@ -621,6 +622,7 @@ pub(crate) async fn proxy_podcast(
 
     let forwarded_req = reqwest::Client::new()
         .request(method, params.url.clone())
+        .fetch_mode_no_cors()
         .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
 
     let forwarded_req = match peer_addr {
@@ -633,13 +635,11 @@ pub(crate) async fn proxy_podcast(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    println!("{:?}",res.headers());
     let mut client_resp = HttpResponse::build(res.status());
     // Remove `Connection` as per
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
 
     for (header_name, header_value) in res.headers().iter() {
-        println!("Key: {:?}, Value: {:?}", header_name, header_value);
         client_resp.insert_header((header_name.clone(), header_value.clone()));
     }
 

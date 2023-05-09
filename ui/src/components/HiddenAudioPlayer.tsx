@@ -10,7 +10,6 @@ import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
-import {PodcastEpisode} from "../store/CommonSlice";
 
 type HiddenAudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement>,
@@ -49,15 +48,7 @@ export const HiddenAudioPlayer:FC<HiddenAudioPlayerProps> = ({refItem, setAudioA
         if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
             return
         }
-        //setAudioAmplifier(new AudioAmplifier(refItem.current!))
-    })
-
-    refItem.current&&refItem.current?.addEventListener("error",()=>{
-        console.log("Error loading audio")
-        let str = store.getState().audioPlayer.currentPodcastEpisode?.url as string
-        let podcastEpisode1 = store.getState().audioPlayer.currentPodcastEpisode as PodcastEpisode
-        console.log(store.getState().audioPlayer.currentPodcastEpisode)
-        store.dispatch(setCurrentPodcastEpisode({...podcastEpisode1, local_url: str}))
+        setAudioAmplifier(new AudioAmplifier(refItem.current!))
     })
 
     return <audio ref={refItem}  crossOrigin="anonymous" src={podcastEpisode?.local_url} id={'hiddenaudio'} onTimeUpdate={(e)=>{
