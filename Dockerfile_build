@@ -8,8 +8,8 @@ RUN  npm install && npm run build
 FROM talk.schwanzer.online/dockerhub_proxy/library/rust:alpine3.17 as dependency-cache
 USER root
 
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
-RUN apk add pkgconfig openssl-dev libc-dev git
+#ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+
 WORKDIR /app/src
 ADD build.rs .
 ADD Cargo.toml .

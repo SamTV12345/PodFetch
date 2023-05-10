@@ -26,7 +26,7 @@ USER root
 WORKDIR /app/src
 
 RUN apk add pkgconfig openssl-dev libc-dev git
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+#ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 
 COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
