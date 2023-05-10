@@ -1,4 +1,0 @@
-FROM ghcr.io/cross-rs/armv7-unknown-linux-musleabi:edge
-
-RUN apk add pkgconfig openssl-dev libc-dev git
-
