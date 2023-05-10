@@ -249,7 +249,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
 
     fn handle_no_auth(&self, req: ServiceRequest) -> Pin<Box<dyn
     futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>>{
-        let user = User::create_admin_user();
+        let user = User::create_standard_admin_user();
         req.extensions_mut().insert(user);
         let service = Rc::clone(&self.service);
         async move {
