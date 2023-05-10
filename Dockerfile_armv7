@@ -28,7 +28,6 @@ ADD src ./src
 ADD build.rs .
 ADD .git .
 ADD db ./db
-RUN cargo update
 RUN rustup target add armv7-unknown-linux-musleabihf
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     chmod 777 /usr/local/cargo/registry/index && \
