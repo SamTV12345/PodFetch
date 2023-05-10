@@ -14,7 +14,7 @@ image.name = "alpine:latest"
 image.toolchain = ["linux/arm64=aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","aarch64-unknown-linux-musl",
     "armv7-unknown-linux-musleabi"]
 pre-build = ["apk add --no-cache gcc ca-certificates musl-dev pkgconfig openssl-dev libc-dev git"]
-env.passthrough = ["RUSTFLAGS", "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS","TARGET_CC=gcc"]
+env.passthrough = ["RUSTFLAGS", "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS","TARGET_CC=gcc", "CFLAGS=-mno-outline-atomics"]
 
 [target."armv7-unknown-linux-musleabi"]
 image.name = "alpine:latest"
