@@ -7,29 +7,14 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM snowgoons/rustbuilder:rustc-1.69.0 as dependency-cache
-
-USER root
-
-WORKDIR /app/src
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
-
-ADD Cargo.toml .
-ADD dummy.rs ./src/main.rs
-ADD build.rs .
-RUN cargo update
-RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
-
-
-FROM snowgoons/rustbuilder:rustc-1.69.0 as builder
+FROM docker-registry.schwanzer.online/dockerhub_proxy/snowgoons/rustbuilder:rustc-1.69.0 as builder
 
 USER root
 
 WORKDIR /app/src
 
 
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
-
+#ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 COPY --from=dependency-cache $HOME/.cargo $HOME/.cargo
 COPY --from=dependency-cache /app/src/target/ /app/src/target/
