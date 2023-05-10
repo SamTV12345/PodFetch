@@ -35,9 +35,9 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     RUSTFLAGS='-C target-feature=-crt-static' cargo build --target armv7-unknown-linux-musleabihf --release
 
 
-FROM library/alpine:3.17 AS Runtime
+FROM library/ubuntu:latest AS Runtime
 WORKDIR /app/
-RUN apk add libgcc tzdata
+RUN apt install libgcc -y
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podfetch /app/podfetch
