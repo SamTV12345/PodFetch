@@ -37,7 +37,6 @@ RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
 
 FROM library/ubuntu:latest AS Runtime
 WORKDIR /app/
-RUN apt install gcc -y
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podfetch /app/podfetch
