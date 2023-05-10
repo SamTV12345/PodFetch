@@ -16,8 +16,6 @@ WORKDIR /app/src
 
 #ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-COPY --from=dependency-cache $HOME/.cargo $HOME/.cargo
-COPY --from=dependency-cache /app/src/target/ /app/src/target/
 RUN rm -rf /app/src/static/*||true
 COPY --from=ui-builder /app/dist /app/src/static
 RUN rm -rf /app/src/target/release/deps/podfetch*
