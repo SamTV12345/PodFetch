@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use crate::db::DB;
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
@@ -67,6 +68,7 @@ Responder {
             episodes_with_logs.push(x);
         }
     });
+    episodes_with_logs.sort_by(|a,b| a.date.cmp(&b.date).reverse());
     HttpResponse::Ok().json(episodes_with_logs)
 }
 

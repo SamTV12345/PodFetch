@@ -100,20 +100,9 @@ impl User{
     }
 
     pub(crate) fn create_admin_user() ->User{
-        let username;
-        let opt_username = var(USERNAME);
-
-        match opt_username {
-            Ok(res) => {
-                username = res;
-            },
-            Err(_) => {
-                username = STANDARD_USER.to_string()
-            }
-        }
         User{
             id: 9999,
-            username,
+            username: var(USERNAME).unwrap().to_string(),
             role: Role::Admin.to_string(),
             password: None,
             explicit_consent: true,
@@ -128,6 +117,17 @@ impl User{
             username: user.username.clone(),
             role: user.role.clone(),
             created_at: user.created_at
+        }
+    }
+
+    pub fn create_standard_admin_user() -> User{
+        User{
+            id: 9999,
+            username: STANDARD_USER.to_string(),
+            role: Role::Admin.to_string(),
+            password: None,
+            explicit_consent: true,
+            created_at: Default::default(),
         }
     }
 

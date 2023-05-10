@@ -159,8 +159,7 @@ impl Episode{
         let mut map:HashMap<String,Podcast> = HashMap::new();
         let res = sql_query(
             r"SELECT * FROM (SELECT * FROM episodes e, podcast_episodes pe WHERE
-            e.username=? AND pe.url=e.episode  ORDER BY timestamp DESC) GROUP BY episode  LIMIT
-            10;")
+            e.username=? AND pe.url=e.episode  ORDER BY timestamp DESC) GROUP BY episode LIMIT 10;")
             .bind::<Text, _>(username1.clone())
             .load::<(Episode,PodcastEpisode)>(conn)
             .expect("");
