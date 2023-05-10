@@ -7,16 +7,16 @@
 image.name = "ahuszagh/aarch64-cross:aarch64-unknown-linux-musl"
 image.toolchain = ["linux/arm64=aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","x86_64-unknown-linux-musl",
     "armv7-unknown-linux-musleabi"]
-pre-build = ["apt-get --assume-yes install libssl1.0-devpkgconfig git"]
+pre-build = ["uname -a && apt-get update && apt-get --assume-yes install libssl-dev pkgconfig git"]
 
 [target."aarch64-unknown-linux-musl"]
 image.name = "ahuszagh/aarch64-cross:aarch64-unknown-linux-musl"
 image.toolchain = ["linux/arm64=aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","aarch64-unknown-linux-musl",
     "armv7-unknown-linux-musleabi"]
-pre-build = ["apt-get --assume-yes install libssl1.0-dev pkgconfig git"]
+pre-build = ["apt-get update && apt-get --assume-yes install libssl-dev pkgconfig git"]
 
 [target."armv7-unknown-linux-musleabi"]
 image.name = "ahuszagh/aarch64-cross:aarch64-unknown-linux-musl"
 image.toolchain = ["linux/arm64=aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","aarch64-unknown-linux-musl",
     "armv7-unknown-linux-musleabi"]
-pre-build = ["apt-get --assume-yes install libssl1.0-dev pkgconfig git"]
+pre-build = ["apt-get update && apt-get --assume-yes install libssl-dev pkgconfig git"]
