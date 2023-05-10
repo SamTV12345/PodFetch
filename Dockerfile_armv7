@@ -9,8 +9,6 @@ RUN  npm install && npm run build
 
 FROM snowgoons/rustbuilder:rustc-1.69.0 as dependency-cache
 
-RUN apk add rustup pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
-
 USER root
 
 WORKDIR /app/src
