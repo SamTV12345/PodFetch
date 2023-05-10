@@ -7,7 +7,7 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM alpine as dependency-cache
+FROM snowgoons/rustbuilder:rustc-1.69.0 as dependency-cache
 
 RUN apk add rustup pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
 
@@ -23,9 +23,7 @@ RUN cargo update
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM alpine as builder
-
-RUN apk add rustup pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
+FROM snowgoons/rustbuilder:rustc-1.69.0 as builder
 
 USER root
 
@@ -53,7 +51,7 @@ RUN cargo update
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     chmod 777 /usr/local/cargo/registry/index && \
     mount -t tmpfs none /usr/local/cargo/registry/index && \
-    RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
+    RUSTFLAGS='-C target-feature=-crt-static' cargo build --target armv7-unknown-linux-musleabihf --release
 
 
 FROM library/alpine:3.17 AS Runtime
