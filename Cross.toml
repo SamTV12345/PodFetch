@@ -5,15 +5,21 @@
 
 [target."x86_64-unknown-linux-musl"]
 image.name = "alpine:edge"
-image.toolchain = ["x86_64-unknown-linux-musl","aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
+image.toolchain = ["aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
 pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
 
 [target."aarch64-unknown-linux-musl"]
 image.name = "alpine:edge"
-image.toolchain = ["x86_64-unknown-linux-musl","aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
+image.toolchain = ["aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","aarch64-unknown-linux-musl",
+    "armv7-unknown-linux-musleabi"]
+pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
+
+[target.'cfg(not(host="armv7"))'."armv7-unknown-linux-musleabi"]
+image.name = "alpine:edge"
+image.toolchain = ["aarch64-unknown-linux-musl","x86_64-unknown-linux-musl"]
 pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
 
 [target."armv7-unknown-linux-musleabi"]
-image.name = "alpine:edge"
-image.toolchain = ["x86_64-unknown-linux-musl","aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
-pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
+image.name = "an-image-that-is-gnu-but-has-musl-libs"
+image.toolchain = ["armv7-unknown-linux-gnueabihf"]
+pre-build = ["apt-get blabla"]
