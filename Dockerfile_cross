@@ -1,4 +1,4 @@
-FROM docker-registry.schwanzer.online/dockerhub_proxy/bash:4.4 as base
+FROM gcr.io/distroless/cc as base
 COPY ./ui/dist /app/static
 COPY ./migrations /app/migrations
 COPY ./db /app/db

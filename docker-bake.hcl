@@ -1,31 +1,9 @@
-# docker-bake.hcl
 group "default" {
-  targets = ["podfetch-amd64","podfetch-arm64","podfetch-armv7"]
+  targets = ["podfetch"]
 }
 
-target "podfetch-amd64" {
-  args ={
-    FILE="x86_64-unknown-linux-gnu"
-  }
+target "podfetch" {
   dockerfile = "Dockerfile_cross"
-  platforms = ["linux/amd64"]
-  tags= ["samuel19982/podfetch:devamd64"]
-}
-
-target "podfetch-arm64" {
-  args ={
-    FILE="aarch64-unknown-linux-gnu"
-  }
-  dockerfile = "Dockerfile_cross"
-  platforms = ["linux/arm64"]
-  tags= ["samuel19982/podfetch:devarm64"]
-}
-
-target "podfetch-armv7" {
-  args ={
-    FILE="armv7-unknown-linux-gnueabihf"
-  }
-  dockerfile = "Dockerfile_cross"
-  platforms = ["linux/arm/v7"]
-  tags= ["samuel19982/podfetch:devarmv7"]
+  tags= ["samuel19982/podfetch:dev"]
+  platforms = ["linux/amd64", "linux/arm64", "linux/arm/v7"]
 }
