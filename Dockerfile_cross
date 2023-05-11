@@ -1,10 +1,3 @@
-FROM docker-registry.schwanzer.online/dockerhub_proxy/library/node:alpine as ui-builder
-
-WORKDIR /app
-COPY ./ui/ ./
-RUN  npm install && npm run build
-
-
 FROM docker-registry.schwanzer.online/dockerhub_proxy/bash:4.4
 
 ARG FILE
@@ -12,7 +5,7 @@ ARG FILE
 WORKDIR /app/
 COPY ./target/$FILE/release/podfetch /app/podfetch
 
-COPY --from=ui-builder /app/dist /app/static
+COPY ./ui/dist /app/static
 COPY ./migrations /app/migrations
 COPY ./db /app/db
 
