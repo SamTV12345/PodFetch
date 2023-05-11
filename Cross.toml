@@ -46,7 +46,7 @@ env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc", "CFLAGS=-mno-outline-atomics"]
 
 pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH  linux-libc-dev git -y"]
 
-[target."armv7-unknown-linux-gnu"]
+[target."armv7-unknown-linux-gnueabi"]
 
 pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH  linux-libc-dev git -y"]
 
