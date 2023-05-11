@@ -29,18 +29,18 @@
 
 
 [target."x86_64-unknown-linux-musl"]
-image.name = "alpine:edge"
+image.name = "multiarch/alpine:amd64-latest-stable"
 image.toolchain = ["x86_64-unknown-linux-musl", "linux/arm64=aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
 pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
 
 [target."aarch64-unknown-linux-musl"]
-image.name = "alpine:edge"
+image.name = "multiarch/alpine:arm64-latest-stable"
 image.toolchain = ["x86_64-unknown-linux-musl", "linux/arm64=aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
 pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
 env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc"]
 
 [target."armv7-unknown-linux-musleabi"]
-image.name = "alpine:edge"
+image.name = "multiarch/alpine:armv7-latest-stable"
 image.toolchain = ["x86_64-unknown-linux-musl", "linux/arm64=aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
 pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
 env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc", "CFLAGS=-mno-outline-atomics"]
