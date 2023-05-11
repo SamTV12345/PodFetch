@@ -9,6 +9,7 @@ target "podfetch-amd64" {
   }
   dockerfile = "Dockerfile_cross"
   platforms = ["linux/amd64"]
+  tags= "samuel19982/podfetch:dev"
 }
 
 target "podfetch-arm64" {
@@ -17,6 +18,7 @@ target "podfetch-arm64" {
   }
   dockerfile = "Dockerfile_cross"
   platforms = ["linux/arm64"]
+  tags= "samuel19982/podfetch:dev"
 }
 
 target "podfetch-armv7" {
@@ -25,4 +27,5 @@ target "podfetch-armv7" {
   }
   dockerfile = "Dockerfile_cross"
   platforms = ["linux/arm/v7"]
+  tags= "samuel19982/podfetch:dev"
 }
