@@ -48,7 +48,7 @@ pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt instal
 
 [target."armv7-unknown-linux-gnueabi"]
 
-pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH  linux-libc-dev git -y"]
+pre-build = ["apt update && apt install gcc libssl-dev:armhf  linux-libc-dev git -y"]
 
 [target."x86_64-unknown-linux-gnu"]
 pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH  linux-libc-dev git -y"]
