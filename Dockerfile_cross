@@ -4,7 +4,7 @@ WORKDIR /app
 COPY ./ui/ ./
 RUN  npm install && npm run build
 
-FROM scratch as cache
+FROM ubuntu as cache
 
 COPY ./target/x86_64*/release/podfetch /app/x86/podfetch
 COPY ./target/aarch64*/release/podfetch /app/arm64/podfetch
