@@ -10,7 +10,7 @@ FROM docker-registry.schwanzer.online/dockerhub_proxy/bash:4.4
 ARG FILE
 
 WORKDIR /app/
-COPY ./target/$FILE/release/podfetch /app/podfetch
+COPY $FILE/release/podfetch /app/podfetch
 
 COPY --from=ui-builder /app/dist /app/static
 COPY ./migrations /app/migrations
