@@ -8,7 +8,6 @@ COPY ./target/$FILE/release/podfetch /app/podfetch
 COPY ./ui/dist /app/static
 COPY ./migrations /app/migrations
 COPY ./db /app/db
-RUN ls
 
 EXPOSE 8000
 ENTRYPOINT ["./podfetch"]
