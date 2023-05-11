@@ -1,4 +1,4 @@
-FROM docker-registry.schwanzer.online/dockerhub_proxy/bash:4.4
+FROM scratch
 
 ARG FILE
 
@@ -11,4 +11,4 @@ COPY ./db /app/db
 RUN ls
 
 EXPOSE 8000
-CMD ["./podfetch"]
+ENTRYPOINT ["./podfetch"]
