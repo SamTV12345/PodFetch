@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/cc as base
+FROM scratch as base
 COPY ./ui/dist /app/static
 COPY ./migrations /app/migrations
 COPY ./db /app/db
