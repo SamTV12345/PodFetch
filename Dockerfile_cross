@@ -1,0 +1,13 @@
+FROM talk.schwanzer.online/dockerhub_proxy/library/node:alpine as ui-builder
+
+WORKDIR /app
+COPY ./ui/ ./
+RUN  npm install && npm run build
+
+FROM gcr.io/distroless/cc-debian11
+WORKDIR /app/
+
+COPY ./target/*${uname -m}*/release/podfetch /app/podfetch
+COPY --from=ui-builder /app/dist /app/static
+COPY ./migrations /app/migrations
+COPY ./db /app/db
