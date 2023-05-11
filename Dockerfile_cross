@@ -6,9 +6,9 @@ RUN  npm install && npm run build
 
 FROM ubuntu as cache
 
-COPY ./target/x86_64*/release/podfetch /app/x86/podfetch
-COPY ./target/aarch64*/release/podfetch /app/arm64/podfetch
-COPY ./target/armv7*/release/podfetch /app/armv7l/podfetch
+COPY ./target/x86_64**/release/podfetch /app/x86/podfetch
+COPY ./target/aarch64**/release/podfetch /app/arm64/podfetch
+COPY ./target/armv7**/release/podfetch /app/armv7l/podfetch
 
 
 FROM docker-registry.schwanzer.online/dockerhub_proxy/bash:4.4
