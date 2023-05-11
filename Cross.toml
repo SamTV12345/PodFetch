@@ -43,4 +43,4 @@ env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc", "CFLAGS=-mno-outline-atomics"]
 
 
 [target."aarch64-unknown-linux-gnu"]
-pre-build = ["apt update && apt install gcc libssl-dev linux-libc-dev git -y"]
+pre-build = ["apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH linux-libc-dev git -y"]
