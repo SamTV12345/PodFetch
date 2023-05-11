@@ -23,7 +23,7 @@ target "podfetch-arm64" {
 
 target "podfetch-armv7" {
   args ={
-    FILE="armv7-unknown-linux-gnueabih"
+    FILE="armv7-unknown-linux-gnueabihf"
   }
   dockerfile = "Dockerfile_cross"
   platforms = ["linux/arm/v7"]
