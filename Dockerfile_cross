@@ -8,7 +8,7 @@ FROM docker-registry.schwanzer.online/dockerhub_proxy/bash:4.4
 WORKDIR /app/
 ARG TARGETPLATFORM
 RUN echo ${TARGETPLATFORM}
-COPY ./target/*$(uname -m)*/release/podfetch /app/podfetch
+COPY ./target/*$(uname -m|sed 's/.$//')*/release/podfetch /app/podfetch
 COPY --from=ui-builder /app/dist /app/static
 COPY ./migrations /app/migrations
 COPY ./db /app/db
