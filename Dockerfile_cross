@@ -1,5 +1,5 @@
 FROM gcr.io/distroless/cc as base
-COPY ./ui/dist /app/static
+COPY ./static /app/static
 COPY ./migrations /app/migrations
 COPY ./db /app/db
 WORKDIR /app/
