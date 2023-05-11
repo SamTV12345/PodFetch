@@ -45,14 +45,17 @@ env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc", "CFLAGS=-mno-outline-atomics"]
 [target."aarch64-unknown-linux-gnu"]
 image.name="docker-registry.schwanzer.online/public/cross:aarch64"
 image.toolchain = ["x86_64-unknown-linux-gnu"]
-pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH  linux-libc-dev git -y"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH
+#linux-libc-dev git -y"]
 
 [target."armv7-unknown-linux-gnueabihf"]
 image.name="docker-registry.schwanzer.online/public/cross:armv7"
 image.toolchain = ["x86_64-unknown-linux-gnu"]
-pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH  linux-libc-dev git -y"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH
+#linux-libc-dev git -y"]
 
 [target."x86_64-unknown-linux-gnu"]
 image.name="docker-registry.schwanzer.online/public/cross:x86"
 image.toolchain = ["x86_64-unknown-linux-gnu"]
-pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH  linux-libc-dev git -y"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH
+#linux-libc-dev git -y"]
