@@ -10,4 +10,4 @@ COPY ./migrations /app/migrations
 COPY ./db /app/db
 
 EXPOSE 8000
-ENTRYPOINT ["./podfetch"]
+CMD ["./podfetch"]
