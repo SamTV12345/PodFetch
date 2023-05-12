@@ -1,0 +1,64 @@
+#[target."armv7-unknown-linux-musleabihf"]
+#image.name = "alpine:edge"
+#image.toolchain = ["x86_64-unknown-linux-musl"]
+#pre-build = ["apk add pkgconfig openssl-dev libc-dev git"]
+
+#[target."x86_64-unknown-linux-musl"]
+#image.name = "ahuszagh/aarch64-cross:aarch64-unknown-linux-musl"
+#image.toolchain = ["linux/arm64=aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","x86_64-unknown-linux-musl",
+#    "armv7-unknown-linux-musleabi"]
+#pre-build = ["cat /etc/apt/sources.list && cat /etc/apt/sources.list.d/ports.list && software-properties-gtk &&
+#apt-get update && apt-get --assume-yes install libssl-dev pkgconfig git"]
+
+#[target."aarch64-unknown-linux-musl"]
+#image.name = "ahuszagh/aarch64-cross:aarch64-unknown-linux-musl"
+#image.toolchain = ["linux/arm64=aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","aarch64-unknown-linux-musl",
+#    "armv7-unknown-linux-musleabi"]
+#pre-build = ["diff /etc/apt/sources.list cat /etc/apt/sources.list.d/ports.list |grep '<'|sed  's/<+//g' >
+#/etc/apt/sources.list1|mv /etc/apt/sources.list1 /etc/apt/sources.list && apt-get update && apt-get --assume-yes
+#install libssl-dev pkgconfig git"]
+#
+#[target."armv7-unknown-linux-musleabi"]
+#image.name = "ahuszagh/aarch64-cross:aarch64-unknown-linux-musl"
+#image.toolchain = ["linux/arm64=aarch64-unknown-linux-musl","x86_64-unknown-linux-musl","aarch64-unknown-linux-musl",
+    #"armv7-unknown-linux-musleabi"]
+#pre-build = ["apt-get update && apt-get --assume-yes install libssl-dev pkgconfig git"]
+
+[target."x86_64-unknown-linux-musl"]
+image.name = "alpine:edge"
+image.toolchain = ["x86_64-unknown-linux-musl", "linux/arm64=aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
+pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
+
+[target."aarch64-unknown-linux-musl"]
+image.name = "multiarch/alpine:arm64-latest-stable"
+image.toolchain = ["x86_64-unknown-linux-musl", "linux/arm64=aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
+pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libressl-dev openssl libc-dev git"]
+env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc"]
+
+[target."armv7-unknown-linux-musleabi"]
+image.name = "multiarch/alpine:armv7-latest-stable"
+image.toolchain = ["x86_64-unknown-linux-musl", "linux/arm64=aarch64-unknown-linux-musl","armv7-unknown-linux-musleabi"]
+pre-build = ["apk add --no-cache gcc musl-dev pkgconfig openssl-dev libc-dev git"]
+env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc", "CFLAGS=-mno-outline-atomics"]
+
+
+[target."aarch64-unknown-linux-gnu"]
+image.name="docker-registry.schwanzer.online/public/cross:aarch64"
+image.toolchain = ["x86_64-unknown-linux-gnu"]
+env.passthrough = ["RUSTFLAGS"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH
+#linux-libc-dev git -y"]
+
+[target."armv7-unknown-linux-gnueabihf"]
+image.name="docker-registry.schwanzer.online/public/cross:armv7"
+image.toolchain = ["x86_64-unknown-linux-gnu"]
+env.passthrough = ["RUSTFLAGS"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH
+#linux-libc-dev git -y"]
+
+[target."x86_64-unknown-linux-gnu"]
+image.name="docker-registry.schwanzer.online/public/cross:x86"
+image.toolchain = ["x86_64-unknown-linux-gnu"]
+env.passthrough = ["RUSTFLAGS"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH&& apt update && apt install gcc libssl-dev:$CROSS_DEB_ARCH
+#linux-libc-dev git -y"]

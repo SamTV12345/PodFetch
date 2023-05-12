@@ -7,36 +7,15 @@ COPY ./ui/ ./
 RUN  npm install && npm run build
 
 
-FROM alpine as dependency-cache
-
-RUN apk add rustup pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
-
-USER root
-
-WORKDIR /app/src
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
-
-ADD Cargo.toml .
-ADD dummy.rs ./src/main.rs
-ADD build.rs .
-RUN cargo update
-RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
-
-
-FROM alpine as builder
-
-RUN apk add rustup pkgconfig openssl-dev libc-dev git curl --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
+FROM docker-registry.schwanzer.online/dockerhub_proxy/snowgoons/rustbuilder:rustc-1.69.0 as builder
 
 USER root
 
 WORKDIR /app/src
 
 
-ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+#ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-
-COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
-COPY --from=dependency-cache /app/src/target/ /app/src/target/
 RUN rm -rf /app/src/static/*||true
 COPY --from=ui-builder /app/dist /app/src/static
 RUN rm -rf /app/src/target/release/deps/podfetch*
@@ -49,16 +28,15 @@ ADD src ./src
 ADD build.rs .
 ADD .git .
 ADD db ./db
-RUN cargo update
+RUN rustup target add armv7-unknown-linux-musleabihf
 RUN --security=insecure mkdir -p /usr/local/cargo/registry/index && \
     chmod 777 /usr/local/cargo/registry/index && \
     mount -t tmpfs none /usr/local/cargo/registry/index && \
     RUSTFLAGS='-C target-feature=-crt-static' cargo build --release
 
 
-FROM library/alpine:3.17 AS Runtime
+FROM library/ubuntu:latest AS Runtime
 WORKDIR /app/
-RUN apk add libgcc tzdata
 ENV TZ=Europe/Berlin
 
 COPY --from=builder /app/src/target/release/podfetch /app/podfetch
