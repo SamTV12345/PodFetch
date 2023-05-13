@@ -1,3 +1,4 @@
+use std::fmt::format;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -105,5 +106,6 @@ impl FileService {
 
 
 pub fn prepare_podcast_title_to_directory(title: &str) ->String {
-    format!("'{}'",title)
+     format!("'{}'",deunicode::deunicode(title))
+         .replace("?","")
 }
