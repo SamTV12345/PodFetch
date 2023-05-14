@@ -1,4 +1,4 @@
-use crate::constants::constants::{DEFAULT_SETTINGS, PodcastType, TELEGRAM_API_ENABLED};
+use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::messages::BroadcastMessage;
@@ -127,7 +127,7 @@ impl PodcastEpisodeService {
                                                                              Vec<PodcastEpisode> {
 
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings().unwrap_or(DEFAULT_SETTINGS);
+        let settings = settings_service.get_settings().unwrap();
         DB::get_last_n_podcast_episodes(conn, podcast.id,
                                         settings.podcast_prefill).unwrap()
     }

@@ -1,5 +1,8 @@
 import {useTranslation} from "react-i18next";
 import {useState} from "react";
+import axios from "axios";
+import {apiURL} from "../utils/Utilities";
+import {enqueueSnackbar} from "notistack";
 
 export const PodcastNaming = ()=>{
     const {t} = useTranslation()
@@ -33,6 +36,17 @@ export const PodcastNaming = ()=>{
         <h3 className="text-xl ml-4">{t('standard-episode-format')}</h3>
         <div className="ml-8">
             <input className="bg-gray-700 rounded p-1 w-2/4"/>
+        </div>
+        <div className="flex">
+            <div className="flex-1"></div>
+            <button className="p-2 bg-blue-600 rounded hover:bg-blue-500" onClick={()=>{
+                axios.put(apiURL+"/settings/name", settings)
+                    .then(()=>{
+                        enqueueSnackbar(t('settings-saved'), {variant: "success"})
+                    })
+            }}>
+                {t('save')}
+            </button>
         </div>
     </div>
 }

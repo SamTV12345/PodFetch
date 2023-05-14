@@ -13,7 +13,11 @@ pub struct Setting {
     pub auto_update: bool,
     pub auto_cleanup: bool,
     pub auto_cleanup_days: i32,
-    pub podcast_prefill: i32
+    pub podcast_prefill: i32,
+    pub replace_invalid_characters: bool,
+    pub use_existing_filename: bool,
+    pub replacement_strategy: String,
+    pub episode_format: String
 }
 
 #[derive(Serialize, Deserialize)]

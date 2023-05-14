@@ -1,3 +1,4 @@
+use crate::controllers::settings_controller::{UpdateNameSettings};
 use crate::db::DB;
 use crate::models::settings::Setting;
 
@@ -19,5 +20,15 @@ impl SettingsService{
 
     pub fn update_settings(&mut self, settings: Setting) -> Setting{
         self.db.update_settings(settings)
+    }
+
+    pub fn update_name(&mut self, update_model:UpdateNameSettings) -> Setting{
+        let mut settings = self.get_settings().unwrap();
+
+        settings.replace_invalid_characters = update_model.replace_invalid_characters;
+        settings.use_existing_filename = update_model.use_existing_filenames;
+        settings.replacement_strategy = update_model.replacement_strategy.to_string();
+
+        self.update_settings(settings)
     }
 }

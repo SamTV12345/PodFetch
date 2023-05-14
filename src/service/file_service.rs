@@ -1,11 +1,9 @@
-use std::fmt::format;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
 use std::path::Path;
-use regex::Regex;
 
 #[derive(Clone)]
 pub struct FileService {

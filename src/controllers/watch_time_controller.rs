@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use crate::db::DB;
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;

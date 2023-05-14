@@ -128,6 +128,10 @@ diesel::table! {
         auto_cleanup -> Bool,
         auto_cleanup_days -> Integer,
         podcast_prefill -> Integer,
+        replace_invalid_characters -> Bool,
+        use_existing_filename -> Bool,
+        replacement_strategy -> Text,
+        episode_format -> Text,
     }
 }
 

@@ -728,7 +728,13 @@ impl DB {
         use crate::schema::settings::dsl::*;
 
         do_retry(||{insert_into(settings)
-            .values(DEFAULT_SETTINGS)
+            .values((
+                id.eq(1),
+                auto_download.eq(DEFAULT_SETTINGS.auto_download),
+                auto_cleanup.eq(DEFAULT_SETTINGS.auto_cleanup),
+                auto_cleanup_days.eq(DEFAULT_SETTINGS.auto_cleanup_days),
+                podcast_prefill.eq(DEFAULT_SETTINGS.podcast_prefill))
+            )
             .execute(&mut self.conn)})
             .expect("Error setting default values");
     }
