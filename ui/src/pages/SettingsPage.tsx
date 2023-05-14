@@ -9,6 +9,7 @@ import {Loading} from "../components/Loading";
 import {ConfirmModal} from "../components/ConfirmModal";
 import {PodcastDelete} from "../components/PodcastDelete";
 import {OPMLExport} from "../components/OPMLExport";
+import {PodcastNaming} from "../components/PodcastNaming";
 
 export const SettingsPage = () => {
     const {t} = useTranslation()
@@ -86,6 +87,7 @@ export const SettingsPage = () => {
 
 
                 <OPMLExport/>
+                <PodcastNaming/>
             <PodcastDelete/>
         </div>
         </div>

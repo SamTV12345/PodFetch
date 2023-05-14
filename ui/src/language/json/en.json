@@ -113,5 +113,14 @@
   "descendant": "Descendant",
   "sort-by-published-date": "Sort by published date",
   "sort-by-title": "Sort by title",
-  "number-of-podcasts-to-download": "Number of initial podcasts to download"
+  "number-of-podcasts-to-download": "Number of initial podcasts to download",
+  "podcast-naming": "Podcast naming",
+  "rename-podcasts": "Rename podcasts",
+  "replace-illegal-characters": "Replace illegal characters",
+  "podfetch-use-existing-filenames": "Use existing filenames",
+  "replace-illegal-characters-description": "Replace illegal characters in filenames with a dash",
+  "colon-replacement": "Colon replacement",
+  "standard-episode-format": "Standard episode format",
+  "dash-separated": "Dash separated",
+  "dash-separated-with-space": "Dash separated with space"
 }

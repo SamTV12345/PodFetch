@@ -115,5 +115,14 @@
   "descendant": "Absteigend",
   "sort-by-published-date": "Nach Veröffentlichungsdatum sortieren",
   "sort-by-title": "Nach Titel sortieren",
-  "number-of-podcasts-to-download": "Anzahl an initialen Podcastdownloads"
+  "number-of-podcasts-to-download": "Anzahl an initialen Podcastdownloads",
+  "podcast-naming": "Podcastbenennung",
+  "rename-podcasts": "Podcasts umbenennen",
+  "replace-illegal-characters": "Ungültige Zeichen ersetzen",
+  "podfetch-use-existing-filenames": "Podfetch existierende Dateinamen verwenden",
+  "replace-illegal-characters-description": "Ungültige Zeichen werden durch Unterstriche ersetzt",
+  "colon-replacement": "Doppelpunkt-Ersatz",
+  "standard-episode-format": "Standard-Episodenformat",
+  "dash-separated": "Bindestrich-getrennt",
+  "dash-separated-with-space": "Bindestrich-getrennt mit Leerzeichen"
 }
