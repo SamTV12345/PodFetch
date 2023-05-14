@@ -175,7 +175,8 @@ Responder {
 pub struct UpdateNameSettings{
     pub use_existing_filenames: bool,
     pub replace_invalid_characters: bool,
-    pub replacement_strategy: ReplacementStrategy
+    pub replacement_strategy: ReplacementStrategy,
+    pub episode_format: String
 }
 #[derive(Deserialize)]
 pub enum ReplacementStrategy{
