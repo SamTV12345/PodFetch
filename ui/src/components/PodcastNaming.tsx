@@ -3,12 +3,16 @@ import {useState} from "react";
 import axios from "axios";
 import {apiURL} from "../utils/Utilities";
 import {enqueueSnackbar} from "notistack";
+import {UpdateNameSettings} from "../models/UpdateNameSettings";
 
 export const PodcastNaming = ()=>{
     const {t} = useTranslation()
     const [renameExistingPodcasts, setRenameExistingPodcasts] = useState<boolean>(true)
     const [renameIllegalCharacters, setRenameIllegalCharacters] = useState<boolean>(true)
     const [selectedReplacementOfColon, setSelectedReplacementOfColon] = useState<string>("dash")
+    const [episodeFormat, setEpisodeFormat] = useState<string>("{}")
+
+
 
     return <div className="bg-slate-900 rounded p-5 text-white grid gap-4">
         <h2 className="text-2xl text-center">{t('podcast-naming')}</h2>
@@ -35,12 +39,17 @@ export const PodcastNaming = ()=>{
         </div>
         <h3 className="text-xl ml-4">{t('standard-episode-format')}</h3>
         <div className="ml-8">
-            <input className="bg-gray-700 rounded p-1 w-2/4"/>
+            <input className="bg-gray-700 rounded p-1 w-2/4" value={episodeFormat} onChange={(v)=>setEpisodeFormat(v.target.value)}/>
         </div>
         <div className="flex">
             <div className="flex-1"></div>
             <button className="p-2 bg-blue-600 rounded hover:bg-blue-500" onClick={()=>{
-                axios.put(apiURL+"/settings/name", settings)
+                axios.put(apiURL+"/settings/name", {
+                    replaceInvalidCharacters: renameIllegalCharacters,
+                    replacementStrategy: selectedReplacementOfColon,
+                    useExistingFilenames: renameExistingPodcasts,
+                    episodeFormat
+                } satisfies UpdateNameSettings)
                     .then(()=>{
                         enqueueSnackbar(t('settings-saved'), {variant: "success"})
                     })

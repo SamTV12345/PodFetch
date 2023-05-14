@@ -22,13 +22,13 @@ impl SettingsService{
         self.db.update_settings(settings)
     }
 
-    pub fn update_name(&mut self, update_model:UpdateNameSettings) -> Setting{
+    pub fn update_name(&mut self, update_model: UpdateNameSettings) -> Setting{
         let mut settings = self.get_settings().unwrap();
 
         settings.replace_invalid_characters = update_model.replace_invalid_characters;
         settings.use_existing_filename = update_model.use_existing_filenames;
         settings.replacement_strategy = update_model.replacement_strategy.to_string();
-
+        settings.episode_format = update_model.episode_format;
         self.update_settings(settings)
     }
 }
