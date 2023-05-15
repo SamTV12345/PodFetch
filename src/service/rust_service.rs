@@ -18,6 +18,7 @@ use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
+use actix_web::error::ParseError::Status;
 use diesel::SqliteConnection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
@@ -190,12 +191,12 @@ impl PodcastService {
                     let result = PodcastEpisodeService::
                     get_last_n_podcast_episodes(conn, podcast.clone());
                     for podcast_episode in result {
-                        self.podcast_episode_service
-                            .download_podcast_episode_if_not_locally_available(
-                                podcast_episode,
-                                podcast.clone(),
-                                lobby.clone(),
-                            );
+                            self.podcast_episode_service
+                                .download_podcast_episode_if_not_locally_available(
+                                    podcast_episode,
+                                    podcast.clone(),
+                                    lobby.clone(),
+                                );
                     }
                 }
             }

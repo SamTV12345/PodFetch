@@ -4,6 +4,9 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
 use std::path::Path;
+use regex::Regex;
+use crate::config::dbconfig::establish_connection;
+use crate::service::settings_service::SettingsService;
 
 #[derive(Clone)]
 pub struct FileService {
@@ -104,6 +107,14 @@ impl FileService {
 
 
 pub fn prepare_podcast_title_to_directory(title: &str) ->String {
+    let mut settings_service = SettingsService::new();
+    let retrieved_settings = settings_service.get_settings().unwrap();
+
+    if retrieved_settings.replace_invalid_characters{
+        let illegal_chars_regex = Regex::new(r#"[<>:"/\\|?*]"#).unwrap();
+        illegal_chars_regex.replace_all(title, "");
+    }
+
+
      format!("'{}'",deunicode::deunicode(title))
-         .replace("?","")
 }

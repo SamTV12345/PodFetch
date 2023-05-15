@@ -44,17 +44,30 @@ impl PodcastEpisodeService {
         let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
         let image_suffix = Self::get_url_file_suffix(&podcast_episode_cloned.image_url);
 
-        let image_save_path = PathService::get_image_path(
-            &podcast_cloned.clone().directory_name,
-            &podcast_episode_cloned.clone().name,
-            &image_suffix,
-        );
+        let image_save_path;
+        let podcast_save_path;
 
-        let podcast_save_path = PathService::get_podcast_episode_path(
-            &podcast.directory_name.clone(),
-            &podcast_episode_cloned.name,
-            &suffix,
-        );
+        if podcast_episode.local_image_url.trim().len()==0{
+            image_save_path= PathService::get_image_path(
+                &podcast_cloned.clone().directory_name,
+                &podcast_episode_cloned.clone().name,
+                &image_suffix,
+            );
+        }
+        else{
+            image_save_path = podcast_episode.clone().local_url
+        }
+
+        if podcast_episode.local_url.trim().len()==0{
+            podcast_save_path = PathService::get_podcast_episode_path(
+                &podcast.directory_name.clone(),
+                &podcast_episode_cloned.name,
+                &suffix);
+        }
+        else{
+            podcast_save_path = podcast_episode.clone().local_url;
+        }
+
 
         match db.check_if_downloaded(&podcast_episode.url) {
             Ok(true) => {

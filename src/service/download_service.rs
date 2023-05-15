@@ -25,31 +25,42 @@ impl DownloadService {
         }
     }
 
-    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast) {
+    pub fn download_podcast_episode(&mut self, mut podcast_episode: PodcastEpisode, podcast: Podcast) {
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
 
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
-        let podcast_save_path = PathService::get_podcast_episode_path(
-            &podcast.directory_name.clone(),
-            &podcast_episode.clone().name,
-            &suffix,
-        );
 
-        let image_podcast_path =
-            PathService::get_image_podcast_path(&podcast.directory_name.clone(), &image_suffix);
+        let image_save_path;
+        let podcast_save_path;
 
-        let image_save_path = PathService::get_image_path(
-            &podcast.directory_name.clone(),
-            &podcast_episode.clone().name,
-            &image_suffix,
-        );
+        if podcast_episode.local_image_url.trim().len()==0{
+            image_save_path= PathService::get_image_path(
+                &podcast.clone().directory_name,
+                &podcast_episode.clone().name,
+                &image_suffix,
+            );
+        }
+        else{
+            image_save_path = podcast_episode.clone().local_url
+        }
+
+        if podcast_episode.local_url.trim().len()==0{
+            podcast_save_path = PathService::get_podcast_episode_path(
+                &podcast.directory_name.clone(),
+                &podcast_episode.name,
+                &suffix);
+        }
+        else{
+            podcast_save_path = podcast_episode.clone().local_url;
+        }
+
         let client = ClientBuilder::new().build().unwrap();
         let mut resp = client.get(podcast_episode.url).send().unwrap();
         let mut image_response = client.get(podcast_episode.image_url).send().unwrap();
 
         let podcast_episode_dir = format!(
             "{}/{}",
-            podcast.directory_name, prepare_podcast_title_to_directory(&podcast_episode.name)
+            podcast.directory_name, prepare_podcast_title_to_directory(&mut podcast_episode.name)
         );
         let podcast_episode_dir = create_dir(podcast_episode_dir);
 
@@ -83,6 +94,8 @@ impl DownloadService {
             }
         }
 
+        let image_podcast_path =
+            PathService::get_image_podcast_path(&podcast.directory_name.clone(), &image_suffix);
         let mut podcast_out = std::fs::File::create(podcast_save_path.clone()).unwrap();
         let mut image_out = std::fs::File::create(image_save_path.clone()).unwrap();
 
