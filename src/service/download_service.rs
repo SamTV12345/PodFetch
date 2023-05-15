@@ -1,6 +1,6 @@
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::service::file_service::{FileService, prepare_podcast_title_to_directory};
+use crate::service::file_service::{determine_image_and_local_podcast_audio_url, FileService, prepare_podcast_episode_title_to_directory, prepare_podcast_title_to_directory};
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -25,34 +25,14 @@ impl DownloadService {
         }
     }
 
-    pub fn download_podcast_episode(&mut self, mut podcast_episode: PodcastEpisode, podcast: Podcast) {
+    pub fn download_podcast_episode(&mut self, mut podcast_episode: PodcastEpisode, mut podcast: Podcast) {
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
 
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
-        let image_save_path;
-        let podcast_save_path;
 
-        if podcast_episode.local_image_url.trim().len()==0{
-            image_save_path= PathService::get_image_path(
-                &podcast.clone().directory_name,
-                &podcast_episode.clone().name,
-                &image_suffix,
-            );
-        }
-        else{
-            image_save_path = podcast_episode.clone().local_url
-        }
-
-        if podcast_episode.local_url.trim().len()==0{
-            podcast_save_path = PathService::get_podcast_episode_path(
-                &podcast.directory_name.clone(),
-                &podcast_episode.name,
-                &suffix);
-        }
-        else{
-            podcast_save_path = podcast_episode.clone().local_url;
-        }
+        let (image_save_path, podcast_save_path) = determine_image_and_local_podcast_audio_url
+            (podcast.clone(), podcast_episode.clone(), &suffix, &image_suffix);
 
         let client = ClientBuilder::new().build().unwrap();
         let mut resp = client.get(podcast_episode.url).send().unwrap();
@@ -60,7 +40,7 @@ impl DownloadService {
 
         let podcast_episode_dir = format!(
             "{}/{}",
-            podcast.directory_name, prepare_podcast_title_to_directory(&mut podcast_episode.name)
+            podcast.directory_name, prepare_podcast_episode_title_to_directory(&mut podcast_episode.name)
         );
         let podcast_episode_dir = create_dir(podcast_episode_dir);
 

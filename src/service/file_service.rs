@@ -1,11 +1,16 @@
+use std::collections::HashMap;
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
 use std::path::Path;
+use std::str::FromStr;
 use regex::Regex;
 use crate::config::dbconfig::establish_connection;
+use crate::controllers::settings_controller::ReplacementStrategy;
+use crate::models::settings::Setting;
+use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 
 #[derive(Clone)]
@@ -109,12 +114,82 @@ impl FileService {
 pub fn prepare_podcast_title_to_directory(title: &str) ->String {
     let mut settings_service = SettingsService::new();
     let retrieved_settings = settings_service.get_settings().unwrap();
+    let final_string = perform_replacement(title, retrieved_settings.clone());
 
-    if retrieved_settings.replace_invalid_characters{
+    let fixed_string = retrieved_settings.podcast_format.replace("{}","{podcasttitle}");
+
+    let mut vars:HashMap<String,&str> = HashMap::new();
+    vars.insert("podcasttitle".to_string(), &final_string);
+    strfmt::strfmt(&fixed_string, &vars).unwrap()
+}
+
+pub fn prepare_podcast_episode_title_to_directory(title: &str) ->String {
+    let mut settings_service = SettingsService::new();
+    let retrieved_settings = settings_service.get_settings().unwrap();
+    let final_string = perform_replacement(title, retrieved_settings.clone());
+
+    let fixed_string = retrieved_settings.episode_format.replace("{}","{episodetitle}");
+
+    let mut vars:HashMap<String, &str> = HashMap::new();
+    vars.insert("episodetitle".to_string(), &final_string);
+    strfmt::strfmt(&fixed_string, &vars).unwrap()
+}
+
+fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
+    let mut final_string: String = title.to_string();
+
+
+    // If checked replace all illegal characters
+    if retrieved_settings.replace_invalid_characters {
         let illegal_chars_regex = Regex::new(r#"[<>:"/\\|?*]"#).unwrap();
-        illegal_chars_regex.replace_all(title, "");
+        final_string = illegal_chars_regex.replace_all(title, "").to_string();
     }
 
+    // Colon replacement strategy
+    match ReplacementStrategy::from_str(&retrieved_settings.replacement_strategy).unwrap() {
+        ReplacementStrategy::ReplaceWithDashAndUnderscore => {
+            final_string = final_string.replace(":", "_").replace(" ", "_")
+        }
+        ReplacementStrategy::Remove => {
+            final_string = final_string.replace(":", "").replace(" ", "")
+        }
+        ReplacementStrategy::ReplaceWithDash => {
+            final_string = final_string.replace(":", "-").replace(" ", "-")
+        }
+    }
 
-     format!("'{}'",deunicode::deunicode(title))
+    final_string = deunicode::deunicode(&final_string);
+    final_string
+}
+
+
+/*
+First image, then podcast
+*/
+pub fn determine_image_and_local_podcast_audio_url(podcast:Podcast, podcast_episode:
+PodcastEpisode, image_suffix: &str, suffix: &str)->(String, String){
+    let image_save_path;
+    let podcast_save_path;
+
+    if podcast_episode.local_image_url.trim().len()==0{
+        image_save_path= PathService::get_image_path(
+            &podcast.clone().directory_name,
+            &podcast_episode.clone().name,
+            &image_suffix,
+        );
+    }
+    else{
+        image_save_path = podcast_episode.clone().local_image_url
+    }
+
+    if podcast_episode.local_url.trim().len()==0{
+        podcast_save_path = PathService::get_podcast_episode_path(
+            &podcast.directory_name.clone(),
+            &podcast_episode.name,
+            &suffix);
+    }
+    else{
+        podcast_save_path = podcast_episode.clone().local_url;
+    }
+    return (image_save_path, podcast_save_path)
 }
