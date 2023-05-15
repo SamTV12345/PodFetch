@@ -33,7 +33,7 @@ export const PodcastDelete = () => {
         <div className="mt-2">
             {
                 podcasts.map(p=>
-                    <div className="border-2 border-b-indigo-100 p-4">
+                    <div className="border-2 border-b-indigo-100 p-4" key={p.id}>
                         <h2>{p.name}</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <button className="p-2 bg-red-500" onClick={()=>{

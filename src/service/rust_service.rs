@@ -52,7 +52,14 @@ impl PodcastService {
             .await
             .unwrap();
         log::info!("Found podcast: {}", result.url());
-        return result.json().await.unwrap();
+        let res_of_search =  result.json().await;
+        if res_of_search.is_err(){
+            log::error!("Error searching for podcast: {}", res_of_search.err().unwrap());
+            return serde_json::from_str("{}").unwrap();
+        }
+        else {
+            return res_of_search.unwrap();
+        }
     }
 
     pub async fn find_podcast_on_podindex(&mut self, podcast: &str) -> Value {

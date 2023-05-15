@@ -5,7 +5,7 @@ export type Setting = {
     autoCleanup: boolean,
     autoCleanupDays: number,
     podcastPrefill: number,
-    useExistingFilenames: boolean,
+    useExistingFilename: boolean,
     replaceInvalidCharacters: boolean,
     replacementStrategy: string,
     episodeFormat: string,

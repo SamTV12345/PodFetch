@@ -4,8 +4,10 @@ use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
+use std::ops::Index;
 use std::path::Path;
 use std::str::FromStr;
+use chrono::format;
 use regex::Regex;
 
 use crate::controllers::settings_controller::ReplacementStrategy;
@@ -89,7 +91,7 @@ impl FileService {
     pub async fn download_podcast_image(&self, podcast_path: &str, image_url: &str, podcast_id: &str) {
         let image_response = self.client.get(image_url).send().await.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(image_url);
-        let file_path = format!("{}/image.{}", podcast_path, image_suffix);
+        let file_path = PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix);
         let mut image_out = std::fs::File::create(file_path.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
@@ -123,16 +125,27 @@ pub fn prepare_podcast_title_to_directory(title: &str) ->String {
     strfmt::strfmt(&fixed_string, &vars).unwrap()
 }
 
-pub fn prepare_podcast_episode_title_to_directory(title: &str) ->String {
+pub fn prepare_podcast_episode_title_to_directory(podcast_episode: PodcastEpisode) ->String {
     let mut settings_service = SettingsService::new();
     let retrieved_settings = settings_service.get_settings().unwrap();
-    let final_string = perform_replacement(title, retrieved_settings.clone());
+    if retrieved_settings.use_existing_filename{
+        let res_of_filename = get_filename_of_url(&podcast_episode.url);
+        if res_of_filename.is_ok(){
+                return res_of_filename.unwrap();
+        }
+    }
+    let final_string = perform_replacement(&podcast_episode.name,
+                                           retrieved_settings.clone())
+        .replace(|c: char| !c.is_ascii(), "");
 
-    let fixed_string = retrieved_settings.episode_format.replace("{}","{episodetitle}");
-
+    let mut fixed_string = retrieved_settings.episode_format.replace("{}", "{episodetitle}")
+        .chars()
+        .filter(|&c| c as u32!= 44)
+        .collect::<String>();
     let mut vars:HashMap<String, &str> = HashMap::new();
     vars.insert("episodetitle".to_string(), &final_string);
-    strfmt::strfmt(&fixed_string, &vars).unwrap()
+
+    format!("'{}'",strfmt::strfmt(&fixed_string, &vars).unwrap())
 }
 
 fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
@@ -141,25 +154,23 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
 
     // If checked replace all illegal characters
     if retrieved_settings.replace_invalid_characters {
-        let illegal_chars_regex = Regex::new(r#"[<>:"/\\|?*]"#).unwrap();
-        final_string = illegal_chars_regex.replace_all(title, "").to_string();
+        let illegal_chars_regex = Regex::new(r#"[<>:"/\\|?*”“„]"#).unwrap();
+        final_string = illegal_chars_regex.replace_all(&final_string.clone(), "").to_string();
     }
 
     // Colon replacement strategy
     match ReplacementStrategy::from_str(&retrieved_settings.replacement_strategy).unwrap() {
         ReplacementStrategy::ReplaceWithDashAndUnderscore => {
-            final_string = final_string.replace(":", "_").replace(" ", "_")
+            final_string = final_string.replace(":", " - ")
         }
         ReplacementStrategy::Remove => {
-            final_string = final_string.replace(":", "").replace(" ", "")
+            final_string = final_string.replace(":", "")
         }
         ReplacementStrategy::ReplaceWithDash => {
-            final_string = final_string.replace(":", "-").replace(" ", "-")
+            final_string = final_string.replace(":", "-")
         }
     }
-
-    final_string = deunicode::deunicode(&final_string);
-    final_string
+    deunicode::deunicode(&final_string)
 }
 
 
@@ -167,29 +178,87 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
 First image, then podcast
 */
 pub fn determine_image_and_local_podcast_audio_url(podcast:Podcast, podcast_episode:
-PodcastEpisode, image_suffix: &str, suffix: &str)->(String, String){
+PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting)->(String, String){
     let image_save_path;
     let podcast_save_path;
-
-    if podcast_episode.local_image_url.trim().len()==0{
-        image_save_path= PathService::get_image_path(
-            &podcast.clone().directory_name,
-            &podcast_episode.clone().name,
-            &image_suffix,
-        );
+    if podcast_episode.local_image_url.trim().len()==0 {
+        if settings.use_existing_filename {
+            let podcast_file_name = get_filename_of_url(&podcast_episode.url);
+            if podcast_file_name.is_err(){
+                // Just insert the name of the episode
+                image_save_path = PathService::get_image_path(
+                    &podcast.clone().directory_name,
+                    Some(podcast_episode.clone()),
+                    &image_suffix,
+                    &podcast_episode.name
+                );
+            }
+            else {
+                // Insert the filename as requested by user
+                image_save_path = PathService::get_image_path(
+                    &podcast.clone().directory_name,
+                    None,
+                    &image_suffix,
+                    &podcast_file_name.unwrap()
+                );
+            }
+        } else {
+            image_save_path = PathService::get_image_path(
+                &podcast.clone().directory_name,
+                Some(podcast_episode.clone()),
+                &image_suffix,
+                &podcast_episode.name
+            );
+        }
     }
     else{
         image_save_path = podcast_episode.clone().local_image_url
     }
 
     if podcast_episode.local_url.trim().len()==0{
-        podcast_save_path = PathService::get_podcast_episode_path(
-            &podcast.directory_name.clone(),
-            &podcast_episode.name,
-            &suffix);
+        if settings.use_existing_filename {
+            let podcast_file_name = get_filename_of_url(&podcast_episode.url);
+
+            if podcast_file_name.is_err(){
+                podcast_save_path = PathService::get_podcast_episode_path(
+                    &podcast.directory_name.clone(),
+                    Some(podcast_episode),
+                    &suffix, &podcast_file_name.unwrap());
+            }
+            else{
+                podcast_save_path = PathService::get_podcast_episode_path(
+                    &podcast.directory_name.clone(),
+                    None,
+                    &suffix, &podcast_file_name.unwrap());
+            }
+        }
+        else{
+            podcast_save_path = PathService::get_podcast_episode_path(
+                &podcast.directory_name.clone(),
+                Some(podcast_episode.clone()),
+                &suffix, &podcast_episode.name);
+        }
     }
     else{
         podcast_save_path = podcast_episode.clone().local_url;
     }
     return (image_save_path, podcast_save_path)
+}
+
+
+fn get_filename_of_url(url: &str) -> Result<String,String> {
+    let re = Regex::new(r"/([^/?]+)\.\w+(?:\?.*)?$").unwrap();
+
+    if let Some(captures) = re.captures(url) {
+        return Ok(remove_extension(captures.get(1).unwrap().as_str()).to_string())
+    }
+    return Err("Could not get filename".to_string());
+}
+
+fn remove_extension(filename: &str) -> &str {
+    if let Some(dot_idx) = filename.rfind('.') {
+        &filename[..dot_idx]
+    } else {
+        filename
+    }
 }

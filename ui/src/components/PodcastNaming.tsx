@@ -17,7 +17,7 @@ export const PodcastNaming:FC<PodcastNamingProps> = ({settings})=>{
         replacementStrategy: settings.replacementStrategy,
             episodeFormat: settings.episodeFormat,
             replaceInvalidCharacters: settings.replaceInvalidCharacters,
-            useExistingFilenames: settings.useExistingFilenames,
+            useExistingFilenames: settings.useExistingFilename,
             podcastFormat: settings.podcastFormat
         }})
 
