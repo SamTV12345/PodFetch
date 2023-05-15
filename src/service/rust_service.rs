@@ -18,7 +18,7 @@ use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
-use actix_web::error::ParseError::Status;
+
 use diesel::SqliteConnection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;

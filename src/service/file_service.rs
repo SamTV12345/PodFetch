@@ -7,7 +7,7 @@ use std::io::{Error, Write};
 use std::path::Path;
 use std::str::FromStr;
 use regex::Regex;
-use crate::config::dbconfig::establish_connection;
+
 use crate::controllers::settings_controller::ReplacementStrategy;
 use crate::models::settings::Setting;
 use crate::service::path_service::PathService;

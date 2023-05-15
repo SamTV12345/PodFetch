@@ -1,6 +1,6 @@
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::service::file_service::{determine_image_and_local_podcast_audio_url, FileService, prepare_podcast_episode_title_to_directory, prepare_podcast_title_to_directory};
+use crate::service::file_service::{determine_image_and_local_podcast_audio_url, FileService, prepare_podcast_episode_title_to_directory};
 use crate::service::mapping_service::MappingService;
 use crate::service::path_service::PathService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -25,7 +25,7 @@ impl DownloadService {
         }
     }
 
-    pub fn download_podcast_episode(&mut self, mut podcast_episode: PodcastEpisode, mut podcast: Podcast) {
+    pub fn download_podcast_episode(&mut self, mut podcast_episode: PodcastEpisode, podcast: Podcast) {
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
 
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
