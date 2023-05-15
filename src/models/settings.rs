@@ -17,7 +17,8 @@ pub struct Setting {
     pub replace_invalid_characters: bool,
     pub use_existing_filename: bool,
     pub replacement_strategy: String,
-    pub episode_format: String
+    pub episode_format: String,
+    pub podcast_format: String
 }
 
 #[derive(Serialize, Deserialize)]

@@ -91,3 +91,7 @@ pub const PASSWORD:&str = "PASSWORD";
 
 
 pub const STANDARD_USER: &str = "user123";
+
+
+pub const ERR_SETTINGS_FORMAT: &str = "A podcast/episode format needs to contain an opening and \
+closing bracket ({}).";

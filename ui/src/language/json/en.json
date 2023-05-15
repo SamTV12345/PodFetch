@@ -122,5 +122,7 @@
   "colon-replacement": "Colon replacement",
   "standard-episode-format": "Standard episode format",
   "dash-separated": "Dash separated",
-  "dash-separated-with-space": "Dash separated with space"
+  "dash-separated-with-underscore": "Dash separated with underscore",
+  "remove": "Entfernen",
+  "standard-podcast-format": "Standard podcast format"
 }

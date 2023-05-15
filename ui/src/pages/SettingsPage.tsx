@@ -87,7 +87,7 @@ export const SettingsPage = () => {
 
 
                 <OPMLExport/>
-                <PodcastNaming/>
+                <PodcastNaming settings={settings}/>
             <PodcastDelete/>
         </div>
         </div>

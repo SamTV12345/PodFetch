@@ -132,6 +132,7 @@ diesel::table! {
         use_existing_filename -> Bool,
         replacement_strategy -> Text,
         episode_format -> Text,
+        podcast_format -> Text,
     }
 }
 

@@ -122,5 +122,7 @@
   "colon-replacement": "Remplacement des deux-points",
   "standard-episode-format": "Format standard des épisodes",
   "dash-separated": "Séparé par des tirets",
-  "dash-separated-with-space": "Séparé par des tirets avec un espace"
+  "dash-separated-with-undesrcore": "Séparé par des tirets avec soulignement",
+  "remove": "Supprimer",
+  "standard-podcast-format": "Format standard du podcast"
 }
