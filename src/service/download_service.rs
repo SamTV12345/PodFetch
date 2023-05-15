@@ -26,7 +26,7 @@ impl DownloadService {
         }
     }
 
-    pub fn download_podcast_episode(&mut self, mut podcast_episode: PodcastEpisode, podcast: Podcast) {
+    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast) {
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
         let settings_in_db = SettingsService::new().get_settings().unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);

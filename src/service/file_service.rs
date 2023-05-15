@@ -4,10 +4,10 @@ use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
-use std::ops::Index;
+
 use std::path::Path;
 use std::str::FromStr;
-use chrono::format;
+
 use regex::Regex;
 
 use crate::controllers::settings_controller::ReplacementStrategy;
@@ -138,7 +138,7 @@ pub fn prepare_podcast_episode_title_to_directory(podcast_episode: PodcastEpisod
                                            retrieved_settings.clone())
         .replace(|c: char| !c.is_ascii(), "");
 
-    let mut fixed_string = retrieved_settings.episode_format.replace("{}", "{episodetitle}")
+    let fixed_string = retrieved_settings.episode_format.replace("{}", "{episodetitle}")
         .chars()
         .filter(|&c| c as u32!= 44)
         .collect::<String>();
