@@ -50,7 +50,7 @@ export const PodcastDelete = () => {
                                     bodyText: t('delete-podcast-with-files-body', {name: p.name})
                                 }))
                                 dispatch(setModalOpen(true))
-                            }}>{t('delete-podcasts-without-files')}</button>
+                            }}>{t('delete-podcasts-with-files')}</button>
                             <button className="p-2 bg-red-500" onClick={()=>{
                                 dispatch(setConfirmModalData({
                                     headerText: t('delete-podcast-without-files'),
