@@ -178,7 +178,7 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
 First image, then podcast
 */
 pub fn determine_image_and_local_podcast_audio_url(podcast:Podcast, podcast_episode:
-PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting)->(String, String){
+PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, )->(String, String){
     let image_save_path;
     let podcast_save_path;
     if podcast_episode.local_image_url.trim().len()==0 {
@@ -250,7 +250,9 @@ fn get_filename_of_url(url: &str) -> Result<String,String> {
     let re = Regex::new(r"/([^/?]+)\.\w+(?:\?.*)?$").unwrap();
 
     if let Some(captures) = re.captures(url) {
-        return Ok(remove_extension(captures.get(1).unwrap().as_str()).to_string())
+        let dir_name = remove_extension(captures.get(1).unwrap().as_str()).to_string();
+
+        return Ok(dir_name)
     }
     return Err("Could not get filename".to_string());
 }

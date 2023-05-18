@@ -7,6 +7,7 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::blocking::ClientBuilder;
 use std::fs::create_dir;
 use std::io;
+use crate::models::file_path::FooBuilder;
 use crate::service::settings_service::SettingsService;
 
 pub struct DownloadService {
@@ -31,60 +32,55 @@ impl DownloadService {
         let settings_in_db = SettingsService::new().get_settings().unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
+        let image_podcast_path;
+        let podcast_episode_path ;
+        match settings_in_db.use_existing_filename {
+            true=>{
+                podcast_episode_path = FooBuilder::default()
+                    .with_podcast(podcast.clone())
+                    .with_suffix(&suffix)
+                    .with_episode(podcast_episode.clone())
+                    .with_filename("podcast")
+                    .with_raw_directory()
+                    .build();
+                image_podcast_path = FooBuilder::default()
+                    .with_podcast(podcast.clone())
+                    .with_suffix(&image_suffix)
+                    .with_episode(podcast_episode.clone())
+                    .with_filename("image")
+                    .with_raw_directory()
+                    .build();
+            },
+            false=>{
+                podcast_episode_path = FooBuilder::default()
+                    .with_suffix(&suffix)
+                    .with_episode(podcast_episode.clone())
+                    .with_podcast_directory(&podcast.directory_name)
+                    .with_podcast(podcast.clone())
+                    .with_filename("podcast")
+                    .build();
 
-        let (image_save_path, podcast_save_path) = determine_image_and_local_podcast_audio_url
-            (podcast.clone(), podcast_episode.clone(),  &image_suffix, &suffix,settings_in_db);
+                image_podcast_path = FooBuilder::default()
+                    .with_suffix(&image_suffix)
+                    .with_episode(podcast_episode.clone())
+                    .with_podcast_directory(&podcast.directory_name)
+                    .with_podcast(podcast.clone())
+                    .with_filename("image")
+                    .build();
+            }
+        }
+
 
         let client = ClientBuilder::new().build().unwrap();
         let mut resp = client.get(podcast_episode.clone().url).send().unwrap();
         let mut image_response = client.get(podcast_episode.image_url.clone()).send().unwrap();
 
-        let podcast_episode_dir = format!(
-            "{}/{}",
-            podcast.directory_name, prepare_podcast_episode_title_to_directory(podcast_episode.clone())
-        );
-        let podcast_episode_dir = create_dir(podcast_episode_dir);
+        let mut podcast_out = std::fs::File::create(podcast_episode_path.clone()).unwrap();
+        let mut image_out = std::fs::File::create(image_podcast_path.clone()).unwrap();
 
-        match podcast_episode_dir {
-            Ok(_) => {}
-            Err(e) => {
-                log::error!("Error creating podcast episode directory {}", e);
-                match FileService::create_podcast_root_directory_exists(){
-                    Ok(_) => {}
-                    Err(e) => {
-                        if e.kind()==io::ErrorKind::AlreadyExists {
-                            log::info!("Podcast root directory already exists")
-                        }
-                        else {
-                            log::error!("Error creating podcast root directory");
-                        }
-                    }
-                }
-
-                match FileService::create_podcast_directory_exists(&podcast.name, &podcast.directory_id) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        if e.kind()==io::ErrorKind::AlreadyExists {
-                            log::info!("Podcast directory already exists")
-                        }
-                        else {
-                            log::error!("Error creating podcast directory {}",e);
-                        }
-                    }
-                }
-            }
-        }
-
-        let image_podcast_path =
-            PathService::get_image_podcast_path_with_podcast_prefix(&podcast.directory_name.clone(), &image_suffix);
-        let mut podcast_out = std::fs::File::create(podcast_save_path.clone()).unwrap();
-        let mut image_out = std::fs::File::create(image_save_path.clone()).unwrap();
-
-        if !self
-            .file_service
-            .check_if_podcast_main_image_downloaded(&podcast.clone().directory_id)
+        if !self.file_service.check_if_podcast_main_image_downloaded(&podcast.clone().directory_id)
         {
-            let mut image_podcast = std::fs::File::create(image_podcast_path).unwrap();
+            let mut image_podcast = std::fs::File::create(image_podcast_path.clone()).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
         }
 
@@ -92,8 +88,8 @@ impl DownloadService {
 
         self.db.update_total_podcast_time_and_image(
                 &podcast_episode.episode_id,
-                &image_save_path,
-                &podcast_save_path.clone(),
+                &image_podcast_path.clone(),
+                &podcast_episode_path.clone(),
             )
             .expect("TODO: panic message");
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");

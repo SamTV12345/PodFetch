@@ -54,7 +54,7 @@ pub struct ResponseModel {
 }
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
-Serialize, Deserialize,)]
+Serialize, Deserialize,Default)]
 pub struct Podcast {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
@@ -116,7 +116,7 @@ pub struct PodcastDto {
 
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
-Serialize, Deserialize)]
+Serialize, Deserialize, Default)]
 pub struct PodcastEpisode {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
