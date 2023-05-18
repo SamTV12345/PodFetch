@@ -17,11 +17,11 @@ PodFetch also supports OIDC authentication. If you want to use it you need to se
 
 If you enable it you need to disable BASIC_AUTH as it is not possible to use both at the same time.
 
-| Variable          | Description                           | example                                                         |
-|-------------------|---------------------------------------|-----------------------------------------------------------------|
-| OIDC_AUTH         | Flag if OIDC should be enabled        | true                                                            |
-| OIDC_AUTHORITY    | The url of the OIDC authority.        | Keycloak Master <keycloak-url/realms/master                     |
-| OIDC_CLIENT_ID    | The client id of the OIDC client.     | podfetch                                                        |
-| OIDC_REDIRECT_URI | The client secret of the OIDC client. | <your-server-url>/ui/login                                      |
-| OIDC_SCOPE        | The scope of the oidc token           | This has a default value of "openid profile email"              |
-| OIDC_JWKS         | The JWKS token uri                    | For Keycloak it is /realms/master/protocol/openid-connect/certs |       
+| Variable          | Description                                                   | Example                                                      |
+|-------------------|---------------------------------------------------------------|--------------------------------------------------------------|
+| OIDC_AUTH         | Flag if OIDC should be enabled                                | `true`                                                       |
+| OIDC_AUTHORITY    | The url of the OIDC authority.                                | `<keycloak-url>/realms/master`                               |
+| OIDC_CLIENT_ID    | The client id of the OIDC client.                             | `podfetch`                                                   |
+| OIDC_REDIRECT_URI | The URI the OIDC authority redirects to after authentication. | `<your-server-url>/ui/login`                                 |
+| OIDC_SCOPE        | The scope of the oidc token                                   | `openid profile email`                                       |
+| OIDC_JWKS         | The JWKS token uri                                            | `<keycloak-url>/realms/master/protocol/openid-connect/certs` |
