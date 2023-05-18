@@ -1,8 +1,8 @@
 
-use std::fs::create_dir;
-use std::io;
+
+
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::service::file_service::{FileService, prepare_podcast_episode_title_to_directory};
+use crate::service::file_service::{prepare_podcast_episode_title_to_directory};
 use crate::service::path_service::PathService;
 
 #[derive(Default, Clone, Debug)]
