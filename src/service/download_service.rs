@@ -1,11 +1,11 @@
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::service::file_service::{determine_image_and_local_podcast_audio_url, FileService, prepare_podcast_episode_title_to_directory};
+use crate::service::file_service::{FileService};
 use crate::service::mapping_service::MappingService;
-use crate::service::path_service::PathService;
+
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::blocking::ClientBuilder;
-use std::fs::create_dir;
+
 use std::io;
 use crate::models::file_path::FooBuilder;
 use crate::service::settings_service::SettingsService;

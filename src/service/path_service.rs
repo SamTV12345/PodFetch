@@ -20,7 +20,7 @@ impl PathService {
         }
     }
 
-    pub fn get_image_path(directory: &str, episode: Option<PodcastEpisode>, suffix: &str, filename: &str) -> String {
+    pub fn get_image_path(directory: &str, episode: Option<PodcastEpisode>, _suffix: &str, filename: &str) -> String {
         return match episode {
             Some(episode) => {
                 format!("{}/{}", directory, prepare_podcast_episode_title_to_directory(episode))
