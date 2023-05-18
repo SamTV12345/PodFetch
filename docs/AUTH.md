@@ -25,3 +25,5 @@ If you enable it you need to disable BASIC_AUTH as it is not possible to use bot
 | OIDC_REDIRECT_URI | The URI the OIDC authority redirects to after authentication. | `<your-server-url>/ui/login`                                 |
 | OIDC_SCOPE        | The scope of the oidc token                                   | `openid profile email`                                       |
 | OIDC_JWKS         | The JWKS token uri                                            | `<keycloak-url>/realms/master/protocol/openid-connect/certs` |
+
+Note: For OIDC authorities that allow for selecting between `Confidential`/`Private` and `Public` for the Client Type (for example Authentik), use `Public`, as PodFetch does not need a client secret.
