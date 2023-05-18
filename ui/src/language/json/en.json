@@ -71,6 +71,7 @@
   "delete-podcast": "Delete podcast",
   "cancel": "Cancel",
   "delete-podcast-with-files-body": "Are you sure you want to delete the podcast {{name}} and all downloaded files?",
+  "delete-podcast-without-files-body": "Are you sure you want to delete the podcast {{name}}? No files will be deleted",
   "podcast-deleted": "Podcast deleted",
   "manage-podcasts": "Manage podcasts",
   "delete-podcasts-without-files": "Delete podcasts without files",
