@@ -1,7 +1,8 @@
+use std::io;
 use std::path::Path;
-use crate::models::itunes_models::PodcastEpisode;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
 
-use crate::service::file_service::{prepare_podcast_episode_title_to_directory, prepare_podcast_title_to_directory};
+use crate::service::file_service::{FileService, prepare_podcast_episode_title_to_directory, prepare_podcast_title_to_directory};
 
 
 pub struct PathService {}
@@ -40,21 +41,53 @@ impl PathService {
         return format!("{}/image.{}", directory, suffix);
     }
 
-    pub fn check_if_podcast_episode_directory_available(directory:&str, escaped_title: &str) -> String {
+    pub fn check_if_podcast_episode_directory_available(base_path:&str, podcast: Podcast, string: String) ->
+                                                                                          String {
         let mut i = 0;
-        let base_path = format!("{}/{}",directory, escaped_title);
-        if !Path::new(&base_path).exists() {
-            return base_path;
+        if !Path::new(&base_path).exists()&& string == "podcast" {
+            std::fs::create_dir(&base_path).map_err(|e| {
+                Self::handle_error_when_creating_directory(podcast);
+                return e
+            }).expect("Error creating directory");
+            return base_path.to_string();
         }
 
-        while Path::new(&format!("{}/{}-{}",directory, escaped_title, i)).exists() {
+        while Path::new(&format!("{}-{}",base_path, i)).exists() {
             i += 1;
         }
-        let final_path = format!("{}/{}-{}",directory, escaped_title, i);
+        let final_path = format!("{}-{}",base_path, i);
         // This is save to insert because this directory does not exist
         std::fs::create_dir(&final_path)
-            .expect("Error creating directory");
+            .map_err(|e| {
+                Self::handle_error_when_creating_directory(podcast);
+                return e
+            }).expect("Error creating directory");
         return final_path;
+    }
 
+    fn handle_error_when_creating_directory(podcast:Podcast){
+                match FileService::create_podcast_root_directory_exists(){
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.kind()==io::ErrorKind::AlreadyExists {
+                            log::info!("Podcast root directory already exists")
+                        }
+                        else {
+                            log::error!("Error creating podcast root directory");
+                        }
+
+                match FileService::create_podcast_directory_exists(&podcast.name, &podcast.directory_id) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.kind()==io::ErrorKind::AlreadyExists {
+                            log::info!("Podcast directory already exists")
+                        }
+                        else {
+                            log::error!("Error creating podcast directory {}",e);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

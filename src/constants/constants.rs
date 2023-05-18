@@ -95,3 +95,6 @@ pub const STANDARD_USER: &str = "user123";
 
 pub const ERR_SETTINGS_FORMAT: &str = "A podcast/episode format needs to contain an opening and \
 closing bracket ({}).";
+
+pub const PODCAST_FILENAME: &str = "podcast";
+pub const PODCAST_IMAGENAME:&str = "image";

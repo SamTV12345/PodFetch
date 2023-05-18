@@ -7,6 +7,7 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::blocking::ClientBuilder;
 
 use std::io;
+use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::FooBuilder;
 use crate::service::settings_service::SettingsService;
 
@@ -40,14 +41,14 @@ impl DownloadService {
                     .with_podcast(podcast.clone())
                     .with_suffix(&suffix)
                     .with_episode(podcast_episode.clone())
-                    .with_filename("podcast")
+                    .with_filename(PODCAST_FILENAME)
                     .with_raw_directory()
                     .build();
                 image_podcast_path = FooBuilder::default()
                     .with_podcast(podcast.clone())
                     .with_suffix(&image_suffix)
                     .with_episode(podcast_episode.clone())
-                    .with_filename("image")
+                    .with_filename(PODCAST_IMAGENAME)
                     .with_raw_directory()
                     .build();
             },
@@ -57,7 +58,7 @@ impl DownloadService {
                     .with_episode(podcast_episode.clone())
                     .with_podcast_directory(&podcast.directory_name)
                     .with_podcast(podcast.clone())
-                    .with_filename("podcast")
+                    .with_filename(PODCAST_FILENAME)
                     .build();
 
                 image_podcast_path = FooBuilder::default()
@@ -65,7 +66,7 @@ impl DownloadService {
                     .with_episode(podcast_episode.clone())
                     .with_podcast_directory(&podcast.directory_name)
                     .with_podcast(podcast.clone())
-                    .with_filename("image")
+                    .with_filename(PODCAST_IMAGENAME)
                     .build();
             }
         }

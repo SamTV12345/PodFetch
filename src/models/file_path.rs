@@ -57,49 +57,19 @@ impl FooBuilder{
 
     pub fn build(self)->String{
         if self.raw_filename{
-            self.clone().create_podcast_episode_dir(self.directory.clone());
-            return format!("{}/{}/{}.{}", self.directory.clone(),self.episode,self.filename.clone(), self.suffix.clone());
+            let resulting_directory = self.clone().create_podcast_episode_dir(self.directory.clone
+            ());
+            return format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix.clone());
         }
-        self.clone().create_podcast_episode_dir(format!("{}/{}",self.directory.clone(), self.episode.clone()));
+        let resulting_directory = self.clone().create_podcast_episode_dir(format!("{}/{}",self
+            .directory.clone(), self.episode.clone()));
 
-        return format!("{}/{}/{}.{}", self.directory.clone(),self.episode,self.filename.clone(), self
-            .suffix
-            .clone());
+        return format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix.clone());
     }
 
 
-    fn create_podcast_episode_dir(self,dirname:String){
-        let podcast_episode_dir = create_dir(dirname);
-
-        match podcast_episode_dir {
-            Ok(_) => {}
-            Err(e) => {
-                log::error!("Error creating podcast episode directory {}", e);
-                match FileService::create_podcast_root_directory_exists(){
-                    Ok(_) => {}
-                    Err(e) => {
-                        if e.kind()==io::ErrorKind::AlreadyExists {
-                            log::info!("Podcast root directory already exists")
-                        }
-                        else {
-                            log::error!("Error creating podcast root directory");
-                        }
-                    }
-                }
-
-                match FileService::create_podcast_directory_exists(&self.podcast.name, &self.podcast
-                    .directory_id) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        if e.kind()==io::ErrorKind::AlreadyExists {
-                            log::info!("Podcast directory already exists")
-                        }
-                        else {
-                            log::error!("Error creating podcast directory {}",e);
-                        }
-                    }
-                }
-            }
-        }
+    fn create_podcast_episode_dir(self,dirname:String)->String{
+        PathService::check_if_podcast_episode_directory_available
+            (&dirname, self.podcast, self.filename.clone())
     }
 }
