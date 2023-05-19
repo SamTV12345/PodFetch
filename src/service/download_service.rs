@@ -8,7 +8,7 @@ use reqwest::blocking::ClientBuilder;
 
 use std::io;
 use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
-use crate::models::file_path::FooBuilder;
+use crate::models::file_path::FilenameBuilder;
 use crate::service::settings_service::SettingsService;
 
 pub struct DownloadService {
@@ -33,40 +33,28 @@ impl DownloadService {
         let settings_in_db = SettingsService::new().get_settings().unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
-        let image_podcast_path;
-        let podcast_episode_path ;
+        let paths;
         match settings_in_db.use_existing_filename {
             true=>{
-                podcast_episode_path = FooBuilder::default()
+                paths = FilenameBuilder::default()
                     .with_podcast(podcast.clone())
                     .with_suffix(&suffix)
                     .with_episode(podcast_episode.clone())
                     .with_filename(PODCAST_FILENAME)
-                    .with_raw_directory()
-                    .build();
-                image_podcast_path = FooBuilder::default()
-                    .with_podcast(podcast.clone())
-                    .with_suffix(&image_suffix)
-                    .with_episode(podcast_episode.clone())
-                    .with_filename(PODCAST_IMAGENAME)
+                    .with_image_filename(PODCAST_IMAGENAME)
+                    .with_image_suffix(&image_suffix)
                     .with_raw_directory()
                     .build();
             },
             false=>{
-                podcast_episode_path = FooBuilder::default()
+                paths = FilenameBuilder::default()
                     .with_suffix(&suffix)
+                    .with_image_suffix(&image_suffix)
                     .with_episode(podcast_episode.clone())
                     .with_podcast_directory(&podcast.directory_name)
                     .with_podcast(podcast.clone())
+                    .with_image_filename(PODCAST_IMAGENAME)
                     .with_filename(PODCAST_FILENAME)
-                    .build();
-
-                image_podcast_path = FooBuilder::default()
-                    .with_suffix(&image_suffix)
-                    .with_episode(podcast_episode.clone())
-                    .with_podcast_directory(&podcast.directory_name)
-                    .with_podcast(podcast.clone())
-                    .with_filename(PODCAST_IMAGENAME)
                     .build();
             }
         }
@@ -76,12 +64,12 @@ impl DownloadService {
         let mut resp = client.get(podcast_episode.clone().url).send().unwrap();
         let mut image_response = client.get(podcast_episode.image_url.clone()).send().unwrap();
 
-        let mut podcast_out = std::fs::File::create(podcast_episode_path.clone()).unwrap();
-        let mut image_out = std::fs::File::create(image_podcast_path.clone()).unwrap();
+        let mut podcast_out = std::fs::File::create(paths.0.clone()).unwrap();
+        let mut image_out = std::fs::File::create(paths.1.clone()).unwrap();
 
         if !self.file_service.check_if_podcast_main_image_downloaded(&podcast.clone().directory_id)
         {
-            let mut image_podcast = std::fs::File::create(image_podcast_path.clone()).unwrap();
+            let mut image_podcast = std::fs::File::create(paths.1.clone()).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
         }
 
@@ -89,8 +77,8 @@ impl DownloadService {
 
         self.db.update_total_podcast_time_and_image(
                 &podcast_episode.episode_id,
-                &image_podcast_path.clone(),
-                &podcast_episode_path.clone(),
+                &paths.1.clone(),
+                &paths.0.clone(),
             )
             .expect("TODO: panic message");
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");

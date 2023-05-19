@@ -154,7 +154,7 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
 
     // If checked replace all illegal characters
     if retrieved_settings.replace_invalid_characters {
-        let illegal_chars_regex = Regex::new(r#"[<>:"/\\|?*”“„]"#).unwrap();
+        let illegal_chars_regex = Regex::new(r#"[<>"/\\|?*”“„]"#).unwrap();
         final_string = illegal_chars_regex.replace_all(&final_string.clone(), "").to_string();
     }
 

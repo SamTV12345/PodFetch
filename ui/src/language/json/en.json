@@ -121,8 +121,8 @@
   "replace-illegal-characters-description": "Replace illegal characters in filenames with a dash",
   "colon-replacement": "Colon replacement",
   "standard-episode-format": "Standard episode format",
-  "dash-separated": "Dash separated",
-  "dash-separated-with-underscore": "Dash separated with underscore",
-  "remove": "Entfernen",
+  "dash-separated": "Dash",
+  "dash-separated-with-space": "Dash separated with space",
+  "remove": "Remove",
   "standard-podcast-format": "Standard podcast format"
 }

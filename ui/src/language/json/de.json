@@ -124,7 +124,7 @@
   "colon-replacement": "Doppelpunkt-Ersatz",
   "standard-episode-format": "Standard-Episodenformat",
   "dash-separated": "Bindestrich-getrennt",
-  "dash-separated-with-underscore": "Bindestrich-getrennt mit Unterstrich",
+  "dash-separated-with-space": "Bindestrich-getrennt mit Abstand",
   "remove": "Entfernen",
   "standard-podcast-format": "Standard-Podcastformat"
 }

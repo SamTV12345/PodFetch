@@ -1,11 +1,10 @@
 import {useTranslation} from "react-i18next";
-import {FC, useState} from "react";
+import {FC} from "react";
 import axios from "axios";
 import {apiURL} from "../utils/Utilities";
 import {enqueueSnackbar} from "notistack";
 import {UpdateNameSettings} from "../models/UpdateNameSettings";
 import {SubmitHandler, useForm} from "react-hook-form";
-import {LoginData} from "./LoginComponent";
 import {Setting} from "../models/Setting";
 
 type PodcastNamingProps = {
@@ -13,7 +12,7 @@ type PodcastNamingProps = {
 }
 export const PodcastNaming:FC<PodcastNamingProps> = ({settings})=>{
     const {t} = useTranslation()
-    const {register, watch, handleSubmit, formState: {}} = useForm<UpdateNameSettings>({defaultValues:{
+    const {register, handleSubmit, formState: {}} = useForm<UpdateNameSettings>({defaultValues:{
         replacementStrategy: settings.replacementStrategy,
             episodeFormat: settings.episodeFormat,
             replaceInvalidCharacters: settings.replaceInvalidCharacters,
@@ -47,7 +46,7 @@ export const PodcastNaming:FC<PodcastNamingProps> = ({settings})=>{
                               block p-2.5 bg-gray-700 border-gray-600 w-3/4
                             placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500" {...register("replacementStrategy")}>
                 <option value="replace-with-dash">{t('dash-separated')}</option>
-                <option value="replace-with-dash-and-underscore">{t('dash-separated-with-underscore')}</option>
+                <option value="replace-with-dash-and-underscore">{t('dash-separated-with-space')}</option>
                 <option value="remove">{t('remove')}</option>
             </select>
         </div>

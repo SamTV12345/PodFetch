@@ -2,7 +2,7 @@ use std::io;
 use std::path::Path;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 
-use crate::service::file_service::{FileService, prepare_podcast_episode_title_to_directory, prepare_podcast_title_to_directory};
+use crate::service::file_service::{FileService, prepare_podcast_episode_title_to_directory};
 
 
 pub struct PathService {}
@@ -32,19 +32,14 @@ impl PathService {
         }
     }
 
-    pub fn get_image_podcast_path(directory: &str, suffix: &str) -> String {
-        return format!("podcasts/{}/image.{}", prepare_podcast_title_to_directory(directory),
-            suffix);
-    }
-
     pub fn get_image_podcast_path_with_podcast_prefix(directory: &str, suffix: &str) -> String {
         return format!("{}/image.{}", directory, suffix);
     }
 
-    pub fn check_if_podcast_episode_directory_available(base_path:&str, podcast: Podcast, string: String) ->
+    pub fn check_if_podcast_episode_directory_available(base_path:&str, podcast: Podcast) ->
                                                                                           String {
         let mut i = 0;
-        if !Path::new(&base_path).exists()&& string == "podcast" {
+        if !Path::new(&base_path).exists() {
             std::fs::create_dir(&base_path).map_err(|e| {
                 Self::handle_error_when_creating_directory(podcast);
                 return e
