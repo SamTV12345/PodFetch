@@ -18,6 +18,7 @@ use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
+
 use diesel::SqliteConnection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
@@ -51,7 +52,14 @@ impl PodcastService {
             .await
             .unwrap();
         log::info!("Found podcast: {}", result.url());
-        return result.json().await.unwrap();
+        let res_of_search =  result.json().await;
+        if res_of_search.is_err(){
+            log::error!("Error searching for podcast: {}", res_of_search.err().unwrap());
+            return serde_json::from_str("{}").unwrap();
+        }
+        else {
+            return res_of_search.unwrap();
+        }
     }
 
     pub async fn find_podcast_on_podindex(&mut self, podcast: &str) -> Value {
@@ -190,12 +198,12 @@ impl PodcastService {
                     let result = PodcastEpisodeService::
                     get_last_n_podcast_episodes(conn, podcast.clone());
                     for podcast_episode in result {
-                        self.podcast_episode_service
-                            .download_podcast_episode_if_not_locally_available(
-                                podcast_episode,
-                                podcast.clone(),
-                                lobby.clone(),
-                            );
+                            self.podcast_episode_service
+                                .download_podcast_episode_if_not_locally_available(
+                                    podcast_episode,
+                                    podcast.clone(),
+                                    lobby.clone(),
+                                );
                     }
                 }
             }

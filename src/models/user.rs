@@ -5,11 +5,11 @@ use diesel::prelude::{Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl, SqliteConnection, AsChangeset};
 use diesel::associations::HasTable;
 use utoipa::ToSchema;
-use crate::schema::users;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
+use crate::schema::users;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]

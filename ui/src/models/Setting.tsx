@@ -4,5 +4,10 @@ export type Setting = {
     autoUpdate: boolean,
     autoCleanup: boolean,
     autoCleanupDays: number,
-    podcastPrefill: number
+    podcastPrefill: number,
+    useExistingFilename: boolean,
+    replaceInvalidCharacters: boolean,
+    replacementStrategy: string,
+    episodeFormat: string,
+    podcastFormat: string
 }

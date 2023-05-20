@@ -113,5 +113,16 @@
   "descendant": "Descendant",
   "sort-by-published-date": "Trier par date de publication",
   "sort-by-title": "Trier par titre",
-  "number-of-podcasts-to-download": "Nombre de podcasts à télécharger"
+  "number-of-podcasts-to-download": "Nombre de podcasts à télécharger",
+  "podcast-naming": "Nom du podcast",
+  "rename-podcasts": "Renommer les podcasts",
+  "replace-illegal-characters": "Remplacer les caractères illégaux",
+  "podfetch-use-existing-filenames": "Utiliser les noms de fichiers existants",
+  "replace-illegal-characters-description": "Remplace les caractères illégaux par des tirets",
+  "colon-replacement": "Remplacement des deux-points",
+  "standard-episode-format": "Format standard des épisodes",
+  "dash-separated": "Séparé par des tirets",
+  "dash-separated-with-space": "Séparé par des tirets avec espacement",
+  "remove": "Supprimer",
+  "standard-podcast-format": "Format standard du podcast"
 }

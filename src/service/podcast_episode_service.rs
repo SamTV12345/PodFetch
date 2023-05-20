@@ -1,13 +1,13 @@
-use crate::constants::constants::{DEFAULT_SETTINGS, PodcastType, TELEGRAM_API_ENABLED};
+use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::messages::BroadcastMessage;
 use crate::models::models::Notification;
 use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
-use crate::service::file_service::FileService;
+use crate::service::file_service::{determine_image_and_local_podcast_audio_url, FileService};
 use crate::service::mapping_service::MappingService;
-use crate::service::path_service::PathService;
+
 use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
@@ -38,23 +38,18 @@ impl PodcastEpisodeService {
         podcast: Podcast,
         lobby: Option<web::Data<Addr<Lobby>>>,
     ) {
+        let mut settings_service = SettingsService::new();
+        let settings = settings_service.get_settings().unwrap();
         let mut db = DB::new().unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
         let image_suffix = Self::get_url_file_suffix(&podcast_episode_cloned.image_url);
 
-        let image_save_path = PathService::get_image_path(
-            &podcast_cloned.clone().directory_name,
-            &podcast_episode_cloned.clone().name,
-            &image_suffix,
-        );
 
-        let podcast_save_path = PathService::get_podcast_episode_path(
-            &podcast.directory_name.clone(),
-            &podcast_episode_cloned.name,
-            &suffix,
-        );
+        let (image_save_path, podcast_save_path) = determine_image_and_local_podcast_audio_url
+            (podcast.clone(), podcast_episode.clone(), &suffix, &image_suffix, settings);
+
 
         match db.check_if_downloaded(&podcast_episode.url) {
             Ok(true) => {
@@ -127,7 +122,7 @@ impl PodcastEpisodeService {
                                                                              Vec<PodcastEpisode> {
 
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings().unwrap_or(DEFAULT_SETTINGS);
+        let settings = settings_service.get_settings().unwrap();
         DB::get_last_n_podcast_episodes(conn, podcast.id,
                                         settings.podcast_prefill).unwrap()
     }

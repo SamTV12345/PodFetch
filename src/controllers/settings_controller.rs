@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Path};
@@ -152,4 +153,61 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<Environmen
         body.add_child(outline).expect("TODO: panic message");
     }
     body
+}
+
+
+#[put("/settings/name")]
+pub async fn update_name(db: Data<Mutex<SettingsService>>,
+                         update_information: web::Json<UpdateNameSettings>, requester: Option<web::ReqData<User>>)
+    -> impl Responder {
+    if !requester.unwrap().is_admin() {
+        return HttpResponse::Unauthorized().finish();
+    }
+
+    let mut db = db.lock().ignore_poison();
+
+    let settings = db.update_name(update_information.into_inner());
+    HttpResponse::Ok().json(settings)
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateNameSettings{
+    pub use_existing_filenames: bool,
+    pub replace_invalid_characters: bool,
+    pub replacement_strategy: ReplacementStrategy,
+    pub episode_format: String,
+    pub podcast_format: String
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all="kebab-case")]
+pub enum ReplacementStrategy{
+    ReplaceWithDashAndUnderscore,
+    Remove,
+    ReplaceWithDash
+}
+
+impl ToString for ReplacementStrategy{
+    fn to_string(&self) -> String {
+        match self {
+            ReplacementStrategy::ReplaceWithDashAndUnderscore => "replace-with-dash-and-underscore"
+                .to_string(),
+            ReplacementStrategy::Remove => "remove".to_string(),
+            ReplacementStrategy::ReplaceWithDash => "replace-with-dash".to_string()
+        }
+    }
+}
+
+impl FromStr for ReplacementStrategy{
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "replace-with-dash-and-underscore" => Ok(ReplacementStrategy::ReplaceWithDashAndUnderscore),
+            "remove" => Ok(ReplacementStrategy::Remove),
+            "replace-with-dash" => Ok(ReplacementStrategy::ReplaceWithDash),
+            _ => Err(())
+        }
+    }
 }

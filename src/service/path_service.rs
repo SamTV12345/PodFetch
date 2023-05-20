@@ -1,19 +1,88 @@
-use crate::service::file_service::prepare_podcast_title_to_directory;
+use std::io;
+use std::path::Path;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
+
+use crate::service::file_service::{FileService, prepare_podcast_episode_title_to_directory};
+
 
 pub struct PathService {}
 
 impl PathService {
-    pub fn get_podcast_episode_path(directory: &str, episode_id: &str, suffix: &str) -> String {
-        return format!("{}/{}/podcast.{}", directory, prepare_podcast_title_to_directory
-            (episode_id), suffix);
+    pub fn get_podcast_episode_path(directory: &str, episode: Option<PodcastEpisode>, suffix: &str, filename: &str)
+        -> String {
+        return match episode {
+            Some(episode) => {
+                format!("{}/{}/podcast.{}", directory,
+                        prepare_podcast_episode_title_to_directory(episode), suffix)
+            },
+            None => {
+                format!("{}/{}/podcast.{}", directory, filename, suffix)
+            }
+        }
     }
 
-    pub fn get_image_path(directory: &str, episode_id: &str, suffix: &str) -> String {
-        return format!("{}/{}/image.{}", directory, prepare_podcast_title_to_directory(episode_id), suffix);
+    pub fn get_image_path(directory: &str, episode: Option<PodcastEpisode>, _suffix: &str, filename: &str) -> String {
+        return match episode {
+            Some(episode) => {
+                format!("{}/{}", directory, prepare_podcast_episode_title_to_directory(episode))
+            },
+            None => {
+                format!("{}/{}", directory, filename)
+            }
+        }
     }
 
-    pub fn get_image_podcast_path(directory: &str, suffix: &str) -> String {
-        return format!("podcasts/{}/image.{}", prepare_podcast_title_to_directory(directory),
-            suffix);
+    pub fn get_image_podcast_path_with_podcast_prefix(directory: &str, suffix: &str) -> String {
+        return format!("{}/image.{}", directory, suffix);
+    }
+
+    pub fn check_if_podcast_episode_directory_available(base_path:&str, podcast: Podcast) ->
+                                                                                          String {
+        let mut i = 0;
+        if !Path::new(&base_path).exists() {
+            std::fs::create_dir(&base_path).map_err(|e| {
+                Self::handle_error_when_creating_directory(podcast);
+                return e
+            }).expect("Error creating directory");
+            return base_path.to_string();
+        }
+
+        while Path::new(&format!("{}-{}",base_path, i)).exists() {
+            i += 1;
+        }
+        let final_path = format!("{}-{}",base_path, i);
+        // This is save to insert because this directory does not exist
+        std::fs::create_dir(&final_path)
+            .map_err(|e| {
+                Self::handle_error_when_creating_directory(podcast);
+                return e
+            }).expect("Error creating directory");
+        return final_path;
+    }
+
+    fn handle_error_when_creating_directory(podcast:Podcast){
+                match FileService::create_podcast_root_directory_exists(){
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.kind()==io::ErrorKind::AlreadyExists {
+                            log::info!("Podcast root directory already exists")
+                        }
+                        else {
+                            log::error!("Error creating podcast root directory");
+                        }
+
+                match FileService::create_podcast_directory_exists(&podcast.name, &podcast.directory_id) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if e.kind()==io::ErrorKind::AlreadyExists {
+                            log::info!("Podcast directory already exists")
+                        }
+                        else {
+                            log::error!("Error creating podcast directory {}",e);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

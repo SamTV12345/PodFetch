@@ -41,7 +41,7 @@ use crate::controllers::podcast_controller::{
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
 use crate::controllers::podcast_episode_controller::{download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_timeline};
-use crate::controllers::settings_controller::{get_opml, get_settings, run_cleanup, update_settings};
+use crate::controllers::settings_controller::{get_opml, get_settings, run_cleanup, update_name, update_settings};
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{
@@ -270,6 +270,7 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
     let middleware = AuthFilter::new();
     web::scope("")
         .wrap(middleware)
+        .service(update_name)
         .service(get_filter)
         .service(search_podcasts)
         .service(add_podcast_by_feed)

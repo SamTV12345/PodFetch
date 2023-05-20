@@ -799,6 +799,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "deunicode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c1bba4f227a4a53d12b653f50ca7bf10c9119ae2aba56aff9e0338b5c98f36a"
+
+[[package]]
 name = "diesel"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1818,6 +1824,7 @@ dependencies = [
  "built",
  "chrono",
  "clokwerk",
+ "deunicode",
  "diesel",
  "diesel_migrations",
  "dotenv",
@@ -1842,6 +1849,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha256",
+ "strfmt",
  "sysinfo",
  "tokio",
  "tokio-stream",
@@ -2399,6 +2407,12 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "strfmt"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a8348af2d9fc3258c8733b8d9d8db2e56f54b2363a4b5b81585c7875ed65e65"
 
 [[package]]
 name = "strsim"

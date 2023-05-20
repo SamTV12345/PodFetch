@@ -19,3 +19,4 @@ pub mod episode;
 pub mod podcast_rssadd_model;
 pub mod order_criteria;
 pub mod filter;
+pub mod file_path;
