@@ -7,6 +7,7 @@ import {User} from "../models/User";
 import {ConfirmModalProps} from "../components/ConfirmModal";
 import {Invite} from "../pages/InviteAdministrationUserPage";
 import {TimeLineModel} from "../models/TimeLineModel";
+import {Filter} from "../models/Filter";
 
 export type Podcast = {
     directory: string,
@@ -57,7 +58,8 @@ interface CommonProps {
     users: User[],
     addInviteModalOpen: boolean,
     invites: Invite[],
-    timeLineEpisodes: TimeLineModel[]
+    timeLineEpisodes: TimeLineModel[],
+    filters: Filter|undefined
 }
 
 // Define the initial state using that type
@@ -78,7 +80,8 @@ const initialState: CommonProps = {
     users: [],
     addInviteModalOpen: false,
     invites: [],
-    timeLineEpisodes:[]
+    timeLineEpisodes:[],
+    filters: undefined
 }
 
 export const commonSlice = createSlice({
@@ -164,10 +167,13 @@ export const commonSlice = createSlice({
         },
         addPodcastEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
             state.selectedEpisodes = [...state.selectedEpisodes, ...action.payload]
+        },
+        setFilters: (state, action:PayloadAction<Filter>) => {
+            state.filters = action.payload
         }
 }})
 
-export const {setSideBarCollapsed, addPodcastEpisodes,setTimeLineEpisodes,setInvites,setAddInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
+export const {setSideBarCollapsed, setFilters, addPodcastEpisodes,setTimeLineEpisodes,setInvites,setAddInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

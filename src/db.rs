@@ -19,6 +19,7 @@ use std::time::SystemTime;
 use diesel::sql_types::{Text, Timestamp};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
+use crate::models::filter::Filter;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
@@ -782,18 +783,35 @@ impl DB {
     }
 
 
-    pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection) -> Vec<
+    pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection, favored_only: bool)
+        -> Vec<
         (PodcastEpisode, Podcast)> {
-        let podcast_timeline = sql_query("SELECT * FROM podcast_episodes,podcasts, \
-        favorites \
-        WHERE podcasts.id = podcast_episodes.podcast_id AND podcasts.id = favorites.podcast_id \
-        AND favorites.username=? AND favored=1 ORDER BY podcast_episodes.date_of_recording DESC \
-        LIMIT 20");
+        Filter::save_decision_for_timeline(username_to_search.clone(),conn,favored_only);
 
-        let res = podcast_timeline.bind::<Text, _>(&username_to_search);
+        match favored_only {
+            true=>{
+                let podcast_timeline = sql_query("SELECT * FROM podcast_episodes,podcasts, \
+                favorites \
+                WHERE podcasts.id = podcast_episodes.podcast_id AND podcasts.id = favorites.podcast_id \
+                AND favorites.username=? AND favored=1 ORDER BY podcast_episodes.date_of_recording DESC \
+                LIMIT 20");
+
+                let res = podcast_timeline.bind::<Text, _>(&username_to_search);
 
 
-        res.load::<(PodcastEpisode, Podcast)>(conn).expect("Error loading podcast episode by id")
+                res.load::<(PodcastEpisode, Podcast)>(conn).expect("Error loading podcast episode by id")
+            }
+            false=>{
+                let podcast_timeline = sql_query("SELECT * FROM podcast_episodes,podcasts \
+                WHERE podcasts.id = podcast_episodes.podcast_id ORDER BY podcast_episodes.date_of_recording DESC \
+                LIMIT 20");
+
+                podcast_timeline.load::<(PodcastEpisode, Podcast)>(conn).expect("Error loading \
+                podcast episode by id")
+            }
+        }
+
+
     }
 
     pub fn get_watch_logs_by_username(username_to_search: String, conn: &mut SqliteConnection,

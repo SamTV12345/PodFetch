@@ -40,6 +40,7 @@ diesel::table! {
         title -> Nullable<Text>,
         ascending -> Bool,
         filter -> Nullable<Text>,
+        only_favored -> Bool,
     }
 }
 

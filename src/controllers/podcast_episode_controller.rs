@@ -52,15 +52,22 @@ pub struct TimeLinePodcastEpisode {
     podcast: Podcast,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimelineQueryParams {
+    pub favored_only: bool,
+}
+
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<User>>, mapping_service:
-Data<Mutex<MappingService>>) ->
+Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) ->
                                                                                              impl
 Responder {
     let mapping_service = mapping_service.lock().ignore_poison();
 
 
-    let res = DB::get_timeline(requester.unwrap().username.clone(),&mut conn.get().unwrap());
+    let res = DB::get_timeline(requester.unwrap().username.clone(),&mut conn.get().unwrap(),
+                               favored_only.favored_only);
 
     let mapped_timeline = res.iter().map(|podcast_episode| {
         let (podcast_episode, podcast) = podcast_episode;
