@@ -126,5 +126,6 @@
   "dash-separated": "Bindestrich-getrennt",
   "dash-separated-with-space": "Bindestrich-getrennt mit Abstand",
   "remove": "Entfernen",
-  "standard-podcast-format": "Standard-Podcastformat"
+  "standard-podcast-format": "Standard-Podcastformat",
+  "onlyFavored": "Nur favorisierte Podcasts"
 }

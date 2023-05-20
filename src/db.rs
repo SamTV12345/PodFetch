@@ -17,9 +17,12 @@ use std::io::Error;
 use std::sync::MutexGuard;
 use std::time::SystemTime;
 use diesel::sql_types::{Text, Timestamp};
+use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
+use crate::models::filter::Filter;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
+
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 
@@ -782,18 +785,59 @@ impl DB {
     }
 
 
-    pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection) -> Vec<
-        (PodcastEpisode, Podcast)> {
-        let podcast_timeline = sql_query("SELECT * FROM podcast_episodes,podcasts, \
-        favorites \
-        WHERE podcasts.id = podcast_episodes.podcast_id AND podcasts.id = favorites.podcast_id \
-        AND favorites.username=? AND favored=1 ORDER BY podcast_episodes.date_of_recording DESC \
-        LIMIT 20");
+    pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection, favored_only: TimelineQueryParams)
+        -> Vec<(PodcastEpisode, Podcast)> {
+        use crate::schema::podcast_episodes::dsl::*;
+        use crate::schema::podcasts::dsl::*;
+        use crate::schema::podcasts::id as pid;
+        
+        use crate::schema::favorites::dsl::*;
+        use crate::schema::favorites::username as f_username;
+        use crate::schema::favorites::podcast_id as f_podcast_id;
+        use crate::schema::podcast_episodes::podcast_id as e_podcast_id;
 
-        let res = podcast_timeline.bind::<Text, _>(&username_to_search);
+        Filter::save_decision_for_timeline(username_to_search.clone(),conn,favored_only.favored_only);
+
+        let mut query = podcast_episodes.inner_join(podcasts.on(e_podcast_id.eq(pid)))
+            .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
+            .order(date_of_recording.desc())
+            .limit(20)
+            .into_boxed();
+
+        match favored_only.favored_only {
+            true=>{
+                match favored_only.last_timestamp {
+                    Some(last_id) => {
+                        query = query.filter(date_of_recording.lt(last_id));
+                    }
+                    None => {}
+                }
+
+                query = query.filter(f_username.eq(username_to_search.clone()));
+
+                query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect("Error loading podcast \
+                episode by id").iter().map(|(episode, podcast, _)| {
+                    (episode.clone(), podcast.clone())
+                }).collect()
+            }
+            false=>{
+                match favored_only.last_timestamp {
+                    Some(last_id) => {
+                        query = query.filter(date_of_recording.lt(last_id));
+                    }
+                    None => {}
+                }
+
+                query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect
+                ("Error \
+                loading \
+                podcast episode by id").iter().map(|(episode, podcast, _)| {
+                    (episode.clone(), podcast.clone())
+                }).collect()
+            }
+        }
 
 
-        res.load::<(PodcastEpisode, Podcast)>(conn).expect("Error loading podcast episode by id")
     }
 
     pub fn get_watch_logs_by_username(username_to_search: String, conn: &mut SqliteConnection,

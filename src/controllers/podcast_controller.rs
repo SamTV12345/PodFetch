@@ -68,11 +68,22 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
     let query = query.into_inner();
     let order = query.order.unwrap_or(OrderCriteria::ASC);
     let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    let only_favored;
+    let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
+                                                    &mut *conn.get().unwrap()).unwrap();
+    match opt_filter {
+        Some(filter)=>{
+            only_favored = filter.only_favored;
+        },
+        None=>{
+            only_favored = true
+        }
+    }
 
     let username = requester.unwrap().username.clone();
     let filter = Filter::new(username.clone(), query.title.clone(), order.clone().to_bool(),Some
                 (latest_pub.clone()
-                .to_string()));
+                .to_string()),only_favored);
     Filter::save_filter(filter, &mut *conn.get().unwrap()).expect("Error saving filter");
 
     match query.favored_only {
