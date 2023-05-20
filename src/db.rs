@@ -22,7 +22,7 @@ use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::schema::podcast_episodes::dsl::podcast_episodes;
+
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 
@@ -790,7 +790,7 @@ impl DB {
         use crate::schema::podcast_episodes::dsl::*;
         use crate::schema::podcasts::dsl::*;
         use crate::schema::podcasts::id as pid;
-        use crate::schema::podcast_episodes::id as episode_id;
+        
         use crate::schema::favorites::dsl::*;
         use crate::schema::favorites::username as f_username;
         use crate::schema::favorites::podcast_id as f_podcast_id;
