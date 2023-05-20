@@ -165,6 +165,9 @@ export const commonSlice = createSlice({
         setTimeLineEpisodes: (state, action:PayloadAction<TimeLineModel[]>) => {
             state.timeLineEpisodes = action.payload
         },
+        addTimelineEpisodes: (state, action:PayloadAction<TimeLineModel[]>) => {
+            state.timeLineEpisodes = [...state.timeLineEpisodes, ...action.payload]
+        },
         addPodcastEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
             state.selectedEpisodes = [...state.selectedEpisodes, ...action.payload]
         },
@@ -173,7 +176,7 @@ export const commonSlice = createSlice({
         }
 }})
 
-export const {setSideBarCollapsed, setFilters, addPodcastEpisodes,setTimeLineEpisodes,setInvites,setAddInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
+export const {setSideBarCollapsed, addTimelineEpisodes,setFilters, addPodcastEpisodes,setTimeLineEpisodes,setInvites,setAddInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
     setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
 
 export default commonSlice.reducer

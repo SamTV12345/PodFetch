@@ -8,13 +8,17 @@ import {FC} from "react";
 import {selectPodcastImage} from "../pages/Homepage";
 import {TimeLineModel} from "../models/TimeLineModel";
 import {useAppDispatch} from "../store/hooks";
+import {Waypoint} from "react-waypoint";
+import {addPodcastEpisodes, addTimelineEpisodes} from "../store/CommonSlice";
 
 
 type PodcastEpisodeTimeLineProps = {
-    podcastEpisode: TimeLineModel
+    podcastEpisode: TimeLineModel,
+    index: number,
+    timelineLength: number
 }
 
-export const PodcastEpisodeTimeLine:FC<PodcastEpisodeTimeLineProps> = ({podcastEpisode}) => {
+export const PodcastEpisodeTimeLine:FC<PodcastEpisodeTimeLineProps> = ({podcastEpisode, index, timelineLength}) => {
     const dispatch = useAppDispatch()
 
     return <div key={podcastEpisode.podcast_episode.episode_id+"dv"}

@@ -56,6 +56,7 @@ pub struct TimeLinePodcastEpisode {
 #[serde(rename_all = "camelCase")]
 pub struct TimelineQueryParams {
     pub favored_only: bool,
+    pub last_timestamp: Option<String>
 }
 
 #[get("/podcasts/timeline")]
@@ -67,7 +68,7 @@ Responder {
 
 
     let res = DB::get_timeline(requester.unwrap().username.clone(),&mut conn.get().unwrap(),
-                               favored_only.favored_only);
+                               favored_only.into_inner());
 
     let mapped_timeline = res.iter().map(|podcast_episode| {
         let (podcast_episode, podcast) = podcast_episode;
