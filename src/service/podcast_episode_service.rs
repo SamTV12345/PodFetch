@@ -15,6 +15,7 @@ use diesel::SqliteConnection;
 use dotenv::var;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
+use reqwest::header::{ACCEPT, HeaderMap};
 use rss::Channel;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
@@ -24,6 +25,7 @@ pub struct PodcastEpisodeService {
     db: DB,
     mapping_service: MappingService,
 }
+
 
 impl PodcastEpisodeService {
     pub fn new() -> Self {
@@ -131,9 +133,14 @@ impl PodcastEpisodeService {
     pub fn insert_podcast_episodes(&mut self, conn: &mut SqliteConnection, podcast: Podcast) ->
                                                                              Vec<PodcastEpisode> {
         let client = ClientBuilder::new().build().unwrap();
-        let result = client.get(podcast.clone().rssfeed).send().unwrap();
-        let bytes = result.bytes().unwrap();
-        let channel = Channel::read_from(&*bytes).unwrap();
+        let mut header_map = HeaderMap::new();
+        header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
+        header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
+        let result = client.get(podcast.clone().rssfeed).headers(header_map).send().unwrap();
+        let content = result.text().unwrap();
+
+        let channel = Channel::read_from(content.as_bytes())
+            .unwrap();
         self.update_podcast_fields(channel.clone(), podcast.id.clone());
 
         let mut podcast_inserted = Vec::new();
