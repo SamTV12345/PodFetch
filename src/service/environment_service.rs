@@ -2,7 +2,7 @@ use std::env;
 use crate::models::settings::ConfigModel;
 use std::env::var;
 use regex::Regex;
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
+use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, POLLING_INTERVAL, USERNAME};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -60,7 +60,7 @@ impl EnvironmentService {
         EnvironmentService {
             server_url: server_url.clone(),
             polling_interval: var("POLLING_INTERVAL")
-                .unwrap_or("300".to_string())
+                .unwrap_or(POLLING_INTERVAL.to_string())
                 .parse::<u32>()
                 .unwrap(),
             podindex_api_key: var("PODINDEX_API_KEY").unwrap_or("".to_string()),

@@ -98,3 +98,6 @@ closing bracket ({}).";
 
 pub const PODCAST_FILENAME: &str = "podcast";
 pub const PODCAST_IMAGENAME:&str = "image";
+
+
+pub const POLLING_INTERVAL: u32 = 300;
