@@ -54,3 +54,6 @@ strfmt="0.2.4"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = {version="0.10.52", features = ["vendored"]}
+
+[profile.release]
+strip = true  # Automatically strip symbols from the binary.
