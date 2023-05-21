@@ -26,7 +26,6 @@ use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
-
 pub mod schema;
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
@@ -57,6 +56,7 @@ mod db;
 mod models;
 mod service;
 use crate::db::DB;
+use crate::dbconfig::DbConn;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::session::Session;
@@ -79,6 +79,7 @@ mod exception;
 mod gpodder;
 mod command_line_runner;
 mod auth_middleware;
+mod dbconfig;
 
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
@@ -206,6 +207,8 @@ async fn main() -> std::io::Result<()> {
             thread::sleep(Duration::from_millis(1000));
         }
     });
+
+    let db = Data::new(dbconfig::DbPool::from_config());
     HttpServer::new(move || {
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
@@ -221,6 +224,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(Data::new(pool.clone()))
+            .app_data(db.clone())
             .app_data(Data::new(Mutex::new(JWKService::new())))
             .wrap(Condition::new(cfg!(debug_assertions),Logger::default()))
     })

@@ -37,5 +37,6 @@ pub fn establish_connection() -> SqliteConnection {
 
 
 pub fn get_database_url()->String{
+    println!("{}",env::var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
     env::var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string())
 }

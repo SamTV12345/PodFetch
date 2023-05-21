@@ -4,6 +4,13 @@ use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use diesel::AsChangeset;
 use diesel::Queryable;
+use futures::executor::block_on;
+use tokio::task::spawn_blocking;
+use crate::db_run;
+use crate::dbconfig::DbPool;
+use crate::dbconfig::FromDb;
+
+use crate::DbConn;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable, AsChangeset, Queryable)]
 #[serde(rename_all = "camelCase")]
@@ -46,11 +53,16 @@ impl Filter{
         Ok(())
     }
 
-    pub fn get_filter_by_username(username1: String, conn: &mut SqliteConnection) -> Result<Option<Filter>, diesel::result::Error>{
+    pub async fn get_filter_by_username(username1: String, conn: &DbConn) ->
+                                                                                   Result<Option<Filter>, diesel::result::Error>{
         use crate::schema::filters::dsl::*;
-        let opt_filter = filters.filter(username.eq(username1)).first::<Filter>(conn)
-            .optional().expect("Error connecting to database"); // delete all filters
-        Ok(opt_filter)
+        let pool = DbPool::from_config();
+        let res = block_on(pool.get());
+        let res = db_run!{conn:{
+            filters.filter(username.eq(username1)).first::<Filter>(res.unwrap())
+                .optional().expect("Error connecting to database")
+        }};
+        Ok(res)
     }
 
     pub fn save_decision_for_timeline(username_to_search: String, conn: &mut SqliteConnection,

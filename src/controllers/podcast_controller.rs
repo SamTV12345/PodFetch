@@ -42,6 +42,7 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use crate::dbconfig::DbConn;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,25 +54,29 @@ pub struct PodcastSearchModel{
 }
 
 #[get("/podcasts/filter")]
-pub async fn get_filter(conn:Data<DbPool>, requester: Option<web::ReqData<User>>) -> impl
+pub async fn get_filter(mut conn: Data<DbConn>, requester: Option<web::ReqData<User>>) -> impl
 Responder{
+            let mut db: &DbConn = &conn;
             let filter = Filter::get_filter_by_username(requester.unwrap().username.clone(),
-                                                        &mut *conn.get().unwrap()).expect("Error getting filter");
+                                                        db).await
+                .expect("Error getting filter");
             HttpResponse::Ok().json(filter)
 }
 
 #[get("/podcasts/search")]
-pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
+pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, mut conn:Data<DbConn>,
                              podcast_service: Data<Mutex<PodcastService>>,
-                             mapping_service:Data<Mutex<MappingService>> , requester: Option<web::ReqData<User>>)
-    ->impl Responder{
+                             mapping_service:Data<Mutex<MappingService>>, requester: Option<web::ReqData<User>>)
+                             ->impl Responder{
     let query = query.into_inner();
     let order = query.order.unwrap_or(OrderCriteria::ASC);
     let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
-    let only_favored;
+    //let only_favored;
     let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
-                                                    &mut *conn.get().unwrap()).unwrap();
-    match opt_filter {
+                                                    &mut conn).await.unwrap();
+
+    return HttpResponse::Ok().json(opt_filter);
+    /*match opt_filter {
         Some(filter)=>{
             only_favored = filter.only_favored;
         },
@@ -108,7 +113,7 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
                 .unwrap();
             HttpResponse::Ok().json(podcasts)
         }
-    }
+    }*/
 
 }
 

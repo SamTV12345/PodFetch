@@ -756,10 +756,17 @@ version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72eb77396836a4505da85bae0712fa324b74acfe1876d7c2f7e694ef3d0ee373"
 dependencies = [
+ "bitflags",
+ "byteorder",
  "chrono",
  "diesel_derives",
+ "itoa",
  "libsqlite3-sys",
+ "mysqlclient-sys",
+ "percent-encoding",
+ "pq-sys",
  "r2d2",
+ "url",
 ]
 
 [[package]]
@@ -1541,6 +1548,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mysqlclient-sys"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f61b381528ba293005c42a409dd73d034508e273bf90481f17ec2e964a6e969b"
+dependencies = [
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1800,6 +1817,15 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+
+[[package]]
+name = "pq-sys"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31c0052426df997c0cbd30789eb44ca097e3541717a7b8fa36b1c464ee7edebd"
+dependencies = [
+ "vcpkg",
+]
 
 [[package]]
 name = "proc-macro-error"

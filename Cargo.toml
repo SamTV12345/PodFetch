@@ -8,6 +8,13 @@ build = "build.rs"
 [build-dependencies]
 built = {version="0.6.0", features=["git2", "chrono", "semver"]}
 
+[features]
+#default = ["sqlite"]
+# Empty to keep compatibility, prefer to set USE_SYSLOG=true
+mysql = ["diesel/mysql", "diesel_migrations/mysql"]
+postgresql = ["diesel/postgres", "diesel_migrations/postgres"]
+sqlite = ["diesel/sqlite", "diesel_migrations/sqlite"]
+
 [dependencies]
 awc =  {version="3.1.1", features = ["rustls"]}
 rpassword = "7.2.0"
