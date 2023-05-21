@@ -76,7 +76,7 @@ The cli usage is described here: [CLI.md](docs/CLI.md)
 
 | Variable         | Description                                   | Default                  |
 |------------------|-----------------------------------------------|--------------------------|
-| POLLING_INTERVAL | Interval in minutes to check for new episodes | 60                       |
+| POLLING_INTERVAL | Interval in minutes to check for new episodes | 300                      |
 | SERVER_URL       | URL of the server                             | http://localhost:8000    |
 | DATABASE_URL     | URL of the database                           | sqlite://./db/podcast.db |
 
