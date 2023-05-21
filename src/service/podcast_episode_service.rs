@@ -234,25 +234,25 @@ impl PodcastEpisodeService {
         let parts: Vec<&str> = duration_str.split(":").collect();
         match parts.len() {
             1 => {
-                let seconds = parts[0].parse::<u32>().unwrap();
+                let seconds = parts[0].parse::<u32>().unwrap_or(0);
                 seconds
             }
             2 => {
-                let minutes = parts[0].parse::<u32>().unwrap();
-                let seconds = parts[1].parse::<u32>().unwrap();
+                let minutes = parts[0].parse::<u32>().unwrap_or(0);
+                let seconds = parts[1].parse::<u32>().unwrap_or(0);
                 minutes * 60 + seconds
             }
             3 => {
-                let hours = parts[0].parse::<u32>().unwrap();
-                let minutes = parts[1].parse::<u32>().unwrap();
-                let seconds = parts[2].parse::<u32>().unwrap();
+                let hours = parts[0].parse::<u32>().unwrap_or(0);
+                let minutes = parts[1].parse::<u32>().unwrap_or(0);
+                let seconds = parts[2].parse::<u32>().unwrap_or(0);
                 hours * 3600 + minutes * 60 + seconds
             }
             4 => {
-                let days = parts[0].parse::<u32>().unwrap();
-                let hours = parts[1].parse::<u32>().unwrap();
-                let minutes = parts[2].parse::<u32>().unwrap();
-                let seconds = parts[3].parse::<u32>().unwrap();
+                let days = parts[0].parse::<u32>().unwrap_or(0);
+                let hours = parts[1].parse::<u32>().unwrap_or(0);
+                let minutes = parts[2].parse::<u32>().unwrap_or(0);
+                let seconds = parts[3].parse::<u32>().unwrap_or(0);
                 days * 86400 + hours * 3600 + minutes * 60 + seconds
             }
             _ => 0,
