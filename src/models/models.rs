@@ -51,7 +51,7 @@ pub struct PodcastHistoryItem {
     pub episode_id: String,
     #[diesel(sql_type = Integer)]
     pub watched_time: i32,
-    #[diesel(sql_type = Timestamp)]
+    #[diesel(sql_type = NaiveDateTime)]
     pub date: NaiveDateTime,
     #[diesel(sql_type = Text)]
     pub username: String

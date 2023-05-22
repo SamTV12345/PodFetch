@@ -2,34 +2,34 @@
 
 diesel::table! {
     devices (id) {
-        id -> Integer,
-        deviceid -> Text,
+        id -> Int4,
+        deviceid -> Varchar,
         kind -> Text,
-        name -> Text,
-        username -> Text,
+        name -> Varchar,
+        username -> Varchar,
     }
 }
 
 diesel::table! {
     episodes (id) {
-        id -> Integer,
-        username -> Text,
-        device -> Text,
-        podcast -> Text,
-        episode -> Text,
+        id -> Int4,
+        username -> Varchar,
+        device -> Varchar,
+        podcast -> Varchar,
+        episode -> Varchar,
         timestamp -> Timestamp,
-        guid -> Nullable<Text>,
-        action -> Text,
-        started -> Nullable<Integer>,
-        position -> Nullable<Integer>,
-        total -> Nullable<Integer>,
+        guid -> Nullable<Varchar>,
+        action -> Varchar,
+        started -> Nullable<Int4>,
+        position -> Nullable<Int4>,
+        total -> Nullable<Int4>,
     }
 }
 
 diesel::table! {
     favorites (username, podcast_id) {
         username -> Text,
-        podcast_id -> Integer,
+        podcast_id -> Int4,
         favored -> Bool,
     }
 }
@@ -46,7 +46,7 @@ diesel::table! {
 
 diesel::table! {
     invites (id) {
-        id -> Text,
+        id -> Varchar,
         role -> Text,
         created_at -> Timestamp,
         accepted_at -> Nullable<Timestamp>,
@@ -57,7 +57,7 @@ diesel::table! {
 
 diesel::table! {
     notifications (id) {
-        id -> Integer,
+        id -> Int4,
         type_of_message -> Text,
         message -> Text,
         created_at -> Text,
@@ -67,28 +67,28 @@ diesel::table! {
 
 diesel::table! {
     podcast_episodes (id) {
-        id -> Integer,
-        podcast_id -> Integer,
+        id -> Int4,
+        podcast_id -> Int4,
         episode_id -> Text,
         name -> Text,
         url -> Text,
         date_of_recording -> Text,
         image_url -> Text,
-        total_time -> Integer,
+        total_time -> Int4,
         local_url -> Text,
         local_image_url -> Text,
         description -> Text,
-        status -> Text,
+        status -> Bpchar,
         download_time -> Nullable<Timestamp>,
     }
 }
 
 diesel::table! {
     podcast_history_items (id) {
-        id -> Integer,
-        podcast_id -> Integer,
+        id -> Int4,
+        podcast_id -> Int4,
         episode_id -> Text,
-        watched_time -> Integer,
+        watched_time -> Int4,
         date -> Timestamp,
         username -> Text,
     }
@@ -96,7 +96,7 @@ diesel::table! {
 
 diesel::table! {
     podcasts (id) {
-        id -> Integer,
+        id -> Int4,
         name -> Text,
         directory_id -> Text,
         rssfeed -> Text,
@@ -108,27 +108,27 @@ diesel::table! {
         last_build_date -> Nullable<Text>,
         author -> Nullable<Text>,
         active -> Bool,
-        original_image_url -> Text,
-        directory_name -> Text,
+        original_image_url -> Varchar,
+        directory_name -> Varchar,
     }
 }
 
 diesel::table! {
     sessions (username, session_id) {
-        username -> Text,
-        session_id -> Text,
+        username -> Varchar,
+        session_id -> Varchar,
         expires -> Timestamp,
     }
 }
 
 diesel::table! {
     settings (id) {
-        id -> Integer,
+        id -> Int4,
         auto_download -> Bool,
         auto_update -> Bool,
         auto_cleanup -> Bool,
-        auto_cleanup_days -> Integer,
-        podcast_prefill -> Integer,
+        auto_cleanup_days -> Int4,
+        podcast_prefill -> Int4,
         replace_invalid_characters -> Bool,
         use_existing_filename -> Bool,
         replacement_strategy -> Text,
@@ -139,7 +139,7 @@ diesel::table! {
 
 diesel::table! {
     subscriptions (id) {
-        id -> Integer,
+        id -> Int4,
         username -> Text,
         device -> Text,
         podcast -> Text,
@@ -150,10 +150,10 @@ diesel::table! {
 
 diesel::table! {
     users (id) {
-        id -> Integer,
-        username -> Text,
+        id -> Int4,
+        username -> Varchar,
         role -> Text,
-        password -> Nullable<Text>,
+        password -> Nullable<Varchar>,
         explicit_consent -> Bool,
         created_at -> Timestamp,
     }

@@ -127,7 +127,7 @@ async fn index() -> impl Responder {
         .body(fix_links(index_html))
 }
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
