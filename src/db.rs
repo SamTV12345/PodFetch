@@ -18,6 +18,7 @@ use std::sync::MutexGuard;
 use std::time::SystemTime;
 use diesel::sql_types::{Text, Timestamp};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
+use crate::DbConnection;
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
@@ -27,7 +28,7 @@ use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 
 pub struct DB {
-    conn: SqliteConnection,
+    conn: DbConnection,
     mapping_service: MappingService,
 }
 
@@ -48,7 +49,7 @@ impl DB {
         })
     }
 
-    pub fn find_by_rss_feed_url(conn:&mut SqliteConnection, feed_url: &str) -> Option<Podcast> {
+    pub fn find_by_rss_feed_url(conn:&mut DbConnection, feed_url: &str) -> Option<Podcast> {
         use crate::dbconfig::schema::podcasts::dsl::*;
         podcasts
             .filter(rssfeed.eq(feed_url))
@@ -57,7 +58,7 @@ impl DB {
             .expect("Error loading podcast by rss feed url")
     }
 
-    pub fn get_podcasts(conn: &mut SqliteConnection, u: String, mapping_service: MutexGuard<MappingService>)
+    pub fn get_podcasts(conn: &mut DbConnection, u: String, mapping_service: MutexGuard<MappingService>)
         -> Result<Vec<PodcastDto>, String> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
@@ -78,7 +79,7 @@ impl DB {
     }
 
 
-    pub fn get_all_podcasts(conn: &mut SqliteConnection)
+    pub fn get_all_podcasts(conn: &mut DbConnection)
         -> Result<Vec<Podcast>, String> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         let result = podcasts
@@ -87,7 +88,7 @@ impl DB {
         Ok(result)
     }
 
-    pub fn get_podcast(conn: &mut SqliteConnection, podcast_id_to_be_found: i32) -> Result<Podcast, Error> {
+    pub fn get_podcast(conn: &mut DbConnection, podcast_id_to_be_found: i32) -> Result<Podcast, Error> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::podcasts::id as podcast_id;
         let found_podcast = podcasts
@@ -105,7 +106,7 @@ impl DB {
         }
     }
 
-    pub fn delete_podcast(conn: &mut SqliteConnection, podcast_id_to_find: i32){
+    pub fn delete_podcast(conn: &mut DbConnection, podcast_id_to_find: i32){
         use crate::dbconfig::schema::podcasts::dsl::*;
         delete(podcasts.filter(id.eq(podcast_id_to_find)))
             .execute(conn)
@@ -113,7 +114,7 @@ impl DB {
     }
 
     pub fn get_podcast_episode_by_id(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcas_episode_id_to_be_found: &str,
     ) -> Result<Option<PodcastEpisode>, String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
@@ -128,7 +129,7 @@ impl DB {
     }
 
     pub fn get_podcast_episode_by_url(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcas_episode_url_to_be_found: &str,
         i: Option<i32>,
     ) -> Result<Option<PodcastEpisode>, String> {
@@ -154,7 +155,7 @@ impl DB {
     }
 
     pub fn query_podcast_episode_by_url(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcas_episode_url_to_be_found: &str,
     ) -> Result<Option<PodcastEpisode>, String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
@@ -168,7 +169,7 @@ impl DB {
         Ok(found_podcast_episode)
     }
 
-    pub fn get_podcast_by_track_id(conn: &mut SqliteConnection, podcast_id: i32) -> Result<Option<Podcast>, String> {
+    pub fn get_podcast_by_track_id(conn: &mut DbConnection, podcast_id: i32) -> Result<Option<Podcast>, String> {
         use crate::dbconfig::schema::podcasts::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         let optional_podcast = podcasts
@@ -181,7 +182,7 @@ impl DB {
     }
 
     pub fn insert_podcast_episodes(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcast: Podcast,
         item: Item,
         optional_image: Option<String>,
@@ -226,7 +227,7 @@ impl DB {
     }
 
     pub fn add_podcast_to_database(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         collection_name: String,
         collection_id: String,
         feed_url: String,
@@ -252,7 +253,7 @@ impl DB {
     }
 
     pub fn get_last_n_podcast_episodes(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcast_episode_id: i32,
         number_to_download: i32
     ) -> Result<Vec<PodcastEpisode>, String> {
@@ -267,7 +268,7 @@ impl DB {
     }
 
     pub fn get_podcast_episodes_of_podcast(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
     ) -> Result<Vec<PodcastEpisode>, String> {
@@ -297,7 +298,7 @@ impl DB {
         }
     }
 
-    pub fn log_watchtime(conn: &mut SqliteConnection, watch_model: PodcastWatchedPostModel, designated_username: String) -> Result<(), String> {
+    pub fn log_watchtime(conn: &mut DbConnection, watch_model: PodcastWatchedPostModel, designated_username: String) -> Result<(), String> {
         let result = Self::
             get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)
             .unwrap();
@@ -308,12 +309,13 @@ impl DB {
                 let now = SystemTime::now();
                 let now: DateTime<Utc> = now.into();
                 let now: &str = &now.to_rfc3339();
+                let now_string = now.to_string();
                 insert_into(podcast_history_items)
                     .values((
                         podcast_id.eq(result.podcast_id),
                         episode_id.eq(result.episode_id),
                         watched_time.eq(watch_model.time),
-                        date.eq(&now),
+                        date.eq(now_string),
                         username.eq(designated_username),
                     ))
                     .execute(conn)
@@ -326,7 +328,7 @@ impl DB {
         }
     }
 
-    pub fn delete_watchtime(conn: &mut SqliteConnection, podcast_id_to_delete: i32) -> Result<(),
+    pub fn delete_watchtime(conn: &mut DbConnection, podcast_id_to_delete: i32) -> Result<(),
         String> {
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
 
@@ -338,7 +340,7 @@ impl DB {
     }
 
     pub fn get_watchtime(
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcast_id_tos_search: &str,
         username_to_find: String
     ) -> Result<PodcastHistoryItem, String> {
@@ -391,7 +393,7 @@ impl DB {
 
     pub fn get_last_watched_podcasts(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
         let result = sql_query(
             "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY date \
@@ -466,7 +468,7 @@ impl DB {
     }
 
 
-    pub fn delete_episodes_of_podcast(conn: &mut SqliteConnection, podcast_id: i32) -> Result<(), String> {
+    pub fn delete_episodes_of_podcast(conn: &mut DbConnection, podcast_id: i32) -> Result<(), String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 
@@ -742,7 +744,7 @@ impl DB {
             .expect("Error setting default values");
     }
 
-    pub fn update_podcast_active(conn: &mut SqliteConnection, podcast_id: i32) {
+    pub fn update_podcast_active(conn: &mut DbConnection, podcast_id: i32) {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
         let found_podcast = DB::get_podcast( conn, podcast_id);
@@ -785,7 +787,7 @@ impl DB {
     }
 
 
-    pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection, favored_only: TimelineQueryParams)
+    pub fn get_timeline(username_to_search: String, conn: &mut DbConnection, favored_only: TimelineQueryParams)
         -> Vec<(PodcastEpisode, Podcast)> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::*;
@@ -840,7 +842,7 @@ impl DB {
 
     }
 
-    pub fn get_watch_logs_by_username(username_to_search: String, conn: &mut SqliteConnection,
+    pub fn get_watch_logs_by_username(username_to_search: String, conn: &mut DbConnection,
                                       since: NaiveDateTime)
         ->
     Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)> {
@@ -857,7 +859,7 @@ impl DB {
         res
     }
 
-    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut SqliteConnection) -> Podcast {
+    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut DbConnection) -> Podcast {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
         podcasts
@@ -866,7 +868,7 @@ impl DB {
             .expect("Error loading podcast by rss feed")
     }
 
-    pub fn search_podcasts_favored(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
+    pub fn search_podcasts_favored(conn: &mut DbConnection, order: OrderCriteria, title: Option<String>,
                                    latest_pub: OrderOption,
                                    designated_username: String) ->Vec<(Podcast, Favorite)>{
         use crate::dbconfig::schema::podcasts::dsl::*;
@@ -927,7 +929,7 @@ impl DB {
         distinct_podcasts
     }
 
-    pub fn search_podcasts(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
+    pub fn search_podcasts(conn: &mut DbConnection, order: OrderCriteria, title: Option<String>,
                            latest_pub: OrderOption,
                            designated_username: String) -> Vec<(Podcast, Option<Favorite>)> {
         use crate::dbconfig::schema::podcasts::dsl::*;

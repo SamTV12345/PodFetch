@@ -7,7 +7,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::{DbPool, unwrap_string};
+use crate::{DbConnection, DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
 use actix_web::{get, post, put, delete, HttpRequest, error, Error};
@@ -25,8 +25,6 @@ use std::sync::{Mutex};
 use std::thread;
 use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
-use diesel::row::NamedRow;
-use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
 use crate::db::DB;
@@ -54,7 +52,7 @@ pub struct PodcastSearchModel{
 }
 
 #[get("/podcasts/filter")]
-pub async fn get_filter(mut conn: Data<DbPool>, requester:
+pub async fn get_filter(conn: Data<DbPool>, requester:
 Option<web::ReqData<User>>) ->
                                                                                                impl
 Responder{
@@ -65,13 +63,13 @@ Responder{
 }
 
 #[get("/podcasts/search")]
-pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, mut conn:Data<DbPool>,
-                             podcast_service: Data<Mutex<PodcastService>>,
-                             mapping_service:Data<Mutex<MappingService>>, requester: Option<web::ReqData<User>>)
+pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
+                             _podcast_service: Data<Mutex<PodcastService>>,
+                             _mapping_service:Data<Mutex<MappingService>>, requester: Option<web::ReqData<User>>)
                              ->impl Responder{
     let query = query.into_inner();
-    let order = query.order.unwrap_or(OrderCriteria::ASC);
-    let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    let _order = query.order.unwrap_or(OrderCriteria::ASC);
+    let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
     //let only_favored;
     let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
                                                     &mut conn.get().unwrap()).await.unwrap();
@@ -354,7 +352,7 @@ pub async fn add_podcast_from_podindex(
     HttpResponse::Ok().into()
 }
 
-fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection)
+fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut DbConnection)
     ->Result<Podcast, PodFetchError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {

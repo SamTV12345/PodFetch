@@ -1,13 +1,14 @@
 use std::str::FromStr;
 use std::sync::MutexGuard;
 use actix_web::http::StatusCode;
-use diesel::{SqliteConnection};
 use crate::exception::exceptions::{PodFetchError, PodFetchErrorTrait};
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use sha256::{digest};
 use crate::constants::constants::Role;
+use crate::DbConnection;
+
 pub struct UserManagementService{
 
 }
@@ -38,7 +39,7 @@ impl UserManagementService {
      * Performs the onboarding with a valid
      */
     pub fn onboard_user(username: String, password: String, invite_id: String, conn: &mut
-    SqliteConnection)->Result<User,
+    DbConnection)->Result<User,
         PodFetchError>{
 
             // Check if the invite is valid
@@ -87,7 +88,7 @@ impl UserManagementService {
         }
     }
 
-    pub fn create_invite(role: Role, explicit_consent_i: bool, conn: &mut SqliteConnection, user:
+    pub fn create_invite(role: Role, explicit_consent_i: bool, conn: &mut DbConnection, user:
     User)
         -> Result<Invite,
         PodFetchError> {
@@ -99,13 +100,13 @@ impl UserManagementService {
         Err(PodFetchError::no_permissions_to_onboard_user())
     }
 
-    pub fn delete_user(user: User, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
+    pub fn delete_user(user: User, conn: &mut DbConnection)->Result<(), PodFetchError>{
 
         User::delete_user(&user, conn).expect("Error deleting User");
         return Ok(())
     }
 
-    pub fn update_role(user: User, conn: &mut SqliteConnection)->Result<UserWithoutPassword,
+    pub fn update_role(user: User, conn: &mut DbConnection)->Result<UserWithoutPassword,
         PodFetchError>{
             return match User::update_role(&user, conn) {
                 Ok(user) => {
@@ -121,7 +122,7 @@ impl UserManagementService {
 
 
     pub fn get_invite_link(invite_id: String, environment_service: MutexGuard<EnvironmentService>,
-                           conn: &mut SqliteConnection) ->Result<String, PodFetchError>{
+                           conn: &mut DbConnection) ->Result<String, PodFetchError>{
 
         match Invite::find_invite(invite_id, conn){
             Ok(invite) => {
@@ -143,7 +144,7 @@ impl UserManagementService {
     }
 
 
-    pub fn get_invite(invite_id: String, conn: &mut SqliteConnection)->Result<Invite, PodFetchError>{
+    pub fn get_invite(invite_id: String, conn: &mut DbConnection)->Result<Invite, PodFetchError>{
         match Invite::find_invite(invite_id, conn){
             Ok(invite) => {
                 match invite {
@@ -167,7 +168,7 @@ impl UserManagementService {
         }
     }
 
-    pub fn get_invites(conn: &mut SqliteConnection)->Result<Vec<Invite>, PodFetchError>{
+    pub fn get_invites(conn: &mut DbConnection)->Result<Vec<Invite>, PodFetchError>{
         match Invite::find_all_invites(conn){
             Ok(invites) => {
                 Ok(invites)
@@ -179,7 +180,7 @@ impl UserManagementService {
         }
     }
 
-    pub fn get_users(requester: User, conn: &mut SqliteConnection)-> Result<Vec<UserWithoutPassword>, PodFetchError> {
+    pub fn get_users(requester: User, conn: &mut DbConnection)-> Result<Vec<UserWithoutPassword>, PodFetchError> {
         if !Self::may_onboard_user(requester) {
             return Err(PodFetchError::no_permissions_to_onboard_user())
         }
@@ -187,7 +188,7 @@ impl UserManagementService {
         return Ok(User::find_all_users(conn))
     }
 
-    pub fn delete_invite(invite_id: String, conn: &mut SqliteConnection)->Result<(), PodFetchError>{
+    pub fn delete_invite(invite_id: String, conn: &mut DbConnection)->Result<(), PodFetchError>{
 
         match Invite::find_invite(invite_id, conn){
             Ok(invite) => {

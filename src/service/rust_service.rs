@@ -10,7 +10,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::{unwrap_string};
+use crate::{DbConnection, unwrap_string};
 use actix::Addr;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -19,7 +19,6 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 
-use diesel::SqliteConnection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
 use crate::config::dbconfig::establish_connection;
@@ -76,7 +75,7 @@ impl PodcastService {
         return result.json().await.unwrap();
     }
 
-    pub async fn insert_podcast_from_podindex(&mut self, conn: &mut SqliteConnection, id: i32,
+    pub async fn insert_podcast_from_podindex(&mut self, conn: &mut DbConnection, id: i32,
                                               lobby: Data<Addr<Lobby>>) ->Result<Podcast,
         PodFetchError>{
         let mapping_service = MappingService::new();
@@ -110,7 +109,7 @@ impl PodcastService {
 
     pub async fn handle_insert_of_podcast(
         &mut self,
-        conn: &mut SqliteConnection,
+        conn: &mut DbConnection,
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
         lobby: Data<Addr<Lobby>>) ->Result<Podcast,PodFetchError>{
@@ -189,7 +188,7 @@ impl PodcastService {
         &mut self,
         podcast: Podcast,
         lobby: Option<Data<Addr<Lobby>>>,
-        conn: &mut SqliteConnection
+        conn: &mut DbConnection
     ) {
         let settings = self.db.get_settings();
         match settings {
@@ -214,7 +213,7 @@ impl PodcastService {
     }
 
     pub fn refresh_podcast(&mut self, podcast: Podcast, lobby: Data<Addr<Lobby>>, conn:&mut
-    SqliteConnection) {
+    DbConnection) {
         log::info!("Refreshing podcast: {}", podcast.name);
         self.podcast_episode_service
             .insert_podcast_episodes(conn, podcast.clone());
@@ -225,7 +224,7 @@ impl PodcastService {
         self.db.update_podcast_favor(&id, x, username).unwrap();
     }
 
-    pub fn get_podcast_by_id(&mut self,conn: &mut SqliteConnection, id: i32) -> Podcast {
+    pub fn get_podcast_by_id(&mut self,conn: &mut DbConnection, id: i32) -> Podcast {
         DB::get_podcast(conn,id).unwrap()
     }
 
@@ -233,7 +232,7 @@ impl PodcastService {
         self.db.get_favored_podcasts(found_username).unwrap()
     }
 
-    pub fn update_active_podcast(conn: &mut SqliteConnection, id: i32) {
+    pub fn update_active_podcast(conn: &mut DbConnection, id: i32) {
         DB::update_podcast_active(conn, id);
     }
 
@@ -269,11 +268,11 @@ impl PodcastService {
         headers
     }
 
-    pub fn get_podcast(conn: &mut SqliteConnection, podcast_id_to_be_searched: i32)->Result<Podcast, Error>{
+    pub fn get_podcast(conn: &mut DbConnection, podcast_id_to_be_searched: i32)->Result<Podcast, Error>{
         DB::get_podcast(conn, podcast_id_to_be_searched)
     }
 
-    pub fn get_podcasts(conn: &mut SqliteConnection, u: String, mapping_service: MutexGuard<MappingService>) ->
+    pub fn get_podcasts(conn: &mut DbConnection, u: String, mapping_service: MutexGuard<MappingService>) ->
                                                                           Result<Vec<PodcastDto>, String> {
         DB::get_podcasts(conn, u, mapping_service)
     }
@@ -281,7 +280,7 @@ impl PodcastService {
     pub fn search_podcasts_favored(
         &mut self, order:OrderCriteria, title: Option<String>, latest_pub: OrderOption,
         mapping_service: MutexGuard<MappingService>, conn: &mut
-        SqliteConnection,
+        DbConnection,
         designated_username: String) -> Result<Vec<impl Serialize>, String>{
         let podcasts = DB::search_podcasts_favored(conn, order, title, latest_pub,
                                                    designated_username);
@@ -297,7 +296,7 @@ impl PodcastService {
     pub fn search_podcasts(&mut self, order:OrderCriteria, mapping_service:
     MutexGuard<MappingService>,title:
                            Option<String>, latest_pub: OrderOption,conn: &mut
-        SqliteConnection,
+        DbConnection,
                            designated_username: String) -> Result<Vec<PodcastDto>, String>{
 
         let podcasts = DB::search_podcasts(conn, order, title, latest_pub, designated_username);

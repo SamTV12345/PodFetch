@@ -4,6 +4,7 @@ use diesel::sql_types::{Integer, Text};
 use utoipa::ToSchema;
 use chrono::NaiveDateTime;
 use diesel::sql_types::Timestamp;
+use crate::DbConnection;
 
 // decode request data
 #[derive(Deserialize)]
@@ -57,7 +58,7 @@ pub struct PodcastHistoryItem {
 }
 
 impl PodcastHistoryItem{
-    pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<(),
+    pub fn delete_by_username(username1: String, conn: &mut DbConnection) -> Result<(),
         diesel::result::Error>{
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
         diesel::delete(podcast_history_items.filter(username.eq(username1)))

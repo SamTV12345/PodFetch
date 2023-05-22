@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
 use crate::db::DB;
+use crate::DbConnection;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 
@@ -39,7 +40,7 @@ pub struct Episode{
 
 
 impl Episode{
-    pub fn insert_episode(&self, conn: &mut SqliteConnection) -> Result<Episode, diesel::result::Error> {
+    pub fn insert_episode(&self, conn: &mut DbConnection) -> Result<Episode, diesel::result::Error> {
         use crate::dbconfig::schema::episodes::dsl::*;
 
         let res = episodes.filter(timestamp.eq(self.clone().timestamp)
@@ -100,7 +101,7 @@ impl Episode{
             total: episode_dto.total,
         }
     }
-    pub async fn get_actions_by_username(username1: String, conn: &mut SqliteConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
+    pub async fn get_actions_by_username(username1: String, conn: &mut DbConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
         use crate::dbconfig::schema::episodes::username;
         use crate::dbconfig::schema::episodes::dsl::episodes;
         use crate::dbconfig::schema::episodes::dsl::timestamp;
@@ -121,7 +122,7 @@ impl Episode{
         }
     }
 
-    pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut SqliteConnection,
+    pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut DbConnection,
                                                  episode_1: String) ->Option<Episode>{
 
         let res = sql_query(
@@ -152,7 +153,7 @@ impl Episode{
         }
     }
 
-    pub fn get_last_watched_episodes(username1: String, conn: &mut SqliteConnection)
+    pub fn get_last_watched_episodes(username1: String, conn: &mut DbConnection)
         ->Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>{
 
 
@@ -187,7 +188,7 @@ impl Episode{
         }).collect()
     }
 
-    pub fn delete_by_username_and_episode(username1: String, conn: &mut SqliteConnection) ->Result<(),Error>{
+    pub fn delete_by_username_and_episode(username1: String, conn: &mut DbConnection) ->Result<(),Error>{
         use crate::dbconfig::schema::episodes::username;
         use crate::dbconfig::schema::episodes::dsl::episodes;
         diesel::delete(episodes.filter(username.eq(username1)))

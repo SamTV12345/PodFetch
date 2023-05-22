@@ -2,11 +2,12 @@ use std::io::Error;
 use chrono::NaiveDateTime;
 use crate::dbconfig::schema::invites;
 use utoipa::ToSchema;
-use diesel::{Queryable, Insertable, Identifiable, SqliteConnection, RunQueryDsl, QueryDsl, OptionalExtension};
+use diesel::{Queryable, Insertable, Identifiable, RunQueryDsl, QueryDsl, OptionalExtension};
 use diesel::associations::HasTable;
 use diesel::ExpressionMethods;
 use uuid::Uuid;
 use crate::constants::constants::Role;
+use crate::DbConnection;
 
 #[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -34,7 +35,7 @@ impl Invite{
     }
 
     pub fn insert_invite(role_to_insert: &Role, explicit_consent_to_insert: bool, conn: &mut
-    SqliteConnection) -> Result<Invite,
+    DbConnection) -> Result<Invite,
         Error> {
         use crate::dbconfig::schema::invites::dsl::*;
 
@@ -55,19 +56,19 @@ impl Invite{
         Ok(created_invite)
     }
 
-    pub fn find_invite(id: String, conn: &mut SqliteConnection) -> Result<Option<Invite>, diesel::result::Error> {
+    pub fn find_invite(id: String, conn: &mut DbConnection) -> Result<Option<Invite>, diesel::result::Error> {
         invites::table
             .filter(invites::id.eq(id))
             .first::<Invite>(conn)
             .optional()
     }
 
-    pub fn find_all_invites(conn: &mut SqliteConnection) -> Result<Vec<Invite>, diesel::result::Error> {
+    pub fn find_all_invites(conn: &mut DbConnection) -> Result<Vec<Invite>, diesel::result::Error> {
         invites::table
             .load::<Invite>(conn)
     }
 
-    pub fn invalidate_invite(invite_id: String, conn: &mut SqliteConnection) -> Result<(),
+    pub fn invalidate_invite(invite_id: String, conn: &mut DbConnection) -> Result<(),
         diesel::result::Error> {
         use crate::dbconfig::schema::invites::dsl::*;
 
@@ -78,7 +79,7 @@ impl Invite{
         Ok(())
     }
 
-    pub fn delete_invite(invite_id: String, conn: &mut SqliteConnection) -> Result<(), diesel::result::Error> {
+    pub fn delete_invite(invite_id: String, conn: &mut DbConnection) -> Result<(), diesel::result::Error> {
         use crate::dbconfig::schema::invites::dsl::*;
 
         diesel::delete(invites.filter(id.eq(invite_id)))

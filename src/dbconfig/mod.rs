@@ -1,20 +1,3 @@
-use std::{sync::Arc, time::Duration};
-
-
-use diesel::{
-    connection::SimpleConnection,
-    r2d2::{ConnectionManager, CustomizeConnection, Pool, PooledConnection},
-};
-
-use tokio::{
-
-    sync::{Mutex, OwnedSemaphorePermit, Semaphore},
-    time::timeout,
-};
-use crate::get_database_url;
-use crate::constants::constants::DATABASE_TIMEOUT_SECONDS;
-
-
 #[cfg(sqlite)]
 #[path = "schemas/sqlite/schema.rs"]
 pub mod schema;
@@ -40,3 +23,27 @@ pub mod __mysql_schema;
 #[path = "schemas/postgresql/schema.rs"]
 pub mod __postgresql_schema;
 
+
+#[macro_export]
+#[cfg(sqlite)]
+macro_rules! import_database_connections {
+    () => {
+        use diesel::SqliteConnection;
+    };
+}
+
+#[macro_export]
+#[cfg(postgresql)]
+macro_rules! import_database_connections {
+    () => {
+        use diesel::PgConnection;
+    };
+}
+
+#[macro_export]
+#[cfg(mysql)]
+macro_rules! import_database_connections {
+    () => {
+        use diesel::MysqlConnection;
+    };
+}

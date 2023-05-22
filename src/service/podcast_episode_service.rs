@@ -11,12 +11,12 @@ use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
-use diesel::SqliteConnection;
 use dotenv::var;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::{ACCEPT, HeaderMap};
 use rss::Channel;
+use crate::DbConnection;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 
@@ -120,7 +120,7 @@ impl PodcastEpisodeService {
         return podcast;
     }
 
-    pub fn get_last_n_podcast_episodes(conn: &mut SqliteConnection, podcast: Podcast) ->
+    pub fn get_last_n_podcast_episodes(conn: &mut DbConnection, podcast: Podcast) ->
                                                                              Vec<PodcastEpisode> {
 
         let mut settings_service = SettingsService::new();
@@ -130,7 +130,7 @@ impl PodcastEpisodeService {
     }
 
     // Used for creating/updating podcasts
-    pub fn insert_podcast_episodes(&mut self, conn: &mut SqliteConnection, podcast: Podcast) ->
+    pub fn insert_podcast_episodes(&mut self, conn: &mut DbConnection, podcast: Podcast) ->
                                                                              Vec<PodcastEpisode> {
         let client = ClientBuilder::new().build().unwrap();
         let mut header_map = HeaderMap::new();
@@ -323,7 +323,7 @@ impl PodcastEpisodeService {
         }
     }
 
-    pub fn cleanup_old_episodes(&mut self, days: i32, conn: &mut SqliteConnection) {
+    pub fn cleanup_old_episodes(&mut self, days: i32, conn: &mut DbConnection) {
         let old_podcast_episodes = self.db.get_podcast_episodes_older_than_days(days);
 
         log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
@@ -343,13 +343,13 @@ impl PodcastEpisodeService {
         }
     }
 
-    pub fn get_podcast_episodes_of_podcast(conn: &mut SqliteConnection, id_num: i32, last_id:
+    pub fn get_podcast_episodes_of_podcast(conn: &mut DbConnection, id_num: i32, last_id:
     Option<String>)
         -> Result<Vec<PodcastEpisode>, String> {
         DB::get_podcast_episodes_of_podcast(conn,id_num, last_id)
     }
 
-    pub fn get_podcast_episode_by_id(conn: &mut SqliteConnection, id_num: &str) ->
+    pub fn get_podcast_episode_by_id(conn: &mut DbConnection, id_num: &str) ->
                                                                    Result<Option<PodcastEpisode>, String> {
         DB::get_podcast_episode_by_id(conn, id_num)
     }

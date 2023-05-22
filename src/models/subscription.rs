@@ -1,7 +1,7 @@
 use std::io::Error;
 use actix_web::web;
 use chrono::{NaiveDateTime, Utc};
-use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use crate::gpodder::subscription::subscriptions::SubscriptionUpdateRequest;
 use diesel::ExpressionMethods;
 
@@ -12,6 +12,7 @@ use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use crate::dbconfig::schema::subscriptions;
 use crate::utils::time::get_current_timestamp;
 use diesel::OptionalExtension;
+use crate::DbConnection;
 
 #[derive(Debug, Serialize, Deserialize,QueryableByName, Queryable,AsChangeset,Insertable, Clone, ToSchema)]
 #[diesel(treat_none_as_null = true)]
@@ -41,7 +42,7 @@ impl Subscription{
             deleted: None
         }
     }
-    pub fn delete_by_username(username1: &str, conn: &mut SqliteConnection) ->
+    pub fn delete_by_username(username1: &str, conn: &mut DbConnection) ->
                                                                                          Result<(), Error>{
         use crate::dbconfig::schema::subscriptions::dsl::*;
         diesel::delete(subscriptions.filter(username.eq(username1)))
@@ -61,7 +62,7 @@ pub struct SubscriptionChangesToClient {
 
 impl SubscriptionChangesToClient {
     pub async fn get_device_subscriptions(device_id: &str, username: &str, since: i32,
-                                          conn: &mut SqliteConnection) -> Result<SubscriptionChangesToClient, Error>{
+                                          conn: &mut DbConnection) -> Result<SubscriptionChangesToClient, Error>{
         let since = NaiveDateTime::from_timestamp_opt(since as i64, 0).unwrap();
       let res:Vec<Subscription> = subscriptions::table
           .filter(subscriptions::username.eq(username))
@@ -83,7 +84,7 @@ impl SubscriptionChangesToClient {
     }
 
     pub async fn update_subscriptions(device_id: &str, username: &str, upload_request:
-    web::Json<SubscriptionUpdateRequest>, conn: &mut SqliteConnection)-> Result<Vec<Vec<String>>,
+    web::Json<SubscriptionUpdateRequest>, conn: &mut DbConnection)-> Result<Vec<Vec<String>>,
         Error>{
         use crate::dbconfig::schema::subscriptions::dsl as dsl_types;
         use crate::dbconfig::schema::subscriptions::dsl::subscriptions;
@@ -143,7 +144,7 @@ impl SubscriptionChangesToClient {
     }
 
    pub fn  find_by_podcast(username_1: String, deviceid_1: String, podcast_1: String, conn:
-   &mut SqliteConnection) -> Result<Option<Subscription>, Error>{
+   &mut DbConnection) -> Result<Option<Subscription>, Error>{
        use crate::dbconfig::schema::subscriptions::dsl::*;
 
        let res = subscriptions.filter(username.eq(username_1).and(device.eq

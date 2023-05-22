@@ -4,6 +4,7 @@ use crate::models::user::User;
 use crate::dbconfig::schema::favorites;
 use serde::{Serialize, Deserialize};
 use diesel::sql_types::{Text, Integer, Bool};
+use crate::DbConnection;
 
 #[derive(Queryable, Associations, Debug, PartialEq,QueryableByName, Serialize, Deserialize, Insertable,
 Clone,
@@ -20,7 +21,7 @@ pub struct Favorite{
 }
 
 impl Favorite{
-    pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<(),
+    pub fn delete_by_username(username1: String, conn: &mut DbConnection) -> Result<(),
         diesel::result::Error>{
         use crate::dbconfig::schema::favorites::dsl::*;
         diesel::delete(favorites.filter(username.eq(username1))).execute(conn)?;

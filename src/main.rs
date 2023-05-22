@@ -23,7 +23,6 @@ use log::{info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use diesel::r2d2::ConnectionManager;
-use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
 mod controllers;
@@ -79,14 +78,23 @@ mod command_line_runner;
 mod auth_middleware;
 mod dbconfig;
 
+import_database_connections!();
+
 #[cfg(sqlite)]
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
-
-#[cfg(postgres)]
+#[cfg(sqlite)]
+type DbConnection = SqliteConnection;
+#[cfg(postgresql)]
 type DbPool = Pool<ConnectionManager<PgConnection>>;
+#[cfg(postgresql)]
+type DbConnection = PgConnection;
 
 #[cfg(mysql)]
 type DbPool = Pool<ConnectionManager<MysqlConnection>>;
+#[cfg(mysql)]
+type DbConnection = MysqlConnection;
+
+
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
@@ -416,6 +424,7 @@ async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<Sqlite
     })).build(manager).unwrap();
     Ok(pool)
 }
+
 
 #[cfg(postgresql)]
 async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<PgConnection>>,

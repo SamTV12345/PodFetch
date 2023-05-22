@@ -1,7 +1,8 @@
 use diesel::prelude::*;
 use std::env;
 use std::time::Duration;
-use diesel::connection::SimpleConnection;
+use crate::DbConnection;
+
 
 #[derive(Debug)]
 pub struct ConnectionOptions {
@@ -10,10 +11,12 @@ pub struct ConnectionOptions {
     pub busy_timeout: Option<Duration>,
 }
 
-impl r2d2::CustomizeConnection<SqliteConnection, diesel::r2d2::Error>
+#[cfg(sqlite)]
+impl r2d2::CustomizeConnection<DbConnection, diesel::r2d2::Error>
 for ConnectionOptions
 {
-    fn on_acquire(&self, conn: &mut SqliteConnection) -> Result<(), diesel::r2d2::Error> {
+    fn on_acquire(&self, conn: &mut DbConnection) -> Result<(), diesel::r2d2::Error> {
+        use diesel::connection::SimpleConnection;
         (|| {
             if self.enable_wal {
                 conn.batch_execute("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;")?;
@@ -31,9 +34,9 @@ for ConnectionOptions
 }
 
 #[cfg(sqlite)]
-pub fn establish_connection() -> SqliteConnection {
+pub fn establish_connection() -> DbConnection {
     let database_url = &get_database_url();
-    SqliteConnection::establish(database_url)
+    DbConnection::establish(database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 
