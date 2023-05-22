@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 use serde::{Deserialize, Serialize};
 use diesel::{Insertable, Queryable, QueryableByName, AsChangeset};
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
-use crate::schema::subscriptions;
+use crate::dbconfig::schema::subscriptions;
 use crate::utils::time::get_current_timestamp;
 use diesel::OptionalExtension;
 
@@ -43,7 +43,7 @@ impl Subscription{
     }
     pub fn delete_by_username(username1: &str, conn: &mut SqliteConnection) ->
                                                                                          Result<(), Error>{
-        use crate::schema::subscriptions::dsl::*;
+        use crate::dbconfig::schema::subscriptions::dsl::*;
         diesel::delete(subscriptions.filter(username.eq(username1)))
             .execute(conn).expect("Error deleting subscriptions of user");
         Ok(())
@@ -85,8 +85,8 @@ impl SubscriptionChangesToClient {
     pub async fn update_subscriptions(device_id: &str, username: &str, upload_request:
     web::Json<SubscriptionUpdateRequest>, conn: &mut SqliteConnection)-> Result<Vec<Vec<String>>,
         Error>{
-        use crate::schema::subscriptions::dsl as dsl_types;
-        use crate::schema::subscriptions::dsl::subscriptions;
+        use crate::dbconfig::schema::subscriptions::dsl as dsl_types;
+        use crate::dbconfig::schema::subscriptions::dsl::subscriptions;
         let mut rewritten_urls:Vec<Vec<String>> = vec![vec![]];
         // Add subscriptions
         upload_request.clone().add.iter().for_each(|c| {
@@ -144,7 +144,7 @@ impl SubscriptionChangesToClient {
 
    pub fn  find_by_podcast(username_1: String, deviceid_1: String, podcast_1: String, conn:
    &mut SqliteConnection) -> Result<Option<Subscription>, Error>{
-       use crate::schema::subscriptions::dsl::*;
+       use crate::dbconfig::schema::subscriptions::dsl::*;
 
        let res = subscriptions.filter(username.eq(username_1).and(device.eq
        (deviceid_1)).and(podcast.eq(podcast_1)))

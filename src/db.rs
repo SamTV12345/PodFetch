@@ -49,7 +49,7 @@ impl DB {
     }
 
     pub fn find_by_rss_feed_url(conn:&mut SqliteConnection, feed_url: &str) -> Option<Podcast> {
-        use crate::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
         podcasts
             .filter(rssfeed.eq(feed_url))
             .first::<Podcast>(conn)
@@ -59,11 +59,11 @@ impl DB {
 
     pub fn get_podcasts(conn: &mut SqliteConnection, u: String, mapping_service: MutexGuard<MappingService>)
         -> Result<Vec<PodcastDto>, String> {
-        use crate::schema::podcasts::dsl::podcasts;
-        use crate::schema::favorites::dsl::favorites as f_db;
-        use crate::schema::favorites::dsl::podcast_id as f_id;
-        use crate::schema::podcasts::id as p_id;
-        use crate::schema::favorites::dsl::username;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
+        use crate::dbconfig::schema::favorites::dsl::podcast_id as f_id;
+        use crate::dbconfig::schema::podcasts::id as p_id;
+        use crate::dbconfig::schema::favorites::dsl::username;
         let result = podcasts
             .left_join(f_db.on(username.eq(u).and(f_id.eq(p_id))))
             .load::<(Podcast, Option<Favorite>)>(conn)
@@ -80,7 +80,7 @@ impl DB {
 
     pub fn get_all_podcasts(conn: &mut SqliteConnection)
         -> Result<Vec<Podcast>, String> {
-        use crate::schema::podcasts::dsl::podcasts;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts;
         let result = podcasts
             .load::<Podcast>(conn)
             .expect("Error loading podcasts");
@@ -88,8 +88,8 @@ impl DB {
     }
 
     pub fn get_podcast(conn: &mut SqliteConnection, podcast_id_to_be_found: i32) -> Result<Podcast, Error> {
-        use crate::schema::podcasts::dsl::podcasts;
-        use crate::schema::podcasts::id as podcast_id;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::dbconfig::schema::podcasts::id as podcast_id;
         let found_podcast = podcasts
             .filter(podcast_id.eq(podcast_id_to_be_found))
             .first::<Podcast>(conn)
@@ -106,7 +106,7 @@ impl DB {
     }
 
     pub fn delete_podcast(conn: &mut SqliteConnection, podcast_id_to_find: i32){
-        use crate::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
         delete(podcasts.filter(id.eq(podcast_id_to_find)))
             .execute(conn)
             .expect("Error deleting podcast");
@@ -116,7 +116,7 @@ impl DB {
         conn: &mut SqliteConnection,
         podcas_episode_id_to_be_found: &str,
     ) -> Result<Option<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         let found_podcast_episode = podcast_episodes
             .filter(episode_id.eq(podcas_episode_id_to_be_found))
@@ -132,7 +132,7 @@ impl DB {
         podcas_episode_url_to_be_found: &str,
         i: Option<i32>,
     ) -> Result<Option<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
         let found_podcast_episode;
         if i.is_some(){
             found_podcast_episode = podcast_episodes
@@ -157,7 +157,7 @@ impl DB {
         conn: &mut SqliteConnection,
         podcas_episode_url_to_be_found: &str,
     ) -> Result<Option<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         let found_podcast_episode = podcast_episodes
             .filter(url.like("%".to_owned()+podcas_episode_url_to_be_found+"%"))
@@ -169,8 +169,8 @@ impl DB {
     }
 
     pub fn get_podcast_by_track_id(conn: &mut SqliteConnection, podcast_id: i32) -> Result<Option<Podcast>, String> {
-        use crate::schema::podcasts::directory_id;
-        use crate::schema::podcasts::dsl::podcasts;
+        use crate::dbconfig::schema::podcasts::directory_id;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts;
         let optional_podcast = podcasts
             .filter(directory_id.eq(podcast_id.to_string()))
             .first::<Podcast>(conn)
@@ -187,7 +187,7 @@ impl DB {
         optional_image: Option<String>,
         duration: i32,
     ) -> PodcastEpisode {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
         let uuid_podcast = uuid::Uuid::new_v4();
 
         let mut inserted_date = "".to_string();
@@ -233,9 +233,9 @@ impl DB {
         image_url_1: String,
         directory_name_to_insert: String
     ) -> Podcast {
-        use crate::schema::podcasts;
-        use crate::schema::podcasts::{directory_id, image_url, name as podcast_name, rssfeed};
-        use crate::schema::podcasts::{original_image_url, directory_name};
+        use crate::dbconfig::schema::podcasts;
+        use crate::dbconfig::schema::podcasts::{directory_id, image_url, name as podcast_name, rssfeed};
+        use crate::dbconfig::schema::podcasts::{original_image_url, directory_name};
 
         let inserted_podcast = insert_into(podcasts::table)
             .values((
@@ -256,7 +256,7 @@ impl DB {
         podcast_episode_id: i32,
         number_to_download: i32
     ) -> Result<Vec<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
         let podcasts = podcast_episodes
             .filter(podcast_id.eq(podcast_episode_id))
             .limit(number_to_download as i64)
@@ -271,8 +271,8 @@ impl DB {
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
     ) -> Result<Vec<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::*;
-        use crate::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::dbconfig::schema::podcast_episodes::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         match last_id {
             Some(last_id) => {
                 let podcasts_found = podcast_episodes
@@ -302,7 +302,7 @@ impl DB {
             get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)
             .unwrap();
 
-        use crate::schema::podcast_history_items::dsl::*;
+        use crate::dbconfig::schema::podcast_history_items::dsl::*;
         match result {
             Some(result) => {
                 let now = SystemTime::now();
@@ -328,7 +328,7 @@ impl DB {
 
     pub fn delete_watchtime(conn: &mut SqliteConnection, podcast_id_to_delete: i32) -> Result<(),
         String> {
-        use crate::schema::podcast_history_items::dsl::*;
+        use crate::dbconfig::schema::podcast_history_items::dsl::*;
 
                 delete(podcast_history_items)
                     .filter(podcast_id.eq(podcast_id_to_delete))
@@ -344,7 +344,7 @@ impl DB {
     ) -> Result<PodcastHistoryItem, String> {
         let result = Self::get_podcast_episode_by_id(conn, podcast_id_tos_search)
             .unwrap();
-        use crate::schema::podcast_history_items::dsl::*;
+        use crate::dbconfig::schema::podcast_history_items::dsl::*;
 
         match result {
             Some(found_podcast) => {
@@ -437,10 +437,10 @@ impl DB {
         image_url: &str,
         local_download_url: &str,
     ) -> Result<(), String> {
-        use crate::schema::podcast_episodes::dsl::episode_id as episode_id_column;
-        use crate::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
-        use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
-        use crate::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as episode_id_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         let result = podcast_episodes
             .filter(episode_id_column.eq(episode_id))
             .first::<PodcastEpisode>(&mut self.conn)
@@ -467,8 +467,8 @@ impl DB {
 
 
     pub fn delete_episodes_of_podcast(conn: &mut SqliteConnection, podcast_id: i32) -> Result<(), String> {
-        use crate::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
-        use crate::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 
 
                 delete(podcast_episodes)
@@ -479,9 +479,9 @@ impl DB {
     }
 
     pub fn update_podcast_image(mut self, id: &str, image_url: &str) -> Result<(), String> {
-        use crate::schema::podcasts::dsl::directory_id;
-        use crate::schema::podcasts::dsl::image_url as image_url_column;
-        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+        use crate::dbconfig::schema::podcasts::dsl::directory_id;
+        use crate::dbconfig::schema::podcasts::dsl::image_url as image_url_column;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
 
         let result = dsl_podcast
             .filter(directory_id.eq(id))
@@ -503,8 +503,8 @@ impl DB {
     }
 
     pub fn get_podcast_by_directory_id(mut self, podcast_id: &str) -> Result<Option<Podcast>, String> {
-        use crate::schema::podcasts::dsl::directory_id;
-        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
+        use crate::dbconfig::schema::podcasts::dsl::directory_id;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
         let result = dsl_podcast
             .filter(directory_id.eq(podcast_id))
             .first::<Podcast>(&mut self.conn)
@@ -514,9 +514,9 @@ impl DB {
     }
 
     pub fn check_if_downloaded(&mut self, download_episode_url: &str) -> Result<bool, String> {
-        use crate::schema::podcast_episodes::dsl::local_url as local_url_column;
-        use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
-        use crate::schema::podcast_episodes::url as podcast_episode_url;
+        use crate::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        use crate::dbconfig::schema::podcast_episodes::url as podcast_episode_url;
         let result = dsl_podcast_episodes
             .filter(local_url_column.is_not_null())
             .filter(podcast_episode_url.eq(download_episode_url))
@@ -543,7 +543,7 @@ impl DB {
         download_url_of_episode: &str,
         status_to_insert: &str,
     ) -> Result<PodcastEpisode, String> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         let updated_podcast =
             diesel::update(podcast_episodes.filter(url.eq(download_url_of_episode)))
@@ -558,7 +558,7 @@ impl DB {
     }
 
     pub fn get_unread_notifications(&mut self) -> Result<Vec<Notification>, String> {
-        use crate::schema::notifications::dsl::*;
+        use crate::dbconfig::schema::notifications::dsl::*;
         let result = notifications
             .filter(status.eq("unread"))
             .order(created_at.desc())
@@ -568,8 +568,8 @@ impl DB {
     }
 
     pub fn insert_notification(&mut self, notification: Notification) -> Result<(), String> {
-        use crate::schema::notifications::dsl::notifications;
-        use crate::schema::notifications::*;
+        use crate::dbconfig::schema::notifications::dsl::notifications;
+        use crate::dbconfig::schema::notifications::*;
         do_retry(||{insert_into(notifications)
             .values((
                 type_of_message.eq(notification.clone().type_of_message),
@@ -587,7 +587,7 @@ impl DB {
         id_to_search: i32,
         status_update: &str,
     ) -> Result<(), String> {
-        use crate::schema::notifications::dsl::*;
+        use crate::dbconfig::schema::notifications::dsl::*;
         do_retry(|| {
             diesel::update(notifications.filter(id.eq(id_to_search)))
                 .set(status.eq(status_update))
@@ -597,7 +597,7 @@ impl DB {
     }
 
     pub fn query_for_podcast(&mut self, query: &str) -> Result<Vec<PodcastEpisode>, String> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
         let result = podcast_episodes
             .filter(
                 name.like(format!("%{}%", query))
@@ -610,10 +610,10 @@ impl DB {
 
     pub fn update_podcast_favor(&mut self, podcast_id_1: &i32, favor: bool, username_1: String) ->
                                                                                                Result<(), String> {
-        use crate::schema::favorites::dsl::favored as favor_column;
-        use crate::schema::favorites::dsl::favorites as f_db;
-        use crate::schema::favorites::dsl::podcast_id;
-        use crate::schema::favorites::dsl::username;
+        use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
+        use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
+        use crate::dbconfig::schema::favorites::dsl::podcast_id;
+        use crate::dbconfig::schema::favorites::dsl::username;
 
         let res = f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1.clone())))
             .first::<Favorite>(&mut self.conn)
@@ -641,10 +641,10 @@ impl DB {
 
     pub fn get_favored_podcasts(&mut self, found_username: String) -> Result<Vec<PodcastDto>,
         String> {
-        use crate::schema::podcasts::dsl::podcasts as dsl_podcast;
-        use crate::schema::favorites::dsl::favorites as f_db;
-        use crate::schema::favorites::dsl::username as user_favor;
-        use crate::schema::favorites::dsl::favored as favor_column;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
+        use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
+        use crate::dbconfig::schema::favorites::dsl::username as user_favor;
+        use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
         let result:Vec<(Podcast, Favorite)>;
 
          result = dsl_podcast
@@ -665,8 +665,8 @@ impl DB {
     }
 
     pub fn get_downloaded_episodes(&mut self) -> Vec<PodcastEpisode> {
-        use crate::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
-        use crate::schema::podcast_episodes::dsl::status as dsl_status;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        use crate::dbconfig::schema::podcast_episodes::dsl::status as dsl_status;
         dsl_podcast_episodes
             .filter(dsl_status.eq("D"))
             .load::<PodcastEpisode>(&mut self.conn)
@@ -674,7 +674,7 @@ impl DB {
     }
 
     pub fn update_podcast_fields(&mut self, podcast_extra: PodcastExtra) {
-        use crate::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
 
         do_retry(||{diesel::update(podcasts)
             .filter(id.eq(podcast_extra.clone().id))
@@ -691,7 +691,7 @@ impl DB {
     }
 
     pub fn get_settings(&mut self) -> Option<Setting> {
-        use crate::schema::settings::dsl::*;
+        use crate::dbconfig::schema::settings::dsl::*;
 
         settings
             .first::<Setting>(&mut self.conn)
@@ -700,7 +700,7 @@ impl DB {
     }
 
     pub fn get_podcast_episodes_older_than_days(&mut self, days: i32) -> Vec<PodcastEpisode> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         podcast_episodes
             .filter(download_time.lt(Utc::now().naive_utc() - Duration::days(days as i64)))
@@ -709,7 +709,7 @@ impl DB {
     }
 
     pub fn update_download_status_of_episode(&mut self, id_to_find: i32) {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
         do_retry(||{diesel::update(podcast_episodes.filter(id.eq(id_to_find)))
             .set((status.eq("N"), download_time.eq(sql("NULL"))))
             .get_result::<PodcastEpisode>(&mut self.conn)}
@@ -717,7 +717,7 @@ impl DB {
     }
 
     pub fn update_settings(&mut self, setting: Setting) -> Setting {
-        use crate::schema::settings::dsl::*;
+        use crate::dbconfig::schema::settings::dsl::*;
         let setting_to_update = settings
             .first::<Setting>(&mut self.conn)
             .expect("Error loading settings");
@@ -728,7 +728,7 @@ impl DB {
     }
 
     pub fn insert_default_settings(&mut self) {
-        use crate::schema::settings::dsl::*;
+        use crate::dbconfig::schema::settings::dsl::*;
 
         do_retry(||{insert_into(settings)
             .values((
@@ -743,7 +743,7 @@ impl DB {
     }
 
     pub fn update_podcast_active(conn: &mut SqliteConnection, podcast_id: i32) {
-        use crate::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
 
         let found_podcast = DB::get_podcast( conn, podcast_id);
 
@@ -765,7 +765,7 @@ impl DB {
         original_image_url_to_set: &str,
         podcast_id_to_find: i32,
     ) {
-        use crate::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
         do_retry(||{ diesel::update(podcasts.filter(id.eq(podcast_id_to_find)))
             .set(original_image_url.eq(original_image_url_to_set))
             .execute(&mut self.conn)})
@@ -776,7 +776,7 @@ impl DB {
         &mut self,
         id_to_search: i32,
     ) -> Vec<PodcastEpisode> {
-        use crate::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
         podcast_episodes
             .filter(podcast_id.eq(id_to_search))
             .filter(status.eq("D"))
@@ -787,14 +787,14 @@ impl DB {
 
     pub fn get_timeline(username_to_search: String, conn: &mut SqliteConnection, favored_only: TimelineQueryParams)
         -> Vec<(PodcastEpisode, Podcast)> {
-        use crate::schema::podcast_episodes::dsl::*;
-        use crate::schema::podcasts::dsl::*;
-        use crate::schema::podcasts::id as pid;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::id as pid;
         
-        use crate::schema::favorites::dsl::*;
-        use crate::schema::favorites::username as f_username;
-        use crate::schema::favorites::podcast_id as f_podcast_id;
-        use crate::schema::podcast_episodes::podcast_id as e_podcast_id;
+        use crate::dbconfig::schema::favorites::dsl::*;
+        use crate::dbconfig::schema::favorites::username as f_username;
+        use crate::dbconfig::schema::favorites::podcast_id as f_podcast_id;
+        use crate::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
 
         Filter::save_decision_for_timeline(username_to_search.clone(),conn,favored_only.favored_only);
 
@@ -858,7 +858,7 @@ impl DB {
     }
 
     pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut SqliteConnection) -> Podcast {
-        use crate::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
 
         podcasts
             .filter(rssfeed.eq(rss_feed_1))
@@ -869,10 +869,10 @@ impl DB {
     pub fn search_podcasts_favored(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
                                    latest_pub: OrderOption,
                                    designated_username: String) ->Vec<(Podcast, Favorite)>{
-        use crate::schema::podcasts::dsl::*;
-        use crate::schema::podcast_episodes::dsl::*;
-        use crate::schema::podcasts::dsl::id as podcastsid;
-        use crate::schema::favorites;
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
+        use crate::dbconfig::schema::favorites;
 
 
         let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
@@ -882,7 +882,7 @@ impl DB {
 
         match latest_pub {
             OrderOption::Title=> {
-                use crate::schema::podcasts::dsl::name as podcasttitle;
+                use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
                     OrderCriteria::ASC => {
                         query = query.order_by(podcasttitle.asc());
@@ -906,7 +906,7 @@ impl DB {
         }
 
         if title.is_some() {
-            use crate::schema::podcasts::dsl::name as podcasttitle;
+            use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
             query = query
                 .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
         }
@@ -930,12 +930,12 @@ impl DB {
     pub fn search_podcasts(conn: &mut SqliteConnection, order: OrderCriteria, title: Option<String>,
                            latest_pub: OrderOption,
                            designated_username: String) -> Vec<(Podcast, Option<Favorite>)> {
-        use crate::schema::podcasts::dsl::*;
-        use crate::schema::podcast_episodes::dsl::*;
-        use crate::schema::podcasts::dsl::id as podcastsid;
-        use crate::schema::favorites::dsl::favorites as f_db;
-        use crate::schema::favorites::dsl::podcast_id as f_id;
-        use crate::schema::favorites::dsl::username as f_username;
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
+        use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
+        use crate::dbconfig::schema::favorites::dsl::podcast_id as f_id;
+        use crate::dbconfig::schema::favorites::dsl::username as f_username;
 
         let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
             .left_join(f_db.on(f_username.eq(designated_username).and(f_id.eq(podcast_id))))
@@ -943,7 +943,7 @@ impl DB {
 
         match latest_pub {
             OrderOption::Title=> {
-                use crate::schema::podcasts::dsl::name as podcasttitle;
+                use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
                     OrderCriteria::ASC => {
                         query = query.order_by(podcasttitle.asc());
@@ -967,7 +967,7 @@ impl DB {
         }
 
         if title.is_some() {
-            use crate::schema::podcasts::dsl::name as podcasttitle;
+            use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
             query = query
                 .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
         }

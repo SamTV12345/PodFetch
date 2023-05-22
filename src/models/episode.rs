@@ -3,7 +3,7 @@ use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
-use crate::schema::episodes;
+use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
@@ -40,7 +40,7 @@ pub struct Episode{
 
 impl Episode{
     pub fn insert_episode(&self, conn: &mut SqliteConnection) -> Result<Episode, diesel::result::Error> {
-        use crate::schema::episodes::dsl::*;
+        use crate::dbconfig::schema::episodes::dsl::*;
 
         let res = episodes.filter(timestamp.eq(self.clone().timestamp)
             .and(device.eq(self.clone().device))
@@ -101,9 +101,9 @@ impl Episode{
         }
     }
     pub async fn get_actions_by_username(username1: String, conn: &mut SqliteConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
-        use crate::schema::episodes::username;
-        use crate::schema::episodes::dsl::episodes;
-        use crate::schema::episodes::dsl::timestamp;
+        use crate::dbconfig::schema::episodes::username;
+        use crate::dbconfig::schema::episodes::dsl::episodes;
+        use crate::dbconfig::schema::episodes::dsl::timestamp;
         match since_date {
             Some(e)=>{
                 episodes
@@ -188,8 +188,8 @@ impl Episode{
     }
 
     pub fn delete_by_username_and_episode(username1: String, conn: &mut SqliteConnection) ->Result<(),Error>{
-        use crate::schema::episodes::username;
-        use crate::schema::episodes::dsl::episodes;
+        use crate::dbconfig::schema::episodes::username;
+        use crate::dbconfig::schema::episodes::dsl::episodes;
         diesel::delete(episodes.filter(username.eq(username1)))
                                    .execute(conn).expect("");
         Ok(())

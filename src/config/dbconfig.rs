@@ -29,9 +29,26 @@ for ConnectionOptions
             .map_err(diesel::r2d2::Error::QueryError)
     }
 }
+
+#[cfg(sqlite)]
 pub fn establish_connection() -> SqliteConnection {
     let database_url = &get_database_url();
     SqliteConnection::establish(database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+}
+
+
+#[cfg(postgresql)]
+pub fn establish_connection()->PgConnection{
+    let database_url = &get_database_url();
+    PgConnection::establish(database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+}
+
+#[cfg(mysql)]
+pub fn establish_connection()->PgConnection{
+    let database_url = &get_database_url();
+    MysqlConnection::establish(database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 

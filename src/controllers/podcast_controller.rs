@@ -25,6 +25,7 @@ use std::sync::{Mutex};
 use std::thread;
 use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
+use diesel::row::NamedRow;
 use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
@@ -42,7 +43,6 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use crate::dbconfig::DbConn;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -54,17 +54,18 @@ pub struct PodcastSearchModel{
 }
 
 #[get("/podcasts/filter")]
-pub async fn get_filter(mut conn: Data<DbConn>, requester: Option<web::ReqData<User>>) -> impl
+pub async fn get_filter(mut conn: Data<DbPool>, requester:
+Option<web::ReqData<User>>) ->
+                                                                                               impl
 Responder{
-            let mut db: &DbConn = &conn;
             let filter = Filter::get_filter_by_username(requester.unwrap().username.clone(),
-                                                        db).await
+                                                        &mut conn.get().unwrap()).await
                 .expect("Error getting filter");
             HttpResponse::Ok().json(filter)
 }
 
 #[get("/podcasts/search")]
-pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, mut conn:Data<DbConn>,
+pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, mut conn:Data<DbPool>,
                              podcast_service: Data<Mutex<PodcastService>>,
                              mapping_service:Data<Mutex<MappingService>>, requester: Option<web::ReqData<User>>)
                              ->impl Responder{
@@ -73,7 +74,7 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, mut conn:Dat
     let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
     //let only_favored;
     let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
-                                                    &mut conn).await.unwrap();
+                                                    &mut conn.get().unwrap()).await.unwrap();
 
     return HttpResponse::Ok().json(opt_filter);
     /*match opt_filter {

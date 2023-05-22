@@ -59,7 +59,7 @@ pub struct PodcastHistoryItem {
 impl PodcastHistoryItem{
     pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<(),
         diesel::result::Error>{
-        use crate::schema::podcast_history_items::dsl::*;
+        use crate::dbconfig::schema::podcast_history_items::dsl::*;
         diesel::delete(podcast_history_items.filter(username.eq(username1)))
             .execute(conn)?;
         Ok(())

@@ -64,7 +64,7 @@ impl<S, B> Service<ServiceRequest> for CookieFilterMiddleware<S>
         let binding = cookie.unwrap();
         let extracted_cookie = binding.value();
 
-        use crate::schema::sessions::dsl::*;
+        use crate::dbconfig::schema::sessions::dsl::*;
         let session = sessions.filter(session_id.eq(extracted_cookie))
             .first::<Session>(&mut establish_connection())
             .optional()

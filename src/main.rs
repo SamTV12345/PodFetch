@@ -26,7 +26,6 @@ use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use r2d2::Pool;
 use regex::Regex;
-pub mod schema;
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
@@ -56,7 +55,6 @@ mod db;
 mod models;
 mod service;
 use crate::db::DB;
-use crate::dbconfig::DbConn;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::session::Session;
@@ -81,9 +79,14 @@ mod command_line_runner;
 mod auth_middleware;
 mod dbconfig;
 
+#[cfg(sqlite)]
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
+#[cfg(postgres)]
+type DbPool = Pool<ConnectionManager<PgConnection>>;
 
+#[cfg(mysql)]
+type DbPool = Pool<ConnectionManager<MysqlConnection>>;
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
@@ -208,7 +211,6 @@ async fn main() -> std::io::Result<()> {
         }
     });
 
-    let db = Data::new(dbconfig::DbPool::from_config());
     HttpServer::new(move || {
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
@@ -224,7 +226,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(Data::new(pool.clone()))
-            .app_data(db.clone())
             .app_data(Data::new(Mutex::new(JWKService::new())))
             .wrap(Condition::new(cfg!(debug_assertions),Logger::default()))
     })
@@ -403,6 +404,7 @@ pub fn check_server_config(service1: EnvironmentService) {
     }
 }
 
+#[cfg(sqlite)]
 async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<SqliteConnection>>,
     String> {
     let manager = ConnectionManager::<SqliteConnection>::new(database_url);
@@ -412,5 +414,23 @@ async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<Sqlite
         enable_foreign_keys: true,
         busy_timeout: Some(Duration::from_secs(120)),
     })).build(manager).unwrap();
+    Ok(pool)
+}
+
+#[cfg(postgresql)]
+async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<PgConnection>>,
+    String> {
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let pool = Pool::builder().max_size(16)
+        .build(manager).unwrap();
+    Ok(pool)
+}
+
+#[cfg(mysql)]
+async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<MysqlConnection >>,
+    String> {
+    let manager = ConnectionManager::<MysqlConnection >::new(database_url);
+    let pool = Pool::builder().max_size(16)
+        .build(manager).unwrap();
     Ok(pool)
 }

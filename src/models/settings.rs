@@ -1,4 +1,4 @@
-use crate::schema::*;
+use crate::dbconfig::schema::*;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use crate::service::environment_service::OidcConfig;
 use utoipa::ToSchema;

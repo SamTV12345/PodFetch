@@ -1,6 +1,6 @@
 use std::io::Error;
 use chrono::NaiveDateTime;
-use crate::schema::invites;
+use crate::dbconfig::schema::invites;
 use utoipa::ToSchema;
 use diesel::{Queryable, Insertable, Identifiable, SqliteConnection, RunQueryDsl, QueryDsl, OptionalExtension};
 use diesel::associations::HasTable;
@@ -36,7 +36,7 @@ impl Invite{
     pub fn insert_invite(role_to_insert: &Role, explicit_consent_to_insert: bool, conn: &mut
     SqliteConnection) -> Result<Invite,
         Error> {
-        use crate::schema::invites::dsl::*;
+        use crate::dbconfig::schema::invites::dsl::*;
 
         let now = chrono::Utc::now().naive_utc();
 
@@ -69,7 +69,7 @@ impl Invite{
 
     pub fn invalidate_invite(invite_id: String, conn: &mut SqliteConnection) -> Result<(),
         diesel::result::Error> {
-        use crate::schema::invites::dsl::*;
+        use crate::dbconfig::schema::invites::dsl::*;
 
         diesel::update(invites.filter(id.eq(invite_id)))
             .set(accepted_at.eq(chrono::Utc::now().naive_utc()))
@@ -79,7 +79,7 @@ impl Invite{
     }
 
     pub fn delete_invite(invite_id: String, conn: &mut SqliteConnection) -> Result<(), diesel::result::Error> {
-        use crate::schema::invites::dsl::*;
+        use crate::dbconfig::schema::invites::dsl::*;
 
         diesel::delete(invites.filter(id.eq(invite_id)))
             .execute(conn)?;

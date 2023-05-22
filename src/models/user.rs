@@ -9,7 +9,7 @@ use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
-use crate::schema::users;
+use crate::dbconfig::schema::users;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]
@@ -47,7 +47,7 @@ impl User{
     }
 
     pub fn find_by_username(username_to_find: &str, conn: &mut SqliteConnection) -> Option<User> {
-        use crate::schema::users::dsl::*;
+        use crate::dbconfig::schema::users::dsl::*;
         match var(USERNAME) {
              Ok(res)=> {
                 if res==username_to_find {
@@ -64,7 +64,7 @@ impl User{
     }
 
     pub fn insert_user(&mut self, conn: &mut SqliteConnection) -> Result<User, Error> {
-        use crate::schema::users::dsl::*;
+        use crate::dbconfig::schema::users::dsl::*;
 
         match  var(USERNAME){
             Ok(res) => {
@@ -132,7 +132,7 @@ impl User{
     }
 
     pub fn find_all_users(conn: &mut SqliteConnection) -> Vec<UserWithoutPassword> {
-        use crate::schema::users::dsl::*;
+        use crate::dbconfig::schema::users::dsl::*;
 
         let loaded_users = users.load::<User>(conn).unwrap();
         loaded_users.into_iter().map(|user| User::map_to_dto(user)).collect()
@@ -194,14 +194,14 @@ impl User{
     }
 
     pub fn delete_by_username(username_to_search: String, conn: &mut SqliteConnection)->Result<(), Error>{
-        use crate::schema::users::dsl::*;
+        use crate::dbconfig::schema::users::dsl::*;
         diesel::delete(users.filter(username.eq(username_to_search))).execute(conn)
             .expect("Error deleting user");
         Ok(())
     }
 
     pub fn update_user(user: User, conn: &mut SqliteConnection)->Result<(), Error>{
-        use crate::schema::users::dsl::*;
+        use crate::dbconfig::schema::users::dsl::*;
         diesel::update(users.filter(id.eq(user.clone().id)))
             .set(user).execute(conn)
             .expect("Error updating user");

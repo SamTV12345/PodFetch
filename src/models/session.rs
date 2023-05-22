@@ -2,7 +2,7 @@ use chrono::{NaiveDateTime, Utc};
 use diesel::{Insertable, Queryable, RunQueryDsl};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use crate::schema::sessions;
+use crate::dbconfig::schema::sessions;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 
@@ -19,7 +19,7 @@ impl Session{
         Self{
             username,
             session_id: Uuid::new_v4().to_string(),
-            expires: NaiveDateTime::from_timestamp_opt(chrono::Utc::now().timestamp() + 60 * 60 *
+            expires: NaiveDateTime::from_timestamp_opt(Utc::now().timestamp() + 60 * 60 *
                 24, 0).unwrap()
         }
     }

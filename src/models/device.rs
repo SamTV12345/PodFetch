@@ -1,7 +1,7 @@
 use diesel::{Queryable, QueryableByName, RunQueryDsl, Insertable, SqliteConnection};
 use utoipa::ToSchema;
 use crate::gpodder::device::dto::device_post::DevicePost;
-use crate::schema::devices;
+use crate::dbconfig::schema::devices;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 
@@ -38,7 +38,7 @@ impl Device {
     }
 
     pub fn save(&self, conn: &mut SqliteConnection) -> Result<Device, diesel::result::Error> {
-        use crate::schema::devices::dsl::*;
+        use crate::dbconfig::schema::devices::dsl::*;
         diesel::insert_into(devices)
             .values(self)
             .get_result(conn)
@@ -46,7 +46,7 @@ impl Device {
 
     pub fn get_devices_of_user(conn: &mut SqliteConnection, username_to_insert: String) ->
                                                                                Result<Vec<Device>, diesel::result::Error> {
-        use crate::schema::devices::dsl::*;
+        use crate::dbconfig::schema::devices::dsl::*;
         devices.filter(username.eq(username_to_insert))
             .load::<Device>(conn)
     }
@@ -61,7 +61,7 @@ impl Device {
     }
     pub fn delete_by_username(username1: String, conn: &mut SqliteConnection) -> Result<usize,
         diesel::result::Error> {
-        use crate::schema::devices::dsl::*;
+        use crate::dbconfig::schema::devices::dsl::*;
         diesel::delete(devices.filter(username.eq(username1))).execute(conn)
     }
 }
