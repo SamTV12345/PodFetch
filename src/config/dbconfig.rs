@@ -44,8 +44,9 @@ pub fn establish_connection() -> DbConnection {
 #[cfg(postgresql)]
 pub fn establish_connection()->PgConnection{
     let database_url = &get_database_url();
+    println!("Connecting to {}", database_url);
     PgConnection::establish(database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+        .unwrap_or_else(|e| panic!("Error connecting to {} with error {}", database_url,e))
 }
 
 #[cfg(mysql)]
@@ -57,6 +58,6 @@ pub fn establish_connection()->PgConnection{
 
 
 pub fn get_database_url()->String{
-    println!("{}",env::var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
+    //println!("{}",env::var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
     env::var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string())
 }

@@ -12,7 +12,7 @@ use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::sync::{Mutex};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{env, thread};
 use std::env::{args, var};
@@ -22,8 +22,8 @@ use actix_web::body::{BoxBody, EitherBody};
 use log::{info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use diesel::r2d2::ConnectionManager;
-use r2d2::Pool;
+use diesel::r2d2::{ConnectionManager, R2D2Connection};
+use r2d2::{ManageConnection, Pool};
 use regex::Regex;
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
@@ -67,6 +67,7 @@ use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
+use once_cell::sync::OnceCell;
 
 mod config;
 
@@ -80,21 +81,40 @@ mod dbconfig;
 
 import_database_connections!();
 
+
 #[cfg(sqlite)]
 type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 #[cfg(sqlite)]
 type DbConnection = SqliteConnection;
+#[cfg(sqlite)]
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/sqlite");
+#[cfg(sqlite)]
+use diesel::sqlite::SqliteQueryBuilder;
+#[cfg(sqlite)]
+pub type MyQueryBuilder = SqliteQueryBuilder;
+
+
 #[cfg(postgresql)]
 type DbPool = Pool<ConnectionManager<PgConnection>>;
 #[cfg(postgresql)]
-type DbConnection = PgConnection;
+pub type DbConnection = PgConnection;
+
+#[cfg(postgresql)]
+use diesel::pg::PgQueryBuilder;
+#[cfg(postgresql)]
+pub type MyQueryBuilder = PgQueryBuilder;
+
+#[cfg(postgresql)]
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
 
 #[cfg(mysql)]
 type DbPool = Pool<ConnectionManager<MysqlConnection>>;
 #[cfg(mysql)]
 type DbConnection = MysqlConnection;
-
-
+#[cfg(mysql)]
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/mysql");
+#[cfg(mysql)]
+pub type MyQueryBuilder = MySQLQueryBuilder;
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
@@ -127,31 +147,32 @@ async fn index() -> impl Responder {
         .body(fix_links(index_html))
 }
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("Debug file located at {}", concat!(env!("OUT_DIR"), "/built.rs"));
+
 
     if args().len()>1 {
         start_command_line(args());
         exit(0)
     }
+
+    let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+    let data_pool = Data::new(pool);
+
     //services
     let podcast_episode_service = PodcastEpisodeService::new();
     let podcast_service = PodcastService::new();
     let db = DB::new().unwrap();
     let mapping_service = MappingService::new();
-    let file_service = FileService::new();
+    let file_service = FileService::new_db();
     let environment_service = EnvironmentService::new();
     let notification_service = NotificationService::new();
     let settings_service = SettingsService::new();
     let lobby = Lobby::default();
-    let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
 
     let chat_server = lobby.start();
-
-    let connection = &mut *pool.get().unwrap();
+    let mut connection = establish_connection();
     let res_migration = connection.run_pending_migrations(MIGRATIONS);
 
     if res_migration.is_err(){
@@ -177,7 +198,8 @@ async fn main() -> std::io::Result<()> {
         env.get_environment();
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
-            let settings = DB::new().unwrap().get_settings();
+            let mut conn = &mut establish_connection();
+            let settings = DB::new().unwrap().get_settings(conn);
             match settings {
                 Some(settings) => {
                     if settings.auto_update {
@@ -195,11 +217,12 @@ async fn main() -> std::io::Result<()> {
 
         scheduler.every(1.day()).run(move || {
             // Clears the session ids once per day
-            Session::cleanup_sessions(&mut establish_connection()).expect("Error clearing old \
+            let conn= &mut establish_connection();
+            Session::cleanup_sessions(conn).expect("Error clearing old \
             sessions");
             let mut db = DB::new().unwrap();
             let mut podcast_episode_service = PodcastEpisodeService::new();
-            let settings = db.get_settings();
+            let settings = db.get_settings(conn);
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
@@ -232,10 +255,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(environment_service.clone())))
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
-            .app_data(Data::new(pool.clone()))
+            .app_data(data_pool.clone())
             .app_data(Data::new(Mutex::new(JWKService::new())))
             .wrap(Condition::new(cfg!(debug_assertions),Logger::default()))
-    }).workers(4)
+    })
+        .workers(4)
     .bind(("0.0.0.0", 8000))?
     .run()
     .await
@@ -372,19 +396,41 @@ pub fn get_secure_user_management() ->Scope{
 
 pub fn insert_default_settings_if_not_present() {
     let mut db = DB::new().unwrap();
-    let settings = db.get_settings();
+    let mut conn = &mut establish_connection();
+    let settings = db.get_settings(conn);
     match settings {
         Some(_) => {
             info!("Settings already present");
         }
         None => {
             info!("No settings found, inserting default settings");
-            db.insert_default_settings();
+            db.insert_default_settings(conn);
         }
     }
 }
 
 pub fn check_server_config(service1: EnvironmentService) {
+    let database_url = get_database_url();
+    #[cfg(sqlite)]
+    if !database_url.starts_with("sqlite"){
+        log::error!("You are using sqlite as database but the database url does not start with sqlite. Please check your .env file.");
+        exit(1);
+    }
+
+    #[cfg(mysql)]
+    if !database_url.starts_with("mysql"){
+        log::error!("You are using mySQL as database but the database url does not start with  \
+        sqlite. Please check your .env file.");
+        exit(1);
+    }
+
+    #[cfg(postgresql)]
+    if !database_url.starts_with("postgres"){
+        log::error!("You are using postgres as database but the database url does not start with  \
+        sqlite. Please check your .env file.");
+        exit(1);
+    }
+
     if service1.http_basic {
         if service1.password.is_empty() || service1.username.is_empty() {
             log::error!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
@@ -432,7 +478,7 @@ async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<PgConn
     let pool = Pool::builder()
         .max_size(1)
         .build(manager)
-        .unwrap();
+        .expect("Failed to create pool.");
     Ok(pool)
 }
 

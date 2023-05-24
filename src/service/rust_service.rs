@@ -29,7 +29,6 @@ use crate::models::order_criteria::{OrderCriteria, OrderOption};
 pub struct PodcastService {
     pub client: Client,
     pub podcast_episode_service: PodcastEpisodeService,
-    pub db: DB,
     pub environment_service: EnvironmentService,
 }
 
@@ -37,7 +36,6 @@ impl PodcastService {
     pub fn new() -> PodcastService {
         PodcastService {
             client: AsyncClientBuilder::new().build().unwrap(),
-            db: DB::new().unwrap(),
             podcast_episode_service: PodcastEpisodeService::new(),
             environment_service: EnvironmentService::new(),
         }
@@ -52,12 +50,11 @@ impl PodcastService {
             .unwrap();
         log::info!("Found podcast: {}", result.url());
         let res_of_search =  result.json().await;
-        if res_of_search.is_err(){
+        return if res_of_search.is_err() {
             log::error!("Error searching for podcast: {}", res_of_search.err().unwrap());
-            return serde_json::from_str("{}").unwrap();
-        }
-        else {
-            return res_of_search.unwrap();
+            serde_json::from_str("{}").unwrap()
+        } else {
+            res_of_search.unwrap()
         }
     }
 
@@ -121,7 +118,7 @@ impl PodcastService {
         let fileservice = FileService::new();
 
         let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),
-                                                                                     &podcast_insert.id.clone().to_string());
+                                                                                     &podcast_insert.id.clone().to_string(), conn);
 
         if podcast_directory_created.is_err() {
                 log::error!("Error creating podcast directory");
@@ -138,7 +135,7 @@ impl PodcastService {
 
         fileservice
             .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(), &podcast_insert
-                .image_url.clone().to_string(), &podcast_insert.id.clone().to_string())
+                .image_url.clone().to_string(), &podcast_insert.id.clone().to_string(), conn)
             .await;
         let podcast = DB::get_podcast_by_track_id(conn, podcast_insert.id.clone())
             .unwrap();
@@ -190,7 +187,8 @@ impl PodcastService {
         lobby: Option<Data<Addr<Lobby>>>,
         conn: &mut DbConnection
     ) {
-        let settings = self.db.get_settings();
+        let mut db = DB::new().unwrap();
+        let settings = db.get_settings(conn);
         match settings {
             Some(settings) => {
                 if settings.auto_download {
@@ -202,6 +200,7 @@ impl PodcastService {
                                     podcast_episode,
                                     podcast.clone(),
                                     lobby.clone(),
+                                    conn
                                 );
                     }
                 }
@@ -220,16 +219,18 @@ impl PodcastService {
         self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn);
     }
 
-    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String) {
-        self.db.update_podcast_favor(&id, x, username).unwrap();
+    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, mut db:
+    MutexGuard<DB>, conn: &mut DbConnection) {
+        db.update_podcast_favor(&id, x, conn,username).unwrap();
     }
 
     pub fn get_podcast_by_id(&mut self,conn: &mut DbConnection, id: i32) -> Podcast {
         DB::get_podcast(conn,id).unwrap()
     }
 
-    pub fn get_favored_podcasts(&mut self, found_username: String) -> Vec<PodcastDto> {
-        self.db.get_favored_podcasts(found_username).unwrap()
+    pub fn get_favored_podcasts(&mut self, found_username: String, mut db: MutexGuard<DB>, conn: &mut DbConnection) ->
+                                                                                      Vec<PodcastDto> {
+        db.get_favored_podcasts(found_username,conn).unwrap()
     }
 
     pub fn update_active_podcast(conn: &mut DbConnection, id: i32) {

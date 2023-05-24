@@ -14,12 +14,15 @@ use diesel::prelude::*;
 use diesel::{insert_into, sql_query, RunQueryDsl, delete};
 use rss::Item;
 use std::io::Error;
+use std::ops::Deref;
 use std::sync::MutexGuard;
 use std::time::SystemTime;
+use actix::ActorStreamExt;
+use diesel::query_builder::QueryBuilder;
 use diesel::sql_types::{Text, Timestamp};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::dbconfig::schema::podcast_history_items::dsl::podcast_history_items;
-use crate::DbConnection;
+use crate::{DbConnection, MyQueryBuilder};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
@@ -29,23 +32,20 @@ use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 
 pub struct DB {
-    conn: DbConnection,
     mapping_service: MappingService,
 }
 
 impl Clone for DB {
     fn clone(&self) -> Self {
         DB {
-            conn: establish_connection(),
             mapping_service: MappingService::new(),
         }
     }
 }
+
 impl DB {
     pub fn new() -> Result<DB, String> {
-        let conn = establish_connection();
         Ok(DB {
-            conn,
             mapping_service: MappingService::new(),
         })
     }
@@ -398,12 +398,16 @@ impl DB {
         use crate::dbconfig::schema::podcast_history_items::date as h_date;
         use diesel::dsl::max;
 
-        let result = sql_query(
-            "SELECT * FROM podcast_history_items WHERE username=:username  GROUP BY episode_id, \
-            id, podcast_id, watched_time, date, username ORDER BY MAX(date) DESC  LIMIT 10;",
-        )
+        let mut builder = MyQueryBuilder::new();
+        builder.push_sql("SELECT * FROM podcast_history_items WHERE username=");
+        builder.push_bind_param();
+        //res.push_identifier(designated_username);
+        builder.push_sql(" AND id in (SELECT id FROM podcast_history_items GROUP BY episode_id \
+        ORDER BY MAX(date) DESC  LIMIT 10);");
+
+        let result = sql_query(builder.finish())
             .bind::<Text,_>(designated_username)
-            .load::<PodcastHistoryItem>(&mut self.conn)
+            .load::<PodcastHistoryItem>(conn)
             .unwrap();
 
         let podcast_watch_episode = result
@@ -441,6 +445,7 @@ impl DB {
         episode_id: &str,
         image_url: &str,
         local_download_url: &str,
+        conn: &mut DbConnection,
     ) -> Result<(), String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
@@ -448,7 +453,7 @@ impl DB {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         let result = podcast_episodes
             .filter(episode_id_column.eq(episode_id))
-            .first::<PodcastEpisode>(&mut self.conn)
+            .first::<PodcastEpisode>(conn)
             .optional()
             .expect("Error loading podcast episode by id");
 
@@ -460,7 +465,7 @@ impl DB {
                         local_image_url_column.eq(image_url),
                         local_url_column.eq(local_download_url),
                     ))
-                    .execute(&mut self.conn)
+                    .execute(conn)
                     .expect("Error updating local image url");
                 Ok(())
             }
@@ -483,21 +488,21 @@ impl DB {
                 Ok(())
     }
 
-    pub fn update_podcast_image(mut self, id: &str, image_url: &str) -> Result<(), String> {
+    pub fn update_podcast_image(mut self, id: &str, image_url: &str, conn: &mut DbConnection) -> Result<(), String> {
         use crate::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::image_url as image_url_column;
         use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
 
         let result = dsl_podcast
             .filter(directory_id.eq(id))
-            .first::<Podcast>(&mut self.conn)
+            .first::<Podcast>(conn)
             .optional()
             .expect("Error loading podcast episode by id");
         match result {
             Some(..) => {
                 diesel::update(dsl_podcast.filter(directory_id.eq(id)))
                     .set(image_url_column.eq(image_url))
-                    .execute(&mut self.conn)
+                    .execute(conn)
                     .expect("Error updating podcast episode");
                 Ok(())
             }
@@ -507,25 +512,26 @@ impl DB {
         }
     }
 
-    pub fn get_podcast_by_directory_id(mut self, podcast_id: &str) -> Result<Option<Podcast>, String> {
+    pub fn get_podcast_by_directory_id(mut self, podcast_id: &str, conn: &mut DbConnection) -> Result<Option<Podcast>,
+        String> {
         use crate::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
         let result = dsl_podcast
             .filter(directory_id.eq(podcast_id))
-            .first::<Podcast>(&mut self.conn)
+            .first::<Podcast>(conn)
             .optional()
             .expect("Error loading podcast episode by id");
         Ok(result)
     }
 
-    pub fn check_if_downloaded(&mut self, download_episode_url: &str) -> Result<bool, String> {
+    pub fn check_if_downloaded(&mut self, download_episode_url: &str, conn: &mut DbConnection) -> Result<bool, String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         use crate::dbconfig::schema::podcast_episodes::url as podcast_episode_url;
         let result = dsl_podcast_episodes
             .filter(local_url_column.is_not_null())
             .filter(podcast_episode_url.eq(download_episode_url))
-            .first::<PodcastEpisode>(&mut self.conn)
+            .first::<PodcastEpisode>(conn)
             .optional()
             .expect("Error loading podcast episode by id");
         match result {
@@ -547,6 +553,7 @@ impl DB {
         &mut self,
         download_url_of_episode: &str,
         status_to_insert: &str,
+        conn: &mut DbConnection,
     ) -> Result<PodcastEpisode, String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
@@ -556,23 +563,23 @@ impl DB {
                     status.eq(status_to_insert),
                     download_time.eq(Utc::now().naive_utc()),
                 ))
-                .get_result::<PodcastEpisode>(&mut self.conn)
+                .get_result::<PodcastEpisode>(conn)
                 .expect("Error updating podcast episode");
 
         Ok(updated_podcast)
     }
 
-    pub fn get_unread_notifications(&mut self) -> Result<Vec<Notification>, String> {
+    pub fn get_unread_notifications(&mut self,conn: &mut DbConnection) -> Result<Vec<Notification>, String> {
         use crate::dbconfig::schema::notifications::dsl::*;
         let result = notifications
             .filter(status.eq("unread"))
             .order(created_at.desc())
-            .load::<Notification>(&mut self.conn)
+            .load::<Notification>(conn)
             .unwrap();
         Ok(result)
     }
 
-    pub fn insert_notification(&mut self, notification: Notification) -> Result<(), String> {
+    pub fn insert_notification(&mut self, notification: Notification, conn: &mut DbConnection) -> Result<(), String> {
         use crate::dbconfig::schema::notifications::dsl::notifications;
         use crate::dbconfig::schema::notifications::*;
         do_retry(||{insert_into(notifications)
@@ -582,7 +589,7 @@ impl DB {
                 status.eq(notification.clone().status),
                 created_at.eq(notification.clone().created_at),
             ))
-            .execute(&mut self.conn)})
+            .execute(conn)})
             .expect("Error inserting Notification");
         Ok(())
     }
@@ -591,29 +598,31 @@ impl DB {
         &mut self,
         id_to_search: i32,
         status_update: &str,
+        conn: &mut DbConnection,
     ) -> Result<(), String> {
         use crate::dbconfig::schema::notifications::dsl::*;
         do_retry(|| {
             diesel::update(notifications.filter(id.eq(id_to_search)))
                 .set(status.eq(status_update))
-                .execute(&mut self.conn)
+                .execute(conn)
         }).expect("Error updating notification");
         Ok(())
     }
 
-    pub fn query_for_podcast(&mut self, query: &str) -> Result<Vec<PodcastEpisode>, String> {
+    pub fn query_for_podcast(&mut self, query: &str, conn: &mut DbConnection) -> Result<Vec<PodcastEpisode>, String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         let result = podcast_episodes
             .filter(
                 name.like(format!("%{}%", query))
                     .or(description.like(format!("%{}%", query))),
             )
-            .load::<PodcastEpisode>(&mut self.conn)
+            .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id");
         Ok(result)
     }
 
-    pub fn update_podcast_favor(&mut self, podcast_id_1: &i32, favor: bool, username_1: String) ->
+    pub fn update_podcast_favor(&mut self, podcast_id_1: &i32, favor: bool,
+                                conn: &mut DbConnection, username_1: String) ->
                                                                                                Result<(), String> {
         use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
@@ -621,14 +630,14 @@ impl DB {
         use crate::dbconfig::schema::favorites::dsl::username;
 
         let res = f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1.clone())))
-            .first::<Favorite>(&mut self.conn)
+            .first::<Favorite>(conn)
             .optional().unwrap();
 
         match res{
             Some(..) => {
                 diesel::update(f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1))))
                     .set(favor_column.eq(favor))
-                    .execute(&mut self.conn).expect("Error updating podcast");
+                    .execute(conn).expect("Error updating podcast");
                 Ok(())
             }
             None => {
@@ -638,13 +647,14 @@ impl DB {
                         username.eq(username_1),
                         favor_column.eq(favor),
                     ))
-                    .execute(&mut self.conn).map_err(|e| e.to_string()).unwrap();
+                    .execute(conn).map_err(|e| e.to_string()).unwrap();
                 Ok(())
             }
         }
     }
 
-    pub fn get_favored_podcasts(&mut self, found_username: String) -> Result<Vec<PodcastDto>,
+    pub fn get_favored_podcasts(&mut self, found_username: String,conn:&mut DbConnection) ->
+                                                                           Result<Vec<PodcastDto>,
         String> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
@@ -657,7 +667,7 @@ impl DB {
                     .filter(
                         favor_column.eq(true).and(
                         user_favor.eq(found_username)))
-                    .load::<(Podcast, Favorite)>(&mut self.conn).unwrap();
+                    .load::<(Podcast, Favorite)>(conn).unwrap();
 
 
 
@@ -669,16 +679,16 @@ impl DB {
         Ok(mapped_result)
     }
 
-    pub fn get_downloaded_episodes(&mut self) -> Vec<PodcastEpisode> {
+    pub fn get_downloaded_episodes(&mut self, conn: &mut DbConnection) -> Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         use crate::dbconfig::schema::podcast_episodes::dsl::status as dsl_status;
         dsl_podcast_episodes
             .filter(dsl_status.eq("D"))
-            .load::<PodcastEpisode>(&mut self.conn)
+            .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
     }
 
-    pub fn update_podcast_fields(&mut self, podcast_extra: PodcastExtra) {
+    pub fn update_podcast_fields(&mut self, podcast_extra: PodcastExtra,  conn: &mut DbConnection) {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
         do_retry(||{diesel::update(podcasts)
@@ -691,48 +701,49 @@ impl DB {
                 summary.eq(podcast_extra.clone().description),
                 last_build_date.eq(podcast_extra.clone().last_build_date),
             ))
-            .execute(&mut self.conn)})
+            .execute(conn)})
             .expect("Error updating podcast episode");
     }
 
-    pub fn get_settings(&mut self) -> Option<Setting> {
+    pub fn get_settings(&mut self, conn: &mut DbConnection) -> Option<Setting> {
         use crate::dbconfig::schema::settings::dsl::*;
 
         settings
-            .first::<Setting>(&mut self.conn)
+            .first::<Setting>(conn)
             .optional()
             .unwrap()
     }
 
-    pub fn get_podcast_episodes_older_than_days(&mut self, days: i32) -> Vec<PodcastEpisode> {
+    pub fn get_podcast_episodes_older_than_days(&mut self, days: i32,conn: &mut DbConnection) ->
+                                                                             Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         podcast_episodes
             .filter(download_time.lt(Utc::now().naive_utc() - Duration::days(days as i64)))
-            .load::<PodcastEpisode>(&mut self.conn)
+            .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
     }
 
-    pub fn update_download_status_of_episode(&mut self, id_to_find: i32) {
+    pub fn update_download_status_of_episode(&mut self, id_to_find: i32, conn: &mut DbConnection) {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         do_retry(||{diesel::update(podcast_episodes.filter(id.eq(id_to_find)))
             .set((status.eq("N"), download_time.eq(sql("NULL"))))
-            .get_result::<PodcastEpisode>(&mut self.conn)}
+            .get_result::<PodcastEpisode>(conn)}
         ).expect("Error updating podcast episode");
     }
 
-    pub fn update_settings(&mut self, setting: Setting) -> Setting {
+    pub fn update_settings(&mut self, setting: Setting, conn:&mut DbConnection) -> Setting {
         use crate::dbconfig::schema::settings::dsl::*;
         let setting_to_update = settings
-            .first::<Setting>(&mut self.conn)
+            .first::<Setting>(conn)
             .expect("Error loading settings");
         do_retry(||{diesel::update(&setting_to_update)
             .set(setting.clone())
-            .get_result::<Setting>(&mut self.conn)})
+            .get_result::<Setting>(conn)})
             .expect("Error updating settings")
     }
 
-    pub fn insert_default_settings(&mut self) {
+    pub fn insert_default_settings(&mut self, conn: &mut DbConnection) {
         use crate::dbconfig::schema::settings::dsl::*;
 
         do_retry(||{insert_into(settings)
@@ -743,7 +754,7 @@ impl DB {
                 auto_cleanup_days.eq(DEFAULT_SETTINGS.auto_cleanup_days),
                 podcast_prefill.eq(DEFAULT_SETTINGS.podcast_prefill))
             )
-            .execute(&mut self.conn)})
+            .execute(conn)})
             .expect("Error setting default values");
     }
 
@@ -769,23 +780,25 @@ impl DB {
         &mut self,
         original_image_url_to_set: &str,
         podcast_id_to_find: i32,
+        conn: &mut DbConnection
     ) {
         use crate::dbconfig::schema::podcasts::dsl::*;
         do_retry(||{ diesel::update(podcasts.filter(id.eq(podcast_id_to_find)))
             .set(original_image_url.eq(original_image_url_to_set))
-            .execute(&mut self.conn)})
+            .execute(conn)})
             .expect("Error updating podcast episode");
     }
 
     pub fn get_downloaded_episodes_by_podcast_id(
         &mut self,
         id_to_search: i32,
+        conn: &mut DbConnection
     ) -> Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         podcast_episodes
             .filter(podcast_id.eq(id_to_search))
             .filter(status.eq("D"))
-            .load::<PodcastEpisode>(&mut self.conn)
+            .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
     }
 

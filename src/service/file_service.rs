@@ -7,32 +7,38 @@ use std::io::{Error, Write};
 
 use std::path::Path;
 use std::str::FromStr;
+use actix_web::web::Data;
 
 use regex::Regex;
+use crate::config::dbconfig::establish_connection;
 
 use crate::controllers::settings_controller::ReplacementStrategy;
+use crate::DbConnection;
 use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 
 #[derive(Clone)]
 pub struct FileService {
-    pub db: DB,
     pub client: Client,
 }
 
 impl FileService {
     pub fn new() -> Self {
         FileService {
-            db: DB::new().unwrap(),
             client: ClientBuilder::new().build().unwrap(),
         }
     }
-    pub fn check_if_podcast_main_image_downloaded(&mut self, podcast_id: &str) -> bool {
-        let podcast = self
-            .db
+    pub fn new_db() -> Self {
+        FileService {
+            client: ClientBuilder::new().build().unwrap(),
+        }
+    }
+    pub fn check_if_podcast_main_image_downloaded(&mut self, podcast_id: &str, db: DB, conn: &mut
+    DbConnection) -> bool {
+        let podcast = db
             .clone()
-            .get_podcast_by_directory_id(podcast_id)
+            .get_podcast_by_directory_id(podcast_id, conn)
             .unwrap();
         match podcast {
             Some(podcast) => {
@@ -55,9 +61,10 @@ impl FileService {
         Ok(())
     }
 
-    pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String) ->Result<String,
+    pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String, conn:&mut DbConnection)
+        ->Result<String,
         Error> {
-        let escaped_title = prepare_podcast_title_to_directory(podcast_title);
+        let escaped_title = prepare_podcast_title_to_directory(podcast_title,conn);
         if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
             std::fs::create_dir(&format!("podcasts/{}", escaped_title))
                 .expect(&*("Error creating directory when inserting ".to_owned() + &escaped_title));
@@ -67,7 +74,8 @@ impl FileService {
             // Check if this is a new podcast with the same name as an old one
 
             let db = DB::new().unwrap();
-            let podcast = db.get_podcast_by_directory_id(podcast_id).unwrap();
+            let conn = &mut establish_connection();
+            let podcast = db.get_podcast_by_directory_id(podcast_id,conn).unwrap();
             match podcast {
                 Some(_)=>{
                     // is the same podcast
@@ -88,7 +96,7 @@ impl FileService {
         }
     }
 
-    pub async fn download_podcast_image(&self, podcast_path: &str, image_url: &str, podcast_id: &str) {
+    pub async fn download_podcast_image(&self, podcast_path: &str, image_url: &str, podcast_id: &str, conn: &mut DbConnection) {
         let image_response = self.client.get(image_url).send().await.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(image_url);
         let file_path = PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix);
@@ -96,7 +104,7 @@ impl FileService {
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
         let db = DB::new().unwrap();
-        db.update_podcast_image(podcast_id, &file_path).unwrap();
+        db.update_podcast_image(podcast_id, &file_path, conn).unwrap();
     }
 
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> std::io::Result<()> {
@@ -113,9 +121,9 @@ impl FileService {
 }
 
 
-pub fn prepare_podcast_title_to_directory(title: &str) ->String {
+pub fn prepare_podcast_title_to_directory(title: &str, conn:&mut DbConnection) ->String {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings().unwrap();
+    let retrieved_settings = settings_service.get_settings(DB::new().unwrap(), conn).unwrap();
     let final_string = perform_replacement(title, retrieved_settings.clone());
 
     let fixed_string = retrieved_settings.podcast_format.replace("{}","{podcasttitle}");
@@ -125,9 +133,11 @@ pub fn prepare_podcast_title_to_directory(title: &str) ->String {
     strfmt::strfmt(&fixed_string, &vars).unwrap()
 }
 
-pub fn prepare_podcast_episode_title_to_directory(podcast_episode: PodcastEpisode) ->String {
+pub fn prepare_podcast_episode_title_to_directory(podcast_episode: PodcastEpisode, conn: &mut
+DbConnection)
+    ->String {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings().unwrap();
+    let retrieved_settings = settings_service.get_settings(DB::new().unwrap(),conn).unwrap();
     if retrieved_settings.use_existing_filename{
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if res_of_filename.is_ok(){
@@ -178,7 +188,8 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
 First image, then podcast
 */
 pub fn determine_image_and_local_podcast_audio_url(podcast:Podcast, podcast_episode:
-PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, )->(String, String){
+PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut DbConnection )->(String,
+                                                                                     String){
     let image_save_path;
     let podcast_save_path;
     if podcast_episode.local_image_url.trim().len()==0 {
@@ -190,7 +201,8 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, )->(String, 
                     &podcast.clone().directory_name,
                     Some(podcast_episode.clone()),
                     &image_suffix,
-                    &podcast_episode.name
+                    &podcast_episode.name,
+                    conn
                 );
             }
             else {
@@ -199,7 +211,8 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, )->(String, 
                     &podcast.clone().directory_name,
                     None,
                     &image_suffix,
-                    &podcast_file_name.unwrap()
+                    &podcast_file_name.unwrap(),
+                    conn
                 );
             }
         } else {
@@ -208,6 +221,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, )->(String, 
                 Some(podcast_episode.clone()),
                 &image_suffix,
                 &podcast_episode.name
+                    ,conn
             );
         }
     }
@@ -223,20 +237,20 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, )->(String, 
                 podcast_save_path = PathService::get_podcast_episode_path(
                     &podcast.directory_name.clone(),
                     Some(podcast_episode),
-                    &suffix, &podcast_file_name.unwrap());
+                    &suffix, &podcast_file_name.unwrap(),conn);
             }
             else{
                 podcast_save_path = PathService::get_podcast_episode_path(
                     &podcast.directory_name.clone(),
                     None,
-                    &suffix, &podcast_file_name.unwrap());
+                    &suffix, &podcast_file_name.unwrap(),conn);
             }
         }
         else{
             podcast_save_path = PathService::get_podcast_episode_path(
                 &podcast.directory_name.clone(),
                 Some(podcast_episode.clone()),
-                &suffix, &podcast_episode.name);
+                &suffix, &podcast_episode.name,conn);
         }
     }
     else{

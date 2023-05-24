@@ -39,7 +39,7 @@ create table invites
 
 create table notifications
 (
-    id              integer not null
+    id              SERIAL not null
         primary key,
     type_of_message TEXT    not null,
     message         TEXT    not null,
@@ -49,7 +49,7 @@ create table notifications
 
 create table podcasts
 (
-    id                 integer                   not null
+    id                 SERIAL                   not null
         primary key,
     name               text                      not null,
     directory_id       text                      not null,
@@ -78,7 +78,7 @@ create table favorites
 
 create table podcast_episodes
 (
-    id                integer             not null
+    id                SERIAL             not null
         primary key,
     podcast_id        integer             not null
         references podcasts,
@@ -103,7 +103,7 @@ create index podcast_episodes_podcast_id_index
 
 create table podcast_history_items
 (
-    id           integer  not null
+    id           SERIAL  not null
         primary key,
     podcast_id   integer  not null
         references podcasts,

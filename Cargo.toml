@@ -9,10 +9,10 @@ build = "build.rs"
 built = {version="0.6.0", features=["git2", "chrono", "semver"]}
 
 [features]
-default = ["postgresql"]
+default = ["sqlite"]
 # Empty to keep compatibility, prefer to set USE_SYSLOG=true
-mysql = ["diesel/mysql", "diesel_migrations/mysql"]
-postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono"]
+mysql = ["diesel/mysql", "diesel_migrations/mysql", "diesel/mysql_backend"]
+postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", "r2d2_postgres", "diesel/postgres_backend"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
 
 [dependencies]
@@ -25,6 +25,7 @@ async-recursion = "1.0.2"
 base64 = "0.21.0"
 uuid = {version="1.3.1", features = ["v4", "serde"]}
 libsqlite3-sys = {version = "0.26.0", features = ["bundled"], optional = true}
+r2d2_postgres = {version = "0.18.1", optional = true}
 diesel_migrations = "2.0.0"
 actix-files = "0.6.2"
 actix-web = {version="4.3.0", features=["rustls"]}
@@ -58,7 +59,7 @@ sha1 = "0.10.5"
 sha256 = "1.1.3"
 deunicode = "1.3.3"
 strfmt="0.2.4"
-
+once_cell = "1.17.1"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = {version="0.10.52", features = ["vendored"]}

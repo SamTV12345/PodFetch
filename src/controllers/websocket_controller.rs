@@ -32,12 +32,13 @@ pub async fn start_connection(
 #[get("/rss")]
 pub async fn get_rss_feed(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
+    db: Data<DbPool>,
 ) -> HttpResponse {
     let env = EnvironmentService::new();
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes();
+    let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes(&mut db.get().unwrap());
 
     let server_url = env.get_server_url();
 
@@ -81,7 +82,8 @@ pub async fn get_rss_feed_for_podcast(
     match res {
         Ok(podcast) => {
             let downloaded_episodes =
-                podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(id.clone());
+                podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(id.clone(),
+                                                                                   &mut conn.get().unwrap());
 
             let mut itunes_owner = get_itunes_owner("", "");
 

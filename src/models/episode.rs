@@ -7,8 +7,9 @@ use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
+use diesel::query_builder::QueryBuilder;
 use crate::db::DB;
-use crate::DbConnection;
+use crate::{DbConnection, MyQueryBuilder};
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 
@@ -158,9 +159,25 @@ impl Episode{
 
 
         let mut map:HashMap<String,Podcast> = HashMap::new();
-        let res = sql_query(
-            r"SELECT * FROM (SELECT * FROM episodes e, podcast_episodes pe WHERE
-            e.username=? AND pe.url=e.episode  ORDER BY timestamp DESC) GROUP BY episode LIMIT 10;")
+
+        let mut builder = MyQueryBuilder::new();
+        builder.push_sql("SELECT * FROM episodes e, podcast_episodes pe WHERE e.username=");
+        builder.push_bind_param();
+        builder.push_sql(" AND pe.url=e.episode  GROUP BY episode, e.id,
+                                                                                                    username, device,
+                                                                                                    podcast,
+                                                                                                    timestamp, guid,
+                                                                                                    action, started,
+                                                                                                    position, total,
+                                                                                                    pe.id,
+                                                                                                    podcast_id,
+                                                                                                    episode_id, name,
+                                                                                                    url,
+                                                                                                    date_of_recording, image_url, total_time, local_url, local_image_url, description, status, download_time ORDER BY timestamp DESC LIMIT 10;");
+
+        let query = builder.finish();
+        println!("Builder: {}",query);
+        let res = sql_query(query)
             .bind::<Text, _>(username1.clone())
             .load::<(Episode,PodcastEpisode)>(conn)
             .expect("");

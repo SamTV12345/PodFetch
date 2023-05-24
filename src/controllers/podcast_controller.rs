@@ -70,12 +70,11 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
     let query = query.into_inner();
     let _order = query.order.unwrap_or(OrderCriteria::ASC);
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
-    //let only_favored;
+    let only_favored;
     let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
                                                     &mut conn.get().unwrap()).await.unwrap();
 
-    return HttpResponse::Ok().json(opt_filter);
-    /*match opt_filter {
+    match opt_filter {
         Some(filter)=>{
             only_favored = filter.only_favored;
         },
@@ -85,17 +84,18 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
     }
 
     let username = requester.unwrap().username.clone();
-    let filter = Filter::new(username.clone(), query.title.clone(), order.clone().to_bool(),Some
-                (latest_pub.clone()
+    let filter = Filter::new(username.clone(), query.title.clone(), _order.clone().to_bool(),Some
+                (_latest_pub.clone()
                 .to_string()),only_favored);
     Filter::save_filter(filter, &mut *conn.get().unwrap()).expect("Error saving filter");
 
     match query.favored_only {
         true => {
-            let podcasts = podcast_service.lock().ignore_poison().search_podcasts_favored( order
+            let podcasts = _podcast_service.lock().ignore_poison().search_podcasts_favored( _order
                                                                                                .clone(), query.title,
-                                                                                   latest_pub.clone(),
-                                                                                   mapping_service.lock()
+                                                                                   _latest_pub
+                                                                                       .clone(),
+                                                                                   _mapping_service.lock()
                                                                                        .ignore_poison(),
                                                                                    &mut conn.get().unwrap
                                                                                    (),username)
@@ -103,16 +103,17 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
             HttpResponse::Ok().json(podcasts)
         }
         false => {
-            let podcasts = podcast_service.lock().ignore_poison().search_podcasts( order.clone(),
-                                                                                   mapping_service.lock().ignore_poison(),
+            let podcasts = _podcast_service.lock().ignore_poison().search_podcasts( _order.clone(),
+                                                                                   _mapping_service.lock().ignore_poison(),
                                                                                    query.title,
-                                                                                   latest_pub.clone(),
+                                                                                   _latest_pub
+                                                                                        .clone(),
                                                                                    &mut conn.get().unwrap
                                                                                    (), username)
                 .unwrap();
             HttpResponse::Ok().json(podcasts)
         }
-    }*/
+    }
 
 }
 
@@ -374,10 +375,11 @@ tag="podcasts"
 pub async fn query_for_podcast(
     podcast: Path<String>,
     podcast_service: Data<Mutex<PodcastEpisodeService>>,
+    conn: Data<DbPool>,
 ) -> impl Responder {
     let mut podcast_service = podcast_service.lock()
         .ignore_poison();
-    let res = podcast_service.query_for_podcast(&podcast);
+    let res = podcast_service.query_for_podcast(&podcast,&mut conn.get().unwrap());
 
     HttpResponse::Ok().json(res)
 }
@@ -449,11 +451,16 @@ pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
+    db:Data<Mutex<DB>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
+
+    let mut db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
 
-    podcast_service.update_favor_podcast(update_model.id, update_model.favored, requester.unwrap().username.clone());
+    podcast_service.update_favor_podcast(update_model.id, update_model.favored,
+                                         requester.unwrap().username.clone(),db, &mut conn.get().unwrap());
     HttpResponse::Ok().json("Favorited podcast")
 }
 
@@ -466,9 +473,13 @@ tag="podcasts"
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,requester: Option<web::ReqData<User>>,
+    db:Data<Mutex<DB>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
+    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone());
+    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone(),db,
+                                                        &mut conn.get().unwrap());
     HttpResponse::Ok().json(podcasts)
 }
 
@@ -663,7 +674,7 @@ pub(crate) async fn proxy_podcast(
         .map_err(error::ErrorInternalServerError)?;
 
     let mut client_resp = HttpResponse::build(res.status());
-    // Remove `Connection` as per
+    // Remove `CONNECTION` as per
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
 
     for (header_name, header_value) in res.headers().iter() {
