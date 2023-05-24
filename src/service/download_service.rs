@@ -7,7 +7,7 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::blocking::ClientBuilder;
 
 use std::io;
-use actix_web::web::Data;
+
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::DbConnection;
@@ -32,7 +32,7 @@ impl DownloadService {
     }
 
     pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast,
-                                    db:DB, conn: &mut DbConnection) {
+                                    db:DB, _conn: &mut DbConnection) {
         let conn = &mut establish_connection();
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
         let settings_in_db = SettingsService::new().get_settings(db.clone(),conn).unwrap();

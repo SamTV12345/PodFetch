@@ -27,7 +27,7 @@ pub async fn get_settings(settings_service: Data<Mutex<SettingsService>>, db:Dat
                                                                                              impl
 Responder {
     let mut settings_service = settings_service.lock().ignore_poison();
-    let mut db = db.lock().unwrap();
+    let db = db.lock().unwrap();
 
     let settings = settings_service.get_settings(db.clone(),&mut conn.get().unwrap());
     match settings {
@@ -51,7 +51,7 @@ web::Json<Setting>, requester: Option<web::ReqData<User>>, db: Data<Mutex<DB>>,c
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
-    let mut db = db.lock().unwrap();
+    let db = db.lock().unwrap();
     let settings = settings_service.update_settings(settings.into_inner(),db.clone(),&mut conn.get().unwrap());
     HttpResponse::Ok().json(settings)
 }

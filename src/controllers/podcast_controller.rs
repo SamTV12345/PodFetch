@@ -455,7 +455,7 @@ pub async fn favorite_podcast(
     conn: Data<DbPool>
 ) -> impl Responder {
 
-    let mut db = db.lock().ignore_poison();
+    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
 

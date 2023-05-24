@@ -1,4 +1,4 @@
-use std::sync::MutexGuard;
+
 use crate::constants::constants::ERR_SETTINGS_FORMAT;
 use crate::controllers::settings_controller::{UpdateNameSettings};
 use crate::db::DB;
@@ -23,7 +23,7 @@ impl SettingsService{
         db.update_settings(settings, conn)
     }
 
-    pub fn update_name(&mut self, update_model: UpdateNameSettings, mut db:DB, conn: &mut DbConnection) ->
+    pub fn update_name(&mut self, update_model: UpdateNameSettings, db:DB, conn: &mut DbConnection) ->
                                                                                 Result<Setting,String>{
         let mut settings_ = self.get_settings(db.clone(), conn).unwrap();
         let res = Self::validate_settings(update_model.clone());

@@ -3,7 +3,7 @@ use actix_web::{get, put, web, HttpResponse, Responder};
 use std::sync::Mutex;
 use diesel::row::NamedRow;
 use crate::db::DB;
-use crate::{DbConnection, DbPool};
+use crate::{DbPool};
 use crate::mutex::LockResultExt;
 use crate::service::notification_service::NotificationService;
 

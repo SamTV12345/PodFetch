@@ -41,7 +41,7 @@ pub struct PodcastWatchedPostModel {
     pub time: i32,
 }
 
-use crate::dbconfig::schema::podcast_history_items;
+
 
 #[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId, Selectable)]
 #[serde(rename_all = "camelCase")]

@@ -126,9 +126,10 @@ impl Episode{
     pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut DbConnection,
                                                  episode_1: String) ->Option<Episode>{
 
+        //TODO Debug with not downloaded podcast episode
         let res = sql_query(
-            "SELECT * FROM (SELECT * FROM episodes,podcasts WHERE username=? AND episodes\
-            .podcast=podcasts.rssfeed AND episodes.episode = ? ORDER BY timestamp DESC) GROUP BY \
+            "SELECT * FROM (SELECT * FROM episodes,podcasts WHERE username=? AND episodes
+            .podcast=podcasts.rssfeed AND episodes.episode = ? ORDER BY timestamp DESC) GROUP BY
             episode  LIMIT 10;")
             .bind::<Text, _>(username1.clone())
             .bind::<Text,_>(episode_1)
@@ -176,7 +177,6 @@ impl Episode{
                                                                                                     date_of_recording, image_url, total_time, local_url, local_image_url, description, status, download_time ORDER BY timestamp DESC LIMIT 10;");
 
         let query = builder.finish();
-        println!("Builder: {}",query);
         let res = sql_query(query)
             .bind::<Text, _>(username1.clone())
             .load::<(Episode,PodcastEpisode)>(conn)

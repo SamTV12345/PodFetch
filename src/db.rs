@@ -1,4 +1,4 @@
-use crate::config::dbconfig::establish_connection;
+
 use crate::constants::constants::{DEFAULT_SETTINGS, STANDARD_USER};
 use crate::models::itunes_models::{Podcast, PodcastDto, PodcastEpisode};
 use crate::models::models::{
@@ -9,19 +9,19 @@ use crate::models::settings::Setting;
 use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastExtra;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use diesel::dsl::{max, sql};
+use diesel::dsl::{sql};
 use diesel::prelude::*;
 use diesel::{insert_into, sql_query, RunQueryDsl, delete};
 use rss::Item;
 use std::io::Error;
-use std::ops::Deref;
+
 use std::sync::MutexGuard;
-use std::time::SystemTime;
+
 use actix::ActorStreamExt;
 use diesel::query_builder::QueryBuilder;
 use diesel::sql_types::{Text, Timestamp};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
-use crate::dbconfig::schema::podcast_history_items::dsl::podcast_history_items;
+
 use crate::{DbConnection, MyQueryBuilder};
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
@@ -394,16 +394,15 @@ impl DB {
         &mut self,
         conn: &mut DbConnection,
         designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
-        use crate::dbconfig::schema::podcast_history_items::username as history_username;
-        use crate::dbconfig::schema::podcast_history_items::date as h_date;
-        use diesel::dsl::max;
+        
+        
+        
 
         let mut builder = MyQueryBuilder::new();
-        builder.push_sql("SELECT * FROM podcast_history_items WHERE username=");
+        builder.push_sql("SELECT * FROM   podcast_history_items phi1 WHERE username=");
         builder.push_bind_param();
-        //res.push_identifier(designated_username);
-        builder.push_sql(" AND id in (SELECT id FROM podcast_history_items GROUP BY episode_id \
-        ORDER BY MAX(date) DESC  LIMIT 10);");
+        builder.push_sql(" AND  phi1.date IN (SELECT MAX(date) FROM   podcast_history_items \
+        phi2 WHERE  phi1.episode_id = phi2.episode_id);");
 
         let result = sql_query(builder.finish())
             .bind::<Text,_>(designated_username)
@@ -488,7 +487,7 @@ impl DB {
                 Ok(())
     }
 
-    pub fn update_podcast_image(mut self, id: &str, image_url: &str, conn: &mut DbConnection) -> Result<(), String> {
+    pub fn update_podcast_image(self, id: &str, image_url: &str, conn: &mut DbConnection) -> Result<(), String> {
         use crate::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::image_url as image_url_column;
         use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
@@ -512,7 +511,7 @@ impl DB {
         }
     }
 
-    pub fn get_podcast_by_directory_id(mut self, podcast_id: &str, conn: &mut DbConnection) -> Result<Option<Podcast>,
+    pub fn get_podcast_by_directory_id(self, podcast_id: &str, conn: &mut DbConnection) -> Result<Option<Podcast>,
         String> {
         use crate::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;

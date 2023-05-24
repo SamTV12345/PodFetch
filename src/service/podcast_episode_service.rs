@@ -16,7 +16,7 @@ use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::{ACCEPT, HeaderMap};
 use rss::Channel;
-use crate::config::dbconfig::establish_connection;
+
 use crate::DbConnection;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;

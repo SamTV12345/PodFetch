@@ -5,14 +5,14 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix::{Actor, ActorFutureExt};
+use actix::{Actor};
 use actix_files::{Files, NamedFile};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::sync::{Arc, Mutex};
+use std::sync::{Mutex};
 use std::time::Duration;
 use std::{env, thread};
 use std::env::{args, var};
@@ -22,8 +22,8 @@ use actix_web::body::{BoxBody, EitherBody};
 use log::{info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use diesel::r2d2::{ConnectionManager, R2D2Connection};
-use r2d2::{ManageConnection, Pool};
+use diesel::r2d2::{ConnectionManager};
+use r2d2::{Pool};
 use regex::Regex;
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
@@ -67,7 +67,7 @@ use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
-use once_cell::sync::OnceCell;
+
 
 mod config;
 
@@ -198,7 +198,7 @@ async fn main() -> std::io::Result<()> {
         env.get_environment();
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
-            let mut conn = &mut establish_connection();
+            let conn = &mut establish_connection();
             let settings = DB::new().unwrap().get_settings(conn);
             match settings {
                 Some(settings) => {
@@ -396,7 +396,7 @@ pub fn get_secure_user_management() ->Scope{
 
 pub fn insert_default_settings_if_not_present() {
     let mut db = DB::new().unwrap();
-    let mut conn = &mut establish_connection();
+    let conn = &mut establish_connection();
     let settings = db.get_settings(conn);
     match settings {
         Some(_) => {
