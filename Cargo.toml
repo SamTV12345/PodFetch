@@ -9,10 +9,10 @@ build = "build.rs"
 built = {version="0.6.0", features=["git2", "chrono", "semver"]}
 
 [features]
-#default = ["sqlite"]
+default = ["postgresql"]
 # Empty to keep compatibility, prefer to set USE_SYSLOG=true
 mysql = ["diesel/mysql", "diesel_migrations/mysql"]
-postgresql = ["diesel/postgres", "diesel_migrations/postgres"]
+postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
 
 [dependencies]

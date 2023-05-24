@@ -5,7 +5,7 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix::Actor;
+use actix::{Actor, ActorFutureExt};
 use actix_files::{Files, NamedFile};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
@@ -151,7 +151,7 @@ async fn main() -> std::io::Result<()> {
 
     let chat_server = lobby.start();
 
-    let mut connection = establish_connection();
+    let connection = &mut *pool.get().unwrap();
     let res_migration = connection.run_pending_migrations(MIGRATIONS);
 
     if res_migration.is_err(){
@@ -218,7 +218,6 @@ async fn main() -> std::io::Result<()> {
             thread::sleep(Duration::from_millis(1000));
         }
     });
-
     HttpServer::new(move || {
         App::new()
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
@@ -236,7 +235,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(pool.clone()))
             .app_data(Data::new(Mutex::new(JWKService::new())))
             .wrap(Condition::new(cfg!(debug_assertions),Logger::default()))
-    })
+    }).workers(4)
     .bind(("0.0.0.0", 8000))?
     .run()
     .await
@@ -430,8 +429,10 @@ async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<Sqlite
 async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<PgConnection>>,
     String> {
     let manager = ConnectionManager::<PgConnection>::new(database_url);
-    let pool = Pool::builder().max_size(16)
-        .build(manager).unwrap();
+    let pool = Pool::builder()
+        .max_size(1)
+        .build(manager)
+        .unwrap();
     Ok(pool)
 }
 

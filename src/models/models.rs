@@ -1,6 +1,7 @@
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
+use diesel::{QueryId, Selectable};
 use utoipa::ToSchema;
 use chrono::NaiveDateTime;
 use diesel::sql_types::Timestamp;
@@ -40,20 +41,23 @@ pub struct PodcastWatchedPostModel {
     pub time: i32,
 }
 
-#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema)]
+use crate::dbconfig::schema::podcast_history_items;
+
+#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId, Selectable)]
 #[serde(rename_all = "camelCase")]
+#[diesel(table_name=crate::dbconfig::schema::podcast_history_items)]
 pub struct PodcastHistoryItem {
-    #[diesel(sql_type = Integer)]
+    #[diesel(sql_type = Integer, column_name=id)]
     pub id: i32,
-    #[diesel(sql_type = Integer)]
+    #[diesel(sql_type = Integer, column_name=podcast_id)]
     pub podcast_id: i32,
-    #[diesel(sql_type = Text)]
+    #[diesel(sql_type = Text,column_name=episode_id)]
     pub episode_id: String,
-    #[diesel(sql_type = Integer)]
+    #[diesel(sql_type = Integer, column_name=watched_time)]
     pub watched_time: i32,
-    #[diesel(sql_type = NaiveDateTime)]
+    #[diesel(sql_type = Timestamp,column_name=date)]
     pub date: NaiveDateTime,
-    #[diesel(sql_type = Text)]
+    #[diesel(sql_type = Text,column_name=username)]
     pub username: String
 }
 

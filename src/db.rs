@@ -9,7 +9,7 @@ use crate::models::settings::Setting;
 use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastExtra;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use diesel::dsl::sql;
+use diesel::dsl::{max, sql};
 use diesel::prelude::*;
 use diesel::{insert_into, sql_query, RunQueryDsl, delete};
 use rss::Item;
@@ -18,6 +18,7 @@ use std::sync::MutexGuard;
 use std::time::SystemTime;
 use diesel::sql_types::{Text, Timestamp};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
+use crate::dbconfig::schema::podcast_history_items::dsl::podcast_history_items;
 use crate::DbConnection;
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
@@ -306,16 +307,14 @@ impl DB {
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
         match result {
             Some(result) => {
-                let now = SystemTime::now();
-                let now: DateTime<Utc> = now.into();
-                let now: &str = &now.to_rfc3339();
-                let now_string = now.to_string();
+                let naive_date_time = Utc::now().naive_utc();
+
                 insert_into(podcast_history_items)
                     .values((
                         podcast_id.eq(result.podcast_id),
                         episode_id.eq(result.episode_id),
                         watched_time.eq(watch_model.time),
-                        date.eq(now_string),
+                        date.eq(naive_date_time),
                         username.eq(designated_username),
                     ))
                     .execute(conn)
@@ -395,13 +394,17 @@ impl DB {
         &mut self,
         conn: &mut DbConnection,
         designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
+        use crate::dbconfig::schema::podcast_history_items::username as history_username;
+        use crate::dbconfig::schema::podcast_history_items::date as h_date;
+        use diesel::dsl::max;
+
         let result = sql_query(
-            "SELECT * FROM (SELECT * FROM podcast_history_items WHERE username=? ORDER BY date \
-            DESC) GROUP BY episode_id  LIMIT 10;",
+            "SELECT * FROM podcast_history_items WHERE username=:username  GROUP BY episode_id, \
+            id, podcast_id, watched_time, date, username ORDER BY MAX(date) DESC  LIMIT 10;",
         )
             .bind::<Text,_>(designated_username)
-        .load::<PodcastHistoryItem>(&mut self.conn)
-        .unwrap();
+            .load::<PodcastHistoryItem>(&mut self.conn)
+            .unwrap();
 
         let podcast_watch_episode = result
             .iter()
