@@ -12,7 +12,8 @@ built = {version="0.6.0", features=["git2", "chrono", "semver"]}
 default = ["sqlite"]
 # Empty to keep compatibility, prefer to set USE_SYSLOG=true
 mysql = ["diesel/mysql", "diesel_migrations/mysql", "diesel/mysql_backend"]
-postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", "r2d2_postgres", "diesel/postgres_backend"]
+postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", "r2d2_postgres",
+    "diesel/postgres_backend"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
 
 [dependencies]
