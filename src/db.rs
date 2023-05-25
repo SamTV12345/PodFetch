@@ -861,11 +861,18 @@ impl DB {
                                       since: NaiveDateTime)
         ->
     Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)> {
+        let mut builder = MyQueryBuilder::new();
 
+        builder.push_sql("SELECT * FROM podcast_history_items,podcast_episodes, podcasts WHERE
+        podcast_history_items.episode_id = podcast_episodes.episode_id AND podcast_history_items
+        .podcast_id=podcasts.id AND username=");
+        builder.push_bind_param();
+        builder.push_sql("AND date >= ");
+        builder.push_bind_param();
 
-        let res = sql_query("SELECT * FROM podcast_history_items,podcast_episodes, podcasts WHERE \
-        podcast_history_items.episode_id = podcast_episodes.episode_id AND podcast_history_items\
-        .podcast_id= podcasts.id AND username=? AND date >= ?")
+        let query = builder.finish();
+
+        let res = sql_query(query)
             .bind::<Text, _>(&username_to_search)
             .bind::<Timestamp, _>(&since)
             .load::<(PodcastHistoryItem, PodcastEpisode, Podcast)>(conn)
