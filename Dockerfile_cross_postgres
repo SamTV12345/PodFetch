@@ -18,12 +18,12 @@ COPY ./target/armv7-unknown-linux-gnueabihf/release/podfetch /app/podfetch
 FROM base as arm64
 COPY ./target/aarch64-unknown-linux-gnu/release/podfetch /app/podfetch
 
-FROM ${TARGETTARGETARCH}${TARGETVARIANT} as final
-COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libpq.so* /usr/lib/${TARGETARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libgssapi_krb5.so* /usr/lib/${TARGETARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libldap_r-2.4.so* /usr/lib/${TARGETARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libkrb5.so* /usr/lib/${TARGETARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libk5crypto.so* /usr/lib/${TARGETARCH}-linux-gnu/
+FROM ${TARGETARCH}${TARGETVARIANT} as final
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libpq.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libgssapi_krb5.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libldap_r-2.4.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libkrb5.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libk5crypto.so* /usr/lib/${TARGETARCH}-linux-gnu/
 COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libkrb5support.so* /usr/lib/${TARGETARCH}-linux-gnu/
 COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/liblber-2.4.so* /usr/lib/${TARGETARCH}-linux-gnu/
 COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libsasl2.so* /usr/lib/${TARGETARCH}-linux-gnu/
