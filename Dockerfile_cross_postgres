@@ -1,4 +1,4 @@
-FROM debian:stretch AS builder
+FROM ubuntu:latest AS builder
 
 RUN apt-get update && apt-get install libpq5 -y
 
