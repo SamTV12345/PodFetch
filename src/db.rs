@@ -17,7 +17,7 @@ use std::io::Error;
 
 use std::sync::MutexGuard;
 
-use diesel::query_builder::QueryBuilder;
+use diesel::query_builder::{QueryBuilder};
 use diesel::sql_types::{Text, Timestamp};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 
@@ -223,8 +223,12 @@ impl DB {
             ))
             .get_result::<PodcastEpisode>(conn)
             .expect("Error inserting podcast episode");
+
+
         return inserted_podcast;
     }
+
+
 
     pub fn add_podcast_to_database(
         conn: &mut DbConnection,

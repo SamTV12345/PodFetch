@@ -3,7 +3,6 @@ use std::env;
 use std::time::Duration;
 use crate::DbConnection;
 
-
 #[derive(Debug)]
 pub struct ConnectionOptions {
     pub enable_wal: bool,
@@ -50,7 +49,7 @@ pub fn establish_connection()->PgConnection{
 }
 
 #[cfg(mysql)]
-pub fn establish_connection()->PgConnection{
+pub fn establish_connection()->MysqlConnection{
     let database_url = &get_database_url();
     MysqlConnection::establish(database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))

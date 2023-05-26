@@ -81,9 +81,9 @@ mod dbconfig;
 
 import_database_connections!();
 
+type DbPool = Pool<ConnectionManager<DbConnection>>;
 
-#[cfg(sqlite)]
-type DbPool = Pool<ConnectionManager<SqliteConnection>>;
+
 #[cfg(sqlite)]
 type DbConnection = SqliteConnection;
 #[cfg(sqlite)]
@@ -94,8 +94,6 @@ use diesel::sqlite::SqliteQueryBuilder;
 pub type MyQueryBuilder = SqliteQueryBuilder;
 
 
-#[cfg(postgresql)]
-type DbPool = Pool<ConnectionManager<PgConnection>>;
 #[cfg(postgresql)]
 pub type DbConnection = PgConnection;
 
@@ -108,13 +106,14 @@ pub type MyQueryBuilder = PgQueryBuilder;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
 
 #[cfg(mysql)]
-type DbPool = Pool<ConnectionManager<MysqlConnection>>;
-#[cfg(mysql)]
 type DbConnection = MysqlConnection;
 #[cfg(mysql)]
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/mysql");
+
 #[cfg(mysql)]
-pub type MyQueryBuilder = MySQLQueryBuilder;
+use diesel::mysql::MysqlQueryBuilder;
+#[cfg(mysql)]
+pub type MyQueryBuilder = MysqlQueryBuilder;
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
@@ -157,6 +156,9 @@ async fn main() -> std::io::Result<()> {
         exit(0)
     }
 
+    let environment_service = EnvironmentService::new();
+
+    check_server_config(environment_service.clone());
     let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
     let data_pool = Data::new(pool);
 
@@ -166,7 +168,6 @@ async fn main() -> std::io::Result<()> {
     let db = DB::new().unwrap();
     let mapping_service = MappingService::new();
     let file_service = FileService::new_db();
-    let environment_service = EnvironmentService::new();
     let notification_service = NotificationService::new();
     let settings_service = SettingsService::new();
     let lobby = Lobby::default();
@@ -190,7 +191,6 @@ async fn main() -> std::io::Result<()> {
     }
 
     insert_default_settings_if_not_present();
-    check_server_config(environment_service.clone());
 
     thread::spawn(|| {
         let mut scheduler = Scheduler::new();
@@ -413,20 +413,21 @@ pub fn check_server_config(service1: EnvironmentService) {
     let database_url = get_database_url();
     #[cfg(sqlite)]
     if !database_url.starts_with("sqlite"){
-        log::error!("You are using sqlite as database but the database url does not start with sqlite. Please check your .env file.");
+        eprintln!("You are using sqlite as database but the database url does not start with sqlite. \
+        Please check your .env file.");
         exit(1);
     }
 
     #[cfg(mysql)]
     if !database_url.starts_with("mysql"){
-        log::error!("You are using mySQL as database but the database url does not start with  \
+        eprintln!("You are using mySQL as database but the database url does not start with  \
         sqlite. Please check your .env file.");
         exit(1);
     }
 
     #[cfg(postgresql)]
     if !database_url.starts_with("postgres"){
-        log::error!("You are using postgres as database but the database url does not start with  \
+        eprintln!("You are using postgres as database but the database url does not start with  \
         sqlite. Please check your .env file.");
         exit(1);
     }

@@ -1,2 +1,3 @@
 -- This file should undo anything in `up.sql`
-DROP TABLE podcasts;
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
