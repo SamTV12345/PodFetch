@@ -23,6 +23,4 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-podfetch}
     volumes:
       - postgres:/data/postgres
-    networks:
-      - postgres
     restart: unless-stopped
