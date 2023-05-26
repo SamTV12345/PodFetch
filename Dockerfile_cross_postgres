@@ -14,7 +14,7 @@ ENV ARCH=x86_64
 COPY ./target/x86_64-unknown-linux-gnu/release/podfetch /app/podfetch
 
 FROM base as armv7
-ENV ARCH=armv7
+ENV ARCH=armhf
 COPY ./target/armv7-unknown-linux-gnueabihf/release/podfetch /app/podfetch
 
 FROM base as arm64
