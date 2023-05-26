@@ -1,6 +1,6 @@
 FROM debian:stretch AS builder
 
-RUN apt install --yes libpq5
+RUN apt-get update && apt-get install libpq5 -y
 
 
 FROM gcr.io/distroless/cc as base
