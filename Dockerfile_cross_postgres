@@ -18,26 +18,26 @@ COPY ./target/armv7-unknown-linux-gnueabihf/release/podfetch /app/podfetch
 FROM base as arm64
 COPY ./target/aarch64-unknown-linux-gnu/release/podfetch /app/podfetch
 
-FROM ${TARGETARCH}${TARGETVARIANT} as final
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libpq.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libgssapi_krb5.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libldap_r-2.4.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libkrb5.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libk5crypto.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libkrb5support.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/liblber-2.4.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libsasl2.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libgnutls.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libp11-kit.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libidn2.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libunistring.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libtasn1.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libnettle.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libhogweed.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libgmp.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /usr/lib/${ARCH}-linux-gnu/libffi.so* /usr/lib/${ARCH}-linux-gnu/
-COPY --from=builder /lib/${ARCH}-linux-gnu/libcom_err.so* /lib/${ARCH}-linux-gnu/
-COPY --from=builder /lib/${ARCH}-linux-gnu/libkeyutils.so* /lib/${ARCH}-linux-gnu/
+FROM ${TARGETTARGETARCH}${TARGETVARIANT} as final
+COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libpq.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libgssapi_krb5.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libldap_r-2.4.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libkrb5.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETTARGETARCH}-linux-gnu/libk5crypto.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libkrb5support.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/liblber-2.4.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libsasl2.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libgnutls.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libp11-kit.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libidn2.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libunistring.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libtasn1.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libnettle.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libhogweed.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libgmp.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /usr/lib/${TARGETARCH}-linux-gnu/libffi.so* /usr/lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /lib/${TARGETARCH}-linux-gnu/libcom_err.so* /lib/${TARGETARCH}-linux-gnu/
+COPY --from=builder /lib/${TARGETARCH}-linux-gnu/libkeyutils.so* /lib/${TARGETARCH}-linux-gnu/
 
 EXPOSE 8000
 CMD ["./podfetch"]
