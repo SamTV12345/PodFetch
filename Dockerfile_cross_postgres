@@ -32,8 +32,8 @@ COPY --from=builder /usr/lib/${ARCH}/libffi.so* /usr/lib/${ARCH}/
 COPY --from=builder /lib/${ARCH}/libcom_err.so* /lib/${ARCH}/
 COPY --from=builder /lib/${ARCH}/libkeyutils.so* /lib/${ARCH}/
 
-RUN ln -s /usr/lib/${ARCH}/libcrypto.so.1.1 /usr/lib/${ARCH}/libcrypto.so
-RUN ln -s /usr/lib/${ARCH}/libssl.so.1.1 /usr/lib/${ARCH}/libssl.so
+COPY /usr/lib/${ARCH}/libcrypto.so.1.1 /usr/lib/${ARCH}/libcrypto.so
+COPY /usr/lib/${ARCH}/libssl.so.1.1 /usr/lib/${ARCH}/libssl.so
 
 COPY ./target/x86_64-unknown-linux-gnu/release/podfetch /app/podfetch
 
@@ -59,8 +59,8 @@ COPY --from=builder /usr/lib/${ARCH}/libffi.so* /usr/lib/${ARCH}/
 COPY --from=builder /lib/${ARCH}/libcom_err.so* /lib/${ARCH}/
 COPY --from=builder /lib/${ARCH}/libkeyutils.so* /lib/${ARCH}/
 
-RUN ln -s /usr/lib/${ARCH}/libcrypto.so.1.1 /usr/lib/${ARCH}/libcrypto.so
-RUN ln -s /usr/lib/${ARCH}/libssl.so.1.1 /usr/lib/${ARCH}/libssl.so
+COPY /usr/lib/${ARCH}/libcrypto.so.1.1 /usr/lib/${ARCH}/libcrypto.so
+COPY /usr/lib/${ARCH}/libssl.so.1.1 /usr/lib/${ARCH}/libssl.so
 
 COPY ./target/armv7-unknown-linux-gnueabihf/release/podfetch /app/podfetch
 
@@ -87,8 +87,8 @@ COPY --from=builder /usr/lib/${ARCH}/libffi.so* /usr/lib/${ARCH}/
 COPY --from=builder /lib/${ARCH}/libcom_err.so* /lib/${ARCH}/
 COPY --from=builder /lib/${ARCH}/libkeyutils.so* /lib/${ARCH}/
 
-RUN ln -s /usr/lib/${ARCH}/libcrypto.so.1.1 /usr/lib/${ARCH}/libcrypto.so
-RUN ln -s /usr/lib/${ARCH}/libssl.so.1.1 /usr/lib/${ARCH}/libssl.so
+COPY /usr/lib/${ARCH}/libcrypto.so.1.1 /usr/lib/${ARCH}/libcrypto.so
+COPY /usr/lib/${ARCH}/libssl.so.1.1 /usr/lib/${ARCH}/libssl.so
 
 COPY ./target/aarch64-unknown-linux-gnu/release/podfetch /app/podfetch
 
