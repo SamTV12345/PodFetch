@@ -1,19 +1,14 @@
 version: '3'
 services:
   podfetch:
-    image: samuel19982/podfetch:latest
+    image: samuel19982/podfetch:dev-postgres
     ports:
       - "80:8000"
     volumes:
-      - podgrab-podcasts:/app/podcasts
-      - podgrab-db:/app/db
+      - ./podcasts:/app/podcasts
     environment:
-      - POLLING_INTERVAL=60
-      - SERVER_URL=http://localhost:80
+      - POLLING_INTERVAL=300
       - DATABASE_URL=postgresql://postgres:changeme@postgres/podfetch
-    depends_on:
-        - postgres
-
   postgres:
     image: postgres
     environment:
@@ -24,3 +19,6 @@ services:
     volumes:
       - postgres:/data/postgres
     restart: unless-stopped
+
+volumes:
+  postgres:
