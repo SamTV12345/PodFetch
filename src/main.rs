@@ -441,7 +441,7 @@ pub fn check_server_config(service1: EnvironmentService) {
 
     if service1.gpodder_integration_enabled{
         if !(service1.http_basic || service1.oidc_configured){
-            log::error!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
+            eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
             exit(1);
         }
     }
@@ -452,7 +452,7 @@ pub fn check_server_config(service1: EnvironmentService) {
 
     if var(TELEGRAM_API_ENABLED).is_ok(){
         if !var(TELEGRAM_BOT_TOKEN).is_ok() || !var(TELEGRAM_BOT_CHAT_ID).is_ok() {
-            log::error!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
+            eprintln!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
             exit(1);
         }
     }

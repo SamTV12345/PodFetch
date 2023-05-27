@@ -17,11 +17,11 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
     ->impl
 Responder {
     let env = env_service.lock().ignore_poison();
-
+    let conn = &mut conn.get().unwrap();
     match rq.clone().cookie("sessionid") {
         Some(cookie) => {
             let session = cookie.value();
-            let opt_session = Session::find_by_session_id(session, &mut conn.get().unwrap());
+            let opt_session = Session::find_by_session_id(session, conn);
                 if opt_session.is_ok(){
                     let user_cookie = create_session_cookie(opt_session.unwrap());
                     return HttpResponse::Ok().cookie(user_cookie).finish();
@@ -39,11 +39,11 @@ Responder {
     if unwrapped_username == env.username && password == env.password {
         return HttpResponse::Ok().finish();
     } else {
-        match User::find_by_username(&unwrapped_username, &mut conn.get().unwrap()) {
+        match User::find_by_username(&unwrapped_username, conn) {
             Some(user) => {
                 if user.clone().password.unwrap()== digest(password) {
                     let session = Session::new(user.username);
-                    Session::insert_session(&session, &mut conn.get().unwrap()).expect("Error inserting session");
+                    Session::insert_session(&session, conn).expect("Error inserting session");
                     let user_cookie = create_session_cookie(session);
                     HttpResponse::Ok().cookie(user_cookie).finish()
                 } else {

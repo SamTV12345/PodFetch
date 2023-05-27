@@ -870,7 +870,7 @@ impl DB {
         podcast_history_items.episode_id = podcast_episodes.episode_id AND podcast_history_items
         .podcast_id=podcasts.id AND username=");
         builder.push_bind_param();
-        builder.push_sql("AND date >= ");
+        builder.push_sql(" AND date >= ");
         builder.push_bind_param();
 
         let query = builder.finish();
