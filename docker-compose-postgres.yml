@@ -8,6 +8,7 @@ services:
       - ./podcasts:/app/podcasts
     environment:
       - POLLING_INTERVAL=300
+      - SERVER_URL=http://localhost:80
       - DATABASE_URL=postgresql://postgres:changeme@postgres/podfetch
   postgres:
     image: postgres
