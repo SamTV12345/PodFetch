@@ -5,6 +5,12 @@ use std::path::Path;
 use built;
 
 fn main() {
+        #[cfg(feature = "sqlite")]
+        println!("cargo:rustc-cfg=sqlite");
+        #[cfg(feature = "mysql")]
+        println!("cargo:rustc-cfg=mysql");
+        #[cfg(feature = "postgresql")]
+        println!("cargo:rustc-cfg=postgresql");
         let mut opts = built::Options::default();
         opts.set_dependencies(true);
         opts.set_git(true);

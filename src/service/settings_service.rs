@@ -1,30 +1,31 @@
+
 use crate::constants::constants::ERR_SETTINGS_FORMAT;
 use crate::controllers::settings_controller::{UpdateNameSettings};
 use crate::db::DB;
+use crate::DbConnection;
 use crate::models::settings::Setting;
 
 #[derive(Clone)]
 pub struct SettingsService{
-    db: DB
 }
 
 impl SettingsService{
     pub fn new() -> SettingsService{
         SettingsService{
-            db: DB::new().expect("Error creating db")
         }
     }
 
-    pub fn get_settings(&mut self) -> Option<Setting> {
-        self.db.get_settings()
+    pub fn get_settings(&mut self, mut db:DB, conn: &mut DbConnection) -> Option<Setting> {
+        db.get_settings(conn)
     }
 
-    pub fn update_settings(&mut self, settings: Setting) -> Setting{
-        self.db.update_settings(settings)
+    pub fn update_settings(&mut self, settings: Setting, mut db:DB,conn: &mut DbConnection) -> Setting{
+        db.update_settings(settings, conn)
     }
 
-    pub fn update_name(&mut self, update_model: UpdateNameSettings) -> Result<Setting,String>{
-        let mut settings_ = self.get_settings().unwrap();
+    pub fn update_name(&mut self, update_model: UpdateNameSettings, db:DB, conn: &mut DbConnection) ->
+                                                                                Result<Setting,String>{
+        let mut settings_ = self.get_settings(db.clone(), conn).unwrap();
         let res = Self::validate_settings(update_model.clone());
         if res.is_err(){
             return  Err(res.err().unwrap());
@@ -35,7 +36,7 @@ impl SettingsService{
         settings_.replacement_strategy = update_model.replacement_strategy.to_string();
         settings_.episode_format = update_model.episode_format;
         settings_.podcast_format = update_model.podcast_format;
-        Ok(self.update_settings(settings_))
+        Ok(self.update_settings(settings_,db.clone(), conn))
     }
 
 

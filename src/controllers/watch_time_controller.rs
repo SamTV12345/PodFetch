@@ -3,6 +3,7 @@ use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, Podcas
 use actix_web::web::Data;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use std::sync::{Mutex};
+use crate::config::dbconfig::establish_connection;
 use crate::DbPool;
 use crate::models::episode::Episode;
 use crate::models::user::User;
@@ -40,11 +41,10 @@ Responder {
 
     let designated_username = requester.unwrap().username.clone();
     let mut db = db.lock().ignore_poison();
-    let last_watched = db.get_last_watched_podcasts(&mut conn.get().unwrap(), designated_username
+    let last_watched = db.get_last_watched_podcasts(&mut establish_connection(), designated_username
         .clone()).unwrap();
 
-    let episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap
-        (),
+    let episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap(),
     );
 
     let mut episodes_with_logs = last_watched.iter().map(|e|{

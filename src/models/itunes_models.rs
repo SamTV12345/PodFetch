@@ -1,11 +1,12 @@
-use crate::schema::*;
+use crate::dbconfig::schema::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
-use diesel::{RunQueryDsl, SqliteConnection};
+use diesel::{RunQueryDsl};
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Bool, Timestamp};
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
+use crate::DbConnection;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -87,9 +88,9 @@ pub struct Podcast {
 }
 
 impl Podcast{
-    pub fn get_by_rss_feed(rssfeed_i: &str, conn: &mut SqliteConnection) -> Result<Podcast,
+    pub fn get_by_rss_feed(rssfeed_i: &str, conn: &mut DbConnection) -> Result<Podcast,
         diesel::result::Error> {
-        use crate::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
         podcasts
             .filter(rssfeed.eq(rssfeed_i))
             .first::<Podcast>(conn)

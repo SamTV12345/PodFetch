@@ -113,6 +113,7 @@ Responder {
                     &mut db,
                     podcast_episode.clone(),
                     podcast,
+                    &mut conn.get().unwrap()
                 );
             }
             None => {}

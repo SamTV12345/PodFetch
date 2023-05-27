@@ -7,7 +7,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::{DbPool, unwrap_string};
+use crate::{DbConnection, DbPool, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
 use actix_web::{get, post, put, delete, HttpRequest, error, Error};
@@ -25,7 +25,6 @@ use std::sync::{Mutex};
 use std::thread;
 use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
-use diesel::SqliteConnection;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
 use crate::db::DB;
@@ -53,24 +52,28 @@ pub struct PodcastSearchModel{
 }
 
 #[get("/podcasts/filter")]
-pub async fn get_filter(conn:Data<DbPool>, requester: Option<web::ReqData<User>>) -> impl
+pub async fn get_filter(conn: Data<DbPool>, requester:
+Option<web::ReqData<User>>) ->
+                                                                                               impl
 Responder{
             let filter = Filter::get_filter_by_username(requester.unwrap().username.clone(),
-                                                        &mut *conn.get().unwrap()).expect("Error getting filter");
+                                                        &mut conn.get().unwrap()).await
+                .expect("Error getting filter");
             HttpResponse::Ok().json(filter)
 }
 
 #[get("/podcasts/search")]
 pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
-                             podcast_service: Data<Mutex<PodcastService>>,
-                             mapping_service:Data<Mutex<MappingService>> , requester: Option<web::ReqData<User>>)
-    ->impl Responder{
+                             _podcast_service: Data<Mutex<PodcastService>>,
+                             _mapping_service:Data<Mutex<MappingService>>, requester: Option<web::ReqData<User>>)
+                             ->impl Responder{
     let query = query.into_inner();
-    let order = query.order.unwrap_or(OrderCriteria::ASC);
-    let latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    let _order = query.order.unwrap_or(OrderCriteria::ASC);
+    let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
     let only_favored;
     let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
-                                                    &mut *conn.get().unwrap()).unwrap();
+                                                    &mut conn.get().unwrap()).await.unwrap();
+
     match opt_filter {
         Some(filter)=>{
             only_favored = filter.only_favored;
@@ -81,17 +84,18 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
     }
 
     let username = requester.unwrap().username.clone();
-    let filter = Filter::new(username.clone(), query.title.clone(), order.clone().to_bool(),Some
-                (latest_pub.clone()
+    let filter = Filter::new(username.clone(), query.title.clone(), _order.clone().to_bool(),Some
+                (_latest_pub.clone()
                 .to_string()),only_favored);
     Filter::save_filter(filter, &mut *conn.get().unwrap()).expect("Error saving filter");
 
     match query.favored_only {
         true => {
-            let podcasts = podcast_service.lock().ignore_poison().search_podcasts_favored( order
+            let podcasts = _podcast_service.lock().ignore_poison().search_podcasts_favored( _order
                                                                                                .clone(), query.title,
-                                                                                   latest_pub.clone(),
-                                                                                   mapping_service.lock()
+                                                                                   _latest_pub
+                                                                                       .clone(),
+                                                                                   _mapping_service.lock()
                                                                                        .ignore_poison(),
                                                                                    &mut conn.get().unwrap
                                                                                    (),username)
@@ -99,10 +103,11 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
             HttpResponse::Ok().json(podcasts)
         }
         false => {
-            let podcasts = podcast_service.lock().ignore_poison().search_podcasts( order.clone(),
-                                                                                   mapping_service.lock().ignore_poison(),
+            let podcasts = _podcast_service.lock().ignore_poison().search_podcasts( _order.clone(),
+                                                                                   _mapping_service.lock().ignore_poison(),
                                                                                    query.title,
-                                                                                   latest_pub.clone(),
+                                                                                   _latest_pub
+                                                                                        .clone(),
                                                                                    &mut conn.get().unwrap
                                                                                    (), username)
                 .unwrap();
@@ -348,7 +353,7 @@ pub async fn add_podcast_from_podindex(
     HttpResponse::Ok().into()
 }
 
-fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut SqliteConnection)
+fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut DbConnection)
     ->Result<Podcast, PodFetchError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
@@ -370,10 +375,11 @@ tag="podcasts"
 pub async fn query_for_podcast(
     podcast: Path<String>,
     podcast_service: Data<Mutex<PodcastEpisodeService>>,
+    conn: Data<DbPool>,
 ) -> impl Responder {
     let mut podcast_service = podcast_service.lock()
         .ignore_poison();
-    let res = podcast_service.query_for_podcast(&podcast);
+    let res = podcast_service.query_for_podcast(&podcast,&mut conn.get().unwrap());
 
     HttpResponse::Ok().json(res)
 }
@@ -445,11 +451,16 @@ pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
+    db:Data<Mutex<DB>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
+
+    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
 
-    podcast_service.update_favor_podcast(update_model.id, update_model.favored, requester.unwrap().username.clone());
+    podcast_service.update_favor_podcast(update_model.id, update_model.favored,
+                                         requester.unwrap().username.clone(),db, &mut conn.get().unwrap());
     HttpResponse::Ok().json("Favorited podcast")
 }
 
@@ -462,9 +473,13 @@ tag="podcasts"
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,requester: Option<web::ReqData<User>>,
+    db:Data<Mutex<DB>>,
+    conn: Data<DbPool>
 ) -> impl Responder {
+    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone());
+    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone(),db,
+                                                        &mut conn.get().unwrap());
     HttpResponse::Ok().json(podcasts)
 }
 
@@ -659,7 +674,7 @@ pub(crate) async fn proxy_podcast(
         .map_err(error::ErrorInternalServerError)?;
 
     let mut client_resp = HttpResponse::build(res.status());
-    // Remove `Connection` as per
+    // Remove `CONNECTION` as per
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
 
     for (header_name, header_value) in res.headers().iter() {

@@ -2,14 +2,15 @@ use std::io::Error;
 use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
 use diesel::prelude::{Insertable, Queryable};
-use diesel::{OptionalExtension, RunQueryDsl, SqliteConnection, AsChangeset};
+use diesel::{OptionalExtension, RunQueryDsl, AsChangeset};
 use diesel::associations::HasTable;
 use utoipa::ToSchema;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
-use crate::schema::users;
+use crate::dbconfig::schema::users;
+use crate::DbConnection;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]
@@ -46,8 +47,8 @@ impl User{
         }
     }
 
-    pub fn find_by_username(username_to_find: &str, conn: &mut SqliteConnection) -> Option<User> {
-        use crate::schema::users::dsl::*;
+    pub fn find_by_username(username_to_find: &str, conn: &mut DbConnection) -> Option<User> {
+        use crate::dbconfig::schema::users::dsl::*;
         match var(USERNAME) {
              Ok(res)=> {
                 if res==username_to_find {
@@ -63,8 +64,8 @@ impl User{
             .unwrap()
     }
 
-    pub fn insert_user(&mut self, conn: &mut SqliteConnection) -> Result<User, Error> {
-        use crate::schema::users::dsl::*;
+    pub fn insert_user(&mut self, conn: &mut DbConnection) -> Result<User, Error> {
+        use crate::dbconfig::schema::users::dsl::*;
 
         match  var(USERNAME){
             Ok(res) => {
@@ -86,12 +87,12 @@ impl User{
         Ok(res)
     }
 
-    pub fn delete_user(&self, conn: &mut SqliteConnection) -> Result<usize, diesel::result::Error> {
+    pub fn delete_user(&self, conn: &mut DbConnection) -> Result<usize, diesel::result::Error> {
         diesel::delete(users::table.filter(users::id.eq(self.id)))
             .execute(conn)
     }
 
-    pub fn update_role(&self, conn: &mut SqliteConnection) -> Result<UserWithoutPassword, diesel::result::Error> {
+    pub fn update_role(&self, conn: &mut DbConnection) -> Result<UserWithoutPassword, diesel::result::Error> {
         let user = diesel::update(users::table.filter(users::id.eq(self.id)))
             .set(users::role.eq(self.role.clone()))
             .get_result::<User>(conn);
@@ -131,8 +132,8 @@ impl User{
         }
     }
 
-    pub fn find_all_users(conn: &mut SqliteConnection) -> Vec<UserWithoutPassword> {
-        use crate::schema::users::dsl::*;
+    pub fn find_all_users(conn: &mut DbConnection) -> Vec<UserWithoutPassword> {
+        use crate::dbconfig::schema::users::dsl::*;
 
         let loaded_users = users.load::<User>(conn).unwrap();
         loaded_users.into_iter().map(|user| User::map_to_dto(user)).collect()
@@ -162,7 +163,7 @@ impl User{
     }
 
 
-    pub fn check_if_admin_or_uploader(username: &Option<String>, conn: &mut SqliteConnection) ->
+    pub fn check_if_admin_or_uploader(username: &Option<String>, conn: &mut DbConnection) ->
                                                                                               Option<HttpResponse> {
         if username.is_some(){
             let found_user = User::find_by_username(&username.clone().unwrap(), conn);
@@ -177,7 +178,7 @@ impl User{
         None
     }
 
-    pub fn check_if_admin(username: &Option<String>, conn: &mut SqliteConnection) ->
+    pub fn check_if_admin(username: &Option<String>, conn: &mut DbConnection) ->
                                                                                               Option<HttpResponse> {
         if username.is_some(){
             let found_user = User::find_by_username(&username.clone().unwrap(), conn);
@@ -193,15 +194,15 @@ impl User{
         None
     }
 
-    pub fn delete_by_username(username_to_search: String, conn: &mut SqliteConnection)->Result<(), Error>{
-        use crate::schema::users::dsl::*;
+    pub fn delete_by_username(username_to_search: String, conn: &mut DbConnection)->Result<(), Error>{
+        use crate::dbconfig::schema::users::dsl::*;
         diesel::delete(users.filter(username.eq(username_to_search))).execute(conn)
             .expect("Error deleting user");
         Ok(())
     }
 
-    pub fn update_user(user: User, conn: &mut SqliteConnection)->Result<(), Error>{
-        use crate::schema::users::dsl::*;
+    pub fn update_user(user: User, conn: &mut DbConnection)->Result<(), Error>{
+        use crate::dbconfig::schema::users::dsl::*;
         diesel::update(users.filter(id.eq(user.clone().id)))
             .set(user).execute(conn)
             .expect("Error updating user");

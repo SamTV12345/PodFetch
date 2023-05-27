@@ -2,12 +2,14 @@ use std::collections::HashMap;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, SqliteConnection, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
-use crate::schema::episodes;
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
+use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
+use diesel::query_builder::QueryBuilder;
 use crate::db::DB;
+use crate::{DbConnection, MyQueryBuilder};
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 
@@ -39,8 +41,8 @@ pub struct Episode{
 
 
 impl Episode{
-    pub fn insert_episode(&self, conn: &mut SqliteConnection) -> Result<Episode, diesel::result::Error> {
-        use crate::schema::episodes::dsl::*;
+    pub fn insert_episode(&self, conn: &mut DbConnection) -> Result<Episode, diesel::result::Error> {
+        use crate::dbconfig::schema::episodes::dsl::*;
 
         let res = episodes.filter(timestamp.eq(self.clone().timestamp)
             .and(device.eq(self.clone().device))
@@ -100,10 +102,10 @@ impl Episode{
             total: episode_dto.total,
         }
     }
-    pub async fn get_actions_by_username(username1: String, conn: &mut SqliteConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
-        use crate::schema::episodes::username;
-        use crate::schema::episodes::dsl::episodes;
-        use crate::schema::episodes::dsl::timestamp;
+    pub async fn get_actions_by_username(username1: String, conn: &mut DbConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
+        use crate::dbconfig::schema::episodes::username;
+        use crate::dbconfig::schema::episodes::dsl::episodes;
+        use crate::dbconfig::schema::episodes::dsl::timestamp;
         match since_date {
             Some(e)=>{
                 episodes
@@ -121,13 +123,20 @@ impl Episode{
         }
     }
 
-    pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut SqliteConnection,
+    pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut DbConnection,
                                                  episode_1: String) ->Option<Episode>{
 
-        let res = sql_query(
-            "SELECT * FROM (SELECT * FROM episodes,podcasts WHERE username=? AND episodes\
-            .podcast=podcasts.rssfeed AND episodes.episode = ? ORDER BY timestamp DESC) GROUP BY \
-            episode  LIMIT 10;")
+        let mut builder = MyQueryBuilder::new();
+
+        builder.push_sql("SELECT * FROM (SELECT * FROM episodes,podcasts WHERE username=");
+        builder.push_bind_param();
+        builder.push_sql(" AND episodes.podcast=podcasts.rssfeed AND episodes.episode = ");
+        builder.push_bind_param();
+        builder.push_sql(" ORDER BY timestamp DESC) GROUP BY episode  LIMIT 10;");
+
+        let query = builder.finish();
+        //TODO Debug with not downloaded podcast episode
+        let res = sql_query(query)
             .bind::<Text, _>(username1.clone())
             .bind::<Text,_>(episode_1)
             .load::<Episode>(conn)
@@ -152,14 +161,29 @@ impl Episode{
         }
     }
 
-    pub fn get_last_watched_episodes(username1: String, conn: &mut SqliteConnection)
+    pub fn get_last_watched_episodes(username1: String, conn: &mut DbConnection)
         ->Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>{
 
 
         let mut map:HashMap<String,Podcast> = HashMap::new();
-        let res = sql_query(
-            r"SELECT * FROM (SELECT * FROM episodes e, podcast_episodes pe WHERE
-            e.username=? AND pe.url=e.episode  ORDER BY timestamp DESC) GROUP BY episode LIMIT 10;")
+
+        let mut builder = MyQueryBuilder::new();
+        builder.push_sql("SELECT * FROM episodes e, podcast_episodes pe WHERE e.username=");
+        builder.push_bind_param();
+        builder.push_sql(" AND pe.url=e.episode  GROUP BY episode, e.id,
+                                                                                                    username, device,
+                                                                                                    podcast,
+                                                                                                    timestamp, guid,
+                                                                                                    action, started,
+                                                                                                    position, total,
+                                                                                                    pe.id,
+                                                                                                    podcast_id,
+                                                                                                    episode_id, name,
+                                                                                                    url,
+                                                                                                    date_of_recording, image_url, total_time, local_url, local_image_url, description, status, download_time ORDER BY timestamp DESC LIMIT 10;");
+
+        let query = builder.finish();
+        let res = sql_query(query)
             .bind::<Text, _>(username1.clone())
             .load::<(Episode,PodcastEpisode)>(conn)
             .expect("");
@@ -187,9 +211,9 @@ impl Episode{
         }).collect()
     }
 
-    pub fn delete_by_username_and_episode(username1: String, conn: &mut SqliteConnection) ->Result<(),Error>{
-        use crate::schema::episodes::username;
-        use crate::schema::episodes::dsl::episodes;
+    pub fn delete_by_username_and_episode(username1: String, conn: &mut DbConnection) ->Result<(),Error>{
+        use crate::dbconfig::schema::episodes::username;
+        use crate::dbconfig::schema::episodes::dsl::episodes;
         diesel::delete(episodes.filter(username.eq(username1)))
                                    .execute(conn).expect("");
         Ok(())

@@ -1,9 +1,11 @@
-use diesel::{Insertable, OptionalExtension, RunQueryDsl, SqliteConnection};
-use crate::schema::filters;
+use diesel::{Insertable, OptionalExtension, RunQueryDsl};
+use crate::dbconfig::schema::filters;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use diesel::AsChangeset;
 use diesel::Queryable;
+use crate::DbConnection;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable, AsChangeset, Queryable)]
 #[serde(rename_all = "camelCase")]
@@ -28,8 +30,8 @@ impl Filter{
         }
     }
 
-    pub fn save_filter(self, conn: &mut SqliteConnection) -> Result<(), diesel::result::Error>{
-        use crate::schema::filters::dsl::*;
+    pub fn save_filter(self, conn: &mut DbConnection) -> Result<(), diesel::result::Error>{
+        use crate::dbconfig::schema::filters::dsl::*;
 
         let opt_filter = filters.filter(username.eq(&self.username)).first::<Filter>(conn)
             .optional().expect("Error connecting to database"); // delete all filters
@@ -46,18 +48,19 @@ impl Filter{
         Ok(())
     }
 
-    pub fn get_filter_by_username(username1: String, conn: &mut SqliteConnection) -> Result<Option<Filter>, diesel::result::Error>{
-        use crate::schema::filters::dsl::*;
-        let opt_filter = filters.filter(username.eq(username1)).first::<Filter>(conn)
-            .optional().expect("Error connecting to database"); // delete all filters
-        Ok(opt_filter)
+    pub async fn get_filter_by_username(username1: String, conn: &mut  DbConnection) ->
+                                                                                   Result<Option<Filter>, diesel::result::Error>{
+        use crate::dbconfig::schema::filters::dsl::*;
+        let res =   filters.filter(username.eq(username1)).first::<Filter>(conn)
+                .optional().expect("Error connecting to database");
+        Ok(res)
     }
 
-    pub fn save_decision_for_timeline(username_to_search: String, conn: &mut SqliteConnection,
+    pub fn save_decision_for_timeline(username_to_search: String, conn: &mut DbConnection,
                                       only_favored_to_insert:
     bool){
-        use crate::schema::filters::only_favored;
-        use crate::schema::filters::dsl::*;
+        use crate::dbconfig::schema::filters::only_favored;
+        use crate::dbconfig::schema::filters::dsl::*;
         diesel::update(filters.filter(username.eq(username_to_search)))
             .set(only_favored.eq(only_favored_to_insert))
             .execute(conn)
