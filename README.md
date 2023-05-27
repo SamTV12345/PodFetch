@@ -21,15 +21,15 @@ Every time a new commit is pushed to the main branch, a new docker image is buil
 
 ### Building the app
 ```bash
-cargo.exe run --color=always --package podfetch --bin podfetch
 # File just needs to be there
 touch static/index.html
-# Enable CORS headers
-export DEV=true
+cargo.exe run --color=always --package podfetch --bin podfetch
 cd ui
 <npm/yarn/pnpm> install
 <npm/yarn/pnpm> run dev
 ```
+
+If you want to run other databases you need to install the corresponding diesel cli. For example for postgres you need to install `diesel_cli --no-default-features --features postgres` and run the same command for running it with cargo.
 
 ## UI Development
 
@@ -39,7 +39,18 @@ I would love to have a UX expert to help me with the UI. If you are interested i
 
 ## Docker
 
-### Docker-Compose
+### Docker-Compose Examples
+
+#### Docker-Compose
+
+##### Advantages over Postgres
+- Easier to setup
+- Easier to use
+
+=> No concurrency. So please don't try to download to podcasts at the same time.
+
+
+### Sqlite
 
 ```yaml
 version: '3'
@@ -58,6 +69,45 @@ services:
 volumes:
   podgrab-podcasts:
   podgrab-db:
+```
+
+### Postgres
+
+#### Advantages over SQLite
+
+- Better performance
+- Better concurrency
+- Better stability
+- Better scalability
+
+#### Docker Compose
+
+```yaml
+version: '3'
+services:
+  podfetch:
+    image: samuel19982/podfetch:dev-postgres
+    ports:
+      - "80:8000"
+    volumes:
+      - ./podcasts:/app/podcasts
+    environment:
+      - POLLING_INTERVAL=300
+      - SERVER_URL=http://localhost:80 # Adjust to your server url
+      - DATABASE_URL=postgresql://postgres:changeme@postgres/podfetch
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /data/postgres
+      POSTGRES_DB: ${POSTGRES_DB:-podfetch}
+    volumes:
+      - postgres:/data/postgres
+    restart: unless-stopped
+
+volumes:
+  postgres:
 ```
 
 # Auth
