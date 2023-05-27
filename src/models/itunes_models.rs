@@ -146,3 +146,9 @@ pub struct PodcastEpisode {
     #[diesel(sql_type = Nullable<Timestamp>)]
     pub(crate) download_time: Option<NaiveDateTime>
 }
+
+impl PodcastEpisode{
+    pub fn is_downloaded(&self) -> bool{
+        self.status == "D"
+    }
+}

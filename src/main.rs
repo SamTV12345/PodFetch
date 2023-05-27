@@ -83,37 +83,7 @@ import_database_connections!();
 
 type DbPool = Pool<ConnectionManager<DbConnection>>;
 
-
-#[cfg(sqlite)]
-type DbConnection = SqliteConnection;
-#[cfg(sqlite)]
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/sqlite");
-#[cfg(sqlite)]
-use diesel::sqlite::SqliteQueryBuilder;
-#[cfg(sqlite)]
-pub type MyQueryBuilder = SqliteQueryBuilder;
-
-
-#[cfg(postgresql)]
-pub type DbConnection = PgConnection;
-
-#[cfg(postgresql)]
-use diesel::pg::PgQueryBuilder;
-#[cfg(postgresql)]
-pub type MyQueryBuilder = PgQueryBuilder;
-
-#[cfg(postgresql)]
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
-
-#[cfg(mysql)]
-type DbConnection = MysqlConnection;
-#[cfg(mysql)]
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/mysql");
-
-#[cfg(mysql)]
-use diesel::mysql::MysqlQueryBuilder;
-#[cfg(mysql)]
-pub type MyQueryBuilder = MysqlQueryBuilder;
+import_database_config!();
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
