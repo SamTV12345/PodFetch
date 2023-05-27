@@ -681,11 +681,10 @@ impl DB {
         Ok(mapped_result)
     }
 
-    pub fn get_downloaded_episodes(&mut self, conn: &mut DbConnection) -> Vec<PodcastEpisode> {
+    pub fn get_episodes(&mut self, conn: &mut DbConnection) -> Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         use crate::dbconfig::schema::podcast_episodes::dsl::status as dsl_status;
         dsl_podcast_episodes
-            .filter(dsl_status.eq("D"))
             .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
     }
@@ -791,7 +790,7 @@ impl DB {
             .expect("Error updating podcast episode");
     }
 
-    pub fn get_downloaded_episodes_by_podcast_id(
+    pub fn get_episodes_by_podcast_id(
         &mut self,
         id_to_search: i32,
         conn: &mut DbConnection
@@ -799,7 +798,6 @@ impl DB {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         podcast_episodes
             .filter(podcast_id.eq(id_to_search))
-            .filter(status.eq("D"))
             .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
     }

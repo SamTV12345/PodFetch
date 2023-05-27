@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
@@ -18,6 +19,7 @@ use reqwest::header::{ACCEPT, HeaderMap};
 use rss::Channel;
 
 use crate::DbConnection;
+use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 
@@ -290,15 +292,48 @@ impl PodcastEpisodeService {
         return podcast_dto;
     }
 
-    pub fn find_all_downloaded_podcast_episodes(&mut self,conn:&mut DbConnection) -> Vec<PodcastEpisode> {
+    pub fn find_all_downloaded_podcast_episodes(&mut self, conn:&mut DbConnection, env: EnvironmentService) ->
+                                                                                   Vec<PodcastEpisode> {
         let mut db = DB::new().unwrap();
-        let result = db.get_downloaded_episodes(conn);
+        let result = db.get_episodes(conn);
+        self.map_rss_podcast_episodes(env, result)
+    }
+
+    fn map_rss_podcast_episodes(&mut self, env: EnvironmentService, result: Vec<PodcastEpisode>) -> Vec<PodcastEpisode> {
         result
             .iter()
             .map(|podcast| {
-                return self.mapping_service.map_podcastepisode_to_dto(podcast);
+                let mut podcast_episode_dto = self.mapping_service.map_podcastepisode_to_dto(podcast);
+                return if podcast_episode_dto.is_downloaded() {
+                    let local_url = self.map_to_local_url(&podcast_episode_dto.clone().local_url);
+                    let local__image_url = self.map_to_local_url(&podcast_episode_dto.clone()
+                        .local_image_url);
+
+                    podcast_episode_dto.local_image_url = env.server_url.clone() + &local__image_url;
+                    podcast_episode_dto.local_url = env.server_url.clone() + &local_url;
+
+                    return podcast_episode_dto
+                } else {
+                    podcast_episode_dto.local_image_url = podcast_episode_dto.clone().image_url;
+                    podcast_episode_dto.local_url = podcast_episode_dto.clone().url;
+
+                    podcast_episode_dto
+                }
             })
             .collect::<Vec<PodcastEpisode>>()
+    }
+
+
+    fn map_to_local_url(&mut self, url: &str) -> String {
+        let splitted_url = url.split("/").collect::<Vec<&str>>();
+        splitted_url.iter()
+            .map(|s| return if s.starts_with("podcasts.")|| s.starts_with("image.") {
+                s.to_string()
+            } else {
+                urlencoding::encode(s).clone().to_string()
+            })
+            .collect::<Vec<_>>()
+            .join("/")
     }
 
     pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
@@ -307,14 +342,9 @@ impl PodcastEpisodeService {
         conn:&mut DbConnection
     ) -> Vec<PodcastEpisode> {
         let mut db = DB::new().unwrap();
-
-        let result = db.get_downloaded_episodes_by_podcast_id(podcast_id,conn);
-        result
-            .iter()
-            .map(|podcast| {
-                return self.mapping_service.map_podcastepisode_to_dto(podcast);
-            })
-            .collect::<Vec<PodcastEpisode>>()
+        let env = EnvironmentService::new();
+        let result = db.get_episodes_by_podcast_id(podcast_id, conn);
+        self.map_rss_podcast_episodes(env, result)
     }
 
     fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32, conn:&mut DbConnection) {

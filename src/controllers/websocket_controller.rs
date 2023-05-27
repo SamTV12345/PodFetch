@@ -7,13 +7,8 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix::Addr;
 use actix_web::{get, web, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use rss::extension::itunes::{
-    ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtensionBuilder,
-    ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
-};
-use rss::{
-    Category, CategoryBuilder, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder,
-};
+use rss::extension::itunes::{ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder, ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder};
+use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder};
 use std::sync::Mutex;
 use crate::DbPool;
 use crate::mutex::LockResultExt;
@@ -32,13 +27,14 @@ pub async fn start_connection(
 #[get("/rss")]
 pub async fn get_rss_feed(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
-    db: Data<DbPool>,
+    db: Data<DbPool>, env: Data<Mutex<EnvironmentService>>
 ) -> HttpResponse {
-    let env = EnvironmentService::new();
+    let env = env.lock().ignore_poison();
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes(&mut db.get().unwrap());
+    let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes(&mut db.get()
+        .unwrap(), env.clone());
 
     let server_url = env.get_server_url();
 
@@ -54,16 +50,30 @@ pub async fn get_rss_feed(
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
-    let channel = ChannelBuilder::default()
+    let items = get_podcast_items_rss(downloaded_episodes.clone());
+
+    let channel_builder = ChannelBuilder::default()
         .language("en".to_string())
         .title("Podfetch")
         .link(format!("{}{}", &server_url, &"rss"))
         .description("Your local rss feed for your podcasts")
-        .itunes_ext(itunes_ext)
-        .items(get_podcast_items_rss(downloaded_episodes))
-        .build();
+        .items(items.clone()).clone();
+
+    let channel = generate_itunes_extension_conditionally(itunes_ext, items, channel_builder);
 
     HttpResponse::Ok().body(channel.to_string())
+}
+
+fn generate_itunes_extension_conditionally(itunes_ext: ITunesChannelExtension, items: Vec<Item>,
+                                           mut channel_builder: ChannelBuilder) ->Channel{
+    return if items.len() == 0 {
+        channel_builder
+            .build()
+    } else {
+        channel_builder
+            .itunes_ext(itunes_ext)
+            .build()
+    }
 }
 
 #[get("/rss/{id}")]
@@ -120,15 +130,17 @@ pub async fn get_rss_feed_for_podcast(
                 .summary(podcast.summary.clone())
                 .build();
 
-            let channel = ChannelBuilder::default()
+            let items = get_podcast_items_rss(downloaded_episodes.clone());
+            let channel_builder = ChannelBuilder::default()
                 .language(podcast.language)
                 .categories(categories)
                 .title(podcast.name)
                 .link(format!("{}{}/{}", &server_url, &"rss", &id))
                 .description(podcast.summary.unwrap())
-                .itunes_ext(itunes_ext)
-                .items(get_podcast_items_rss(downloaded_episodes))
-                .build();
+                .items(items.clone()).clone();
+
+            let channel = generate_itunes_extension_conditionally(itunes_ext, items,
+                                                                  channel_builder);
 
             HttpResponse::Ok().body(channel.to_string())
         }
@@ -139,14 +151,12 @@ pub async fn get_rss_feed_for_podcast(
 }
 
 fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> {
-    let env = EnvironmentService::new();
-    let server_url = env.server_url;
 
     downloaded_episodes
         .iter()
         .map(|episode| {
             let enclosure = EnclosureBuilder::default()
-                .url(format!("{}{}",server_url,&episode.clone().local_url))
+                .url(&episode.clone().local_url)
                 .length(episode.clone().total_time.to_string())
                 .mime_type(format!(
                     "{}/{}",
@@ -157,7 +167,7 @@ fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> 
 
             let itunes_extension = ITunesItemExtensionBuilder::default()
                 .duration(Some(episode.clone().total_time.to_string()))
-                .image(Some(format!("{}{}",server_url,episode.clone().local_image_url)))
+                .image(Some(episode.clone().local_image_url))
                 .build();
 
             let guid = GuidBuilder::default()
