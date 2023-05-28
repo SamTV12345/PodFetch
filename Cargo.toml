@@ -65,3 +65,4 @@ openssl = "0.10.52"
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
+lto = "thin"
