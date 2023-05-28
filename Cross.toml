@@ -46,16 +46,16 @@ env.passthrough = ["RUSTFLAGS","TARGET_CC=gcc", "CFLAGS=-mno-outline-atomics"]
 image.name="docker-registry.schwanzer.online/public/aarch64-unknown-linux-gnu:local"
 image.toolchain = ["linux/arm64=aarch64-unknown-linux-gnu","x86_64-unknown-linux-gnu"]
 env.passthrough = ["RUSTFLAGS"]
-pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH && apt update && apt install git:$CROSS_DEB_ARCH -y"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH && apt update && apt install git:$CROSS_DEB_ARCH -y"]
 
 [target."armv7-unknown-linux-gnueabihf"]
 image.name="docker-registry.schwanzer.online/public/armv7-unknown-linux-gnueabihf:local"
 image.toolchain = ["linux/arm64=aarch64-unknown-linux-gnu","x86_64-unknown-linux-gnu"]
 env.passthrough = ["RUSTFLAGS"]
-pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH && apt update && apt install git:$CROSS_DEB_ARCH -y"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH && apt update && apt install git:$CROSS_DEB_ARCH -y"]
 
 [target."x86_64-unknown-linux-gnu"]
 image.name="docker-registry.schwanzer.online/public/x86_64-unknown-linux-gnu:local"
 image.toolchain = ["linux/arm64=aarch64-unknown-linux-gnu","x86_64-unknown-linux-gnu"]
 env.passthrough = ["RUSTFLAGS"]
-pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH && apt update && apt install git:$CROSS_DEB_ARCH -y"]
+#pre-build = ["dpkg --add-architecture $CROSS_DEB_ARCH && apt update && apt install git:$CROSS_DEB_ARCH -y"]
