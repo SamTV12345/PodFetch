@@ -108,7 +108,7 @@ pub async fn get_info() -> impl Responder {
     let version = VersionInfo{
         commit: env!("GIT_EXACT_TAG"),
         version: env!("VW_VERSION"),
-        r#ref: env!("GIT_REV"),
+        r#ref: env!("GIT_BRANCH"),
         ci: built_info::CI_PLATFORM.unwrap_or("No CI platform"),
         time: built_info::BUILT_TIME_UTC,
         os: built_info::CFG_OS,
