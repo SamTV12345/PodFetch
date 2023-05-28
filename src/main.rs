@@ -443,20 +443,22 @@ async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<Sqlite
 
 
 #[cfg(postgresql)]
-async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<PgConnection>>,
+async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DbConnection>>,
     String> {
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let db_connections = var("DB_CONNECTIONS").unwrap_or("10".to_string()).parse()
+        .unwrap_or(10);
+    let manager = ConnectionManager::<DbConnection>::new(database_url);
     let pool = Pool::builder()
-        .max_size(1)
+        .max_size(db_connections)
         .build(manager)
         .expect("Failed to create pool.");
     Ok(pool)
 }
 
 #[cfg(mysql)]
-async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<MysqlConnection >>,
+async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DbConnection>>,
     String> {
-    let manager = ConnectionManager::<MysqlConnection >::new(database_url);
+    let manager = ConnectionManager::<DbConnection>::new(database_url);
     let pool = Pool::builder().max_size(16)
         .build(manager).unwrap();
     Ok(pool)

@@ -22,7 +22,6 @@ fn main() {
         version_from_git_info().expect("Error retrieving git information");
 
 
-        #[cfg(feature = "sqlite")]
         create_git_sqlite(opts);
 
         if let Ok(version) = maybe_vaultwarden_version {
@@ -40,7 +39,9 @@ fn main() {
 
 }
 
+
 fn create_git_sqlite(mut opts: Options) {
+        #[cfg(feature = "sqlite")]
         opts.set_git(true);
         let src = env::var("CARGO_MANIFEST_DIR").unwrap();
         let dst = Path::new(&env::var("OUT_DIR").unwrap()).join("built.rs");

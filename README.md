@@ -95,6 +95,7 @@ services:
       - POLLING_INTERVAL=300
       - SERVER_URL=http://localhost:80 # Adjust to your server url
       - DATABASE_URL=postgresql://postgres:changeme@postgres/podfetch
+      - DB_CONNECTIONS=10 # optional
   postgres:
     image: postgres
     environment:
