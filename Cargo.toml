@@ -13,7 +13,8 @@ default = ["sqlite"]
 mysql = ["diesel/mysql", "diesel_migrations/mysql", "diesel/mysql_backend"]
 postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", "r2d2_postgres",
     "diesel/postgres_backend"]
-sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
+sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35",
+    "openssl/vendored"]
 
 [dependencies]
 awc =  {version="3.1.1", features = ["rustls"]}
@@ -62,7 +63,6 @@ strfmt="0.2.4"
 urlencoding="2.1.2"
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.52"
-
 
 
 [profile.release]
