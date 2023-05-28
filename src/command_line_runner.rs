@@ -282,9 +282,9 @@ pub fn create_debug_message() {
     println!("Target: {}", built_info::TARGET);
     println!("Endian: {}", built_info::CFG_ENDIAN);
     println!("Debug: {}", built_info::DEBUG);
-    println!("Git Version: {:?}", built_info::GIT_VERSION);
-    println!("Git Commit Hash: {:?}", built_info::GIT_COMMIT_HASH);
-    println!("Git Head Ref: {:?}", built_info::GIT_HEAD_REF);
+    println!("Git Version: {:?}", "");
+    println!("Git Commit Hash: {:?}", "");
+    println!("Git Head Ref: {:?}", "");
     println!("Build Time: {}", built_info::BUILT_TIME_UTC);
     println!("Version: {}", built_info::PKG_VERSION);
     println!("Authors: {}", built_info::PKG_AUTHORS);
