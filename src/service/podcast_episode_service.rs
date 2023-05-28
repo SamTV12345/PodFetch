@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::db::DB;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
@@ -306,10 +305,10 @@ impl PodcastEpisodeService {
                 let mut podcast_episode_dto = self.mapping_service.map_podcastepisode_to_dto(podcast);
                 return if podcast_episode_dto.is_downloaded() {
                     let local_url = self.map_to_local_url(&podcast_episode_dto.clone().local_url);
-                    let local__image_url = self.map_to_local_url(&podcast_episode_dto.clone()
+                    let local_image_url = self.map_to_local_url(&podcast_episode_dto.clone()
                         .local_image_url);
 
-                    podcast_episode_dto.local_image_url = env.server_url.clone() + &local__image_url;
+                    podcast_episode_dto.local_image_url = env.server_url.clone() + &local_image_url;
                     podcast_episode_dto.local_url = env.server_url.clone() + &local_url;
 
                     return podcast_episode_dto
