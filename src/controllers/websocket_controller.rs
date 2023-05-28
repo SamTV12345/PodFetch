@@ -1,6 +1,6 @@
 use crate::controllers::web_socket::WsConn;
 use crate::db::DB;
-use crate::models::itunes_models::PodcastEpisode;
+use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -9,7 +9,7 @@ use actix_web::{get, web, web::Data, web::Payload, Error, HttpRequest, HttpRespo
 use actix_web_actors::ws;
 use rss::extension::itunes::{ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder, ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder};
 use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder};
-use std::sync::Mutex;
+use std::sync::{Mutex};
 use crate::DbPool;
 use crate::mutex::LockResultExt;
 
@@ -46,7 +46,7 @@ pub async fn get_rss_feed(
         .explicit(Some("no".to_string()))
         .author(Some("Podfetch".to_string()))
         .keywords(Some("Podcast, RSS, Feed".to_string()))
-        .new_feed_url(format!("{}{}", &server_url, &"/rss"))
+        .new_feed_url(format!("{}{}", &server_url, &"rss"))
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
@@ -59,17 +59,38 @@ pub async fn get_rss_feed(
         .description("Your local rss feed for your podcasts")
         .items(items.clone()).clone();
 
-    let channel = generate_itunes_extension_conditionally(itunes_ext, items, channel_builder);
+    let channel = generate_itunes_extension_conditionally(itunes_ext, items, channel_builder,
+                                                          None, env.clone());
 
     HttpResponse::Ok().body(channel.to_string())
 }
 
-fn generate_itunes_extension_conditionally(itunes_ext: ITunesChannelExtension, items: Vec<Item>,
-                                           mut channel_builder: ChannelBuilder) ->Channel{
+fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtension, items: Vec<Item>,
+                                           mut channel_builder: ChannelBuilder,
+                                           podcast: Option<Podcast>,
+                                           env: EnvironmentService) ->Channel{
     return if items.len() == 0 {
+        if podcast.is_some() {
+            let unwrapped_podcast = podcast.unwrap();
+            match unwrapped_podcast.image_url.len() > 0{
+                true => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.image_url),
+                false => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.original_image_url)
+            }
+        }
+
+
         channel_builder
             .build()
     } else {
+
+        if podcast.is_some() {
+            let unwrapped_podcast = podcast.unwrap();
+
+            match unwrapped_podcast.image_url.len() > 0{
+                true => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.image_url),
+                false => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.original_image_url)
+            }
+        }
         channel_builder
             .itunes_ext(itunes_ext)
             .build()
@@ -83,7 +104,7 @@ pub async fn get_rss_feed_for_podcast(
     conn: Data<DbPool>,
 ) -> HttpResponse {
     let env = EnvironmentService::new();
-    let server_url = env.server_url;
+    let server_url = env.server_url.clone();
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
@@ -126,21 +147,23 @@ pub async fn get_rss_feed_for_podcast(
                 .explicit(podcast.clone().explicit)
                 .author(podcast.clone().author)
                 .keywords(podcast.clone().keywords)
-                .new_feed_url(format!("{}{}/{}", &server_url, &"/rss", &id))
+                .new_feed_url(format!("{}{}/{}", &server_url, &"rss", &id))
                 .summary(podcast.summary.clone())
                 .build();
 
             let items = get_podcast_items_rss(downloaded_episodes.clone());
             let channel_builder = ChannelBuilder::default()
-                .language(podcast.language)
+                .language(podcast.clone().language)
                 .categories(categories)
-                .title(podcast.name)
+                .title(podcast.name.clone())
                 .link(format!("{}{}/{}", &server_url, &"rss", &id))
-                .description(podcast.summary.unwrap())
+                .description(podcast.clone().summary.unwrap())
                 .items(items.clone()).clone();
 
             let channel = generate_itunes_extension_conditionally(itunes_ext, items,
-                                                                  channel_builder);
+                                                                  channel_builder, Some(podcast
+                    .clone()), env
+            );
 
             HttpResponse::Ok().body(channel.to_string())
         }
@@ -176,6 +199,7 @@ fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> 
                 .build();
             let item = ItemBuilder::default()
                 .guid(Some(guid))
+                .pub_date(Some(episode.clone().date_of_recording))
                 .title(Some(episode.clone().name))
                 .description(Some(episode.clone().description))
                 .enclosure(Some(enclosure))
