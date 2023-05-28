@@ -106,9 +106,9 @@ pub struct VersionInfo {
 #[get("/info")]
 pub async fn get_info() -> impl Responder {
     let version = VersionInfo{
-        commit: built_info::GIT_COMMIT_HASH.unwrap_or("No commit hash"),
-        version: built_info::GIT_VERSION.unwrap_or("No git version"),
-        r#ref: built_info::GIT_HEAD_REF.unwrap_or("No github ref"),
+        commit: env!("GIT_EXACT_TAG"),
+        version: env!("VW_VERSION"),
+        r#ref: env!("GIT_REV"),
         ci: built_info::CI_PLATFORM.unwrap_or("No CI platform"),
         time: built_info::BUILT_TIME_UTC,
         os: built_info::CFG_OS,

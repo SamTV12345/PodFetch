@@ -6,7 +6,7 @@ build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
-built = {version="0.6.0", features=["git2", "chrono", "semver"]}
+built = {version="0.6.0", features=["chrono", "semver"]}
 
 [features]
 default = ["sqlite"]
@@ -60,7 +60,7 @@ sha256 = "1.1.3"
 deunicode = "1.3.3"
 strfmt="0.2.4"
 urlencoding="2.1.2"
-#[target.'cfg(not(windows))'.dependencies]
+[target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.52"
 
 [profile.release]
