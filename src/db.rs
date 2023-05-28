@@ -683,7 +683,6 @@ impl DB {
 
     pub fn get_episodes(&mut self, conn: &mut DbConnection) -> Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
-        use crate::dbconfig::schema::podcast_episodes::dsl::status as dsl_status;
         dsl_podcast_episodes
             .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
