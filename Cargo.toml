@@ -9,7 +9,7 @@ build = "build.rs"
 built = {version="0.6.0", features=["chrono", "semver"]}
 
 [features]
-default = ["postgresql"]
+default = ["sqlite"]
 mysql = ["diesel/mysql", "diesel_migrations/mysql", "diesel/mysql_backend"]
 postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", "r2d2_postgres",
     "diesel/postgres_backend"]
@@ -63,6 +63,8 @@ strfmt="0.2.4"
 urlencoding="2.1.2"
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.52"
+
+
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
