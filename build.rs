@@ -21,9 +21,6 @@ fn main() {
         #[cfg(feature = "postgresql")]
         version_from_git_info().expect("Error retrieving git information");
 
-
-        create_git_sqlite(opts);
-
         if let Ok(version) = maybe_vaultwarden_version {
                 println!("cargo:rustc-env=VW_VERSION={version}");
                 println!("cargo:rustc-env=CARGO_PKG_VERSION={version}");
@@ -33,16 +30,14 @@ fn main() {
                 println!("cargo:rustc-env=VW_VERSION=unknown");
                 println!("cargo:rustc-env=CARGO_PKG_VERSION=unknown");
                 println!("cargo:rustc-env=GIT_EXACT_TAG=unknown");
+                println!("cargo:rustc-env=GIT_LAST_TAG=unknown");
+                println!("cargo:rustc-env=GIT_BRANCH=unknown");
+                println!("cargo:rustc-env=GIT_REV=unknown");
         }
-
-
-
 }
 
 
 fn create_git_sqlite(mut opts: Options) {
-        #[cfg(feature = "sqlite")]
-        opts.set_git(true);
         let src = env::var("CARGO_MANIFEST_DIR").unwrap();
         let dst = Path::new(&env::var("OUT_DIR").unwrap()).join("built.rs");
         println!("Path: {:?}", dst);
