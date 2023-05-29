@@ -57,6 +57,7 @@ version: '3'
 services:
   podfetch:
     image: samuel19982/podfetch:latest
+    user: ${UID:-1000}:${GID:-1000}
     ports:
       - "80:8000"
     volumes:
@@ -87,6 +88,7 @@ version: '3'
 services:
   podfetch:
     image: samuel19982/podfetch:dev-postgres
+    user: ${UID:-1000}:${GID:-1000}
     ports:
       - "80:8000"
     volumes:
