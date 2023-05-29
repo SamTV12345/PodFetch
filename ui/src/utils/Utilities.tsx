@@ -8,6 +8,7 @@ import i18n from "i18next";
 import {PodcastEpisode} from "../store/CommonSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Filter} from "../models/Filter";
+import {OrderCriteria} from "../models/Order";
 
 const defaultOptions: IOptions = {
     allowedTags: ['b', 'i', 'em', 'strong', 'a'],
@@ -128,3 +129,27 @@ export const getFiltersDefault = () => {
     } satisfies Filter
 }
 
+export type OrderCriteriaSortingType = {
+    sorting: OrderCriteria,
+    ascending: boolean
+}
+
+export const TITLE_ASCENDING:OrderCriteriaSortingType = {
+    sorting: OrderCriteria.TITLE,
+    ascending: true
+}
+
+export const TIME_ASCENDING:OrderCriteriaSortingType = {
+    sorting: OrderCriteria.PUBLISHEDDATE,
+    ascending: true
+}
+
+export const TIME_DESCENDING:OrderCriteriaSortingType = {
+    sorting: OrderCriteria.PUBLISHEDDATE,
+    ascending: false
+}
+
+export const TITLE_DESCENDING:OrderCriteriaSortingType = {
+    sorting: OrderCriteria.TITLE,
+    ascending: false
+}

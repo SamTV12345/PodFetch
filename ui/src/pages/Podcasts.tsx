@@ -1,6 +1,12 @@
 import {FC, useEffect} from "react";
 import axios, {AxiosResponse} from "axios";
-import {apiURL, getFiltersDefault} from "../utils/Utilities";
+import {
+    apiURL,
+    getFiltersDefault,
+    OrderCriteriaSortingType, TIME_ASCENDING, TIME_DESCENDING,
+    TITLE_ASCENDING,
+    TITLE_DESCENDING
+} from "../utils/Utilities";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {Podcast, setFilters, setPodcasts} from "../store/CommonSlice";
 import {Card} from "../components/Card";
@@ -10,7 +16,7 @@ import {useLocation} from "react-router-dom";
 import {MaginifyingGlassIcon} from "../icons/MaginifyingGlassIcon";
 import {useDebounce} from "../utils/useDebounce";
 import {useTranslation} from "react-i18next";
-import {Order, OrderCriteria} from "../models/Order";
+import {Order} from "../models/Order";
 import {Filter} from "../models/Filter";
 import {PlusIcon} from "../icons/PlusIcon";
 import {RefreshIcon} from "../icons/RefreshIcon";
@@ -90,20 +96,19 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
                     </span>
                 </span>
             <div className="flex flex-1"></div>
-            <select  className="border text-sm rounded-lg block p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
+            <select   className="border text-center text-sm rounded-3xl block bg-amber-300 focus:border-none active:border-none bg-opacity-70 focus:ring-blue-500  focus:border-blue-500 w-36 h-10"
                      onChange={(v)=> {
-                         dispatch(setFilters({...filters as Filter,filter: v.target.value as OrderCriteria}))
-                     }} value={filters?.ascending?Order.ASC:Order.DESC}>
-                <option value={OrderCriteria.PUBLISHEDDATE}>{t('sort-by-published-date')}</option>
-                <option value={OrderCriteria.TITLE}>{t('sort-by-title')}</option>
+                         let converted = JSON.parse(v.target.value) as OrderCriteriaSortingType
+                         dispatch(setFilters({...filters as Filter,filter: converted.sorting, ascending: converted.ascending}))
+                     }} value={JSON.stringify({sorting: filters?.filter,ascending: filters?.ascending})}>
+                <option value={JSON.stringify(TIME_ASCENDING)}>1.1.-31.12</option>
+                <option value={JSON.stringify(TIME_DESCENDING)}>31.12-1.1</option>
+                <option value={JSON.stringify(TITLE_ASCENDING)}>A-Z</option>
+                <option value={JSON.stringify(TITLE_DESCENDING)}>Z-A</option>
             </select>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5"
-                 stroke="currentColor" className={`${filters?.ascending?'rotate-180':''} w-6 h-6`} onClick={()=>{dispatch(setFilters({...filters as Filter,ascending: !filters?.ascending}))}}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18"/>
-            </svg>
         </div>
                 <div className="flex-1"></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5  xs:grid-cols-3 gap-2 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6  xs:grid-cols-3 lg:gap-10 pt-3">
             {!onlyFavorites&&podcasts.map((podcast)=>{
 
                 return <Card podcast={podcast} key={podcast.id}/>
