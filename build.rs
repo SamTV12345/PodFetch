@@ -21,6 +21,7 @@ fn main() {
         #[cfg(feature = "postgresql")]
         version_from_git_info().expect("Error retrieving git information");
 
+        create_git_sqlite(opts);
         if let Ok(version) = maybe_vaultwarden_version {
                 println!("cargo:rustc-env=VW_VERSION={version}");
                 println!("cargo:rustc-env=CARGO_PKG_VERSION={version}");
