@@ -31,7 +31,7 @@ diesel_migrations = "2.0.0"
 actix-files = "0.6.2"
 actix-web = {version="4.3.0", features=["rustls"]}
 jsonwebtoken = {version="8.2.0"}
-log = "0.4.17"
+log = "0.4.18"
 futures-util = "0.3.28"
 opml = "1.1.5"
 rand = "0.8.5"
@@ -48,7 +48,7 @@ utoipa = { version = "3", features = ["actix_extras"] }
 futures = "0.3.28"
 utoipa-swagger-ui = {version = "3", features = ["actix-web"] }
 clokwerk= "0.4.0"
-tokio = {version = "1.28.1", features = ["full"]}
+tokio = {version = "1.28.2", features = ["full"]}
 serde = "1.0.163"
 serde_derive = "1.0.152"
 sysinfo = {version = "0.29.0", features = ["serde"]}
