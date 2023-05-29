@@ -61,15 +61,15 @@ services:
     ports:
       - "80:8000"
     volumes:
-      - podgrab-podcasts:/app/podcasts
-      - podgrab-db:/app/db
+      - podfetch-podcasts:/app/podcasts
+      - podfetch-db:/app/db
     environment:
       - POLLING_INTERVAL=60
       - SERVER_URL=http://<your-ip>:<your-port>
 
 volumes:
-  podgrab-podcasts:
-  podgrab-db:
+  podfetch-podcasts:
+  podfetch-db:
 ```
 
 ### Postgres

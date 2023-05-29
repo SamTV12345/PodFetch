@@ -6,13 +6,13 @@ services:
     ports:
       - "80:8000"
     volumes:
-      - podgrab-podcasts:/app/podcasts
-      - podgrab-db:/app/db
+      - podfetch-podcasts:/app/podcasts
+      - podfetch-db:/app/db
     environment:
       - POLLING_INTERVAL=60
       - SERVER_URL=http://localhost:80
       - DATABASE_URL=sqlite:///app/db/podcast.db
 
 volumes:
-    podgrab-podcasts:
-    podgrab-db:
+    podfetch-podcasts:
+    podfetch-db:
