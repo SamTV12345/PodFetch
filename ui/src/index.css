@@ -152,7 +152,11 @@
 }
 
 .sidebar .active{
-    @apply bg-gray-700;
+    @apply bg-amber-400 text-amber-500 text-opacity-60 bg-opacity-40 rounded-2xl;
+}
+
+.sidebar .active svg{
+    @apply text-amber-500 fill-amber-500;
 }
 
 #podcast-add-decider .active{

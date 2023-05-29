@@ -27,7 +27,7 @@ export const Notifications = () => {
         }
         else{
             return notifications.map((notification, index) => {
-                return <div className="relative flex text-white ml-2 mr-2 border-b-2 border-b-amber-800 pt-4" key={index}>
+                return <div className="relative flex text-black ml-2 mr-2 border-b-2 border-b-amber-800 pt-4" key={index}>
                     {notification.message}
                     <div className="absolute right-0 top-0 cursor-pointer" onClick={()=>{dismissNotification(notification)}}>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">

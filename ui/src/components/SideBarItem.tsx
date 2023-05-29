@@ -6,10 +6,11 @@ import {setSideBarCollapsed} from "../store/CommonSlice";
 type SideBarItemProps = {
     highlightPath:string,
     translationkey: string,
-    icon:React.ReactElement
+    icon:React.ReactElement,
+    className?:string
 }
 
-export const SideBarItem:FC<SideBarItemProps>  =({highlightPath,translationkey,icon})=>{
+export const SideBarItem:FC<SideBarItemProps>  =({highlightPath,translationkey,icon, className})=>{
     const dispatch = useAppDispatch()
 
     const minimizeOnMobile = ()=>{
@@ -17,10 +18,10 @@ export const SideBarItem:FC<SideBarItemProps>  =({highlightPath,translationkey,i
             dispatch(setSideBarCollapsed(true))
         }
     }
-    return   <li className="sidebar" onClick={()=>minimizeOnMobile()}>
-        <NavLink to={highlightPath} className="flex items-center p-2 text-base font-normal rounded-lg text-white hover:bg-gray-700 h-20">
+    return   <li className={"sidebar "+className} onClick={()=>minimizeOnMobile()}>
+        <NavLink to={highlightPath} className="flex pl-2  mt-1 mb-1  items-center text-base font-normal rounded-lg text-white hover:text-amber-400 hover:bg-amber-400 hover:bg-opacity-30 h-14">
             {icon}
-            <span className="ml-3">{translationkey}</span>
+            <span className="ml-3 hover:text-inherit">{translationkey}</span>
         </NavLink>
     </li>
 }

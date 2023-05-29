@@ -10,12 +10,13 @@ import {ConfirmModal} from "../components/ConfirmModal";
 import {PodcastDelete} from "../components/PodcastDelete";
 import {OPMLExport} from "../components/OPMLExport";
 import {PodcastNaming} from "../components/PodcastNaming";
+import {useNavigate} from "react-router-dom";
 
 export const SettingsPage = () => {
     const {t} = useTranslation()
     const [settings, setSettings] = useState<Setting>()
     const {enqueueSnackbar} = useSnackbar()
-
+    const navigate = useNavigate()
 
     useEffect(()=>{
         axios.get(apiURL+"/settings").then((res:AxiosResponse<Setting>)=>{
@@ -30,7 +31,7 @@ export const SettingsPage = () => {
 
 
     return (
-        <div className="p-6">
+        <div className="p-6 h-full">
             <ConfirmModal/>
             <h1 className="text-2xl text-center font-bold">{t('settings')}</h1>
             <div className="grid gap-5">
@@ -85,7 +86,7 @@ export const SettingsPage = () => {
                 </div>
             </div>
 
-
+                <button onClick={()=>{navigate('/info')}}>To Info Page</button>
                 <OPMLExport/>
                 <PodcastNaming settings={settings}/>
             <PodcastDelete/>

@@ -5,7 +5,7 @@ export const AdministrationPage = () => {
     const {t} = useTranslation()
     const navigate = useNavigate()
 
-    return <div className="grid grid-cols-1 md:grid-cols-2 p-5 gap-5">
+    return <div className="block static"><div className="grid grid-cols-1 md:grid-cols-2 p-5 gap-5">
         <button className="bg-slate-600 grid place-items-center text-3xl text-white" onClick={()=>{
             navigate('/administration/users')
         }}>
@@ -22,5 +22,5 @@ export const AdministrationPage = () => {
                 {t('invites')}
             </div>
         </button>
-    </div>
+    </div></div>
 }

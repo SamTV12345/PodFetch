@@ -1,7 +1,10 @@
 {
   "homepage" : "Page d'accueil",
   "podcasts" : "Podcast",
-  "last-listened" : "Récemment écouté",
+  "add-new": "Ajouter un nouveau",
+  "search": "Rechercher",
+  "all-subscriptions": "Toutes les abonnements",
+  "last-listened": "Récemment écouté",
   "no-notifications" : "Pas de notifications",
   "download-computer" : "Télécharger sur l'ordinateur",
   "download-to-server" : "Télécharger sur le serveur",
