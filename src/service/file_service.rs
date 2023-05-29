@@ -116,7 +116,7 @@ impl FileService {
     }
 
     pub fn delete_podcast_files(podcast_dir: &str){
-        std::fs::remove_dir_all(format!("podcasts/{}", podcast_dir)).expect("Error deleting podcast directory");
+        std::fs::remove_dir_all(podcast_dir).expect("Error deleting podcast directory");
     }
 }
 
