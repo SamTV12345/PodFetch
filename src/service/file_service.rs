@@ -97,6 +97,7 @@ impl FileService {
     }
 
     pub async fn download_podcast_image(&self, podcast_path: &str, image_url: &str, podcast_id: &str, conn: &mut DbConnection) {
+
         let image_response = self.client.get(image_url).send().await.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(image_url);
         let file_path = PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix);

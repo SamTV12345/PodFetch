@@ -155,9 +155,9 @@ impl PodcastService {
         match podcast {
             Some(podcast) => {
                 spawn_blocking(move || {
+                    let mut conn = establish_connection();
                     let mut podcast_service = PodcastService::new();
                     let mut podcast_episode_service = PodcastEpisodeService::new();
-                    let mut conn = establish_connection();
                     log::debug!("Inserting podcast episodes: {}", podcast.name);
                     let inserted_podcasts =
                         podcast_episode_service.insert_podcast_episodes(&mut conn, podcast.clone());
