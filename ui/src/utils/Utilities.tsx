@@ -106,9 +106,8 @@ export const preparePodcastEpisode = (episode: PodcastEpisode, response: Podcast
 
 
 export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: PodcastWatchedModel) => {
-    const strippedUrl = episode.url.replace(/\?.*$/, "");
     const strippedImage = episode.image_url.replace(/\?.*$/, "");
-    const test = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?url=' + strippedUrl
+    const test = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?episodeId=' + episode.episode_id
 
     return {
         ...episode,

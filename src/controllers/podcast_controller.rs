@@ -25,6 +25,8 @@ use std::sync::{Mutex};
 use std::thread;
 use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
+use base64::Engine;
+use base64::engine::general_purpose;
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
 use crate::db::DB;
@@ -33,14 +35,16 @@ use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
 use futures_util::{StreamExt};
+use regex::Regex;
 use reqwest::header::HeaderMap;
 use tokio::sync::mpsc;
 use crate::models::filter::Filter;
-use crate::models::itunes_models::Podcast;
+use crate::models::itunes_models::{Podcast};
 use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -265,7 +269,14 @@ pub async fn add_podcast_by_feed(
         return HttpResponse::Unauthorized().json("Unauthorized");
     }
     let client = AsyncClientBuilder::new().build().unwrap();
-    let result = client.get(rss_feed.clone().rss_feed_url).send().await.unwrap();
+    let mut header_map = HeaderMap::new();
+    add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
+    let result = client.get(rss_feed.clone().rss_feed_url)
+        .headers(header_map)
+        .send()
+        .await
+        .unwrap();
+
     let bytes = result.bytes().await.unwrap();
     let channel = Channel::read_from(&*bytes).unwrap();
     let num = rand::thread_rng().gen_range(100..10000000);
@@ -623,8 +634,9 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     HttpResponse::Ok().into()
 }
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Params {
-    url: String,
+    episode_id: String,
 }
 
 #[get("/proxy/podcast")]
@@ -633,9 +645,16 @@ pub(crate) async fn proxy_podcast(
     params: web::Query<Params>,
     peer_addr: Option<PeerAddr>,
     method: Method,
-    rq: HttpRequest
+    rq: HttpRequest,
+    pool: Data<DbPool>
 ) -> Result<HttpResponse, Error> {
+    let conn = &mut *pool.get().unwrap();
 
+    let opt_res = PodcastEpisodeService::get_podcast_episode_by_id(conn, &params.episode_id);
+    if opt_res.is_err()|| opt_res.clone().unwrap().is_none(){
+        return Ok(HttpResponse::NotFound().finish());
+    }
+    let episode = opt_res.unwrap().unwrap();
     let (tx, rx) = mpsc::unbounded_channel();
 
     actix_web::rt::spawn(async move {
@@ -653,12 +672,13 @@ pub(crate) async fn proxy_podcast(
         header_map.append(x.0.clone(), x.1.clone());
     }
 
+    add_basic_auth_headers_conditionally(episode.clone().url,&mut header_map);
     // Required to not generate a 302 redirect
     header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
     header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
 
     let forwarded_req = reqwest::Client::new()
-        .request(method, params.url.clone())
+        .request(method, episode.url)
         .headers(header_map)
         .fetch_mode_no_cors()
         .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
@@ -674,9 +694,6 @@ pub(crate) async fn proxy_podcast(
         .map_err(error::ErrorInternalServerError)?;
 
     let mut client_resp = HttpResponse::build(res.status());
-    // Remove `CONNECTION` as per
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection#Directives
-
     for (header_name, header_value) in res.headers().iter() {
         client_resp.insert_header((header_name.clone(), header_value.clone()));
     }

@@ -142,6 +142,7 @@ impl PodcastEpisodeService {
                                                                              Vec<PodcastEpisode> {
         let client = ClientBuilder::new().build().unwrap();
         let mut header_map = HeaderMap::new();
+
         header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
         header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
         let result = client.get(podcast.clone().rssfeed).headers(header_map).send().unwrap();
