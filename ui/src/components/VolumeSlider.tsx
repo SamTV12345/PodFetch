@@ -1,4 +1,4 @@
-import {VolumeIcon} from "./VolumeIcon";
+import {VolumeIcon} from "../icons/VolumeIcon";
 import {setPlayBackRate, setVolume} from "../store/AudioPlayerSlice";
 import {AudioAmplifier} from "../models/AudioAmplifier";
 import {FC, RefObject} from "react";

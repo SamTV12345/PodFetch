@@ -1,17 +1,12 @@
-import {PlayIcon} from "./PlayIcon";
+import {PlayIcon} from "../icons/PlayIcon";
 import axios, {AxiosResponse} from "axios";
 import {apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
-import {CloudIcon} from "./CloudIcon";
-import {InfoIcon} from "./InfoIcon";
-import {
-    addPodcastEpisodes,
-    PodcastEpisode,
-    setInfoModalPodcast,
-    setInfoModalPodcastOpen}
-    from "../store/CommonSlice";
+import {CloudIcon} from "../icons/CloudIcon";
+import {InfoIcon} from "../icons/InfoIcon";
+import {addPodcastEpisodes, PodcastEpisode, setInfoModalPodcast, setInfoModalPodcastOpen} from "../store/CommonSlice";
 import {FC} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {Waypoint} from "react-waypoint";

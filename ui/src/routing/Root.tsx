@@ -1,7 +1,7 @@
 import {useEffect} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {Header} from "../components/Header";
-import {SideBar} from "../components/SideBar";
+import {SideBar} from "../components/sidebar/SideBar";
 import {Outlet, useNavigate} from "react-router-dom";
 import {AudioComponents} from "../components/AudioComponents";
 import {Search} from "../components/Search";

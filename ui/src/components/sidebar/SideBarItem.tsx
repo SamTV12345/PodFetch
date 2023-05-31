@@ -1,7 +1,7 @@
 import {NavLink} from "react-router-dom";
 import {FC} from "react";
-import {useAppDispatch} from "../store/hooks";
-import {setSideBarCollapsed} from "../store/CommonSlice";
+import {useAppDispatch} from "../../store/hooks";
+import {setSideBarCollapsed} from "../../store/CommonSlice";
 
 type SideBarItemProps = {
     highlightPath:string,

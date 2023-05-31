@@ -1,4 +1,4 @@
-import {PlayIcon} from "./PlayIcon";
+import {PlayIcon} from "../icons/PlayIcon";
 import axios, {AxiosResponse} from "axios";
 import {apiURL, prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
@@ -8,8 +8,6 @@ import {FC} from "react";
 import {selectPodcastImage} from "../pages/Homepage";
 import {TimeLineModel} from "../models/TimeLineModel";
 import {useAppDispatch} from "../store/hooks";
-import {Waypoint} from "react-waypoint";
-import {addPodcastEpisodes, addTimelineEpisodes} from "../store/CommonSlice";
 
 
 type PodcastEpisodeTimeLineProps = {

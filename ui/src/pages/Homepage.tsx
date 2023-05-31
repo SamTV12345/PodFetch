@@ -2,7 +2,7 @@ import {useEffect, useState} from "react";
 import axios, {AxiosResponse} from "axios";
 import {apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode} from "../utils/Utilities";
 import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel";
-import {PlayIcon} from "../components/PlayIcon";
+import {PlayIcon} from "../icons/PlayIcon";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";

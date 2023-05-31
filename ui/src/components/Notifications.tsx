@@ -1,4 +1,4 @@
-import {BellIcon} from "./BellIcon";
+import {BellIcon} from "../icons/BellIcon";
 import {useState} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {Notification} from "../models/Notification";
