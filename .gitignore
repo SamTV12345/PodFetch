@@ -4,6 +4,7 @@ target
 podcasts
 static/*
 .env
+*.iml
 
 !static/default.jpg
 podcast.db-shm

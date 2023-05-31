@@ -1,5 +1,5 @@
 import {IconProps} from "./PlayIcon";
-import {FC, Ref, RefObject, useState} from "react";
+import {FC, RefObject, useState} from "react";
 
 interface VolumeProps extends IconProps {
     audio:  RefObject<HTMLAudioElement>

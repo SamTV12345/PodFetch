@@ -1,0 +1,30 @@
+@import "theme-light";
+@import "theme-dark.scss";
+
+body.theme-dark {
+  @include theme-dark;
+}
+
+/* Light theme */
+
+body.theme-light {
+  @include theme-light;
+}
+
+/* System default theme */
+
+body.theme-default {
+  @include theme-light;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  body.theme-default {
+    @include theme-dark;
+  }
+}
+
+/* Demo style declaration */
+
+body {
+  background-color: var(--color-bg);
+}
