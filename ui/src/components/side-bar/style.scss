@@ -15,8 +15,7 @@ $sidebar-transition-duration: $transition-duration-1;
 
   display: flex;
   flex-direction: column;
-  gap: $spacing-11;
-  padding: $spacing-8;
+  gap: $spacing-10;
 
   color: white;
 
@@ -53,8 +52,12 @@ $sidebar-transition-duration: $transition-duration-1;
   /* Logo */
 
   .logo-section {
-    @include sidebar-row;
-    color: var(--color-primary-1)
+    padding: $spacing-8;
+
+    .logo-row {
+      @include sidebar-row;
+      color: var(--color-primary-1)
+    }
   }
 
   /* Navigation */
@@ -63,6 +66,9 @@ $sidebar-transition-duration: $transition-duration-1;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+
+    padding: $spacing-8;
+    overflow: auto;
 
     gap: $spacing-3;
 

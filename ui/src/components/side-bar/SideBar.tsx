@@ -14,8 +14,10 @@ export const SideBar = () => {
     return (
         <aside className={`side-bar ${sideBarCollapsed ? 'closed' : 'open'}`} aria-label="Sidebar">
             <div className="logo-section">
-                <PodFetchIcon/>
-                <h1 className="text-white pt-1">Podfetch</h1>
+                <div className={"logo-row"}>
+                    <PodFetchIcon/>
+                    <h1 className="text-white pt-1">Podfetch</h1>
+                </div>
             </div>
 
             <ul className="navigation-section">
