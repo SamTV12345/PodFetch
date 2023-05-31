@@ -27,6 +27,7 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.43.9",
     "react-i18next": "^12.2.2",
+    "react-icons": "^4.9.0",
     "react-oidc-context": "^2.2.2",
     "react-redux": "^8.0.5",
     "react-router-dom": "^6.11.1",
