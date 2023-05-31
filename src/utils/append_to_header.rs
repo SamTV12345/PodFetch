@@ -1,7 +1,6 @@
 use base64::Engine;
 use base64::engine::general_purpose;
 use regex::Regex;
-use crate::models::itunes_models::PodcastEpisode;
 
 pub fn add_basic_auth_headers_conditionally(url: String, header_map: &mut
 reqwest::header::HeaderMap) {
