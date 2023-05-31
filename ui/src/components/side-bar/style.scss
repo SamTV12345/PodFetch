@@ -72,6 +72,11 @@ $sidebar-transition-duration: $transition-duration-1;
       &:hover {
         background-color: var(--color-primary-dark-5);
       }
+
+      &.active {
+        background-color: var(--color-primary-dark-5);
+        color: var(--color-primary-1);
+      }
     }
 
     .space-before {
