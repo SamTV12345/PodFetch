@@ -1,7 +1,7 @@
 import {useEffect} from "react";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {Header} from "../components/Header";
-import {SideBar} from "../components/sidebar/SideBar";
+import {SideBar} from "../components/side-bar/SideBar";
 import {Outlet, useNavigate} from "react-router-dom";
 import {AudioComponents} from "../components/AudioComponents";
 import {Search} from "../components/Search";
@@ -10,6 +10,7 @@ import {configWSUrl} from "../utils/Utilities";
 import {setLoginData} from "../store/CommonSlice";
 import {Loading} from "../components/Loading";
 import App from "../App";
+import ContentPanel from "../components/side-bar/ContentPanel";
 
 export const Root = () => {
     const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
@@ -57,18 +58,17 @@ export const Root = () => {
 
     configWSUrl(configModel.serverUrl)
 
-    return <App>
-        <div className="grid h-full md:grid-cols-[300px_1fr] w-full">
+    return (
+        <App>
             <SideBar/>
-
-            <div className="">
+            <ContentPanel>
                 <Header/>
                 <div className="grid grid-rows-[1fr_auto] h-full">
                     <Outlet/>
                     <AudioComponents/>
                 </div>
-            </div>
-        </div>
-        <Search/>
-    </App>
+            </ContentPanel>
+            <Search/>
+        </App>
+    )
 }

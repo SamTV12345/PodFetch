@@ -1,0 +1,37 @@
+@import "../../assets/scss/style";
+
+$sidebar-transition-duration: $transition-duration-1;
+
+.side-bar {
+  height: 100%;
+  width: $sidebar-width;
+
+  position: fixed;
+  top: 0;
+
+  transition: left $sidebar-transition-duration;
+
+  &.closed {
+    left: -$sidebar-width;
+  }
+
+  &.open {
+    left: 0;
+  }
+}
+
+.content-panel {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+
+  transition: margin-left $sidebar-transition-duration;
+
+  &.open {
+    margin-left: $sidebar-width;
+  }
+
+  &.closed {
+    margin-left: 0;
+  }
+}

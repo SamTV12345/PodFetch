@@ -19,7 +19,7 @@ import {AuthProvider} from "react-oidc-context";
 import {Loading} from "./components/Loading";
 import {OIDCRefresher} from "./components/OIDCRefresher";
 import {SnackbarProvider} from "notistack";
-import "./assets/style.scss"
+import "./assets/scss/style.scss"
 
 const AuthWrapper:FC<PropsWithChildren> = ({children})=>{
     const dispatch = useAppDispatch()

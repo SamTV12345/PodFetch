@@ -7,7 +7,8 @@ import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react";
 import {Notification} from "./models/Notification";
 import {addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes} from "./store/CommonSlice";
 import {
-    checkIfOpmlAdded, checkIfOpmlErrored,
+    checkIfOpmlAdded,
+    checkIfOpmlErrored,
     checkIfPodcastAdded,
     checkIfPodcastEpisodeAdded,
     checkIfPodcastRefreshed
@@ -16,11 +17,14 @@ import {store} from "./store/store";
 import {Root} from "./routing/Root";
 import {
     AdministrationUserViewLazyLoad,
-    AdministrationViewLazyLoad, InviteAdministrationUserViewLazyLoad, MobileSearchViewLazyLoad,
+    AdministrationViewLazyLoad,
+    InviteAdministrationUserViewLazyLoad,
+    MobileSearchViewLazyLoad,
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
-    SettingsViewLazyLoad, TimeLineViewLazyLoad
+    SettingsViewLazyLoad,
+    TimeLineViewLazyLoad
 } from "./utils/LazyLoading";
 import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities";
 import {LoginComponent} from "./components/LoginComponent";
@@ -150,9 +154,11 @@ const App: FC<PropsWithChildren> = ({children}) => {
         getNotifications()
     }, [])
 
-    return <Suspense>
-        <div>{children}</div>
-    </Suspense>
+    return (
+        <Suspense>
+            {children}
+        </Suspense>
+    )
 }
 
 export default App

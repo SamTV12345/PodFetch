@@ -4,6 +4,7 @@ import {useAppSelector} from "../../store/hooks";
 import {PodFetchLogo} from "../../icons/PodFetchLogo";
 import {HeartIcon} from "../../icons/HeartIcon";
 import {PodcastIcon} from "../../icons/PodcastIcon";
+import "./style.scss"
 
 export const SideBar = () => {
     const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
@@ -12,9 +13,7 @@ export const SideBar = () => {
 
 
     return (
-        <aside
-            className={`float-left ${sideBarCollapsed ? 'hidden' : 'col-span-6 md:col-span-1'} z-10 w-full bg-gray-950 flex  border-none sticky`}
-            aria-label="Sidebar">
+        <aside className={`side-bar ${sideBarCollapsed ? 'closed' : 'open'}`} aria-label="Sidebar">
             <div className="py-4 px-3 bg-gray-950 w-full">
                 <div className="text-amber-600 flex text-2xl gap-2"><PodFetchLogo/><h1
                     className="text-white pt-1">Podfetch</h1></div>
