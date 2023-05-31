@@ -69,6 +69,8 @@ $sidebar-transition-duration: $transition-duration-1;
     li a {
       @include sidebar-row;
 
+      transition: background-color $sidebar-transition-duration, color $sidebar-transition-duration;
+
       &:hover {
         background-color: var(--color-primary-dark-5);
       }
