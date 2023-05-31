@@ -180,7 +180,8 @@ impl Episode{
                                                                                                     podcast_id,
                                                                                                     episode_id, name,
                                                                                                     url,
-                                                                                                    date_of_recording, image_url, total_time, local_url, local_image_url, description, status, download_time ORDER BY timestamp DESC LIMIT 10;");
+                                                                                                    date_of_recording, image_url, total_time, local_url, local_image_url, description, status,
+                                                                                                     download_time ORDER BY timestamp DESC LIMIT 10;");
 
         let query = builder.finish();
         let res = sql_query(query)

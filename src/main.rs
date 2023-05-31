@@ -25,6 +25,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use diesel::r2d2::{ConnectionManager};
 use r2d2::{Pool};
 use regex::Regex;
+use tokio::task::spawn_blocking;
+
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
@@ -122,7 +124,9 @@ async fn main() -> std::io::Result<()> {
 
 
     if args().len()>1 {
-        start_command_line(args());
+        spawn_blocking(move ||{
+            start_command_line(args())
+        }).await.expect("TODO: panic message");
         exit(0)
     }
 
@@ -398,7 +402,7 @@ pub fn check_server_config(service1: EnvironmentService) {
     #[cfg(postgresql)]
     if !database_url.starts_with("postgres"){
         eprintln!("You are using postgres as database but the database url does not start with  \
-        sqlite. Please check your .env file.");
+        postgres/postgresql. Please check your .env file.");
         exit(1);
     }
 
