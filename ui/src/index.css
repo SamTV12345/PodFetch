@@ -2,8 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-*{
-    font-family: Roboto, serif;
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'wght' 300;
 }
 
 .movie-text{
