@@ -10,6 +10,10 @@
   font-variation-settings: 'wght' 300;
 }
 
+.filled {
+  font-variation-settings: 'FILL' 1;
+}
+
 .movie-text{
     font-family: anton, serif;
     font-weight: 800;
