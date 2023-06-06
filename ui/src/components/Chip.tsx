@@ -1,4 +1,4 @@
-import {FC, ReactElement} from "react";
+import {FC, ReactElement} from "react"
 
 type ChipProps = {
     index: number,
@@ -9,27 +9,59 @@ export const Chip:FC<ChipProps> = ({index, children}) => {
     switch (index % 7) {
         case 0:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-blue-500 to-violet-500 align-baseline font-bold uppercase leading-none text-white">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-blue-500 to-violet-500">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-indigo-700 whitespace-nowrap">
+                        {children}
+                    </span>
+                </span>
         case 1:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-slate-600 to-slate-300 align-baseline font-bold uppercase leading-none text-white">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-slate-600 to-slate-300">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-slate-700 whitespace-nowrap">
+                        {children}
+                    </span>
+                </span>
         case 2:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-blue-700 to-cyan-500 align-baseline font-bold uppercase leading-none text-white">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-blue-700 to-cyan-500">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-sky-700 whitespace-nowrap">
+                        {children}
+                     </span>
+                </span>
         case 3:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-red-600 to-orange-600 align-baseline font-bold uppercase leading-none text-white">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-red-600 to-orange-600">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-orange-700 whitespace-nowrap">
+                        {children}
+                    </span>
+                </span>
         case 4:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-green-500 to-teal-500 align-baseline font-bold uppercase leading-none text-white">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-green-500 to-teal-500">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-emerald-700 whitespace-nowrap">
+                        {children}
+                    </span>
+                </span>
         case 5:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-gray-400 to-gray-100 align-baseline font-bold uppercase leading-none text-slate-500">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-gray-400 to-gray-100">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-gray-700 whitespace-nowrap">
+                        {children}
+                    </span>
+                </span>
         case 6:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-zinc-800 to-zinc-700 align-baseline font-bold uppercase leading-none text-white">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-zinc-800 to-zinc-700">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-zinc-700 whitespace-nowrap">
+                        {children}
+                    </span>
+                </span>
         default:
             return <span
-                className="p-2 text-xs rounded-1.8 inline-block whitespace-nowrap text-center bg-gradient-to-tl from-green-500 to-teal-500 align-baseline font-bold uppercase leading-none text-white">{children}</span>
+                className="p-px inline-block rounded bg-gradient-to-tl from-green-500 to-teal-500">
+                    <span className="block bg-white leading-none p-1.5 rounded text-center text-xs text-emerald-700 whitespace-nowrap">
+                        {children}
+                    </span>
+                </span>
     }
 }
