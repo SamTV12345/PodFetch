@@ -80,7 +80,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             <div className="flex gap-2 items-center">
                 <Heading1>{t('all-subscriptions')}</Heading1>
 
-                <span className="material-symbols-outlined cursor-pointer text-stone-900 hover:text-stone-600" onClick={()=>{
+                <span className="material-symbols-outlined cursor-pointer text-stone-800 hover:text-stone-600" onClick={()=>{
                     refreshAllPodcasts()
                 }}>refresh</span>
             </div>
@@ -94,7 +94,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
 
         <div className="flex gap-4 mb-10">
             <span className="flex-1 relative">
-                <Input type="text" placeholder={t('search')!} value={filters?.title} onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}/>
+                <Input type="text" placeholder={t('search')!} value={filters?.title} className="pl-10" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}/>
 
                 <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
             </span>

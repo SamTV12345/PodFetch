@@ -158,10 +158,6 @@
     @apply text-amber-500 fill-amber-500;
 }
 
-#podcast-add-decider .active{
-    @apply bg-slate-800  text-blue-500;
-}
-
 #root > div{
     @apply h-full;
 }
