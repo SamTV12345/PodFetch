@@ -1,9 +1,16 @@
-lockfileVersion: '6.0'
+lockfileVersion: '6.1'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 dependencies:
   '@fontsource/anton':
     specifier: ^4.5.9
     version: 4.5.9
+  '@fontsource/poppins':
+    specifier: ^5.0.2
+    version: 5.0.2
   '@fontsource/roboto':
     specifier: ^4.5.8
     version: 4.5.8
@@ -31,6 +38,9 @@ dependencies:
   javascript-time-ago:
     specifier: ^2.5.9
     version: 2.5.9
+  material-symbols:
+    specifier: ^0.5.5
+    version: 0.5.5
   notistack:
     specifier: ^3.0.1
     version: 3.0.1(csstype@3.1.2)(react-dom@18.2.0)(react@18.2.0)
@@ -320,6 +330,10 @@ packages:
 
   /@fontsource/anton@4.5.9:
     resolution: {integrity: sha512-/WhUp4eSkphwXcexGz9r3Cj1l3jy4pW5ecGcaVdwf7Cti2WMc+t2xof/dZfTCN3se+egzeZxDCgFbZnbtIvaEw==}
+    dev: false
+
+  /@fontsource/poppins@5.0.2:
+    resolution: {integrity: sha512-504RESq2qbyVxxpjP2TyVQODOWakuBHBD3AtYurtmNHosC4x+mjyOlRSdW2QjsILezlwFCnLkYuGUzYiV44sEg==}
     dev: false
 
   /@fontsource/roboto@4.5.8:
@@ -1037,6 +1051,10 @@ packages:
     hasBin: true
     dependencies:
       js-tokens: 4.0.0
+    dev: false
+
+  /material-symbols@0.5.5:
+    resolution: {integrity: sha512-NFUsjEVBNZvcRRqslY0RWnmlGgjhJkpDQkQs42o52gT2AmIbaP6V7wTRgyTkLAoD5VtpgpIx9eoOAXcH2ynwkg==}
     dev: false
 
   /merge2@1.4.1:

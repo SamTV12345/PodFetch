@@ -79,7 +79,7 @@ export const PodcastDetailPage = () => {
 
     return <Fragment key={"detail"}>
 
-        <div className="max-w-3xl px-8">
+        <div className="max-w-4xl px-8">
             <PodcastInfoModal/>
 
             <div className="flex gap-8 items-center mb-8">
@@ -130,7 +130,7 @@ export const PodcastDetailPage = () => {
             </div>}
 
             <div>
-                <Heading2 className="mb-8">Available Episodes</Heading2>
+                <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
 
                 {selectedEpisodes.map((episode, index) => {
                     return <PodcastDetailItem episode={episode} key={index} index={index} episodesLength={selectedEpisodes.length}/>
