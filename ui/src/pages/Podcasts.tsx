@@ -65,7 +65,6 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
         })
     },[location])
 
-
     return <div className="p-5">
         <AddPodcast/>
         <div className="flex flex-col md:flex-row gap-3">
@@ -79,7 +78,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             <select  className="border text-sm rounded-lg block p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"
                      onChange={(v)=> {
                          dispatch(setFilters({...filters as Filter,filter: v.target.value as OrderCriteria}))
-                     }} value={filters?.ascending?Order.ASC:Order.DESC}>
+                     }} value={filters?.filter?.toUpperCase()}>
                 <option value={OrderCriteria.PUBLISHEDDATE}>{t('sort-by-published-date')}</option>
                 <option value={OrderCriteria.TITLE}>{t('sort-by-title')}</option>
             </select>
