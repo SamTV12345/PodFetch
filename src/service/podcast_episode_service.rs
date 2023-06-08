@@ -142,10 +142,16 @@ impl PodcastEpisodeService {
                                                                              Vec<PodcastEpisode> {
         let client = ClientBuilder::new().build().unwrap();
         let mut header_map = HeaderMap::new();
-
+        let mut db = DB::new().unwrap();
         header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
         header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
         let result = client.get(podcast.clone().rssfeed).headers(header_map).send().unwrap();
+
+        if result.status() == 301|| result.status() == 308 {
+            println!("Redirecting to {}", result.url().to_string());
+            DB::update_podcast_urls_on_redirect(podcast.id, result.url().to_string(), conn);
+        }
+
         let content = result.text().unwrap();
 
         let channel = Channel::read_from(content.as_bytes())
@@ -156,8 +162,16 @@ impl PodcastEpisodeService {
 
         // insert original podcast image url
         if podcast.original_image_url.is_empty() {
-            let mut db = DB::new().unwrap();
-            db.update_original_image_url(&channel.image().unwrap().url.to_string(), podcast.id,conn);
+            match channel.image() {
+                Some(image) => {
+                    db.update_original_image_url(&image.url.to_string(), podcast.id,conn);
+                }
+                None => {
+                    let env = EnvironmentService::new();
+                    let url = env.server_url.clone().to_owned() + &"ui/default.jpg".to_string();
+                    db.update_original_image_url(&url, podcast.id,conn);
+                }
+            }
         }
 
         for (_, item) in channel.items.iter().enumerate() {

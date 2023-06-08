@@ -64,6 +64,8 @@ export const logCurrentPlaybackTime = (episodeId: string, timeInSeconds: number)
 }
 
 export const formatTime = (isoDate: string) => {
+    if(Number.isNaN(Date.parse(isoDate))) return ""
+    if (isoDate === undefined) return ""
     return timeago.format(new Date(isoDate))
 }
 

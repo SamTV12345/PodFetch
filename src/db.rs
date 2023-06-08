@@ -681,6 +681,14 @@ impl DB {
         Ok(mapped_result)
     }
 
+    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: String, conn: &mut DbConnection) {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        diesel::update(podcast_episodes.filter(podcast_id.eq(podcast_id_to_update)))
+            .set(url.eq(new_url))
+            .execute(conn)
+            .expect("Error updating podcast episode");
+    }
+
     pub fn get_episodes(&mut self, conn: &mut DbConnection) -> Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         dsl_podcast_episodes
