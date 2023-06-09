@@ -18,7 +18,7 @@ import {Filter} from "../models/Filter"
 import {Card} from "../components/Card"
 import {AddPodcast} from "../components/AddPodcast"
 import {ButtonPrimary} from "../components/ButtonPrimary"
-import {CustomSelect} from '../components/CustomSelect'
+import {CustomSelect} from "../components/CustomSelect"
 import {Heading1} from "../components/Heading1"
 import {Input} from "../components/Input"
 import "material-symbols/outlined.css"
