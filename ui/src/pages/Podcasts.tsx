@@ -21,6 +21,7 @@ import {ButtonPrimary} from "../components/ButtonPrimary"
 import {Heading1} from "../components/Heading1"
 import {Input} from "../components/Input"
 import "material-symbols/outlined.css"
+import { CustomSelect } from '../components/CustomSelect'
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -50,6 +51,13 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             })
     }
 
+    const orderOptions = [
+        { value: JSON.stringify(TIME_ASCENDING), label: '1.1.-31.12' },
+        { value: JSON.stringify(TIME_DESCENDING), label: '31.12-1.1' },
+        { value: JSON.stringify(TITLE_ASCENDING), label: 'A-Z' },
+        { value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A' }
+    ];
+
     useDebounce(()=> {
         performFilter();
     },500, [filters])
@@ -71,7 +79,6 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             }
         })
     },[location])
-
 
     return <div className="px-8">
         <AddPodcast/>
@@ -98,20 +105,12 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
 
                 <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
             </span>
-            <span className="relative">
-                <select className="bg-white border border-stone-200 pl-11 pr-4 py-2 rounded-full text-sm text-stone-600"
-                    onChange={(v)=> {
-                        let converted = JSON.parse(v.target.value) as OrderCriteriaSortingType
-                        dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
-                    }} value={JSON.stringify({sorting: filters?.filter,ascending: filters?.ascending})}>
-                    <option value={JSON.stringify(TIME_ASCENDING)}>1.1.-31.12</option>
-                    <option value={JSON.stringify(TIME_DESCENDING)}>31.12-1.1</option>
-                    <option value={JSON.stringify(TITLE_ASCENDING)}>A-Z</option>
-                    <option value={JSON.stringify(TITLE_DESCENDING)}>Z-A</option>
-                </select>
 
-                <span className="material-symbols-outlined absolute left-4 top-2 text-stone-500">sort</span>
-            </span>
+            <CustomSelect icon="sort" onChange={(v)=> {
+                console.log(JSON.parse(v))
+                let converted = JSON.parse(v) as OrderCriteriaSortingType
+                dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
+            }} options={orderOptions} value={JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})} />
         </div>
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
