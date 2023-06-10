@@ -27,10 +27,8 @@ export const readFile = (file: File): Promise<FileItem> => {
 
         fr.onload = async () => {
             const result = fr.result
-            console.log(result)
             if (typeof result == "string") {
                 fileItem.content = result
-                console.log(result)
                 res(fileItem)
             }
         }

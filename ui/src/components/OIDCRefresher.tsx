@@ -21,7 +21,6 @@ export const OIDCRefresher:FC<PropsWithChildren> = ({children})=>{
 
     useEffect(()=>{
         if(auth.user?.access_token){
-            console.log("Refreshing token")
             axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.access_token;
         }
     },[auth.user?.access_token])

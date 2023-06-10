@@ -24,7 +24,6 @@ export   const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|Podcast
         }
     }
     else{
-        console.log(podcast.image_url)
         if(podcast.local_image_url.trim().length>1){
             return preparePath(podcast.local_image_url)
         }

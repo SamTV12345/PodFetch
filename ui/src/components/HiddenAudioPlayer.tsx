@@ -23,7 +23,6 @@ export const HiddenAudioPlayer:FC<HiddenAudioPlayerProps> = ({refItem, setAudioA
     useEffect(
         ()=>{
             if(podcastEpisode && refItem && refItem.current){
-                console.log("Switched to episode: "+podcastEpisode.local_url+ " at time: "+podcastEpisode.time)
                 refItem.current.load()
                 if(podcastEpisode.time===undefined){
                     //fetch time from server
