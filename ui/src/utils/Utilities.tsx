@@ -63,8 +63,8 @@ export const logCurrentPlaybackTime = (episodeId: string, timeInSeconds: number)
     })
 }
 
-export const formatTime = (isoDate: Date) => {
-    return timeago.format(isoDate)
+export const formatTime = (isoDate: string) => {
+    return timeago.format(new Date(isoDate))
 }
 
 export const removeHTML = (html: string) => {

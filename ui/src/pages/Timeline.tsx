@@ -1,11 +1,11 @@
 import {useTranslation} from "react-i18next";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {useEffect, useMemo, useState} from "react";
+import {useEffect} from "react";
 import axios, {AxiosResponse} from "axios";
 import {apiURL, formatTime, getFiltersDefault} from "../utils/Utilities";
-import {addTimelineEpisodes, setFilters, setTimeLineEpisodes} from "../store/CommonSlice";
+import {setFilters, setTimeLineEpisodes} from "../store/CommonSlice";
 import {PodcastEpisodeTimeLine} from "../components/PodcastEpisodeTimeLine";
-import {TimelineHATEOASModel, TimeLineModel} from "../models/TimeLineModel";
+import {TimelineHATEOASModel} from "../models/TimeLineModel";
 import {Switcher} from "../components/Switcher";
 import {Filter} from "../models/Filter";
 import {Loading} from "../components/Loading";
@@ -64,7 +64,7 @@ export const Timeline = () => {
             timeLineEpisodes.data.map((e, index) => {
                 if (currentTime.length==0|| e.podcast_episode.date_of_recording.split('T')[0] !== currentTime) {
                     return <div key={e.podcast_episode.episode_id} className="bg-gray-800 mb-5 p-3 rounded"><h2 className="text-xl text-white">
-                        {formatTime(new Date(e.podcast_episode.date_of_recording))}</h2>
+                        {formatTime(e.podcast_episode.date_of_recording)}</h2>
                         <div
                             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                             <PodcastEpisodeTimeLine podcastEpisode={e} key={e.podcast_episode.episode_id+index + "Parent"}
