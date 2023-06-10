@@ -12,7 +12,7 @@ use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::dsl::{sql};
 use diesel::prelude::*;
 use diesel::{insert_into, sql_query, RunQueryDsl, delete};
-use rss::Item;
+use rss::{Guid, Item};
 use std::io::Error;
 
 use std::sync::MutexGuard;
@@ -22,6 +22,8 @@ use diesel::sql_types::{Text, Timestamp};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 
 use crate::{DbConnection, MyQueryBuilder};
+use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+use crate::dbconfig::schema::podcasts::rssfeed;
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
@@ -210,6 +212,11 @@ impl DB {
             }
         }
 
+        let mut guid_to_insert = "".to_string();
+        if item.guid.is_some() {
+            guid_to_insert = item.guid.unwrap().value
+        }
+
         let inserted_podcast = insert_into(podcast_episodes)
             .values((
                 total_time.eq(duration),
@@ -220,6 +227,7 @@ impl DB {
                 date_of_recording.eq(inserted_date),
                 image_url.eq(inserted_image_url),
                 description.eq(opt_or_empty_string(item.description)),
+                guid.eq(guid_to_insert)
             ))
             .get_result::<PodcastEpisode>(conn)
             .expect("Error inserting podcast episode");
@@ -682,9 +690,11 @@ impl DB {
     }
 
     pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: String, conn: &mut DbConnection) {
-        use crate::dbconfig::schema::podcast_episodes::dsl::*;
-        diesel::update(podcast_episodes.filter(podcast_id.eq(podcast_id_to_update)))
-            .set(url.eq(new_url))
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::id as pid;
+
+        diesel::update(podcasts.filter(pid.eq(podcast_id_to_update)))
+            .set(rssfeed.eq(new_url))
             .execute(conn)
             .expect("Error updating podcast episode");
     }
@@ -1019,5 +1029,26 @@ impl DB {
             (c.clone().0, c.clone().2)
         }).collect::<Vec<(Podcast, Option<Favorite>)>>();
         distinct_podcasts
+    }
+
+    pub fn update_podcast_episode(conn: &mut DbConnection, episode_to_update:PodcastEpisode) ->
+                                                                                  PodcastEpisode {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+
+        diesel::update(podcast_episodes.find(episode_to_update.id.clone()))
+            .set(episode_to_update)
+            .get_result::<PodcastEpisode>(conn)
+            .expect("Error updating podcast episode")
+    }
+
+    pub fn update_guid(conn: &mut DbConnection, guid_to_update:Guid, podcast_episode_id_to_update:
+    &str) {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as podcast_episode_id;
+
+        diesel::update(podcast_episodes.filter(podcast_episode_id.eq(podcast_episode_id_to_update)))
+            .set(guid.eq(guid_to_update.value))
+            .execute(conn)
+            .expect("Error updating guide");
     }
 }

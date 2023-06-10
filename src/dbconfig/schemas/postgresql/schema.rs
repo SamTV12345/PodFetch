@@ -80,6 +80,7 @@ diesel::table! {
         description -> Text,
         status -> Bpchar,
         download_time -> Nullable<Timestamp>,
+        guid -> Varchar
     }
 }
 

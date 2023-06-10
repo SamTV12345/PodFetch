@@ -115,9 +115,9 @@ pub struct PodcastDto {
     pub favorites: bool
 }
 
-
+use diesel::AsChangeset;
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
-Serialize, Deserialize, Default)]
+Serialize, Deserialize, Default, AsChangeset)]
 pub struct PodcastEpisode {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
@@ -144,7 +144,9 @@ pub struct PodcastEpisode {
     #[diesel(sql_type = Text)]
     pub(crate) status: String,
     #[diesel(sql_type = Nullable<Timestamp>)]
-    pub(crate) download_time: Option<NaiveDateTime>
+    pub(crate) download_time: Option<NaiveDateTime>,
+    #[diesel(sql_type = Text)]
+    pub(crate) guid: String,
 }
 
 impl PodcastEpisode{

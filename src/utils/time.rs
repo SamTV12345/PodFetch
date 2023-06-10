@@ -1,5 +1,7 @@
+use std::any::{type_name, TypeId};
 use std::time::SystemTime;
 use chrono::{NaiveDateTime, Utc};
+use rss::Guid;
 
 
 pub fn get_current_timestamp()->i64{
@@ -13,9 +15,13 @@ pub fn get_current_timestamp_str()->NaiveDateTime{
 }
 
 
-pub fn opt_or_empty_string(opt: Option<String>) -> String {
+pub fn opt_or_empty_string<T:ToString>(opt: Option<T>) ->  String {
     match opt {
-        Some(s) => s,
-        None => "".to_string(),
+        Some(s) => {
+            s.to_string()
+        },
+        None => {
+            return "".to_string()
+        },
     }
 }

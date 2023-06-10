@@ -85,6 +85,7 @@ impl MappingService {
             local_image_url:  podcast_episode.local_image_url.clone(),
             status: podcast_episode.status.clone(),
             download_time: podcast_episode.download_time.clone(),
+            guid: podcast_episode.guid.clone(),
         }
     }
 
