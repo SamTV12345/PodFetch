@@ -1,14 +1,14 @@
-import {createRef, FC} from "react";
-import {Podcast, updateLikePodcast} from "../store/CommonSlice";
-import {Link} from "react-router-dom";
-import axios from "axios";
-import {apiURL} from "../utils/Utilities";
-import {useAppDispatch} from "../store/hooks";
+import {createRef, FC} from "react"
+import {Link} from "react-router-dom"
+import axios from "axios"
+import {apiURL} from "../utils/Utilities"
+import {useAppDispatch} from "../store/hooks"
+import {Podcast, updateLikePodcast} from "../store/CommonSlice"
+import "material-symbols/outlined.css"
 
 type CardProps = {
     podcast: Podcast
 }
-
 
 export const Card:FC<CardProps> = ({podcast})=>{
     const likeButton = createRef<HTMLElement>()
@@ -20,24 +20,23 @@ export const Card:FC<CardProps> = ({podcast})=>{
         })
     }
 
-    return <div className="max-w-sm rounded-lg">
-        <Link to={podcast.id+"/episodes"}>
-            <div className="relative">
-            <img className="rounded-2xl" src={podcast.image_url} alt=""/>
-                {!podcast.active&&<div className="absolute pointer-events-none left-0 top-0 w-full h-full bg-gray-500 opacity-80 z-10 grid place-items-center"></div>}
-            </div>
-            <i ref={likeButton} className={`fa-star fa-solid text-3xl cursor-pointer ${podcast.favorites?'text-amber-400': 'text-gray-500'}`} onClick={()=>{
-                likeButton.current?.classList.toggle('text-amber-400')
+    return <Link className="group" to={podcast.id+"/episodes"}>
+        <div className="relative mb-2">
+            <img className={`rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)] ${!podcast.active?'opacity-20':''}`} src={podcast.image_url} alt=""/>
+
+            <span ref={likeButton} className={`material-symbols-outlined filled absolute top-2 right-2 h-6 w-6 filled ${podcast.favorites?'text-rose-700 hover:text-rose-600': 'text-stone-200 hover:text-stone-100'}`} onClick={(e)=>{
+                // Prevent icon click from triggering link to podcast detail
+                e.preventDefault()
+
+                likeButton.current?.classList.toggle('fill-amber-400')
                 likePodcast()
                 dispatch(updateLikePodcast(podcast.id))
-            }}></i>
-        </Link>
-        <div className="grid grid-cols-[1fr_auto] p-5">
-                <h5 className="mb-2 text-2xl font-bold tracking-tight text-black break-all">{podcast.name}</h5>
+            }}>favorite</span>
+        </div>
 
-        </div>
         <div>
-            <p className="px-5 pb-5 text-gray-700 text-xl">{podcast.author}</p>
+            <span className="block font-bold leading-[1.2] mb-2 text-stone-900 transition-color group-hover:text-stone-600">{podcast.name}</span>
+            <span className="block leading-[1.2] text-sm text-stone-500">{podcast.author}</span>
         </div>
-    </div>
+    </Link>
 }

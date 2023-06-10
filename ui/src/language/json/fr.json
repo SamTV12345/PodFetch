@@ -128,5 +128,6 @@
   "dash-separated-with-space": "Séparé par des tirets avec espacement",
   "remove": "Supprimer",
   "standard-podcast-format": "Format standard du podcast",
-  "onlyFavored": "Seulement favoris podcasts"
+  "onlyFavored": "Seulement favoris podcasts",
+  "available-episodes": "Épisodes disponibles"
 }

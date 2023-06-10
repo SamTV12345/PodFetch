@@ -1,26 +1,27 @@
-import {FC, useEffect} from "react";
-import axios, {AxiosResponse} from "axios";
+import {FC, useEffect} from "react"
+import {useLocation} from "react-router-dom"
+import {useTranslation} from "react-i18next"
+import axios, {AxiosResponse} from "axios"
+import {useDebounce} from "../utils/useDebounce"
 import {
     apiURL,
     getFiltersDefault,
     OrderCriteriaSortingType, TIME_ASCENDING, TIME_DESCENDING,
     TITLE_ASCENDING,
     TITLE_DESCENDING
-} from "../utils/Utilities";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {Podcast, setFilters, setPodcasts} from "../store/CommonSlice";
-import {Card} from "../components/Card";
-import {AddPodcast} from "../components/AddPodcast";
-import {setModalOpen} from "../store/ModalSlice";
-import {useLocation} from "react-router-dom";
-import {MaginifyingGlassIcon} from "../icons/MaginifyingGlassIcon";
-import {useDebounce} from "../utils/useDebounce";
-import {useTranslation} from "react-i18next";
-import {Order} from "../models/Order";
-import {Filter} from "../models/Filter";
-import {PlusIcon} from "../icons/PlusIcon";
-import {RefreshIcon} from "../icons/RefreshIcon";
-
+} from "../utils/Utilities"
+import {useAppDispatch, useAppSelector} from "../store/hooks"
+import {Podcast, setFilters, setPodcasts} from "../store/CommonSlice"
+import {setModalOpen} from "../store/ModalSlice"
+import {Order} from "../models/Order"
+import {Filter} from "../models/Filter"
+import {Card} from "../components/Card"
+import {AddPodcast} from "../components/AddPodcast"
+import {ButtonPrimary} from "../components/ButtonPrimary"
+import {CustomSelect} from "../components/CustomSelect"
+import {Heading1} from "../components/Heading1"
+import {Input} from "../components/Input"
+import "material-symbols/outlined.css"
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -50,6 +51,13 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             })
     }
 
+    const orderOptions = [
+        { value: JSON.stringify(TIME_ASCENDING), label: '1.1.-31.12' },
+        { value: JSON.stringify(TIME_DESCENDING), label: '31.12-1.1' },
+        { value: JSON.stringify(TITLE_ASCENDING), label: 'A-Z' },
+        { value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A' }
+    ];
+
     useDebounce(()=> {
         performFilter();
     },500, [filters])
@@ -72,53 +80,47 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
         })
     },[location])
 
-
-    return <div className="p-5 mt-20">
+    return <div className="px-8">
         <AddPodcast/>
-        <div className="flex flex-col md:flex-row gap-3">
-            <div className="text-3xl font-bold">{t('all-subscriptions')}</div>
-            <div className="grid grid-cols-2 mt-1">
-                <RefreshIcon onClick={()=>{
+
+        <div className="flex justify-between mb-10">
+            <div className="flex gap-2 items-center">
+                <Heading1>{t('all-subscriptions')}</Heading1>
+
+                <span className="material-symbols-outlined cursor-pointer text-stone-800 hover:text-stone-600" onClick={()=>{
                     refreshAllPodcasts()
-                }}/>
-
+                }}>refresh</span>
             </div>
-            <button className="bg-amber-300 bg-opacity-70 text-white rounded-xl pl-1 pt-0.5 pr-1" onClick={()=>{
-                dispatch(setModalOpen(true))
-            }}><div className="flex"><PlusIcon/> <span className="p-2 text-amber-700 font-bold">{t('add-new')}</span></div></button>
-        </div>
-        <div className="flex">
-                <span className="relative  w-full md:w-1/2">
-                    <input type="text" placeholder={t('search')!} value={filters?.title} onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}
-                           className="w-full pl-14 rounded shadow-lg  mt-3 p-2 outline-none"/>
-                    <span className="absolute left-2 bottom-2 scale-90">
-                        <MaginifyingGlassIcon/>
-                    </span>
-                </span>
-            <div className="flex flex-1"></div>
-            <select   className="border text-center text-sm rounded-3xl block bg-amber-300 focus:border-none active:border-none bg-opacity-70 focus:ring-blue-500  focus:border-blue-500 w-36 h-10"
-                     onChange={(v)=> {
-                         let converted = JSON.parse(v.target.value) as OrderCriteriaSortingType
-                         dispatch(setFilters({...filters as Filter,filter: converted.sorting, ascending: converted.ascending}))
-                     }} value={JSON.stringify({sorting: filters?.filter,ascending: filters?.ascending})}>
-                <option value={JSON.stringify(TIME_ASCENDING)}>1.1.-31.12</option>
-                <option value={JSON.stringify(TIME_DESCENDING)}>31.12-1.1</option>
-                <option value={JSON.stringify(TITLE_ASCENDING)}>A-Z</option>
-                <option value={JSON.stringify(TITLE_DESCENDING)}>Z-A</option>
-            </select>
-        </div>
-                <div className="flex-1"></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6  xs:grid-cols-3 lg:gap-10 pt-3">
-            {!onlyFavorites&&podcasts.map((podcast)=>{
 
+            <ButtonPrimary className="flex items-center" onClick={()=>{
+                dispatch(setModalOpen(true))
+            }}>
+                <span className="material-symbols-outlined">add</span> {t('add-new')}
+            </ButtonPrimary>
+        </div>
+
+        <div className="flex gap-4 mb-10">
+            <span className="flex-1 relative">
+                <Input type="text" placeholder={t('search')!} value={filters?.title} className="pl-10" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}/>
+
+                <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
+            </span>
+
+            <CustomSelect icon="sort" onChange={(v)=> {
+                console.log(JSON.parse(v))
+                let converted = JSON.parse(v) as OrderCriteriaSortingType
+                dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
+            }} options={orderOptions} value={JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            {!onlyFavorites&&podcasts.map((podcast)=>{
                 return <Card podcast={podcast} key={podcast.id}/>
-            })
-            }
-            {
-            onlyFavorites&&podcasts.filter(podcast=>podcast.favorites).map((podcast)=>{
+            })}
+
+            {onlyFavorites&&podcasts.filter(podcast=>podcast.favorites).map((podcast)=>{
                 return <Card podcast={podcast} key={podcast.id}/>
-                })
-            }
+            })}
         </div>
     </div>
 }

@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-*{
-    font-family: Roboto, serif;
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'wght' 300;
+}
+
+.filled {
+  font-variation-settings: 'FILL' 1;
 }
 
 .movie-text{
@@ -142,25 +150,12 @@
     overflow: hidden;
 }
 
-.podcast-summary a{
-    @apply text-gray-900 hover:underline ;
-    text-underline: steelblue ;
-}
-
-.text-ago{
-    color: #25d1da;
-}
-
 .sidebar .active{
     @apply bg-amber-400 text-amber-500 text-opacity-60 bg-opacity-40 rounded-2xl;
 }
 
 .sidebar .active svg{
     @apply text-amber-500 fill-amber-500;
-}
-
-#podcast-add-decider .active{
-    @apply bg-slate-800  text-blue-500;
 }
 
 #root > div{

@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@fontsource/anton": "^4.5.9",
+    "@fontsource/poppins": "^5.0.2",
     "@fontsource/roboto": "^4.5.8",
     "@fortawesome/fontawesome-free": "^6.4.0",
+    "@radix-ui/react-select": "^1.2.2",
     "@reduxjs/toolkit": "^1.9.5",
     "axios": "^1.4.0",
     "chart.js": "^4.3.0",
@@ -20,6 +22,7 @@
     "i18next": "^22.4.15",
     "i18next-browser-languagedetector": "^7.0.1",
     "javascript-time-ago": "^2.5.9",
+    "material-symbols": "^0.5.5",
     "notistack": "^3.0.1",
     "oidc-client-ts": "^2.2.3",
     "react": "^18.2.0",

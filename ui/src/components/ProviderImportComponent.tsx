@@ -1,15 +1,18 @@
-import {Spinner} from "./Spinner";
-import {useTranslation} from "react-i18next";
-import {useDebounce} from "../utils/useDebounce";
-import axios, {AxiosResponse} from "axios";
-import {apiURL} from "../utils/Utilities";
-import {AgnosticPodcastDataModel, GeneralModel, PodIndexModel} from "../models/PodcastAddModel";
-import {setSearchedPodcasts} from "../store/CommonSlice";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {FC, useState} from "react";
-import {setModalOpen} from "../store/ModalSlice";
-import {enqueueSnackbar} from "notistack";
-import {AddTypes} from "../models/AddTypes";
+import {useTranslation} from "react-i18next"
+import axios, {AxiosResponse} from "axios"
+import {enqueueSnackbar} from "notistack"
+import {useDebounce} from "../utils/useDebounce"
+import {apiURL} from "../utils/Utilities"
+import {useAppDispatch, useAppSelector} from "../store/hooks"
+import {setSearchedPodcasts} from "../store/CommonSlice"
+import {setModalOpen} from "../store/ModalSlice"
+import {AddTypes} from "../models/AddTypes"
+import {AgnosticPodcastDataModel, GeneralModel, PodIndexModel} from "../models/PodcastAddModel"
+import {ButtonSecondary} from './ButtonSecondary'
+import {Input} from './Input'
+import {Spinner} from "./Spinner"
+import "material-symbols/outlined.css"
 
 type ProviderImportComponent = {
     selectedSearchType: AddTypes
@@ -19,6 +22,7 @@ type AddPostPostModel = {
     trackId: number,
     userId: number
 }
+
 export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSearchType})=>{
     const dispatch = useAppDispatch()
     const searchedPodcasts = useAppSelector(state=>state.common.searchedPodcasts)
@@ -63,32 +67,37 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
         2000,[searchText])
 
     const {t} = useTranslation()
-    return <div className="flex flex-col gap-4">
-    <input value={searchText} placeholder={t('search-podcast')!}
-    className={"border text-sm rounded-lg block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white focus:ring-blue-500 focus:border-blue-500"}
-    onChange={(v)=>setSearchText(v.target.value)}/>
-    <div className="border-2 border-gray-600 rounded p-5 max-h-80 overflow-y-scroll">
-        {loading?<div className="grid place-items-center"><Spinner className="w-12 h-12"/></div>:
-                searchedPodcasts&& searchedPodcasts.map((podcast, index)=>{
-                    return <div key={index}>
-                    <div className="flex">
-                    <div className="flex-1 grid grid-rows-2">
-                        <div>{podcast.title}</div>
-                        <div className="text-sm">{podcast.artist}</div>
-                    </div>
-                    <div>
-                    <button className="fa fa-plus bg-blue-900 text-white p-3" onClick={()=>{
-                        addPodcast({
-                            trackId: podcast.id,
-                            userId:1
-                        })
-                    }}></button>
-                    </div>
-                    </div>
-                    <hr className="border-gray-500"/>
+
+    return <div className="flex flex-col gap-8">
+        <span className="relative">
+            <Input type="text" value={searchText} placeholder={t('search-podcast')!} className="pl-10" onChange={(v)=>setSearchText(v.target.value)}/>
+
+            <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
+        </span>
+
+        {loading?
+            <div className="grid place-items-center">
+                <Spinner className="w-12 h-12"/>
+            </div>
+        :searchedPodcasts&&
+            <ul className="flex flex-col gap-6 max-h-80 pr-3 overflow-y-scroll">
+                {searchedPodcasts.map((podcast, index)=>{
+                    return <li key={index} className="flex gap-4 items-center">
+                        <div className="flex-1 flex flex-col gap-1">
+                            <span className="font-bold leading-tight text-stone-900">{podcast.title}</span>
+                            <span className="leading-tight text-sm text-stone-500">{podcast.artist}</span>
                         </div>
-                })
+                        <div>
+                            <ButtonSecondary className="flex" onClick={()=>{
+                                addPodcast({
+                                    trackId: podcast.id,
+                                    userId:1
+                                })
+                            }}><span className="material-symbols-outlined">add</span></ButtonSecondary>
+                        </div>
+                    </li>
+                })}
+            </ul>
         }
-        </div>
-        </div>
+    </div>
 }
