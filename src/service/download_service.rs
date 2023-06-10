@@ -7,12 +7,14 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::blocking::ClientBuilder;
 
 use std::io;
+use reqwest::header::HeaderMap;
 
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::DbConnection;
 use crate::models::file_path::FilenameBuilder;
 use crate::service::settings_service::SettingsService;
+use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 
 pub struct DownloadService {
     pub db: DB,
@@ -65,9 +67,18 @@ impl DownloadService {
         }
 
 
-        let client = ClientBuilder::new().build().unwrap();
-        let mut resp = client.get(podcast_episode.clone().url).send().unwrap();
-        let mut image_response = client.get(podcast_episode.image_url.clone()).send().unwrap();
+        let client = ClientBuilder::new()
+            .build()
+            .unwrap();
+
+        let mut header_map = HeaderMap::new();
+        add_basic_auth_headers_conditionally(podcast_episode.clone().url, &mut header_map);
+        let mut resp = client.get(podcast_episode.clone().url)
+            .headers(header_map.clone())
+            .send()
+            .unwrap();
+        let mut image_response = client.get(podcast_episode.image_url.clone()).headers(header_map).send()
+            .unwrap();
 
         let mut podcast_out = std::fs::File::create(paths.0.clone()).unwrap();
         let mut image_out = std::fs::File::create(paths.1.clone()).unwrap();

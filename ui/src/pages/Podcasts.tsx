@@ -107,7 +107,6 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             </span>
 
             <CustomSelect icon="sort" onChange={(v)=> {
-                console.log(JSON.parse(v))
                 let converted = JSON.parse(v) as OrderCriteriaSortingType
                 dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
             }} options={orderOptions} value={JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})} />

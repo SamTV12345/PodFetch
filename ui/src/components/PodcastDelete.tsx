@@ -1,4 +1,4 @@
-import {setConfirmModalData, setPodcasts} from "../store/CommonSlice";
+import {Podcast, setConfirmModalData, setPodcasts} from "../store/CommonSlice";
 import {setModalOpen} from "../store/ModalSlice";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useTranslation} from "react-i18next";
@@ -21,10 +21,10 @@ export const PodcastDelete = () => {
         }
     },[])
 
-    const deletePodcast = (withFiles:boolean, podcast_id: number)=>{
+    const deletePodcast = (withFiles: boolean, podcast_id: number, p: Podcast)=>{
         axios.delete(apiURL+"/podcast/"+podcast_id,{data: {delete_files: withFiles}})
             .then(()=>{
-                enqueueSnackbar(t('podcast-deleted'),{variant: "success"})
+                enqueueSnackbar(t('podcast-deleted', {name: p.name}),{variant: "success"})
             })
     }
 
@@ -40,7 +40,7 @@ export const PodcastDelete = () => {
                                 dispatch(setConfirmModalData({
                                     headerText: t('delete-podcast-with-files'),
                                     onAccept:()=>{
-                                        deletePodcast(true, p.id)
+                                        deletePodcast(true, p.id, p)
                                     },
                                     onReject: ()=>{
                                         dispatch(setModalOpen(false))
@@ -55,7 +55,7 @@ export const PodcastDelete = () => {
                                 dispatch(setConfirmModalData({
                                     headerText: t('delete-podcast-without-files'),
                                     onAccept:()=>{
-                                        deletePodcast(false, p.id)
+                                        deletePodcast(false, p.id, p)
                                     },
                                     onReject: ()=>{
                                         dispatch(setModalOpen(false))

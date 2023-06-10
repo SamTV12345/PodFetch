@@ -57,18 +57,19 @@ version: '3'
 services:
   podfetch:
     image: samuel19982/podfetch:latest
+    user: ${UID:-1000}:${GID:-1000}
     ports:
       - "80:8000"
     volumes:
-      - podgrab-podcasts:/app/podcasts
-      - podgrab-db:/app/db
+      - podfetch-podcasts:/app/podcasts
+      - podfetch-db:/app/db
     environment:
       - POLLING_INTERVAL=60
       - SERVER_URL=http://<your-ip>:<your-port>
 
 volumes:
-  podgrab-podcasts:
-  podgrab-db:
+  podfetch-podcasts:
+  podfetch-db:
 ```
 
 ### Postgres
@@ -86,7 +87,8 @@ volumes:
 version: '3'
 services:
   podfetch:
-    image: samuel19982/podfetch:dev-postgres
+    image: samuel19982/podfetch:postgres
+    user: ${UID:-1000}:${GID:-1000}
     ports:
       - "80:8000"
     volumes:

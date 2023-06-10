@@ -38,7 +38,7 @@ fn main() {
 }
 
 
-fn create_git_sqlite(mut opts: Options) {
+fn create_git_sqlite(opts: Options) {
         let src = env::var("CARGO_MANIFEST_DIR").unwrap();
         let dst = Path::new(&env::var("OUT_DIR").unwrap()).join("built.rs");
         println!("Path: {:?}", dst);

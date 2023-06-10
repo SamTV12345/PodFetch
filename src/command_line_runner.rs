@@ -17,6 +17,8 @@ use crate::models::favorites::Favorite;
 use crate::models::models::PodcastHistoryItem;
 use crate::models::session::Session;
 use crate::models::subscription::Subscription;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::service::rust_service::PodcastService;
 
 
 pub fn start_command_line(mut args: Args){
@@ -25,8 +27,71 @@ pub fn start_command_line(mut args: Args){
         "help"|"--help"=>{
             println!(r" The following commands are available:
             users => Handles user management
+            podcasts => Handles podcast management
             ")
         }
+        "podcasts"=>{
+            println!("Podcast management");
+            match args.nth(0).unwrap().as_str() {
+                "refresh"=> {
+                    let podcast_rss_feed = args.nth(0);
+                    if podcast_rss_feed.is_none(){
+                        println!("Please provide a podcast rss feed url");
+                        exit(1);
+                    }
+                    let rss_feed = podcast_rss_feed.clone().unwrap();
+                    let mut podcast_service = PodcastService::new();
+                    let conn = &mut establish_connection();
+
+
+                    let replaced_feed = rss_feed.replace("'", "").replace(" ","");
+                    println!("Refreshing podcast {}", replaced_feed);
+
+                    let podcast = DB::get_podcast_by_rss_feed(replaced_feed, conn);
+
+                    let mut podcast_episode_service = PodcastEpisodeService::new();
+                    podcast_episode_service.insert_podcast_episodes(conn, podcast.clone());
+                    podcast_service.schedule_episode_download( podcast,None, conn);
+
+                }
+                "refresh-all"=> {
+                    let conn = &mut establish_connection();
+                    let podcasts  = DB::get_all_podcasts(&mut establish_connection());
+                    let mut podcast_service = PodcastService::new();
+                    for podcast in podcasts.unwrap(){
+                            println!("Refreshing podcast {}", podcast.name);
+
+                        let mut podcast_episode_service = PodcastEpisodeService::new();
+                        podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast.clone());
+                            podcast_service.schedule_episode_download( podcast,None, conn);
+                    }
+                }
+                "list"=>{
+                    let podcasts = DB::get_all_podcasts(&mut establish_connection());
+                    match podcasts {
+                        Ok(podcasts)=>{
+                            println!("Id - Name - RSS Feed");
+                            for podcast in podcasts{
+                                println!("{} - {} - {}", podcast.id, podcast.name, podcast.rssfeed);
+                            }
+                        },
+                        Err(..)=>{
+                            println!("Error getting podcasts");
+                        }
+                    }
+                },
+                "help"|"--help"=>{
+                    println!(r" The following commands are available:
+                    refresh => Refreshes a podcast
+                    refresh-all => Refreshes all podcasts
+                    list => Lists all podcasts
+                    ")
+                }
+                _=>{
+                    println!("Unknown command");
+                }
+            }
+        },
         "users"=>{
             println!("User management");
             match args.nth(0).unwrap().as_str() {
