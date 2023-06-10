@@ -1,4 +1,4 @@
-import {FC, useEffect} from "react"
+import {FC, useEffect, useMemo} from "react"
 import {useLocation} from "react-router-dom"
 import {useTranslation} from "react-i18next"
 import axios, {AxiosResponse} from "axios"
@@ -40,6 +40,10 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
     let location = useLocation();
     const {t} = useTranslation()
     const filters = useAppSelector(state=>state.common.filters)
+    const memorizedSelection = useMemo(()=>{
+        return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
+    },[filters])
+
     const refreshAllPodcasts = ()=>{
         axios.post(apiURL+"/podcast/all")
     }
@@ -113,7 +117,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             <CustomSelect icon="sort" onChange={(v)=> {
                 let converted = JSON.parse(v) as OrderCriteriaSortingType
                 dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
-            }} options={orderOptions} value={JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})} />
+            }} options={orderOptions} value={memorizedSelection} />
         </div>
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
