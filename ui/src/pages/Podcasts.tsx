@@ -38,11 +38,14 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
     }
 
     const performFilter =()=>{
+        if(filters === undefined){
+            return
+        }
         axios.get(apiURL + "/podcasts/search", {
             params: {
                 title: filters?.title,
                 order: filters?.ascending?Order.ASC:Order.DESC,
-                orderOption: filters?.filter=="PUBLISHEDDATE"?"PUBLISHEDDATE":"TITLE",
+                orderOption: filters?.filter?.toUpperCase(),
                 favoredOnly: !!onlyFavorites
             }
         })

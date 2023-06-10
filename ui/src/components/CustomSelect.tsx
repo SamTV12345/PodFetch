@@ -16,6 +16,7 @@ type CustomSelectProps = {
 }
 
 export const CustomSelect: FC<CustomSelectProps> = ({ defaultValue, icon, onChange, options, value }) => {
+    console.log(value)
     return <Select.Root defaultValue={defaultValue} onValueChange={onChange} value={value}>
         <Select.Trigger className="bg-white border border-stone-200 pl-6 pr-2 py-2 rounded-full text-sm text-stone-600">
             {icon &&
