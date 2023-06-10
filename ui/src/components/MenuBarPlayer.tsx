@@ -47,7 +47,6 @@ export const MenuBarPlayer:FC<MenuBarPlayerProps> = ({refItem}) => {
         refItem.current.src = episodes[index].local_url
         refItem.current.load()
         refItem.current?.play()
-        console.log("Switched to episode: "+episodes[index])
         dispatch(setPlaying(true))
     }
 

@@ -71,7 +71,7 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,epi
                 dispatch(setInfoModalPodcastOpen(true))
             }}/></div></div>
             {
-                index===episodesLength-5&&<Waypoint key={index+"waypoint"} onEnter={()=>{
+                index===episodesLength&&<Waypoint key={index+"waypoint"} onEnter={()=>{
                     axios.get(apiURL+"/podcast/"+params.id+"/episodes?last_podcast_episode="+episode.date_of_recording)
                         .then((response)=>{
                             dispatch(addPodcastEpisodes(response.data))

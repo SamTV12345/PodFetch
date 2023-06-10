@@ -6,7 +6,7 @@ import {LoginData} from "../components/LoginComponent";
 import {User} from "../models/User";
 import {ConfirmModalProps} from "../components/ConfirmModal";
 import {Invite} from "../pages/InviteAdministrationUserPage";
-import {TimeLineModel} from "../models/TimeLineModel";
+import {TimelineHATEOASModel, TimeLineModel} from "../models/TimeLineModel";
 import {Filter} from "../models/Filter";
 
 export type Podcast = {
@@ -58,7 +58,7 @@ interface CommonProps {
     users: User[],
     addInviteModalOpen: boolean,
     invites: Invite[],
-    timeLineEpisodes: TimeLineModel[],
+    timeLineEpisodes: TimelineHATEOASModel|undefined
     filters: Filter|undefined
 }
 
@@ -80,7 +80,7 @@ const initialState: CommonProps = {
     users: [],
     addInviteModalOpen: false,
     invites: [],
-    timeLineEpisodes:[],
+    timeLineEpisodes:undefined,
     filters: undefined
 }
 
@@ -162,11 +162,19 @@ export const commonSlice = createSlice({
         setInvites: (state, action:PayloadAction<Invite[]>) => {
             state.invites = action.payload
         },
-        setTimeLineEpisodes: (state, action:PayloadAction<TimeLineModel[]>) => {
+        setTimeLineEpisodes: (state, action:PayloadAction<TimelineHATEOASModel>) => {
             state.timeLineEpisodes = action.payload
         },
-        addTimelineEpisodes: (state, action:PayloadAction<TimeLineModel[]>) => {
-            state.timeLineEpisodes = [...state.timeLineEpisodes, ...action.payload]
+        addTimelineEpisodes: (state, action:PayloadAction<TimelineHATEOASModel>) => {
+            if (!state.timeLineEpisodes) {
+                state.timeLineEpisodes = action.payload
+                return
+            }
+            state.timeLineEpisodes = {
+                totalElements: action.payload.totalElements,
+                data: [...state.timeLineEpisodes.data, ...action.payload.data]
+            }  satisfies TimelineHATEOASModel
+            //[...state.timeLineEpisodes, ...action.payload]
         },
         addPodcastEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
             state.selectedEpisodes = [...state.selectedEpisodes, ...action.payload]

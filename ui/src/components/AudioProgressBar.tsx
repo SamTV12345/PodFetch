@@ -70,7 +70,6 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef, className}) => {
 
     const calcTotalMovement = (e: React.MouseEvent<HTMLElement, MouseEvent>)=>{
         if(mousePressed && metadata && audioplayerRef.current){
-            console.log("Changing percentage to: "+(metadata.percentage + e.movementX))
             dispatch(setCurrentTimeUpdatePercentage(metadata.percentage + e.movementX))
             audioplayerRef.current.currentTime = Math.floor(metadata.percentage + e.movementX / 100 * audioplayerRef.current.duration)
         }
