@@ -27,6 +27,13 @@ interface PodcastsProps {
     onlyFavorites?: boolean
 }
 
+const orderOptions = [
+    { value: JSON.stringify(TIME_ASCENDING), label: '1.1.-31.12' },
+    { value: JSON.stringify(TIME_DESCENDING), label: '31.12-1.1' },
+    { value: JSON.stringify(TITLE_ASCENDING), label: 'A-Z' },
+    { value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A' }
+]
+
 export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
     const podcasts = useAppSelector(state=>state.common.podcasts)
     const dispatch = useAppDispatch()
@@ -54,12 +61,6 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             })
     }
 
-    const orderOptions = [
-        { value: JSON.stringify(TIME_ASCENDING), label: '1.1.-31.12' },
-        { value: JSON.stringify(TIME_DESCENDING), label: '31.12-1.1' },
-        { value: JSON.stringify(TITLE_ASCENDING), label: 'A-Z' },
-        { value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A' }
-    ];
 
     useDebounce(()=> {
         performFilter();
