@@ -58,8 +58,6 @@ macro_rules! import_database_config{
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/sqlite");
     #[cfg(sqlite)]
     use diesel::sqlite::SqliteQueryBuilder;
-    #[cfg(sqlite)]
-    pub type MyQueryBuilder = SqliteQueryBuilder;
 
 
     #[cfg(postgresql)]
@@ -67,8 +65,6 @@ macro_rules! import_database_config{
 
     #[cfg(postgresql)]
     use diesel::pg::PgQueryBuilder;
-    #[cfg(postgresql)]
-    pub type MyQueryBuilder = PgQueryBuilder;
 
     #[cfg(postgresql)]
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
@@ -77,10 +73,5 @@ macro_rules! import_database_config{
     type DbConnection = MysqlConnection;
     #[cfg(mysql)]
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/mysql");
-
-    #[cfg(mysql)]
-    use diesel::mysql::MysqlQueryBuilder;
-    #[cfg(mysql)]
-    pub type MyQueryBuilder = MysqlQueryBuilder;
     }
 }

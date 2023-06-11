@@ -1,7 +1,7 @@
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use diesel::prelude::*;
-use diesel::{RunQueryDsl};
+use diesel::{debug_query, RunQueryDsl};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::{DbConnection};
 use crate::models::favorites::Favorite;
@@ -36,9 +36,9 @@ impl TimelineItem{
 
         let mut total_count = podcast_episodes.inner_join(podcasts.on(e_podcast_id.eq(pid)))
             .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
-            .order(date_of_recording.desc())
             .count()
             .into_boxed();
+
 
         match favored_only.favored_only {
             true=>{
@@ -62,6 +62,7 @@ impl TimelineItem{
                 }
             }
         }
+        println!("{}",debug_query(&total_count).to_string());
         let results = total_count.get_result::<i64>(conn).expect("Error counting results");
         let result = query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect("Error \
         loading podcast episode by id");
