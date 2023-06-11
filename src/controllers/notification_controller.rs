@@ -13,12 +13,11 @@ responses(
 tag="notifications"
 )]
 #[get("/notifications/unread")]
-pub async fn get_unread_notifications(notification_service: Data<Mutex<NotificationService>>,
-                                      db:Data<Mutex<DB>>, conn: Data<DbPool> ) ->
+pub async fn get_unread_notifications(notification_service: Data<Mutex<NotificationService>>, conn: Data<DbPool> ) ->
                                                                                              impl Responder {
     let notifications = notification_service
         .lock().ignore_poison()
-        .get_unread_notifications(db.lock().ignore_poison().clone(),&mut conn.get().unwrap());
+        .get_unread_notifications(&mut conn.get().unwrap());
     HttpResponse::Ok().json(notifications.unwrap())
 }
 

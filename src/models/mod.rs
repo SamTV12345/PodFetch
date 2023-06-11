@@ -23,3 +23,5 @@ pub mod file_path;
 pub mod podcasts;
 pub mod podcast_dto;
 pub mod podcast_episode;
+pub mod podcast_history_item;
+pub mod notification;

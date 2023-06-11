@@ -35,11 +35,9 @@ impl FileService {
             client: ClientBuilder::new().build().unwrap(),
         }
     }
-    pub fn check_if_podcast_main_image_downloaded(&mut self, podcast_id: &str, db: DB, conn: &mut
+    pub fn check_if_podcast_main_image_downloaded(&mut self, podcast_id: &str, conn: &mut
     DbConnection) -> bool {
-        let podcast = db
-            .clone()
-            .get_podcast_by_directory_id(podcast_id, conn)
+        let podcast = Podcast::get_podcast_by_directory_id(podcast_id, conn)
             .unwrap();
         match podcast {
             Some(podcast) => {
@@ -76,7 +74,7 @@ impl FileService {
 
             let db = DB::new().unwrap();
             let conn = &mut establish_connection();
-            let podcast = db.get_podcast_by_directory_id(podcast_id,conn).unwrap();
+            let podcast = Podcast::get_podcast_by_directory_id(podcast_id,conn).unwrap();
             match podcast {
                 Some(_)=>{
                     // is the same podcast
@@ -105,8 +103,7 @@ impl FileService {
         let mut image_out = std::fs::File::create(file_path.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
-        let db = DB::new().unwrap();
-        db.update_podcast_image(podcast_id, &file_path, conn).unwrap();
+        PodcastEpisode::update_podcast_image(podcast_id, &file_path, conn).unwrap();
     }
 
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> std::io::Result<()> {

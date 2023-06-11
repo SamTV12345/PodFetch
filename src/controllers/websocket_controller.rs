@@ -109,7 +109,7 @@ pub async fn get_rss_feed_for_podcast(
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let res = DB::get_podcast(&mut conn.get().unwrap(),id.clone());
+    let res = Podcast::get_podcast(&mut conn.get().unwrap(),id.clone());
 
     match res {
         Ok(podcast) => {

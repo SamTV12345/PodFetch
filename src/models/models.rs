@@ -44,34 +44,6 @@ pub struct PodcastWatchedPostModel {
 
 
 
-#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId,
-Selectable, Debug)]
-#[serde(rename_all = "camelCase")]
-#[diesel(table_name=crate::dbconfig::schema::podcast_history_items)]
-pub struct PodcastHistoryItem {
-    #[diesel(sql_type = Integer, column_name=id)]
-    pub id: i32,
-    #[diesel(sql_type = Integer, column_name=podcast_id)]
-    pub podcast_id: i32,
-    #[diesel(sql_type = Text,column_name=episode_id)]
-    pub episode_id: String,
-    #[diesel(sql_type = Integer, column_name=watched_time)]
-    pub watched_time: i32,
-    #[diesel(sql_type = Timestamp,column_name=date)]
-    pub date: NaiveDateTime,
-    #[diesel(sql_type = Text,column_name=username)]
-    pub username: String
-}
-
-impl PodcastHistoryItem{
-    pub fn delete_by_username(username1: String, conn: &mut DbConnection) -> Result<(),
-        diesel::result::Error>{
-        use crate::dbconfig::schema::podcast_history_items::dsl::*;
-        diesel::delete(podcast_history_items.filter(username.eq(username1)))
-            .execute(conn)?;
-        Ok(())
-    }
-}
 
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -103,12 +75,4 @@ pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub podcast: Podcast,
 }
 
-#[derive(Serialize, Deserialize, Queryable,Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct Notification {
-    pub id: i32,
-    pub type_of_message: String,
-    pub message: String,
-    pub created_at: String,
-    pub status: String,
-}
+

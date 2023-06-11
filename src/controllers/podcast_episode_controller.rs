@@ -116,11 +116,11 @@ Responder {
 
     thread::spawn(move || {
         let mut db = DB::new().unwrap();
-        let res = DB::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
+        let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
             .unwrap();
         match res {
             Some(podcast_episode) => {
-                let podcast = DB::get_podcast(&mut conn.get().unwrap(),podcast_episode
+                let podcast = Podcast::get_podcast(&mut conn.get().unwrap(),podcast_episode
                     .podcast_id).unwrap();
                 PodcastEpisodeService::perform_download(
                     &podcast_episode,

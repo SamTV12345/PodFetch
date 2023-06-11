@@ -14,12 +14,13 @@ use crate::db::DB;
 use crate::models::device::Device;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
-use crate::models::models::PodcastHistoryItem;
 use crate::models::session::Session;
 use crate::models::subscription::Subscription;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-
+use crate::models::podcast_history_item::PodcastHistoryItem;
+use crate::models::podcasts::Podcast;
+use crate::models::settings::Setting;
 
 pub fn start_command_line(mut args: Args){
     println!("Starting from command line");
@@ -56,7 +57,7 @@ pub fn start_command_line(mut args: Args){
                 }
                 "refresh-all"=> {
                     let conn = &mut establish_connection();
-                    let podcasts  = DB::get_all_podcasts(&mut establish_connection());
+                    let podcasts  = Podcast::get_all_podcasts(&mut establish_connection());
                     let mut podcast_service = PodcastService::new();
                     for podcast in podcasts.unwrap(){
                             println!("Refreshing podcast {}", podcast.name);
@@ -67,7 +68,7 @@ pub fn start_command_line(mut args: Args){
                     }
                 }
                 "list"=>{
-                    let podcasts = DB::get_all_podcasts(&mut establish_connection());
+                    let podcasts = Podcast::get_all_podcasts(&mut establish_connection());
                     match podcasts {
                         Ok(podcasts)=>{
                             println!("Id - Name - RSS Feed");
@@ -360,7 +361,7 @@ pub fn create_debug_message() {
     println!("Rustc Version: {}", built_info::RUSTC_VERSION);
     println!("Rustc: {}", built_info::RUSTC_VERSION);
 
-    let podcasts  = DB::get_all_podcasts(&mut establish_connection());
+    let podcasts  = Podcast::get_all_podcasts(&mut establish_connection());
 
     match podcasts {
         Ok(podcasts) => {

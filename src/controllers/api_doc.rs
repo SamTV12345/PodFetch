@@ -1,7 +1,4 @@
 use crate::models;
-use crate::models::models::{
-    PodCastAddModel, PodcastHistoryItem, PodcastWatchedEpisodeModel, PodcastWatchedPostModel,
-};
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::HttpResponse;
 use futures::future::LocalBoxFuture;
@@ -19,6 +16,10 @@ use crate::controllers::podcast_controller::*;
 use crate::controllers::notification_controller::*;
 use crate::controllers::settings_controller::*;
 use crate::models::settings::Setting;
+use crate::models::podcast_history_item::PodcastHistoryItem;
+use crate::models::models::PodcastWatchedEpisodeModel;
+use crate::models::models::PodcastWatchedPostModel;
+use crate::models::models::PodCastAddModel;
 
 #[derive(OpenApi)]
 #[openapi(

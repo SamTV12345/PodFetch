@@ -1,7 +1,8 @@
 use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
-use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
+use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode};
+use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::service::environment_service;
 use crate::models::podcasts::Podcast;
 

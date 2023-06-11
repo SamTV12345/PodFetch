@@ -41,6 +41,8 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 
 #[derive(Serialize, Deserialize)]
@@ -399,7 +401,7 @@ Data<Mutex<PodcastService>>, conn: Data<DbPool>, requester: Option<web::ReqData<
         return HttpResponse::Unauthorized().json("Unauthorized");
     }
 
-    let podcasts = DB::get_all_podcasts(&mut conn.get().unwrap());
+    let podcasts = Podcast::get_all_podcasts(&mut conn.get().unwrap());
     thread::spawn(move || {
     for podcast in podcasts.unwrap() {
         podcast_service.lock()
@@ -481,13 +483,13 @@ tag="podcasts"
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,requester: Option<web::ReqData<User>>,
-    db:Data<Mutex<DB>>,
+    mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>
 ) -> impl Responder {
-    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone(),db,
-                                                        &mut conn.get().unwrap());
+    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone(),
+                                                        mapping_service.lock().ignore_poison()
+                                                            .clone(), &mut conn.get().unwrap());
     HttpResponse::Ok().json(podcasts)
 }
 
@@ -617,17 +619,18 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     }
 
 
-    let podcast = DB::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
+    let podcast = Podcast::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
         finding podcast");
     if data.delete_files{
         FileService::delete_podcast_files(&podcast.directory_name);
     }
 
-    DB::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
+    PodcastHistoryItem::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
     watchtime");
-    DB::delete_episodes_of_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
+    PodcastEpisode::delete_episodes_of_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
+    deleting \
     episodes of podcast");
-    DB::delete_podcast(&mut *db.get().unwrap(), id.clone());
+    Podcast::delete_podcast(&mut *db.get().unwrap(), id.clone());
     HttpResponse::Ok().into()
 }
 #[derive(Debug, Deserialize)]

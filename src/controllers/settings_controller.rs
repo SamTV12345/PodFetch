@@ -103,7 +103,7 @@ pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service: Data
                                                                                              impl
 Responder {
     let env_service = env_service.lock().ignore_poison();
-    let podcasts_found = DB::get_all_podcasts(&mut conn.get().unwrap()).unwrap();
+    let podcasts_found = Podcast::get_all_podcasts(&mut conn.get().unwrap()).unwrap();
 
     let mut xml = XMLBuilder::new().version(XMLVersion::XML1_1)
         .encoding("UTF-8".to_string())

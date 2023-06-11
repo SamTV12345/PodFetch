@@ -16,11 +16,11 @@ impl SettingsService{
     }
 
     pub fn get_settings(&mut self, mut db:DB, conn: &mut DbConnection) -> Option<Setting> {
-        db.get_settings(conn)
+        Setting::get_settings(conn)
     }
 
     pub fn update_settings(&mut self, settings: Setting, mut db:DB,conn: &mut DbConnection) -> Setting{
-        db.update_settings(settings, conn)
+        Setting::update_settings(settings, conn)
     }
 
     pub fn update_name(&mut self, update_model: UpdateNameSettings, db:DB, conn: &mut DbConnection) ->
