@@ -10,7 +10,6 @@ use crate::models::user::{User, UserWithoutPassword};
 use crate::utils::time::get_current_timestamp_str;
 use rpassword::read_password;
 use crate::controllers::sys_info_controller::built_info;
-use crate::db::DB;
 use crate::models::device::Device;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -20,7 +19,7 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
-use crate::models::settings::Setting;
+
 
 pub fn start_command_line(mut args: Args){
     println!("Starting from command line");
@@ -48,7 +47,7 @@ pub fn start_command_line(mut args: Args){
                     let replaced_feed = rss_feed.replace("'", "").replace(" ","");
                     println!("Refreshing podcast {}", replaced_feed);
 
-                    let podcast = DB::get_podcast_by_rss_feed(replaced_feed, conn);
+                    let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn);
 
                     let mut podcast_episode_service = PodcastEpisodeService::new();
                     podcast_episode_service.insert_podcast_episodes(conn, podcast.clone());

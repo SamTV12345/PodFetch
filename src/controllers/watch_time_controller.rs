@@ -1,4 +1,3 @@
-use crate::db::DB;
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
 use actix_web::{get, post, web, HttpResponse, Responder};
@@ -39,12 +38,11 @@ responses(
 tag="watchtime"
 )]
 #[get("/podcast/episode/lastwatched")]
-pub async fn get_last_watched(db: Data<Mutex<DB>>, conn: Data<DbPool>, requester:
+pub async fn get_last_watched(conn: Data<DbPool>, requester:
 Option<web::ReqData<User>>, mapping_service:Data<Mutex<MappingService>>) -> impl
 Responder {
 
     let designated_username = requester.unwrap().username.clone();
-    let mut db = db.lock().ignore_poison();
     let last_watched = PodcastHistoryItem::get_last_watched_podcasts(&mut establish_connection(),
                                                      designated_username
         .clone(), mapping_service.lock().ignore_poison().clone()).unwrap();

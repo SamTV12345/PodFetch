@@ -4,7 +4,7 @@ use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
 use diesel::{BoolExpressionMethods, delete, insert_into, OptionalExtension, RunQueryDsl, TextExpressionMethods};
 use diesel::dsl::sql;
 use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Bool, Timestamp};
+use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use rss::Item;

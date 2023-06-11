@@ -2,16 +2,15 @@ use std::collections::HashMap;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
-use diesel::dsl::max;
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension};
+
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
-use diesel::query_builder::QueryBuilder;
-use crate::db::DB;
-use crate::{DbConnection, MyQueryBuilder};
-use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+
+use crate::{DbConnection};
+
 use crate::models::models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
@@ -177,7 +176,7 @@ impl Episode{
         query.iter().map(|e|{
             let opt_podcast = map.get(&*e.clone().1.podcast);
             if opt_podcast.is_none(){
-                let podcast_found = DB::get_podcast_by_rss_feed(e.clone().1.podcast, conn);
+                let podcast_found = Podcast::get_podcast_by_rss_feed(e.clone().1.podcast, conn);
                 map.insert(e.clone().1.podcast.clone(),podcast_found.clone());
             }
             let found_podcast = map.get(&e.clone().1.podcast).cloned().unwrap();

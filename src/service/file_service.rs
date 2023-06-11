@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use crate::db::DB;
-use crate::models::podcast_dto::PodcastDto;
+
 use crate::models::podcasts::Podcast;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
@@ -72,7 +71,6 @@ impl FileService {
         else{
             // Check if this is a new podcast with the same name as an old one
 
-            let db = DB::new().unwrap();
             let conn = &mut establish_connection();
             let podcast = Podcast::get_podcast_by_directory_id(podcast_id,conn).unwrap();
             match podcast {
@@ -122,7 +120,7 @@ impl FileService {
 
 pub fn prepare_podcast_title_to_directory(title: &str, conn:&mut DbConnection) ->String {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(DB::new().unwrap(), conn).unwrap();
+    let retrieved_settings = settings_service.get_settings(conn).unwrap();
     let final_string = perform_replacement(title, retrieved_settings.clone());
 
     let fixed_string = retrieved_settings.podcast_format.replace("{}","{podcasttitle}");
@@ -136,7 +134,7 @@ pub fn prepare_podcast_episode_title_to_directory(podcast_episode: PodcastEpisod
 DbConnection)
     ->String {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(DB::new().unwrap(),conn).unwrap();
+    let retrieved_settings = settings_service.get_settings(conn).unwrap();
     if retrieved_settings.use_existing_filename{
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if res_of_filename.is_ok(){

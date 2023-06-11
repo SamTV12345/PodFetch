@@ -1,10 +1,10 @@
 use std::sync::MutexGuard;
 use crate::dbconfig::schema::*;
-use chrono::NaiveDateTime;
+
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
 use diesel::{BoolExpressionMethods, delete, insert_into, JoinOnDsl, OptionalExtension, RunQueryDsl};
 use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Bool, Timestamp};
+use diesel::sql_types::{Integer, Text, Nullable, Bool};
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use crate::DbConnection;
@@ -15,7 +15,7 @@ use crate::service::mapping_service::MappingService;
 use crate::utils::do_retry::do_retry;
 use crate::utils::podcast_builder::PodcastExtra;
 use std::io::Error;
-use crate::db::DB;
+
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
 Serialize, Deserialize,Default)]
@@ -136,7 +136,6 @@ impl Podcast{
         image_url_1: String,
         directory_name_to_insert: String
     ) -> Podcast {
-        use crate::dbconfig::schema::podcasts;
         use crate::dbconfig::schema::podcasts::{directory_id, image_url, name as podcast_name, rssfeed};
         use crate::dbconfig::schema::podcasts::{original_image_url, directory_name};
 
@@ -152,6 +151,15 @@ impl Podcast{
             .get_result::<Podcast>(conn)
             .expect("Error inserting podcast");
         return inserted_podcast;
+    }
+
+    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut DbConnection) -> Podcast {
+        use crate::dbconfig::schema::podcasts::dsl::*;
+
+        podcasts
+            .filter(rssfeed.eq(rss_feed_1))
+            .first::<Podcast>(conn)
+            .expect("Error loading podcast by rss feed")
     }
 
     pub fn get_podcast_by_directory_id(podcast_id: &str, conn: &mut DbConnection) -> Result<Option<Podcast>,

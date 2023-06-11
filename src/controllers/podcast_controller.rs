@@ -27,7 +27,6 @@ use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
-use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -461,16 +460,14 @@ pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
-    db:Data<Mutex<DB>>,
     conn: Data<DbPool>
 ) -> impl Responder {
 
-    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
 
     podcast_service.update_favor_podcast(update_model.id, update_model.favored,
-                                         requester.unwrap().username.clone(),db, &mut conn.get().unwrap());
+                                         requester.unwrap().username.clone(), &mut conn.get().unwrap());
     HttpResponse::Ok().json("Favorited podcast")
 }
 

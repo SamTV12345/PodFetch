@@ -1,7 +1,6 @@
 
 use crate::constants::constants::ERR_SETTINGS_FORMAT;
 use crate::controllers::settings_controller::{UpdateNameSettings};
-use crate::db::DB;
 use crate::DbConnection;
 use crate::models::settings::Setting;
 
@@ -15,17 +14,17 @@ impl SettingsService{
         }
     }
 
-    pub fn get_settings(&mut self, mut db:DB, conn: &mut DbConnection) -> Option<Setting> {
+    pub fn get_settings(&mut self, conn: &mut DbConnection) -> Option<Setting> {
         Setting::get_settings(conn)
     }
 
-    pub fn update_settings(&mut self, settings: Setting, mut db:DB,conn: &mut DbConnection) -> Setting{
+    pub fn update_settings(&mut self, settings: Setting, conn: &mut DbConnection) -> Setting{
         Setting::update_settings(settings, conn)
     }
 
-    pub fn update_name(&mut self, update_model: UpdateNameSettings, db:DB, conn: &mut DbConnection) ->
+    pub fn update_name(&mut self, update_model: UpdateNameSettings, conn: &mut DbConnection) ->
                                                                                 Result<Setting,String>{
-        let mut settings_ = self.get_settings(db.clone(), conn).unwrap();
+        let mut settings_ = self.get_settings(conn).unwrap();
         let res = Self::validate_settings(update_model.clone());
         if res.is_err(){
             return  Err(res.err().unwrap());
@@ -36,7 +35,7 @@ impl SettingsService{
         settings_.replacement_strategy = update_model.replacement_strategy.to_string();
         settings_.episode_format = update_model.episode_format;
         settings_.podcast_format = update_model.podcast_format;
-        Ok(self.update_settings(settings_,db.clone(), conn))
+        Ok(self.update_settings(settings_, conn))
     }
 
 

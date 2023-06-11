@@ -1,12 +1,11 @@
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-use diesel::prelude::*;
-use diesel::sql_types::{Integer, Text};
-use diesel::{QueryId, Selectable};
+
+
 use utoipa::ToSchema;
 use chrono::NaiveDateTime;
-use diesel::sql_types::Timestamp;
-use crate::DbConnection;
+
+
 
 // decode request data
 #[derive(Deserialize)]

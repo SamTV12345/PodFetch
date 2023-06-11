@@ -1,35 +1,11 @@
-
-use crate::constants::constants::{DEFAULT_SETTINGS, STANDARD_USER};
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_dto::PodcastDto;
-
 use crate::models::podcasts::Podcast;
-use crate::models::settings::Setting;
-use crate::service::mapping_service::MappingService;
-use crate::utils::podcast_builder::PodcastExtra;
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use diesel::dsl::{sql};
 use diesel::prelude::*;
-use diesel::{insert_into, sql_query, RunQueryDsl, delete, debug_query};
-use rss::Item;
-use std::io::Error;
-
-use std::sync::MutexGuard;
-
-use diesel::query_builder::{QueryBuilder};
-use diesel::sql_types::{Text, Timestamp};
+use diesel::{RunQueryDsl};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
-
-use crate::{DbConnection, MyQueryBuilder};
-use crate::dbconfig::__sqlite_schema::podcast_history_items::dsl::podcast_history_items;
-use crate::models::episode::{Episode, EpisodeAction};
+use crate::{DbConnection};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
-
-use crate::utils::do_retry::do_retry;
-use crate::utils::time::opt_or_empty_string;
-
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,32 +14,7 @@ pub struct TimelineItem{
     pub total_elements: i64
 }
 
-pub struct DB {
-    mapping_service: MappingService,
-}
-
-impl Clone for DB {
-    fn clone(&self) -> Self {
-        DB {
-            mapping_service: MappingService::new(),
-        }
-    }
-}
-
-impl DB {
-    pub fn new() -> Result<DB, String> {
-        Ok(DB {
-            mapping_service: MappingService::new(),
-        })
-    }
-
-
-
-
-
-
-
-
+impl TimelineItem{
     pub fn get_timeline(username_to_search: String, conn: &mut DbConnection, favored_only: TimelineQueryParams)
         -> TimelineItem {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
@@ -121,18 +72,4 @@ impl DB {
         }
 
     }
-
-
-
-    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut DbConnection) -> Podcast {
-        use crate::dbconfig::schema::podcasts::dsl::*;
-
-        podcasts
-            .filter(rssfeed.eq(rss_feed_1))
-            .first::<Podcast>(conn)
-            .expect("Error loading podcast by rss feed")
-    }
-
-
-
 }

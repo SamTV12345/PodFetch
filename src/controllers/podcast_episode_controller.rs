@@ -1,4 +1,3 @@
-use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
@@ -7,6 +6,7 @@ use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
+use crate::db::TimelineItem;
 use crate::DbPool;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -77,7 +77,7 @@ Responder {
     let mapping_service = mapping_service.lock().ignore_poison().clone();
 
 
-    let mut res = DB::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
+    let res = TimelineItem::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
                                    favored_only.into_inner());
 
     let mapped_timeline = res.data.iter().map(|podcast_episode| {
@@ -115,7 +115,6 @@ Responder {
     }
 
     thread::spawn(move || {
-        let mut db = DB::new().unwrap();
         let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
             .unwrap();
         match res {
@@ -124,7 +123,6 @@ Responder {
                     .podcast_id).unwrap();
                 PodcastEpisodeService::perform_download(
                     &podcast_episode,
-                    &mut db,
                     podcast_episode.clone(),
                     podcast,
                     &mut conn.get().unwrap()

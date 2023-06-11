@@ -1,7 +1,6 @@
 use std::io::Error;
 use std::sync::{MutexGuard};
 use crate::constants::constants::{PodcastType, ITUNES_URL};
-use crate::db::DB;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 
@@ -191,7 +190,6 @@ impl PodcastService {
         lobby: Option<Data<Addr<Lobby>>>,
         conn: &mut DbConnection
     ) {
-        let mut db = DB::new().unwrap();
         let settings = Setting::get_settings(conn);
         match settings {
             Some(settings) => {
@@ -223,8 +221,7 @@ impl PodcastService {
         self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn);
     }
 
-    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, mut db:
-    MutexGuard<DB>, conn: &mut DbConnection) {
+    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, conn: &mut DbConnection) {
         Favorite::update_podcast_favor(&id, x, conn,username).unwrap();
     }
 

@@ -2,7 +2,7 @@ use actix_web::{HttpResponse, Responder, web};
 
 use actix_web::{get,post};
 use actix_web::web::Data;
-use crate::db::DB;
+
 use crate::DbPool;
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
 use std::borrow::Borrow;

@@ -1,4 +1,3 @@
-use crate::db::DB;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::{FileService};
@@ -18,7 +17,6 @@ use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 
 pub struct DownloadService {
-    pub db: DB,
     pub mappingservice: MappingService,
     pub client_builder: ClientBuilder,
     pub file_service: FileService,
@@ -27,18 +25,16 @@ pub struct DownloadService {
 impl DownloadService {
     pub fn new() -> Self {
         DownloadService {
-            db: DB::new().unwrap(),
             mappingservice: MappingService::new(),
             client_builder: ClientBuilder::new(),
             file_service: FileService::new(),
         }
     }
 
-    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast,
-                                    db:DB, _conn: &mut DbConnection) {
+    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast) {
         let conn = &mut establish_connection();
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
-        let settings_in_db = SettingsService::new().get_settings(db.clone(),conn).unwrap();
+        let settings_in_db = SettingsService::new().get_settings(conn).unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
         let paths;

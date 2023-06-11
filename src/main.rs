@@ -55,7 +55,6 @@ mod constants;
 mod db;
 mod models;
 mod service;
-use crate::db::DB;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::podcasts::Podcast;
@@ -141,7 +140,6 @@ async fn main() -> std::io::Result<()> {
     //services
     let podcast_episode_service = PodcastEpisodeService::new();
     let podcast_service = PodcastService::new();
-    let db = DB::new().unwrap();
     let mapping_service = MappingService::new();
     let file_service = FileService::new_db();
     let notification_service = NotificationService::new();
@@ -196,7 +194,6 @@ async fn main() -> std::io::Result<()> {
             let conn= &mut establish_connection();
             Session::cleanup_sessions(conn).expect("Error clearing old \
             sessions");
-            let mut db = DB::new().unwrap();
             let mut podcast_episode_service = PodcastEpisodeService::new();
             let settings = Setting::get_settings(conn);
             match settings {
@@ -225,7 +222,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
-            .app_data(Data::new(Mutex::new(db.clone())))
             .app_data(Data::new(Mutex::new(mapping_service.clone())))
             .app_data(Data::new(Mutex::new(file_service.clone())))
             .app_data(Data::new(Mutex::new(environment_service.clone())))
@@ -371,7 +367,6 @@ pub fn get_secure_user_management() ->Scope{
 }
 
 pub fn insert_default_settings_if_not_present() {
-    let mut db = DB::new().unwrap();
     let conn = &mut establish_connection();
     let settings = Setting::get_settings(conn);
     match settings {

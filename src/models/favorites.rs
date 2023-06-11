@@ -98,7 +98,6 @@ impl Favorite{
         use crate::dbconfig::schema::podcasts::dsl::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
-        use crate::dbconfig::schema::favorites;
 
 
         let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))

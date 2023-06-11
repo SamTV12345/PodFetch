@@ -59,7 +59,6 @@ impl Filter{
     pub fn save_decision_for_timeline(username_to_search: String, conn: &mut DbConnection,
                                       only_favored_to_insert:
     bool){
-        use crate::dbconfig::schema::filters::only_favored;
         use crate::dbconfig::schema::filters::dsl::*;
         diesel::update(filters.filter(username.eq(username_to_search)))
             .set(only_favored.eq(only_favored_to_insert))

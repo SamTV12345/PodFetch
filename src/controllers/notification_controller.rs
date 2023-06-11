@@ -1,7 +1,6 @@
 use actix_web::web::Data;
 use actix_web::{get, put, web, HttpResponse, Responder};
 use std::sync::Mutex;
-use crate::db::DB;
 use crate::{DbPool};
 use crate::mutex::LockResultExt;
 use crate::service::notification_service::NotificationService;
@@ -35,13 +34,11 @@ tag="notifications"
 #[put("/notifications/dismiss")]
 pub async fn dismiss_notifications(
     id: web::Json<NotificationId>,
-    notification_service: Data<Mutex<NotificationService>>,
-    db:Data<Mutex<DB>>,
-    conn: Data<DbPool>
+    notification_service: Data<Mutex<NotificationService>>, conn: Data<DbPool>
 ) -> impl Responder {
     notification_service.lock()
         .ignore_poison()
-        .update_status_of_notification(id.id, "dismissed", db.lock().ignore_poison().clone(),
+        .update_status_of_notification(id.id, "dismissed",
                                        &mut conn.get().unwrap())
         .expect("Error dismissing notification");
     HttpResponse::Ok()

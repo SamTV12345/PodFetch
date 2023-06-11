@@ -1,5 +1,4 @@
 use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
-use crate::db::DB;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::messages::BroadcastMessage;
@@ -19,7 +18,7 @@ use rss::Channel;
 
 use crate::DbConnection;
 use crate::models::notification::Notification;
-use crate::models::podcast_history_item::PodcastHistoryItem;
+
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
@@ -45,8 +44,7 @@ impl PodcastEpisodeService {
         conn: &mut DbConnection,
     ) {
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings(DB::new().unwrap(),conn).unwrap();
-        let mut db = DB::new().unwrap();
+        let settings = settings_service.get_settings(conn).unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
@@ -71,7 +69,6 @@ impl PodcastEpisodeService {
             Ok(false) => {
                 let podcast_inserted = Self::perform_download(
                     &podcast_episode,
-                    &mut db,
                     podcast_episode_cloned,
                     podcast_cloned,
                     conn
@@ -105,15 +102,13 @@ impl PodcastEpisodeService {
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
-        db: &mut DB,
         podcast_episode_cloned: PodcastEpisode,
         podcast_cloned: Podcast,
         conn: &mut DbConnection,
     ) -> PodcastEpisode {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned,
-                                                  DB::new().unwrap(), conn);
+        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned, conn);
         let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)
             .unwrap();
         let notification = Notification {
@@ -131,7 +126,7 @@ impl PodcastEpisodeService {
                                                                              Vec<PodcastEpisode> {
 
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings(DB::new().unwrap(),conn).unwrap();
+        let settings = settings_service.get_settings(conn).unwrap();
         PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id,
                                         settings.podcast_prefill).unwrap()
     }
@@ -155,7 +150,6 @@ impl PodcastEpisodeService {
 
         // insert original podcast image url
         if podcast.original_image_url.is_empty() {
-            let mut db = DB::new().unwrap();
             Podcast::update_original_image_url(&channel.image().unwrap().url.to_string(), podcast
                 .id,conn);
         }
@@ -283,7 +277,6 @@ impl PodcastEpisodeService {
     }
 
     pub fn query_for_podcast(&mut self, query: &str, conn:&mut DbConnection) -> Vec<PodcastEpisode> {
-        let mut db = DB::new().unwrap();
 
         let podcasts = Podcast::query_for_podcast(query,conn).unwrap();
         let podcast_dto = podcasts
@@ -295,7 +288,6 @@ impl PodcastEpisodeService {
 
     pub fn find_all_downloaded_podcast_episodes(&mut self, conn:&mut DbConnection, env: EnvironmentService) ->
                                                                                    Vec<PodcastEpisode> {
-        let mut db = DB::new().unwrap();
         let result = PodcastEpisode::get_episodes(conn);
         self.map_rss_podcast_episodes(env, result)
     }
@@ -349,7 +341,6 @@ impl PodcastEpisodeService {
 
     fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32, conn:&mut DbConnection) {
         let itunes = feed.clone().itunes_ext;
-        let mut db = DB::new().unwrap();
 
         match itunes {
             Some(itunes) => {

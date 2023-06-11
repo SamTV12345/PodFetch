@@ -1,13 +1,3 @@
-use crate::dbconfig::schema::*;
-use chrono::NaiveDateTime;
-use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
-use diesel::{RunQueryDsl};
-use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Bool, Timestamp};
-use diesel::QueryDsl;
-use diesel::ExpressionMethods;
-use crate::DbConnection;
-
 #[derive(Serialize, Deserialize)]
 pub struct PodcastDto {
     pub(crate) id: i32,

@@ -7,7 +7,6 @@ use actix_web::{web, HttpResponse, Responder};
 use std::sync::{Mutex, MutexGuard};
 use chrono::Local;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
-use crate::db::DB;
 use crate::DbPool;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
@@ -22,14 +21,12 @@ responses(
 tag="podcast_episodes"
 )]
 #[get("/settings")]
-pub async fn get_settings(settings_service: Data<Mutex<SettingsService>>, db:Data<Mutex<DB>>,
-                          conn:Data<DbPool>) ->
+pub async fn get_settings(settings_service: Data<Mutex<SettingsService>>, conn:Data<DbPool>) ->
                                                                                              impl
 Responder {
     let mut settings_service = settings_service.lock().ignore_poison();
-    let db = db.lock().unwrap();
 
-    let settings = settings_service.get_settings(db.clone(),&mut conn.get().unwrap());
+    let settings = settings_service.get_settings(&mut conn.get().unwrap());
     match settings {
         Some(settings) => HttpResponse::Ok().json(settings),
         None => HttpResponse::NotFound().finish(),
@@ -45,14 +42,13 @@ tag="settings"
 )]
 #[put("/settings")]
 pub async fn update_settings(settings_service: Data<Mutex<SettingsService>>, settings:
-web::Json<Setting>, requester: Option<web::ReqData<User>>, db: Data<Mutex<DB>>,conn:Data<DbPool>) -> impl Responder {
+web::Json<Setting>, requester: Option<web::ReqData<User>>,conn:Data<DbPool>) -> impl Responder {
     if !requester.unwrap().is_admin() {
         return HttpResponse::Unauthorized().finish();
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
-    let db = db.lock().unwrap();
-    let settings = settings_service.update_settings(settings.into_inner(),db.clone(),&mut conn.get().unwrap());
+    let settings = settings_service.update_settings(settings.into_inner(),&mut conn.get().unwrap());
     HttpResponse::Ok().json(settings)
 }
 
@@ -65,17 +61,14 @@ tag="settings"
 #[put("/settings/runcleanup")]
 pub async fn run_cleanup(
     pdservice: Data<Mutex<PodcastEpisodeService>>,
-    settings_service: Data<Mutex<SettingsService>>,
-    db: Data<Mutex<DB>>,
-    conn: Data<DbPool>,
+    settings_service: Data<Mutex<SettingsService>>,conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> impl Responder {
 
     if !requester.unwrap().is_admin() {
         return HttpResponse::Unauthorized().finish();
     }
-    let db = db.lock().unwrap();
-    let settings = settings_service.lock().ignore_poison().get_settings(db.clone(), &mut conn.get
+    let settings = settings_service.lock().ignore_poison().get_settings( &mut conn.get
     ().unwrap());
     match settings {
         Some(settings) => {
@@ -166,7 +159,6 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<Environmen
 pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
                          update_information: web::Json<UpdateNameSettings>, requester:
                          Option<web::ReqData<User>>,
-                         db: Data<Mutex<DB>>,
                          conn: Data<DbPool>)
     -> impl Responder {
     if !requester.unwrap().is_admin() {
@@ -175,8 +167,7 @@ pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
 
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.update_name(update_information.into_inner(),db.lock().unwrap
-    ().clone(), &mut conn.get().unwrap());
+    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get().unwrap());
     HttpResponse::Ok().json(settings)
 }
 

@@ -139,15 +139,15 @@ impl PodcastHistoryItem{
         designated_username: String, mapping_service: MappingService) ->
                                                                           Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
         use crate::dbconfig::schema::podcast_history_items;
-        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        
         use crate::dbconfig::schema::podcast_history_items::dsl::episode_id as ehid;
 
-        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as eid;
-        use crate::dbconfig::schema::podcasts::dsl::id as pid;
-        use crate::dbconfig::schema::episodes::episode;
-        use crate::dbconfig::schema::podcasts::dsl::*;
-        use diesel::dsl::max;
-        use diesel::sqlite::Sqlite;
+        
+        
+        
+        
+        
+        
         use diesel::NullableExpressionMethods;
 
         let (history_item1, history_item2) = diesel::alias!(podcast_history_items as p1, podcast_history_items
