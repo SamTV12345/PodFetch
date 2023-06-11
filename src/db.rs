@@ -11,7 +11,7 @@ use crate::utils::podcast_builder::PodcastExtra;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::dsl::{sql};
 use diesel::prelude::*;
-use diesel::{insert_into, sql_query, RunQueryDsl, delete};
+use diesel::{insert_into, sql_query, RunQueryDsl, delete, debug_query};
 use rss::Item;
 use std::io::Error;
 
@@ -22,6 +22,7 @@ use diesel::sql_types::{Text, Timestamp};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 
 use crate::{DbConnection, MyQueryBuilder};
+use crate::dbconfig::__sqlite_schema::podcast_history_items::dsl::podcast_history_items;
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
@@ -405,20 +406,30 @@ impl DB {
         &mut self,
         conn: &mut DbConnection,
         designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
+        use crate::dbconfig::schema::podcast_history_items;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_history_items::dsl::episode_id as ehid;
 
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as eid;
+        use crate::dbconfig::schema::podcasts::dsl::id as pid;
+        use crate::dbconfig::schema::episodes::episode;
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use diesel::dsl::max;
+        use diesel::sqlite::Sqlite;
+        let (users1, users2) = diesel::alias!(podcast_history_items as p1, podcast_history_items
+            as p2);
 
+        let subquery = users1
+            .select(diesel::dsl::max(users1.field(podcast_history_items::date)))
+            .filter(users1.field(podcast_history_items::episode_id).eq(users1.field(ehid)))
+            .group_by(users1.field(ehid));
 
-
-        let mut builder = MyQueryBuilder::new();
-        builder.push_sql("SELECT * FROM   podcast_history_items phi1 WHERE username=");
-        builder.push_bind_param();
-        builder.push_sql(" AND  phi1.date IN (SELECT MAX(date) FROM   podcast_history_items \
-        phi2 WHERE  phi1.episode_id = phi2.episode_id);");
-
-        let result = sql_query(builder.finish())
-            .bind::<Text,_>(designated_username)
+        let result = users2
+            .filter(users2.field(podcast_history_items::username).eq(designated_username))
+            .filter(users2.field(podcast_history_items::date).nullable().eq_any( subquery))
             .load::<PodcastHistoryItem>(conn)
             .unwrap();
+
 
         let podcast_watch_episode = result
             .iter()
@@ -874,24 +885,19 @@ impl DB {
                                       since: NaiveDateTime)
         ->
     Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)> {
-        let mut builder = MyQueryBuilder::new();
+        use crate::dbconfig::schema::podcast_history_items;
+        use crate::dbconfig::schema::podcasts;
+        use crate::dbconfig::schema::podcast_episodes;
 
-        builder.push_sql("SELECT * FROM podcast_history_items,podcast_episodes, podcasts WHERE
-        podcast_history_items.episode_id = podcast_episodes.episode_id AND podcast_history_items
-        .podcast_id=podcasts.id AND username=");
-        builder.push_bind_param();
-        builder.push_sql(" AND date >= ");
-        builder.push_bind_param();
-
-        let query = builder.finish();
-
-        let res = sql_query(query)
-            .bind::<Text, _>(&username_to_search)
-            .bind::<Timestamp, _>(&since)
+        podcast_history_items::table
+            .inner_join(podcast_episodes::table.on(podcast_history_items::episode_id.eq(podcast_episodes::episode_id)))
+            .inner_join(podcasts::table)
+            .filter(podcast_history_items::episode_id.eq(podcast_episodes::episode_id))
+            .filter(podcast_history_items::podcast_id.eq(podcasts::id))
+            .filter(podcast_history_items::username.eq(username_to_search))
+            .filter(podcast_history_items::date.ge(since))
             .load::<(PodcastHistoryItem, PodcastEpisode, Podcast)>(conn)
-            .expect("Error loading watch logs");
-
-        res
+            .unwrap()
     }
 
     pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut DbConnection) -> Podcast {

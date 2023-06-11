@@ -128,26 +128,22 @@ impl Episode{
     pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut DbConnection,
                                                  episode_1: String) ->Option<Episode>{
 
-        let mut builder = MyQueryBuilder::new();
+        use crate::dbconfig::schema::episodes::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::table as podcast_episode_table;
+        use diesel::JoinOnDsl;
+        use diesel::Table;
 
-        builder.push_sql("SELECT * FROM episodes,podcasts WHERE username=");
-        builder.push_bind_param();
-        builder.push_sql(" AND episodes.podcast=podcasts.rssfeed AND episodes.episode = ");
-        builder.push_bind_param();
-        builder.push_sql(" ORDER BY timestamp DESC LIMIT 10;");
-
-        let query = builder.finish();
-        //TODO Debug with not downloaded podcast episode
-        let res = sql_query(query)
-            .bind::<Text, _>(username1.clone())
-            .bind::<Text,_>(episode_1)
-            .load::<Episode>(conn)
+        let query = episodes
+            .inner_join(podcast_episode_table.on(podcast.eq(rssfeed)))
+            .filter(username.eq(username1))
+            .filter(episode.eq(episode_1))
+            .order_by(timestamp.desc())
+            .select(episodes::all_columns())
+            .first::<Episode>(conn)
+            .optional()
             .expect("");
-        return if res.len() > 0 {
-            Some(res[0].clone())
-        } else {
-            None
-        }
+        return query;
     }
 
     pub fn convert_to_podcast_history_item(&self, podcast_1: Podcast,pod_episode: PodcastEpisode)

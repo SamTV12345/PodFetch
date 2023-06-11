@@ -43,7 +43,8 @@ pub struct PodcastWatchedPostModel {
 
 
 
-#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId, Selectable)]
+#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId,
+Selectable, Debug)]
 #[serde(rename_all = "camelCase")]
 #[diesel(table_name=crate::dbconfig::schema::podcast_history_items)]
 pub struct PodcastHistoryItem {
