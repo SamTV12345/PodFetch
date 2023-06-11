@@ -69,6 +69,12 @@ pub struct TimelineQueryParams {
     pub last_timestamp: Option<String>
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the current timeline of the user")),
+tag="podcasts"
+)]
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<User>>, mapping_service:
 Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) ->

@@ -91,6 +91,12 @@ pub enum Mode{
     LOCAL,ONLINE
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the podcasts in opml format")),
+tag="podcasts"
+)]
 #[get("/settings/opml/{type_of}")]
 pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service: Data<Mutex<EnvironmentService>>) ->
                                                                                              impl
@@ -154,7 +160,13 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<Environmen
     body
 }
 
-
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Updates the name settings")),
+tag="podcasts",
+request_body=UpdateNameSettings
+)]
 #[put("/settings/name")]
 pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
                          update_information: web::Json<UpdateNameSettings>, requester:
@@ -171,7 +183,8 @@ pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
     HttpResponse::Ok().json(settings)
 }
 
-#[derive(Deserialize, Clone)]
+use utoipa::ToSchema;
+#[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNameSettings{
     pub use_existing_filenames: bool,

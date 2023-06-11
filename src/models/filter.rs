@@ -5,9 +5,9 @@ use diesel::ExpressionMethods;
 use diesel::AsChangeset;
 use diesel::Queryable;
 use crate::DbConnection;
+use utoipa::ToSchema;
 
-
-#[derive(Debug, Clone, Serialize, Deserialize, Insertable, AsChangeset, Queryable)]
+#[derive(Debug, Clone, Serialize, Deserialize, Insertable, AsChangeset, Queryable,ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Filter{
     pub username: String,

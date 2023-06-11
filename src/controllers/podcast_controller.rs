@@ -1,5 +1,5 @@
 use crate::models::dto_models::PodcastFavorUpdateModel;
-use crate::models::models::{PodCastAddModel, PodcastInsertModel};
+use crate::models::models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
 use crate::models::search_type::SearchType::{ITUNES, PODINDEX};
 use crate::models::web_socket_message::Lobby;
@@ -53,6 +53,12 @@ pub struct PodcastSearchModel{
     favored_only: bool
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the user specific filter.",body= Option<Filter>)),
+tag="podcasts"
+)]
 #[get("/podcasts/filter")]
 pub async fn get_filter(conn: Data<DbPool>, requester:
 Option<web::ReqData<User>>) ->
@@ -64,6 +70,13 @@ Responder{
             HttpResponse::Ok().json(filter)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the podcasts matching the searching criteria",body=
+Vec<Podcast>)),
+tag="podcasts"
+)]
 #[get("/podcasts/search")]
 pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
                              _podcast_service: Data<Mutex<PodcastService>>,
@@ -210,14 +223,14 @@ pub async fn find_podcast(
 
 #[utoipa::path(
 context_path="/api/v1",
-request_body=PodCastAddModel,
+request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podcast to the database.")),
 tag="podcasts"
 )]
 #[post("/podcast/itunes")]
 pub async fn add_podcast(
-    track_id: web::Json<PodCastAddModel>,
+    track_id: web::Json<PodcastAddModel>,
     lobby: Data<Addr<Lobby>>,
     conn: Data<DbPool>, requester: Option<web::ReqData<User>>) -> impl Responder {
     if !requester.unwrap().is_privileged_user(){
@@ -252,6 +265,12 @@ pub async fn add_podcast(
     HttpResponse::Ok().into()
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Adds a podcast by its feed url",body=Podcast)),
+tag="podcasts"
+)]
 #[post("/podcast/feed")]
 pub async fn add_podcast_by_feed(
     rss_feed: web::Json<PodcastRSSAddModel>,
@@ -330,14 +349,14 @@ pub async fn import_podcasts_from_opml(
 
 #[utoipa::path(
 context_path="/api/v1",
-request_body=PodCastAddModel,
+request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podindex podcast to the database")),
 tag="podcasts"
 )]
 #[post("/podcast/podindex")]
 pub async fn add_podcast_from_podindex(
-    id: web::Json<PodCastAddModel>,
+    id: web::Json<PodcastAddModel>,
     lobby: Data<Addr<Lobby>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>
@@ -377,9 +396,8 @@ fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut DbConne
 context_path="/api/v1",
 params(("podcast", description="The podcast episode query parameter.")),
 responses(
-(status = 200, description = "Queries for a podcast episode by a query string ")),
-tag="podcasts"
-)]
+(status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisode>)),
+tag="podcasts",)]
 #[get("/podcasts/{podcast}/query")]
 pub async fn query_for_podcast(
     podcast: Path<String>,
@@ -393,6 +411,12 @@ pub async fn query_for_podcast(
     HttpResponse::Ok().json(res)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Refreshes all podcasts")),
+tag="podcasts"
+)]
 #[post("/podcast/all")]
 pub async fn refresh_all_podcasts(lobby:Data<Addr<Lobby>>, podcast_service:
 Data<Mutex<PodcastService>>, conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder {
@@ -602,12 +626,19 @@ async fn insert_outline(
 
 
 }
-
-#[derive(Deserialize)]
+use utoipa::ToSchema;
+#[derive(Deserialize,ToSchema)]
 pub struct DeletePodcast {
     pub delete_files: bool
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body=DeletePodcast,
+responses(
+(status = 200, description = "Deletes a podcast by id")),
+tag="podcasts"
+)]
 #[delete("/podcast/{id}")]
 pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id: Path<i32>, requester: Option<web::ReqData<User>>)
                             ->impl Responder{
@@ -636,6 +667,13 @@ pub struct Params {
     episode_id: String,
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Proxies a podcast so people can stream podcasts from the remote \
+server")),
+tag="podcasts"
+)]
 #[get("/proxy/podcast")]
 pub(crate) async fn proxy_podcast(
     mut payload: web::Payload,

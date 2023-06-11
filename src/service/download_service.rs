@@ -11,7 +11,6 @@ use reqwest::header::HeaderMap;
 
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
-use crate::DbConnection;
 use crate::models::file_path::FilenameBuilder;
 use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;

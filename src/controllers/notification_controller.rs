@@ -8,7 +8,7 @@ use crate::service::notification_service::NotificationService;
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Gets all unread notifications.")),
+(status = 200, description = "Gets all unread notifications.",body= Vec<Notification>)),
 tag="notifications"
 )]
 #[get("/notifications/unread")]

@@ -8,8 +8,8 @@ use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::user_management_service::UserManagementService;
-
-#[derive(Deserialize)]
+use utoipa::ToSchema;
+#[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserOnboardingModel{
     invite_id: String,
@@ -17,7 +17,7 @@ pub struct UserOnboardingModel{
     password: String
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct InvitePostModel{
     role: Role,
@@ -31,6 +31,13 @@ pub struct UserRoleUpdateModel{
     explicit_consent: bool
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body = UserOnboardingModel,
+responses(
+(status = 200, description = "Creates a user (admin)")),
+tag="info"
+)]
 #[post("/users/")]
 pub async fn onboard_user(user_onboarding: web::Json<UserOnboardingModel>, conn: Data<DbPool>)->impl Responder{
     let user_to_onboard = user_onboarding.into_inner();
@@ -46,6 +53,12 @@ pub async fn onboard_user(user_onboarding: web::Json<UserOnboardingModel>, conn:
     };
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets all users", body= Vec<UserOnboardingModel>)),
+tag="info"
+)]
 #[get("")]
 pub async fn get_users(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder{
 
@@ -59,6 +72,12 @@ pub async fn get_users(conn: Data<DbPool>, requester: Option<web::ReqData<User>>
     HttpResponse::Ok().json(res.unwrap())
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets a user by username", body = Option<User>)),
+tag="info"
+)]
 #[get("/users/{username}")]
 pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
     let username = get_user_from_request(req);
@@ -70,6 +89,13 @@ pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
     };
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body = UserOnboardingModel,
+responses(
+(status = 200, description = "Updates the role of a user", body = Option<User>)),
+tag="info"
+)]
 #[put("/{username}/role")]
 pub async fn update_role(role: web::Json<UserRoleUpdateModel>, conn: Data<DbPool>, username:
 web::Path<String>, requester: Option<web::ReqData<User>>)
@@ -103,6 +129,13 @@ web::Path<String>, requester: Option<web::ReqData<User>>)
     }
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body=InvitePostModel,
+responses(
+(status = 200, description = "Creates an invite", body = Invite,)),
+tag="info"
+)]
 #[post("/invites")]
 pub async fn create_invite(invite: web::Json<InvitePostModel>, conn:
 Data<DbPool>, requester: Option<web::ReqData<User>>)
@@ -116,6 +149,12 @@ Responder{
     HttpResponse::Ok().json(created_invite)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets all invites", body = Vec<Invite>)),
+tag="info"
+)]
 #[get("/invites")]
 pub async fn get_invites(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder{
     if !requester.unwrap().is_admin(){
@@ -131,6 +170,12 @@ pub async fn get_invites(conn: Data<DbPool>, requester: Option<web::ReqData<User
     HttpResponse::Ok().json(invites.unwrap())
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets a specific invite", body = Option<Invite>)),
+tag="info"
+)]
 #[get("/users/invites/{invite_id}")]
 pub async fn get_invite(conn: Data<DbPool>, invite_id: web::Path<String>)->
     impl Responder{
@@ -140,6 +185,12 @@ pub async fn get_invite(conn: Data<DbPool>, invite_id: web::Path<String>)->
     }
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Deletes a user by username")),
+tag="info"
+)]
 #[delete("/{username}")]
 pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>,  requester: Option<web::ReqData<User>>)->impl
 Responder{
@@ -155,6 +206,11 @@ Responder{
     };
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+tag="info",
+responses(
+(status = 200, description = "Gets an invite by id", body = Option<Invite>)))]
 #[get("/invites/{invite_id}/link")]
 pub async fn get_invite_link(conn: Data<DbPool>, invite_id: web::Path<String>,
                              environment_service: Data<Mutex<EnvironmentService>>, requester: Option<web::ReqData<User>>)->
@@ -173,6 +229,11 @@ pub async fn get_invite_link(conn: Data<DbPool>, invite_id: web::Path<String>,
     }
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+tag="info",
+responses(
+(status = 200, description = "Deletes an invite by id")))]
 #[delete("/invites/{invite_id}")]
 pub async fn delete_invite(conn:Data<DbPool>, invite_id: web::Path<String>,requester: Option<web::ReqData<User>>)->impl Responder{
     if !requester.unwrap().is_admin(){

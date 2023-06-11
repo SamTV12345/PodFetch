@@ -14,6 +14,11 @@ use std::sync::{Mutex};
 use crate::DbPool;
 use crate::mutex::LockResultExt;
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets a web socket connection"))
+,tag="info")]
 #[get("/ws")]
 pub async fn start_connection(
     req: HttpRequest,
@@ -25,6 +30,11 @@ pub async fn start_connection(
     Ok(resp)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the complete rss feed"))
+,tag="info")]
 #[get("/rss")]
 pub async fn get_rss_feed(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
@@ -98,6 +108,11 @@ fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtensio
     }
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets a specific rss feed"))
+,tag="info")]
 #[get("/rss/{id}")]
 pub async fn get_rss_feed_for_podcast(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,

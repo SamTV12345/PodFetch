@@ -22,7 +22,7 @@ pub struct NewUser {
 
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct PodCastAddModel {
+pub struct PodcastAddModel {
     pub track_id: i32,
     pub user_id: i32,
 }

@@ -108,7 +108,7 @@ impl PodcastEpisodeService {
     ) -> PodcastEpisode {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned, conn);
+        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned);
         let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)
             .unwrap();
         let notification = Notification {
