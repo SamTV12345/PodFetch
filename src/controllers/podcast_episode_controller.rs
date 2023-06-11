@@ -8,6 +8,7 @@ use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
 use crate::DbPool;
+use crate::models::favorites::Favorite;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -50,6 +51,14 @@ pub async fn find_all_podcast_episodes_of_podcast(
 pub struct TimeLinePodcastEpisode {
     podcast_episode: PodcastEpisode,
     podcast: Podcast,
+    favorite: Option<Favorite>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeLinePodcastItem{
+    data: Vec<TimeLinePodcastEpisode>,
+    total_elements: i64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -64,22 +73,26 @@ pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<Us
 Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) ->
                                                                                              impl
 Responder {
-    let mapping_service = mapping_service.lock().ignore_poison();
+    let mapping_service = mapping_service.lock().ignore_poison().clone();
 
 
-    let res = DB::get_timeline(requester.unwrap().username.clone(),&mut conn.get().unwrap(),
-                               favored_only.into_inner());
+    let mut res = DB::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
+                                   favored_only.into_inner());
 
-    let mapped_timeline = res.iter().map(|podcast_episode| {
-        let (podcast_episode, podcast) = podcast_episode;
-        let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(podcast_episode);
+    let mapped_timeline = res.data.iter().map(|podcast_episode| {
+        let (podcast_episode, podcast, favorite) = podcast_episode.clone();
+        let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast_episode);
 
-        TimeLinePodcastEpisode{
+        return TimeLinePodcastEpisode {
             podcast_episode: mapped_podcast_episode,
-            podcast: podcast.clone()
-        }
-    }).collect::<Vec<TimeLinePodcastEpisode>>();
-    HttpResponse::Ok().json(mapped_timeline)
+            podcast,
+            favorite
+        };
+        }).collect::<Vec<TimeLinePodcastEpisode>>();
+    HttpResponse::Ok().json(TimeLinePodcastItem{
+        data: mapped_timeline,
+        total_elements: res.total_elements
+    })
 }
 
 /**

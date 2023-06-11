@@ -30,6 +30,14 @@ use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimelineItem{
+    pub data: Vec<(PodcastEpisode,Podcast, Option<Favorite>)>,
+    pub total_elements: i64
+}
+
 pub struct DB {
     mapping_service: MappingService,
 }
@@ -802,8 +810,10 @@ impl DB {
     }
 
 
+
+
     pub fn get_timeline(username_to_search: String, conn: &mut DbConnection, favored_only: TimelineQueryParams)
-        -> Vec<(PodcastEpisode, Podcast)> {
+        -> TimelineItem {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::*;
         use crate::dbconfig::schema::podcasts::id as pid;
@@ -821,21 +831,24 @@ impl DB {
             .limit(20)
             .into_boxed();
 
+        let mut total_count = podcast_episodes.inner_join(podcasts.on(e_podcast_id.eq(pid)))
+            .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
+            .order(date_of_recording.desc())
+            .count()
+            .into_boxed();
+
         match favored_only.favored_only {
             true=>{
                 match favored_only.last_timestamp {
                     Some(last_id) => {
-                        query = query.filter(date_of_recording.lt(last_id));
+                        query = query.filter(date_of_recording.lt(last_id.clone()));
                     }
                     None => {}
                 }
 
                 query = query.filter(f_username.eq(username_to_search.clone()));
+                total_count = total_count.filter(f_username.eq(username_to_search.clone()));
 
-                query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect("Error loading podcast \
-                episode by id").iter().map(|(episode, podcast, _)| {
-                    (episode.clone(), podcast.clone())
-                }).collect()
             }
             false=>{
                 match favored_only.last_timestamp {
@@ -844,16 +857,16 @@ impl DB {
                     }
                     None => {}
                 }
-
-                query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect
-                ("Error \
-                loading \
-                podcast episode by id").iter().map(|(episode, podcast, _)| {
-                    (episode.clone(), podcast.clone())
-                }).collect()
             }
         }
+        let results = total_count.get_result::<i64>(conn).expect("Error counting results");
+        let result = query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect("Error \
+        loading podcast episode by id");
 
+        TimelineItem{
+            total_elements: results,
+            data: result
+        }
 
     }
 
