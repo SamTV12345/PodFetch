@@ -117,7 +117,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             <CustomSelect icon="sort" onChange={(v)=> {
                 let converted = JSON.parse(v) as OrderCriteriaSortingType
                 dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
-            }} options={orderOptions} value={memorizedSelection} />
+            }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
         </div>
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">

@@ -1,4 +1,5 @@
 import {FC} from "react"
+import {DefaultTFuncReturn} from "i18next"
 import * as Select from "@radix-ui/react-select"
 import "material-symbols/outlined.css"
 
@@ -12,10 +13,11 @@ type CustomSelectProps = {
     icon?: string,
     onChange: (v: string) => void,
     options: Array<Option>,
+    placeholder?: string | DefaultTFuncReturn,
     value: string
 }
 
-export const CustomSelect: FC<CustomSelectProps> = ({ defaultValue, icon, onChange, options, value }) => {
+export const CustomSelect:FC<CustomSelectProps> = ({defaultValue, icon, onChange, options, placeholder, value}) => {
     console.log(value)
     return <Select.Root defaultValue={defaultValue} onValueChange={onChange} value={value}>
         <Select.Trigger className="bg-white border border-stone-200 pl-6 pr-2 py-2 rounded-full text-sm text-stone-600">
@@ -23,8 +25,7 @@ export const CustomSelect: FC<CustomSelectProps> = ({ defaultValue, icon, onChan
                 <span className="material-symbols-outlined align-middle !leading-[1.25rem] -ml-2 mr-1 text-stone-500">{icon}</span>
             }
 
-            {/* TODO: Tranlation */}
-            <Select.Value placeholder="Sort by" />
+            <Select.Value placeholder={placeholder} />
 
             <Select.Icon>
                 <span className="material-symbols-outlined align-middle !leading-[1.25rem] ml-2 text-stone-500">expand_more</span>
