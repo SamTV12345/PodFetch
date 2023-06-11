@@ -100,6 +100,8 @@ impl EnvironmentService {
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
+        println!("Developer specifications available at {}",self.server_url.clone()+"swagger-ui/index\
+        .html#/");
         println!("GPodder integration enabled: {}", self.gpodder_integration_enabled);
         println!("Database url is set to: {}", var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
         println!(

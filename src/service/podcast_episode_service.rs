@@ -1,8 +1,7 @@
 use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
-use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::messages::BroadcastMessage;
-use crate::models::models::Notification;
 use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
 use crate::service::file_service::{determine_image_and_local_podcast_audio_url, FileService};
@@ -18,6 +17,8 @@ use reqwest::header::{ACCEPT, HeaderMap};
 use rss::Channel;
 
 use crate::DbConnection;
+use crate::models::notification::Notification;
+
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
@@ -43,8 +44,7 @@ impl PodcastEpisodeService {
         conn: &mut DbConnection,
     ) {
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings(DB::new().unwrap(),conn).unwrap();
-        let mut db = DB::new().unwrap();
+        let settings = settings_service.get_settings(conn).unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
@@ -55,12 +55,10 @@ impl PodcastEpisodeService {
             (podcast.clone(), podcast_episode.clone(), &suffix, &image_suffix, settings,conn);
 
 
-        match db.check_if_downloaded(&podcast_episode.url, conn) {
+        match PodcastEpisode::check_if_downloaded(&podcast_episode.url, conn) {
             Ok(true) => {
-                let mut db = DB::new().unwrap();
 
-                db
-                    .update_total_podcast_time_and_image(
+                PodcastEpisode::update_total_podcast_time_and_image(
                         &podcast_episode_cloned.episode_id,
                         &image_save_path,
                         &podcast_save_path.clone(),
@@ -71,7 +69,6 @@ impl PodcastEpisodeService {
             Ok(false) => {
                 let podcast_inserted = Self::perform_download(
                     &podcast_episode,
-                    &mut db,
                     podcast_episode_cloned,
                     podcast_cloned,
                     conn
@@ -105,17 +102,14 @@ impl PodcastEpisodeService {
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
-        db: &mut DB,
         podcast_episode_cloned: PodcastEpisode,
         podcast_cloned: Podcast,
         conn: &mut DbConnection,
     ) -> PodcastEpisode {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned,
-                                                  DB::new().unwrap(), conn);
-        let podcast = db
-            .update_podcast_episode_status(&podcast_episode.url, "D", conn)
+        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned);
+        let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)
             .unwrap();
         let notification = Notification {
             id: 0,
@@ -124,7 +118,7 @@ impl PodcastEpisodeService {
             type_of_message: "Download".to_string(),
             status: "unread".to_string(),
         };
-        db.insert_notification(notification,conn).unwrap();
+        Notification::insert_notification(notification,conn).unwrap();
         return podcast;
     }
 
@@ -132,8 +126,8 @@ impl PodcastEpisodeService {
                                                                              Vec<PodcastEpisode> {
 
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings(DB::new().unwrap(),conn).unwrap();
-        DB::get_last_n_podcast_episodes(conn, podcast.id,
+        let settings = settings_service.get_settings(conn).unwrap();
+        PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id,
                                         settings.podcast_prefill).unwrap()
     }
 
@@ -156,8 +150,8 @@ impl PodcastEpisodeService {
 
         // insert original podcast image url
         if podcast.original_image_url.is_empty() {
-            let mut db = DB::new().unwrap();
-            db.update_original_image_url(&channel.image().unwrap().url.to_string(), podcast.id,conn);
+            Podcast::update_original_image_url(&channel.image().unwrap().url.to_string(), podcast
+                .id,conn);
         }
 
         for (_, item) in channel.items.iter().enumerate() {
@@ -169,7 +163,8 @@ impl PodcastEpisodeService {
                     match enclosure {
                         Some(enclosure)=>{
                             let result =
-                                DB::get_podcast_episode_by_url(conn, &enclosure.url.to_string(),
+                                PodcastEpisode::get_podcast_episode_by_url(conn, &enclosure.url
+                                    .to_string(),
                                                                Some(podcast.id));
                             let mut duration_episode = 0;
 
@@ -184,7 +179,7 @@ impl PodcastEpisodeService {
                             if result_unwrapped.is_some()  && result_unwrapped.clone().unwrap()
                                 .podcast_id != podcast.id {
 
-                                let inserted_episode = DB::insert_podcast_episodes(conn,
+                                let inserted_episode = PodcastEpisode::insert_podcast_episodes(conn,
                                                                                    podcast.clone(),
                                                                                    item.clone(),
                                                                                    Some(result_unwrapped.unwrap().image_url),
@@ -202,7 +197,7 @@ impl PodcastEpisodeService {
                                     None => {}
                                 }
 
-                                let inserted_episode = DB::insert_podcast_episodes(conn,
+                                let inserted_episode = PodcastEpisode::insert_podcast_episodes(conn,
                                                                                    podcast.clone(),
                                                                                    item.clone(),
                                                                                    itunes_ext.image,
@@ -225,13 +220,13 @@ impl PodcastEpisodeService {
                         log::info!("Skipping episode {} without enclosure.", item.clone().title.unwrap_or("with no title".to_string()));
                         continue;
                     }
-                    let result = DB::get_podcast_episode_by_url(
+                    let result = PodcastEpisode::get_podcast_episode_by_url(
                         conn, &opt_enclosure.clone().unwrap().url, None);
                     // We can't retrieve the duration of the podcast episode, so we set it to 0
 
                     if result.unwrap().is_none() {
                         let duration_episode = 0;
-                        let inserted_episode = DB::insert_podcast_episodes(
+                        let inserted_episode = PodcastEpisode::insert_podcast_episodes(
                             conn,
                             podcast.clone(),
                             item.clone(),
@@ -282,9 +277,8 @@ impl PodcastEpisodeService {
     }
 
     pub fn query_for_podcast(&mut self, query: &str, conn:&mut DbConnection) -> Vec<PodcastEpisode> {
-        let mut db = DB::new().unwrap();
 
-        let podcasts = db.query_for_podcast(query,conn).unwrap();
+        let podcasts = Podcast::query_for_podcast(query,conn).unwrap();
         let podcast_dto = podcasts
             .iter()
             .map(|podcast| self.mapping_service.map_podcastepisode_to_dto(podcast))
@@ -294,8 +288,7 @@ impl PodcastEpisodeService {
 
     pub fn find_all_downloaded_podcast_episodes(&mut self, conn:&mut DbConnection, env: EnvironmentService) ->
                                                                                    Vec<PodcastEpisode> {
-        let mut db = DB::new().unwrap();
-        let result = db.get_episodes(conn);
+        let result = PodcastEpisode::get_episodes(conn);
         self.map_rss_podcast_episodes(env, result)
     }
 
@@ -341,15 +334,13 @@ impl PodcastEpisodeService {
         podcast_id: i32,
         conn:&mut DbConnection
     ) -> Vec<PodcastEpisode> {
-        let mut db = DB::new().unwrap();
         let env = EnvironmentService::new();
-        let result = db.get_episodes_by_podcast_id(podcast_id, conn);
+        let result = PodcastEpisode::get_episodes_by_podcast_id(podcast_id, conn);
         self.map_rss_podcast_episodes(env, result)
     }
 
     fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32, conn:&mut DbConnection) {
         let itunes = feed.clone().itunes_ext;
-        let mut db = DB::new().unwrap();
 
         match itunes {
             Some(itunes) => {
@@ -361,26 +352,24 @@ impl PodcastEpisodeService {
                     .keywords(itunes.categories)
                     .build();
 
-                db.update_podcast_fields(constructed_extra_fields,conn);
+                Podcast::update_podcast_fields(constructed_extra_fields,conn);
             }
             None => {}
         }
     }
 
     pub fn cleanup_old_episodes(&mut self, days: i32, conn: &mut DbConnection) {
-        let mut db = DB::new().unwrap();
 
-        let old_podcast_episodes = db.get_podcast_episodes_older_than_days(days,conn);
-        let mut db = DB::new().unwrap();
+        let old_podcast_episodes = PodcastEpisode::get_podcast_episodes_older_than_days(days,conn);
 
         log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
         for old_podcast in old_podcast_episodes {
-            let podcast = DB::get_podcast(conn,old_podcast.clone().podcast_id).unwrap();
+            let podcast = Podcast::get_podcast(conn,old_podcast.clone().podcast_id).unwrap();
             let res = FileService::cleanup_old_episode(podcast, old_podcast.clone());
 
             match res {
                 Ok(_) => {
-                    db.update_download_status_of_episode(old_podcast.clone().id,conn);
+                    PodcastEpisode::update_download_status_of_episode(old_podcast.clone().id,conn);
                 }
                 Err(e) => {
                     println!("Error deleting podcast episode.{}", e);
@@ -392,11 +381,11 @@ impl PodcastEpisodeService {
     pub fn get_podcast_episodes_of_podcast(conn: &mut DbConnection, id_num: i32, last_id:
     Option<String>)
         -> Result<Vec<PodcastEpisode>, String> {
-        DB::get_podcast_episodes_of_podcast(conn,id_num, last_id)
+        PodcastEpisode::get_podcast_episodes_of_podcast(conn,id_num, last_id)
     }
 
     pub fn get_podcast_episode_by_id(conn: &mut DbConnection, id_num: &str) ->
                                                                    Result<Option<PodcastEpisode>, String> {
-        DB::get_podcast_episode_by_id(conn, id_num)
+        PodcastEpisode::get_podcast_episode_by_id(conn, id_num)
     }
 }

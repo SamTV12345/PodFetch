@@ -75,7 +75,6 @@ const App: FC<PropsWithChildren> = ({children}) => {
     useEffect(() => {
         if (socket) {
             socket.onopen = () => {
-                console.log("Connected")
             }
 
             // @ts-ignore
@@ -128,11 +127,9 @@ const App: FC<PropsWithChildren> = ({children}) => {
 
 
             socket.onerror = () => {
-                console.log("Error")
             }
 
             socket.onclose = () => {
-                console.log("Closed")
             }
         }
     }, [podcasts, socket, config])

@@ -33,8 +33,8 @@ pub async fn get_sys_info() -> impl Responder {
         podcast_directory: podcast_byte_size,
     })
 }
-
-#[derive(Debug, Serialize)]
+use utoipa::ToSchema;
+#[derive(Debug, Serialize,ToSchema)]
 pub struct SysExtraInfo {
     pub system: System,
     pub podcast_directory: u64,
@@ -56,6 +56,7 @@ pub async fn get_public_config() -> impl Responder {
 
 #[utoipa::path(
 context_path="/api/v1",
+request_body=LoginRequest,
 responses(
 (status = 200, description = "Performs a login if basic auth is enabled",
 body=String)),
@@ -103,6 +104,12 @@ pub struct VersionInfo {
     pub os: &'static str,
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the info of the server")),
+tag="info"
+)]
 #[get("/info")]
 pub async fn get_info() -> impl Responder {
     let version = VersionInfo{

@@ -9,7 +9,6 @@ export const OIDCLogin = () => {
     const {t} = useTranslation()
 
     if (auth.isAuthenticated && auth.user){
-        console.log("User is authenticated")
         axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.access_token;
         navigate("/")
     }

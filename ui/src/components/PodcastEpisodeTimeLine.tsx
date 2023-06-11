@@ -6,17 +6,21 @@ import {store} from "../store/store";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {FC} from "react";
 import {selectPodcastImage} from "../pages/Homepage";
-import {TimeLineModel} from "../models/TimeLineModel";
-import {useAppDispatch} from "../store/hooks";
+import {TimelineHATEOASModel, TimeLineModel} from "../models/TimeLineModel";
+import {useAppDispatch, useAppSelector} from "../store/hooks";
+import {Waypoint} from "react-waypoint";
+import {addPodcastEpisodes, addTimelineEpisodes} from "../store/CommonSlice";
 
 
 type PodcastEpisodeTimeLineProps = {
     podcastEpisode: TimeLineModel,
     index: number,
-    timelineLength: number
+    timelineLength: number,
+    totalLength: number,
+    timeLineEpisodes: TimelineHATEOASModel
 }
 
-export const PodcastEpisodeTimeLine:FC<PodcastEpisodeTimeLineProps> = ({podcastEpisode, index, timelineLength}) => {
+export const PodcastEpisodeTimeLine:FC<PodcastEpisodeTimeLineProps> = ({podcastEpisode, index, timelineLength, timeLineEpisodes}) => {
     const dispatch = useAppDispatch()
 
     return <div key={podcastEpisode.podcast_episode.episode_id+"dv"}
@@ -38,6 +42,20 @@ export const PodcastEpisodeTimeLine:FC<PodcastEpisodeTimeLineProps> = ({podcastE
                         })
                 }}/>
             </div>
+            {
+                timeLineEpisodes.data.length === index+1 &&<Waypoint key={index+"waypoint"} onEnter={()=>{
+                    axios.get(apiURL+"/podcasts/timeline", {
+                        params:{
+                            lastTimestamp: podcastEpisode.podcast_episode.date_of_recording,
+                            favoredOnly: store.getState().common.filters?.onlyFavored
+                        }
+                    })
+                        .then((response:AxiosResponse<TimelineHATEOASModel>)=>{
+                            dispatch(addTimelineEpisodes(response.data))
+                        })
+                }
+                }/>
+            }
         </div>
         <div className="p-5">
             <h5 className="mb-2 text-2xl font-bold tracking-tight text-white break-words">{podcastEpisode.podcast_episode.name}</h5>
