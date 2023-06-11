@@ -397,9 +397,9 @@ impl DB {
         &mut self,
         conn: &mut DbConnection,
         designated_username: String) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
-        
-        
-        
+
+
+
 
         let mut builder = MyQueryBuilder::new();
         builder.push_sql("SELECT * FROM   podcast_history_items phi1 WHERE username=");

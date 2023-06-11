@@ -3,6 +3,7 @@ use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
+use diesel::dsl::max;
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
@@ -10,6 +11,7 @@ use diesel::ExpressionMethods;
 use diesel::query_builder::QueryBuilder;
 use crate::db::DB;
 use crate::{DbConnection, MyQueryBuilder};
+use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 use crate::models::itunes_models::{Podcast, PodcastEpisode};
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 
@@ -162,51 +164,36 @@ impl Episode{
     }
 
     pub fn get_last_watched_episodes(username1: String, conn: &mut DbConnection)
-        ->Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>{
-
-
+                                     ->Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>{
+        use crate::dbconfig::schema::episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use diesel::JoinOnDsl;
         let mut map:HashMap<String,Podcast> = HashMap::new();
 
-        let mut builder = MyQueryBuilder::new();
-        builder.push_sql("SELECT * FROM episodes e, podcast_episodes pe WHERE e.username=");
-        builder.push_bind_param();
-        builder.push_sql(" AND pe.url=e.episode  GROUP BY episode, e.id,
-                                                                                                    username, device,
-                                                                                                    podcast,
-                                                                                                    timestamp, guid,
-                                                                                                    action, started,
-                                                                                                    position, total,
-                                                                                                    pe.id,
-                                                                                                    podcast_id,
-                                                                                                    episode_id, name,
-                                                                                                    url,
-                                                                                                    date_of_recording, image_url, total_time, local_url, local_image_url, description, status,
-                                                                                                     download_time ORDER BY timestamp DESC LIMIT 10;");
+        let query = podcast_episodes
+            .inner_join(episodes.on(podcast.eq(url)))
+            .filter(username.eq(username1))
+            .load::<(PodcastEpisode,Episode)>(conn).expect("ERror loading");
 
-        let query = builder.finish();
-        let res = sql_query(query)
-            .bind::<Text, _>(username1.clone())
-            .load::<(Episode,PodcastEpisode)>(conn)
-            .expect("");
 
-        res.iter().map(|e|{
-            let opt_podcast = map.get(&*e.clone().0.podcast);
+        query.iter().map(|e|{
+            let opt_podcast = map.get(&*e.clone().1.podcast);
             if opt_podcast.is_none(){
-                let podcast = DB::get_podcast_by_rss_feed(e.clone().0.podcast, conn);
-                map.insert(e.clone().0.podcast.clone(),podcast.clone());
+                let podcast_found = DB::get_podcast_by_rss_feed(e.clone().1.podcast, conn);
+                map.insert(e.clone().1.podcast.clone(),podcast_found.clone());
             }
-            let found_podcast = map.get(&e.clone().0.podcast).cloned().unwrap();
+            let found_podcast = map.get(&e.clone().1.podcast).cloned().unwrap();
             PodcastWatchedEpisodeModelWithPodcastEpisode{
-                id: e.clone().0.id,
+                id: e.clone().1.id,
                 podcast_id: found_podcast.id,
-                episode_id: e.clone().1.episode_id,
-                url: e.clone().1.url,
-                name: e.clone().1.name,
-                image_url: e.clone().1.image_url,
-                watched_time: e.clone().0.position.unwrap(),
-                date: e.clone().0.timestamp,
-                total_time: e.clone().1.total_time,
-                podcast_episode: e.clone().1,
+                episode_id: e.clone().0.episode_id,
+                url: e.clone().0.url,
+                name: e.clone().0.name,
+                image_url: e.clone().0.image_url,
+                watched_time: e.clone().1.position.unwrap(),
+                date: e.clone().1.timestamp,
+                total_time: e.clone().0.total_time,
+                podcast_episode: e.clone().0,
                 podcast: found_podcast.clone(),
             }
         }).collect()

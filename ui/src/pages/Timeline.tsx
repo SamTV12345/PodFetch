@@ -40,15 +40,17 @@ export const Timeline = () => {
             .then((filterAxiosResponse: AxiosResponse<Filter>) => {
                 filterAxiosResponse.data == null && dispatch(setFilters(getFiltersDefault()))
 
-                dispatch(setFilters(filterAxiosResponse.data))
+                filterAxiosResponse.data &&dispatch(setFilters(filterAxiosResponse.data))
             })
     }, [])
 
     useEffect(() => {
         if (filter) {
+            let favoredOnly = filter?.onlyFavored
+
             axios.get(apiURL + "/podcasts/timeline", {
                 params: {
-                    favoredOnly: filter.onlyFavored
+                    favoredOnly: favoredOnly === undefined ? false : favoredOnly
                 }
             })
                 .then((c: AxiosResponse<TimeLineModel[]>) => {
@@ -57,10 +59,6 @@ export const Timeline = () => {
         }
     }, [filter])
 
-    if (filter == null) {
-        return <Loading/>
-    }
-
     return <div className="p-3">
         <div className="grid-cols-1 grid md:grid-cols-[1fr_auto] ">
             <h1 className="font-bold text-3xl">{t('timeline')}</h1>
@@ -68,7 +66,7 @@ export const Timeline = () => {
                 <div className="grid grid-cols-[1fr_auto] gap-2">
                     <span className="grid">{t('onlyFavored')}</span>
                     <div className="static">
-                        <Switcher checked={filter.onlyFavored} setChecked={() => dispatch(setFilters({
+                        <Switcher checked={filter === undefined?true: filter.onlyFavored} setChecked={() => dispatch(setFilters({
                             ...filter as Filter,
                             onlyFavored: !filter?.onlyFavored
                         }))}/>
