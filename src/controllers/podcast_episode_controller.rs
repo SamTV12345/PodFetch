@@ -9,7 +9,8 @@ use std::sync::Mutex;
 use std::thread;
 use crate::DbPool;
 use crate::models::favorites::Favorite;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 

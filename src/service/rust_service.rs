@@ -2,7 +2,9 @@ use std::io::Error;
 use std::sync::{MutexGuard};
 use crate::constants::constants::{PodcastType, ITUNES_URL};
 use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastDto};
+use crate::models::podcast_dto::PodcastDto;
+use crate::models::podcasts::Podcast;
+
 use crate::models::messages::BroadcastMessage;
 use crate::models::models::PodcastInsertModel;
 use crate::models::web_socket_message::Lobby;

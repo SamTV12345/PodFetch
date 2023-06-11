@@ -5,7 +5,9 @@ use crate::models::models::{
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::HttpResponse;
 use futures::future::LocalBoxFuture;
-use models::itunes_models::{ItunesModel, Podcast, PodcastEpisode};
+use models::itunes_models::{ItunesModel};
+use crate::models::podcast_episode::PodcastEpisode;
+use models::podcasts::Podcast;
 use std::future;
 use std::future::Ready;
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};

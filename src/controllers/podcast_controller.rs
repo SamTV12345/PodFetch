@@ -36,7 +36,7 @@ use futures_util::{StreamExt};
 use reqwest::header::HeaderMap;
 use tokio::sync::mpsc;
 use crate::models::filter::Filter;
-use crate::models::itunes_models::{Podcast};
+use crate::models::podcasts::Podcast;
 use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;

@@ -12,7 +12,8 @@ use diesel::query_builder::QueryBuilder;
 use crate::db::DB;
 use crate::{DbConnection, MyQueryBuilder};
 use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 
 #[derive(Serialize, Deserialize, Debug,Queryable, QueryableByName,Insertable, Clone, ToSchema)]

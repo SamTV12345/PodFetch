@@ -20,3 +20,6 @@ pub mod podcast_rssadd_model;
 pub mod order_criteria;
 pub mod filter;
 pub mod file_path;
+pub mod podcasts;
+pub mod podcast_dto;
+pub mod podcast_episode;

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_dto::PodcastDto;
+use crate::models::podcasts::Podcast;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
@@ -8,7 +9,7 @@ use std::io::{Error, Write};
 use std::path::Path;
 use std::str::FromStr;
 
-
+use crate::models::podcast_episode::PodcastEpisode;
 use regex::Regex;
 use crate::config::dbconfig::establish_connection;
 

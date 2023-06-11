@@ -9,7 +9,7 @@ use chrono::Local;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 use crate::db::DB;
 use crate::DbPool;
-use crate::models::itunes_models::{Podcast};
+use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;

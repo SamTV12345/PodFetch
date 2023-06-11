@@ -1,5 +1,5 @@
 use diesel::prelude::*;
-use crate::models::itunes_models::Podcast;
+use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::dbconfig::schema::favorites;
 use serde::{Serialize, Deserialize};

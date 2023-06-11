@@ -1,6 +1,7 @@
 use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::messages::BroadcastMessage;
 use crate::models::models::Notification;
 use crate::models::web_socket_message::Lobby;

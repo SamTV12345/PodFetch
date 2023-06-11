@@ -1,4 +1,5 @@
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
 use diesel::{QueryId, Selectable};

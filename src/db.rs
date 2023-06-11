@@ -1,10 +1,13 @@
 
 use crate::constants::constants::{DEFAULT_SETTINGS, STANDARD_USER};
-use crate::models::itunes_models::{Podcast, PodcastDto, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_dto::PodcastDto;
+
 use crate::models::models::{
     Notification, PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode,
     PodcastWatchedPostModel,
 };
+use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastExtra;
@@ -416,17 +419,17 @@ impl DB {
         use crate::dbconfig::schema::podcasts::dsl::*;
         use diesel::dsl::max;
         use diesel::sqlite::Sqlite;
-        let (users1, users2) = diesel::alias!(podcast_history_items as p1, podcast_history_items
+        let (history_item1, history_item2) = diesel::alias!(podcast_history_items as p1, podcast_history_items
             as p2);
 
-        let subquery = users1
-            .select(diesel::dsl::max(users1.field(podcast_history_items::date)))
-            .filter(users1.field(podcast_history_items::episode_id).eq(users1.field(ehid)))
-            .group_by(users1.field(ehid));
+        let subquery = history_item1
+            .select(diesel::dsl::max(history_item1.field(podcast_history_items::date)))
+            .filter(history_item1.field(podcast_history_items::episode_id).eq(history_item1.field(ehid)))
+            .group_by(history_item1.field(ehid));
 
-        let result = users2
-            .filter(users2.field(podcast_history_items::username).eq(designated_username))
-            .filter(users2.field(podcast_history_items::date).nullable().eq_any( subquery))
+        let result = history_item2
+            .filter(history_item2.field(podcast_history_items::username).eq(designated_username))
+            .filter(history_item2.field(podcast_history_items::date).nullable().eq_any( subquery))
             .load::<PodcastHistoryItem>(conn)
             .unwrap();
 

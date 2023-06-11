@@ -1,5 +1,7 @@
 use crate::constants::constants::PodcastType;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
+
 use actix::prelude::{Message, Recipient};
 use uuid::Uuid;
 

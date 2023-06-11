@@ -1,7 +1,10 @@
 use crate::models::favorites::Favorite;
-use crate::models::itunes_models::{Podcast, PodcastDto, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_dto::PodcastDto;
 use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
 use crate::service::environment_service;
+use crate::models::podcasts::Podcast;
+
 
 #[derive(Clone)]
 pub struct MappingService {

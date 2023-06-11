@@ -1,5 +1,6 @@
 use crate::DbConnection;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::service::file_service::{prepare_podcast_episode_title_to_directory};
 use crate::service::path_service::PathService;
 
