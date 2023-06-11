@@ -2,18 +2,19 @@ use std::collections::HashMap;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, sql_query};
-use diesel::dsl::max;
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension};
+
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
-use diesel::query_builder::QueryBuilder;
-use crate::db::DB;
-use crate::{DbConnection, MyQueryBuilder};
-use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
-use crate::models::models::{PodcastHistoryItem, PodcastWatchedEpisodeModelWithPodcastEpisode};
+
+use crate::{DbConnection};
+
+use crate::models::models::PodcastWatchedEpisodeModelWithPodcastEpisode;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_history_item::PodcastHistoryItem;
+use crate::models::podcasts::Podcast;
 
 #[derive(Serialize, Deserialize, Debug,Queryable, QueryableByName,Insertable, Clone, ToSchema)]
 pub struct Episode{
@@ -128,26 +129,22 @@ impl Episode{
     pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut DbConnection,
                                                  episode_1: String) ->Option<Episode>{
 
-        let mut builder = MyQueryBuilder::new();
+        use crate::dbconfig::schema::episodes::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::table as podcast_episode_table;
+        use diesel::JoinOnDsl;
+        use diesel::Table;
 
-        builder.push_sql("SELECT * FROM episodes,podcasts WHERE username=");
-        builder.push_bind_param();
-        builder.push_sql(" AND episodes.podcast=podcasts.rssfeed AND episodes.episode = ");
-        builder.push_bind_param();
-        builder.push_sql(" ORDER BY timestamp DESC LIMIT 10;");
-
-        let query = builder.finish();
-        //TODO Debug with not downloaded podcast episode
-        let res = sql_query(query)
-            .bind::<Text, _>(username1.clone())
-            .bind::<Text,_>(episode_1)
-            .load::<Episode>(conn)
+        let query = episodes
+            .inner_join(podcast_episode_table.on(podcast.eq(rssfeed)))
+            .filter(username.eq(username1))
+            .filter(episode.eq(episode_1))
+            .order_by(timestamp.desc())
+            .select(episodes::all_columns())
+            .first::<Episode>(conn)
+            .optional()
             .expect("");
-        return if res.len() > 0 {
-            Some(res[0].clone())
-        } else {
-            None
-        }
+        return query;
     }
 
     pub fn convert_to_podcast_history_item(&self, podcast_1: Podcast,pod_episode: PodcastEpisode)
@@ -179,7 +176,7 @@ impl Episode{
         query.iter().map(|e|{
             let opt_podcast = map.get(&*e.clone().1.podcast);
             if opt_podcast.is_none(){
-                let podcast_found = DB::get_podcast_by_rss_feed(e.clone().1.podcast, conn);
+                let podcast_found = Podcast::get_podcast_by_rss_feed(e.clone().1.podcast, conn);
                 map.insert(e.clone().1.podcast.clone(),podcast_found.clone());
             }
             let found_podcast = map.get(&e.clone().1.podcast).cloned().unwrap();

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+
+use crate::models::podcasts::Podcast;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
@@ -8,7 +8,7 @@ use std::io::{Error, Write};
 use std::path::Path;
 use std::str::FromStr;
 
-
+use crate::models::podcast_episode::PodcastEpisode;
 use regex::Regex;
 use crate::config::dbconfig::establish_connection;
 
@@ -34,11 +34,9 @@ impl FileService {
             client: ClientBuilder::new().build().unwrap(),
         }
     }
-    pub fn check_if_podcast_main_image_downloaded(&mut self, podcast_id: &str, db: DB, conn: &mut
+    pub fn check_if_podcast_main_image_downloaded(&mut self, podcast_id: &str, conn: &mut
     DbConnection) -> bool {
-        let podcast = db
-            .clone()
-            .get_podcast_by_directory_id(podcast_id, conn)
+        let podcast = Podcast::get_podcast_by_directory_id(podcast_id, conn)
             .unwrap();
         match podcast {
             Some(podcast) => {
@@ -73,9 +71,8 @@ impl FileService {
         else{
             // Check if this is a new podcast with the same name as an old one
 
-            let db = DB::new().unwrap();
             let conn = &mut establish_connection();
-            let podcast = db.get_podcast_by_directory_id(podcast_id,conn).unwrap();
+            let podcast = Podcast::get_podcast_by_directory_id(podcast_id,conn).unwrap();
             match podcast {
                 Some(_)=>{
                     // is the same podcast
@@ -104,8 +101,7 @@ impl FileService {
         let mut image_out = std::fs::File::create(file_path.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
-        let db = DB::new().unwrap();
-        db.update_podcast_image(podcast_id, &file_path, conn).unwrap();
+        PodcastEpisode::update_podcast_image(podcast_id, &file_path, conn).unwrap();
     }
 
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> std::io::Result<()> {
@@ -124,7 +120,7 @@ impl FileService {
 
 pub fn prepare_podcast_title_to_directory(title: &str, conn:&mut DbConnection) ->String {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(DB::new().unwrap(), conn).unwrap();
+    let retrieved_settings = settings_service.get_settings(conn).unwrap();
     let final_string = perform_replacement(title, retrieved_settings.clone());
 
     let fixed_string = retrieved_settings.podcast_format.replace("{}","{podcasttitle}");
@@ -138,7 +134,7 @@ pub fn prepare_podcast_episode_title_to_directory(podcast_episode: PodcastEpisod
 DbConnection)
     ->String {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(DB::new().unwrap(),conn).unwrap();
+    let retrieved_settings = settings_service.get_settings(conn).unwrap();
     if retrieved_settings.use_existing_filename{
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if res_of_filename.is_ok(){

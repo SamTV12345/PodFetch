@@ -1,4 +1,3 @@
-use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
@@ -7,9 +6,11 @@ use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
+use crate::db::TimelineItem;
 use crate::DbPool;
 use crate::models::favorites::Favorite;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 
@@ -68,6 +69,12 @@ pub struct TimelineQueryParams {
     pub last_timestamp: Option<String>
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the current timeline of the user")),
+tag="podcasts"
+)]
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<User>>, mapping_service:
 Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) ->
@@ -76,7 +83,7 @@ Responder {
     let mapping_service = mapping_service.lock().ignore_poison().clone();
 
 
-    let mut res = DB::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
+    let res = TimelineItem::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
                                    favored_only.into_inner());
 
     let mapped_timeline = res.data.iter().map(|podcast_episode| {
@@ -114,16 +121,14 @@ Responder {
     }
 
     thread::spawn(move || {
-        let mut db = DB::new().unwrap();
-        let res = DB::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
+        let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
             .unwrap();
         match res {
             Some(podcast_episode) => {
-                let podcast = DB::get_podcast(&mut conn.get().unwrap(),podcast_episode
+                let podcast = Podcast::get_podcast(&mut conn.get().unwrap(),podcast_episode
                     .podcast_id).unwrap();
                 PodcastEpisodeService::perform_download(
                     &podcast_episode,
-                    &mut db,
                     podcast_episode.clone(),
                     podcast,
                     &mut conn.get().unwrap()
