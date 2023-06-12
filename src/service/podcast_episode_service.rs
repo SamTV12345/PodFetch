@@ -140,30 +140,16 @@ impl PodcastEpisodeService {
     pub fn insert_podcast_episodes(&mut self, conn: &mut DbConnection, podcast: Podcast) ->
                                                                              Vec<PodcastEpisode> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
-        let client = ClientBuilder::new().redirect(Policy::custom({
-            let is_redirected = Arc::clone(&is_redirected);
 
-            move |attempt|{
+        let returned_data_from_podcast_insert = Self::do_request_to_podcast_server(podcast.clone());
 
-                if attempt.previous().len() > 0 {
-                    *is_redirected.lock().unwrap() = true;
-                }
-                attempt.follow()
-            }
-        })).build().unwrap();
-        let mut header_map = HeaderMap::new();
-        header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
-        header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
-        let result = client.get(podcast.clone().rssfeed).headers(header_map).send().unwrap();
-        let mut url = result.url().clone().to_string();
-        let content = result.text().unwrap().clone();
-
-        let channel = Channel::read_from(content.as_bytes())
+        let channel = Channel::read_from(returned_data_from_podcast_insert.content.as_bytes())
             .unwrap();
 
         if *is_redirected.clone().lock().ignore_poison() {
-            log::info!("The podcast {} has moved to {}", podcast.name,url);
-            Podcast::update_podcast_urls_on_redirect(podcast.id, url, conn);
+            log::info!("The podcast {} has moved to {}", podcast.name,
+                returned_data_from_podcast_insert.url);
+            Podcast::update_podcast_urls_on_redirect(podcast.id, returned_data_from_podcast_insert.url, conn);
             Self::update_episodes_on_redirect(conn,channel.items());
         }
 
@@ -174,8 +160,13 @@ impl PodcastEpisodeService {
                 let new_url = extension.new_feed_url.unwrap();
                 let items = channel.items();
                 Podcast::update_podcast_urls_on_redirect(podcast.id, new_url, conn);
-                //FIXME solve this by refetching the urls etc.
-                Self::update_episodes_on_redirect(conn,items);
+
+                let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone());
+
+                let channel = Channel::read_from(returned_data_from_server.content.as_bytes())
+                    .unwrap();
+                let items = channel.items();
+                Self::update_episodes_on_redirect(conn, items);
             }
         }
 
@@ -467,4 +458,42 @@ impl PodcastEpisodeService {
                                                                    Result<Option<PodcastEpisode>, String> {
         PodcastEpisode::get_podcast_episode_by_id(conn, id_num)
     }
+
+    fn do_request_to_podcast_server(podcast:Podcast) ->RequestReturnType{
+        let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
+        let client = ClientBuilder::new().redirect(Policy::custom({
+            let is_redirected = Arc::clone(&is_redirected);
+
+            move |attempt|{
+
+                if attempt.previous().len() > 0 {
+                    *is_redirected.lock().unwrap() = true;
+                }
+                attempt.follow()
+            }
+        })).build().unwrap();
+        let mut header_map = HeaderMap::new();
+        header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
+        header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
+        let result = client
+            .get(podcast.clone().rssfeed)
+            .headers(header_map)
+            .send()
+            .unwrap();
+        let mut url = result.url().clone().to_string();
+        let content = result.text().unwrap().clone();
+
+        return RequestReturnType {
+            url,
+            content
+        }
+    }
+
+
+
+}
+
+struct RequestReturnType {
+    pub url:String,
+    pub content:String
 }
