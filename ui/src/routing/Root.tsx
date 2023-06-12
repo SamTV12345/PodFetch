@@ -1,24 +1,22 @@
-import {useEffect} from "react";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {Header} from "../components/Header";
-import {SideBar} from "../components/side-bar/SideBar";
-import {Outlet, useNavigate} from "react-router-dom";
-import {AudioComponents} from "../components/AudioComponents";
-import {Search} from "../components/Search";
-import axios from "axios";
-import {configWSUrl} from "../utils/Utilities";
-import {setLoginData} from "../store/CommonSlice";
-import {Loading} from "../components/Loading";
-import App from "../App";
-import ContentPanel from "../components/side-bar/ContentPanel";
+import {useEffect} from "react"
+import axios from "axios"
+import {Outlet, useNavigate} from "react-router-dom"
+import {configWSUrl} from "../utils/Utilities"
+import {useAppDispatch, useAppSelector} from "../store/hooks"
+import {setLoginData} from "../store/CommonSlice"
+import App from "../App"
+import {AudioComponents} from "../components/AudioComponents"
+import {Header} from "../components/Header"
+import {Loading} from "../components/Loading"
+import {MainContentPanel} from "../components/MainContentPanel"
+import {Search} from "../components/Search"
+import {Sidebar} from "../components/Sidebar"
 
 export const Root = () => {
-    const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
     const dispatch = useAppDispatch()
     const configModel = useAppSelector(state => state.common.configModel)
     const navigate = useNavigate()
     const auth = useAppSelector(state => state.common.loginData)
-
 
     const extractLoginData = (auth_local: string)=>{
         const test = atob(auth_local)
@@ -60,14 +58,14 @@ export const Root = () => {
 
     return (
         <App>
-            <SideBar/>
-            <ContentPanel>
+            <Sidebar/>
+            <MainContentPanel>
                 <Header/>
                 <div className="grid grid-rows-[1fr_auto] h-full">
                     <Outlet/>
                     <AudioComponents/>
                 </div>
-            </ContentPanel>
+            </MainContentPanel>
             <Search/>
         </App>
     )

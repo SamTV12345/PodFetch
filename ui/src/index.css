@@ -14,6 +14,11 @@
   font-variation-settings: 'FILL' 1;
 }
 
+#primary-navigation a.active {
+    background-color: rgba(192,124,3,0.1);
+    @apply text-mustard-600;
+}
+
 .movie-text{
     font-family: anton, serif;
     font-weight: 800;
@@ -63,30 +68,6 @@
 
 #audio-bottom-bar:hover >* {
     @apply visible opacity-100;
-}
-
-#notification-modal {
-    background-color: rgb(31 41 55 / var(--tw-border-opacity));
-    top: 0;
-}
-
-.notification-modal-visible{
-    @apply visible opacity-100;
-    left: 50%;
-    transform: translate(-50%, 0);
-    margin-top: 10px;
-}
-
-#notification-modal::after {
-    content: '';
-    position: absolute;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-top: 10px solid rgb(31 41 55 / var(--tw-border-opacity));
-    transform: rotate(180deg) translate(50%, 100%);
-    left: 50%;
-    top: 0;
-    clear: both;
 }
 
 ::-webkit-scrollbar {
@@ -148,14 +129,6 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
     overflow: hidden;
-}
-
-.sidebar .active{
-    @apply bg-amber-400 text-amber-500 text-opacity-60 bg-opacity-40 rounded-2xl;
-}
-
-.sidebar .active svg{
-    @apply text-amber-500 fill-amber-500;
 }
 
 #root > div{

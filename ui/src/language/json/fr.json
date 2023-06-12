@@ -1,5 +1,5 @@
 {
-  "homepage" : "Page d'accueil",
+  "homepage" : "Accueil",
   "podcasts" : "Podcast",
   "add-new": "Ajouter un nouveau",
   "search": "Rechercher",
@@ -98,7 +98,7 @@
   "not-admin": "Vous n'êtes pas administrateur",
   "not-admin-or-uploader": "Vous n'êtes pas administrateur ou uploader",
   "stream-podcast-episode": "Écouter l'épisode",
-  "timeline": "Chronologie",
+  "timeline": "Derniers épisodes",
   "version": "Version",
   "commit": "Commit",
   "ci-build": "Build CI",

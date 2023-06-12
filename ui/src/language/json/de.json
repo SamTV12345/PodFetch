@@ -100,7 +100,7 @@
   "not-admin": "Sie sind kein Administrator",
   "not-admin-or-uploader": "Sie sind weder Administrator noch Uploader",
   "stream-podcast-episode": "Podcast-Episode streamen",
-  "timeline": "Zeitleiste",
+  "timeline": "Neueste Episoden",
   "version": "Version",
   "commit": "Commit",
   "ci-build": "CI Build",
