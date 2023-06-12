@@ -114,7 +114,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
                 <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
             </span>
 
-            <CustomSelect icon="sort" onChange={(v)=> {
+            <CustomSelect iconName="sort" onChange={(v)=> {
                 let converted = JSON.parse(v) as OrderCriteriaSortingType
                 dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
             }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
