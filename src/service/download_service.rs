@@ -1,5 +1,5 @@
-use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::service::file_service::{FileService};
 use crate::service::mapping_service::MappingService;
 
@@ -11,13 +11,11 @@ use reqwest::header::HeaderMap;
 
 use crate::config::dbconfig::establish_connection;
 use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
-use crate::DbConnection;
 use crate::models::file_path::FilenameBuilder;
 use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 
 pub struct DownloadService {
-    pub db: DB,
     pub mappingservice: MappingService,
     pub client_builder: ClientBuilder,
     pub file_service: FileService,
@@ -26,18 +24,16 @@ pub struct DownloadService {
 impl DownloadService {
     pub fn new() -> Self {
         DownloadService {
-            db: DB::new().unwrap(),
             mappingservice: MappingService::new(),
             client_builder: ClientBuilder::new(),
             file_service: FileService::new(),
         }
     }
 
-    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast,
-                                    db:DB, _conn: &mut DbConnection) {
+    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast) {
         let conn = &mut establish_connection();
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
-        let settings_in_db = SettingsService::new().get_settings(db.clone(),conn).unwrap();
+        let settings_in_db = SettingsService::new().get_settings(conn).unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
         let paths;
@@ -84,7 +80,7 @@ impl DownloadService {
         let mut image_out = std::fs::File::create(paths.1.clone()).unwrap();
 
         if !self.file_service.check_if_podcast_main_image_downloaded(&podcast.clone()
-            .directory_id, db.clone(), conn)
+            .directory_id,  conn)
         {
             let mut image_podcast = std::fs::File::create(paths.1.clone()).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
@@ -92,7 +88,7 @@ impl DownloadService {
 
         io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
 
-        self.db.update_total_podcast_time_and_image(
+        PodcastEpisode::update_total_podcast_time_and_image(
                 &podcast_episode.episode_id,
                 &paths.1.clone(),
                 &paths.0.clone(),

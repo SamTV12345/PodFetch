@@ -19,7 +19,6 @@ export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audio
     const selectedPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
 
-    console.log("Podcast"+selectedPodcast?.local_image_url)
     return createPortal(<div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setDetailedAudioPlayerOpen(false))}
                                            className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-60 md:inset-0 h-modal h-full 
              ${!detailedAudioPlayerOpen&&'pointer-events-none'}

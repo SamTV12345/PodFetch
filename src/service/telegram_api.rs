@@ -1,7 +1,9 @@
 use std::env::var;
 use frankenstein::{Api, ParseMode, SendMessageParams, TelegramApi};
 use crate::constants::constants::{TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
+
 
 pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: Podcast){
     let api = Api::new(&var(TELEGRAM_BOT_TOKEN).unwrap());

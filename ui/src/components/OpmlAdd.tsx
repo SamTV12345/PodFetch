@@ -53,12 +53,6 @@ export const OpmlAdd:FC<OpmlAddProps> = ({})=>{
         axios.post(apiURL+"/podcast/opml", {
             content: files[0].content
         })
-            .then((v)=>{
-                console.log(v)
-            })
-            .catch((e)=>{
-                console.log(e)
-            })
     }
 
 

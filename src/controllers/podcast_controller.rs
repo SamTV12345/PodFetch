@@ -1,5 +1,5 @@
 use crate::models::dto_models::PodcastFavorUpdateModel;
-use crate::models::models::{PodCastAddModel, PodcastInsertModel};
+use crate::models::models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
 use crate::models::search_type::SearchType::{ITUNES, PODINDEX};
 use crate::models::web_socket_message::Lobby;
@@ -27,7 +27,6 @@ use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
-use crate::db::DB;
 use crate::exception::exceptions::PodFetchError;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -36,11 +35,13 @@ use futures_util::{StreamExt};
 use reqwest::header::HeaderMap;
 use tokio::sync::mpsc;
 use crate::models::filter::Filter;
-use crate::models::itunes_models::{Podcast};
+use crate::models::podcasts::Podcast;
 use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 
 #[derive(Serialize, Deserialize)]
@@ -52,6 +53,12 @@ pub struct PodcastSearchModel{
     favored_only: bool
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the user specific filter.",body= Option<Filter>)),
+tag="podcasts"
+)]
 #[get("/podcasts/filter")]
 pub async fn get_filter(conn: Data<DbPool>, requester:
 Option<web::ReqData<User>>) ->
@@ -63,6 +70,13 @@ Responder{
             HttpResponse::Ok().json(filter)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the podcasts matching the searching criteria",body=
+Vec<Podcast>)),
+tag="podcasts"
+)]
 #[get("/podcasts/search")]
 pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
                              _podcast_service: Data<Mutex<PodcastService>>,
@@ -209,14 +223,14 @@ pub async fn find_podcast(
 
 #[utoipa::path(
 context_path="/api/v1",
-request_body=PodCastAddModel,
+request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podcast to the database.")),
 tag="podcasts"
 )]
 #[post("/podcast/itunes")]
 pub async fn add_podcast(
-    track_id: web::Json<PodCastAddModel>,
+    track_id: web::Json<PodcastAddModel>,
     lobby: Data<Addr<Lobby>>,
     conn: Data<DbPool>, requester: Option<web::ReqData<User>>) -> impl Responder {
     if !requester.unwrap().is_privileged_user(){
@@ -251,6 +265,12 @@ pub async fn add_podcast(
     HttpResponse::Ok().into()
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Adds a podcast by its feed url",body=Podcast)),
+tag="podcasts"
+)]
 #[post("/podcast/feed")]
 pub async fn add_podcast_by_feed(
     rss_feed: web::Json<PodcastRSSAddModel>,
@@ -329,14 +349,14 @@ pub async fn import_podcasts_from_opml(
 
 #[utoipa::path(
 context_path="/api/v1",
-request_body=PodCastAddModel,
+request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podindex podcast to the database")),
 tag="podcasts"
 )]
 #[post("/podcast/podindex")]
 pub async fn add_podcast_from_podindex(
-    id: web::Json<PodCastAddModel>,
+    id: web::Json<PodcastAddModel>,
     lobby: Data<Addr<Lobby>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>
@@ -376,9 +396,8 @@ fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut DbConne
 context_path="/api/v1",
 params(("podcast", description="The podcast episode query parameter.")),
 responses(
-(status = 200, description = "Queries for a podcast episode by a query string ")),
-tag="podcasts"
-)]
+(status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisode>)),
+tag="podcasts",)]
 #[get("/podcasts/{podcast}/query")]
 pub async fn query_for_podcast(
     podcast: Path<String>,
@@ -392,6 +411,12 @@ pub async fn query_for_podcast(
     HttpResponse::Ok().json(res)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Refreshes all podcasts")),
+tag="podcasts"
+)]
 #[post("/podcast/all")]
 pub async fn refresh_all_podcasts(lobby:Data<Addr<Lobby>>, podcast_service:
 Data<Mutex<PodcastService>>, conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder {
@@ -399,7 +424,7 @@ Data<Mutex<PodcastService>>, conn: Data<DbPool>, requester: Option<web::ReqData<
         return HttpResponse::Unauthorized().json("Unauthorized");
     }
 
-    let podcasts = DB::get_all_podcasts(&mut conn.get().unwrap());
+    let podcasts = Podcast::get_all_podcasts(&mut conn.get().unwrap());
     thread::spawn(move || {
     for podcast in podcasts.unwrap() {
         podcast_service.lock()
@@ -459,16 +484,14 @@ pub async fn favorite_podcast(
     update_model: web::Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
-    db:Data<Mutex<DB>>,
     conn: Data<DbPool>
 ) -> impl Responder {
 
-    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
 
     podcast_service.update_favor_podcast(update_model.id, update_model.favored,
-                                         requester.unwrap().username.clone(),db, &mut conn.get().unwrap());
+                                         requester.unwrap().username.clone(), &mut conn.get().unwrap());
     HttpResponse::Ok().json("Favorited podcast")
 }
 
@@ -481,13 +504,13 @@ tag="podcasts"
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,requester: Option<web::ReqData<User>>,
-    db:Data<Mutex<DB>>,
+    mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>
 ) -> impl Responder {
-    let db = db.lock().ignore_poison();
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone(),db,
-                                                        &mut conn.get().unwrap());
+    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone(),
+                                                        mapping_service.lock().ignore_poison()
+                                                            .clone(), &mut conn.get().unwrap());
     HttpResponse::Ok().json(podcasts)
 }
 
@@ -603,12 +626,19 @@ async fn insert_outline(
 
 
 }
-
-#[derive(Deserialize)]
+use utoipa::ToSchema;
+#[derive(Deserialize,ToSchema)]
 pub struct DeletePodcast {
     pub delete_files: bool
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+request_body=DeletePodcast,
+responses(
+(status = 200, description = "Deletes a podcast by id")),
+tag="podcasts"
+)]
 #[delete("/podcast/{id}")]
 pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id: Path<i32>, requester: Option<web::ReqData<User>>)
                             ->impl Responder{
@@ -617,17 +647,18 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     }
 
 
-    let podcast = DB::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
+    let podcast = Podcast::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
         finding podcast");
     if data.delete_files{
         FileService::delete_podcast_files(&podcast.directory_name);
     }
 
-    DB::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
+    PodcastHistoryItem::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
     watchtime");
-    DB::delete_episodes_of_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
+    PodcastEpisode::delete_episodes_of_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
+    deleting \
     episodes of podcast");
-    DB::delete_podcast(&mut *db.get().unwrap(), id.clone());
+    Podcast::delete_podcast(&mut *db.get().unwrap(), id.clone());
     HttpResponse::Ok().into()
 }
 #[derive(Debug, Deserialize)]
@@ -636,6 +667,13 @@ pub struct Params {
     episode_id: String,
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Proxies a podcast so people can stream podcasts from the remote \
+server")),
+tag="podcasts"
+)]
 #[get("/proxy/podcast")]
 pub(crate) async fn proxy_podcast(
     mut payload: web::Payload,

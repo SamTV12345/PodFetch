@@ -1,4 +1,3 @@
-use crate::db::DB;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
@@ -7,8 +6,11 @@ use actix_web::{web, HttpResponse, Responder};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
+use crate::db::TimelineItem;
 use crate::DbPool;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+use crate::models::favorites::Favorite;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 
@@ -50,6 +52,14 @@ pub async fn find_all_podcast_episodes_of_podcast(
 pub struct TimeLinePodcastEpisode {
     podcast_episode: PodcastEpisode,
     podcast: Podcast,
+    favorite: Option<Favorite>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeLinePodcastItem{
+    data: Vec<TimeLinePodcastEpisode>,
+    total_elements: i64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -59,27 +69,37 @@ pub struct TimelineQueryParams {
     pub last_timestamp: Option<String>
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the current timeline of the user")),
+tag="podcasts"
+)]
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<User>>, mapping_service:
 Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) ->
                                                                                              impl
 Responder {
-    let mapping_service = mapping_service.lock().ignore_poison();
+    let mapping_service = mapping_service.lock().ignore_poison().clone();
 
 
-    let res = DB::get_timeline(requester.unwrap().username.clone(),&mut conn.get().unwrap(),
-                               favored_only.into_inner());
+    let res = TimelineItem::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
+                                   favored_only.into_inner());
 
-    let mapped_timeline = res.iter().map(|podcast_episode| {
-        let (podcast_episode, podcast) = podcast_episode;
-        let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(podcast_episode);
+    let mapped_timeline = res.data.iter().map(|podcast_episode| {
+        let (podcast_episode, podcast, favorite) = podcast_episode.clone();
+        let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast_episode);
 
-        TimeLinePodcastEpisode{
+        return TimeLinePodcastEpisode {
             podcast_episode: mapped_podcast_episode,
-            podcast: podcast.clone()
-        }
-    }).collect::<Vec<TimeLinePodcastEpisode>>();
-    HttpResponse::Ok().json(mapped_timeline)
+            podcast,
+            favorite
+        };
+        }).collect::<Vec<TimeLinePodcastEpisode>>();
+    HttpResponse::Ok().json(TimeLinePodcastItem{
+        data: mapped_timeline,
+        total_elements: res.total_elements
+    })
 }
 
 /**
@@ -101,16 +121,14 @@ Responder {
     }
 
     thread::spawn(move || {
-        let mut db = DB::new().unwrap();
-        let res = DB::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
+        let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
             .unwrap();
         match res {
             Some(podcast_episode) => {
-                let podcast = DB::get_podcast(&mut conn.get().unwrap(),podcast_episode
+                let podcast = Podcast::get_podcast(&mut conn.get().unwrap(),podcast_episode
                     .podcast_id).unwrap();
                 PodcastEpisodeService::perform_download(
                     &podcast_episode,
-                    &mut db,
                     podcast_episode.clone(),
                     podcast,
                     &mut conn.get().unwrap()

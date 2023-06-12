@@ -1,6 +1,7 @@
 use crate::controllers::web_socket::WsConn;
-use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastEpisode};
+
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -13,6 +14,11 @@ use std::sync::{Mutex};
 use crate::DbPool;
 use crate::mutex::LockResultExt;
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets a web socket connection"))
+,tag="info")]
 #[get("/ws")]
 pub async fn start_connection(
     req: HttpRequest,
@@ -24,6 +30,11 @@ pub async fn start_connection(
     Ok(resp)
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets the complete rss feed"))
+,tag="info")]
 #[get("/rss")]
 pub async fn get_rss_feed(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
@@ -97,6 +108,11 @@ fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtensio
     }
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets a specific rss feed"))
+,tag="info")]
 #[get("/rss/{id}")]
 pub async fn get_rss_feed_for_podcast(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
@@ -108,7 +124,7 @@ pub async fn get_rss_feed_for_podcast(
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let res = DB::get_podcast(&mut conn.get().unwrap(),id.clone());
+    let res = Podcast::get_podcast(&mut conn.get().unwrap(),id.clone());
 
     match res {
         Ok(podcast) => {

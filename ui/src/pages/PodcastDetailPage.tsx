@@ -88,7 +88,6 @@ export const PodcastDetailPage = () => {
                                onClick={() => {
                                    axios.post(apiURL + "/podcast/" + params.id + "/refresh")
                                        .then(() => {
-                                           console.log("Refreshed")
                                        })
                                }}></i></h1>
                         <div className="flex gap-3">

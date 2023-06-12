@@ -1,8 +1,9 @@
 use std::io::Error;
 use std::sync::{MutexGuard};
 use crate::constants::constants::{PodcastType, ITUNES_URL};
-use crate::db::DB;
-use crate::models::itunes_models::{Podcast, PodcastDto};
+use crate::models::podcast_dto::PodcastDto;
+use crate::models::podcasts::Podcast;
+
 use crate::models::messages::BroadcastMessage;
 use crate::models::models::PodcastInsertModel;
 use crate::models::web_socket_message::Lobby;
@@ -23,7 +24,9 @@ use serde::Serialize;
 use tokio::task::spawn_blocking;
 use crate::config::dbconfig::establish_connection;
 use crate::exception::exceptions::{PodFetchError};
+use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
+use crate::models::settings::Setting;
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -110,7 +113,7 @@ impl PodcastService {
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
         lobby: Data<Addr<Lobby>>) ->Result<Podcast,PodFetchError>{
-        let opt_podcast = DB::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone() );
+        let opt_podcast = Podcast::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone() );
         if opt_podcast.is_some() {
             return Err(PodFetchError::podcast_already_exists())
         }
@@ -124,7 +127,7 @@ impl PodcastService {
                 log::error!("Error creating podcast directory");
                 return Err(PodFetchError::podcast_directory_creation_error())
         }
-        let inserted_podcast = DB::add_podcast_to_database(
+        let inserted_podcast = Podcast::add_podcast_to_database(
             conn,
             podcast_insert.title,
             podcast_insert.id.to_string(),
@@ -137,7 +140,7 @@ impl PodcastService {
             .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(), &podcast_insert
                 .image_url.clone().to_string(), &podcast_insert.id.clone().to_string(), conn)
             .await;
-        let podcast = DB::get_podcast_by_track_id(conn, podcast_insert.id.clone())
+        let podcast = Podcast::get_podcast_by_track_id(conn, podcast_insert.id.clone())
             .unwrap();
         lobby
             .get_ref()
@@ -187,8 +190,7 @@ impl PodcastService {
         lobby: Option<Data<Addr<Lobby>>>,
         conn: &mut DbConnection
     ) {
-        let mut db = DB::new().unwrap();
-        let settings = db.get_settings(conn);
+        let settings = Setting::get_settings(conn);
         match settings {
             Some(settings) => {
                 if settings.auto_download {
@@ -219,22 +221,23 @@ impl PodcastService {
         self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn);
     }
 
-    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, mut db:
-    MutexGuard<DB>, conn: &mut DbConnection) {
-        db.update_podcast_favor(&id, x, conn,username).unwrap();
+    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, conn: &mut DbConnection) {
+        Favorite::update_podcast_favor(&id, x, conn,username).unwrap();
     }
 
     pub fn get_podcast_by_id(&mut self,conn: &mut DbConnection, id: i32) -> Podcast {
-        DB::get_podcast(conn,id).unwrap()
+        Podcast::get_podcast(conn,id).unwrap()
     }
 
-    pub fn get_favored_podcasts(&mut self, found_username: String, mut db: MutexGuard<DB>, conn: &mut DbConnection) ->
+    pub fn get_favored_podcasts(&mut self, found_username: String,
+                                mapping_service:MappingService, conn: &mut
+    DbConnection) ->
                                                                                       Vec<PodcastDto> {
-        db.get_favored_podcasts(found_username,conn).unwrap()
+        Favorite::get_favored_podcasts(found_username,conn,mapping_service).unwrap()
     }
 
     pub fn update_active_podcast(conn: &mut DbConnection, id: i32) {
-        DB::update_podcast_active(conn, id);
+        Podcast::update_podcast_active(conn, id);
     }
 
     fn compute_podindex_header(&mut self) -> HeaderMap {
@@ -270,12 +273,12 @@ impl PodcastService {
     }
 
     pub fn get_podcast(conn: &mut DbConnection, podcast_id_to_be_searched: i32)->Result<Podcast, Error>{
-        DB::get_podcast(conn, podcast_id_to_be_searched)
+        Podcast::get_podcast(conn, podcast_id_to_be_searched)
     }
 
     pub fn get_podcasts(conn: &mut DbConnection, u: String, mapping_service: MutexGuard<MappingService>) ->
                                                                           Result<Vec<PodcastDto>, String> {
-        DB::get_podcasts(conn, u, mapping_service)
+        Podcast::get_podcasts(conn, u, mapping_service)
     }
 
     pub fn search_podcasts_favored(
@@ -283,7 +286,7 @@ impl PodcastService {
         mapping_service: MutexGuard<MappingService>, conn: &mut
         DbConnection,
         designated_username: String) -> Result<Vec<impl Serialize>, String>{
-        let podcasts = DB::search_podcasts_favored(conn, order, title, latest_pub,
+        let podcasts = Favorite::search_podcasts_favored(conn, order, title, latest_pub,
                                                    designated_username);
         let mut podcast_dto_vec = Vec::new();
         for podcast in podcasts {
@@ -300,7 +303,7 @@ impl PodcastService {
         DbConnection,
                            designated_username: String) -> Result<Vec<PodcastDto>, String>{
 
-        let podcasts = DB::search_podcasts(conn, order, title, latest_pub, designated_username);
+        let podcasts = Favorite::search_podcasts(conn, order, title, latest_pub, designated_username);
         let mapped_result = podcasts
             .iter()
             .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites

@@ -2,11 +2,13 @@ use actix_web::{HttpResponse, Responder, web};
 
 use actix_web::{get,post};
 use actix_web::web::Data;
-use crate::db::DB;
+
 use crate::DbPool;
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
 use std::borrow::Borrow;
 use chrono::NaiveDateTime;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::session::Session;
 use crate::utils::time::{get_current_timestamp};
 
@@ -43,7 +45,7 @@ pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>
             println!("{}",since_date.unwrap());
             let mut actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap(), since_date)
                 .await;
-            let watch_logs = DB::get_watch_logs_by_username(username.clone(), &mut *pool.get()
+            let watch_logs = PodcastHistoryItem::get_watch_logs_by_username(username.clone(), &mut *pool.get()
                 .unwrap(), since_date.unwrap()).iter().map(|watch_log| {
                 Episode{
                     id: 0,
@@ -97,7 +99,8 @@ Responder {
                         episode_url = res.unwrap().parse().unwrap()
                     }
 
-                    let podcast_episode = DB::query_podcast_episode_by_url(&mut *conn.get().unwrap(),
+                    let podcast_episode = PodcastEpisode::query_podcast_episode_by_url(&mut *conn.get()
+                        .unwrap(),
                                                                            &*episode_url);
                     if podcast_episode.clone().unwrap().is_none() {
                         return;

@@ -1,12 +1,11 @@
-use crate::dbconfig::schema::*;
-use chrono::NaiveDateTime;
-use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
-use diesel::{RunQueryDsl};
+
+
+
+
 use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Bool, Timestamp};
-use diesel::QueryDsl;
-use diesel::ExpressionMethods;
-use crate::DbConnection;
+
+
+
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -52,105 +51,4 @@ pub struct ItunesModel {
 pub struct ResponseModel {
     pub result_count: i32,
     pub results: Vec<ItunesModel>,
-}
-
-#[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
-Serialize, Deserialize,Default)]
-pub struct Podcast {
-    #[diesel(sql_type = Integer)]
-    pub(crate) id: i32,
-    #[diesel(sql_type = Text)]
-    pub(crate) name: String,
-    #[diesel(sql_type = Text)]
-    pub directory_id: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) rssfeed: String,
-    #[diesel(sql_type = Text)]
-    pub image_url: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub summary: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub language: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub explicit: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub keywords: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub last_build_date: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub author: Option<String>,
-    #[diesel(sql_type = Bool)]
-    pub active: bool,
-    #[diesel(sql_type = Text)]
-    pub original_image_url: String,
-    #[diesel(sql_type = Text)]
-    pub directory_name:String
-}
-
-impl Podcast{
-    pub fn get_by_rss_feed(rssfeed_i: &str, conn: &mut DbConnection) -> Result<Podcast,
-        diesel::result::Error> {
-        use crate::dbconfig::schema::podcasts::dsl::*;
-        podcasts
-            .filter(rssfeed.eq(rssfeed_i))
-            .first::<Podcast>(conn)
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct PodcastDto {
-    pub(crate) id: i32,
-    pub(crate) name: String,
-    pub directory_id: String,
-    pub(crate) rssfeed: String,
-    pub image_url: String,
-    pub summary: Option<String>,
-    pub language: Option<String>,
-    pub explicit: Option<String>,
-    pub keywords: Option<String>,
-    pub last_build_date: Option<String>,
-    pub author: Option<String>,
-    pub active: bool,
-    pub original_image_url: String,
-    pub favorites: bool
-}
-
-use diesel::AsChangeset;
-#[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
-Serialize, Deserialize, Default, AsChangeset)]
-pub struct PodcastEpisode {
-    #[diesel(sql_type = Integer)]
-    pub(crate) id: i32,
-    #[diesel(sql_type = Integer)]
-    pub(crate) podcast_id: i32,
-    #[diesel(sql_type = Text)]
-    pub(crate) episode_id: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) name: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) url: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) date_of_recording: String,
-    #[diesel(sql_type = Text)]
-    pub image_url: String,
-    #[diesel(sql_type = Integer)]
-    pub total_time: i32,
-    #[diesel(sql_type = Text)]
-    pub(crate) local_url: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) local_image_url: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) description: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) status: String,
-    #[diesel(sql_type = Nullable<Timestamp>)]
-    pub(crate) download_time: Option<NaiveDateTime>,
-    #[diesel(sql_type = Text)]
-    pub(crate) guid: String,
-}
-
-impl PodcastEpisode{
-    pub fn is_downloaded(&self) -> bool{
-        self.status == "D"
-    }
 }
