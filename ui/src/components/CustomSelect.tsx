@@ -9,28 +9,29 @@ type Option = {
 }
 
 type CustomSelectProps = {
+    className?: string,
     defaultValue?: string,
-    iconClassName?: string,
     iconName?: string,
     onChange?: (v: string) => void,
     options: Array<Option>,
     placeholder?: string | DefaultTFuncReturn,
-    triggerClassName?: string,
     value: string
 }
 
-export const CustomSelect:FC<CustomSelectProps> = ({defaultValue, iconClassName, iconName, onChange, options, placeholder, triggerClassName, value}) => {
+export const CustomSelect:FC<CustomSelectProps> = ({className = '', defaultValue, iconName, onChange, options, placeholder, value}) => {
     console.log(value)
     return <Select.Root defaultValue={defaultValue} onValueChange={onChange} value={value}>
-        <Select.Trigger className={`bg-white border border-stone-200 pl-6 pr-2 py-2 rounded-full text-sm text-stone-600 ${triggerClassName}`}>
+        <Select.Trigger className={`flex items-center bg-white border border-stone-200 pl-6 pr-2 py-2 rounded-full text-sm text-stone-600 ${className}`}>
             {iconName &&
-                <span className={`material-symbols-outlined align-middle !leading-[1.25rem] -ml-2 mr-1 text-stone-500 ${iconClassName}`}>{iconName}</span>
+                <span className="icon material-symbols-outlined align-middle !leading-[1.25rem] -ml-2 mr-1 text-stone-500">{iconName}</span>
             }
 
-            <Select.Value placeholder={placeholder} />
+            <span className="value grow">
+                <Select.Value placeholder={placeholder}/>
+            </span>
 
             <Select.Icon>
-                <span className="material-symbols-outlined align-middle !leading-[1.25rem] ml-1 text-stone-500">expand_more</span>
+                <span className="expand-icon material-symbols-outlined align-middle !leading-[1.25rem] ml-1 text-stone-500">expand_more</span>
             </Select.Icon>
         </Select.Trigger>
 

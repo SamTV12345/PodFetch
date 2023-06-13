@@ -6,6 +6,8 @@
     font-family: 'Poppins', sans-serif;
 }
 
+/* Icons */
+
 .material-symbols-outlined {
   font-variation-settings: 'wght' 300;
 }
@@ -14,9 +16,43 @@
   font-variation-settings: 'FILL' 1;
 }
 
+/* Sidebar */
+
 #primary-navigation a.active {
     background-color: rgba(192,124,3,0.1);
     @apply text-mustard-600;
+}
+
+/* Header */
+
+.i18n-dropdown {
+    @apply border-0;
+    @apply p-0;
+    @apply text-stone-900;
+}
+
+.i18n-dropdown .value,
+.i18n-dropdown .expand-icon {
+    @apply invisible;
+    @apply w-0;
+}
+
+@media screen(xs) {
+    .i18n-dropdown {
+        @apply pl-6;
+        @apply pr-2;
+        @apply py-2;
+    }
+
+    .i18n-dropdown .value,
+    .i18n-dropdown .expand-icon {
+        @apply visible;
+        @apply w-auto;
+    }
+}
+
+.i18n-dropdown .icon {
+    @apply text-stone-900;
 }
 
 .movie-text{

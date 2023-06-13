@@ -19,7 +19,7 @@ export const CustomDropdownMenu: FC<CustomDropdownMenuProps> = ({menuItems, trig
     const { t } = useTranslation()
 
     return <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
+        <DropdownMenu.Trigger className="flex items-center">
             {trigger}
         </DropdownMenu.Trigger>
 

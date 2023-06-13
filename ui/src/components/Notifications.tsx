@@ -13,7 +13,7 @@ export const Notifications:FC = () => {
     const dispatch = useAppDispatch()
     const {t}  = useTranslation()
 
-    const trigger = () => <div className="relative">
+    const trigger = () => <div className="flex items-center relative">
         <span className="material-symbols-outlined cursor-pointer text-stone-900 hover:text-stone-600">notifications</span>
 
         {notifications.length>0 &&<div className="absolute top-0 right-0 border-2 border-white bg-red-700 h-3 w-3 rounded-full"/>}

@@ -61,7 +61,7 @@ export const Root = () => {
             <Sidebar/>
             <MainContentPanel>
                 <Header/>
-                <div className="grid grid-rows-[1fr_auto] h-full">
+                <div className="grid grid-rows-[1fr_auto] pb-8">
                     <Outlet/>
                     <AudioComponents/>
                 </div>

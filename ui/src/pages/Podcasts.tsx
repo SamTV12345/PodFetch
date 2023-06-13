@@ -88,10 +88,11 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
         })
     },[location])
 
-    return <div className="px-8">
+    return <div>
         <AddPodcast/>
 
-        <div className="flex justify-between mb-10">
+        {/* Title and Add button */}
+        <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-4 mb-10">
             <div className="flex gap-2 items-center">
                 <Heading1>{t('all-subscriptions')}</Heading1>
 
@@ -107,7 +108,8 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             </ButtonPrimary>
         </div>
 
-        <div className="flex gap-4 mb-10">
+        {/* Search/sort */}
+        <div className="flex flex-col md:flex-row gap-4 mb-10">
             <span className="flex-1 relative">
                 <Input type="text" placeholder={t('search')!} value={filters?.title} className="pl-10" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}/>
 
@@ -120,7 +122,8 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
         </div>
 
-        <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+        {/* Podcast list */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
             {!onlyFavorites&&podcasts.map((podcast)=>{
                 return <Card podcast={podcast} key={podcast.id}/>
             })}

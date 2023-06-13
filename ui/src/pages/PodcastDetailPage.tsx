@@ -79,24 +79,49 @@ export const PodcastDetailPage = () => {
 
     return <Fragment key={"detail"}>
 
-        <div className="max-w-4xl px-8">
+        <div className="max-w-4xl">
             <PodcastInfoModal/>
 
-            <div className="flex gap-8 items-center mb-8">
-                <img className="hidden sm:inline w-40 rounded-xl" src={currentPodcast.image_url} alt=""/>
+            {/* Header */}
+            <div className="
+                flex flex-col
+                xs:grid
+                xs:grid-cols-[auto_1fr_auto] xs:grid-rows-[auto_auto_auto]
+                gap-x-4 gap-y-2 lg:gap-x-8 lg:gap-y-1 items-center mb-8
+            ">
+                {/* Thumbnail */}
+                <img className="
+                    order-4
+                    xs:col-start-1 xs:col-end-2 row-start-3 row-end-4
+                    lg:col-start-1 lg:col-end-2 lg:row-start-2 lg:row-end-4
+                    w-full xs:w-24 md:w-32 lg:w-40 rounded-xl
+                " src={currentPodcast.image_url} alt=""/>
 
-                <div className="w-full md:flex flex-col items-start justify-center gap-2">
-                    <div>
-                        <Heading1 className="inline align-middle mr-2">{currentPodcast.name}</Heading1>
+                {/* Title and refresh icon */}
+                <div className="
+                    order-2
+                    col-start-1 col-end-4 row-start-2 row-end-3
+                    sm:col-start-1 sm:col-end-3
+                    lg:col-start-2 lg:col-end-3 
+                    self-start xs:self-end
+                ">
+                    <Heading1 className="inline align-middle mr-2">{currentPodcast.name}</Heading1>
 
-                        <span className="material-symbols-outlined inline cursor-pointer align-middle text-stone-800 hover:text-stone-600" onClick={() => {
-                            axios.post(apiURL + "/podcast/" + params.id + "/refresh")
-                                .then(() => {
-                                    console.log("Refreshed")
-                                })
-                        }}>refresh</span>
-                    </div>
+                    <span className="material-symbols-outlined inline cursor-pointer align-middle text-stone-800 hover:text-stone-600" onClick={() => {
+                        axios.post(apiURL + "/podcast/" + params.id + "/refresh")
+                            .then(() => {
+                                console.log("Refreshed")
+                            })
+                    }}>refresh</span>
+                </div>
 
+                {/* Metadata */}
+                <div className="
+                    order-3
+                    col-start-2 col-end-4 row-start-3 row-end-4
+                    sm:col-start-2 sm:col-end-3
+                    self-start flex flex-col gap-2
+                ">
                     <span className="block text-stone-500">{currentPodcast.author}</span>
 
                     {<div className="flex gap-2">
@@ -108,7 +133,14 @@ export const PodcastDetailPage = () => {
                     <span className="material-symbols-outlined inline cursor-pointer text-stone-800 hover:text-stone-600" onClick={()=>{window.open(configModel?.rssFeed+"/"+params.id)}}>rss_feed</span>
                 </div>
 
-                <div className="self-start flex gap-3 items-center">
+                {/* Toggle */}
+                <div className="
+                    order-1
+                    col-start-1 col-end-4 row-start-1 row-end-2
+                    sm:col-start-3 sm:col-end-4 sm:row-start-2 sm:row-end-3
+                    justify-self-end self-end sm:self-start
+                    flex gap-3 items-center
+                ">
                     <span className="text-xs text-stone-500">{t('active')}</span>
 
                     <Switcher checked={currentPodcast.active} setChecked={()=>{
@@ -120,15 +152,19 @@ export const PodcastDetailPage = () => {
                 </div>
             </div>
 
-            {currentPodcast.summary&&<div className="relative leading-[1.75] mb-8 text-sm text-stone-900">
-                <div id="summary" className={lineClamp?'line-clamp-3':''} dangerouslySetInnerHTML={removeHTML(currentPodcast.summary)}/>
-                {(isOverflown('summary')||lineClamp)&&<div className="cursor-pointer underline text-mustard-600 hover:text-mustard-500"  onClick={()=>{
-                    setLineClamp(!lineClamp)
-                }}>
-                    {lineClamp?t('show-more'):t('show-less')}
-                </div>}
-            </div>}
+            {/* Description */
+            currentPodcast.summary &&
+                <div className="relative leading-[1.75] mb-8 text-sm text-stone-900">
+                    <div id="summary" className={lineClamp?'line-clamp-3':''} dangerouslySetInnerHTML={removeHTML(currentPodcast.summary)}/>
+                    {(isOverflown('summary')||lineClamp)&&<div className="cursor-pointer underline text-mustard-600 hover:text-mustard-500"  onClick={()=>{
+                        setLineClamp(!lineClamp)
+                    }}>
+                        {lineClamp?t('show-more'):t('show-less')}
+                    </div>}
+                </div>
+            }
 
+            {/* Episode list */}
             <div>
                 <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
 
