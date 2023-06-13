@@ -27,7 +27,7 @@ export const CustomDropdownMenu: FC<CustomDropdownMenuProps> = ({menuItems, trig
             <DropdownMenu.Content className="bg-white py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)]">
 
                 {menuItems.map((menuItem) =>
-                    <DropdownMenu.Item>
+                    <DropdownMenu.Item key={menuItem.translationKey}>
                         {menuItem.onClick ?
                             <span className="flex items-center gap-2 cursor-pointer px-6 py-2 text-sm text-stone-900 hover:text-stone-600" onClick={menuItem.onClick}>
                                 <span className="material-symbols-outlined">{menuItem.iconName}</span> {t(menuItem.translationKey)}
