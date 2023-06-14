@@ -104,7 +104,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             <ButtonPrimary className="flex items-center" onClick={()=>{
                 dispatch(setModalOpen(true))
             }}>
-                <span className="material-symbols-outlined">add</span> {t('add-new')}
+                <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
             </ButtonPrimary>
         </div>
 

@@ -106,27 +106,6 @@
     @apply visible opacity-100;
 }
 
-::-webkit-scrollbar {
-    width: 7px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-    width: 15px;
-    @apply bg-gray-800
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-    @apply bg-gray-500 rounded-full;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500;
-}
-
-
 .searchfield{
     width: 64rem;
 }

@@ -93,7 +93,7 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
                                     trackId: podcast.id,
                                     userId:1
                                 })
-                            }}><span className="material-symbols-outlined">add</span></ButtonSecondary>
+                            }}><span className="material-symbols-outlined leading-[0.875rem]">add</span></ButtonSecondary>
                         </div>
                     </li>
                 })}

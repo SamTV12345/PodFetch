@@ -1,6 +1,7 @@
-import {FC, useState} from "react"
+import {FC} from "react"
 import {useTranslation} from "react-i18next"
 import axios from "axios"
+import {AnimatePresence, motion} from "framer-motion"
 import * as Popover from '@radix-ui/react-popover'
 import {apiURL} from "../utils/Utilities"
 import {useAppDispatch, useAppSelector} from "../store/hooks"
@@ -31,15 +32,27 @@ export const Notifications:FC = () => {
             return <div className="text-center place-items-center flex px-5 text-sm text-stone-500">
                 {t('no-notifications')}
             </div>
-        }
-        else{
-            return notifications.map((notification, index) => {
-                return <div className="grid grid-cols-[1fr_auto] gap-2 border-b last-of-type:border-b-0 border-b-stone-200 px-5 py-3 text-sm text-stone-900" key={index}>
-                    {notification.message}
-
-                    <span className="material-symbols-outlined cursor-pointer text-stone-400 hover:text-stone-600" onClick={()=>{dismissNotification(notification)}}>close</span>
-                </div>
-            })
+        } else {
+            return <AnimatePresence>
+                {notifications.map((notification) => (
+                    <motion.div className="grid grid-cols-[1fr_auto] gap-2 last-of-type:!border-b-0 border-b-stone-200 px-5 text-sm text-stone-900"
+                    key={notification.id}
+                    initial={false}
+                    animate={{ borderBottomWidth: '1px', maxHeight: '100%',  opacity: 1, paddingTop: '0.75rem', paddingBottom: '0.75rem' }}
+                    exit={{ borderBottomWidth: 0, maxHeight: 0, opacity: 0, paddingBottom: 0, paddingTop: 0 }}
+                    transition={{
+                        opacity: { ease: 'linear', duration: 0.1 },
+                        borderBottomWidth: { delay: 0.15, ease: 'easeOut', duration: 0.1 },
+                        maxHeight: { delay: 0.15, ease: 'easeOut', duration: 0.1 },
+                        paddingBottom: { delay: 0.15, ease: 'easeOut', duration: 0.1 },
+                        paddingTop: { delay: 0.15, ease: 'easeOut', duration: 0.1 }
+                    }}>
+                        {notification.message}
+ 
+                        <span className="material-symbols-outlined cursor-pointer text-stone-400 hover:text-stone-600" onClick={()=>{dismissNotification(notification)}}>close</span>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
         }
     }
 
