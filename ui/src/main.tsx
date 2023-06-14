@@ -1,6 +1,7 @@
 import React, {FC, PropsWithChildren, useEffect} from 'react'
 import ReactDOM from 'react-dom/client'
 import {router} from './App'
+import '@fontsource-variable/inter'
 import "@fontsource/poppins/400.css"
 import "@fontsource/poppins/400-italic.css"
 import "@fontsource/poppins/700.css"

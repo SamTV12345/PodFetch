@@ -1,4 +1,5 @@
 import {FC} from "react"
+import {DefaultTFuncReturn} from "i18next"
 import * as Select from "@radix-ui/react-select"
 import "material-symbols/outlined.css"
 
@@ -8,26 +9,29 @@ type Option = {
 }
 
 type CustomSelectProps = {
+    className?: string,
     defaultValue?: string,
-    icon?: string,
-    onChange: (v: string) => void,
+    iconName?: string,
+    onChange?: (v: string) => void,
     options: Array<Option>,
+    placeholder?: string | DefaultTFuncReturn,
     value: string
 }
 
-export const CustomSelect: FC<CustomSelectProps> = ({ defaultValue, icon, onChange, options, value }) => {
+export const CustomSelect:FC<CustomSelectProps> = ({className = '', defaultValue, iconName, onChange, options, placeholder, value}) => {
     console.log(value)
     return <Select.Root defaultValue={defaultValue} onValueChange={onChange} value={value}>
-        <Select.Trigger className="bg-white border border-stone-200 pl-6 pr-2 py-2 rounded-full text-sm text-stone-600">
-            {icon &&
-                <span className="material-symbols-outlined align-middle !leading-[1.25rem] -ml-2 mr-1 text-stone-500">{icon}</span>
+        <Select.Trigger className={`flex items-center bg-white border border-stone-200 pl-6 pr-2 py-2 rounded-full text-sm text-stone-600 ${className}`}>
+            {iconName &&
+                <span className="icon material-symbols-outlined align-middle !leading-[1.25rem] -ml-2 mr-1 text-stone-500">{iconName}</span>
             }
 
-            {/* TODO: Tranlation */}
-            <Select.Value placeholder="Sort by" />
+            <span className="value grow">
+                <Select.Value placeholder={placeholder}/>
+            </span>
 
             <Select.Icon>
-                <span className="material-symbols-outlined align-middle !leading-[1.25rem] ml-2 text-stone-500">expand_more</span>
+                <span className="expand-icon material-symbols-outlined align-middle !leading-[1.25rem] ml-1 text-stone-500">expand_more</span>
             </Select.Icon>
         </Select.Trigger>
 

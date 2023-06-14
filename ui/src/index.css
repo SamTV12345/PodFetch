@@ -6,12 +6,53 @@
     font-family: 'Poppins', sans-serif;
 }
 
+/* Icons */
+
 .material-symbols-outlined {
   font-variation-settings: 'wght' 300;
 }
 
 .filled {
   font-variation-settings: 'FILL' 1;
+}
+
+/* Sidebar */
+
+#primary-navigation a.active {
+    background-color: rgba(192,124,3,0.1);
+    @apply text-mustard-600;
+}
+
+/* Header */
+
+.i18n-dropdown {
+    @apply border-0;
+    @apply p-0;
+    @apply text-stone-900;
+}
+
+.i18n-dropdown .value,
+.i18n-dropdown .expand-icon {
+    @apply invisible;
+    @apply w-0;
+}
+
+@media screen(xs) {
+    .i18n-dropdown {
+        @apply pl-6;
+        @apply pr-2;
+        @apply py-2;
+    }
+
+    .i18n-dropdown .value,
+    .i18n-dropdown .expand-icon {
+        @apply visible;
+        @apply w-auto;
+    }
+}
+
+.i18n-dropdown .icon {
+    @apply text-stone-900;
 }
 
 .movie-text{
@@ -65,51 +106,6 @@
     @apply visible opacity-100;
 }
 
-#notification-modal {
-    background-color: rgb(31 41 55 / var(--tw-border-opacity));
-    top: 0;
-}
-
-.notification-modal-visible{
-    @apply visible opacity-100;
-    left: 50%;
-    transform: translate(-50%, 0);
-    margin-top: 10px;
-}
-
-#notification-modal::after {
-    content: '';
-    position: absolute;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-top: 10px solid rgb(31 41 55 / var(--tw-border-opacity));
-    transform: rotate(180deg) translate(50%, 100%);
-    left: 50%;
-    top: 0;
-    clear: both;
-}
-
-::-webkit-scrollbar {
-    width: 7px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-    width: 15px;
-    @apply bg-gray-800
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-    @apply bg-gray-500 rounded-full;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500;
-}
-
-
 .searchfield{
     width: 64rem;
 }
@@ -148,14 +144,6 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
     overflow: hidden;
-}
-
-.sidebar .active{
-    @apply bg-amber-400 text-amber-500 text-opacity-60 bg-opacity-40 rounded-2xl;
-}
-
-.sidebar .active svg{
-    @apply text-amber-500 fill-amber-500;
 }
 
 #root > div{
