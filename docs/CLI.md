@@ -21,3 +21,11 @@ e.g.
 ```bash
 podfetch users --help
 ```
+
+
+# Usage in docker
+
+```bash
+docker ps #This will get you the id of the
+docker exec -it <your-docker-id/name> /app/podfetch <your-command> # Will execute your desired command in the container
+```
