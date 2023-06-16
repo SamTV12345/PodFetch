@@ -18,7 +18,8 @@ export const PlayerVolumeSlider:FC<PlayerVolumeSliderProps> = ({refItem, audioAm
         <div className="flex items-center gap-2 w-40 sm:w-full sm:px-0">
             <VolumeIcon audio={refItem} volume={volume}/>
 
-            <Slider.Root className="relative flex items-center cursor-pointer h-2 w-full" value={[volume]} max={100} onValueChange={(v)=>{
+            {/*  Volume max 300 as some podcast providers have inconsistent sound profiles */}
+            <Slider.Root className="relative flex items-center cursor-pointer h-2 w-full" value={[volume]} max={300} onValueChange={(v)=>{
                 audioAmplifier&& audioAmplifier.setVolume(Number(v)/100)
                 if(refItem && refItem.current){
                     dispatch(setVolume(Number(v)))
