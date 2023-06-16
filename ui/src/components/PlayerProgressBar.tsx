@@ -1,9 +1,9 @@
-import React, {createRef, FC, useMemo, useState} from "react";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {setCurrentTimeUpdatePercentage} from "../store/AudioPlayerSlice";
-import {logCurrentPlaybackTime} from "../utils/Utilities";
+import React, {createRef, FC, useMemo, useState} from "react"
+import {useAppDispatch, useAppSelector} from "../store/hooks"
+import {setCurrentTimeUpdatePercentage} from "../store/AudioPlayerSlice"
+import {logCurrentPlaybackTime} from "../utils/Utilities"
 
-type ProgressBarProps = {
+type PlayerProgressBarProps = {
     audioplayerRef: React.RefObject<HTMLAudioElement>,
     className?: string
 }
@@ -26,7 +26,7 @@ const convertToMinutes = (time: number|undefined)=>{
     return hours_p + ":" + minutes_p + ":" + seconds_p.substring(0,2);
 }
 
-const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef, className}) => {
+export const PlayerProgressBar:FC<PlayerProgressBarProps> = ({audioplayerRef, className}) => {
     window.addEventListener("mousedown", () => {
         setMousePressed(true)
     })
@@ -75,21 +75,20 @@ const ProgressBar:FC<ProgressBarProps> = ({audioplayerRef, className}) => {
         }
     }
 
-
-
     return (
-        <div className="relative h-1 bg-slate-900 ml-5 mr-5 mb-2 cursor-pointer w-12/12 box-border" id="audio-progress-wrapper" ref={wrapper} onClick={(e)=>{
-            endWrapperPosition(e)
-        }}>
-            <div className={`absolute -top-6 opacity-0 invisible timecounter ${className}`} id="timecounter">{currentTime}</div>
-            <div className={`absolute right-0 -top-6 opacity-0 invisible timecounter ${className}`}>{totalDuration}</div>
-            <div className="bg-gray-500 h-1" id="audio-progress" style={{width: (metadata.percentage) +"%"}}>
-                <i className="fa-solid text-gray-300 fa-circle opacity-0 invisible" id="sound-control" ref={control}
-                   onMouseMove={(e)=>calcTotalMovement(e)}>
-                </i>
-            </div>
-        </div>
-    );
-};
+        <div className="flex items-center gap-3">
+            {/* Fixed width to avoid layout shift as time progresses */}
+            <span className={`text-xs text-right text-stone-900 w-12 ${className}`}>{currentTime}</span>
 
-export default ProgressBar;
+            <div className="grow bg-stone-400 cursor-pointer h-1" ref={wrapper} onClick={(e)=>{
+                endWrapperPosition(e)
+            }}>
+                <div className="relative bg-stone-900 h-1 text-right" style={{width: (metadata.percentage) +"%"}}>
+                    <span className="absolute -right-1 -top-1 bg-stone-900 h-3 w-3 rounded-full" onMouseMove={(e)=>calcTotalMovement(e)} ref={control}></span>
+                </div>
+            </div>
+
+            <div className={`text-xs text-stone-900 w-12 ${className}`}>{totalDuration}</div>
+        </div>
+    )
+}

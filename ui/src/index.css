@@ -61,23 +61,6 @@
     font-size: 50px;
     @apply text-gray-900;
 }
-#audio-progress{
-    @apply absolute;
-}
-
-#audio-progress-wrapper:hover #sound-control, #audio-progress-wrapper:hover .timecounter {
-    @apply visible opacity-100;
-}
-
-
-
-
-#sound-control{
-    position:absolute;
-    right: 0;
-    top:-5px;
-}
-
 
 .overlay {
     width: 100%;
@@ -94,15 +77,6 @@
 
 
 .play-button-background:hover > *{
-    @apply visible opacity-100;
-}
-
-
-#positionwrapper {
-    left: 50%;
-}
-
-#audio-bottom-bar:hover >* {
     @apply visible opacity-100;
 }
 
@@ -124,10 +98,6 @@
 }
 .z-60{
     z-index: 60;
-}
-
-.visibility-important{
-    visibility: visible !important;
 }
 
 .line-clamp-3{

@@ -10,7 +10,7 @@ import {setModalOpen} from "../store/ModalSlice"
 import {AddTypes} from "../models/AddTypes"
 import {AgnosticPodcastDataModel, GeneralModel, PodIndexModel} from "../models/PodcastAddModel"
 import {ButtonSecondary} from './ButtonSecondary'
-import {Input} from './Input'
+import {CustomInput} from './CustomInput'
 import {Spinner} from "./Spinner"
 import "material-symbols/outlined.css"
 
@@ -70,7 +70,7 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
 
     return <div className="flex flex-col gap-8">
         <span className="relative">
-            <Input type="text" value={searchText} placeholder={t('search-podcast')!} className="pl-10" onChange={(v)=>setSearchText(v.target.value)}/>
+            <CustomInput type="text" value={searchText} placeholder={t('search-podcast')!} className="pl-10 w-full" onChange={(v)=>setSearchText(v.target.value)}/>
 
             <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
         </span>

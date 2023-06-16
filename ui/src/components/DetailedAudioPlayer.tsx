@@ -1,59 +1,68 @@
-import {createPortal} from "react-dom";
-import {setDetailedAudioPlayerOpen} from "../store/CommonSlice";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {removeHTML} from "../utils/Utilities";
-import ProgressBar from "./AudioProgressBar";
-import {MenuBarPlayer} from "./MenuBarPlayer";
-import {FC, RefObject} from "react";
-import {VolumeSlider} from "./VolumeSlider";
-import {AudioAmplifier} from "../models/AudioAmplifier";
+import {FC, RefObject} from "react"
+import {createPortal} from "react-dom"
+import {useAppDispatch, useAppSelector} from "../store/hooks"
+import {setDetailedAudioPlayerOpen} from "../store/CommonSlice"
+import {removeHTML} from "../utils/Utilities"
+import {AudioAmplifier} from "../models/AudioAmplifier"
+import {PlayerTimeControls} from "./PlayerTimeControls"
+import {PlayerProgressBar} from "./PlayerProgressBar"
+import {PlayerVolumeSlider} from "./PlayerVolumeSlider"
+import "material-symbols/outlined.css"
 
 type DetailedAudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement>,
     audioAmplifier: AudioAmplifier|undefined,
     setAudioAmplifier: (audioAmplifier: AudioAmplifier|undefined)=>void
 }
+
 export const DetailedAudioPlayer:FC<DetailedAudioPlayerProps> = ({refItem, audioAmplifier}) => {
     const dispatch = useAppDispatch()
-    const detailedAudioPlayerOpen = useAppSelector(state => state.common.detailedAudioPlayerOpen)
     const selectedPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
 
-    return createPortal(<div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setDetailedAudioPlayerOpen(false))}
-                                           className={`overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-60 md:inset-0 h-modal h-full 
-             ${!detailedAudioPlayerOpen&&'pointer-events-none'}
-              z-40 ${detailedAudioPlayerOpen?'opacity-100':'animate-opacity'} duration-75`}>
-        <div className="bg-gray-800 h-full grid grid-rows-[1fr_auto]"  onClick={event => event.stopPropagation()}>
-            <div className="grid grid-cols-[1fr_2fr]">
-                <div  className="block ml-1 mr-1 md:hidden absolute mt-9 text-2xl text-center font-bold text-white">
-                    <div>{selectedPodcast?.name}</div>
-                    <div className="text-sm font-normal">{currentPodcast&&currentPodcast.name}</div>
-                </div>
-                <div className="grid place-items-center">
-                    <div className="relative">
-                    <img src={selectedPodcast?.local_image_url} alt={selectedPodcast?.name} className="h-24 md:h-80 object-cover shadow-lg shadow-amber-600"/>
-                        <div  className="hidden md:block absolute mt-2 text-2xl font-bold text-white">
-                            <div>{selectedPodcast?.name}</div>
-                            <div className="text-sm font-normal">{currentPodcast&&currentPodcast.name}</div>
-                        </div>
+    return createPortal(
+        <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 bg-white md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
+            <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl text-stone-900 hover:text-stone-600" onClick={()=>dispatch(setDetailedAudioPlayerOpen(false))}>close_fullscreen</span>
+
+            {/* Episode information */}
+            <div className="
+            grid
+            grid-cols-[1fr] grid-rows-[auto_1fr]
+            md:grid-cols-[auto_auto] md:grid-rows-1
+            md:items-center gap-4 xs:gap-8 md:gap-10
+            px-4 py-8 xs:px-8 md:px-12
+            ">
+                {/* Thumbnail and titles need special positioning to vertically align thumbnail with description */}
+                <div className="flex flex-col xs:flex-row items-center gap-4 md:block md:relative md:mb-10">
+                    <div className="aspect-square bg-center bg-cover md:mb-4 rounded-xl h-40 md:h-60 lg:h-80" style={{backgroundImage: `url("${selectedPodcast?.local_image_url}")`}}></div>
+
+                    <div className="md:absolute text-center xs:text-left">
+                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl">{selectedPodcast?.name}</span>
+                        <span className="block lg:text-lg">{currentPodcast&&currentPodcast.name}</span>
                     </div>
                 </div>
-                <div className="grid place-items-center text-white text-2xl">
-                    <div className="max-h-80 overflow-y-auto" dangerouslySetInnerHTML={selectedPodcast?.description? removeHTML(selectedPodcast.description):{__html:''}}/>
-                </div>
-            </div>
-            <div className="col-span-2 mb-3">
-                <ProgressBar audioplayerRef={refItem} className={"text-white visibility-important opacity-100"}/>
-                <div className="grid-cols-3 grid">
-                    <div></div>
-                    <MenuBarPlayer refItem={refItem}/>
-                    <VolumeSlider refItem={refItem} audioAmplifier={audioAmplifier}/>
-                </div>
-            </div>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className=" ml-2 w-8 h-8 absolute top-0 left-0 text-white">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-        </svg>
 
-    </div>, document.getElementById('modal')!)
+                {/* Description */}
+                <div className="md:max-h-60 lg:max-h-80 md:mb-10 overflow-y-auto xs:text-lg md:text-xl lg:text-2xl" dangerouslySetInnerHTML={selectedPodcast?.description? removeHTML(selectedPodcast.description):{__html:''}}/>
+
+            </div>
+
+            {/* Player */}
+            <div className="bg-white px-2 xs:p-4">
+                <PlayerProgressBar audioplayerRef={refItem} className="mb-2"/>
+
+                <div className="
+                    grid
+                    grid-col-1 xs:grid-cols-[0_1fr_12rem] md:grid-cols-[12rem_1fr_12rem]
+                    justify-items-center
+                    px-3 xs:px-4 md:px-10
+                ">
+                    <div></div>
+                    <PlayerTimeControls refItem={refItem}/>
+                    <PlayerVolumeSlider refItem={refItem} audioAmplifier={audioAmplifier}/>
+                </div>
+            </div>
+
+        </div>,document.getElementById('modal')!
+    )
 }

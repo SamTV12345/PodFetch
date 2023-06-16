@@ -58,15 +58,18 @@ export const Root = () => {
 
     return (
         <App>
+            <div className="grid grid-cols-[1fr] md:grid-cols-[18rem_1fr] grid-rows-[1fr_auto]">
             <Sidebar/>
             <MainContentPanel>
                 <Header/>
                 <div className="grid grid-rows-[1fr_auto] pb-8">
                     <Outlet/>
-                    <AudioComponents/>
+                    
                 </div>
             </MainContentPanel>
+            <AudioComponents/>
             <Search/>
+            </div>
         </App>
     )
 }

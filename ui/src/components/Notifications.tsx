@@ -62,7 +62,7 @@ export const Notifications:FC = () => {
         </Popover.Trigger>
 
         <Popover.Portal>
-            <Popover.Content className="bg-white max-h-80 max-w-xs overflow-y-auto py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)]">
+            <Popover.Content className="bg-white max-h-80 max-w-xs overflow-y-auto py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)] z-10">
                 {displayNotifications()}
 
                 <Popover.Arrow className="fill-white" />

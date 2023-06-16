@@ -24,7 +24,7 @@ export const CustomDropdownMenu: FC<CustomDropdownMenuProps> = ({menuItems, trig
         </DropdownMenu.Trigger>
 
         <DropdownMenu.Portal>
-            <DropdownMenu.Content className="bg-white py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)]">
+            <DropdownMenu.Content className="bg-white py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)] z-10">
 
                 {menuItems.map((menuItem) =>
                     <DropdownMenu.Item key={menuItem.translationKey}>
