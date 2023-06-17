@@ -7,14 +7,15 @@ use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
-use rss::Item;
+use rss::{Guid, Item};
 use crate::DbConnection;
 use crate::models::podcasts::Podcast;
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
+use diesel::AsChangeset;
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
-Serialize, Deserialize, Default)]
+Serialize, Deserialize, Default, AsChangeset)]
 pub struct PodcastEpisode {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
@@ -41,7 +42,9 @@ pub struct PodcastEpisode {
     #[diesel(sql_type = Text)]
     pub(crate) status: String,
     #[diesel(sql_type = Nullable<Timestamp>)]
-    pub(crate) download_time: Option<NaiveDateTime>
+    pub(crate) download_time: Option<NaiveDateTime>,
+    #[diesel(sql_type = Text)]
+    pub(crate) guid: String
 }
 
 impl PodcastEpisode{
@@ -350,5 +353,26 @@ impl PodcastEpisode{
             .filter(podcast_id.eq(id_to_search))
             .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
+    }
+
+    pub fn update_guid(conn: &mut DbConnection, guid_to_update:Guid, podcast_episode_id_to_update:
+    &str) {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as podcast_episode_id;
+
+        diesel::update(podcast_episodes.filter(podcast_episode_id.eq(podcast_episode_id_to_update)))
+            .set(guid.eq(guid_to_update.value))
+            .execute(conn)
+            .expect("Error updating guide");
+    }
+
+    pub fn update_podcast_episode(conn: &mut DbConnection, episode_to_update:PodcastEpisode) ->
+    PodcastEpisode {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+
+        diesel::update(podcast_episodes.find(episode_to_update.id.clone()))
+            .set(episode_to_update)
+            .get_result::<PodcastEpisode>(conn)
+            .expect("Error updating podcast episode")
     }
 }

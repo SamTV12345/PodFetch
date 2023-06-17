@@ -71,6 +71,5 @@ impl TimelineItem{
             total_elements: results,
             data: result
         }
-
     }
 }

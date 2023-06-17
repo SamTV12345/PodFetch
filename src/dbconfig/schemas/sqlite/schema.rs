@@ -80,6 +80,7 @@ diesel::table! {
         description -> Text,
         status -> Text,
         download_time -> Nullable<Timestamp>,
+        guid -> Text,
     }
 }
 

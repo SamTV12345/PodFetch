@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use crate::constants::constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -10,15 +11,19 @@ use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
+use diesel::{OptionalExtension, RunQueryDsl};
 use dotenv::var;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::{ACCEPT, HeaderMap};
-use rss::Channel;
+use reqwest::redirect::Policy;
+use rss::{Channel, Item};
+use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 
 use crate::DbConnection;
 use crate::models::notification::Notification;
 
+use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
@@ -134,25 +139,54 @@ impl PodcastEpisodeService {
     // Used for creating/updating podcasts
     pub fn insert_podcast_episodes(&mut self, conn: &mut DbConnection, podcast: Podcast) ->
                                                                              Vec<PodcastEpisode> {
-        let client = ClientBuilder::new().build().unwrap();
-        let mut header_map = HeaderMap::new();
+        let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
 
-        header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
-        header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
-        let result = client.get(podcast.clone().rssfeed).headers(header_map).send().unwrap();
-        let content = result.text().unwrap();
+        let returned_data_from_podcast_insert = Self::do_request_to_podcast_server(podcast.clone());
 
-        let channel = Channel::read_from(content.as_bytes())
+        let channel = Channel::read_from(returned_data_from_podcast_insert.content.as_bytes())
             .unwrap();
+
+        if *is_redirected.clone().lock().ignore_poison() {
+            log::info!("The podcast {} has moved to {}", podcast.name,
+                returned_data_from_podcast_insert.url);
+            Podcast::update_podcast_urls_on_redirect(podcast.id, returned_data_from_podcast_insert.url, conn);
+            Self::update_episodes_on_redirect(conn,channel.items());
+        }
+
+        if channel.itunes_ext.is_some(){
+            let extension = channel.itunes_ext.clone().unwrap();
+
+            if extension.new_feed_url.is_some(){
+                let new_url = extension.new_feed_url.unwrap();
+                let items = channel.items();
+                Podcast::update_podcast_urls_on_redirect(podcast.id, new_url, conn);
+
+                let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone());
+
+                let channel = Channel::read_from(returned_data_from_server.content.as_bytes())
+                    .unwrap();
+                let items = channel.items();
+                Self::update_episodes_on_redirect(conn, items);
+            }
+        }
+
+
         self.update_podcast_fields(channel.clone(), podcast.id.clone(),conn);
 
         let mut podcast_inserted = Vec::new();
 
-        // insert original podcast image url
-        if podcast.original_image_url.is_empty() {
-            Podcast::update_original_image_url(&channel.image().unwrap().url.to_string(), podcast
-                .id,conn);
-        }
+
+            match channel.image() {
+                Some(image) => {
+                   Podcast::update_original_image_url(&image.url.to_string(), podcast.id,
+                    conn);
+                }
+                None => {
+                    let env = EnvironmentService::new();
+                    let url = env.server_url.clone().to_owned() + &"ui/default.jpg".to_string();
+                    Podcast::update_original_image_url(&url, podcast.id,conn);
+                }
+            }
 
         for (_, item) in channel.items.iter().enumerate() {
             let itunes_ext = item.clone().itunes_ext;
@@ -186,6 +220,14 @@ impl PodcastEpisodeService {
                                                                                    duration_episode as i32,
                                 );
                                 podcast_inserted.push(inserted_episode);
+                            }
+                            else if result_unwrapped.is_some(){
+                                let already_loaded_episode = result_unwrapped.unwrap();
+                                if already_loaded_episode.guid.is_empty() && item.guid().is_some
+                                () && !item.guid().unwrap().permalink{
+                                    PodcastEpisode::update_guid(conn,item.guid.clone().unwrap(),
+                                                    &already_loaded_episode.episode_id);
+                                }
                             }
 
                             if result.clone().unwrap().is_none() {
@@ -239,6 +281,34 @@ impl PodcastEpisodeService {
             }
         }
         return podcast_inserted;
+    }
+
+
+    fn update_episodes_on_redirect(conn: &mut DbConnection, items: &[Item]) {
+        for (_, item) in items.iter().enumerate(){
+            let opt_found_podcast_episode = Self::get_podcast_episode_by_guid(conn, item.title.as_ref().unwrap());
+            if opt_found_podcast_episode.is_some(){
+                let found_podcast_episode = opt_found_podcast_episode.unwrap();
+                let mut podcast_episode = found_podcast_episode.clone();
+                if item.itunes_ext.is_some(){
+                    podcast_episode.image_url = item.itunes_ext.as_ref().unwrap().image.clone()
+                        .unwrap();
+                }
+                podcast_episode.url = item.enclosure.as_ref().unwrap().url.to_string();
+                PodcastEpisode::update_podcast_episode(conn, podcast_episode);
+            }
+        }
+    }
+
+    fn get_podcast_episode_by_guid(conn: &mut DbConnection, guid_to_search: &str) ->
+                                                                    Option<PodcastEpisode>{
+        use diesel::QueryDsl;
+        use diesel::ExpressionMethods;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        podcast_episodes
+            .filter(guid.eq(guid_to_search))
+            .first::<PodcastEpisode>(conn)
+            .optional().expect("Error loading podcast episode")
     }
 
     fn parse_duration(duration_str: &str) -> u32 {
@@ -388,4 +458,42 @@ impl PodcastEpisodeService {
                                                                    Result<Option<PodcastEpisode>, String> {
         PodcastEpisode::get_podcast_episode_by_id(conn, id_num)
     }
+
+    fn do_request_to_podcast_server(podcast:Podcast) ->RequestReturnType{
+        let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
+        let client = ClientBuilder::new().redirect(Policy::custom({
+            let is_redirected = Arc::clone(&is_redirected);
+
+            move |attempt|{
+
+                if attempt.previous().len() > 0 {
+                    *is_redirected.lock().unwrap() = true;
+                }
+                attempt.follow()
+            }
+        })).build().unwrap();
+        let mut header_map = HeaderMap::new();
+        header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
+        header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
+        let result = client
+            .get(podcast.clone().rssfeed)
+            .headers(header_map)
+            .send()
+            .unwrap();
+        let mut url = result.url().clone().to_string();
+        let content = result.text().unwrap().clone();
+
+        return RequestReturnType {
+            url,
+            content
+        }
+    }
+
+
+
+}
+
+struct RequestReturnType {
+    pub url:String,
+    pub content:String
 }

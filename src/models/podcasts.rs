@@ -233,4 +233,14 @@ impl Podcast{
             .execute(conn)})
             .expect("Error updating podcast episode");
     }
+
+    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: String, conn: &mut DbConnection) {
+        use crate::dbconfig::schema::podcasts::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::id as pid;
+
+        diesel::update(podcasts.filter(pid.eq(podcast_id_to_update)))
+            .set(rssfeed.eq(new_url))
+            .execute(conn)
+            .expect("Error updating podcast episode");
+    }
 }
