@@ -25,10 +25,10 @@ export const SettingsData:FC = ()=>{
     },[])
 
     if(settings === undefined){
-        return <Loading/>
+        return <Loading />
     }
 
-    return <Settings initialSettings={settings}/>
+    return <Settings initialSettings={settings} />
 }
 
 export const Settings:FC<SettingsProps> = ({initialSettings}) => {
@@ -38,46 +38,46 @@ export const Settings:FC<SettingsProps> = ({initialSettings}) => {
 
     return (
         <div>
-            <div className="content-stretch grid grid-cols-1 sm:grid-cols-[1fr_auto] items-center gap-6 mb-10 text-stone-900">
-                <div>
-                    <span>{t('auto-cleanup')}</span>
-                    <CustomButtonSecondary className=" ml-6" onClick={()=>{
-                        axios.put(apiURL+"/settings/runcleanup")
-                    }}>{t('run-cleanup')}</CustomButtonSecondary>
-                </div>
-                <div className="text-right">
-                    <Switcher checked={settings.autoCleanup} setChecked={()=>{
+            <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10 text-stone-900">
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <div>
+                        <label className="mr-6" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
+                        <CustomButtonSecondary onClick={()=>{
+                            axios.put(apiURL+"/settings/runcleanup")
+                        }}>{t('run-cleanup')}</CustomButtonSecondary>
+                    </div>
+                    <Switcher checked={settings.autoCleanup} className="xs:justify-self-end" id="auto-cleanup" setChecked={()=>{
                         setSettings({...settings, autoCleanup: !settings?.autoCleanup})
-                    }}/>
+                    }} />
                 </div>
 
-                <span>{t('days-to-keep')}</span>
-                <div className="text-right">
-                    <CustomInput type="number" className="w-20" value={settings.autoCleanupDays} onChange={(e)=>{
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="days-to-keep">{t('days-to-keep')}</label>
+                    <CustomInput className="w-20" id="days-to-keep" onChange={(e)=>{
                         setSettings({...settings, autoCleanupDays: parseInt(e.target.value)})
-                    }}/>
+                    }} type="number" value={settings.autoCleanupDays} />
                 </div>
 
-                <span>{t('auto-update')}</span>
-                <div className="text-right">
-                    <Switcher checked={settings.autoUpdate} setChecked={()=>{
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="auto-update">{t('auto-update')}</label>
+                    <Switcher checked={settings.autoUpdate} className="xs:justify-self-end" id="auto-update" setChecked={()=>{
                         setSettings({...settings, autoUpdate: !settings?.autoUpdate})
-                    }}/>
+                    }} />
                 </div>
 
-                <span>{t('number-of-podcasts-to-download')}</span>
-                <div className="text-right">
-                    <CustomInput type="number" className="w-20" value={settings.podcastPrefill} onChange={(e)=>{
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="number-of-podcasts-to-download">{t('number-of-podcasts-to-download')}</label>
+                    <CustomInput className="w-20" id="number-of-podcasts-to-download" onChange={(e)=>{
                         setSettings({...settings, podcastPrefill: parseInt(e.target.value)})
-                    }}/>
+                    }} type="number" value={settings.podcastPrefill} />
                 </div>
 
-                <span>{t('auto-download')}</span>
-                <div className="text-right">
-                    <Switcher checked={settings.autoDownload} setChecked={()=>{
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="auto-download">{t('auto-download')}</label>
+                    <Switcher checked={settings.autoDownload} className="xs:justify-self-end" id="auto-download" setChecked={()=>{
                         setSettings({...settings, autoDownload: !settings?.autoDownload})
-                    }}/>
-                </div>   
+                    }} />
+                </div>
             </div>
 
             <CustomButtonPrimary className="float-right" onClick={()=>{

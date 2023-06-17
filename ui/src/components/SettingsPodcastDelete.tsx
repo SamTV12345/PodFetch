@@ -30,12 +30,12 @@ export const SettingsPodcastDelete:FC = () => {
     }
 
     return (
-        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto] items-center gap-6">
             {podcasts.map((p) => (
-                <div className="contents" key={p.id}>
-                    <span className="text-stone-900">{p.name}</span>
+                <div className="grid grid-cols-1 xs:grid-cols-[auto_1fr] justify-items-start gap-2 lg:contents mb-4" key={p.id}>
+                    <span className="xs:col-span-2 lg:col-span-1 text-stone-900">{p.name}</span>
 
-                    <CustomButtonSecondary className="w-auto" onClick={()=>{
+                    <CustomButtonSecondary onClick={()=>{
                         dispatch(setConfirmModalData({
                             headerText: t('delete-podcast-with-files'),
                             onAccept:()=>{

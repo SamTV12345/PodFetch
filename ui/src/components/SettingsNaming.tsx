@@ -42,10 +42,10 @@ export const SettingsNaming:FC = ()=>{
     },[])
 
     if(settings === undefined){
-        return <Loading/>
+        return <Loading />
     }
 
-    return <Settings intialSettings={settings}/>
+    return <Settings intialSettings={settings} />
 }
 
 const Settings:FC<SettingsProps> = ({intialSettings}) => {
@@ -71,65 +71,65 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
 
     return (
         <form onSubmit={handleSubmit(update_settings)}>
-            <div className="grid grid-cols-[1fr_auto] gap-6 mb-10">
-                <fieldset className="contents">
-                    <legend className="text-stone-900">{t('rename-podcasts')}</legend>
+            <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10">
+                <fieldset className="xs:contents mb-4">
+                    <legend className="self-start mb-2 xs:mb-0 text-stone-900">{t('rename-podcasts')}</legend>
 
                     <div className="flex flex-col gap-2">
-                        <div>
+                        <div className="flex">
                             <Controller
                             name="useExistingFilenames"
                             control={control}
                             render={({ field: { name, onChange, value }}) => (
-                                <CustomCheckbox id="use-existing-filenames" name={name} onChange={onChange} value ={value}/>
-                            )}/>
+                                <CustomCheckbox id="use-existing-filenames" name={name} onChange={onChange} value ={value} />
+                            )} />
 
                             <label className="ml-2 text-sm text-stone-600" htmlFor="use-existing-filenames">{t('use-existing-filenames')}</label>
                         </div>
-                        <div>
+                        <div className="flex">
                             <Controller
                             name="replaceInvalidCharacters"
                             control={control}
                             render={({ field: { name, onChange, value }}) => (
-                                <CustomCheckbox id="replace-invalid-characters" name={name} onChange={onChange} value ={value}/>
-                            )}/>
+                                <CustomCheckbox id="replace-invalid-characters" name={name} onChange={onChange} value ={value} />
+                            )} />
 
                             <label className="ml-2 text-sm text-stone-600" htmlFor="replace-invalid-characters">{t('replace-invalid-characters-description')}</label>
                         </div>
                     </div>
                 </fieldset>
 
-                <div className="contents">
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="text-stone-900" htmlFor="colon-replacement">{t('colon-replacement')}</label>
 
                     <Controller
                     name="replacementStrategy"
                     control={control}
                     render={({ field: { name, onChange, value }}) => (
-                        <CustomSelect id="colon-replacement" name={name} options={options} onChange={onChange} value ={value}/>
-                    )}/>
+                        <CustomSelect id="colon-replacement" name={name} options={options} onChange={onChange} value ={value} />
+                    )} />
                 </div>
 
-                <div className="contents">
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="text-stone-900" htmlFor="episode-format">{t('standard-episode-format')}</label>
 
                     <Controller
                     name="episodeFormat"
                     control={control}
                     render={({ field: { name, onChange, value }}) => (
-                        <CustomInput id="episode-format" name={name} onChange={onChange} value={value}/>
-                    )}/>
+                        <CustomInput id="episode-format" name={name} onChange={onChange} value={value} />
+                    )} />
                 </div>
 
-                <div className="contents">
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="text-stone-900" htmlFor="podcast-format">{t('standard-podcast-format')}</label>
 
                     <Controller
                     name="podcastFormat"
                     control={control}
                     render={({ field: { name, onChange, value }}) => (
-                        <CustomInput id="podcast-format" name={name} onChange={onChange} value={value}/>
-                    )}/>
+                        <CustomInput id="podcast-format" name={name} onChange={onChange} value={value} />
+                    )} />
                 </div>
             </div>
 
