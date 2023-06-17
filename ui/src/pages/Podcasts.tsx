@@ -17,7 +17,7 @@ import {Order} from "../models/Order"
 import {Filter} from "../models/Filter"
 import {Card} from "../components/Card"
 import {AddPodcast} from "../components/AddPodcast"
-import {ButtonPrimary} from "../components/ButtonPrimary"
+import {CustomButtonPrimary} from "../components/CustomButtonPrimary"
 import {CustomInput} from "../components/CustomInput"
 import {CustomSelect} from "../components/CustomSelect"
 import {Heading1} from "../components/Heading1"
@@ -101,11 +101,11 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
                 }}>refresh</span>
             </div>
 
-            <ButtonPrimary className="flex items-center" onClick={()=>{
+            <CustomButtonPrimary className="flex items-center" onClick={()=>{
                 dispatch(setModalOpen(true))
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
-            </ButtonPrimary>
+            </CustomButtonPrimary>
         </div>
 
         {/* Search/sort */}

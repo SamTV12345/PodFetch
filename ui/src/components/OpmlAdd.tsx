@@ -6,7 +6,7 @@ import {FileItem, readFile} from "../utils/FileUtils"
 import {setInProgress} from "../store/opmlImportSlice"
 import {useAppDispatch, useAppSelector} from "../store/hooks"
 import {AddTypes} from "../models/AddTypes"
-import { ButtonPrimary } from './ButtonPrimary'
+import {CustomButtonPrimary} from "./CustomButtonPrimary"
 
 type OpmlAddProps = {
     selectedSearchType: AddTypes
@@ -131,10 +131,10 @@ export const OpmlAdd:FC<OpmlAddProps> = ({})=>{
             </div>
         }
 
-        <ButtonPrimary disabled={files.length==0} onClick={()=>{
+        <CustomButtonPrimary disabled={files.length==0} onClick={()=>{
         dispatch(setInProgress(true))
         uploadOpml()}}>
             {t('upload-opml')}
-        </ButtonPrimary>
+        </CustomButtonPrimary>
     </div>
 }

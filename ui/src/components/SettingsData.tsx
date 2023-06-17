@@ -4,8 +4,8 @@ import axios, {AxiosResponse} from "axios"
 import {useSnackbar} from "notistack"
 import {apiURL} from "../utils/Utilities"
 import {Setting} from "../models/Setting"
-import {ButtonPrimary} from "./ButtonPrimary"
-import {ButtonSecondary} from "./ButtonSecondary"
+import {CustomButtonPrimary} from "./CustomButtonPrimary"
+import {CustomButtonSecondary} from "./CustomButtonSecondary"
 import {CustomInput} from "./CustomInput"
 import {Loading} from "../components/Loading"
 import {Switcher} from "./Switcher"
@@ -41,9 +41,9 @@ export const Settings:FC<SettingsProps> = ({initialSettings}) => {
             <div className="content-stretch grid grid-cols-1 sm:grid-cols-[1fr_auto] items-center gap-6 mb-10 text-stone-900">
                 <div>
                     <span>{t('auto-cleanup')}</span>
-                    <ButtonSecondary className=" ml-6" onClick={()=>{
+                    <CustomButtonSecondary className=" ml-6" onClick={()=>{
                         axios.put(apiURL+"/settings/runcleanup")
-                    }}>{t('run-cleanup')}</ButtonSecondary>
+                    }}>{t('run-cleanup')}</CustomButtonSecondary>
                 </div>
                 <div className="text-right">
                     <Switcher checked={settings.autoCleanup} setChecked={()=>{
@@ -80,12 +80,12 @@ export const Settings:FC<SettingsProps> = ({initialSettings}) => {
                 </div>   
             </div>
 
-            <ButtonPrimary className="float-right" onClick={()=>{
+            <CustomButtonPrimary className="float-right" onClick={()=>{
                 axios.put(apiURL+"/settings", settings)
                     .then(()=>{
                         enqueueSnackbar(t('settings-saved'), {variant: "success"})
                     })
-            }}>{t('save')}</ButtonPrimary>
+            }}>{t('save')}</CustomButtonPrimary>
         </div>
     )
 }

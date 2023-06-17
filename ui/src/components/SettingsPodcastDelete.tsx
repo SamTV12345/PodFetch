@@ -6,7 +6,7 @@ import {useAppDispatch, useAppSelector} from "../store/hooks"
 import {Podcast, setConfirmModalData, setPodcasts} from "../store/CommonSlice"
 import {setModalOpen} from "../store/ModalSlice"
 import {apiURL} from "../utils/Utilities"
-import {ButtonSecondary} from './ButtonSecondary'
+import {CustomButtonSecondary} from "./CustomButtonSecondary"
 
 export const SettingsPodcastDelete:FC = () => {
     const podcasts = useAppSelector(state=>state.common.podcasts)
@@ -35,7 +35,7 @@ export const SettingsPodcastDelete:FC = () => {
                 <div className="contents" key={p.id}>
                     <span className="text-stone-900">{p.name}</span>
 
-                    <ButtonSecondary className="w-auto" onClick={()=>{
+                    <CustomButtonSecondary className="w-auto" onClick={()=>{
                         dispatch(setConfirmModalData({
                             headerText: t('delete-podcast-with-files'),
                             onAccept:()=>{
@@ -49,9 +49,9 @@ export const SettingsPodcastDelete:FC = () => {
                             bodyText: t('delete-podcast-with-files-body', {name: p.name})
                         }))
                         dispatch(setModalOpen(true))
-                    }}>{t('delete-podcast-with-files')}</ButtonSecondary>
+                    }}>{t('delete-podcast-with-files')}</CustomButtonSecondary>
 
-                    <ButtonSecondary onClick={()=>{
+                    <CustomButtonSecondary onClick={()=>{
                         dispatch(setConfirmModalData({
                             headerText: t('delete-podcast-without-files'),
                             onAccept:()=>{
@@ -65,7 +65,7 @@ export const SettingsPodcastDelete:FC = () => {
                             bodyText: t('delete-podcast-without-files-body', {name: p.name})
                         }))
                         dispatch(setModalOpen(true))
-                    }}>{t('delete-podcast-without-files')}</ButtonSecondary>
+                    }}>{t('delete-podcast-without-files')}</CustomButtonSecondary>
                 </div>
             ))}
         </div>

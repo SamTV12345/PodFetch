@@ -6,7 +6,7 @@ import {enqueueSnackbar} from "notistack"
 import {apiURL} from "../utils/Utilities"
 import {Setting} from "../models/Setting"
 import {UpdateNameSettings} from "../models/UpdateNameSettings"
-import {ButtonPrimary} from "./ButtonPrimary"
+import {CustomButtonPrimary} from "./CustomButtonPrimary"
 import {CustomSelect} from "../components/CustomSelect"
 import {CustomInput} from "../components/CustomInput"
 import {Loading} from "../components/Loading"
@@ -133,7 +133,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                 </div>
             </div>
 
-            <ButtonPrimary className="float-right" type="submit">{t('save')}</ButtonPrimary>
+            <CustomButtonPrimary className="float-right" type="submit">{t('save')}</CustomButtonPrimary>
         </form>
     )
 }

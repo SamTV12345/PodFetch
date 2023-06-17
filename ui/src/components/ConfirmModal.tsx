@@ -1,6 +1,6 @@
 import {useAppSelector} from "../store/hooks"
-import {ButtonPrimary} from "./ButtonPrimary"
-import {ButtonSecondary} from "./ButtonSecondary"
+import {CustomButtonPrimary} from "./CustomButtonPrimary"
+import {CustomButtonSecondary} from "./CustomButtonSecondary"
 import {Modal} from "./Modal"
 
 export type ConfirmModalProps = {
@@ -21,8 +21,8 @@ export const ConfirmModal = ()=>{
                 {confirmModalData?.bodyText}
             </div>
             <div className="text-right">
-                <ButtonSecondary className="border-transparent shadow-none hover:shadow-none text-base text-stone-900 hover:text-stone-600" onClick={confirmModalData?.onReject}>{confirmModalData?.rejectText}</ButtonSecondary>
-                <ButtonPrimary className="bg-red-700 hover:bg-red-600 hover:shadow-red-600" onClick={confirmModalData?.onAccept}>{confirmModalData?.acceptText}</ButtonPrimary>
+                <CustomButtonSecondary className="border-transparent shadow-none hover:shadow-none text-base text-stone-900 hover:text-stone-600" onClick={confirmModalData?.onReject}>{confirmModalData?.rejectText}</CustomButtonSecondary>
+                <CustomButtonPrimary className="bg-red-700 hover:bg-red-600 hover:shadow-red-600" onClick={confirmModalData?.onAccept}>{confirmModalData?.acceptText}</CustomButtonPrimary>
             </div>
         </Modal>
     )

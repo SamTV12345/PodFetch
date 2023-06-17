@@ -2,7 +2,7 @@ import {FC} from "react"
 import {useTranslation} from "react-i18next"
 import axios from "axios"
 import {apiURL} from "../utils/Utilities"
-import {ButtonSecondary} from "./ButtonSecondary"
+import {CustomButtonSecondary} from "./CustomButtonSecondary"
 import "material-symbols/outlined.css"
 
 export const SettingsOPMLExport:FC = () => {
@@ -33,18 +33,18 @@ export const SettingsOPMLExport:FC = () => {
     return (
         <div className="grid grid-cols-[auto_1fr] items-center justify-items-start gap-x-20 gap-y-6 mb-10">
             <span>{t('export-with-local-urls')}</span>
-            <ButtonSecondary className="flex items-center" onClick={() => {
+            <CustomButtonSecondary className="flex items-center" onClick={() => {
                 downloadOPML('local')
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">download</span> {t('download')}
-            </ButtonSecondary>
+            </CustomButtonSecondary>
 
             <span>{t('export-with-online-urls')}</span>
-            <ButtonSecondary className="flex items-center" onClick={() => {
+            <CustomButtonSecondary className="flex items-center" onClick={() => {
                 downloadOPML('online')
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">download</span> {t('download')}
-            </ButtonSecondary>
+            </CustomButtonSecondary>
         </div>
     )
 }
