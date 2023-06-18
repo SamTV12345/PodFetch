@@ -100,6 +100,14 @@ impl User{
         Ok(User::map_to_dto(user.unwrap()))
     }
 
+    pub fn update_explicit_consent(&self, conn: &mut DbConnection) -> Result<UserWithoutPassword, diesel::result::Error> {
+        let user = diesel::update(users::table.filter(users::id.eq(self.id)))
+            .set(users::explicit_consent.eq(self.explicit_consent))
+            .get_result::<User>(conn);
+
+        Ok(User::map_to_dto(user.unwrap()))
+    }
+
     pub(crate) fn create_admin_user() ->User{
         User{
             id: 9999,

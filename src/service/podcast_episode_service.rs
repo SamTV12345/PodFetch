@@ -18,7 +18,6 @@ use reqwest::blocking::ClientBuilder;
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
-use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 
 use crate::DbConnection;
 use crate::models::notification::Notification;
@@ -158,7 +157,6 @@ impl PodcastEpisodeService {
 
             if extension.new_feed_url.is_some(){
                 let new_url = extension.new_feed_url.unwrap();
-                let items = channel.items();
                 Podcast::update_podcast_urls_on_redirect(podcast.id, new_url, conn);
 
                 let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone());
@@ -480,7 +478,7 @@ impl PodcastEpisodeService {
             .headers(header_map)
             .send()
             .unwrap();
-        let mut url = result.url().clone().to_string();
+        let url = result.url().clone().to_string();
         let content = result.text().unwrap().clone();
 
         return RequestReturnType {

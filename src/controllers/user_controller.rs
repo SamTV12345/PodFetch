@@ -117,7 +117,7 @@ web::Path<String>, requester: Option<web::ReqData<User>>)
     found_user.role = role.role.to_string();
     found_user.explicit_consent = role.explicit_consent;
 
-    let res = UserManagementService::update_role(found_user,  &mut *conn.get()
+    let res = UserManagementService::update_user(found_user, &mut *conn.get()
         .unwrap());
 
     match res {
