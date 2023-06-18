@@ -5,9 +5,10 @@ import "material-symbols/outlined.css"
 interface VolumeProps extends IconProps {
     audio:  RefObject<HTMLAudioElement>,
     className?: string,
+    max: number,
     volume: number
 }
-export const VolumeIcon:FC<VolumeProps> = ({audio, className = '', volume}) => {
+export const VolumeIcon:FC<VolumeProps> = ({audio, className = '', max, volume}) => {
     const [muted, setMuted] = useState(false)
 
     return muted ? (
@@ -23,6 +24,6 @@ export const VolumeIcon:FC<VolumeProps> = ({audio, className = '', volume}) => {
                 audio.current.muted = true
                 setMuted(true)
             }
-        }}>{(volume < 50) ? 'volume_down' : 'volume_up'}</span>
+        }}>{((volume / max) < 0.5) ? 'volume_down' : 'volume_up'}</span>
     )
 }
