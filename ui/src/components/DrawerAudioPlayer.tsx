@@ -29,7 +29,7 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({refItem, audioAmp
             justify-items-center sm:justify-items-stretch
             gap-2 sm:gap-4 lg:gap-10
             p-4 lg:pr-8
-            bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.15)] z-10
+            bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.15)]
         ">
             <PlayerEpisodeInfo podcast={podcast} podcastEpisode={podcastEpisode}/>
 

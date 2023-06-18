@@ -68,13 +68,13 @@ export const Timeline = () => {
                     {/* Section start */
                     index === 0 || (formatTime(e.podcast_episode.date_of_recording) !== formatTime(timeLineEpisodes.data[index-1].podcast_episode.date_of_recording)) ? (<>
                         {/* Date */}
-                        <span className="col-span-full bg-white -mb-4 -ml-6 py-2 z-10">
+                        <span className="col-span-full bg-white -mb-4 -ml-6 py-2">
                             <span className="inline-block bg-mustard-600 mr-4 outline outline-2 outline-offset-2 outline-mustard-600 h-2 w-2 rounded-full"></span>
                             <span className="text-xs text-mustard-600">{formatTime(e.podcast_episode.date_of_recording)}</span>
                         </span>
 
                         {/* Left line */}
-                        <div className="absolute h-full bg-stone-300 ml-[0.1875rem] w-px"></div>
+                        <div className="absolute h-full bg-stone-300 ml-[0.1875rem] w-px -z-10"></div>
                     </>) : ''}
 
                     <TimelineEpisodeCard

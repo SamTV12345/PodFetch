@@ -42,7 +42,7 @@ export const CustomSelect:FC<CustomSelectProps> = ({className = '', defaultValue
             </Select.Trigger>
 
             <Select.Portal>
-                <Select.Content className="overflow-hidden bg-white rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)]">
+                <Select.Content className="overflow-hidden bg-white rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)] z-30">
                     <Select.ScrollUpButton />
 
                     <Select.Viewport className="p-2">
