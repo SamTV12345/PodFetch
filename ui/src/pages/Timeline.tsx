@@ -8,8 +8,8 @@ import {Filter} from "../models/Filter"
 import {TimelineHATEOASModel} from "../models/TimeLineModel"
 import {Heading1} from "../components/Heading1"
 import {Loading} from "../components/Loading"
-import {TimelineEpisodeCard} from "../components/TimelineEpisodeCard"
 import {Switcher} from "../components/Switcher"
+import {TimelineEpisode} from "../components/TimelineEpisode"
 
 export const Timeline = () => {
     const {t} = useTranslation()
@@ -77,7 +77,7 @@ export const Timeline = () => {
                         <div className="absolute h-full bg-stone-300 ml-[0.1875rem] w-px -z-10"></div>
                     </>) : ''}
 
-                    <TimelineEpisodeCard
+                    <TimelineEpisode
                         podcastEpisode={e}
                         key={e.podcast_episode.episode_id+index + "Parent"}
                         index={index}
