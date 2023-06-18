@@ -7,7 +7,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::{DbConnection, DbPool, get_default_image, unwrap_string, unwrap_string_audio};
+use crate::{DbConnection, DbPool, get_default_image, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
 use actix_web::{get, post, put, delete, HttpRequest, error, Error};
