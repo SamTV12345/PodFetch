@@ -1,4 +1,4 @@
-import {lazy} from "react";
+import {lazy} from "react"
 
 export const PodcastViewLazyLoad = lazy(()=>import('../pages/Podcasts').then(module=> {
     return{default:module["Podcasts"]}
@@ -16,21 +16,14 @@ export const SettingsViewLazyLoad = lazy(()=>import('../pages/SettingsPage').the
     return{default:module["SettingsPage"]}
 }))
 
-export const AdministrationViewLazyLoad = lazy(()=>import('../pages/AdministrationPage').then(module=> {
-    return{default:module["AdministrationPage"]}
-}))
-
-export const AdministrationUserViewLazyLoad = lazy(()=>import('../pages/AdministrationUserPage').then(module=> {
-    return{default:module["AdministrationUserPage"]}
-}))
-
-export const InviteAdministrationUserViewLazyLoad = lazy(()=>import('../pages/InviteAdministrationUserPage').then(module=> {
-    return{default:module["InviteAdministrationUserPage"]}
+export const UserAdminViewLazyLoad = lazy(()=>import('../pages/UserAdminPage').then(module=> {
+    return{default:module["UserAdminPage"]}
 }))
 
 export const TimeLineViewLazyLoad = lazy(()=>import('../pages/Timeline').then(module=> {
     return{default:module["Timeline"]}
 }))
+
 export const MobileSearchViewLazyLoad = lazy(()=>import('../pages/MobileSearchPage').then(module=> {
     return{default:module["MobileSearchPage"]}
 }))
