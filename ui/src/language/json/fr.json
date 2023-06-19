@@ -8,6 +8,7 @@
   "no-notifications" : "Pas de notifications",
   "download-computer" : "Télécharger sur l'ordinateur",
   "download-to-server" : "Télécharger sur le serveur",
+  "episode-downloaded-to-server": "Épisode téléchargé sur le serveur",
   "cpu-info" : "Info CPU",
   "cpu-brand" : "Marque du processeur",
   "cpu-cores" : "Noyaux de CPU",

@@ -121,16 +121,13 @@ export const commonSlice = createSlice({
         setInfoModalPodcastOpen: (state, action:PayloadAction<boolean>) => {
             state.infoModalPodcastOpen = action.payload
         },
-        setInfoModalDownloaded: (state, action:PayloadAction<string>) => {
-            if(state.infoModalPodcast) {
-                state.infoModalPodcast.status = 'D'
-                state.selectedEpisodes = state.selectedEpisodes.map((episode) => {
-                    if(episode.episode_id === action.payload) {
-                        episode.status = 'D'
-                    }
-                    return episode
-                })
-            }
+        setEpisodeDownloaded: (state, action:PayloadAction<string>) => {
+            state.selectedEpisodes = state.selectedEpisodes.map((episode) => {
+                if(episode.episode_id === action.payload) {
+                    episode.status = 'D'
+                }
+                return episode
+            })
         },
         setDetailedAudioPlayerOpen: (state, action:PayloadAction<boolean>) => {
             state.detailedAudioPlayerOpen = action.payload
@@ -184,7 +181,8 @@ export const commonSlice = createSlice({
         }
 }})
 
-export const {setSidebarCollapsed, addTimelineEpisodes,setFilters, addPodcastEpisodes,setTimeLineEpisodes,setInvites,setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData,setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,setSelectedEpisodes, setSearchedPodcasts,updateLikePodcast, setInfoModalDownloaded,
-    setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen} = commonSlice.actions
+export const {
+    setSidebarCollapsed, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts, setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
+} = commonSlice.actions
 
 export default commonSlice.reducer
