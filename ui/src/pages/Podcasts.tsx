@@ -111,7 +111,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
         {/* Search/sort */}
         <div className="flex flex-col md:flex-row gap-4 mb-10">
             <span className="flex-1 relative">
-                <CustomInput type="text" placeholder={t('search')!} value={filters?.title} className="pl-10 w-full" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}/>
+                <CustomInput type="text" placeholder={t('search')!} value={filters?.title || ''} className="pl-10 w-full" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}/>
 
                 <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
             </span>
