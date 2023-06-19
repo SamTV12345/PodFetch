@@ -1,7 +1,5 @@
-use std::any::{type_name, TypeId};
 use std::time::SystemTime;
 use chrono::{NaiveDateTime, Utc};
-use rss::Guid;
 
 
 pub fn get_current_timestamp()->i64{

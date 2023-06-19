@@ -106,19 +106,27 @@ impl UserManagementService {
         return Ok(())
     }
 
-    pub fn update_role(user: User, conn: &mut DbConnection)->Result<UserWithoutPassword,
+    pub fn update_user(user_to_update: User, conn: &mut DbConnection) ->Result<UserWithoutPassword,
         PodFetchError>{
-            return match User::update_role(&user, conn) {
-                Ok(user) => {
-                    Ok(user)
+        return match User::update_role(&user_to_update, conn) {
+            Ok(user) => {
+                match User::update_explicit_consent(&user_to_update, conn){
+                    Ok(_) => {}
+                    Err(e) => {
+                        log::error!("The following error occured when updating a user {}",e);
+                        return Err(PodFetchError::new("Error updating User",
+                                                      StatusCode::INTERNAL_SERVER_ERROR))
+                    }
                 }
-                Err(e) => {
-                    log::error!("The following error occured when updating a user {}",e);
-                    Err(PodFetchError::new("Error updating User",
-                                           StatusCode::INTERNAL_SERVER_ERROR))
-                }
+                Ok(user)
+            }
+            Err(e) => {
+                log::error!("The following error occured when updating a user {}",e);
+                Err(PodFetchError::new("Error updating User",
+                                       StatusCode::INTERNAL_SERVER_ERROR))
             }
         }
+    }
 
 
     pub fn get_invite_link(invite_id: String, environment_service: MutexGuard<EnvironmentService>,
