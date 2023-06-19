@@ -9,7 +9,7 @@ import {setSearchedPodcasts} from "../store/CommonSlice"
 import {setModalOpen} from "../store/ModalSlice"
 import {AddTypes} from "../models/AddTypes"
 import {AgnosticPodcastDataModel, GeneralModel, PodIndexModel} from "../models/PodcastAddModel"
-import {ButtonSecondary} from './ButtonSecondary'
+import {CustomButtonSecondary} from './CustomButtonSecondary'
 import {CustomInput} from './CustomInput'
 import {Spinner} from "./Spinner"
 import "material-symbols/outlined.css"
@@ -88,12 +88,12 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
                             <span className="leading-tight text-sm text-stone-500">{podcast.artist}</span>
                         </div>
                         <div>
-                            <ButtonSecondary className="flex" onClick={()=>{
+                            <CustomButtonSecondary className="flex" onClick={()=>{
                                 addPodcast({
                                     trackId: podcast.id,
                                     userId:1
                                 })
-                            }}><span className="material-symbols-outlined leading-[0.875rem]">add</span></ButtonSecondary>
+                            }}><span className="material-symbols-outlined leading-[0.875rem]">add</span></CustomButtonSecondary>
                         </div>
                     </li>
                 })}

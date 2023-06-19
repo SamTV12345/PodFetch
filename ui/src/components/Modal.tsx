@@ -21,7 +21,7 @@ export const Modal:FC<ModalProps>  = ({headerText,children})=>{
     const {t} = useTranslation()
 
     return  openModal ? createPortal(<div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setModalOpen(false))}
-    className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur h-screen overflow-x-hidden overflow-y-auto z-50">
+    className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur h-screen overflow-x-hidden overflow-y-auto z-20">
 
         <div className="relative bg-white max-w-lg p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)] w-full" onClick={(e)=>e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={()=>dispatch(setModalOpen(false))}>

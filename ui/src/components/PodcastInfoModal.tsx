@@ -24,7 +24,7 @@ export const PodcastInfoModal = () => {
     }
 
     return createPortal( <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setInfoModalPodcastOpen(false))}
-        className={`fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden transition-opacity z-50
+        className={`fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden transition-opacity z-30
          ${!infoModalOpen&&'pointer-events-none'}
          ${infoModalOpen?'opacity-100':'opacity-0'}`}>
 

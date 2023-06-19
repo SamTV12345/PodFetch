@@ -15,12 +15,12 @@ import {Podcast, setFilters, setPodcasts} from "../store/CommonSlice"
 import {setModalOpen} from "../store/ModalSlice"
 import {Order} from "../models/Order"
 import {Filter} from "../models/Filter"
-import {Card} from "../components/Card"
-import {AddPodcast} from "../components/AddPodcast"
-import {ButtonPrimary} from "../components/ButtonPrimary"
+import {AddPodcastModal} from "../components/AddPodcastModal"
+import {CustomButtonPrimary} from "../components/CustomButtonPrimary"
 import {CustomInput} from "../components/CustomInput"
 import {CustomSelect} from "../components/CustomSelect"
 import {Heading1} from "../components/Heading1"
+import {PodcastCard} from "../components/PodcastCard"
 import "material-symbols/outlined.css"
 
 interface PodcastsProps {
@@ -65,72 +65,73 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             })
     }
 
-
     useDebounce(()=> {
-        performFilter();
+        performFilter()
     },500, [filters])
 
     useEffect(()=>{
         axios.get(apiURL+"/podcasts/filter")
             .then((c:AxiosResponse<Filter>)=>{
-            if(c.data === null){
-                dispatch(setFilters(getFiltersDefault()))
-            }
-            else{
-                dispatch(setFilters({
-                    ascending: c.data.ascending,
-                    filter: c.data.filter,
-                    title: c.data.title,
-                    username: c.data.username,
-                    onlyFavored: c.data.onlyFavored
-                }))
-            }
-        })
+                if(c.data === null){
+                    dispatch(setFilters(getFiltersDefault()))
+                }
+                else{
+                    dispatch(setFilters({
+                        ascending: c.data.ascending,
+                        filter: c.data.filter,
+                        title: c.data.title,
+                        username: c.data.username,
+                        onlyFavored: c.data.onlyFavored
+                    }))
+                }
+            })
     },[location])
 
-    return <div>
-        <AddPodcast/>
+    return (
+        <div>
+            <AddPodcastModal />
 
-        {/* Title and Add button */}
-        <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-4 mb-10">
-            <div className="flex gap-2 items-center">
-                <Heading1>{t('all-subscriptions')}</Heading1>
+            {/* Title and Add button */}
+            <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-4 mb-10">
+                <div className="flex gap-2 items-center">
+                    <Heading1>{t('all-subscriptions')}</Heading1>
 
-                <span className="material-symbols-outlined cursor-pointer text-stone-800 hover:text-stone-600" onClick={()=>{
-                    refreshAllPodcasts()
-                }}>refresh</span>
+                    <span className="material-symbols-outlined cursor-pointer text-stone-800 hover:text-stone-600" onClick={()=>{
+                        refreshAllPodcasts()
+                    }}>refresh</span>
+                </div>
+
+                <CustomButtonPrimary className="flex items-center" onClick={()=>{
+                    dispatch(setModalOpen(true))
+                }}>
+                    <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
+                </CustomButtonPrimary>
             </div>
 
-            <ButtonPrimary className="flex items-center" onClick={()=>{
-                dispatch(setModalOpen(true))
-            }}>
-                <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
-            </ButtonPrimary>
+            {/* Search/sort */}
+            <div className="flex flex-col md:flex-row gap-4 mb-10">
+                <span className="flex-1 relative">
+                    <CustomInput className="pl-10 w-full" type="text" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))} placeholder={t('search')!} value={filters?.title || ''} />
+
+                    <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
+                </span>
+
+                <CustomSelect iconName="sort" onChange={(v)=> {
+                    let converted = JSON.parse(v) as OrderCriteriaSortingType
+                    dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
+                }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
+            </div>
+
+            {/* Podcast list */}
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
+                {!onlyFavorites&&podcasts.map((podcast)=>{
+                    return <PodcastCard podcast={podcast} key={podcast.id} />
+                })}
+
+                {onlyFavorites&&podcasts.filter(podcast=>podcast.favorites).map((podcast)=>{
+                    return <PodcastCard podcast={podcast} key={podcast.id} />
+                })}
+            </div>
         </div>
-
-        {/* Search/sort */}
-        <div className="flex flex-col md:flex-row gap-4 mb-10">
-            <span className="flex-1 relative">
-                <CustomInput type="text" placeholder={t('search')!} value={filters?.title} className="pl-10 w-full" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))}/>
-
-                <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
-            </span>
-
-            <CustomSelect iconName="sort" onChange={(v)=> {
-                let converted = JSON.parse(v) as OrderCriteriaSortingType
-                dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
-            }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
-        </div>
-
-        {/* Podcast list */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
-            {!onlyFavorites&&podcasts.map((podcast)=>{
-                return <Card podcast={podcast} key={podcast.id}/>
-            })}
-
-            {onlyFavorites&&podcasts.filter(podcast=>podcast.favorites).map((podcast)=>{
-                return <Card podcast={podcast} key={podcast.id}/>
-            })}
-        </div>
-    </div>
+    )
 }

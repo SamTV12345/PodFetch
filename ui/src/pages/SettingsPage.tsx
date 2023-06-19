@@ -1,96 +1,62 @@
-import {useTranslation} from "react-i18next";
-import {Switcher} from "../components/Switcher";
-import {useEffect, useState} from "react";
-import {apiURL} from "../utils/Utilities";
-import axios, {AxiosResponse} from "axios";
-import {Setting} from "../models/Setting";
-import {useSnackbar} from "notistack";
-import {Loading} from "../components/Loading";
-import {ConfirmModal} from "../components/ConfirmModal";
-import {PodcastDelete} from "../components/PodcastDelete";
-import {OPMLExport} from "../components/OPMLExport";
-import {PodcastNaming} from "../components/PodcastNaming";
-import {useNavigate} from "react-router-dom";
+import {useState} from "react"
+import {useTranslation} from "react-i18next"
+import {ConfirmModal} from "../components/ConfirmModal"
+import {Heading1} from "../components/Heading1"
+import {SettingsData} from "../components/SettingsData"
+import {SettingsNaming} from "../components/SettingsNaming"
+import {SettingsOPMLExport} from "../components/SettingsOPMLExport"
+import {SettingsPodcastDelete} from "../components/SettingsPodcastDelete"
 
 export const SettingsPage = () => {
     const {t} = useTranslation()
-    const [settings, setSettings] = useState<Setting>()
-    const {enqueueSnackbar} = useSnackbar()
-    const navigate = useNavigate()
-
-    useEffect(()=>{
-        axios.get(apiURL+"/settings").then((res:AxiosResponse<Setting>)=>{
-            setSettings(res.data)
-        })
-    },[])
-
-    if(settings===undefined){
-        return <Loading/>
-    }
-
-
+    const [selectedSection, setSelectedSection] = useState<string>('retention')
 
     return (
-        <div className="p-6 h-full">
-            <ConfirmModal/>
-            <h1 className="text-2xl text-center font-bold">{t('settings')}</h1>
-            <div className="grid gap-5">
-            <div className="bg-slate-900 rounded p-5 text-white">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="">{t('auto-cleanup')}</div>
-                    <div><Switcher checked={settings.autoCleanup} setChecked={()=>{
-                        setSettings({...settings, autoCleanup: !settings?.autoCleanup})
-                    }}/></div>
+        <div>
+            <ConfirmModal />
 
-                    <span className=" pt-2 pb-2">{t('days-to-keep')}</span>
-                    <div><input type="number" className="bg-gray-600 p-2 rounded" value={settings.autoCleanupDays} onChange={(e)=>{
-                        setSettings({...settings, autoCleanupDays: parseInt(e.target.value)})
-                    }}/></div>
-                    <div className="">
-                        {t('auto-update')}
-                    </div>
+            <Heading1 className="mb-10">{t('settings')}</Heading1>
 
-                    <div>
-                        <Switcher checked={settings.autoUpdate} setChecked={()=>{
-                            setSettings({...settings, autoUpdate: !settings?.autoUpdate})
-                        }}/>
-                    </div>
-                    <div className="">
-                        {t('number-of-podcasts-to-download')}
-                    </div>
-                    <div><input type="number" className="bg-gray-600 p-2 rounded" value={settings.podcastPrefill} onChange={(e)=>{
-                        setSettings({...settings, podcastPrefill: parseInt(e.target.value)})
-                    }}/></div>
-                    <div>
-                        {t('auto-download')}
-                    </div>
-                    <div className="mb-4">
-                        <Switcher checked={settings.autoDownload} setChecked={()=>{
-                            setSettings({...settings, autoDownload: !settings?.autoDownload})
-                        }}/>
-                        <button className="bg-blue-600 rounded p-2 hover:bg-blue-500 ml-5" onClick={()=>{
-                            axios.put(apiURL+"/settings/runcleanup")
-                        }}>{t('run-cleanup')}</button>
-                    </div>
-                </div>
-                <div className="flex">
-                    <div className="flex-1"></div>
-                    <button className="p-2 bg-blue-600 rounded hover:bg-blue-500" onClick={()=>{
-                        axios.put(apiURL+"/settings", settings)
-                            .then(()=>{
-                                enqueueSnackbar(t('settings-saved'), {variant: "success"})
-                            })
-                    }}>
-                        {t('save')}
-                    </button>
-                </div>
+            {/* Tabs */}
+            <div className={`
+                scrollbox-x mb-10 py-2
+                w-[calc(100vw-2rem)] ${/* viewport - padding */ ''}
+                xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
+                md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
+            `}>
+                <ul className="flex gap-2 border-b border-stone-200 min-w-fit text-stone-500">
+                    <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSection === 'retention' && 'border-b-2 border-mustard-600 text-mustard-600'}`} onClick={()=>setSelectedSection('retention')}>
+                        {t('data-retention')}
+                    </li>
+                    <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSection === 'opml' && 'border-b-2 border-mustard-600 text-mustard-600'}`} onClick={()=>setSelectedSection('opml')}>
+                        {t('opml-export')}
+                    </li>
+                    <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSection === 'naming' && 'border-b-2 border-mustard-600 text-mustard-600'}`} onClick={()=>setSelectedSection('naming')}>
+                        {t('podcast-naming')}
+                    </li>
+                    <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSection === 'podcasts' && 'border-b-2 border-mustard-600 text-mustard-600'}`} onClick={()=>setSelectedSection('podcasts')}>
+                        {t('manage-podcasts')}
+                    </li>
+                </ul>
             </div>
 
-                <button onClick={()=>{navigate('/info')}}>To Info Page</button>
-                <OPMLExport/>
-                <PodcastNaming settings={settings}/>
-            <PodcastDelete/>
-        </div>
+            <div className="max-w-screen-md">
+                {selectedSection === 'retention' && (
+                    <SettingsData />
+                )}
+
+                {selectedSection === 'opml' && (
+                    <SettingsOPMLExport />
+                )}
+                
+                {selectedSection === 'naming' && (
+                    <SettingsNaming />
+                )}
+                
+                {selectedSection === 'podcasts' && (
+                    <SettingsPodcastDelete />
+                )}
+            </div>
         </div>
     )
 }

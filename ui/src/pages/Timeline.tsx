@@ -8,8 +8,8 @@ import {Filter} from "../models/Filter"
 import {TimelineHATEOASModel} from "../models/TimeLineModel"
 import {Heading1} from "../components/Heading1"
 import {Loading} from "../components/Loading"
-import {TimelineEpisodeCard} from "../components/TimelineEpisodeCard"
 import {Switcher} from "../components/Switcher"
+import {TimelineEpisode} from "../components/TimelineEpisode"
 
 export const Timeline = () => {
     const {t} = useTranslation()
@@ -68,16 +68,16 @@ export const Timeline = () => {
                     {/* Section start */
                     index === 0 || (formatTime(e.podcast_episode.date_of_recording) !== formatTime(timeLineEpisodes.data[index-1].podcast_episode.date_of_recording)) ? (<>
                         {/* Date */}
-                        <span className="col-span-full bg-white -mb-4 -ml-6 py-2 z-10">
+                        <span className="col-span-full bg-white -mb-4 -ml-6 py-2">
                             <span className="inline-block bg-mustard-600 mr-4 outline outline-2 outline-offset-2 outline-mustard-600 h-2 w-2 rounded-full"></span>
                             <span className="text-xs text-mustard-600">{formatTime(e.podcast_episode.date_of_recording)}</span>
                         </span>
 
                         {/* Left line */}
-                        <div className="absolute h-full bg-stone-300 ml-[0.1875rem] w-px"></div>
+                        <div className="absolute h-full bg-stone-300 ml-[0.1875rem] w-px -z-10"></div>
                     </>) : ''}
 
-                    <TimelineEpisodeCard
+                    <TimelineEpisode
                         podcastEpisode={e}
                         key={e.podcast_episode.episode_id+index + "Parent"}
                         index={index}

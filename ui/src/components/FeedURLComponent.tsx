@@ -5,7 +5,7 @@ import axios, {AxiosResponse} from "axios"
 import {enqueueSnackbar} from "notistack"
 import {apiURL} from "../utils/Utilities"
 import {Podcast} from "../store/CommonSlice"
-import { ButtonPrimary } from './ButtonPrimary'
+import {CustomButtonPrimary} from "./CustomButtonPrimary"
 
 type FeedURLComponentProps = {
 
@@ -39,6 +39,6 @@ export const FeedURLComponent:FC<FeedURLComponentProps> = ()=>{
         })} placeholder={t('rss-feed-url')!}
         className={"bg-stone-100 w-full px-4 py-2 rounded-lg text-sm text-stone-600"}/>
 
-        <ButtonPrimary disabled={feedUrlWatched.trim().length===0} type="submit">Add</ButtonPrimary>
+        <CustomButtonPrimary disabled={feedUrlWatched.trim().length===0} type="submit">Add</CustomButtonPrimary>
     </form>
 }

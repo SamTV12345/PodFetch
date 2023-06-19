@@ -1,15 +1,17 @@
-import {ChangeEventHandler, FC} from "react"
+import { ChangeEventHandler, FC } from "react"
 
 type CustomInputProps = {
-  className?: string,
-  type?: string,
-  placeholder?: string,
-  name?: string,
-  value?: string | number,
-  onChange?: ChangeEventHandler<HTMLInputElement>
+    className?: string,
+    id?: string,
+    name?: string,
+    onChange?: ChangeEventHandler<HTMLInputElement>,
+    placeholder?: string,
+    type?: string,
+    value?: string | number
 }
 
-export const CustomInput:FC<CustomInputProps> = ({className = '', type = 'text', placeholder, name, value, onChange}) => {
-  return <input type={type} placeholder={placeholder} name={name} value={value} onChange={onChange}
-  className={"bg-stone-100 px-4 py-2 rounded-lg text-sm text-stone-600 " + className}/>
+export const CustomInput: FC<CustomInputProps> = ({className = '', id, name, onChange, placeholder, type = 'text', value}) => {
+    return (
+        <input className={"bg-stone-100 px-4 py-2 rounded-lg text-sm text-stone-600 " + className} id={id} name={name} placeholder={placeholder} onChange={onChange} value={value} type={type}/>
+    )
 }
