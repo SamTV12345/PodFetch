@@ -141,6 +141,9 @@ export const commonSlice = createSlice({
         addPodcast: (state, action:PayloadAction<Podcast>) => {
             state.podcasts = [...state.podcasts, action.payload]
         },
+        podcastDeleted: (state, action:PayloadAction<number>) => {
+            state.podcasts = state.podcasts.filter((podcast) => podcast.id !== action.payload)
+        },
         setLoginData: (state, action:PayloadAction<Partial<LoginData>>) => {
             state.loginData = action.payload
         },
@@ -182,7 +185,7 @@ export const commonSlice = createSlice({
 }})
 
 export const {
-    setSidebarCollapsed, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, setCurrentDetailedPodcastId, setConfigModel, setPodcasts, setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
+    setSidebarCollapsed, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, podcastDeleted, setCurrentDetailedPodcastId, setConfigModel, setPodcasts, setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
 } = commonSlice.actions
 
 export default commonSlice.reducer
