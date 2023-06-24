@@ -1,91 +1,81 @@
-import {useEffect, useState} from "react";
-import axios, {AxiosResponse} from "axios";
-import {apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode} from "../utils/Utilities";
-import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel";
-import {PlayIcon} from "../icons/PlayIcon";
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
-import {store} from "../store/store";
-import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
-import {useAppDispatch} from "../store/hooks";
-import {useTranslation} from "react-i18next";
-import {PodcastEpisode} from "../store/CommonSlice";
+import {useEffect, useState} from "react"
+import {Link} from "react-router-dom"
+import {useTranslation} from "react-i18next"
+import axios from "axios"
+import {apiURL} from "../utils/Utilities"
+import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel"
+import {TimeLineModel, TimelineHATEOASModel} from "../models/TimeLineModel"
+import {EpisodeCard} from "../components/EpisodeCard"
+import {Heading2} from "../components/Heading2"
 
-const isPodcastWatchedEpisodeModel = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode): podcast is PodcastWatchedEpisodeModel => {
-    return (podcast as PodcastWatchedEpisodeModel).watchedTime !== undefined;
-}
-
-export   const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode) => {
-    if (isPodcastWatchedEpisodeModel(podcast)){
-        if(podcast.podcastEpisode.local_image_url.length>1){
-            return preparePath(podcast.podcastEpisode.local_image_url)
-        }
-        else{
-            return podcast.podcastEpisode.image_url
-        }
-    }
-    else{
-        if(podcast.local_image_url.trim().length>1){
-            return preparePath(podcast.local_image_url)
-        }
-        else{
-            return podcast.image_url
-        }
-    }
-
-}
 export const Homepage = () => {
-    const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
-    const dispatch = useAppDispatch()
     const {t} = useTranslation()
-
-
+    const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
+    const [latestEpisodes, setLatestEpisodes] = useState<TimeLineModel[]>([])
 
     useEffect(()=>{
-            axios.get(apiURL+"/podcast/episode/lastwatched")
-                .then((v:AxiosResponse<PodcastWatchedEpisodeModel[]>)=>{
-                    setPodcastWatched(v.data)
-                })
+        axios.get<PodcastWatchedEpisodeModel[]>(apiURL+"/podcast/episode/lastwatched")
+            .then((response) => {
+                setPodcastWatched(response.data)
+            })
 
+        axios.get<TimelineHATEOASModel>(apiURL + "/podcasts/timeline", {
+            params: {
+                favoredOnly: false
+            }
+        })
+            .then((response) => {
+                setLatestEpisodes(response.data.data)
+            })
     }, [])
 
+    return (
+        <>
+            <div className="mb-12">
+                <Heading2 className="mb-2">{t('last-listened')}</Heading2>
 
-
-    return <div className="p-3">
-        <h1 className="font-bold text-2xl">{t('last-listened')}</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xs:grid-cols-1 gap-4">
-        {
-            podcastWatched.map((v)=>{
-                return <div key={v.episodeId}
-                    className="max-w-sm rounded-lg shadow bg-gray-800 border-gray-700">
-                    <div className="relative" key={v.episodeId}>
-                        <img src={selectPodcastImage(v)} alt="" className=""/>
-                        <div className="absolute left-0 top-0 w-full h-full hover:bg-gray-500 opacity-80 z-10 grid place-items-center play-button-background">
-                            <PlayIcon key={v.podcastEpisode.episode_id+"icon"} podcast={v.podcastEpisode} className="w-20 h-20 opacity-0" onClick={()=>{
-                                axios.get(apiURL+"/podcast/episode/"+v.podcastEpisode.episode_id)
-                                    .then((response: AxiosResponse<PodcastWatchedModel>)=>{
-                                        if (v.podcastEpisode.local_image_url.trim().length>1){
-                                            store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(v.podcastEpisode, response.data)))
-                                        }
-                                        else{
-                                            store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(v.podcastEpisode, response.data)))
-                                        }
-
-
-                                        dispatch(setCurrentPodcast(v.podcast))
-                                        dispatch(setPlaying(true))
-                                    })
-                            }}/>
-                        </div>
-                    </div>
-                    <div className="relative border-box w-11/12">
-                        <div className="bg-blue-900 h-2" style={{width: (v.watchedTime/v.totalTime)*100+"%"}}></div>
-                    </div>
-                    <div className="p-5">
-                            <h5 className="mb-2 text-2xl font-bold tracking-tight text-white break-words">{v.name}</h5>
+                <div className={`
+                    scrollbox-x
+                    pb-4 pt-8
+                    w-[calc(100vw-2rem)] ${/* viewport - padding */ ''}
+                    xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
+                    md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
+                `}>
+                    <div className="flex gap-8">
+                        {podcastWatched.map((v)=>{
+                            return (
+                                <div className="basis-40 shrink-0 whitespace-normal" key={v.episodeId}>
+                                    <EpisodeCard podcast={v.podcast} podcastEpisode={v.podcastEpisode} watchedTime={v.watchedTime} totalTime={v.totalTime} />
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
-            })
-        }
-        </div>
-    </div>
+            </div>
+            <div>
+                <div className="flex items-center gap-4 mb-2">
+                    <Heading2>{t('latest-episodes')}</Heading2>
+                    <Link className="text-sm text-mustard-600 hover:text-mustard-500" to="timeline">{t('view-more')}</Link>
+                </div>
+
+                <div className={`
+                    scrollbox-x
+                    pb-4 pt-8
+                    w-[calc(100vw-2rem)] ${/* viewport - padding */ ''}
+                    xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
+                    md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
+                `}>
+                    <div className="flex gap-8">
+                        {latestEpisodes.map((episode)=>{
+                            return (
+                                <div className="basis-40 shrink-0 whitespace-normal" key={episode.podcast_episode.episode_id}>
+                                    <EpisodeCard podcast={episode.podcast} podcastEpisode={episode.podcast_episode} />
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </div>
+        </>
+    )
 }

@@ -1,20 +1,45 @@
 import {FC} from "react"
 import axios, {AxiosResponse} from "axios"
-import {apiURL, prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities"
+import {apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode} from "../utils/Utilities"
 import {store} from "../store/store"
 import {useAppDispatch} from "../store/hooks"
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice"
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel"
-import {TimeLineModel} from "../models/TimeLineModel"
-import {selectPodcastImage} from "../pages/Homepage"
 import { Podcast, PodcastEpisode } from '../store/CommonSlice'
+import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 
 type EpisodeCardProps = {
     podcast: Podcast,
     podcastEpisode: PodcastEpisode,
+    totalTime?: number,
+    watchedTime?: number
 }
 
-export const EpisodeCard:FC<EpisodeCardProps> = ({podcast, podcastEpisode}) => {
+const isPodcastWatchedEpisodeModel = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode): podcast is PodcastWatchedEpisodeModel => {
+    return (podcast as PodcastWatchedEpisodeModel).watchedTime !== undefined;
+}
+
+export const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode) => {
+    if (isPodcastWatchedEpisodeModel(podcast)){
+        if(podcast.podcastEpisode.local_image_url.length>1){
+            return preparePath(podcast.podcastEpisode.local_image_url)
+        }
+        else{
+            return podcast.podcastEpisode.image_url
+        }
+    }
+    else{
+        if(podcast.local_image_url.trim().length>1){
+            return preparePath(podcast.local_image_url)
+        }
+        else{
+            return podcast.image_url
+        }
+    }
+
+}
+
+export const EpisodeCard:FC<EpisodeCardProps> = ({podcast, podcastEpisode, totalTime, watchedTime}) => {
     const dispatch = useAppDispatch()
 
     return (
@@ -37,6 +62,13 @@ export const EpisodeCard:FC<EpisodeCardProps> = ({podcast, podcastEpisode}) => {
                 <div className="absolute inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="material-symbols-outlined !text-7xl text-white group-active:scale-90" key={podcastEpisode.episode_id+"icon"}>play_circle</span>
                 </div>
+
+                {/* Progress bar */
+                totalTime && watchedTime && (
+                    <div className="absolute bottom-0 inset-x-0 bg-stone-900">
+                        <div className="bg-mustard-600 h-1.5" style={{width: (watchedTime/totalTime)*100+"%"}}></div>
+                    </div>
+                )}
             </div>
 
             {/* Titles */}
@@ -44,6 +76,8 @@ export const EpisodeCard:FC<EpisodeCardProps> = ({podcast, podcastEpisode}) => {
                 <span className="block font-bold leading-[1.2] mb-2 text-sm text-stone-900 transition-color group-hover:text-stone-600">{podcastEpisode.name}</span>
                 <span className="block leading-[1.2] text-xs text-stone-900">{podcast.name}</span>
             </div>
+
+            {/* TODO: Remaining time */}
         </div>
     )
 }

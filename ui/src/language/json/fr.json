@@ -106,6 +106,8 @@
   "not-admin": "Vous n'êtes pas administrateur",
   "not-admin-or-uploader": "Vous n'êtes pas administrateur ou uploader",
   "stream-podcast-episode": "Écouter l'épisode",
+  "latest-episodes": "Derniers épisodes",
+  "view-more": "Voir plus",
   "timeline": "Derniers épisodes",
   "version": "Version",
   "commit": "Commit",
