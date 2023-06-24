@@ -1,6 +1,6 @@
 {
   "homepage": "Home",
-  "last-listened": "Last listened",
+  "last-listened": "Recently listened",
   "podcasts": "Podcast",
   "add-new": "Add new",
   "search": "Search",
@@ -106,6 +106,8 @@
   "not-admin": "You are not an admin",
   "not-admin-or-uploader": "You are not an admin or an uploader",
   "stream-podcast-episode": "Stream podcast episode",
+  "latest-episodes": "Latest episodes",
+  "view-more": "View more",
   "timeline": "Latest Episodes",
   "version": "Version",
   "commit": "Commit",
