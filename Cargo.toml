@@ -63,7 +63,7 @@ urlencoding="2.1.2"
 
 
 [target.'cfg(not(windows))'.dependencies]
-openssl = "0.10.53"
+openssl = "0.10.55"
 
 
 [profile.release]
