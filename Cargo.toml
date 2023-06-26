@@ -6,7 +6,7 @@ build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
-built = {version="0.6.0", features=["chrono", "semver"]}
+built = {version="0.6.1", features=["chrono", "semver"]}
 
 [features]
 default = ["sqlite"]
