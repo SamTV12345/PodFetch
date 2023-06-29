@@ -2,7 +2,7 @@ import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
 import {Notification} from "../models/Notification";
 import {ConfigModel} from "../models/SysInfo";
-import {LoginData} from "../components/LoginComponent";
+import {LoginData} from "../pages/Login";
 import {User} from "../models/User";
 import {ConfirmModalProps} from "../components/ConfirmModal";
 import {Invite} from "../components/UserAdminInvites";

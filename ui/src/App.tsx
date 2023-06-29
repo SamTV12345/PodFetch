@@ -27,8 +27,8 @@ import {
 import {Notification} from "./models/Notification"
 import {Root} from "./routing/Root"
 import {Homepage} from "./pages/Homepage"
-import {InviteComponent} from "./components/InviteComponent"
-import {LoginComponent} from "./components/LoginComponent"
+import {AcceptInvite} from "./pages/AcceptInvite"
+import {Login} from "./pages/Login"
 import "./App.css"
 
 export const router = createBrowserRouter(createRoutesFromElements(
@@ -51,8 +51,8 @@ export const router = createBrowserRouter(createRoutesFromElements(
             <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad/></Suspense>}/>
             <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad/></Suspense>}/>
         </Route>
-        <Route path="/login" element={<LoginComponent/>}/>
-        <Route path="/invite/:id" element={<InviteComponent/>}></Route>
+        <Route path="/login" element={<Login/>}/>
+        <Route path="/invite/:id" element={<AcceptInvite/>}></Route>
     </>
 ), {
     basename: import.meta.env.BASE_URL
