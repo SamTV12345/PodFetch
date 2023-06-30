@@ -24,6 +24,6 @@ export const TimeLineViewLazyLoad = lazy(()=>import('../pages/Timeline').then(mo
     return{default:module["Timeline"]}
 }))
 
-export const MobileSearchViewLazyLoad = lazy(()=>import('../pages/MobileSearchPage').then(module=> {
-    return{default:module["MobileSearchPage"]}
+export const EpisodeSearchViewLazyLoad = lazy(()=>import('../pages/EpisodeSearchPage').then(module=> {
+    return{default:module["EpisodeSearchPage"]}
 }))
