@@ -130,14 +130,6 @@
     @apply visible opacity-100;
 }
 
-.dots-distance {
-    gap: 2px;
-}
-
-.dots-margin-bottom {
-    margin-bottom: 0.15rem;
-}
-
 .animate-opacity {
     @apply opacity-0;
     animation: fadein 0.5s;
