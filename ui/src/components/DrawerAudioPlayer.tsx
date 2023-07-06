@@ -24,6 +24,7 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({refItem, audioAmp
 
     return (
         <div className="
+            fixed bottom-0 left-0 right-0 z-50
             col-span-2 grid
             sm:grid-cols-[10rem_1fr_8rem] md:grid-cols-[16rem_1fr_10rem] lg:grid-cols-[20rem_1fr_12rem]
             justify-items-center sm:justify-items-stretch
