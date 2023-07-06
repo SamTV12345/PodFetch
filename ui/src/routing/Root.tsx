@@ -1,23 +1,22 @@
-import {useEffect} from "react";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {Header} from "../components/Header";
-import {SideBar} from "../components/SideBar";
-import {Outlet, useNavigate} from "react-router-dom";
-import {AudioComponents} from "../components/AudioComponents";
-import {Search} from "../components/Search";
-import axios from "axios";
-import {configWSUrl} from "../utils/Utilities";
-import {setLoginData} from "../store/CommonSlice";
-import {Loading} from "../components/Loading";
-import App from "../App";
+import {useEffect} from "react"
+import axios from "axios"
+import {Outlet, useNavigate} from "react-router-dom"
+import {configWSUrl} from "../utils/Utilities"
+import {useAppDispatch, useAppSelector} from "../store/hooks"
+import {setLoginData} from "../store/CommonSlice"
+import App from "../App"
+import {AudioComponents} from "../components/AudioComponents"
+import {Header} from "../components/Header"
+import {Loading} from "../components/Loading"
+import {MainContentPanel} from "../components/MainContentPanel"
+import {EpisodeSearchModal} from "../components/EpisodeSearchModal"
+import {Sidebar} from "../components/Sidebar"
 
 export const Root = () => {
-    const sideBarCollapsed = useAppSelector(state => state.common.sideBarCollapsed)
     const dispatch = useAppDispatch()
     const configModel = useAppSelector(state => state.common.configModel)
     const navigate = useNavigate()
     const auth = useAppSelector(state => state.common.loginData)
-
 
     const extractLoginData = (auth_local: string)=>{
         const test = atob(auth_local)
@@ -57,18 +56,19 @@ export const Root = () => {
 
     configWSUrl(configModel.serverUrl)
 
-    return <App>
-        <div className="grid  grid-rows-[auto_1fr] h-full md:grid-cols-[300px_1fr]">
-            <Header/>
-            <SideBar/>
-            <div
-                className={`col-span-6 md:col-span-5 ${sideBarCollapsed ? 'xs:col-span-5' : 'hidden'} md:block w-full overflow-x-auto`}>
-                <div className="grid grid-rows-[1fr_auto] h-full ">
-                    <Outlet/>
-                    <AudioComponents/>
-                </div>
+    return (
+        <App>
+            <div className="grid grid-cols-[1fr] md:grid-cols-[18rem_1fr] grid-rows-[1fr_auto]">
+                <Sidebar />
+                <MainContentPanel>
+                    <Header />
+                    <div className="grid grid-rows-[1fr_auto] pb-8">
+                        <Outlet />
+                    </div>
+                </MainContentPanel>
+                <AudioComponents />
+                <EpisodeSearchModal />
             </div>
-        </div>
-        <Search/>
-    </App>
+        </App>
+    )
 }

@@ -1,6 +1,13 @@
 import React, {FC, PropsWithChildren, useEffect} from 'react'
 import ReactDOM from 'react-dom/client'
 import {router} from './App'
+import '@fontsource-variable/inter'
+import "@fontsource/poppins/400.css"
+import "@fontsource/poppins/400-italic.css"
+import "@fontsource/poppins/500.css"
+import "@fontsource/poppins/500-italic.css"
+import "@fontsource/poppins/700.css"
+import "@fontsource/poppins/700-italic.css"
 import './index.css'
 import {Provider} from "react-redux";
 import {store} from "./store/store";
@@ -19,6 +26,7 @@ import {AuthProvider} from "react-oidc-context";
 import {Loading} from "./components/Loading";
 import {OIDCRefresher} from "./components/OIDCRefresher";
 import {SnackbarProvider} from "notistack";
+import "./assets/scss/style.scss"
 
 const AuthWrapper:FC<PropsWithChildren> = ({children})=>{
     const dispatch = useAppDispatch()

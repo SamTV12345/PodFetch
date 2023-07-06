@@ -1,0 +1,60 @@
+@import "theme-light";
+@import "theme-dark";
+
+$spacing-1: .05em;
+$spacing-2: .1em;
+$spacing-3: .2em;
+$spacing-4: .3em;
+$spacing-5: .4em;
+$spacing-6: .5em;
+$spacing-7: .75em;
+$spacing-8: 1em;
+$spacing-9: 2em;
+$spacing-10: 3em;
+$spacing-11: 5em;
+
+/* Dark theme */
+
+body.theme-dark {
+  @include theme-dark;
+}
+
+/* Light theme */
+
+body.theme-light {
+  @include theme-light;
+}
+
+/* System default theme */
+
+body.theme-default {
+  @include theme-light;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  body.theme-default {
+    @include theme-dark;
+  }
+}
+
+/* Demo style declaration */
+
+body {
+  background-color: var(--color-bg);
+}
+
+/* Global styles */
+
+html, body {
+  margin: 0;
+}
+
+html {
+  height: 100%;
+}
+
+body, #root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}

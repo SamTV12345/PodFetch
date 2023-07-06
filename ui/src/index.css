@@ -2,8 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
-*{
-    font-family: Roboto, serif;
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Icons */
+
+.material-symbols-outlined {
+  font-variation-settings: 'wght' 300;
+}
+
+.filled {
+  font-variation-settings: 'FILL' 1;
+}
+
+/* Sidebar */
+
+#primary-navigation a.active {
+    background-color: rgba(192,124,3,0.1);
+    @apply text-mustard-600;
+}
+
+/* Header */
+
+.i18n-dropdown {
+    @apply border-0;
+    @apply p-0;
+    @apply text-stone-900;
+}
+
+.i18n-dropdown .value,
+.i18n-dropdown .expand-icon {
+    @apply invisible;
+    @apply w-0;
+}
+
+@media screen(xs) {
+    .i18n-dropdown {
+        @apply pl-6;
+        @apply pr-2;
+        @apply py-2;
+    }
+
+    .i18n-dropdown .value,
+    .i18n-dropdown .expand-icon {
+        @apply visible;
+        @apply w-auto;
+    }
+}
+
+.i18n-dropdown .icon {
+    @apply text-stone-900;
+}
+
+/* Applies horizontal scrolling shadows for smaller screens (https://lea.verou.me/2012/04/background-attachment-local/) */
+.scrollbox-x {
+    background:
+        /* Shadow covers */
+        linear-gradient(to right, white 50%, rgba(255,255,255,0)),
+        linear-gradient(to right, rgba(255,255,255,0), white 50%) 100% 0,
+
+        /* Shadows */
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)) 100% 0;
+    background:
+        /* Shadow covers */
+        linear-gradient(to right, white 50%, rgba(255,255,255,0)),
+        linear-gradient(to right, rgba(255,255,255,0), white 50%) 100% 0,
+
+        /* Shadows */
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)) 100% 0;
+    background-attachment: local, local, scroll, scroll;
+    background-color: white;
+    background-repeat: no-repeat;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.scrollbox-y {
+	background:
+		/* Shadow covers */
+		linear-gradient(white 50%, rgba(255,255,255,0)),
+		linear-gradient(rgba(255,255,255,0), white 50%) 0 100%,
+		
+		/* Shadows */
+		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.2), rgba(0,0,0,0)),
+		radial-gradient(farthest-side at  100%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
+	background:
+		/* Shadow covers */
+		linear-gradient(white 50%, rgba(255,255,255,0)),
+		linear-gradient(rgba(255,255,255,0), white 50%) 0 100%,
+		
+		/* Shadows */
+		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.2), rgba(0,0,0,0)),
+		radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
+    background-attachment: local, local, scroll, scroll;
+	background-color: white;
+    background-repeat: no-repeat;
+	background-size: 100% 40px, 100% 40px, 100% 14px, 100% 14px;
+    overflow-y: auto;
 }
 
 .movie-text{
@@ -12,23 +111,6 @@
     font-size: 50px;
     @apply text-gray-900;
 }
-#audio-progress{
-    @apply absolute;
-}
-
-#audio-progress-wrapper:hover #sound-control, #audio-progress-wrapper:hover .timecounter {
-    @apply visible opacity-100;
-}
-
-
-
-
-#sound-control{
-    position:absolute;
-    right: 0;
-    top:-5px;
-}
-
 
 .overlay {
     width: 100%;
@@ -48,82 +130,12 @@
     @apply visible opacity-100;
 }
 
-
-#positionwrapper {
-    left: 50%;
-}
-
-#audio-bottom-bar:hover >* {
-    @apply visible opacity-100;
-}
-
-#notification-modal {
-    background-color: rgb(31 41 55 / var(--tw-border-opacity));
-    top: 0;
-}
-
-.notification-modal-visible{
-    @apply visible opacity-100;
-    left: 50%;
-    transform: translate(-50%, 0);
-    margin-top: 10px;
-}
-
-#notification-modal::after {
-    content: '';
-    position: absolute;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-top: 10px solid rgb(31 41 55 / var(--tw-border-opacity));
-    transform: rotate(180deg) translate(50%, 100%);
-    left: 50%;
-    top: 0;
-    clear: both;
-}
-
-::-webkit-scrollbar {
-    width: 7px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-    width: 15px;
-    @apply bg-gray-800
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-    @apply bg-gray-500 rounded-full;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500;
-}
-
-
-.searchfield{
-    width: 64rem;
-}
-
-.dots-distance {
-    gap: 2px;
-}
-
-.dots-margin-bottom {
-    margin-bottom: 0.15rem;
-}
-
 .animate-opacity {
     @apply opacity-0;
     animation: fadein 0.5s;
 }
 .z-60{
     z-index: 60;
-}
-
-.visibility-important{
-    visibility: visible !important;
 }
 
 .line-clamp-3{
@@ -140,23 +152,6 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
     overflow: hidden;
-}
-
-.podcast-summary a{
-    @apply text-gray-900 hover:underline ;
-    text-underline: steelblue ;
-}
-
-.text-ago{
-    color: #25d1da;
-}
-
-.sidebar .active{
-    @apply bg-gray-700;
-}
-
-#podcast-add-decider .active{
-    @apply bg-slate-800  text-blue-500;
 }
 
 #root > div{

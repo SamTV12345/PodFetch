@@ -1,5 +1,7 @@
-import {Modal} from "./Modal";
-import {useAppSelector} from "../store/hooks";
+import {useAppSelector} from "../store/hooks"
+import {CustomButtonPrimary} from "./CustomButtonPrimary"
+import {CustomButtonSecondary} from "./CustomButtonSecondary"
+import {Modal} from "./Modal"
 
 export type ConfirmModalProps = {
     headerText: string,
@@ -9,17 +11,19 @@ export type ConfirmModalProps = {
     rejectText: string,
     bodyText: string
 }
+
 export const ConfirmModal = ()=>{
     const confirmModalData = useAppSelector(state=>state.common.confirmModalData)
 
-    return <Modal acceptText={confirmModalData?.acceptText} headerText={confirmModalData?.headerText} onAccept={()=>{}} cancelText={confirmModalData?.rejectText}
-                  onCancel={()=>{}} onDelete={()=>{}}>
-        <div>
-            {confirmModalData?.bodyText}
-        </div>
-        <div className="grid grid-cols-2 gap-5 w-2/4">
-            <button className="bg-green-800 p-2 rounded active:scale-95 hover:bg-green-700" onClick={confirmModalData?.onReject}>{confirmModalData?.rejectText}</button>
-            <button className="bg-red-700 p-2 rounded active:scale-95 hover:bg-red-600" onClick={confirmModalData?.onAccept}>{confirmModalData?.acceptText}</button>
-        </div>
-    </Modal>
+    return (
+        <Modal acceptText={confirmModalData?.acceptText} headerText={confirmModalData?.headerText} onAccept={()=>{}} cancelText={confirmModalData?.rejectText} onCancel={()=>{}} onDelete={()=>{}}>
+            <div className="mb-4">
+                {confirmModalData?.bodyText}
+            </div>
+            <div className="text-right">
+                <CustomButtonSecondary className="border-transparent shadow-none hover:shadow-none text-base text-stone-900 hover:text-stone-600" onClick={confirmModalData?.onReject}>{confirmModalData?.rejectText}</CustomButtonSecondary>
+                <CustomButtonPrimary className="bg-red-700 hover:bg-red-600 hover:shadow-red-600" onClick={confirmModalData?.onAccept}>{confirmModalData?.acceptText}</CustomButtonPrimary>
+            </div>
+        </Modal>
+    )
 }

@@ -1,34 +1,35 @@
-import './App.css'
-import {createBrowserRouter, createRoutesFromElements, Route} from "react-router-dom";
-import {useAppDispatch, useAppSelector} from "./store/hooks";
-import {Homepage} from "./pages/Homepage";
-import axios, {AxiosResponse} from "axios";
-import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react";
-import {Notification} from "./models/Notification";
-import {addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes} from "./store/CommonSlice";
+import {FC, PropsWithChildren, Suspense, useEffect, useState} from "react"
+import {createBrowserRouter, createRoutesFromElements, Route} from "react-router-dom"
+import {useTranslation} from "react-i18next"
+import axios, {AxiosResponse} from "axios"
+import {enqueueSnackbar} from "notistack"
+import {store} from "./store/store"
+import {useAppDispatch, useAppSelector} from "./store/hooks"
+import {addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes} from "./store/CommonSlice"
+import {setMessages, setProgress} from "./store/opmlImportSlice"
+import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities"
 import {
-    checkIfOpmlAdded, checkIfOpmlErrored,
-    checkIfPodcastAdded,
-    checkIfPodcastEpisodeAdded,
-    checkIfPodcastRefreshed
-} from "./utils/MessageIdentifier";
-import {store} from "./store/store";
-import {Root} from "./routing/Root";
-import {
-    AdministrationUserViewLazyLoad,
-    AdministrationViewLazyLoad, InviteAdministrationUserViewLazyLoad, MobileSearchViewLazyLoad,
+    UserAdminViewLazyLoad,
+    EpisodeSearchViewLazyLoad,
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
-    SettingsViewLazyLoad, TimeLineViewLazyLoad
-} from "./utils/LazyLoading";
-import {apiURL, configWSUrl, isJsonString} from "./utils/Utilities";
-import {LoginComponent} from "./components/LoginComponent";
-import {enqueueSnackbar} from "notistack";
-import {useTranslation} from "react-i18next";
-import {InviteComponent} from "./components/InviteComponent";
-import {setMessages, setProgress} from "./store/opmlImportSlice";
-
+    SettingsViewLazyLoad,
+    TimeLineViewLazyLoad
+} from "./utils/LazyLoading"
+import {
+    checkIfOpmlAdded,
+    checkIfOpmlErrored,
+    checkIfPodcastAdded,
+    checkIfPodcastEpisodeAdded,
+    checkIfPodcastRefreshed
+} from "./utils/MessageIdentifier"
+import {Notification} from "./models/Notification"
+import {Root} from "./routing/Root"
+import {Homepage} from "./pages/Homepage"
+import {AcceptInvite} from "./pages/AcceptInvite"
+import {Login} from "./pages/Login"
+import "./App.css"
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -38,7 +39,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route index element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
-                <Route path={"search"} element={<Suspense><MobileSearchViewLazyLoad/></Suspense>}/>
+                <Route path={"search"} element={<Suspense><EpisodeSearchViewLazyLoad/></Suspense>}/>
             </Route>
             <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad/></Suspense>}/>
             <Route path={"favorites"}>
@@ -48,14 +49,10 @@ export const router = createBrowserRouter(createRoutesFromElements(
             </Route>
             <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad/></Suspense>}/>
             <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad/></Suspense>}/>
-            <Route path={"administration"}>
-                <Route index element={<Suspense><AdministrationViewLazyLoad/></Suspense>}/>
-                <Route path="users" element={<Suspense><AdministrationUserViewLazyLoad/></Suspense>}/>
-                <Route path="invites" element={<Suspense><InviteAdministrationUserViewLazyLoad/></Suspense>}/>
-            </Route>
+            <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad/></Suspense>}/>
         </Route>
-        <Route path="/login" element={<LoginComponent/>}/>
-        <Route path="/invite/:id" element={<InviteComponent/>}></Route>
+        <Route path="/login" element={<Login/>}/>
+        <Route path="/invite/:id" element={<AcceptInvite/>}></Route>
     </>
 ), {
     basename: import.meta.env.BASE_URL
@@ -147,9 +144,11 @@ const App: FC<PropsWithChildren> = ({children}) => {
         getNotifications()
     }, [])
 
-    return <Suspense>
-        <div>{children}</div>
-    </Suspense>
+    return (
+        <Suspense>
+            {children}
+        </Suspense>
+    )
 }
 
 export default App

@@ -1,0 +1,29 @@
+@mixin theme-light {
+  --color-bg: #FFF;
+
+  --color-primary-1: #c07c03;
+  --color-primary-light-5: #fae3ba;
+  --color-primary-dark-4: #3b2a0f;
+  --color-primary-dark-5: #1f1608;
+
+  --color-gray-1: #f5f5f4;
+  --color-gray-2: #e7e5e4;
+  --color-gray-3: #d6d3d1;
+  --color-gray-4: #a8a29e;
+  --color-gray-5: #78716c;
+  --color-gray-6: #57534e;
+  --color-gray-7: #44403c;
+  --color-gray-8: #292524;
+  --color-gray-9: #1c1917;
+  --color-gray-10: #0c0a09;
+
+  --color-green-1: #dcfce7;
+  --color-green-2: #bbf7d0;
+  --color-green-3: #86efac;
+  --color-green-4: #4ade80;
+  --color-green-5: #22c55e;
+  --color-green-6: #16a34a;
+  --color-green-7: #15803d;
+  --color-green-8: #166534;
+  --color-green-9: #14532d;
+}
