@@ -32,9 +32,9 @@ export const Sidebar = () => {
                 <SidebarItem iconName="favorite" path="favorites" translationKey="favorites"/>
                 <SidebarItem iconName="magic_button" path="timeline" translationKey="timeline"/>
 
-                <div className="display-only-mobile">
-                    <SidebarItem iconName="search" path="/podcasts/search" translationKey="search-podcasts"/>
-                </div>
+                <span className="display-only-mobile">
+                    <SidebarItem iconName="search" path="/podcasts/search" translationKey="search-episodes"/>
+                </span>
             </ul>
 
         </div>

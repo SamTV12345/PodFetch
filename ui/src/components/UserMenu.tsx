@@ -18,7 +18,7 @@ export const UserMenu:FC = () => {
         },
         {
             iconName: 'info',
-            translationKey: 'info',
+            translationKey: 'system-info',
             path: 'info'
         }
     ]

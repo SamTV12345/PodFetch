@@ -8,8 +8,8 @@ export const PodcastDetailViewLazyLoad = lazy(()=>import('../pages/PodcastDetail
     return{default:module["PodcastDetailPage"]}
 }))
 
-export const PodcastInfoViewLazyLoad = lazy(()=>import('../pages/PodcastInfoPage').then(module=> {
-    return{default:module["PodcastInfoPage"]}
+export const PodcastInfoViewLazyLoad = lazy(()=>import('../pages/SystemInfoPage').then(module=> {
+    return{default:module["SystemInfoPage"]}
 }))
 
 export const SettingsViewLazyLoad = lazy(()=>import('../pages/SettingsPage').then(module=> {
@@ -24,6 +24,6 @@ export const TimeLineViewLazyLoad = lazy(()=>import('../pages/Timeline').then(mo
     return{default:module["Timeline"]}
 }))
 
-export const MobileSearchViewLazyLoad = lazy(()=>import('../pages/MobileSearchPage').then(module=> {
-    return{default:module["MobileSearchPage"]}
+export const EpisodeSearchViewLazyLoad = lazy(()=>import('../pages/EpisodeSearchPage').then(module=> {
+    return{default:module["EpisodeSearchPage"]}
 }))
