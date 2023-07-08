@@ -44,7 +44,7 @@ export const SystemInfoPage:FC = () => {
         const used = disk.reduce((x, y) => {
             return (x + (y.total_space - y.available_space))
         }, 0)
-    
+
         const available = disk.reduce((x, y)=>{
             return (x + y.available_space)
         }, 0)
@@ -130,9 +130,9 @@ export const SystemInfoPage:FC = () => {
                             )}
                         </dd>
 
-    
+
                         <dt className="font-medium text-stone-900">{t('rss-feed')}</dt>
-                        <dd className="text-stone-500"><a className="text-mustard-600 hover:text-mustard-500" href={configModel?.rssFeed} target="_blank">{configModel?.rssFeed}</a></dd>
+                        <dd className="text-stone-500"><a className="text-mustard-600 hover:text-mustard-500" href={configModel?.rssFeed} target="_blank" rel="noopener noreferrer">{configModel?.rssFeed}</a></dd>
 
                         {versionInfo && (
                             <>
