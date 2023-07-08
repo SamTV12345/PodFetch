@@ -59,7 +59,9 @@ interface CommonProps {
     createInviteModalOpen: boolean,
     invites: Invite[],
     timeLineEpisodes: TimelineHATEOASModel|undefined
-    filters: Filter|undefined
+    filters: Filter|undefined,
+    infoHeading: string|undefined,
+    infoText: string|undefined
 }
 
 // Define the initial state using that type
@@ -81,7 +83,9 @@ const initialState: CommonProps = {
     createInviteModalOpen: false,
     invites: [],
     timeLineEpisodes:undefined,
-    filters: undefined
+    filters: undefined,
+    infoHeading: undefined,
+    infoText: undefined
 }
 
 export const commonSlice = createSlice({
@@ -181,11 +185,17 @@ export const commonSlice = createSlice({
         },
         setFilters: (state, action:PayloadAction<Filter>) => {
             state.filters = action.payload
+        },
+        setInfoHeading: (state, action:PayloadAction<string>) => {
+            state.infoHeading = action.payload
+        },
+        setInfoText: (state, action:PayloadAction<string>) => {
+            state.infoText = action.payload
         }
 }})
 
 export const {
-    setSidebarCollapsed, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, podcastDeleted, setCurrentDetailedPodcastId, setConfigModel, setPodcasts, setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
+    setSidebarCollapsed, setInfoHeading,setInfoText, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, podcastDeleted, setCurrentDetailedPodcastId, setConfigModel, setPodcasts, setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
 } = commonSlice.actions
 
 export default commonSlice.reducer

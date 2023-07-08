@@ -140,5 +140,13 @@
   "remove": "Entfernen",
   "standard-podcast-format": "Standard-Podcastformat",
   "onlyFavored": "Nur favorisierte Podcasts",
-  "available-episodes": "Verfügbare Episoden"
+  "available-episodes": "Verfügbare Episoden",
+
+  "days-to-keep-explanation": "Gibt die Anzahl an Tage wieder, die ein Podcast aufbewahrt, d.h., auf dem Server gespeichert wird. Diese Einstellung ist nur aktiv, wenn die automatische Bereinigung aktiviert ist oder auf Bereinigung jetzt ausführen geklickt wird.",
+  "auto-update-explanation": "PodFetch wird automatisch nach neuen Episoden suchen, wenn die Seite besucht wird. Wenn diese Option deaktiviert wird, müssen die Podcasts manuell aktualisiert werden, um nach neuen Episoden zu suchen. Das Update Intervall kann per Environment Variable konfiguriert werden.",
+  "number-of-podcasts-to-download-explanation": "Gibt die Anzahl an Podcast Episoden wieder, die beim initialen hinzufügen eines Podcasts heruntergeladen werden. Bei 0 werden nur die Datenbankeinträge erstellt. Eine Option wie 10000 archiviert sämtliche Podcast Epsioden.",
+  "auto-download-explanation": "Wenn diese Option aktiviert ist, so werden die Episoden automatisch heruntergeladen, wenn ein Podcast hinzugefügt wird.",
+  "standard-episode-format-explanation":"Gibt das Standardformat für die Episoden an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
+  "standard-podcast-format-explanation":"Gibt das Standardformat für die Podcasts an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
+  "colon-replacement-explanation": "Gibt an, durch welches Zeichen der Doppelpunkt ersetzt werden soll. Dies ist nützlich, da der Doppelpunkt nicht im Dateinamen verwendet werden kann."
 }
