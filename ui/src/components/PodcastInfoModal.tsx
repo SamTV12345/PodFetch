@@ -51,5 +51,4 @@ export const PodcastInfoModal = () => {
                 </p>}
             </div>
     </div>, document.getElementById('modal1')!)
-
 }

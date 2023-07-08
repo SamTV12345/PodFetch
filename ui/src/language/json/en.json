@@ -140,5 +140,13 @@
   "dash-separated-with-space": "Dash separated with space",
   "remove": "Remove",
   "standard-podcast-format": "Standard podcast format",
-  "available-episodes": "Available Episodes"
+  "available-episodes": "Available Episodes",
+
+  "days-to-keep-explanation": "Reflects the number of days a podcast is kept, i.e., stored on the server. This setting is only active if auto-purge is enabled or Run purge now is clicked.",
+  "auto-update-explanation": "PodFetch will automatically check for new episodes when the page is visited. If this option is disabled, podcasts will need to be manually updated to check for new episodes. The update interval can be configured via Environment Variable.",
+  "number-of-podcasts-to-download-explanation": "Returns the number of podcast episodes that are downloaded when a podcast is initially added. If 0, only the database entries are created. An option like 10000 archives all podcast episodes.",
+  "auto-download-explanation": "If this option is activated, the episodes will be downloaded automatically when a podcast is added",
+  "default-episode-format-explanation": "Specifies the default format for the episodes. This only affects the folder structure and its naming.",
+  "standard-podcast-format-explanation": "Specifies the standard format for the podcasts. This only affects the folder structure and naming.",
+  "colon-replacement-explanation": "Specifies by which character the colon should be replaced. This is useful because the colon cannot be used in the file name."
 }
