@@ -140,5 +140,13 @@
   "remove": "Supprimer",
   "standard-podcast-format": "Format standard du podcast",
   "onlyFavored": "Seulement favoris podcasts",
-  "available-episodes": "Épisodes disponibles"
+  "available-episodes": "Épisodes disponibles",
+
+  "days-to-keep-explanation" : "Reflète le nombre de jours pendant lesquels un podcast est conservé, c'est-à-dire stocké sur le serveur. Ce paramètre n'est actif que si le nettoyage automatique est activé ou si l'on clique sur Exécuter le nettoyage maintenant",
+  "auto-update-explanation" : "PodFetch recherchera automatiquement de nouveaux épisodes lorsque la page est visitée. Si cette option est désactivée, les podcasts doivent être mis à jour manuellement pour rechercher de nouveaux épisodes. L'intervalle de mise à jour peut être configuré par variable d'environnement",
+  "number-of-podcasts-to-download-explanation" : "Reflète le nombre d'épisodes de podcasts téléchargés lors de l'ajout initial d'un podcast. Avec 0, seules les entrées de la base de données sont créées. Une option comme 10000 archive tous les épisodes de podcast",
+  "auto-donwload-explanation" : "Si cette option est activée, les épisodes sont automatiquement téléchargés lorsqu'un podcast est ajouté",
+  "standard-episode-format-explanation" : "Spécifie le format par défaut pour les épisodes. Cela n'a d'effet que sur la structure des dossiers et leur dénomination",
+  "standard-podcast-format-explanation" : "Indique le format par défaut pour les podcasts. Cela n'affecte que la structure des dossiers et leur dénomination.",
+  "colon-replacement-explanation" : "Indique par quel caractère le deux-points doit être remplacé. Ceci est utile car le deux-points ne peut pas être utilisé dans le nom de fichier"
 }

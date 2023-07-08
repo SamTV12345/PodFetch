@@ -6,6 +6,8 @@ import {SettingsData} from "../components/SettingsData"
 import {SettingsNaming} from "../components/SettingsNaming"
 import {SettingsOPMLExport} from "../components/SettingsOPMLExport"
 import {SettingsPodcastDelete} from "../components/SettingsPodcastDelete"
+import {Modal} from "../components/Modal";
+import {InfoModal} from "../components/InfoModal";
 
 export const SettingsPage = () => {
     const {t} = useTranslation()
@@ -48,15 +50,16 @@ export const SettingsPage = () => {
                 {selectedSection === 'opml' && (
                     <SettingsOPMLExport />
                 )}
-                
+
                 {selectedSection === 'naming' && (
                     <SettingsNaming />
                 )}
-                
+
                 {selectedSection === 'podcasts' && (
                     <SettingsPodcastDelete />
                 )}
             </div>
+            <InfoModal/>
         </div>
     )
 }

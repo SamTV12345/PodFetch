@@ -11,6 +11,7 @@ import {CustomSelect} from "../components/CustomSelect"
 import {CustomInput} from "../components/CustomInput"
 import {Loading} from "../components/Loading"
 import { CustomCheckbox } from '../components/CustomCheckbox'
+import {SettingsInfoIcon} from "./SettingsInfoIcon";
 
 type SettingsProps = {
     intialSettings: Setting
@@ -100,7 +101,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                 </fieldset>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-stone-900" htmlFor="colon-replacement">{t('colon-replacement')}</label>
+                    <label className="text-stone-900 flex gap-1" htmlFor="colon-replacement">{t('colon-replacement')} <SettingsInfoIcon headerKey="colon-replacement" textKey="auto-download-explanation"/></label>
 
                     <Controller
                     name="replacementStrategy"
@@ -111,7 +112,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-stone-900" htmlFor="episode-format">{t('standard-episode-format')}</label>
+                    <label className="text-stone-900 flex gap-1" htmlFor="episode-format">{t('standard-episode-format')} <SettingsInfoIcon headerKey="standard-episode-format" textKey="standard-episode-format-explanation"/></label>
 
                     <Controller
                     name="episodeFormat"
@@ -122,7 +123,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-stone-900" htmlFor="podcast-format">{t('standard-podcast-format')}</label>
+                    <label className="text-stone-900 flex gap-1" htmlFor="podcast-format">{t('standard-podcast-format')} <SettingsInfoIcon headerKey="standard-podcast-format" textKey="standard-podcast-format-explanation"/></label>
 
                     <Controller
                     name="podcastFormat"
