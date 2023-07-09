@@ -27,7 +27,7 @@ use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
 use tokio::task::spawn_blocking;
 use crate::constants::constants::{PodcastType};
-use crate::exception::exceptions::PodFetchError;
+
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::FileService;
@@ -640,9 +640,9 @@ tag="podcasts"
 )]
 #[delete("/podcast/{id}")]
 pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id: Path<i32>, requester: Option<web::ReqData<User>>)
-                            ->impl Responder{
+                            -> Result<HttpResponse, CustomError>{
     if !requester.unwrap().is_privileged_user(){
-        return HttpResponse::Unauthorized().json("Unauthorized");
+        return Err(CustomError::Forbidden);
     }
 
 
@@ -657,8 +657,8 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     PodcastEpisode::delete_episodes_of_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
     deleting \
     episodes of podcast");
-    Podcast::delete_podcast(&mut *db.get().unwrap(), id.clone());
-    HttpResponse::Ok().into()
+    Podcast::delete_podcast(&mut *db.get().unwrap(), id.clone())?;
+    Ok(HttpResponse::Ok().into())
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -55,7 +55,7 @@ pub fn start_command_line(mut args: Args){
 
                     let mut podcast_episode_service = PodcastEpisodeService::new();
                     podcast_episode_service.insert_podcast_episodes(conn, podcast.clone());
-                    podcast_service.schedule_episode_download( podcast,None, conn);
+                    podcast_service.schedule_episode_download( podcast,None, conn).unwrap();
 
                 }
                 "refresh-all"=> {
@@ -67,7 +67,7 @@ pub fn start_command_line(mut args: Args){
 
                         let mut podcast_episode_service = PodcastEpisodeService::new();
                         podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast.clone());
-                            podcast_service.schedule_episode_download( podcast,None, conn);
+                            podcast_service.schedule_episode_download( podcast,None, conn).unwrap();
                     }
                 }
                 "list"=>{

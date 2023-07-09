@@ -1,4 +1,4 @@
-use std::io::Error;
+
 use std::sync::{MutexGuard};
 use crate::constants::constants::{PodcastType, ITUNES_URL};
 use crate::models::podcast_dto::PodcastDto;
@@ -23,7 +23,7 @@ use std::time::SystemTime;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
 use crate::config::dbconfig::establish_connection;
-use crate::exception::exceptions::{PodFetchError};
+
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
@@ -171,7 +171,7 @@ impl PodcastService {
                         podcast: Option::from(podcast.clone()),
                         podcast_episodes: Option::from(inserted_podcasts),
                     });
-                    podcast_service.schedule_episode_download(podcast, Some(lobby),&mut conn);
+                    podcast_service.schedule_episode_download(podcast, Some(lobby),&mut conn).unwrap();
                 })
                     .await
                     .unwrap();
@@ -188,7 +188,7 @@ impl PodcastService {
         podcast: Podcast,
         lobby: Option<Data<Addr<Lobby>>>,
         conn: &mut DbConnection
-    ) {
+    ) ->Result<(),CustomError> {
         let settings = Setting::get_settings(conn);
         match settings {
             Some(settings) => {
@@ -202,22 +202,25 @@ impl PodcastService {
                                 podcast.clone(),
                                 lobby.clone(),
                                 conn
-                            );
+                            )?;
+                        return Ok(());
                     }
                 }
+                return Ok(());
             }
             None => {
                 log::error!("Error getting settings");
+                Err(CustomError::Unknown)
             }
         }
     }
 
     pub fn refresh_podcast(&mut self, podcast: Podcast, lobby: Data<Addr<Lobby>>, conn:&mut
-    DbConnection) {
+    DbConnection) ->Result<(),CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
         self.podcast_episode_service
             .insert_podcast_episodes(conn, podcast.clone());
-        self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn);
+        self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn)
     }
 
     pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, conn: &mut DbConnection) {

@@ -1,8 +1,8 @@
 use actix_web::web::Data;
-use actix_web::{get, put, web, HttpResponse, Responder};
+use actix_web::{get, put, web, HttpResponse};
 use std::sync::Mutex;
 use crate::{DbPool};
-use crate::models::notification::Notification;
+
 use crate::mutex::LockResultExt;
 use crate::service::notification_service::NotificationService;
 use crate::utils::error::CustomError;

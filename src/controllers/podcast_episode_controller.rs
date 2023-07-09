@@ -13,6 +13,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
+use crate::utils::error::CustomError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -113,11 +114,9 @@ tag="podcast_episodes"
 )]
 #[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>,
-                                                  requester: Option<web::ReqData<User>>) ->
-                                                                                             impl
-Responder {
+                                                  requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError>{
     if !requester.unwrap().is_privileged_user(){
-        return HttpResponse::Unauthorized().json("Unauthorized");
+        return Err(CustomError::Forbidden)
     }
 
     thread::spawn(move || {
@@ -132,11 +131,12 @@ Responder {
                     podcast_episode.clone(),
                     podcast,
                     &mut conn.get().unwrap()
-                );
+                ).unwrap();
             }
-            None => {}
+            None => {
+            }
         }
     });
 
-    HttpResponse::Ok().json("Download started")
+    Ok(HttpResponse::Ok().json("Download started"))
 }

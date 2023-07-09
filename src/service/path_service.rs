@@ -1,10 +1,10 @@
-use std::io;
+
 use std::path::Path;
 use crate::DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
-use crate::service::file_service::{FileService, prepare_podcast_episode_title_to_directory};
+use crate::service::file_service::{prepare_podcast_episode_title_to_directory};
 use crate::utils::error::{CustomError, map_io_error};
 
 
@@ -43,7 +43,7 @@ impl PathService {
         return format!("{}/image.{}", directory, suffix);
     }
 
-    pub fn check_if_podcast_episode_directory_available(base_path:&str, podcast: Podcast,conn: &mut DbConnection) ->
+    pub fn check_if_podcast_episode_directory_available(base_path:&str, _podcast: Podcast,_conn: &mut DbConnection) ->
                                                                                           Result<String, CustomError> {
         let mut i = 0;
         if !Path::new(&base_path).exists() {

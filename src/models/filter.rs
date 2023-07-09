@@ -6,7 +6,7 @@ use diesel::AsChangeset;
 use diesel::Queryable;
 use crate::DbConnection;
 use utoipa::ToSchema;
-use crate::utils::error::{CustomError, map_db_error, map_io_error};
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable, AsChangeset, Queryable,ToSchema)]
 #[serde(rename_all = "camelCase")]

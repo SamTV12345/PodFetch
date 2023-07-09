@@ -3,7 +3,7 @@ use diesel::Queryable;
 use utoipa::ToSchema;
 use crate::utils::do_retry::do_retry;
 use diesel::insert_into;
-use crate::utils::error::{CustomError, map_db_error, map_io_error};
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Serialize, Deserialize, Queryable,Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
