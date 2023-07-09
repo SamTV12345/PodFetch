@@ -17,6 +17,7 @@ use crate::DbConnection;
 use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
+use crate::utils::error::{CustomError, map_io_error};
 
 #[derive(Clone)]
 pub struct FileService {
@@ -60,19 +61,17 @@ impl FileService {
     }
 
     pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String, conn:&mut DbConnection)
-        ->Result<String,
-        Error> {
+        ->Result<String, CustomError> {
         let escaped_title = prepare_podcast_title_to_directory(podcast_title,conn);
         if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
-            std::fs::create_dir(&format!("podcasts/{}", escaped_title))
-                .expect(&*("Error creating directory when inserting ".to_owned() + &escaped_title));
+            std::fs::create_dir(&format!("podcasts/{}", escaped_title)).map_err(map_io_error)?;
             Ok(format!("podcasts/{}", escaped_title))
         }
         else{
             // Check if this is a new podcast with the same name as an old one
 
             let conn = &mut establish_connection();
-            let podcast = Podcast::get_podcast_by_directory_id(podcast_id,conn).unwrap();
+            let podcast = Podcast::get_podcast_by_directory_id(podcast_id,conn)?;
             match podcast {
                 Some(_)=>{
                     // is the same podcast

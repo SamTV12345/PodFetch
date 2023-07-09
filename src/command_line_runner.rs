@@ -21,6 +21,10 @@ use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 
 
+fn print_err_to_cmd(err: &Error) {
+    println!("Error: {:?}", err);
+}
+
 pub fn start_command_line(mut args: Args){
     println!("Starting from command line");
     match args.nth(1).unwrap().as_str() {
@@ -47,7 +51,7 @@ pub fn start_command_line(mut args: Args){
                     let replaced_feed = rss_feed.replace("'", "").replace(" ","");
                     println!("Refreshing podcast {}", replaced_feed);
 
-                    let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn);
+                    let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn).expect("Error getting podcast");
 
                     let mut podcast_episode_service = PodcastEpisodeService::new();
                     podcast_episode_service.insert_podcast_episodes(conn, podcast.clone());

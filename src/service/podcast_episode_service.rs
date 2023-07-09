@@ -26,6 +26,7 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
+use crate::utils::error::CustomError;
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -46,7 +47,7 @@ impl PodcastEpisodeService {
         podcast: Podcast,
         lobby: Option<web::Data<Addr<Lobby>>>,
         conn: &mut DbConnection,
-    ) {
+    ) ->Result<(), CustomError> {
         let mut settings_service = SettingsService::new();
         let settings = settings_service.get_settings(conn).unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
@@ -76,7 +77,7 @@ impl PodcastEpisodeService {
                     podcast_episode_cloned,
                     podcast_cloned,
                     conn
-                );
+                )?;
                 let mapped_dto = self
                     .mapping_service
                     .map_podcastepisode_to_dto(&podcast_inserted);
@@ -102,6 +103,7 @@ impl PodcastEpisodeService {
                 println!("Error checking if podcast episode is downloaded.");
             }
         }
+        Ok(())
     }
 
     pub fn perform_download(
@@ -109,10 +111,10 @@ impl PodcastEpisodeService {
         podcast_episode_cloned: PodcastEpisode,
         podcast_cloned: Podcast,
         conn: &mut DbConnection,
-    ) -> PodcastEpisode {
+    ) -> Result<PodcastEpisode,CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned);
+        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned)?;
         let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)
             .unwrap();
         let notification = Notification {
@@ -123,7 +125,7 @@ impl PodcastEpisodeService {
             status: "unread".to_string(),
         };
         Notification::insert_notification(notification,conn).unwrap();
-        return podcast;
+        return Ok(podcast);
     }
 
     pub fn get_last_n_podcast_episodes(conn: &mut DbConnection, podcast: Podcast) ->

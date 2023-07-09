@@ -6,6 +6,7 @@ use diesel::AsChangeset;
 use diesel::Queryable;
 use crate::DbConnection;
 use utoipa::ToSchema;
+use crate::utils::error::{CustomError, map_db_error, map_io_error};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable, AsChangeset, Queryable,ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -30,7 +31,7 @@ impl Filter{
         }
     }
 
-    pub fn save_filter(self, conn: &mut DbConnection) -> Result<(), diesel::result::Error>{
+    pub fn save_filter(self, conn: &mut DbConnection) -> Result<(), CustomError>{
         use crate::dbconfig::schema::filters::dsl::*;
 
         let opt_filter = filters.filter(username.eq(&self.username)).first::<Filter>(conn)
@@ -38,21 +39,24 @@ impl Filter{
        match opt_filter {
            Some(_)=>{
                diesel::update(filters.filter(username.eq(&self.clone().username))).set(self)
-                   .execute(conn)?;
+                   .execute(conn)
+                   .map_err(map_db_error)?;
            },
            None=>{
                diesel::insert_into(filters).values(self)
-                   .execute(conn)?;
+                   .execute(conn)
+                   .map_err(map_db_error)?;
            }
        }
         Ok(())
     }
 
     pub async fn get_filter_by_username(username1: String, conn: &mut  DbConnection) ->
-                                                                                   Result<Option<Filter>, diesel::result::Error>{
+                                                                                   Result<Option<Filter>, CustomError>{
         use crate::dbconfig::schema::filters::dsl::*;
         let res =   filters.filter(username.eq(username1)).first::<Filter>(conn)
-                .optional().expect("Error connecting to database");
+                .optional()
+            .map_err(map_db_error)?;
         Ok(res)
     }
 

@@ -9,6 +9,7 @@ use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::mapping_service::MappingService;
+use crate::utils::error::CustomError;
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -39,8 +40,7 @@ tag="watchtime"
 )]
 #[get("/podcast/episode/lastwatched")]
 pub async fn get_last_watched(conn: Data<DbPool>, requester:
-Option<web::ReqData<User>>, mapping_service:Data<Mutex<MappingService>>) -> impl
-Responder {
+Option<web::ReqData<User>>, mapping_service:Data<Mutex<MappingService>>) -> Result<HttpResponse, CustomError> {
 
     let designated_username = requester.unwrap().username.clone();
     let last_watched = PodcastHistoryItem::get_last_watched_podcasts(&mut establish_connection(),
@@ -48,7 +48,7 @@ Responder {
         .clone(), mapping_service.lock().ignore_poison().clone()).unwrap();
 
     let episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap(),
-    );
+    )?;
 
     let mut episodes_with_logs = last_watched.iter().map(|e|{
         let episode = episodes.iter().find(|e1| e1.episode_id == e.episode_id);
@@ -71,7 +71,7 @@ Responder {
         }
     });
     episodes_with_logs.sort_by(|a,b| a.date.cmp(&b.date).reverse());
-    HttpResponse::Ok().json(episodes_with_logs)
+    Ok(HttpResponse::Ok().json(episodes_with_logs))
 }
 
 #[utoipa::path(

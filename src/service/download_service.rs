@@ -14,6 +14,7 @@ use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::FilenameBuilder;
 use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
+use crate::utils::error::CustomError;
 
 pub struct DownloadService {
     pub mappingservice: MappingService,
@@ -30,7 +31,8 @@ impl DownloadService {
         }
     }
 
-    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast) {
+    pub fn download_podcast_episode(&mut self, podcast_episode: PodcastEpisode, podcast: Podcast)
+        -> Result<(),CustomError> {
         let conn = &mut establish_connection();
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
         let settings_in_db = SettingsService::new().get_settings(conn).unwrap();
@@ -47,7 +49,7 @@ impl DownloadService {
                     .with_image_filename(PODCAST_IMAGENAME)
                     .with_image_suffix(&image_suffix)
                     .with_raw_directory(conn)
-                    .build(conn);
+                    .build(conn)?;
             },
             false=>{
                 paths = FilenameBuilder::default()
@@ -58,7 +60,7 @@ impl DownloadService {
                     .with_podcast(podcast.clone())
                     .with_image_filename(PODCAST_IMAGENAME)
                     .with_filename(PODCAST_FILENAME)
-                    .build(conn);
+                    .build(conn)?;
             }
         }
 
@@ -95,5 +97,6 @@ impl DownloadService {
             conn)
             .expect("TODO: panic message");
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
+        Ok(())
     }
 }

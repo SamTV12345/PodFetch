@@ -3,6 +3,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::{prepare_podcast_episode_title_to_directory};
 use crate::service::path_service::PathService;
+use crate::utils::error::CustomError;
 
 #[derive(Default, Clone, Debug)]
 pub struct FilenameBuilder {
@@ -67,25 +68,28 @@ impl FilenameBuilder {
         self
     }
 
-    pub fn build(self,conn: &mut DbConnection)->(String, String){
+    pub fn build(self,conn: &mut DbConnection)->Result<(String, String),CustomError>{
         if self.raw_filename{
             let resulting_directory = self.clone().create_podcast_episode_dir(self.directory.clone
-            (),conn);
-            return (format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix
-                .clone()),format!("{}/{}.{}", resulting_directory,self.image_filename.clone(), self.image_suffix
-                .clone()));
+            (),conn)?;
+            return Ok((format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix
+                .clone()),
+                    format!("{}/{}.{}", resulting_directory,self.image_filename.clone(),
+                                  self.image_suffix
+                .clone())));
         }
         let resulting_directory = self.clone().create_podcast_episode_dir(format!("{}/{}",self
-            .directory.clone(), self.episode.clone()),conn);
+            .directory.clone(), self.episode.clone()),conn)?;
 
-        return (format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix.clone
+        return Ok((format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix.clone
         ()),format!("{}/{}.{}", resulting_directory,self.image_filename.clone(), self.image_suffix
-            .clone()));
+            .clone())));
     }
 
 
-    fn create_podcast_episode_dir(self,dirname:String,conn: &mut DbConnection)->String{
-        PathService::check_if_podcast_episode_directory_available
-            (&dirname, self.podcast, conn)
+    fn create_podcast_episode_dir(self,dirname:String,conn: &mut DbConnection)->Result<String,
+        CustomError>{
+        Ok(PathService::check_if_podcast_episode_directory_available
+            (&dirname, self.podcast, conn)?)
     }
 }

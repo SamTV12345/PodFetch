@@ -27,6 +27,7 @@ use crate::exception::exceptions::{PodFetchError};
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
+use crate::utils::error::CustomError;
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -79,7 +80,7 @@ impl PodcastService {
 
     pub async fn insert_podcast_from_podindex(&mut self, conn: &mut DbConnection, id: i32,
                                               lobby: Data<Addr<Lobby>>) ->Result<Podcast,
-        PodFetchError>{
+        CustomError>{
         let mapping_service = MappingService::new();
         let resp = self
             .client
@@ -96,7 +97,7 @@ impl PodcastService {
 
         let podcast = resp.json::<Value>().await.unwrap();
 
-        self.handle_insert_of_podcast(conn,
+        Ok(self.handle_insert_of_podcast(conn,
                                       PodcastInsertModel {
                                           title: unwrap_string(&podcast["feed"]["title"]),
                                           id,
@@ -106,7 +107,7 @@ impl PodcastService {
                                       mapping_service,
                                       lobby,
         )
-            .await
+            .await?)
     }
 
     pub async fn handle_insert_of_podcast(
@@ -114,29 +115,25 @@ impl PodcastService {
         conn: &mut DbConnection,
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
-        lobby: Data<Addr<Lobby>>) ->Result<Podcast,PodFetchError>{
+        lobby: Data<Addr<Lobby>>) ->Result<Podcast,CustomError>{
         let opt_podcast = Podcast::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone() );
         if opt_podcast.is_some() {
-            return Err(PodFetchError::podcast_already_exists())
+            return Err(CustomError::Conflict(format!("Podcast with feed url {} already exists", podcast_insert.feed_url)));
         }
 
         let fileservice = FileService::new();
 
         let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),
-                                                                                     &podcast_insert.id.clone().to_string(), conn);
+                                                                                     &podcast_insert.id.clone().to_string(), conn)?;
 
-        if podcast_directory_created.is_err() {
-            log::error!("Error creating podcast directory");
-            return Err(PodFetchError::podcast_directory_creation_error())
-        }
         let inserted_podcast = Podcast::add_podcast_to_database(
             conn,
             podcast_insert.title,
             podcast_insert.id.to_string(),
             podcast_insert.feed_url,
             podcast_insert.image_url.clone(),
-            podcast_directory_created.unwrap()
-        );
+            podcast_directory_created
+        )?;
 
         fileservice
             .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(), &podcast_insert
@@ -274,7 +271,8 @@ impl PodcastService {
         headers
     }
 
-    pub fn get_podcast(conn: &mut DbConnection, podcast_id_to_be_searched: i32)->Result<Podcast, Error>{
+    pub fn get_podcast(conn: &mut DbConnection, podcast_id_to_be_searched: i32)->Result<Podcast,
+        CustomError>{
         Podcast::get_podcast(conn, podcast_id_to_be_searched)
     }
 
@@ -287,9 +285,9 @@ impl PodcastService {
         &mut self, order:OrderCriteria, title: Option<String>, latest_pub: OrderOption,
         mapping_service: MutexGuard<MappingService>, conn: &mut
         DbConnection,
-        designated_username: String) -> Result<Vec<impl Serialize>, String>{
+        designated_username: String) -> Result<Vec<impl Serialize>, CustomError>{
         let podcasts = Favorite::search_podcasts_favored(conn, order, title, latest_pub,
-                                                         designated_username);
+                                                         designated_username)?;
         let mut podcast_dto_vec = Vec::new();
         for podcast in podcasts {
             let podcast_dto = mapping_service.map_podcast_to_podcast_dto_with_favorites_option(&podcast);
@@ -303,9 +301,10 @@ impl PodcastService {
     MutexGuard<MappingService>,title:
                            Option<String>, latest_pub: OrderOption,conn: &mut
     DbConnection,
-                           designated_username: String) -> Result<Vec<PodcastDto>, String>{
+                           designated_username: String) -> Result<Vec<PodcastDto>, CustomError>{
 
-        let podcasts = Favorite::search_podcasts(conn, order, title, latest_pub, designated_username);
+        let podcasts = Favorite::search_podcasts(conn, order, title, latest_pub,
+                                                 designated_username)?;
         let mapped_result = podcasts
             .iter()
             .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites

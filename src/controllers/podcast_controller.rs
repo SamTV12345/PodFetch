@@ -61,13 +61,10 @@ tag="podcasts"
 )]
 #[get("/podcasts/filter")]
 pub async fn get_filter(conn: Data<DbPool>, requester:
-Option<web::ReqData<User>>) ->
-                                                                                               impl
-Responder{
+Option<web::ReqData<User>>) -> Result<HttpResponse,CustomError>{
             let filter = Filter::get_filter_by_username(requester.unwrap().username.clone(),
-                                                        &mut conn.get().unwrap()).await
-                .expect("Error getting filter");
-            HttpResponse::Ok().json(filter)
+                                                        &mut conn.get().unwrap()).await?;
+            Ok(HttpResponse::Ok().json(filter))
 }
 
 #[utoipa::path(
@@ -81,13 +78,14 @@ tag="podcasts"
 pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<DbPool>,
                              _podcast_service: Data<Mutex<PodcastService>>,
                              _mapping_service:Data<Mutex<MappingService>>, requester: Option<web::ReqData<User>>)
-                             ->impl Responder{
+                             ->Result<HttpResponse,CustomError>{
+
     let query = query.into_inner();
     let _order = query.order.unwrap_or(OrderCriteria::ASC);
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
     let only_favored;
     let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
-                                                    &mut conn.get().unwrap()).await.unwrap();
+                                                    &mut conn.get().unwrap()).await?;
 
     match opt_filter {
         Some(filter)=>{
@@ -102,7 +100,7 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
     let filter = Filter::new(username.clone(), query.title.clone(), _order.clone().to_bool(),Some
                 (_latest_pub.clone()
                 .to_string()),only_favored);
-    Filter::save_filter(filter, &mut *conn.get().unwrap()).expect("Error saving filter");
+    Filter::save_filter(filter, &mut *conn.get().unwrap())?;
 
     match query.favored_only {
         true => {
@@ -113,9 +111,8 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
                                                                                    _mapping_service.lock()
                                                                                        .ignore_poison(),
                                                                                    &mut conn.get().unwrap
-                                                                                   (),username)
-                .unwrap();
-            HttpResponse::Ok().json(podcasts)
+                                                                                   (),username)?;
+            Ok(HttpResponse::Ok().json(podcasts))
         }
         false => {
             let podcasts = _podcast_service.lock().ignore_poison().search_podcasts( _order.clone(),
@@ -123,10 +120,10 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
                                                                                    query.title,
                                                                                    _latest_pub
                                                                                         .clone(),
-                                                                                   &mut conn.get().unwrap
-                                                                                   (), username)
-                .unwrap();
-            HttpResponse::Ok().json(podcasts)
+                                                                                   &mut conn.get
+                                                                                   ().unwrap(),
+                                                                                    username)?;
+            Ok(HttpResponse::Ok().json(podcasts))
         }
     }
 
@@ -382,7 +379,7 @@ pub async fn add_podcast_from_podindex(
 }
 
 fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut DbConnection)
-    ->Result<Podcast, PodFetchError> {
+    ->Result<Podcast, CustomError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let mut podcast_service = PodcastService::new();
@@ -627,6 +624,8 @@ async fn insert_outline(
 
 }
 use utoipa::ToSchema;
+use crate::utils::error::CustomError;
+
 #[derive(Deserialize,ToSchema)]
 pub struct DeletePodcast {
     pub delete_files: bool

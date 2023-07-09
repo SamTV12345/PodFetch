@@ -15,6 +15,7 @@ use crate::models::models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Serialize, Deserialize, Debug,Queryable, QueryableByName,Insertable, Clone, ToSchema)]
 pub struct Episode{
@@ -161,7 +162,8 @@ impl Episode{
     }
 
     pub fn get_last_watched_episodes(username1: String, conn: &mut DbConnection)
-                                     ->Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>{
+                                     ->Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>,
+                                         CustomError>{
         use crate::dbconfig::schema::episodes::dsl::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use diesel::JoinOnDsl;
@@ -170,13 +172,14 @@ impl Episode{
         let query = podcast_episodes
             .inner_join(episodes.on(podcast.eq(url)))
             .filter(username.eq(username1))
-            .load::<(PodcastEpisode,Episode)>(conn).expect("ERror loading");
+            .load::<(PodcastEpisode,Episode)>(conn)
+            .map_err(map_db_error)?;
 
 
-        query.iter().map(|e|{
+        let mapped_watched_episodes = query.iter().map(|e|{
             let opt_podcast = map.get(&*e.clone().1.podcast);
             if opt_podcast.is_none(){
-                let podcast_found = Podcast::get_podcast_by_rss_feed(e.clone().1.podcast, conn);
+                let podcast_found = Podcast::get_podcast_by_rss_feed(e.clone().1.podcast, conn).unwrap();
                 map.insert(e.clone().1.podcast.clone(),podcast_found.clone());
             }
             let found_podcast = map.get(&e.clone().1.podcast).cloned().unwrap();
@@ -193,7 +196,8 @@ impl Episode{
                 podcast_episode: e.clone().0,
                 podcast: found_podcast.clone(),
             }
-        }).collect()
+        }).collect();
+        return Ok(mapped_watched_episodes);
     }
 
     pub fn delete_by_username_and_episode(username1: String, conn: &mut DbConnection) ->Result<(),Error>{
