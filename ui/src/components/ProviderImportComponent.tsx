@@ -37,7 +37,7 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
     useDebounce(()=>{
             setLoading(true)
             selectedSearchType === "itunes"?
-                axios.get(apiURL+"/podcasts/0/"+searchText+"/search")
+                axios.get(apiURL+"/podcasts/0/"+encodeURI(searchText)+"/search")
                     .then((v:AxiosResponse<GeneralModel>)=>{
                         setLoading(false)
                         const agnosticModel:AgnosticPodcastDataModel[] = v.data.results.map((podcast)=>{
