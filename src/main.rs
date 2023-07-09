@@ -405,7 +405,7 @@ pub fn check_server_config(service1: EnvironmentService) {
 
     if service1.http_basic {
         if service1.password.is_empty() || service1.username.is_empty() {
-            log::error!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
+            eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
             exit(1);
         }
     }
@@ -418,7 +418,8 @@ pub fn check_server_config(service1: EnvironmentService) {
     }
 
     if service1.http_basic && service1.oidc_configured{
-        log::error!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
+        eprintln!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
+        exit(1);
     }
 
     if var(TELEGRAM_API_ENABLED).is_ok(){
