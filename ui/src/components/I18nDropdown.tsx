@@ -6,7 +6,8 @@ import "material-symbols/outlined.css"
 const languageOptions = [
     { value: 'de-DE', label: 'Deutsch' },
     { value: 'en', label: 'English' },
-    { value: 'fr', label: 'Français' }
+    { value: 'fr', label: 'Français' },
+    { value: 'pl', label: 'Polski' }
 ]
 
 export const Dropdown = ()=>{
