@@ -4,6 +4,7 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import de_translation from './json/de.json'
 import en_translation from './json/en.json'
 import fr_translation from './json/fr.json'
+import pl_translation from './json/pl.json'
 
 const resources = {
     de: {
@@ -14,6 +15,9 @@ const resources = {
     },
     fr:{
         translation: fr_translation
+    },
+    pl:{
+        translation: pl_translation
     }
 }
 
