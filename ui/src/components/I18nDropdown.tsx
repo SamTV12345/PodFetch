@@ -7,7 +7,8 @@ const languageOptions = [
     { value: 'de-DE', label: 'Deutsch' },
     { value: 'en', label: 'English' },
     { value: 'fr', label: 'Français' },
-    { value: 'pl', label: 'Polski' }
+    { value: 'pl', label: 'Polski' },
+    { value: 'es', label: 'Español' }
 ]
 
 export const Dropdown = ()=>{
