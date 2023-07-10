@@ -3,7 +3,7 @@
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use log::error;
-use reqwest::Error;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]

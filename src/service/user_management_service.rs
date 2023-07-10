@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use std::sync::MutexGuard;
-use actix_web::http::StatusCode;
+
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;

@@ -27,7 +27,7 @@ use crate::config::dbconfig::establish_connection;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
-use crate::utils::error::{CustomError, map_io_error, map_reqwest_error};
+use crate::utils::error::{CustomError, map_reqwest_error};
 
 #[derive(Clone)]
 pub struct PodcastService {

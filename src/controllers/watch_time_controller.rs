@@ -1,6 +1,6 @@
 use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpResponse};
 use std::sync::{Mutex};
 use crate::config::dbconfig::establish_connection;
 use crate::DbPool;

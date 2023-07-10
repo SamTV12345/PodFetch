@@ -1,5 +1,5 @@
 use std::sync::MutexGuard;
-use actix_web::HttpResponse;
+
 use crate::dbconfig::schema::*;
 
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};

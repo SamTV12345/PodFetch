@@ -1,5 +1,5 @@
 use std::sync::{Mutex};
-use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web::web::Data;
 use sha256::digest;
 use crate::{DbPool};
