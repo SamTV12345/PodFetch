@@ -5,6 +5,7 @@ import de_translation from './json/de.json'
 import en_translation from './json/en.json'
 import fr_translation from './json/fr.json'
 import pl_translation from './json/pl.json'
+import es_translation from './json/es.json'
 
 const resources = {
     de: {
@@ -18,6 +19,9 @@ const resources = {
     },
     pl:{
         translation: pl_translation
+    },
+    es:{
+        translation: es_translation
     }
 }
 
