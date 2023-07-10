@@ -20,7 +20,8 @@ impl SettingsService{
         Ok(Setting::get_settings(conn)?)
     }
 
-    pub fn update_settings(&mut self, settings: Setting, conn: &mut DbConnection) -> Setting{
+    pub fn update_settings(&mut self, settings: Setting, conn: &mut DbConnection) ->
+                                                                                  Result<Setting, CustomError> {
         Setting::update_settings(settings, conn)
     }
 
@@ -35,7 +36,7 @@ impl SettingsService{
         settings_.replacement_strategy = update_model.replacement_strategy.to_string();
         settings_.episode_format = update_model.episode_format;
         settings_.podcast_format = update_model.podcast_format;
-        Ok(self.update_settings(settings_, conn))
+        Ok(self.update_settings(settings_, conn)?)
     }
 
 

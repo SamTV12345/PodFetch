@@ -19,11 +19,8 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
+use crate::utils::error::CustomError;
 
-
-fn print_err_to_cmd(err: &Error) {
-    println!("Error: {:?}", err);
-}
 
 pub fn start_command_line(mut args: Args){
     println!("Starting from command line");
@@ -101,7 +98,7 @@ pub fn start_command_line(mut args: Args){
             println!("User management");
             match args.nth(0).unwrap().as_str() {
                 "add"=> {
-                    let mut user = read_user_account();
+                    let mut user = read_user_account().unwrap();
 
 
                     println!("Should a user with the following settings be applied {:?}",user);
@@ -168,14 +165,10 @@ pub fn start_command_line(mut args: Args){
                                &mut username);
                     username = trim_string(username);
                     println!(">{}<", username);
-                    match User::find_by_username(username.as_str(), &mut establish_connection()){
-                        Some(user)=>{
-                            do_user_update(user)
-                        },
-                        None=>{
-                            println!("Username not found")
-                        }
-                    }
+                    let user = User::find_by_username(username.as_str(), &mut
+                        establish_connection()).unwrap();
+
+                    do_user_update(user)
 
                 }
                 "list"=> {
@@ -216,7 +209,7 @@ fn list_users() -> Vec<UserWithoutPassword> {
 }
 
 
-pub fn read_user_account()->User{
+pub fn read_user_account()->Result<User, CustomError>{
     let mut username = String::new();
     let password;
 
@@ -225,11 +218,12 @@ pub fn read_user_account()->User{
     }).join(", ");
     retry_read("Enter your username: ", &mut username);
 
-    let user_exists = User::find_by_username(&username, &mut establish_connection()).is_some();
-    if user_exists{
-        println!("User already exists");
-        exit(1);
+    let user = User::find_by_username(&username, &mut establish_connection());
+
+    if user.is_err() {
+        println!("User does not exist");
     }
+
     password = retry_read_secret("Enter your password: ");
     let assigned_role = retry_read_role(&format!("Select your role {}",&role));
 
@@ -242,7 +236,7 @@ pub fn read_user_account()->User{
         created_at: get_current_timestamp_str(),
     };
 
-    user
+    Ok(user)
 }
 
 pub fn retry_read(prompt: &str, input: &mut String){

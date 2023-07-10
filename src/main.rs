@@ -97,7 +97,7 @@ pub fn run_poll(
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
-            podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast);
+            podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast)?;
             podcast_service.schedule_episode_download(podcast_clone, None, &mut
                 establish_connection())?;
         }
@@ -167,7 +167,7 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    insert_default_settings_if_not_present();
+    insert_default_settings_if_not_present().expect("Could not insert default settings");
 
     thread::spawn(|| {
         let mut scheduler = Scheduler::new();
@@ -379,7 +379,7 @@ pub fn insert_default_settings_if_not_present() ->Result<(),CustomError> {
         }
         None => {
             info!("No settings found, inserting default settings");
-            Setting::insert_default_settings(conn);
+            Setting::insert_default_settings(conn)?;
             Ok(())
         }
     }

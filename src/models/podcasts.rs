@@ -1,4 +1,5 @@
 use std::sync::MutexGuard;
+use actix_web::HttpResponse;
 use crate::dbconfig::schema::*;
 
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
@@ -208,34 +209,30 @@ impl Podcast{
             .map_err(map_db_error)?)
     }
 
-    pub fn update_podcast_active(conn: &mut DbConnection, podcast_id: i32) {
+    pub fn update_podcast_active(conn: &mut DbConnection, podcast_id: i32) ->Result<(),CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
-        let found_podcast = Podcast::get_podcast( conn, podcast_id);
+        let found_podcast = Podcast::get_podcast( conn, podcast_id)?;
 
-        match found_podcast {
-            Ok(found_podcast) => {
-                do_retry(||{diesel::update(podcasts.filter(id.eq(podcast_id)))
+
+        diesel::update(podcasts.filter(id.eq(podcast_id)))
                     .set(active.eq(!found_podcast.active))
-                    .execute(conn)})
-                    .expect("Error updating podcast episode");
-            }
-            Err(e) => {
-                panic!("Error updating podcast active: {}", e);
-            }
-        }
+                    .execute(conn)
+                    .map_err(map_db_error)?;
+        return Ok(())
     }
 
     pub fn update_original_image_url(
         original_image_url_to_set: &str,
         podcast_id_to_find: i32,
         conn: &mut DbConnection
-    ) {
+    ) ->Result<(), CustomError>{
         use crate::dbconfig::schema::podcasts::dsl::*;
         do_retry(||{ diesel::update(podcasts.filter(id.eq(podcast_id_to_find)))
             .set(original_image_url.eq(original_image_url_to_set))
             .execute(conn)})
-            .expect("Error updating podcast episode");
+            .map_err(map_db_error)?;
+        Ok(())
     }
 
     pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: String, conn: &mut DbConnection) {

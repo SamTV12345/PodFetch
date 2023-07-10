@@ -10,12 +10,12 @@ use crate::service::environment_service::EnvironmentService;
 use awc::cookie::{Cookie, SameSite};
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
+use crate::utils::error::CustomError;
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool>,
                    env_service: Data<Mutex<EnvironmentService>>)
-    ->impl
-Responder {
+    -> Result<HttpResponse, CustomError> {
     let env = env_service.lock().ignore_poison();
     let conn = &mut conn.get().unwrap();
     match rq.clone().cookie("sessionid") {
@@ -24,7 +24,7 @@ Responder {
             let opt_session = Session::find_by_session_id(session, conn);
                 if opt_session.is_ok(){
                     let user_cookie = create_session_cookie(opt_session.unwrap());
-                    return HttpResponse::Ok().cookie(user_cookie).finish();
+                    return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
                 }
         }
         None=>{}
@@ -34,27 +34,21 @@ Responder {
     let unwrapped_username = username.into_inner();
     let (username_basic, password) = AuthFilter::basic_auth_login(authorization.to_string());
     if username_basic != unwrapped_username {
-        return HttpResponse::Unauthorized().finish();
+        return Err(CustomError::Forbidden)
     }
     if unwrapped_username == env.username && password == env.password {
-        return HttpResponse::Ok().finish();
+        return Ok(HttpResponse::Ok().finish());
     } else {
-        match User::find_by_username(&unwrapped_username, conn) {
-            Some(user) => {
-                if user.clone().password.unwrap()== digest(password) {
+        let user =  User::find_by_username(&unwrapped_username, conn)?;
+        if user.clone().password.unwrap()== digest(password) {
                     let session = Session::new(user.username);
                     Session::insert_session(&session, conn).expect("Error inserting session");
                     let user_cookie = create_session_cookie(session);
-                    HttpResponse::Ok().cookie(user_cookie).finish()
-                } else {
-                    HttpResponse::Unauthorized().finish()
-                }
-            }
-            None => {
-                return  HttpResponse::Unauthorized().finish()
-            }
+                    Ok(HttpResponse::Ok().cookie(user_cookie).finish())
+        } else {
+                    return  Err(CustomError::Forbidden)
+         }
         }
-    }
 }
 
 fn create_session_cookie(session: Session) -> Cookie<'static> {

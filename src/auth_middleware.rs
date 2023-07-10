@@ -103,8 +103,9 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
             Ok(auth) => {
                 let (username, password) = AuthFilter::extract_basic_auth(auth);
                 let res = req.app_data::<web::Data<DbPool>>().unwrap();
-                let found_user = User::find_by_username(username.as_str(), &mut *res.get().unwrap());
-                if found_user.is_none() {
+                let found_user = User::find_by_username(username.as_str(), &mut *res.get().unwrap
+                ());
+                if found_user.is_err() {
                     return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized"))
                         .map_into_right_body()))
                 }
@@ -209,7 +210,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                 let service = Rc::clone(&self.service);
 
                 match found_user {
-                    Some(user) => {
+                    Ok(user) => {
                         req.extensions_mut().insert(user);
                         async move {
                             service
@@ -219,7 +220,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                         }
                             .boxed_local()
                     },
-                    None => {
+                    Err(_) => {
                         // User is authenticated so we can onboard him if he is new
                         let user = User::insert_user(&mut User {
                             id: 0,

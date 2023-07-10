@@ -3,12 +3,13 @@ use actix_web::{HttpRequest, HttpResponse, post, get, put, Responder, web, delet
 use actix_web::web::Data;
 use crate::constants::constants::{Role, USERNAME};
 use crate::DbPool;
-use crate::exception::exceptions::PodFetchErrorTrait;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::user_management_service::UserManagementService;
 use utoipa::ToSchema;
+use crate::utils::error::CustomError;
+
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserOnboardingModel{
@@ -39,18 +40,16 @@ responses(
 tag="info"
 )]
 #[post("/users/")]
-pub async fn onboard_user(user_onboarding: web::Json<UserOnboardingModel>, conn: Data<DbPool>)->impl Responder{
+pub async fn onboard_user(user_onboarding: web::Json<UserOnboardingModel>, conn: Data<DbPool>)->
+                                                                                              Result<HttpResponse, CustomError>{
     let user_to_onboard = user_onboarding.into_inner();
 
     let res = UserManagementService::onboard_user(user_to_onboard.username, user_to_onboard
         .password,
-                                                  user_to_onboard.invite_id, &mut *conn.get().unwrap());
+                                                  user_to_onboard.invite_id, &mut *conn.get()
+            .unwrap())?;
 
-    return match res {
-        Ok(user) => HttpResponse::Ok().json(User::map_to_dto(user)),
-        Err(e) => HttpResponse::BadRequest()
-            .body(e.name().clone())
-    };
+        Ok(HttpResponse::Ok().json(User::map_to_dto(res)))
 }
 
 #[utoipa::path(
@@ -60,16 +59,13 @@ responses(
 tag="info"
 )]
 #[get("")]
-pub async fn get_users(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder{
+pub async fn get_users(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->
+                                                                                 Result<HttpResponse, CustomError>{
 
-    let res = UserManagementService::get_users(requester.unwrap().into_inner(),&mut *conn.get().unwrap());
+    let res = UserManagementService::get_users(requester.unwrap().into_inner(),&mut *conn.get()
+        .unwrap())?;
 
-    if res.is_err() {
-        return HttpResponse::Forbidden()
-            .body(res.err().unwrap().name().clone())
-    }
-
-    HttpResponse::Ok().json(res.unwrap())
+    Ok(HttpResponse::Ok().json(res))
 }
 
 #[utoipa::path(
@@ -79,14 +75,11 @@ responses(
 tag="info"
 )]
 #[get("/users/{username}")]
-pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)->impl Responder{
+pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)-> Result<HttpResponse, CustomError>{
     let username = get_user_from_request(req);
-    let user = User::find_by_username(&username, &mut *conn.get().unwrap());
-    return match user {
-        Some(user) => HttpResponse::Ok().json(User::map_to_dto(user)),
-        None => HttpResponse::NotFound()
-            .body("User not found")
-    };
+    let user = User::find_by_username(&username, &mut *conn.get().unwrap())?;
+    Ok(HttpResponse::Ok().json(User::map_to_dto(user)))
+
 }
 
 #[utoipa::path(
@@ -99,34 +92,20 @@ tag="info"
 #[put("/{username}/role")]
 pub async fn update_role(role: web::Json<UserRoleUpdateModel>, conn: Data<DbPool>, username:
 web::Path<String>, requester: Option<web::ReqData<User>>)
-    ->impl Responder{
+    -> Result<HttpResponse, CustomError>{
 
     if !requester.unwrap().is_admin(){
-        return HttpResponse::Forbidden()
-            .body("You are not authorized to perform this action")
+        return Err(CustomError::Forbidden)
     }
-    let user_to_update = User::find_by_username(&username, &mut *conn.get().unwrap());
-
-    if user_to_update.is_none() {
-        return HttpResponse::NotFound()
-            .body("User not found")
-    }
+    let mut user_to_update = User::find_by_username(&username, &mut *conn.get().unwrap())?;
 
     // Update to his/her designated role
-    let mut found_user = user_to_update.unwrap();
-    found_user.role = role.role.to_string();
-    found_user.explicit_consent = role.explicit_consent;
+    user_to_update.role = role.role.to_string();
+    user_to_update.explicit_consent = role.explicit_consent;
 
-    let res = UserManagementService::update_user(found_user, &mut *conn.get()
-        .unwrap());
+    let res = UserManagementService::update_user(user_to_update, &mut *conn.get().unwrap())?;
 
-    match res {
-        Ok(_) =>{
-            HttpResponse::Ok().into()
-        },
-        Err(e) => HttpResponse::BadRequest()
-            .body(e.name().clone())
-    }
+    Ok(HttpResponse::Ok().json(res))
 }
 
 #[utoipa::path(

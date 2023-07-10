@@ -8,6 +8,7 @@ use diesel::ExpressionMethods;
 use uuid::Uuid;
 use crate::constants::constants::Role;
 use crate::DbConnection;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -56,11 +57,12 @@ impl Invite{
         Ok(created_invite)
     }
 
-    pub fn find_invite(id: String, conn: &mut DbConnection) -> Result<Option<Invite>, diesel::result::Error> {
+    pub fn find_invite(id: String, conn: &mut DbConnection) -> Result<Option<Invite>, CustomError> {
         invites::table
             .filter(invites::id.eq(id))
             .first::<Invite>(conn)
             .optional()
+            .map_err(map_db_error)
     }
 
     pub fn find_all_invites(conn: &mut DbConnection) -> Result<Vec<Invite>, diesel::result::Error> {
@@ -79,11 +81,12 @@ impl Invite{
         Ok(())
     }
 
-    pub fn delete_invite(invite_id: String, conn: &mut DbConnection) -> Result<(), diesel::result::Error> {
+    pub fn delete_invite(invite_id: String, conn: &mut DbConnection) -> Result<(), CustomError> {
         use crate::dbconfig::schema::invites::dsl::*;
 
         diesel::delete(invites.filter(id.eq(invite_id)))
-            .execute(conn)?;
+            .execute(conn)
+            .map_err(map_db_error)?;
 
         Ok(())
     }

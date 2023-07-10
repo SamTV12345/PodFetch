@@ -43,7 +43,8 @@ impl PodcastHistoryItem{
         Ok(())
     }
 
-    pub fn log_watchtime(conn: &mut DbConnection, watch_model: PodcastWatchedPostModel, designated_username: String) -> Result<(), String> {
+    pub fn log_watchtime(conn: &mut DbConnection, watch_model: PodcastWatchedPostModel,
+                         designated_username: String) -> Result<(), CustomError> {
         let result = PodcastEpisode::get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)
             .unwrap();
 
@@ -61,7 +62,7 @@ impl PodcastHistoryItem{
                         username.eq(designated_username),
                     ))
                     .execute(conn)
-                    .expect("Error inserting podcast episode");
+                    .map_err(map_db_error)?;
                 Ok(())
             }
             None => {

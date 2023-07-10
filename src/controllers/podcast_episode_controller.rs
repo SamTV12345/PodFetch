@@ -2,7 +2,7 @@ use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
 use actix_web::{get, put};
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;

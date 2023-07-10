@@ -226,12 +226,13 @@ impl PodcastService {
     DbConnection) ->Result<(),CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
         self.podcast_episode_service
-            .insert_podcast_episodes(conn, podcast.clone());
+            .insert_podcast_episodes(conn, podcast.clone())?;
         self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn)
     }
 
-    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, conn: &mut DbConnection) {
-        Favorite::update_podcast_favor(&id, x, conn,username).unwrap();
+    pub fn update_favor_podcast(&mut self, id: i32, x: bool, username: String, conn: &mut
+    DbConnection) -> Result<(),CustomError> {
+        Favorite::update_podcast_favor(&id, x, conn,username)
     }
 
     pub fn get_podcast_by_id(&mut self,conn: &mut DbConnection, id: i32) -> Podcast {
@@ -241,12 +242,12 @@ impl PodcastService {
     pub fn get_favored_podcasts(&mut self, found_username: String,
                                 mapping_service:MappingService, conn: &mut
         DbConnection) ->
-                                Vec<PodcastDto> {
-        Favorite::get_favored_podcasts(found_username,conn,mapping_service).unwrap()
+                                Result<Vec<PodcastDto>, CustomError> {
+        Favorite::get_favored_podcasts(found_username,conn,mapping_service)
     }
 
-    pub fn update_active_podcast(conn: &mut DbConnection, id: i32) {
-        Podcast::update_podcast_active(conn, id);
+    pub fn update_active_podcast(conn: &mut DbConnection, id: i32) -> Result<(),CustomError> {
+        Podcast::update_podcast_active(conn, id)
     }
 
     fn compute_podindex_header(&mut self) -> HeaderMap {

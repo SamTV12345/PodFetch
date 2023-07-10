@@ -179,12 +179,12 @@ impl PodcastEpisodeService {
             match channel.image() {
                 Some(image) => {
                    Podcast::update_original_image_url(&image.url.to_string(), podcast.id,
-                    conn);
+                    conn)?;
                 }
                 None => {
                     let env = EnvironmentService::new();
                     let url = env.server_url.clone().to_owned() + &"ui/default.jpg".to_string();
-                    Podcast::update_original_image_url(&url, podcast.id,conn);
+                    Podcast::update_original_image_url(&url, podcast.id,conn)?;
                 }
             }
 

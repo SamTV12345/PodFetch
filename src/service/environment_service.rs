@@ -91,23 +91,25 @@ impl EnvironmentService {
     }
 
     pub fn get_environment(&self) {
+        println!("\n");
         log::info!("Starting with the following environment variables:");
         for (key, value) in env::vars() {
             log::debug!("{}: {}", key, value);
         }
-        println!("Public server url: {}", self.server_url);
-        println!(
+        log::info!("Public server url: {}", self.server_url);
+        log::info!(
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
-        println!("Developer specifications available at {}",self.server_url.clone()+"swagger-ui/index\
+        log::info!("Developer specifications available at {}",self.server_url.clone()+"swagger-ui/index\
         .html#/");
-        println!("GPodder integration enabled: {}", self.gpodder_integration_enabled);
-        println!("Database url is set to: {}", var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
-        println!(
+        log::info!("GPodder integration enabled: {}", self.gpodder_integration_enabled);
+        log::info!("Database url is set to: {}", var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
+        log::info!(
             "Podindex API key&secret configured: {}",
             self.podindex_api_key.len() > 0 && self.podindex_api_secret.len() > 0
         );
+        println!("\n");
     }
 
     pub fn get_config(&mut self) -> ConfigModel {

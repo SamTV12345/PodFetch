@@ -19,17 +19,14 @@ tag="watchtime"
 )]
 #[post("/podcast/episode")]
 pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>, conn: Data<DbPool>,
-                           requester: Option<web::ReqData<User>>) ->
-                                                                                             impl
-Responder {
+                           requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
 
 
     let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
     PodcastHistoryItem::log_watchtime(&mut conn.get().unwrap(),podcast_watch.0, requester.unwrap().username
-        .clone())
-        .expect("Error logging watchtime");
+        .clone())?;
     log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
-    HttpResponse::Ok()
+    Ok(HttpResponse::Ok().body("Watchtime logged."))
 }
 
 #[utoipa::path(
@@ -81,9 +78,10 @@ responses(
 tag="watchtime"
 )]
 #[get("/podcast/episode/{id}")]
-pub async fn get_watchtime(id: web::Path<String>, conn: Data<DbPool>, requester: Option<web::ReqData<User>>) -> impl Responder {
+pub async fn get_watchtime(id: web::Path<String>, conn: Data<DbPool>, requester:
+Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
     let designated_username = requester.unwrap().username.clone();
-    let watchtime = PodcastHistoryItem::get_watchtime(&mut conn.get().unwrap(),&id, designated_username)
-        .unwrap();
-    HttpResponse::Ok().json(watchtime)
+    let watchtime = PodcastHistoryItem::get_watchtime(&mut conn.get().unwrap(),&id,
+                                                      designated_username)?;
+    Ok(HttpResponse::Ok().json(watchtime))
 }

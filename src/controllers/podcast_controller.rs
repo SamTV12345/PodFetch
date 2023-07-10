@@ -434,7 +434,7 @@ Data<Mutex<PodcastService>>, conn: Data<DbPool>, requester: Option<web::ReqData<
         podcast_service.lock()
             .ignore_poison()
             .refresh_podcast(podcast.clone(), lobby.clone(), &mut conn.get()
-            .unwrap());
+                .unwrap()).unwrap();
         lobby.clone().do_send(BroadcastMessage {
             podcast_episode: None,
             type_of: PodcastType::RefreshPodcast,
@@ -489,14 +489,15 @@ pub async fn favorite_podcast(
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
     conn: Data<DbPool>
-) -> impl Responder {
+) -> Result<HttpResponse, CustomError> {
 
     let mut podcast_service = podcast_service_mutex.lock()
         .ignore_poison();
 
     podcast_service.update_favor_podcast(update_model.id, update_model.favored,
-                                         requester.unwrap().username.clone(), &mut conn.get().unwrap());
-    HttpResponse::Ok().json("Favorited podcast")
+                                         requester.unwrap().username.clone(), &mut conn.get()
+            .unwrap())?;
+    Ok(HttpResponse::Ok().json("Favorited podcast"))
 }
 
 #[utoipa::path(
@@ -510,12 +511,12 @@ pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,requester: Option<web::ReqData<User>>,
     mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>
-) -> impl Responder {
+) -> Result<HttpResponse, CustomError> {
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
     let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone(),
                                                         mapping_service.lock().ignore_poison()
-                                                            .clone(), &mut conn.get().unwrap());
-    HttpResponse::Ok().json(podcasts)
+                                                            .clone(), &mut conn.get().unwrap())?;
+    Ok(HttpResponse::Ok().json(podcasts))
 }
 
 #[utoipa::path(
@@ -530,14 +531,14 @@ pub async fn update_active_podcast(
     id: Path<String>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>
-) -> impl Responder {
+) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user(){
-        return HttpResponse::Unauthorized().json("Unauthorized");
+        return Err(CustomError::Forbidden);
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
-    PodcastService::update_active_podcast(&mut conn.get().unwrap(), id_num);
-    HttpResponse::Ok().json("Updated active podcast")
+    PodcastService::update_active_podcast(&mut conn.get().unwrap(), id_num)?;
+    Ok(HttpResponse::Ok().json("Updated active podcast"))
 }
 
 #[async_recursion(?Send)]

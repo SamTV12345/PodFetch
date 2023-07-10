@@ -3,7 +3,7 @@ use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Path};
 use actix_web::{get, put};
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse};
 use std::sync::{Mutex, MutexGuard};
 use chrono::Local;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
@@ -41,14 +41,15 @@ tag="settings"
 )]
 #[put("/settings")]
 pub async fn update_settings(settings_service: Data<Mutex<SettingsService>>, settings:
-web::Json<Setting>, requester: Option<web::ReqData<User>>,conn:Data<DbPool>) -> impl Responder {
+web::Json<Setting>, requester: Option<web::ReqData<User>>,conn:Data<DbPool>) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
-        return HttpResponse::Unauthorized().finish();
+        return Err(CustomError::Forbidden);
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
-    let settings = settings_service.update_settings(settings.into_inner(),&mut conn.get().unwrap());
-    HttpResponse::Ok().json(settings)
+    let settings = settings_service.update_settings(settings.into_inner(),&mut conn.get().unwrap
+    ())?;
+    Ok(HttpResponse::Ok().json(settings))
 }
 
 #[utoipa::path(
@@ -97,9 +98,8 @@ responses(
 tag="podcasts"
 )]
 #[get("/settings/opml/{type_of}")]
-pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service: Data<Mutex<EnvironmentService>>) ->
-                                                                                             impl
-Responder {
+pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service:
+Data<Mutex<EnvironmentService>>) -> Result<HttpResponse, CustomError>{
     let env_service = env_service.lock().ignore_poison();
     let podcasts_found = Podcast::get_all_podcasts(&mut conn.get().unwrap()).unwrap();
 
@@ -109,15 +109,17 @@ Responder {
     let mut opml = XMLElement::new("opml");
     opml.add_attribute("version", "2.0");
     opml.add_child(add_header()).expect("TODO: panic message");
-    opml.add_child(add_podcasts(podcasts_found, env_service,type_of.into_inner() )).expect("TODO: panic \
-    message");
+    opml.add_child(add_podcasts(podcasts_found, env_service, type_of.into_inner())).map_err(|e|{
+        log::error!("Error adding podcasts to opml: {}", e);
+        CustomError::Unknown
+    })?;
 
     xml.set_root_element(opml);
 
 
     let mut writer: Vec<u8> = Vec::new();
     xml.generate(&mut writer).unwrap();
-    HttpResponse::Ok().body(writer)
+    Ok(HttpResponse::Ok().body(writer))
 }
 
 

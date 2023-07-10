@@ -50,18 +50,19 @@ impl Setting{
             .map_err(map_db_error)
     }
 
-    pub fn update_settings(setting: Setting, conn:&mut DbConnection) -> Setting {
+    pub fn update_settings(setting: Setting, conn:&mut DbConnection) -> Result<Setting,
+        CustomError> {
         use crate::dbconfig::schema::settings::dsl::*;
         let setting_to_update = settings
             .first::<Setting>(conn)
             .expect("Error loading settings");
-        do_retry(||{diesel::update(&setting_to_update)
+       do_retry(||{diesel::update(&setting_to_update)
             .set(setting.clone())
             .get_result::<Setting>(conn)})
-            .expect("Error updating settings")
+            .map_err(map_db_error)
     }
 
-    pub fn insert_default_settings(conn: &mut DbConnection) {
+    pub fn insert_default_settings(conn: &mut DbConnection) ->Result<(), CustomError>{
         use crate::dbconfig::schema::settings::dsl::*;
         use diesel::ExpressionMethods;
         do_retry(||{insert_into(settings)
@@ -73,6 +74,7 @@ impl Setting{
                 podcast_prefill.eq(DEFAULT_SETTINGS.podcast_prefill))
             )
             .execute(conn)})
-            .expect("Error setting default values");
+            .map_err(map_db_error)?;
+        Ok(())
     }
 }
