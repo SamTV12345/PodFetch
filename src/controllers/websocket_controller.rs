@@ -13,12 +13,13 @@ use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, 
 use std::sync::{Mutex};
 use crate::DbPool;
 use crate::mutex::LockResultExt;
+use crate::utils::error::CustomError;
 
 #[utoipa::path(
-context_path="/api/v1",
+context_path = "/api/v1",
 responses(
 (status = 200, description = "Gets a web socket connection"))
-,tag="info")]
+, tag = "info")]
 #[get("/ws")]
 pub async fn start_connection(
     req: HttpRequest,
@@ -31,21 +32,22 @@ pub async fn start_connection(
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+context_path = "/api/v1",
 responses(
 (status = 200, description = "Gets the complete rss feed"))
-,tag="info")]
+, tag = "info")]
 #[get("/rss")]
 pub async fn get_rss_feed(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
-    db: Data<DbPool>, env: Data<Mutex<EnvironmentService>>
-) -> HttpResponse {
+    db: Data<DbPool>, env: Data<Mutex<EnvironmentService>>,
+) -> Result<HttpResponse, CustomError> {
     let env = env.lock().ignore_poison();
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes(&mut db.get()
-        .unwrap(), env.clone());
+    let downloaded_episodes = podcast_service
+        .find_all_downloaded_podcast_episodes(&mut db.get()
+            .unwrap(), env.clone())?;
 
     let server_url = env.get_server_url();
 
@@ -70,127 +72,111 @@ pub async fn get_rss_feed(
         .description("Your local rss feed for your podcasts")
         .items(items.clone()).clone();
 
-    let channel = generate_itunes_extension_conditionally(itunes_ext, items, channel_builder,
+    let channel = generate_itunes_extension_conditionally(itunes_ext, channel_builder,
                                                           None, env.clone());
 
-    HttpResponse::Ok().body(channel.to_string())
+    Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
-fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtension, items: Vec<Item>,
+fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtension,
                                            mut channel_builder: ChannelBuilder,
                                            podcast: Option<Podcast>,
-                                           env: EnvironmentService) ->Channel{
-    return if items.len() == 0 {
-        if podcast.is_some() {
-            let unwrapped_podcast = podcast.unwrap();
-            match unwrapped_podcast.image_url.len() > 0{
-                true => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.image_url),
-                false => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.original_image_url)
+                                           env: EnvironmentService) -> Channel {
+    match podcast {
+        Some(e) => {
+            match e.image_url.len() > 0 {
+                true => itunes_ext.set_image(env.server_url + &*e.image_url),
+                false => itunes_ext.set_image(env.server_url + &*e.original_image_url)
             }
         }
-
-
-        channel_builder
-            .build()
-    } else {
-
-        if podcast.is_some() {
-            let unwrapped_podcast = podcast.unwrap();
-
-            match unwrapped_podcast.image_url.len() > 0{
-                true => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.image_url),
-                false => itunes_ext.set_image(env.server_url+ &*unwrapped_podcast.original_image_url)
-            }
-        }
-        channel_builder
-            .itunes_ext(itunes_ext)
-            .build()
+        _ => {}
     }
+    channel_builder
+        .itunes_ext(itunes_ext)
+        .build()
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+context_path = "/api/v1",
 responses(
 (status = 200, description = "Gets a specific rss feed"))
-,tag="info")]
+, tag = "info")]
 #[get("/rss/{id}")]
 pub async fn get_rss_feed_for_podcast(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
     id: web::Path<i32>,
     conn: Data<DbPool>,
-) -> HttpResponse {
+) -> Result<HttpResponse, CustomError> {
     let env = EnvironmentService::new();
     let server_url = env.server_url.clone();
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let res = Podcast::get_podcast(&mut conn.get().unwrap(),id.clone());
+    let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), id.clone())?;
 
-    match res {
-        Ok(podcast) => {
-            let downloaded_episodes =
-                podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(id.clone(),
-                                                                                   &mut conn.get().unwrap());
+    let downloaded_episodes =
+        podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(id.clone(),
+                                                                           &mut conn.get
+                                                                           ().unwrap())?;
 
-            let mut itunes_owner = get_itunes_owner("", "");
+    let mut itunes_owner = get_itunes_owner("", "");
 
-            if podcast.author.is_some() {
-                itunes_owner =
-                    get_itunes_owner(&podcast.clone().author.unwrap(), "local@local.com");
-            }
-
-            let mut categories: Vec<Category> = vec![];
-            if podcast.keywords.is_some() {
-                let keywords = podcast.clone().keywords.unwrap();
-                let keywords: Vec<String> = keywords.split(",").map(|s| s.to_string()).collect();
-                categories = keywords
-                    .iter()
-                    .map(|keyword| CategoryBuilder::default().name(keyword).build())
-                    .collect();
-            }
-
-            let itunes_ext = ITunesChannelExtensionBuilder::default()
-                .owner(Some(itunes_owner))
-                .categories(get_categories(
-                    podcast
-                        .clone()
-                        .keywords
-                        .unwrap()
-                        .split(",")
-                        .map(|s| s.to_string())
-                        .collect(),
-                ))
-                .explicit(podcast.clone().explicit)
-                .author(podcast.clone().author)
-                .keywords(podcast.clone().keywords)
-                .new_feed_url(format!("{}{}/{}", &server_url, &"rss", &id))
-                .summary(podcast.summary.clone())
-                .build();
-
-            let items = get_podcast_items_rss(downloaded_episodes.clone());
-            let channel_builder = ChannelBuilder::default()
-                .language(podcast.clone().language)
-                .categories(categories)
-                .title(podcast.name.clone())
-                .link(format!("{}{}/{}", &server_url, &"rss", &id))
-                .description(podcast.clone().summary.unwrap())
-                .items(items.clone()).clone();
-
-            let channel = generate_itunes_extension_conditionally(itunes_ext, items,
-                                                                  channel_builder, Some(podcast
-                    .clone()), env
-            );
-
-            HttpResponse::Ok().body(channel.to_string())
-        }
-        Err(..) => {
-            return HttpResponse::NotFound().finish();
-        }
+    match podcast.author.clone() {
+        Some(author) =>
+            itunes_owner =
+                get_itunes_owner(&author, "local@local.com"),
+        _ => {}
     }
+
+    let mut categories: Vec<Category> = vec![];
+    match podcast.keywords.clone() {
+        Some(keyword) => {
+            let keywords: Vec<String> = keyword.split(",").map(|s| s.to_string()).collect();
+            categories = keywords
+                .iter()
+                .map(|keyword| CategoryBuilder::default().name(keyword).build())
+                .collect();
+        }
+        _ => {}
+    }
+
+    let itunes_ext = ITunesChannelExtensionBuilder::default()
+        .owner(Some(itunes_owner))
+        .categories(get_categories(
+            podcast
+                .clone()
+                .keywords
+                .clone()
+                .unwrap()
+                .split(",")
+                .map(|s| s.to_string())
+                .collect(),
+        ))
+        .explicit(podcast.clone().explicit)
+        .author(podcast.clone().author)
+        .keywords(podcast.clone().keywords)
+        .new_feed_url(format!("{}{}/{}", &server_url, &"rss", &id))
+        .summary(podcast.summary.clone())
+        .build();
+
+    let items = get_podcast_items_rss(downloaded_episodes.clone());
+    let channel_builder = ChannelBuilder::default()
+        .language(podcast.clone().language)
+        .categories(categories)
+        .title(podcast.name.clone())
+        .link(format!("{}{}/{}", &server_url, &"rss", &id))
+        .description(podcast.clone().summary.unwrap())
+        .items(items.clone()).clone();
+
+    let channel = generate_itunes_extension_conditionally(itunes_ext,
+                                                          channel_builder, Some(podcast
+            .clone()), env,
+    );
+
+    Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
 fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> {
-
     downloaded_episodes
         .iter()
         .map(|episode| {
@@ -198,8 +184,7 @@ fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> 
                 .url(&episode.clone().local_url)
                 .length(episode.clone().total_time.to_string())
                 .mime_type(format!(
-                    "{}/{}",
-                    "audio",
+                    "audio/{}",
                     &*PodcastEpisodeService::get_url_file_suffix(&episode.clone().local_url)
                 ))
                 .build();
@@ -232,6 +217,7 @@ fn get_categories(categories: Vec<String>) -> Vec<ITunesCategory> {
         .map(|category| get_category(category.to_string()))
         .collect::<Vec<ITunesCategory>>()
 }
+
 fn get_category(category: String) -> ITunesCategory {
     ITunesCategoryBuilder::default().text(category).build()
 }

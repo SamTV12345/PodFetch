@@ -49,7 +49,7 @@ impl PodcastEpisodeService {
         conn: &mut DbConnection,
     ) ->Result<(), CustomError> {
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings(conn).unwrap();
+        let settings = settings_service.get_settings(conn)?.unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
         let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
@@ -57,7 +57,7 @@ impl PodcastEpisodeService {
 
 
         let (image_save_path, podcast_save_path) = determine_image_and_local_podcast_audio_url
-            (podcast.clone(), podcast_episode.clone(), &suffix, &image_suffix, settings,conn);
+            (podcast.clone(), podcast_episode.clone(), &suffix, &image_suffix, settings,conn)?;
 
 
         match PodcastEpisode::check_if_downloaded(&podcast_episode.url, conn) {
@@ -129,17 +129,17 @@ impl PodcastEpisodeService {
     }
 
     pub fn get_last_n_podcast_episodes(conn: &mut DbConnection, podcast: Podcast) ->
-                                                                             Vec<PodcastEpisode> {
+                                                                             Result<Vec<PodcastEpisode>, CustomError> {
 
         let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings(conn).unwrap();
-        PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id,
-                                        settings.podcast_prefill).unwrap()
+        let settings = settings_service.get_settings(conn)?.unwrap();
+        Ok(PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id,
+                                        settings.podcast_prefill).unwrap())
     }
 
     // Used for creating/updating podcasts
     pub fn insert_podcast_episodes(&mut self, conn: &mut DbConnection, podcast: Podcast) ->
-                                                                             Vec<PodcastEpisode> {
+                                                                             Result<Vec<PodcastEpisode>, CustomError> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
 
         let returned_data_from_podcast_insert = Self::do_request_to_podcast_server(podcast.clone());
@@ -171,7 +171,7 @@ impl PodcastEpisodeService {
         }
 
 
-        self.update_podcast_fields(channel.clone(), podcast.id.clone(),conn);
+        self.update_podcast_fields(channel.clone(), podcast.id.clone(),conn)?;
 
         let mut podcast_inserted = Vec::new();
 
@@ -280,7 +280,7 @@ impl PodcastEpisodeService {
                 }
             }
         }
-        return podcast_inserted;
+        return Ok(podcast_inserted);
     }
 
 
@@ -346,24 +346,25 @@ impl PodcastEpisodeService {
         return capture.get(1).unwrap().as_str().to_owned();
     }
 
-    pub fn query_for_podcast(&mut self, query: &str, conn:&mut DbConnection) -> Vec<PodcastEpisode> {
+    pub fn query_for_podcast(&mut self, query: &str, conn:&mut DbConnection) -> Result<Vec<PodcastEpisode>, CustomError> {
 
-        let podcasts = Podcast::query_for_podcast(query,conn).unwrap();
+        let podcasts = Podcast::query_for_podcast(query,conn)?;
         let podcast_dto = podcasts
             .iter()
             .map(|podcast| self.mapping_service.map_podcastepisode_to_dto(podcast))
             .collect::<Vec<PodcastEpisode>>();
-        return podcast_dto;
+        return Ok(podcast_dto);
     }
 
     pub fn find_all_downloaded_podcast_episodes(&mut self, conn:&mut DbConnection, env: EnvironmentService) ->
-                                                                                   Vec<PodcastEpisode> {
+                                                                                   Result<Vec<PodcastEpisode>, CustomError> {
         let result = PodcastEpisode::get_episodes(conn);
-        self.map_rss_podcast_episodes(env, result)
+        Ok(self.map_rss_podcast_episodes(env, result)?)
     }
 
-    fn map_rss_podcast_episodes(&mut self, env: EnvironmentService, result: Vec<PodcastEpisode>) -> Vec<PodcastEpisode> {
-        result
+    fn map_rss_podcast_episodes(&mut self, env: EnvironmentService, result: Vec<PodcastEpisode>)
+        -> Result<Vec<PodcastEpisode>, CustomError> {
+        Ok(result
             .iter()
             .map(|podcast| {
                 let mut podcast_episode_dto = self.mapping_service.map_podcastepisode_to_dto(podcast);
@@ -383,7 +384,7 @@ impl PodcastEpisodeService {
                     podcast_episode_dto
                 }
             })
-            .collect::<Vec<PodcastEpisode>>()
+            .collect::<Vec<PodcastEpisode>>())
     }
 
 
@@ -403,13 +404,14 @@ impl PodcastEpisodeService {
         &mut self,
         podcast_id: i32,
         conn:&mut DbConnection
-    ) -> Vec<PodcastEpisode> {
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
         let env = EnvironmentService::new();
         let result = PodcastEpisode::get_episodes_by_podcast_id(podcast_id, conn);
-        self.map_rss_podcast_episodes(env, result)
+        Ok(self.map_rss_podcast_episodes(env, result)?)
     }
 
-    fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32, conn:&mut DbConnection) {
+    fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32, conn:&mut DbConnection)
+        ->Result<(), CustomError> {
         let itunes = feed.clone().itunes_ext;
 
         match itunes {
@@ -422,10 +424,13 @@ impl PodcastEpisodeService {
                     .keywords(itunes.categories)
                     .build();
 
-                Podcast::update_podcast_fields(constructed_extra_fields,conn);
+                Podcast::update_podcast_fields(constructed_extra_fields,conn)?;
             }
-            None => {}
+            None => {
+            }
         }
+        Ok(())
+
     }
 
     pub fn cleanup_old_episodes(&mut self, days: i32, conn: &mut DbConnection) {
@@ -450,13 +455,14 @@ impl PodcastEpisodeService {
 
     pub fn get_podcast_episodes_of_podcast(conn: &mut DbConnection, id_num: i32, last_id:
     Option<String>)
-        -> Result<Vec<PodcastEpisode>, String> {
-        PodcastEpisode::get_podcast_episodes_of_podcast(conn,id_num, last_id)
+        -> Result<Vec<PodcastEpisode>, CustomError> {
+        Ok(PodcastEpisode::get_podcast_episodes_of_podcast(conn,id_num, last_id)?)
     }
 
     pub fn get_podcast_episode_by_id(conn: &mut DbConnection, id_num: &str) ->
-                                                                   Result<Option<PodcastEpisode>, String> {
-        PodcastEpisode::get_podcast_episode_by_id(conn, id_num)
+                                                                   Result<Option<PodcastEpisode>,
+                                                                       CustomError> {
+        Ok(PodcastEpisode::get_podcast_episode_by_id(conn, id_num)?)
     }
 
     fn do_request_to_podcast_server(podcast:Podcast) ->RequestReturnType{
@@ -488,9 +494,6 @@ impl PodcastEpisodeService {
             content
         }
     }
-
-
-
 }
 
 struct RequestReturnType {

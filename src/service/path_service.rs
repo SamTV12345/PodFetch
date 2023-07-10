@@ -13,28 +13,28 @@ pub struct PathService {}
 impl PathService {
     pub fn get_podcast_episode_path(directory: &str, episode: Option<PodcastEpisode>, suffix:
     &str, filename: &str, conn: &mut DbConnection)
-        -> String {
+        -> Result<String, CustomError> {
         return match episode {
             Some(episode) => {
-                format!("{}/{}/podcast.{}", directory,
-                        prepare_podcast_episode_title_to_directory(episode, conn), suffix)
+                Ok(format!("{}/{}/podcast.{}", directory,
+                        prepare_podcast_episode_title_to_directory(episode, conn)?, suffix))
             },
             None => {
-                format!("{}/{}/podcast.{}", directory, filename, suffix)
+                Ok(format!("{}/{}/podcast.{}", directory, filename, suffix))
             }
         }
     }
 
     pub fn get_image_path(directory: &str, episode: Option<PodcastEpisode>, _suffix: &str,
                           filename: &str,
-                          conn: &mut DbConnection) -> String {
+                          conn: &mut DbConnection) -> Result<String, CustomError> {
         return match episode {
             Some(episode) => {
-                format!("{}/{}", directory, prepare_podcast_episode_title_to_directory(episode,
-                                                                                       conn))
+                Ok(format!("{}/{}", directory, prepare_podcast_episode_title_to_directory(episode,
+                                                                                       conn)?))
             },
             None => {
-                format!("{}/{}", directory, filename)
+                Ok(format!("{}/{}", directory, filename))
             }
         }
     }

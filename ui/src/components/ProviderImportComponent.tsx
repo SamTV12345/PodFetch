@@ -78,8 +78,7 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
         {loading?
             <div className="grid place-items-center">
                 <Spinner className="w-12 h-12"/>
-            </div>
-        :searchedPodcasts&&
+            </div> :searchedPodcasts &&
             <ul className="flex flex-col gap-6 max-h-80 pr-3 overflow-y-scroll">
                 {searchedPodcasts.map((podcast, index)=>{
                     return <li key={index} className="flex gap-4 items-center">

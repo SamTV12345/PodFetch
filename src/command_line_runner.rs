@@ -54,7 +54,7 @@ pub fn start_command_line(mut args: Args){
                     let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn).expect("Error getting podcast");
 
                     let mut podcast_episode_service = PodcastEpisodeService::new();
-                    podcast_episode_service.insert_podcast_episodes(conn, podcast.clone());
+                    podcast_episode_service.insert_podcast_episodes(conn, podcast.clone()).unwrap();
                     podcast_service.schedule_episode_download( podcast,None, conn).unwrap();
 
                 }
@@ -66,7 +66,8 @@ pub fn start_command_line(mut args: Args){
                             println!("Refreshing podcast {}", podcast.name);
 
                         let mut podcast_episode_service = PodcastEpisodeService::new();
-                        podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast.clone());
+                        podcast_episode_service.insert_podcast_episodes(&mut establish_connection
+                            (), podcast.clone()).unwrap();
                             podcast_service.schedule_episode_download( podcast,None, conn).unwrap();
                     }
                 }

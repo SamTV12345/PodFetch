@@ -25,10 +25,11 @@ impl FilenameBuilder {
         self
     }
 
-    pub fn with_episode(mut self, podcast_episode: PodcastEpisode,conn: &mut DbConnection) -> FilenameBuilder {
-        self.episode = prepare_podcast_episode_title_to_directory(podcast_episode.clone(), conn);
+    pub fn with_episode(mut self, podcast_episode: PodcastEpisode,conn: &mut DbConnection) ->
+                                                                                           Result<FilenameBuilder, CustomError> {
+        self.episode = prepare_podcast_episode_title_to_directory(podcast_episode.clone(), conn)?;
         self.raw_episode = podcast_episode;
-        self
+        Ok(self)
     }
 
     pub fn with_filename(mut self, filename: &str) -> FilenameBuilder {
@@ -51,16 +52,16 @@ impl FilenameBuilder {
         self
     }
 
-    pub fn with_raw_directory(mut self,conn: &mut DbConnection) -> FilenameBuilder {
+    pub fn with_raw_directory(mut self,conn: &mut DbConnection) -> Result<FilenameBuilder, CustomError> {
         self.directory = PathService::get_image_path(
             &self.podcast.clone().directory_name,
             Some(self.raw_episode.clone()),
             &self.suffix,
             &self.raw_episode.name,
             conn
-        );
+        )?;
         self.raw_filename = true;
-        self
+        Ok(self)
     }
 
     pub fn with_podcast(mut self, podcast: Podcast) -> FilenameBuilder {

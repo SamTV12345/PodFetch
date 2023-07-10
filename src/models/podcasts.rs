@@ -62,7 +62,7 @@ impl Podcast{
     }
 
     pub fn get_podcasts(conn: &mut DbConnection, u: String, mapping_service: MutexGuard<MappingService>)
-                        -> Result<Vec<PodcastDto>, String> {
+                        -> Result<Vec<PodcastDto>, CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::podcast_id as f_id;
@@ -72,7 +72,7 @@ impl Podcast{
             .left_join(f_db.on(username.eq(u)
                 .and(f_id.eq(p_id))))
             .load::<(Podcast, Option<Favorite>)>(conn)
-            .expect("Error loading podcasts");
+            .map_err(map_db_error)?;
 
         let mapped_result = result
             .iter()
@@ -176,7 +176,8 @@ impl Podcast{
         Ok(result)
     }
 
-    pub fn query_for_podcast(query: &str, conn: &mut DbConnection) -> Result<Vec<PodcastEpisode>, String> {
+    pub fn query_for_podcast(query: &str, conn: &mut DbConnection) -> Result<Vec<PodcastEpisode>,
+        CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use diesel::TextExpressionMethods;
         let result = podcast_episodes
@@ -185,14 +186,15 @@ impl Podcast{
                     .or(description.like(format!("%{}%", query))),
             )
             .load::<PodcastEpisode>(conn)
-            .expect("Error loading podcast episode by id");
+            .map_err(map_db_error)?;
         Ok(result)
     }
 
-    pub fn update_podcast_fields(podcast_extra: PodcastExtra,  conn: &mut DbConnection) {
+    pub fn update_podcast_fields(podcast_extra: PodcastExtra,  conn: &mut DbConnection)
+        ->Result<usize, CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
-        do_retry(||{diesel::update(podcasts)
+        Ok(do_retry(||{diesel::update(podcasts)
             .filter(id.eq(podcast_extra.clone().id))
             .set((
                 author.eq(podcast_extra.clone().author),
@@ -203,7 +205,7 @@ impl Podcast{
                 last_build_date.eq(podcast_extra.clone().last_build_date),
             ))
             .execute(conn)})
-            .expect("Error updating podcast episode");
+            .map_err(map_db_error)?)
     }
 
     pub fn update_podcast_active(conn: &mut DbConnection, podcast_id: i32) {

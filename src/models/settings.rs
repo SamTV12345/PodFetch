@@ -7,6 +7,7 @@ use crate::DbConnection;
 use crate::utils::do_retry::do_retry;
 use diesel::insert_into;
 use crate::constants::constants::DEFAULT_SETTINGS;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(
     Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,ToSchema
@@ -40,13 +41,13 @@ pub struct ConfigModel {
 
 impl Setting{
 
-    pub fn get_settings(conn: &mut DbConnection) -> Option<Setting> {
+    pub fn get_settings(conn: &mut DbConnection) -> Result<Option<Setting>, CustomError> {
         use crate::dbconfig::schema::settings::dsl::*;
 
         settings
             .first::<Setting>(conn)
             .optional()
-            .unwrap()
+            .map_err(map_db_error)
     }
 
     pub fn update_settings(setting: Setting, conn:&mut DbConnection) -> Setting {

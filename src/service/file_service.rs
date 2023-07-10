@@ -62,7 +62,7 @@ impl FileService {
 
     pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String, conn:&mut DbConnection)
         ->Result<String, CustomError> {
-        let escaped_title = prepare_podcast_title_to_directory(podcast_title,conn);
+        let escaped_title = prepare_podcast_title_to_directory(podcast_title,conn)?;
         if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
             std::fs::create_dir(&format!("podcasts/{}", escaped_title)).map_err(map_io_error)?;
             Ok(format!("podcasts/{}", escaped_title))
@@ -117,27 +117,28 @@ impl FileService {
 }
 
 
-pub fn prepare_podcast_title_to_directory(title: &str, conn:&mut DbConnection) ->String {
+pub fn prepare_podcast_title_to_directory(title: &str, conn:&mut DbConnection) ->Result<String,
+    CustomError> {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(conn).unwrap();
+    let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
     let final_string = perform_replacement(title, retrieved_settings.clone());
 
     let fixed_string = retrieved_settings.podcast_format.replace("{}","{podcasttitle}");
 
     let mut vars:HashMap<String,&str> = HashMap::new();
     vars.insert("podcasttitle".to_string(), &final_string);
-    strfmt::strfmt(&fixed_string, &vars).unwrap()
+    Ok(strfmt::strfmt(&fixed_string, &vars).unwrap())
 }
 
 pub fn prepare_podcast_episode_title_to_directory(podcast_episode: PodcastEpisode, conn: &mut
 DbConnection)
-    ->String {
+    ->Result<String, CustomError> {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(conn).unwrap();
+    let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
     if retrieved_settings.use_existing_filename{
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if res_of_filename.is_ok(){
-                return res_of_filename.unwrap();
+                return Ok(res_of_filename.unwrap());
         }
     }
     let final_string = perform_replacement(&podcast_episode.name,
@@ -151,7 +152,7 @@ DbConnection)
     let mut vars:HashMap<String, &str> = HashMap::new();
     vars.insert("episodetitle".to_string(), &final_string);
 
-    format!("'{}'",strfmt::strfmt(&fixed_string, &vars).unwrap())
+    Ok(format!("'{}'",strfmt::strfmt(&fixed_string, &vars).unwrap()))
 }
 
 fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
@@ -184,8 +185,8 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
 First image, then podcast
 */
 pub fn determine_image_and_local_podcast_audio_url(podcast:Podcast, podcast_episode:
-PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut DbConnection )->(String,
-                                                                                     String){
+PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut DbConnection )
+    ->Result<(String, String), CustomError> {
     let image_save_path;
     let podcast_save_path;
     if podcast_episode.local_image_url.trim().len()==0 {
@@ -199,7 +200,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
                     &image_suffix,
                     &podcast_episode.name,
                     conn
-                );
+                )?;
             }
             else {
                 // Insert the filename as requested by user
@@ -209,7 +210,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
                     &image_suffix,
                     &podcast_file_name.unwrap(),
                     conn
-                );
+                )?;
             }
         } else {
             image_save_path = PathService::get_image_path(
@@ -218,7 +219,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
                 &image_suffix,
                 &podcast_episode.name
                     ,conn
-            );
+            )?;
         }
     }
     else{
@@ -233,26 +234,26 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
                 podcast_save_path = PathService::get_podcast_episode_path(
                     &podcast.directory_name.clone(),
                     Some(podcast_episode),
-                    &suffix, &podcast_file_name.unwrap(),conn);
+                    &suffix, &podcast_file_name.unwrap(),conn)?;
             }
             else{
                 podcast_save_path = PathService::get_podcast_episode_path(
                     &podcast.directory_name.clone(),
                     None,
-                    &suffix, &podcast_file_name.unwrap(),conn);
+                    &suffix, &podcast_file_name.unwrap(),conn)?;
             }
         }
         else{
             podcast_save_path = PathService::get_podcast_episode_path(
                 &podcast.directory_name.clone(),
                 Some(podcast_episode.clone()),
-                &suffix, &podcast_episode.name,conn);
+                &suffix, &podcast_episode.name,conn)?;
         }
     }
     else{
         podcast_save_path = podcast_episode.clone().local_url;
     }
-    return (image_save_path, podcast_save_path)
+    return Ok((image_save_path, podcast_save_path))
 }
 
 

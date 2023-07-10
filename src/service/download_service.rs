@@ -35,7 +35,7 @@ impl DownloadService {
         -> Result<(),CustomError> {
         let conn = &mut establish_connection();
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
-        let settings_in_db = SettingsService::new().get_settings(conn).unwrap();
+        let settings_in_db = SettingsService::new().get_settings(conn)?.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
         let paths;
@@ -44,18 +44,18 @@ impl DownloadService {
                 paths = FilenameBuilder::default()
                     .with_podcast(podcast.clone())
                     .with_suffix(&suffix)
-                    .with_episode(podcast_episode.clone(), conn)
+                    .with_episode(podcast_episode.clone(), conn)?
                     .with_filename(PODCAST_FILENAME)
                     .with_image_filename(PODCAST_IMAGENAME)
                     .with_image_suffix(&image_suffix)
-                    .with_raw_directory(conn)
+                    .with_raw_directory(conn)?
                     .build(conn)?;
             },
             false=>{
                 paths = FilenameBuilder::default()
                     .with_suffix(&suffix)
                     .with_image_suffix(&image_suffix)
-                    .with_episode(podcast_episode.clone(), conn)
+                    .with_episode(podcast_episode.clone(), conn)?
                     .with_podcast_directory(&podcast.directory_name)
                     .with_podcast(podcast.clone())
                     .with_image_filename(PODCAST_IMAGENAME)

@@ -10,6 +10,7 @@ use chrono::NaiveDateTime;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::session::Session;
+use crate::utils::error::CustomError;
 use crate::utils::time::{get_current_timestamp};
 
 #[derive(Serialize, Deserialize)]
@@ -33,20 +34,20 @@ pub struct EpisodeSinceRequest{
 #[get("/episodes/{username}.json")]
 pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>,
                                  opt_flag: Option<web::ReqData<Session>>,
-                                 since: web::Query<EpisodeSinceRequest>) -> impl Responder {
+                                 since: web::Query<EpisodeSinceRequest>) -> Result<HttpResponse,
+    CustomError> {
     match opt_flag {
         Some(flag) => {
             let username = username.clone();
             if flag.username != username.clone() {
-                return HttpResponse::Unauthorized().finish();
+                return Err(CustomError::Forbidden)
             }
 
             let since_date = NaiveDateTime::from_timestamp_opt(since.since as i64, 0);
-            println!("{}",since_date.unwrap());
             let mut actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap(), since_date)
                 .await;
             let watch_logs = PodcastHistoryItem::get_watch_logs_by_username(username.clone(), &mut *pool.get()
-                .unwrap(), since_date.unwrap()).iter().map(|watch_log| {
+                .unwrap(), since_date.unwrap())?.iter().map(|watch_log| {
                 Episode{
                     id: 0,
                     username: watch_log.clone().0.username,
@@ -63,13 +64,13 @@ pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>
             }).collect::<Vec<Episode>>();
 
             actions.append(&mut watch_logs.clone().to_vec());
-            HttpResponse::Ok().json(EpisodeActionResponse {
+            Ok(HttpResponse::Ok().json(EpisodeActionResponse {
                 actions,
                 timestamp: get_current_timestamp()
-            })
+            }))
         }
         None => {
-            HttpResponse::Unauthorized().finish()
+           Err(CustomError::Forbidden)
         }
     }
 }

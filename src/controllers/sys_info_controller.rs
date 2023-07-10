@@ -23,17 +23,20 @@ body = SysExtraInfo)),
 tag="sys"
 )]
 #[get("/sys/info")]
-pub async fn get_sys_info() -> impl Responder {
+pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    let podcast_byte_size = get_size("podcasts").unwrap();
-    HttpResponse::Ok().json(SysExtraInfo {
+    let podcast_byte_size = get_size("podcasts")
+        .map_err(map_io_extra_error)?;
+    Ok(HttpResponse::Ok().json(SysExtraInfo {
         system: sys,
         podcast_directory: podcast_byte_size,
-    })
+    }))
 }
 use utoipa::ToSchema;
+use crate::utils::error::{CustomError, map_io_error, map_io_extra_error};
+
 #[derive(Debug, Serialize,ToSchema)]
 pub struct SysExtraInfo {
     pub system: System,

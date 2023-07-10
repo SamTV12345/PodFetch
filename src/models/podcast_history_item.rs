@@ -13,6 +13,7 @@ use crate::constants::constants::STANDARD_USER;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::mapping_service::MappingService;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId,Selectable,
 Debug)]
@@ -84,9 +85,8 @@ impl PodcastHistoryItem{
         conn: &mut DbConnection,
         podcast_id_tos_search: &str,
         username_to_find: String
-    ) -> Result<PodcastHistoryItem, String> {
-        let result = PodcastEpisode::get_podcast_episode_by_id(conn, podcast_id_tos_search)
-            .unwrap();
+    ) -> Result<PodcastHistoryItem, CustomError> {
+        let result = PodcastEpisode::get_podcast_episode_by_id(conn, podcast_id_tos_search)?;
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
 
         match result {
@@ -96,7 +96,7 @@ impl PodcastHistoryItem{
                     .order(date.desc())
                     .first::<PodcastHistoryItem>(conn)
                     .optional()
-                    .expect("Error loading podcast episode by id");
+                    .map_err(map_db_error)?;
 
                 return match history_item {
                     Some(found_history_item) => {
@@ -109,7 +109,7 @@ impl PodcastHistoryItem{
 
                                 let found_podcast_item = Podcast::get_podcast(conn,
                                                                              found_history_item
-                                    .podcast_id).unwrap();
+                                    .podcast_id)?;
                                 return Ok(Episode::convert_to_podcast_history_item(&episode,
                                                                                    found_podcast_item,
                                                                                    found_podcast));
@@ -128,7 +128,7 @@ impl PodcastHistoryItem{
                 };
             }
             None => {
-                panic!("Podcast episode not found");
+                return Err(CustomError::NotFound);
             }
         }
     }
@@ -137,7 +137,7 @@ impl PodcastHistoryItem{
     pub fn get_last_watched_podcasts(
         conn: &mut DbConnection,
         designated_username: String, mapping_service: MappingService) ->
-                                                                          Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, String> {
+                                                                          Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::podcast_history_items;
         
         use crate::dbconfig::schema::podcast_history_items::dsl::episode_id as ehid;
@@ -162,7 +162,7 @@ impl PodcastHistoryItem{
             .filter(history_item2.field(podcast_history_items::username).eq(designated_username))
             .filter(history_item2.field(podcast_history_items::date).nullable().eq_any( subquery))
             .load::<PodcastHistoryItem>(conn)
-            .unwrap();
+            .map_err(map_db_error)?;
 
 
         let podcast_watch_episode = result
@@ -175,8 +175,7 @@ impl PodcastHistoryItem{
                     Some(podcast_episode) => {
                         let podcast_dto = mapping_service
                             .map_podcastepisode_to_dto(&podcast_episode);
-                        let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id)
-                            .unwrap();
+                        let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id).unwrap();
                         let podcast_watch_model = mapping_service
                             .map_podcast_history_item_to_with_podcast_episode(
                                 &podcast_watch_model.clone(),
@@ -197,12 +196,13 @@ impl PodcastHistoryItem{
     pub fn get_watch_logs_by_username(username_to_search: String, conn: &mut DbConnection,
                                       since: NaiveDateTime)
                                       ->
-                                      Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)> {
+                                      Result<Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)>,
+                                          CustomError> {
         use crate::dbconfig::schema::podcast_history_items;
         use crate::dbconfig::schema::podcasts;
         use crate::dbconfig::schema::podcast_episodes;
 
-        podcast_history_items::table
+        Ok(podcast_history_items::table
             .inner_join(podcast_episodes::table.on(podcast_history_items::episode_id.eq(podcast_episodes::episode_id)))
             .inner_join(podcasts::table)
             .filter(podcast_history_items::episode_id.eq(podcast_episodes::episode_id))
@@ -210,6 +210,6 @@ impl PodcastHistoryItem{
             .filter(podcast_history_items::username.eq(username_to_search))
             .filter(podcast_history_items::date.ge(since))
             .load::<(PodcastHistoryItem, PodcastEpisode, Podcast)>(conn)
-            .unwrap()
+            .map_err(map_db_error)?)
     }
 }

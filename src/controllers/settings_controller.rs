@@ -22,14 +22,13 @@ tag="podcast_episodes"
 )]
 #[get("/settings")]
 pub async fn get_settings(settings_service: Data<Mutex<SettingsService>>, conn:Data<DbPool>) ->
-                                                                                             impl
-Responder {
+                                                                                             Result<HttpResponse, CustomError> {
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.get_settings(&mut conn.get().unwrap());
+    let settings = settings_service.get_settings(&mut conn.get().unwrap())?;
     match settings {
-        Some(settings) => HttpResponse::Ok().json(settings),
-        None => HttpResponse::NotFound().finish(),
+        Some(settings) => Ok(HttpResponse::Ok().json(settings)),
+        None => Err(CustomError::NotFound)
     }
 }
 
@@ -63,24 +62,24 @@ pub async fn run_cleanup(
     pdservice: Data<Mutex<PodcastEpisodeService>>,
     settings_service: Data<Mutex<SettingsService>>,conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
-) -> impl Responder {
+) -> Result<HttpResponse, CustomError> {
 
     if !requester.unwrap().is_admin() {
-        return HttpResponse::Unauthorized().finish();
+        return Err(CustomError::Forbidden)
     }
     let settings = settings_service.lock().ignore_poison().get_settings( &mut conn.get
-    ().unwrap());
+    ().unwrap())?;
     match settings {
         Some(settings) => {
             pdservice
                 .lock()
                 .ignore_poison()
                 .cleanup_old_episodes(settings.auto_cleanup_days,&mut conn.get().unwrap());
-            HttpResponse::Ok().finish()
+            Ok(HttpResponse::Ok().finish())
         }
         None => {
             log::error!("Error getting settings");
-            HttpResponse::InternalServerError().finish()
+            Err(CustomError::Unknown)
         }
     }
 }
@@ -172,18 +171,21 @@ pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
                          update_information: web::Json<UpdateNameSettings>, requester:
                          Option<web::ReqData<User>>,
                          conn: Data<DbPool>)
-    -> impl Responder {
+    -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
-        return HttpResponse::Unauthorized().finish();
+        return Err(CustomError::Forbidden)
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get().unwrap());
-    HttpResponse::Ok().json(settings)
+    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get()
+        .unwrap())?;
+    Ok(HttpResponse::Ok().json(settings))
 }
 
 use utoipa::ToSchema;
+use crate::utils::error::CustomError;
+
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNameSettings{

@@ -3,6 +3,7 @@ use crate::constants::constants::ERR_SETTINGS_FORMAT;
 use crate::controllers::settings_controller::{UpdateNameSettings};
 use crate::DbConnection;
 use crate::models::settings::Setting;
+use crate::utils::error::CustomError;
 
 #[derive(Clone)]
 pub struct SettingsService{
@@ -14,8 +15,9 @@ impl SettingsService{
         }
     }
 
-    pub fn get_settings(&mut self, conn: &mut DbConnection) -> Option<Setting> {
-        Setting::get_settings(conn)
+    pub fn get_settings(&mut self, conn: &mut DbConnection) -> Result<Option<Setting>,
+        CustomError> {
+        Ok(Setting::get_settings(conn)?)
     }
 
     pub fn update_settings(&mut self, settings: Setting, conn: &mut DbConnection) -> Setting{
@@ -23,12 +25,10 @@ impl SettingsService{
     }
 
     pub fn update_name(&mut self, update_model: UpdateNameSettings, conn: &mut DbConnection) ->
-                                                                                Result<Setting,String>{
-        let mut settings_ = self.get_settings(conn).unwrap();
-        let res = Self::validate_settings(update_model.clone());
-        if res.is_err(){
-            return  Err(res.err().unwrap());
-        }
+                                                                                Result<Setting,
+                                                                                    CustomError>{
+        let mut settings_ = self.get_settings(conn)?.unwrap();
+        Self::validate_settings(update_model.clone())?;
 
         settings_.replace_invalid_characters = update_model.replace_invalid_characters;
         settings_.use_existing_filename = update_model.use_existing_filenames;
@@ -39,12 +39,13 @@ impl SettingsService{
     }
 
 
-    fn validate_settings(update_setttings: UpdateNameSettings)->Result<UpdateNameSettings, String>{
+    fn validate_settings(update_setttings: UpdateNameSettings)->Result<UpdateNameSettings,
+        CustomError>{
         if !update_setttings.podcast_format.contains("{}"){
-            return Err(ERR_SETTINGS_FORMAT.to_string())
+            return Err(CustomError::Conflict(ERR_SETTINGS_FORMAT.to_string()))
         }
         if !update_setttings.episode_format.contains("{}"){
-            return Err(ERR_SETTINGS_FORMAT.to_string())
+            return Err(CustomError::Conflict(ERR_SETTINGS_FORMAT.to_string()))
         }
         return Ok(update_setttings)
     }

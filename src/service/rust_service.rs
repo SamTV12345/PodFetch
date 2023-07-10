@@ -27,7 +27,7 @@ use crate::config::dbconfig::establish_connection;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_io_error, map_reqwest_error};
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -64,18 +64,24 @@ impl PodcastService {
         }
     }
 
-    pub async fn find_podcast_on_podindex(&mut self, podcast: &str) -> Value {
+    pub async fn find_podcast_on_podindex(&mut self, podcast: &str) -> Result<Value, CustomError> {
         let headers = self.compute_podindex_header();
+
+        let query = vec![
+            ("q", podcast)
+        ];
+
         let result = self
             .client
-            .get("https://api.podcastindex.org/api/1.0/search/byterm?q=".to_owned() + podcast)
+            .get("https://api.podcastindex.org/api/1.0/search/byterm")
+            .query(&query)
             .headers(headers)
             .send()
             .await
-            .unwrap();
+            .map_err(map_reqwest_error)?;
 
         log::info!("Found podcast: {}", result.url());
-        return result.json().await.unwrap();
+        return Ok(result.json().await.map_err(map_reqwest_error)?);
     }
 
     pub async fn insert_podcast_from_podindex(&mut self, conn: &mut DbConnection, id: i32,
@@ -162,7 +168,8 @@ impl PodcastService {
                     let mut podcast_episode_service = PodcastEpisodeService::new();
                     log::debug!("Inserting podcast episodes: {}", podcast.name);
                     let inserted_podcasts =
-                        podcast_episode_service.insert_podcast_episodes(&mut conn, podcast.clone());
+                        podcast_episode_service.insert_podcast_episodes(&mut conn, podcast.clone
+                        ()).unwrap();
 
                     lobby.get_ref().do_send(BroadcastMessage {
                         podcast_episode: None,
@@ -189,12 +196,12 @@ impl PodcastService {
         lobby: Option<Data<Addr<Lobby>>>,
         conn: &mut DbConnection
     ) ->Result<(),CustomError> {
-        let settings = Setting::get_settings(conn);
+        let settings = Setting::get_settings(conn)?;
         match settings {
             Some(settings) => {
                 if settings.auto_download {
                     let result = PodcastEpisodeService::
-                    get_last_n_podcast_episodes(conn, podcast.clone());
+                    get_last_n_podcast_episodes(conn, podcast.clone())?;
                     for podcast_episode in result {
                         self.podcast_episode_service
                             .download_podcast_episode_if_not_locally_available(
@@ -280,7 +287,7 @@ impl PodcastService {
     }
 
     pub fn get_podcasts(conn: &mut DbConnection, u: String, mapping_service: MutexGuard<MappingService>) ->
-    Result<Vec<PodcastDto>, String> {
+    Result<Vec<PodcastDto>, CustomError> {
         Podcast::get_podcasts(conn, u, mapping_service)
     }
 
