@@ -26,10 +26,9 @@ pub fn init_logging() {
             }
             writeln!(
                 buf,
-                "{} {} [{}] - {}",
+                "{} {} - {}",
                 Local::now().format("%Y-%m-%dT%H:%M:%S"),
                 symbol,
-                record.level(),
                 record.args()
             )
         })
