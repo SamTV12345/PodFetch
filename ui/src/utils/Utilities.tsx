@@ -4,6 +4,8 @@ import sanitizeHtml, {IOptions} from 'sanitize-html'
 import en from 'javascript-time-ago/locale/en'
 import de from 'javascript-time-ago/locale/de'
 import fr from 'javascript-time-ago/locale/fr'
+import pl from 'javascript-time-ago/locale/pl'
+import es from 'javascript-time-ago/locale/es'
 import i18n from "i18next";
 import {PodcastEpisode} from "../store/CommonSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
@@ -21,22 +23,15 @@ const defaultOptions: IOptions = {
 i18n.on("languageChanged", (lng) => {
     timeago = new TimeAgo(lng)
 })
-TimeAgo.addDefaultLocale(de)
-TimeAgo.addLocale(en)
+
+TimeAgo.addDefaultLocale(en)
+TimeAgo.addLocale(de)
+TimeAgo.addLocale(pl)
+TimeAgo.addLocale(es)
 TimeAgo.addLocale(fr)
 
 export const SKIPPED_TIME = 30
 let timeago = new TimeAgo('en-US')
-
-export const isLocalhost = Boolean(
-    window.location.hostname === 'localhost' ||
-    // [::1] is the IPv6 localhost address.
-    window.location.hostname === '[::1]' ||
-    // 127.0.0.0/8 are considered localhost for IPv4.
-    window.location.hostname.match(
-        /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
-    )
-);
 
 export let apiURL: string
 export let uiURL: string
