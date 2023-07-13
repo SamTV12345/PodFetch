@@ -87,7 +87,9 @@ Responder {
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
                 let episode = Episode::convert_to_episode(episode, username.clone());
-                inserted_episodes.push(Episode::insert_episode(episode.borrow(), &mut *conn.get().unwrap())
+                inserted_episodes.push(Episode::insert_episode(&episode.clone().into(), &mut *conn
+                    .get()
+                    .unwrap())
                     .expect("Unable to insert episode"));
 
                 if EpisodeAction::from_string(&episode.clone().action) == EpisodeAction::Play {

@@ -6,6 +6,8 @@ import {enqueueSnackbar} from "notistack"
 import {apiURL} from "../utils/Utilities"
 import {Podcast} from "../store/CommonSlice"
 import {CustomButtonPrimary} from "./CustomButtonPrimary"
+import {handleAddPodcast} from "../utils/ErrorSnackBarResponses";
+import {useAppSelector} from "../store/hooks";
 
 type FeedURLComponentProps = {
 
@@ -20,15 +22,14 @@ export const FeedURLComponent:FC<FeedURLComponentProps> = ()=>{
     const {register, watch, handleSubmit, formState: {}} = useForm<FeedURLFormData>({defaultValues:{
          feedUrl: ''
         }})
+    const searchedPodcasts = useAppSelector(state=>state.common.searchedPodcasts)
     const feedUrlWatched = watch('feedUrl')
 
     const onSubmit = (data: FeedURLFormData) => {
             axios.post(apiURL+"/podcast/feed", {
                 rssFeedUrl: data.feedUrl
             }).then((v:AxiosResponse<Podcast>)=>{
-                enqueueSnackbar(t('podcast-added', {
-                    name: v.data.name
-                }),{variant: "success"})
+                handleAddPodcast(v.status, v.data.name, t)
             })
         }
 

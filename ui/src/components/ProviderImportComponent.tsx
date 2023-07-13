@@ -1,7 +1,6 @@
 import {FC, useState} from "react";
 import {useTranslation} from "react-i18next"
-import axios, {AxiosResponse} from "axios"
-import {enqueueSnackbar} from "notistack"
+import axios, {AxiosError, AxiosResponse} from "axios"
 import {useDebounce} from "../utils/useDebounce"
 import {apiURL} from "../utils/Utilities"
 import {useAppDispatch, useAppSelector} from "../store/hooks"
@@ -13,12 +12,13 @@ import {CustomButtonSecondary} from './CustomButtonSecondary'
 import {CustomInput} from './CustomInput'
 import {Spinner} from "./Spinner"
 import "material-symbols/outlined.css"
+import {handleAddPodcast} from "../utils/ErrorSnackBarResponses";
 
 type ProviderImportComponent = {
     selectedSearchType: AddTypes
 }
 
-type AddPostPostModel = {
+export type AddPostPostModel = {
     trackId: number,
     userId: number
 }
@@ -30,10 +30,16 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
     const [searchText, setSearchText] = useState<string>("")
 
     const addPodcast = (podcast:AddPostPostModel)=>{
-        axios.post(apiURL+"/podcast/"+selectedSearchType,podcast).then(()=>{
-            dispatch(setModalOpen(false))
-        }).catch(()=>enqueueSnackbar(t('not-admin-or-uploader'),{variant: "error"}))
+        axios.post(apiURL+"/podcast/"+selectedSearchType,podcast)
+            .then((err:any)=> {
+                dispatch(setModalOpen(false))
+                handleAddPodcast(err.response!.status, searchedPodcasts!.find((v)=>v.id === podcast.trackId)?.title!, t)
+            })
+            .catch((err:AxiosError)=>{
+                handleAddPodcast(err.response!.status, searchedPodcasts!.find((v)=>v.id === podcast.trackId)?.title!, t)
+            })
     }
+
     useDebounce(()=>{
             setLoading(true)
             selectedSearchType === "itunes"?
@@ -79,7 +85,7 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
             <div className="grid place-items-center">
                 <Spinner className="w-12 h-12"/>
             </div> :searchedPodcasts &&
-            <ul className="flex flex-col gap-6 max-h-80 pr-3 overflow-y-scroll">
+            <ul className="flex flex-col gap-6 max-h-80 pr-3 overflow-y-auto">
                 {searchedPodcasts.map((podcast, index)=>{
                     return <li key={index} className="flex gap-4 items-center">
                         <div className="flex-1 flex flex-col gap-1">
