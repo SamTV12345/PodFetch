@@ -62,7 +62,6 @@ impl TimelineItem{
                 }
             }
         }
-        println!("{}",debug_query(&total_count).to_string());
         let results = total_count.get_result::<i64>(conn).expect("Error counting results");
         let result = query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect("Error \
         loading podcast episode by id");

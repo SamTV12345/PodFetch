@@ -1,4 +1,3 @@
-use crate::constants::constants::ERROR_LOGIN_MESSAGE;
 use crate::service::environment_service::EnvironmentService;
 use actix_web::web::Data;
 use actix_web::{get, post};
@@ -23,17 +22,20 @@ body = SysExtraInfo)),
 tag="sys"
 )]
 #[get("/sys/info")]
-pub async fn get_sys_info() -> impl Responder {
+pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    let podcast_byte_size = get_size("podcasts").unwrap();
-    HttpResponse::Ok().json(SysExtraInfo {
+    let podcast_byte_size = get_size("podcasts")
+        .map_err(map_io_extra_error)?;
+    Ok(HttpResponse::Ok().json(SysExtraInfo {
         system: sys,
         podcast_directory: podcast_byte_size,
-    })
+    }))
 }
 use utoipa::ToSchema;
+use crate::utils::error::{CustomError, map_io_extra_error};
+
 #[derive(Debug, Serialize,ToSchema)]
 pub struct SysExtraInfo {
     pub system: System,
@@ -67,25 +69,20 @@ pub async fn login(
     auth: web::Json<LoginRequest>,
     env: Data<Mutex<EnvironmentService>>,
     db: Data<DbPool>
-) -> impl Responder {
+) -> Result<HttpResponse, CustomError> {
     let env_service = env.lock().ignore_poison();
 
     if auth.0.username == env_service.username && auth.0.password == env_service.password {
-        return HttpResponse::Ok().json("Login successful");
+        return Ok(HttpResponse::Ok().json("Login successful"));
     }
-    let db_user = User::find_by_username(&auth.0.username, &mut *db.get().unwrap());
+    let db_user = User::find_by_username(&auth.0.username, &mut *db.get().unwrap())?;
 
-    return match db_user {
-        Some(user) => {
-            if user.password.unwrap() == digest(auth.0.password) {
-                return HttpResponse::Ok().json("Login successful");
-            }
-            HttpResponse::Unauthorized().json(ERROR_LOGIN_MESSAGE)
-        }
-        None => {
-            HttpResponse::Unauthorized().json(ERROR_LOGIN_MESSAGE)
-        }
-    };
+
+    if db_user.password.unwrap() == digest(auth.0.password) {
+                return Ok(HttpResponse::Ok().json("Login successful"));
+    }
+    log::warn!("Login failed for user {}", auth.0.username);
+    Err(CustomError::Forbidden)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -33,8 +33,6 @@ pub struct PartialSettings {
     pub podcast_prefill: i32,
 }
 
-pub const ERROR_LOGIN_MESSAGE: &str = "User either not found or password is incorrect";
-
 pub const TELEGRAM_BOT_TOKEN: &str = "TELEGRAM_BOT_TOKEN";
 pub const TELEGRAM_BOT_CHAT_ID: &str = "TELEGRAM_BOT_CHAT_ID";
 pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";

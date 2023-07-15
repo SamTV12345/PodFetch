@@ -1867,6 +1867,7 @@ dependencies = [
  "sha256",
  "strfmt",
  "sysinfo",
+ "thiserror",
  "tokio",
  "tokio-stream",
  "urlencoding",

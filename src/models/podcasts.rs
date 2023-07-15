@@ -1,4 +1,5 @@
 use std::sync::MutexGuard;
+
 use crate::dbconfig::schema::*;
 
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
@@ -14,7 +15,8 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::mapping_service::MappingService;
 use crate::utils::do_retry::do_retry;
 use crate::utils::podcast_builder::PodcastExtra;
-use std::io::Error;
+
+use crate::utils::error::{CustomError, map_db_error};
 
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
@@ -61,7 +63,7 @@ impl Podcast{
     }
 
     pub fn get_podcasts(conn: &mut DbConnection, u: String, mapping_service: MutexGuard<MappingService>)
-                        -> Result<Vec<PodcastDto>, String> {
+                        -> Result<Vec<PodcastDto>, CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::podcast_id as f_id;
@@ -71,7 +73,7 @@ impl Podcast{
             .left_join(f_db.on(username.eq(u)
                 .and(f_id.eq(p_id))))
             .load::<(Podcast, Option<Favorite>)>(conn)
-            .expect("Error loading podcasts");
+            .map_err(map_db_error)?;
 
         let mapped_result = result
             .iter()
@@ -90,39 +92,39 @@ impl Podcast{
         Ok(result)
     }
 
-    pub fn get_podcast(conn: &mut DbConnection, podcast_id_to_be_found: i32) -> Result<Podcast, Error> {
+    pub fn get_podcast(conn: &mut DbConnection, podcast_id_to_be_found: i32) -> Result<Podcast,
+        CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::podcasts::id as podcast_id;
         let found_podcast = podcasts
             .filter(podcast_id.eq(podcast_id_to_be_found))
             .first::<Podcast>(conn)
             .optional()
-            .expect("Error loading podcast by id");
+            .map_err(map_db_error)?;
 
         match found_podcast {
             Some(podcast) => Ok(podcast),
-            None => Err(Error::new(
-                std::io::ErrorKind::NotFound,
-                "Podcast not found",
-            )),
+            None => Err(CustomError::NotFound)
         }
     }
 
-    pub fn delete_podcast(conn: &mut DbConnection, podcast_id_to_find: i32){
+    pub fn delete_podcast(conn: &mut DbConnection, podcast_id_to_find: i32) ->Result<(),CustomError>{
         use crate::dbconfig::schema::podcasts::dsl::*;
-        delete(podcasts.filter(id.eq(podcast_id_to_find)))
+        let _ = delete(podcasts.filter(id.eq(podcast_id_to_find)))
             .execute(conn)
-            .expect("Error deleting podcast");
+            .map_err(map_db_error)?;
+        Ok(())
     }
 
-    pub fn get_podcast_by_track_id(conn: &mut DbConnection, podcast_id: i32) -> Result<Option<Podcast>, String> {
+    pub fn get_podcast_by_track_id(conn: &mut DbConnection, podcast_id: i32) ->
+                                                                             Result<Option<Podcast>, CustomError> {
         use crate::dbconfig::schema::podcasts::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         let optional_podcast = podcasts
             .filter(directory_id.eq(podcast_id.to_string()))
             .first::<Podcast>(conn)
             .optional()
-            .expect("Error loading podcast by id");
+            .map_err(map_db_error)?;
 
         Ok(optional_podcast)
     }
@@ -135,7 +137,7 @@ impl Podcast{
         feed_url: String,
         image_url_1: String,
         directory_name_to_insert: String
-    ) -> Podcast {
+    ) -> Result<Podcast, CustomError> {
         use crate::dbconfig::schema::podcasts::{directory_id, image_url, name as podcast_name, rssfeed};
         use crate::dbconfig::schema::podcasts::{original_image_url, directory_name};
 
@@ -149,32 +151,34 @@ impl Podcast{
                 directory_name.eq(directory_name_to_insert.to_string())
             ))
             .get_result::<Podcast>(conn)
-            .expect("Error inserting podcast");
-        return inserted_podcast;
+            .map_err(map_db_error)?;
+        return Ok(inserted_podcast);
     }
 
-    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut DbConnection) -> Podcast {
+    pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut DbConnection) -> Result<Podcast,
+        CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
-        podcasts
+        Ok(podcasts
             .filter(rssfeed.eq(rss_feed_1))
             .first::<Podcast>(conn)
-            .expect("Error loading podcast by rss feed")
+            .map_err(map_db_error)?)
     }
 
     pub fn get_podcast_by_directory_id(podcast_id: &str, conn: &mut DbConnection) -> Result<Option<Podcast>,
-        String> {
+        CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
         let result = dsl_podcast
             .filter(directory_id.eq(podcast_id))
             .first::<Podcast>(conn)
             .optional()
-            .expect("Error loading podcast episode by id");
+            .map_err(map_db_error)?;
         Ok(result)
     }
 
-    pub fn query_for_podcast(query: &str, conn: &mut DbConnection) -> Result<Vec<PodcastEpisode>, String> {
+    pub fn query_for_podcast(query: &str, conn: &mut DbConnection) -> Result<Vec<PodcastEpisode>,
+        CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use diesel::TextExpressionMethods;
         let result = podcast_episodes
@@ -183,14 +187,15 @@ impl Podcast{
                     .or(description.like(format!("%{}%", query))),
             )
             .load::<PodcastEpisode>(conn)
-            .expect("Error loading podcast episode by id");
+            .map_err(map_db_error)?;
         Ok(result)
     }
 
-    pub fn update_podcast_fields(podcast_extra: PodcastExtra,  conn: &mut DbConnection) {
+    pub fn update_podcast_fields(podcast_extra: PodcastExtra,  conn: &mut DbConnection)
+        ->Result<usize, CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
-        do_retry(||{diesel::update(podcasts)
+        Ok(do_retry(||{diesel::update(podcasts)
             .filter(id.eq(podcast_extra.clone().id))
             .set((
                 author.eq(podcast_extra.clone().author),
@@ -201,37 +206,33 @@ impl Podcast{
                 last_build_date.eq(podcast_extra.clone().last_build_date),
             ))
             .execute(conn)})
-            .expect("Error updating podcast episode");
+            .map_err(map_db_error)?)
     }
 
-    pub fn update_podcast_active(conn: &mut DbConnection, podcast_id: i32) {
+    pub fn update_podcast_active(conn: &mut DbConnection, podcast_id: i32) ->Result<(),CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
-        let found_podcast = Podcast::get_podcast( conn, podcast_id);
+        let found_podcast = Podcast::get_podcast( conn, podcast_id)?;
 
-        match found_podcast {
-            Ok(found_podcast) => {
-                do_retry(||{diesel::update(podcasts.filter(id.eq(podcast_id)))
+
+        diesel::update(podcasts.filter(id.eq(podcast_id)))
                     .set(active.eq(!found_podcast.active))
-                    .execute(conn)})
-                    .expect("Error updating podcast episode");
-            }
-            Err(e) => {
-                panic!("Error updating podcast active: {}", e);
-            }
-        }
+                    .execute(conn)
+                    .map_err(map_db_error)?;
+        return Ok(())
     }
 
     pub fn update_original_image_url(
         original_image_url_to_set: &str,
         podcast_id_to_find: i32,
         conn: &mut DbConnection
-    ) {
+    ) ->Result<(), CustomError>{
         use crate::dbconfig::schema::podcasts::dsl::*;
         do_retry(||{ diesel::update(podcasts.filter(id.eq(podcast_id_to_find)))
             .set(original_image_url.eq(original_image_url_to_set))
             .execute(conn)})
-            .expect("Error updating podcast episode");
+            .map_err(map_db_error)?;
+        Ok(())
     }
 
     pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: String, conn: &mut DbConnection) {

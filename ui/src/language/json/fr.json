@@ -148,5 +148,6 @@
   "auto-donwload-explanation" : "Si cette option est activée, les épisodes sont automatiquement téléchargés lorsqu'un podcast est ajouté",
   "standard-episode-format-explanation" : "Spécifie le format par défaut pour les épisodes. Cela n'a d'effet que sur la structure des dossiers et leur dénomination",
   "standard-podcast-format-explanation" : "Indique le format par défaut pour les podcasts. Cela n'affecte que la structure des dossiers et leur dénomination.",
-  "colon-replacement-explanation" : "Indique par quel caractère le deux-points doit être remplacé. Ceci est utile car le deux-points ne peut pas être utilisé dans le nom de fichier"
+  "colon-replacement-explanation" : "Indique par quel caractère le deux-points doit être remplacé. Ceci est utile car le deux-points ne peut pas être utilisé dans le nom de fichier",
+  "already-added": "Podcast {{name}} déjà ajouté"
 }

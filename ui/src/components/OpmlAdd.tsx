@@ -22,6 +22,7 @@ export const OpmlAdd:FC<OpmlAddProps> = ({})=>{
     const [dragState, setDragState] = useState<DragState>("none")
     type DragState = "none" | "allowed" | "invalid"
     const {t} = useTranslation()
+
     useEffect(()=>{
         if (progress.length===podcastsToUpload){
             dispatch(setInProgress(false))
@@ -115,7 +116,7 @@ export const OpmlAdd:FC<OpmlAddProps> = ({})=>{
                 <span className="block text-center text-sm text-stone-900">
                     {t('progress')}: {progress.length}/{podcastsToUpload}
                 </span>
-                
+
                 {podcastsToUpload > 0 && progress.length > 0 &&
                     <div className="bg-stone-400 h-2.5 mt-2  rounded-full w-full">
                         <div className="bg-stone-900 h-2.5 rounded-full" style={{width:`${(progress.length/podcastsToUpload)*100}%`}}></div>

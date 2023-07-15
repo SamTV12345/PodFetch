@@ -11,6 +11,7 @@ use dotenv::var;
 use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
 use crate::dbconfig::schema::users;
 use crate::DbConnection;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]
@@ -47,21 +48,27 @@ impl User{
         }
     }
 
-    pub fn find_by_username(username_to_find: &str, conn: &mut DbConnection) -> Option<User> {
+    pub fn find_by_username(username_to_find: &str, conn: &mut DbConnection) ->
+                                                                             Result<User, CustomError> {
         use crate::dbconfig::schema::users::dsl::*;
         match var(USERNAME) {
              Ok(res)=> {
                 if res==username_to_find {
-                    return Some(User::create_admin_user());
+                    return Ok(User::create_admin_user());
                 }
+                 return Err(CustomError::NotFound)
             }
             _ => {}
         }
 
-        users.filter(username.eq(username_to_find))
+        let opt_user = users.filter(username.eq(username_to_find))
             .first::<User>(conn)
             .optional()
-            .unwrap()
+            .map_err(map_db_error)?;
+        if opt_user.is_none() {
+            return Err(CustomError::NotFound);
+        }
+        Ok(opt_user.unwrap())
     }
 
     pub fn insert_user(&mut self, conn: &mut DbConnection) -> Result<User, Error> {
@@ -87,9 +94,10 @@ impl User{
         Ok(res)
     }
 
-    pub fn delete_user(&self, conn: &mut DbConnection) -> Result<usize, diesel::result::Error> {
+    pub fn delete_user(&self, conn: &mut DbConnection) -> Result<usize, CustomError> {
         diesel::delete(users::table.filter(users::id.eq(self.id)))
             .execute(conn)
+            .map_err(map_db_error)
     }
 
     pub fn update_role(&self, conn: &mut DbConnection) -> Result<UserWithoutPassword, diesel::result::Error> {
@@ -172,34 +180,25 @@ impl User{
 
 
     pub fn check_if_admin_or_uploader(username: &Option<String>, conn: &mut DbConnection) ->
-                                                                                              Option<HttpResponse> {
+                                                                                          Result<Option<HttpResponse>, CustomError> {
         if username.is_some(){
-            let found_user = User::find_by_username(&username.clone().unwrap(), conn);
-            if found_user.is_none(){
-                return Some(HttpResponse::BadRequest().json("User not found"));
-            }
-            let user = found_user.unwrap();
-            if user.role.ne(&Role::Admin.to_string()) && user.role.ne(&Role::Uploader.to_string()){
-                return Some(HttpResponse::BadRequest().json("User is not an admin or uploader"));
+            let found_user = User::find_by_username(&username.clone().unwrap(), conn)?;
+            if found_user.role.ne(&Role::Admin.to_string()) && found_user.role.ne(&Role::Uploader.to_string()){
+                return Err(CustomError::Forbidden);
             }
         }
-        None
+        Ok(None)
     }
 
-    pub fn check_if_admin(username: &Option<String>, conn: &mut DbConnection) ->
-                                                                                              Option<HttpResponse> {
+    pub fn check_if_admin(username: &Option<String>, conn: &mut DbConnection) -> Result<(),CustomError>{
         if username.is_some(){
-            let found_user = User::find_by_username(&username.clone().unwrap(), conn);
-            if found_user.is_none(){
-                return Some(HttpResponse::BadRequest().json("User not found"));
-            }
-            let user = found_user.unwrap();
+            let found_user = User::find_by_username(&username.clone().unwrap(), conn)?;
 
-            if user.role != Role::Admin.to_string(){
-                return Some(HttpResponse::BadRequest().json("User is not an admin"));
+            if found_user.role != Role::Admin.to_string(){
+                return Err(CustomError::Forbidden);
             }
         }
-        None
+        Ok(())
     }
 
     pub fn delete_by_username(username_to_search: String, conn: &mut DbConnection)->Result<(), Error>{

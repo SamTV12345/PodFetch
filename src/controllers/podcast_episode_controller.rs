@@ -2,7 +2,7 @@ use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
 use actix_web::{get, put};
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
@@ -13,6 +13,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
+use crate::utils::error::CustomError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -33,19 +34,20 @@ pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
     last_podcast_episode: Query<OptionalId>,
     mapping_service: Data<Mutex<MappingService>>,
-    conn: Data<DbPool>) -> impl Responder {
+    conn: Data<DbPool>) -> Result<HttpResponse, CustomError> {
     let mapping_service = mapping_service.lock() .ignore_poison();
 
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(&mut conn.get().unwrap(), id_num,
-                                                                     last_podcast_episode.last_podcast_episode)
-        .unwrap();
+                                                                     last_podcast_episode.last_podcast_episode)?;
     let mapped_podcasts = res
         .into_iter()
-        .map(|podcast| mapping_service.map_podcastepisode_to_dto(&podcast))
-        .collect::<Vec<_>>();
-    HttpResponse::Ok().json(mapped_podcasts)
+        .map(|podcast| mapping_service
+            .map_podcastepisode_to_dto(&podcast))
+        .collect::<Vec<PodcastEpisode>>();
+    Ok(HttpResponse::Ok()
+        .json(mapped_podcasts))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -77,9 +79,8 @@ tag="podcasts"
 )]
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<User>>, mapping_service:
-Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) ->
-                                                                                             impl
-Responder {
+Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result<HttpResponse,
+    CustomError> {
     let mapping_service = mapping_service.lock().ignore_poison().clone();
 
 
@@ -96,10 +97,10 @@ Responder {
             favorite
         };
         }).collect::<Vec<TimeLinePodcastEpisode>>();
-    HttpResponse::Ok().json(TimeLinePodcastItem{
+    Ok(HttpResponse::Ok().json(TimeLinePodcastItem{
         data: mapped_timeline,
         total_elements: res.total_elements
-    })
+    }))
 }
 
 /**
@@ -113,16 +114,14 @@ tag="podcast_episodes"
 )]
 #[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>,
-                                                  requester: Option<web::ReqData<User>>) ->
-                                                                                             impl
-Responder {
+                                                  requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError>{
     if !requester.unwrap().is_privileged_user(){
-        return HttpResponse::Unauthorized().json("Unauthorized");
+        return Err(CustomError::Forbidden)
     }
 
     thread::spawn(move || {
-        let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id.into_inner())
-            .unwrap();
+        let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id
+            .into_inner()).unwrap();
         match res {
             Some(podcast_episode) => {
                 let podcast = Podcast::get_podcast(&mut conn.get().unwrap(),podcast_episode
@@ -132,11 +131,12 @@ Responder {
                     podcast_episode.clone(),
                     podcast,
                     &mut conn.get().unwrap()
-                );
+                ).unwrap();
             }
-            None => {}
+            None => {
+            }
         }
     });
 
-    HttpResponse::Ok().json("Download started")
+    Ok(HttpResponse::Ok().json("Download started"))
 }

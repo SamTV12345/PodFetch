@@ -1,6 +1,6 @@
 import {FC} from "react"
 import {useTranslation} from "react-i18next"
-import {DefaultTFuncReturn} from "i18next"
+import {TFunction} from "i18next"
 import * as Select from "@radix-ui/react-select"
 import "material-symbols/outlined.css"
 
@@ -18,7 +18,7 @@ type CustomSelectProps = {
     name?: string,
     onChange?: (v: string) => void,
     options: Array<Option>,
-    placeholder?: string | DefaultTFuncReturn,
+    placeholder?: string | TFunction,
     value: string
 }
 
@@ -33,7 +33,7 @@ export const CustomSelect:FC<CustomSelectProps> = ({className = '', defaultValue
                 }
 
                 <span className="value grow">
-                    <Select.Value placeholder={placeholder}/>
+                    <Select.Value placeholder={placeholder as string}/>
                 </span>
 
                 <Select.Icon>

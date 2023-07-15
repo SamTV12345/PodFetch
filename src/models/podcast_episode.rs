@@ -13,6 +13,7 @@ use crate::models::podcasts::Podcast;
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 use diesel::AsChangeset;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
 Serialize, Deserialize, Default, AsChangeset)]
@@ -55,14 +56,14 @@ impl PodcastEpisode{
     pub fn get_podcast_episode_by_id(
         conn: &mut DbConnection,
         podcas_episode_id_to_be_found: &str,
-    ) -> Result<Option<PodcastEpisode>, String> {
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         let found_podcast_episode = podcast_episodes
             .filter(episode_id.eq(podcas_episode_id_to_be_found))
             .first::<PodcastEpisode>(conn)
             .optional()
-            .expect("Error loading podcast by id");
+            .map_err(map_db_error)?;
 
         Ok(found_podcast_episode)
     }
@@ -161,7 +162,7 @@ impl PodcastEpisode{
         conn: &mut DbConnection,
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
-    ) -> Result<Vec<PodcastEpisode>, String> {
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         match last_id {
@@ -172,7 +173,7 @@ impl PodcastEpisode{
                     .order(date_of_recording.desc())
                     .limit(75)
                     .load::<PodcastEpisode>(conn)
-                    .expect("Error loading podcasts");
+                    .map_err(map_db_error)?;
                 Ok(podcasts_found)
             }
             None => {

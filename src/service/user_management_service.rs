@@ -1,25 +1,22 @@
 use std::str::FromStr;
 use std::sync::MutexGuard;
-use actix_web::http::StatusCode;
-use crate::exception::exceptions::{PodFetchError, PodFetchErrorTrait};
+
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use sha256::{digest};
 use crate::constants::constants::Role;
 use crate::DbConnection;
+use crate::utils::error::CustomError;
 
-pub struct UserManagementService{
-
-}
+pub struct UserManagementService {}
 
 impl UserManagementService {
-
-    pub fn may_onboard_user(user: User)->bool{
+    pub fn may_onboard_user(user: User) -> bool {
         Role::from_str(&user.role).unwrap() == Role::Admin
     }
 
-    pub fn is_valid_password(password: String) ->bool{
+    pub fn is_valid_password(password: String) -> bool {
         let mut has_whitespace = false;
         let mut has_upper = false;
         let mut has_lower = false;
@@ -39,23 +36,21 @@ impl UserManagementService {
      * Performs the onboarding with a valid
      */
     pub fn onboard_user(username: String, password: String, invite_id: String, conn: &mut
-    DbConnection)->Result<User,
-        PodFetchError>{
+    DbConnection) -> Result<User, CustomError> {
 
-            // Check if the invite is valid
+        // Check if the invite is valid
         return match Invite::find_invite(invite_id.clone(), conn) {
             Ok(invite) => {
                 match invite {
                     Some(invite) => {
                         if invite.accepted_at.is_some() {
-                            return Err(PodFetchError::new("Invite already accepted",
-                                                          StatusCode::BAD_REQUEST));
+                            return Err(CustomError::Conflict("Invite already accepted".to_string()));
                         }
 
 
                         let mut actual_user = User::new(1, username, Role::from_str(&invite.role).unwrap(),
                                                         Some
-                            (digest(password.clone())), chrono::Utc::now().naive_utc(), invite.explicit_consent);
+                                                            (digest(password.clone())), chrono::Utc::now().naive_utc(), invite.explicit_consent);
 
 
                         // This is safe as only when basic auth is enabled, the password is set
@@ -68,153 +63,124 @@ impl UserManagementService {
                                 }
                                 Err(e) => {
                                     log::error!("The following error occured when inserting a user {}",e);
-                                    Err(PodFetchError::new("Error inserting User", StatusCode::INTERNAL_SERVER_ERROR))
+                                    Err(CustomError::Unknown)
                                 }
                             }
                         } else {
-                            Err(PodFetchError::new("Password is not valid", StatusCode::CONFLICT))
+                            Err(CustomError::Conflict("Password is not valid".to_string()))
                         }
                     }
                     None => {
-                        Err(PodFetchError::new("Invite code not found",
-                                               StatusCode::NOT_FOUND))
+                        Err(CustomError::NotFound)
                     }
                 }
             }
             Err(e) => {
                 log::error!("The following error occured when finding an invite {}",e);
-                Err(PodFetchError::new("Invite code not found", StatusCode::NOT_FOUND))
+                Err(CustomError::NotFound)
             }
-        }
+        };
     }
 
     pub fn create_invite(role: Role, explicit_consent_i: bool, conn: &mut DbConnection, user:
     User)
-        -> Result<Invite,
-        PodFetchError> {
-        if Self::may_onboard_user(user){
-            let invite = Invite::insert_invite(&role,explicit_consent_i, conn).expect("Error \
+                         -> Result<Invite,
+                             CustomError> {
+        if Self::may_onboard_user(user) {
+            let invite = Invite::insert_invite(&role, explicit_consent_i, conn).expect("Error \
             inserting invite");
-            return Ok(invite)
+            return Ok(invite);
         }
-        Err(PodFetchError::no_permissions_to_onboard_user())
+        Err(CustomError::Forbidden)
     }
 
-    pub fn delete_user(user: User, conn: &mut DbConnection)->Result<(), PodFetchError>{
-
-        User::delete_user(&user, conn).expect("Error deleting User");
-        return Ok(())
+    pub fn delete_user(user: User, conn: &mut DbConnection) -> Result<usize, CustomError> {
+        User::delete_user(&user, conn)
     }
 
-    pub fn update_user(user_to_update: User, conn: &mut DbConnection) ->Result<UserWithoutPassword,
-        PodFetchError>{
+    pub fn update_user(user_to_update: User, conn: &mut DbConnection) -> Result<UserWithoutPassword,
+        CustomError> {
         return match User::update_role(&user_to_update, conn) {
             Ok(user) => {
-                match User::update_explicit_consent(&user_to_update, conn){
+                match User::update_explicit_consent(&user_to_update, conn) {
                     Ok(_) => {}
                     Err(e) => {
                         log::error!("The following error occured when updating a user {}",e);
-                        return Err(PodFetchError::new("Error updating User",
-                                                      StatusCode::INTERNAL_SERVER_ERROR))
+                        return Err(CustomError::Unknown);
                     }
                 }
                 Ok(user)
             }
             Err(e) => {
                 log::error!("The following error occured when updating a user {}",e);
-                Err(PodFetchError::new("Error updating User",
-                                       StatusCode::INTERNAL_SERVER_ERROR))
+                return Err(CustomError::Unknown);
             }
-        }
+        };
     }
 
 
     pub fn get_invite_link(invite_id: String, environment_service: MutexGuard<EnvironmentService>,
-                           conn: &mut DbConnection) ->Result<String, PodFetchError>{
+                           conn: &mut DbConnection) -> Result<String, CustomError> {
+        let invite = Invite::find_invite(invite_id, conn)?;
+        match invite {
+            Some(invite) => {
+                Ok(environment_service.clone().server_url + "ui/invite/" + &invite.id)
+            }
+            None => {
+                Err(CustomError::NotFound)
+            }
+        }
+    }
 
-        match Invite::find_invite(invite_id, conn){
-            Ok(invite) => {
-                match invite {
-                    Some(invite)=>{
-                        Ok(environment_service.clone().server_url+"ui/invite/"+&invite.id)
-                    }
-                    None=>{
-                        Err(PodFetchError::new("Invite code not found",
-                                               StatusCode::NOT_FOUND))
-                    }
+
+    pub fn get_invite(invite_id: String, conn: &mut DbConnection) -> Result<Invite, CustomError> {
+        let invite = Invite::find_invite(invite_id, conn)?;
+
+        match invite {
+            Some(invite) => {
+                if invite.accepted_at.is_some() {
+                    return Err(CustomError::Conflict("Invite already accepted".to_string
+                    ()));
                 }
+                Ok(invite)
             }
-            Err(e) => {
-                log::error!("The following error occured when finding an invite {}",e);
-                Err(PodFetchError::new("Invite code not found", StatusCode::NOT_FOUND))
-            }
-        }
-    }
-
-
-    pub fn get_invite(invite_id: String, conn: &mut DbConnection)->Result<Invite, PodFetchError>{
-        match Invite::find_invite(invite_id, conn){
-            Ok(invite) => {
-                match invite {
-                    Some(invite)=>{
-                        if invite.accepted_at.is_some(){
-                            return Err(PodFetchError::new("Invite already accepted",
-                                                          StatusCode::BAD_REQUEST));
-                        }
-                        Ok(invite)
-                    }
-                    None=>{
-                        Err(PodFetchError::new("Invite code not found",
-                                               StatusCode::NOT_FOUND))
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("The following error occured when finding an invite {}",e);
-                Err(PodFetchError::new("Invite code not found", StatusCode::NOT_FOUND))
+            None => {
+                Err(CustomError::NotFound)
             }
         }
     }
 
-    pub fn get_invites(conn: &mut DbConnection)->Result<Vec<Invite>, PodFetchError>{
-        match Invite::find_all_invites(conn){
-            Ok(invites) => {
-                Ok(invites)
-            }
-            Err(e) => {
-                log::error!("The following error occured when finding an invite {}",e);
-                Err(PodFetchError::new("Invite code not found", StatusCode::NOT_FOUND))
-            }
+pub fn get_invites(conn: &mut DbConnection) -> Result<Vec<Invite>, CustomError> {
+    match Invite::find_all_invites(conn) {
+        Ok(invites) => {
+            Ok(invites)
+        }
+        Err(e) => {
+            log::error!("The following error occured when finding an invite {}",e);
+            Err(CustomError::NotFound)
         }
     }
+}
 
-    pub fn get_users(requester: User, conn: &mut DbConnection)-> Result<Vec<UserWithoutPassword>, PodFetchError> {
-        if !Self::may_onboard_user(requester) {
-            return Err(PodFetchError::no_permissions_to_onboard_user())
-        }
-
-        return Ok(User::find_all_users(conn))
+pub fn get_users(requester: User, conn: &mut DbConnection) -> Result<Vec<UserWithoutPassword>,
+    CustomError> {
+    if !Self::may_onboard_user(requester) {
+        return Err(CustomError::Forbidden);
     }
 
-    pub fn delete_invite(invite_id: String, conn: &mut DbConnection)->Result<(), PodFetchError>{
+    return Ok(User::find_all_users(conn));
+}
 
-        match Invite::find_invite(invite_id, conn){
-            Ok(invite) => {
-                match invite {
-                    Some(invite)=>{
-                        Invite::delete_invite(invite.id, conn).expect("Error deleting invite");
-                        Ok(())
-                    }
-                    None=>{
-                        Err(PodFetchError::new("Invite code not found",
-                                               StatusCode::NOT_FOUND))
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("The following error occured when finding an invite {}",e);
-                Err(PodFetchError::new("Invite code not found", StatusCode::NOT_FOUND))
-            }
+pub fn delete_invite(invite_id: String, conn: &mut DbConnection) -> Result<(), CustomError> {
+    let invite = Invite::find_invite(invite_id, conn)?;
+    match invite {
+        Some(invite) => {
+            Invite::delete_invite(invite.id, conn)?;
+            Ok(())
+        }
+        None => {
+            Err(CustomError::NotFound)
         }
     }
+}
 }

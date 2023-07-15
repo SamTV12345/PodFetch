@@ -3,7 +3,7 @@ use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Path};
 use actix_web::{get, put};
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse};
 use std::sync::{Mutex, MutexGuard};
 use chrono::Local;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
@@ -22,14 +22,13 @@ tag="podcast_episodes"
 )]
 #[get("/settings")]
 pub async fn get_settings(settings_service: Data<Mutex<SettingsService>>, conn:Data<DbPool>) ->
-                                                                                             impl
-Responder {
+                                                                                             Result<HttpResponse, CustomError> {
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.get_settings(&mut conn.get().unwrap());
+    let settings = settings_service.get_settings(&mut conn.get().unwrap())?;
     match settings {
-        Some(settings) => HttpResponse::Ok().json(settings),
-        None => HttpResponse::NotFound().finish(),
+        Some(settings) => Ok(HttpResponse::Ok().json(settings)),
+        None => Err(CustomError::NotFound)
     }
 }
 
@@ -42,14 +41,15 @@ tag="settings"
 )]
 #[put("/settings")]
 pub async fn update_settings(settings_service: Data<Mutex<SettingsService>>, settings:
-web::Json<Setting>, requester: Option<web::ReqData<User>>,conn:Data<DbPool>) -> impl Responder {
+web::Json<Setting>, requester: Option<web::ReqData<User>>,conn:Data<DbPool>) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
-        return HttpResponse::Unauthorized().finish();
+        return Err(CustomError::Forbidden);
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
-    let settings = settings_service.update_settings(settings.into_inner(),&mut conn.get().unwrap());
-    HttpResponse::Ok().json(settings)
+    let settings = settings_service.update_settings(settings.into_inner(),&mut conn.get().unwrap
+    ())?;
+    Ok(HttpResponse::Ok().json(settings))
 }
 
 #[utoipa::path(
@@ -63,24 +63,24 @@ pub async fn run_cleanup(
     pdservice: Data<Mutex<PodcastEpisodeService>>,
     settings_service: Data<Mutex<SettingsService>>,conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
-) -> impl Responder {
+) -> Result<HttpResponse, CustomError> {
 
     if !requester.unwrap().is_admin() {
-        return HttpResponse::Unauthorized().finish();
+        return Err(CustomError::Forbidden)
     }
     let settings = settings_service.lock().ignore_poison().get_settings( &mut conn.get
-    ().unwrap());
+    ().unwrap())?;
     match settings {
         Some(settings) => {
             pdservice
                 .lock()
                 .ignore_poison()
                 .cleanup_old_episodes(settings.auto_cleanup_days,&mut conn.get().unwrap());
-            HttpResponse::Ok().finish()
+            Ok(HttpResponse::Ok().finish())
         }
         None => {
             log::error!("Error getting settings");
-            HttpResponse::InternalServerError().finish()
+            Err(CustomError::Unknown)
         }
     }
 }
@@ -98,9 +98,8 @@ responses(
 tag="podcasts"
 )]
 #[get("/settings/opml/{type_of}")]
-pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service: Data<Mutex<EnvironmentService>>) ->
-                                                                                             impl
-Responder {
+pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service:
+Data<Mutex<EnvironmentService>>) -> Result<HttpResponse, CustomError>{
     let env_service = env_service.lock().ignore_poison();
     let podcasts_found = Podcast::get_all_podcasts(&mut conn.get().unwrap()).unwrap();
 
@@ -110,15 +109,17 @@ Responder {
     let mut opml = XMLElement::new("opml");
     opml.add_attribute("version", "2.0");
     opml.add_child(add_header()).expect("TODO: panic message");
-    opml.add_child(add_podcasts(podcasts_found, env_service,type_of.into_inner() )).expect("TODO: panic \
-    message");
+    opml.add_child(add_podcasts(podcasts_found, env_service, type_of.into_inner())).map_err(|e|{
+        log::error!("Error adding podcasts to opml: {}", e);
+        CustomError::Unknown
+    })?;
 
     xml.set_root_element(opml);
 
 
     let mut writer: Vec<u8> = Vec::new();
     xml.generate(&mut writer).unwrap();
-    HttpResponse::Ok().body(writer)
+    Ok(HttpResponse::Ok().body(writer))
 }
 
 
@@ -172,18 +173,21 @@ pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
                          update_information: web::Json<UpdateNameSettings>, requester:
                          Option<web::ReqData<User>>,
                          conn: Data<DbPool>)
-    -> impl Responder {
+    -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
-        return HttpResponse::Unauthorized().finish();
+        return Err(CustomError::Forbidden)
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get().unwrap());
-    HttpResponse::Ok().json(settings)
+    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get()
+        .unwrap())?;
+    Ok(HttpResponse::Ok().json(settings))
 }
 
 use utoipa::ToSchema;
+use crate::utils::error::CustomError;
+
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNameSettings{

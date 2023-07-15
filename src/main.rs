@@ -70,6 +70,7 @@ use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
+use crate::utils::error::CustomError;
 
 
 mod config;
@@ -90,16 +91,18 @@ import_database_config!();
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
-    mut podcast_episode_service: PodcastEpisodeService) {
+    mut podcast_episode_service: PodcastEpisodeService)->Result<(),CustomError> {
     //check for new episodes
     let podcats_result = Podcast::get_all_podcasts(&mut establish_connection()).unwrap();
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
-            podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast);
-            podcast_service.schedule_episode_download(podcast_clone, None, &mut establish_connection());
+            podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast)?;
+            podcast_service.schedule_episode_download(podcast_clone, None, &mut
+                establish_connection())?;
         }
     }
+    Ok(())
 }
 
 fn fix_links(content: &str)->String{
@@ -164,7 +167,7 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    insert_default_settings_if_not_present();
+    insert_default_settings_if_not_present().expect("Could not insert default settings");
 
     thread::spawn(|| {
         let mut scheduler = Scheduler::new();
@@ -173,14 +176,14 @@ async fn main() -> std::io::Result<()> {
         let polling_interval = env.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
             let conn = &mut establish_connection();
-            let settings = Setting::get_settings(conn);
+            let settings = Setting::get_settings(conn).unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_update {
                         let podcast_service = PodcastService::new();
                         let podcast_episode_service = PodcastEpisodeService::new();
                         info!("Polling for new episodes");
-                        run_poll(podcast_service, podcast_episode_service);
+                        run_poll(podcast_service, podcast_episode_service).unwrap();
                     }
                 }
                 None => {
@@ -195,12 +198,12 @@ async fn main() -> std::io::Result<()> {
             Session::cleanup_sessions(conn).expect("Error clearing old \
             sessions");
             let mut podcast_episode_service = PodcastEpisodeService::new();
-            let settings = Setting::get_settings(conn);
+            let settings = Setting::get_settings(conn).unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
                         podcast_episode_service.cleanup_old_episodes(settings.auto_cleanup_days,
-                                                                     &mut establish_connection());
+                                                                     &mut establish_connection())
                     }
                 }
                 None => {
@@ -366,16 +369,18 @@ pub fn get_secure_user_management() ->Scope{
         .service(get_invite_link)
 }
 
-pub fn insert_default_settings_if_not_present() {
+pub fn insert_default_settings_if_not_present() ->Result<(),CustomError> {
     let conn = &mut establish_connection();
-    let settings = Setting::get_settings(conn);
+    let settings = Setting::get_settings(conn)?;
     match settings {
         Some(_) => {
             info!("Settings already present");
+            Ok(())
         }
         None => {
             info!("No settings found, inserting default settings");
-            Setting::insert_default_settings(conn);
+            Setting::insert_default_settings(conn)?;
+            Ok(())
         }
     }
 }
