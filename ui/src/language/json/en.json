@@ -148,6 +148,7 @@
   "auto-download-explanation": "If this option is activated, the episodes will be downloaded automatically when a podcast is added",
   "default-episode-format-explanation": "Specifies the default format for the episodes. This only affects the folder structure and its naming.",
   "standard-podcast-format-explanation": "Specifies the standard format for the podcasts. This only affects the folder structure and naming.",
+  "standard-episode-format-explanation": "Specifies the standard format for the episodes. This only affects the folder structure and naming.",
   "colon-replacement-explanation": "Specifies by which character the colon should be replaced. This is useful because the colon cannot be used in the file name.",
   "already-added": "Podcast {{name}} already added"
 }

@@ -71,7 +71,7 @@ export const Settings:FC<SettingsProps> = ({initialSettings}) => {
 
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label htmlFor="auto-download" className="flex gap-1">{t('auto-download')} <SettingsInfoIcon headerKey="auto-download" textKey="auto-donwload-explanation"/></label>
+                    <label htmlFor="auto-download" className="flex gap-1">{t('auto-download')} <SettingsInfoIcon headerKey="auto-download" textKey="auto-download-explanation"/></label>
                     <Switcher checked={settings.autoDownload} className="xs:justify-self-end" id="auto-download" setChecked={()=>{
                         setSettings({...settings, autoDownload: !settings?.autoDownload})
                     }} />
