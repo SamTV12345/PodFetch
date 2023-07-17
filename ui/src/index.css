@@ -86,7 +86,7 @@
 		/* Shadow covers */
 		linear-gradient(white 50%, rgba(255,255,255,0)),
 		linear-gradient(rgba(255,255,255,0), white 50%) 0 100%,
-		
+
 		/* Shadows */
 		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.2), rgba(0,0,0,0)),
 		radial-gradient(farthest-side at  100%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
@@ -94,7 +94,7 @@
 		/* Shadow covers */
 		linear-gradient(white 50%, rgba(255,255,255,0)),
 		linear-gradient(rgba(255,255,255,0), white 50%) 0 100%,
-		
+
 		/* Shadows */
 		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.2), rgba(0,0,0,0)),
 		radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
@@ -172,4 +172,23 @@
     .display-only-mobile{
         @apply block;
     }
+}
+::-webkit-scrollbar {
+    @apply w-2.5 h-2.5;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+    @apply bg-gray-200
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
