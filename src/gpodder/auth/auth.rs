@@ -30,7 +30,14 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
         None=>{}
     }
 
-    let authorization = rq.headers().get("Authorization").unwrap().to_str().unwrap();
+    let opt_authorization = rq.headers().get("Authorization");
+
+    if opt_authorization.is_none() {
+        return Err(CustomError::Forbidden)
+    }
+
+    let authorization = opt_authorization.unwrap().to_str().unwrap();
+
     let unwrapped_username = username.into_inner();
     let (username_basic, password) = AuthFilter::basic_auth_login(authorization.to_string());
     if username_basic != unwrapped_username {

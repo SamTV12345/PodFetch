@@ -56,7 +56,6 @@ impl User{
                 if res==username_to_find {
                     return Ok(User::create_admin_user());
                 }
-                 return Err(CustomError::NotFound)
             }
             _ => {}
         }

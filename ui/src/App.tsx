@@ -61,7 +61,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
 const App: FC<PropsWithChildren> = ({children}) => {
     const dispatch = useAppDispatch()
     const podcasts = useAppSelector(state => state.common.podcasts)
-    const [socket, setSocket] = useState<any>()
+    const [socket, setSocket] = useState<WebSocket>()
     const config = useAppSelector(state => state.common.configModel)
     const {t} = useTranslation()
 
@@ -70,7 +70,6 @@ const App: FC<PropsWithChildren> = ({children}) => {
             socket.onopen = () => {
             }
 
-            // @ts-ignore
             socket.onmessage = (event) => {
                 if (!isJsonString(event.data)) {
                     return
