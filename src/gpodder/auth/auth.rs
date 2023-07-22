@@ -66,3 +66,18 @@ fn create_session_cookie(session: Session) -> Cookie<'static> {
     (SameSite::Strict).path("/api").finish();
     user_cookie
 }
+
+#[cfg(test)]
+mod tests{
+    use crate::gpodder::auth::auth::create_session_cookie;
+    use crate::models::session::Session;
+
+    #[test]
+    fn test_create_session_cookie(){
+        let session = Session::new("test".to_string());
+        let cookie = create_session_cookie(session.clone());
+
+        assert_eq!(cookie.name(), "sessionid");
+        assert_eq!(cookie.value(), session.session_id);
+    }
+}

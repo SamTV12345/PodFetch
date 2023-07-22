@@ -119,3 +119,7 @@ pub const PODINDEX_API_SECRET: &str = "PODINDEX_API_SECRET";
 // GPodder config
 
 pub const GPODDER_INTEGRATION_ENABLED: &str = "GPODDER_INTEGRATION_ENABLED";
+
+pub const DATABASE_URL: &str = "DATABASE_URL";
+
+pub const DATABASE_URL_DEFAULT_SQLITE: &str = "sqlite://./db/podcast.db";

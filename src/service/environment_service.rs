@@ -2,6 +2,7 @@ use std::env;
 use crate::models::settings::ConfigModel;
 use std::env::var;
 use regex::Regex;
+use crate::config::dbconfig::get_database_url;
 use crate::constants::constants::{BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -104,7 +105,7 @@ impl EnvironmentService {
         log::info!("Developer specifications available at {}",self.server_url.clone()+"swagger-ui/index\
         .html#/");
         log::info!("GPodder integration enabled: {}", self.gpodder_integration_enabled);
-        log::info!("Database url is set to: {}", var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
+        log::info!("Database url is set to: {}", &get_database_url());
         log::info!(
             "Podindex API key&secret configured: {}",
             self.podindex_api_key.len() > 0 && self.podindex_api_secret.len() > 0

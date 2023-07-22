@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 use std::env;
 use std::time::Duration;
+use crate::constants::constants::{DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE};
 use crate::DbConnection;
 
 #[derive(Debug)]
@@ -57,6 +58,5 @@ pub fn establish_connection()->MysqlConnection{
 
 
 pub fn get_database_url()->String{
-    //println!("{}",env::var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string()));
-    env::var("DATABASE_URL").unwrap_or("sqlite://./db/podcast.db".to_string())
+    env::var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string())
 }
