@@ -11,19 +11,6 @@ pub mod schema;
 pub mod schema;
 
 
-#[cfg(sqlite)]
-#[path = "schemas/sqlite/schema.rs"]
-pub mod __sqlite_schema;
-
-#[cfg(mysql)]
-#[path = "schemas/mysql/schema.rs"]
-pub mod __mysql_schema;
-
-#[cfg(postgresql)]
-#[path = "schemas/postgresql/schema.rs"]
-pub mod __postgresql_schema;
-
-
 #[macro_export]
 #[cfg(sqlite)]
 macro_rules! import_database_connections {

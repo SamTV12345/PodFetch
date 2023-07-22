@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 use crate::DbConnection;
 use crate::utils::do_retry::do_retry;
 use diesel::insert_into;
-use crate::constants::constants::DEFAULT_SETTINGS;
+use crate::constants::inner_constants::DEFAULT_SETTINGS;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(

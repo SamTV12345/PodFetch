@@ -1,11 +1,11 @@
 
 use std::sync::{MutexGuard};
-use crate::constants::constants::{PodcastType, ITUNES_URL};
+use crate::constants::inner_constants::{PodcastType, ITUNES_URL};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 
 use crate::models::messages::BroadcastMessage;
-use crate::models::models::PodcastInsertModel;
+use crate::models::misc_models::PodcastInsertModel;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -36,6 +36,12 @@ pub struct PodcastService {
     pub environment_service: EnvironmentService,
 }
 
+impl Default for PodcastService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PodcastService {
     pub fn new() -> PodcastService {
         PodcastService {
@@ -56,7 +62,7 @@ impl PodcastService {
             .unwrap();
         log::info!("Found podcast: {}", result.url());
         let res_of_search =  result.json().await;
-        return if res_of_search.is_err() {
+        if res_of_search.is_err() {
             log::error!("Error searching for podcast: {}", res_of_search.err().unwrap());
             serde_json::from_str("{}").unwrap()
         } else {
@@ -81,7 +87,7 @@ impl PodcastService {
             .map_err(map_reqwest_error)?;
 
         log::info!("Found podcast: {}", result.url());
-        return Ok(result.json().await.map_err(map_reqwest_error)?);
+        result.json().await.map_err(map_reqwest_error)
     }
 
     pub async fn insert_podcast_from_podindex(&mut self, conn: &mut DbConnection, id: i32,
@@ -103,7 +109,7 @@ impl PodcastService {
 
         let podcast = resp.json::<Value>().await.unwrap();
 
-        Ok(self.handle_insert_of_podcast(conn,
+        self.handle_insert_of_podcast(conn,
                                       PodcastInsertModel {
                                           title: unwrap_string(&podcast["feed"]["title"]),
                                           id,
@@ -113,7 +119,7 @@ impl PodcastService {
                                       mapping_service,
                                       lobby,
         )
-            .await?)
+            .await
     }
 
     pub async fn handle_insert_of_podcast(
@@ -145,7 +151,7 @@ impl PodcastService {
             .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(), &podcast_insert
                 .image_url.clone().to_string(), &podcast_insert.id.clone().to_string(), conn)
             .await;
-        let podcast = Podcast::get_podcast_by_track_id(conn, podcast_insert.id.clone())
+        let podcast = Podcast::get_podcast_by_track_id(conn, podcast_insert.id)
             .unwrap();
         lobby
             .get_ref()
@@ -210,10 +216,9 @@ impl PodcastService {
                                 lobby.clone(),
                                 conn
                             )?;
-                        return Ok(());
                     }
                 }
-                return Ok(());
+                Ok(())
             }
             None => {
                 log::error!("Error getting settings");
@@ -318,8 +323,8 @@ impl PodcastService {
                                                  designated_username)?;
         let mapped_result = podcasts
             .iter()
-            .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites
-            (&*podcast))
+            .map(|podcast| mapping_service.map_podcast_to_podcast_dto_with_favorites
+            (podcast))
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }

@@ -76,9 +76,9 @@ impl Favorite{
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::username as user_favor;
         use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
-        let result:Vec<(Podcast, Favorite)>;
+        
 
-        result = dsl_podcast
+        let result:Vec<(Podcast, Favorite)> = dsl_podcast
             .inner_join(f_db)
             .filter(
                 favor_column.eq(true).and(
@@ -90,8 +90,8 @@ impl Favorite{
 
         let mapped_result = result
             .iter()
-            .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites_option
-            (&*podcast))
+            .map(|podcast| mapping_service.map_podcast_to_podcast_dto_with_favorites_option
+            (podcast))
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }
@@ -114,21 +114,21 @@ impl Favorite{
             OrderOption::Title=> {
                 use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(podcasttitle.asc());
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(podcasttitle.desc());
                     }
                 }
             }
             OrderOption::PublishedDate => {
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(date_of_recording.asc());
 
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(date_of_recording.desc());
                     }
                 }
@@ -177,21 +177,21 @@ impl Favorite{
             OrderOption::Title=> {
                 use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(podcasttitle.asc());
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(podcasttitle.desc());
                     }
                 }
             }
             OrderOption::PublishedDate => {
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(date_of_recording.asc());
 
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(date_of_recording.desc());
                     }
                 }

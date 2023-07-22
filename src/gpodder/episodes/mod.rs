@@ -1,1 +1,1 @@
-pub mod episodes;
+pub mod gpodder_episodes;

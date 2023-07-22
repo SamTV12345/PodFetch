@@ -5,7 +5,7 @@ use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use sha256::{digest};
-use crate::constants::constants::Role;
+use crate::constants::inner_constants::Role;
 use crate::DbConnection;
 use crate::utils::error::CustomError;
 
@@ -26,7 +26,7 @@ impl UserManagementService {
             has_whitespace |= c.is_whitespace();
             has_lower |= c.is_lowercase();
             has_upper |= c.is_uppercase();
-            has_digit |= c.is_digit(10);
+            has_digit |= c.is_ascii_digit();
         }
 
         !has_whitespace && has_upper && has_lower && has_digit && password.len() >= 8
@@ -39,7 +39,7 @@ impl UserManagementService {
     DbConnection) -> Result<User, CustomError> {
 
         // Check if the invite is valid
-        return match Invite::find_invite(invite_id.clone(), conn) {
+        match Invite::find_invite(invite_id.clone(), conn) {
             Ok(invite) => {
                 match invite {
                     Some(invite) => {
@@ -79,7 +79,7 @@ impl UserManagementService {
                 log::error!("The following error occured when finding an invite {}",e);
                 Err(CustomError::NotFound)
             }
-        };
+        }
     }
 
     pub fn create_invite(role: Role, explicit_consent_i: bool, conn: &mut DbConnection, user:
@@ -100,7 +100,7 @@ impl UserManagementService {
 
     pub fn update_user(user_to_update: User, conn: &mut DbConnection) -> Result<UserWithoutPassword,
         CustomError> {
-        return match User::update_role(&user_to_update, conn) {
+        match User::update_role(&user_to_update, conn) {
             Ok(user) => {
                 match User::update_explicit_consent(&user_to_update, conn) {
                     Ok(_) => {}
@@ -113,9 +113,9 @@ impl UserManagementService {
             }
             Err(e) => {
                 log::error!("The following error occured when updating a user {}",e);
-                return Err(CustomError::Unknown);
+                Err(CustomError::Unknown)
             }
-        };
+        }
     }
 
 
@@ -168,7 +168,7 @@ pub fn get_users(requester: User, conn: &mut DbConnection) -> Result<Vec<UserWit
         return Err(CustomError::Forbidden);
     }
 
-    return Ok(User::find_all_users(conn));
+    Ok(User::find_all_users(conn))
 }
 
 pub fn delete_invite(invite_id: String, conn: &mut DbConnection) -> Result<(), CustomError> {

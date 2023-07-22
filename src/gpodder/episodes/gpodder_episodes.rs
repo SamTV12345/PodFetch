@@ -5,7 +5,6 @@ use actix_web::web::Data;
 
 use crate::DbPool;
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
-use std::borrow::Borrow;
 use chrono::NaiveDateTime;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
@@ -43,10 +42,10 @@ pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>
                 return Err(CustomError::Forbidden)
             }
 
-            let since_date = NaiveDateTime::from_timestamp_opt(since.since as i64, 0);
-            let mut actions = Episode::get_actions_by_username(username.clone(), &mut *pool.get().unwrap(), since_date)
+            let since_date = NaiveDateTime::from_timestamp_opt(since.since, 0);
+            let mut actions = Episode::get_actions_by_username(username.clone(), &mut pool.get().unwrap(), since_date)
                 .await;
-            let watch_logs = PodcastHistoryItem::get_watch_logs_by_username(username.clone(), &mut *pool.get()
+            let watch_logs = PodcastHistoryItem::get_watch_logs_by_username(username.clone(), &mut pool.get()
                 .unwrap(), since_date.unwrap())?.iter().map(|watch_log| {
                 Episode{
                     id: 0,
@@ -87,7 +86,7 @@ Responder {
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
                 let episode = Episode::convert_to_episode(episode, username.clone());
-                inserted_episodes.push(Episode::insert_episode(&episode.clone().into(), &mut *conn
+                inserted_episodes.push(Episode::insert_episode(&episode.clone(), &mut conn
                     .get()
                     .unwrap())
                     .expect("Unable to insert episode"));
@@ -95,18 +94,17 @@ Responder {
                 if EpisodeAction::from_string(&episode.clone().action) == EpisodeAction::Play {
                     let mut episode_url = episode.clone().episode;
                     // Sometimes podcast provider like to check which browser access their podcast
-                    let mut first_split = episode.episode.split("?");
+                    let mut first_split = episode.episode.split('?');
                     let res = first_split.next();
 
-                    if res.is_some() {
-                        episode_url = res.unwrap().parse().unwrap()
-                    }
+                    if let Some(unwrapped_res) = res {
+                        episode_url = unwrapped_res.parse().unwrap()
+                    };
 
-                    let podcast_episode = PodcastEpisode::query_podcast_episode_by_url(&mut *conn.get()
+                    let podcast_episode = PodcastEpisode::query_podcast_episode_by_url(&mut conn.get()
                         .unwrap(),
-                                                                           &*episode_url);
+                                                                           &episode_url);
                     if podcast_episode.clone().unwrap().is_none() {
-                        return;
                     }
                 }
             });

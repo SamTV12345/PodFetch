@@ -49,7 +49,7 @@ impl FileService {
                 return false;
             }
         }
-        return false;
+        false
     }
 
     pub fn create_podcast_root_directory_exists() ->Result<(), Error> {
@@ -60,11 +60,12 @@ impl FileService {
         Ok(())
     }
 
-    pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String, conn:&mut DbConnection)
+    pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &str, conn:&mut
+    DbConnection)
         ->Result<String, CustomError> {
         let escaped_title = prepare_podcast_title_to_directory(podcast_title,conn)?;
         if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
-            std::fs::create_dir(&format!("podcasts/{}", escaped_title)).map_err(map_io_error)?;
+            std::fs::create_dir(format!("podcasts/{}", escaped_title)).map_err(map_io_error)?;
             Ok(format!("podcasts/{}", escaped_title))
         }
         else{
@@ -84,7 +85,7 @@ impl FileService {
                         i += 1;
                     }
                     // This is save to insert because this directory does not exist
-                    std::fs::create_dir(&format!("podcasts/{}-{}", escaped_title, i))
+                    std::fs::create_dir(format!("podcasts/{}-{}", escaped_title, i))
                         .expect("Error creating directory");
                     Ok(format!("podcasts/{}-{}", escaped_title, i))
                 }
@@ -105,7 +106,7 @@ impl FileService {
 
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> std::io::Result<()> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
-        std::fs::remove_dir_all(&format!(
+        std::fs::remove_dir_all(format!(
             "podcasts/{}/{}",
             podcast.directory_id, episode.episode_id
         ))
@@ -137,8 +138,8 @@ DbConnection)
     let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
     if retrieved_settings.use_existing_filename{
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
-        if res_of_filename.is_ok(){
-                return Ok(res_of_filename.unwrap());
+        if let Ok(res_unwrapped) =res_of_filename {
+                return Ok(res_unwrapped);
         }
     }
     let final_string = perform_replacement(&podcast_episode.name,
@@ -168,13 +169,13 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
     // Colon replacement strategy
     match ReplacementStrategy::from_str(&retrieved_settings.replacement_strategy).unwrap() {
         ReplacementStrategy::ReplaceWithDashAndUnderscore => {
-            final_string = final_string.replace(":", " - ")
+            final_string = final_string.replace(':', " - ")
         }
         ReplacementStrategy::Remove => {
-            final_string = final_string.replace(":", "")
+            final_string = final_string.replace(':', "")
         }
         ReplacementStrategy::ReplaceWithDash => {
-            final_string = final_string.replace(":", "-")
+            final_string = final_string.replace(':', "-")
         }
     }
     deunicode::deunicode(&final_string)
@@ -189,7 +190,8 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
     ->Result<(String, String), CustomError> {
     let image_save_path;
     let podcast_save_path;
-    if podcast_episode.local_image_url.trim().len()==0 {
+    // not yet downloaded
+    if podcast_episode.local_image_url.trim().is_empty() {
         if settings.use_existing_filename {
             let podcast_file_name = get_filename_of_url(&podcast_episode.url);
             if podcast_file_name.is_err(){
@@ -197,7 +199,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
                 image_save_path = PathService::get_image_path(
                     &podcast.clone().directory_name,
                     Some(podcast_episode.clone()),
-                    &image_suffix,
+                    image_suffix,
                     &podcast_episode.name,
                     conn
                 )?;
@@ -207,7 +209,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
                 image_save_path = PathService::get_image_path(
                     &podcast.clone().directory_name,
                     None,
-                    &image_suffix,
+                    image_suffix,
                     &podcast_file_name.unwrap(),
                     conn
                 )?;
@@ -216,7 +218,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
             image_save_path = PathService::get_image_path(
                 &podcast.clone().directory_name,
                 Some(podcast_episode.clone()),
-                &image_suffix,
+                image_suffix,
                 &podcast_episode.name
                     ,conn
             )?;
@@ -226,7 +228,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
         image_save_path = podcast_episode.clone().local_image_url
     }
 
-    if podcast_episode.local_url.trim().len()==0{
+    if podcast_episode.local_url.trim().is_empty(){
         if settings.use_existing_filename {
             let podcast_file_name = get_filename_of_url(&podcast_episode.url);
 
@@ -234,26 +236,26 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
                 podcast_save_path = PathService::get_podcast_episode_path(
                     &podcast.directory_name.clone(),
                     Some(podcast_episode),
-                    &suffix, &podcast_file_name.unwrap(),conn)?;
+                    suffix, &podcast_file_name.unwrap(),conn)?;
             }
             else{
                 podcast_save_path = PathService::get_podcast_episode_path(
                     &podcast.directory_name.clone(),
                     None,
-                    &suffix, &podcast_file_name.unwrap(),conn)?;
+                    suffix, &podcast_file_name.unwrap(),conn)?;
             }
         }
         else{
             podcast_save_path = PathService::get_podcast_episode_path(
                 &podcast.directory_name.clone(),
                 Some(podcast_episode.clone()),
-                &suffix, &podcast_episode.name,conn)?;
+                suffix, &podcast_episode.name,conn)?;
         }
     }
     else{
         podcast_save_path = podcast_episode.clone().local_url;
     }
-    return Ok((image_save_path, podcast_save_path))
+    Ok((image_save_path, podcast_save_path))
 }
 
 
@@ -265,7 +267,7 @@ fn get_filename_of_url(url: &str) -> Result<String,String> {
 
         return Ok(dir_name)
     }
-    return Err("Could not get filename".to_string());
+    Err("Could not get filename".to_string())
 }
 
 fn remove_extension(filename: &str) -> &str {
@@ -273,5 +275,108 @@ fn remove_extension(filename: &str) -> &str {
         &filename[..dot_idx]
     } else {
         filename
+    }
+}
+
+
+#[cfg(test)]
+mod tests{
+    use crate::service::file_service::{perform_replacement};
+
+    #[test]
+    fn test_remove_file_suffix(){
+        let filename = "test.mp3";
+        let filename_without_suffix = super::remove_extension(filename);
+        assert_eq!(filename_without_suffix,"test");
+    }
+
+    #[test]
+    fn test_remove_file_suffix_long_name(){
+        let filename = "testz398459345z!?234.mp3";
+        let filename_without_suffix = super::remove_extension(filename);
+        assert_eq!(filename_without_suffix,"testz398459345z!?234");
+    }
+
+    #[test]
+    fn get_filename_of_url_test(){
+        let url = "https://www.example.com/test.mp3";
+        let filename = super::get_filename_of_url(url);
+        assert_eq!(filename.unwrap(),"test");
+    }
+
+    #[test]
+    fn get_filename_of_url_test_with_numbers(){
+        let url = "https://www.example823459274892347.com234/mypodcast.mp3";
+        let filename = super::get_filename_of_url(url);
+        assert_eq!(filename.unwrap(),"mypodcast");
+    }
+
+    #[test]
+    fn test_perform_replacement_dash_and_underscore(){
+        let title = "test: test";
+        let settings = crate::models::settings::Setting{
+            id: 1,
+            auto_download: false,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 0,
+            podcast_format: "test{podcasttitle}".to_string(),
+            episode_format: "test123{episodetitle}".to_string(),
+            replacement_strategy: "replace-with-dash-and-underscore".to_string(),
+            replace_invalid_characters: true,
+            use_existing_filename: false,
+
+            podcast_prefill: 0,
+        };
+
+        let result = perform_replacement(title, settings);
+
+        assert_eq!(result,"test -  test");
+    }
+
+    #[test]
+    fn test_perform_replacement_remove(){
+        let title = "test: test";
+        let settings = crate::models::settings::Setting{
+            id: 1,
+            auto_download: false,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 0,
+            podcast_format: "test{podcasttitle}".to_string(),
+            episode_format: "test123{episodetitle}".to_string(),
+            replacement_strategy: "remove".to_string(),
+            replace_invalid_characters: true,
+            use_existing_filename: false,
+
+            podcast_prefill: 0,
+        };
+
+        let result = perform_replacement(title, settings);
+
+        assert_eq!(result,"test test");
+    }
+
+    #[test]
+    fn test_perform_replacement_replace_with_dash(){
+        let title = "test: test";
+        let settings = crate::models::settings::Setting{
+            id: 1,
+            auto_download: false,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 0,
+            podcast_format: "test{podcasttitle}".to_string(),
+            episode_format: "test123{episodetitle}".to_string(),
+            replacement_strategy: "replace-with-dash".to_string(),
+            replace_invalid_characters: true,
+            use_existing_filename: false,
+
+            podcast_prefill: 0,
+        };
+
+        let result = perform_replacement(title, settings);
+
+        assert_eq!(result,"test- test");
     }
 }

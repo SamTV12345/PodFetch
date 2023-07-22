@@ -18,17 +18,15 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
     -> Result<HttpResponse, CustomError> {
     let env = env_service.lock().ignore_poison();
     let conn = &mut conn.get().unwrap();
-    match rq.clone().cookie("sessionid") {
-        Some(cookie) => {
-            let session = cookie.value();
-            let opt_session = Session::find_by_session_id(session, conn);
-                if opt_session.is_ok(){
-                    let user_cookie = create_session_cookie(opt_session.unwrap());
-                    return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
-                }
-        }
-        None=>{}
-    }
+        if let Some(cookie) = rq.clone().cookie("sessionid") {
+                let session = cookie.value();
+                let opt_session = Session::find_by_session_id(session, conn);
+                   if let Ok(unwrapped_session) = opt_session {
+                          let user_cookie = create_session_cookie(unwrapped_session);
+                           return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
+                      }
+          }
+
 
     let opt_authorization = rq.headers().get("Authorization");
 
@@ -44,7 +42,7 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
         return Err(CustomError::Forbidden)
     }
     if unwrapped_username == env.username && password == env.password {
-        return Ok(HttpResponse::Ok().finish());
+        Ok(HttpResponse::Ok().finish())
     } else {
         let user =  User::find_by_username(&unwrapped_username, conn)?;
         if user.clone().password.unwrap()== digest(password) {
@@ -53,7 +51,7 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
                     let user_cookie = create_session_cookie(session);
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
         } else {
-                    return  Err(CustomError::Forbidden)
+                    Err(CustomError::Forbidden)
          }
         }
 }
@@ -65,4 +63,19 @@ fn create_session_cookie(session: Session) -> Cookie<'static> {
         .same_site
     (SameSite::Strict).path("/api").finish();
     user_cookie
+}
+
+#[cfg(test)]
+mod tests{
+    use crate::gpodder::auth::authentication::create_session_cookie;
+    use crate::models::session::Session;
+
+    #[test]
+    fn test_create_session_cookie(){
+        let session = Session::new("test".to_string());
+        let cookie = create_session_cookie(session.clone());
+
+        assert_eq!(cookie.name(), "sessionid");
+        assert_eq!(cookie.value(), session.session_id);
+    }
 }

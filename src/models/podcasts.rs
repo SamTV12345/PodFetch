@@ -77,8 +77,8 @@ impl Podcast{
 
         let mapped_result = result
             .iter()
-            .map(|podcast| return mapping_service.map_podcast_to_podcast_dto_with_favorites
-            (&*podcast))
+            .map(|podcast| mapping_service.map_podcast_to_podcast_dto_with_favorites
+            (podcast))
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }
@@ -152,17 +152,17 @@ impl Podcast{
             ))
             .get_result::<Podcast>(conn)
             .map_err(map_db_error)?;
-        return Ok(inserted_podcast);
+        Ok(inserted_podcast)
     }
 
     pub fn get_podcast_by_rss_feed(rss_feed_1:String, conn: &mut DbConnection) -> Result<Podcast,
         CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
-        Ok(podcasts
+        podcasts
             .filter(rssfeed.eq(rss_feed_1))
             .first::<Podcast>(conn)
-            .map_err(map_db_error)?)
+            .map_err(map_db_error)
     }
 
     pub fn get_podcast_by_directory_id(podcast_id: &str, conn: &mut DbConnection) -> Result<Option<Podcast>,
@@ -195,7 +195,7 @@ impl Podcast{
         ->Result<usize, CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::*;
 
-        Ok(do_retry(||{diesel::update(podcasts)
+        do_retry(||{diesel::update(podcasts)
             .filter(id.eq(podcast_extra.clone().id))
             .set((
                 author.eq(podcast_extra.clone().author),
@@ -206,7 +206,7 @@ impl Podcast{
                 last_build_date.eq(podcast_extra.clone().last_build_date),
             ))
             .execute(conn)})
-            .map_err(map_db_error)?)
+            .map_err(map_db_error)
     }
 
     pub fn update_podcast_active(conn: &mut DbConnection, podcast_id: i32) ->Result<(),CustomError> {
@@ -219,7 +219,7 @@ impl Podcast{
                     .set(active.eq(!found_podcast.active))
                     .execute(conn)
                     .map_err(map_db_error)?;
-        return Ok(())
+        Ok(())
     }
 
     pub fn update_original_image_url(

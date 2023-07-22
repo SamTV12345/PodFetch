@@ -192,3 +192,7 @@
 ::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
+
+#summary a {
+    @apply text-mustard-600;
+}

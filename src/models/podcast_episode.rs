@@ -74,25 +74,24 @@ impl PodcastEpisode{
         i: Option<i32>,
     ) -> Result<Option<PodcastEpisode>, String> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
-        let found_podcast_episode;
-        if i.is_some(){
-            found_podcast_episode = podcast_episodes
+       let found_podcast_epsiode = if let Some(i_unwrapped) = i{
+             podcast_episodes
                 .filter(url.eq(podcas_episode_url_to_be_found)
-                    .and(podcast_id.eq(i.unwrap())))
+                    .and(podcast_id.eq(i_unwrapped)))
                 .first::<PodcastEpisode>(conn)
                 .optional()
-                .expect("Error loading podcast by id");
+                .expect("Error loading podcast by id")
         }
         else{
-            found_podcast_episode = podcast_episodes
+            podcast_episodes
                 .filter(url.eq(podcas_episode_url_to_be_found))
                 .first::<PodcastEpisode>(conn)
                 .optional()
-                .expect("Error loading podcast by id");
-        }
+                .expect("Error loading podcast by id")
+        };
 
 
-        Ok(found_podcast_episode)
+        Ok(found_podcast_epsiode)
     }
 
     pub fn query_podcast_episode_by_url(
@@ -121,7 +120,7 @@ impl PodcastEpisode{
         let uuid_podcast = uuid::Uuid::new_v4();
 
         let mut inserted_date = "".to_string();
-        let inserted_image_url;
+
         match &item.pub_date {
             Some(date) => {
                 let date = DateTime::parse_from_rfc2822(date).expect("Error parsing date");
@@ -130,14 +129,14 @@ impl PodcastEpisode{
             None => {}
         }
 
-        match optional_image {
+        let inserted_image_url = match optional_image {
             Some(image_url_podcast_episode) => {
-                inserted_image_url = image_url_podcast_episode;
+                image_url_podcast_episode
             }
             None => {
-                inserted_image_url = podcast.original_image_url;
+                 podcast.original_image_url
             }
-        }
+        };
 
         let inserted_podcast = insert_into(podcast_episodes)
             .values((
@@ -154,7 +153,7 @@ impl PodcastEpisode{
             .expect("Error inserting podcast episode");
 
 
-        return inserted_podcast;
+        inserted_podcast
     }
 
 
@@ -371,7 +370,7 @@ impl PodcastEpisode{
     PodcastEpisode {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
-        diesel::update(podcast_episodes.find(episode_to_update.id.clone()))
+        diesel::update(podcast_episodes.find(episode_to_update.id))
             .set(episode_to_update)
             .get_result::<PodcastEpisode>(conn)
             .expect("Error updating podcast episode")

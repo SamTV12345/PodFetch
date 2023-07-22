@@ -1,4 +1,4 @@
-use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
+use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
 use actix_web::{get, post, web, HttpResponse};
 use std::sync::{Mutex};
@@ -63,7 +63,7 @@ Option<web::ReqData<User>>, mapping_service:Data<Mutex<MappingService>>) -> Resu
     }).collect::<Vec<&PodcastWatchedEpisodeModelWithPodcastEpisode>>();
 
     episodes.iter().for_each(|x|{
-        if episodes_with_logs.iter().find(|e| e.episode_id == x.episode_id).is_none(){
+        if !episodes_with_logs.iter().any(|e| e.episode_id == x.episode_id){
             episodes_with_logs.push(x);
         }
     });

@@ -14,7 +14,7 @@ impl PathService {
     pub fn get_podcast_episode_path(directory: &str, episode: Option<PodcastEpisode>, suffix:
     &str, filename: &str, conn: &mut DbConnection)
         -> Result<String, CustomError> {
-        return match episode {
+        match episode {
             Some(episode) => {
                 Ok(format!("{}/{}/podcast.{}", directory,
                         prepare_podcast_episode_title_to_directory(episode, conn)?, suffix))
@@ -28,7 +28,7 @@ impl PathService {
     pub fn get_image_path(directory: &str, episode: Option<PodcastEpisode>, _suffix: &str,
                           filename: &str,
                           conn: &mut DbConnection) -> Result<String, CustomError> {
-        return match episode {
+        match episode {
             Some(episode) => {
                 Ok(format!("{}/{}", directory, prepare_podcast_episode_title_to_directory(episode,
                                                                                        conn)?))
@@ -40,14 +40,14 @@ impl PathService {
     }
 
     pub fn get_image_podcast_path_with_podcast_prefix(directory: &str, suffix: &str) -> String {
-        return format!("{}/image.{}", directory, suffix);
+        format!("{}/image.{}", directory, suffix)
     }
 
     pub fn check_if_podcast_episode_directory_available(base_path:&str, _podcast: Podcast,_conn: &mut DbConnection) ->
                                                                                           Result<String, CustomError> {
         let mut i = 0;
         if !Path::new(&base_path).exists() {
-            std::fs::create_dir(&base_path).map_err(map_io_error)?;
+            std::fs::create_dir(base_path).map_err(map_io_error)?;
             return Ok(base_path.to_string());
         }
 
@@ -58,6 +58,6 @@ impl PathService {
         // This is save to insert because this directory does not exist
         std::fs::create_dir(&final_path)
             .map_err(map_io_error)?;
-        return Ok(final_path);
+        Ok(final_path)
     }
 }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,7 @@ use diesel::ExpressionMethods;
 
 use crate::{DbConnection};
 
-use crate::models::models::PodcastWatchedEpisodeModelWithPodcastEpisode;
+use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
@@ -57,8 +58,8 @@ impl Episode{
             .optional()
             .expect("");
 
-        if res.is_some() {
-            return Ok(res.unwrap())
+        if let Some(unwrapped_res) = res {
+            return Ok(unwrapped_res)
         }
 
         diesel::insert_into(episodes)
@@ -81,7 +82,7 @@ impl Episode{
         EpisodeDto {
             podcast: self.podcast.clone(),
             episode: self.episode.clone(),
-            timestamp: self.timestamp.clone(),
+            timestamp: self.timestamp,
             guid: self.guid.clone(),
             action: EpisodeAction::from_string(&self.action),
             started: self.started,
@@ -98,7 +99,7 @@ impl Episode{
             device: episode_dto.device.clone(),
             podcast: episode_dto.podcast.clone(),
             episode: episode_dto.episode.clone(),
-            timestamp: episode_dto.timestamp.clone(),
+            timestamp: episode_dto.timestamp,
             guid: episode_dto.guid.clone(),
             action: episode_dto.action.clone().to_string(),
             started: episode_dto.started,
@@ -136,7 +137,8 @@ impl Episode{
         use diesel::JoinOnDsl;
         use diesel::Table;
 
-        let query = episodes
+        
+        episodes
             .inner_join(podcast_episode_table.on(podcast.eq(rssfeed)))
             .filter(username.eq(username1))
             .filter(episode.eq(episode_1))
@@ -144,8 +146,7 @@ impl Episode{
             .select(episodes::all_columns())
             .first::<Episode>(conn)
             .optional()
-            .expect("");
-        return query;
+            .expect("")
     }
 
     pub fn convert_to_podcast_history_item(&self, podcast_1: Podcast,pod_episode: PodcastEpisode)
@@ -197,7 +198,7 @@ impl Episode{
                 podcast: found_podcast.clone(),
             }
         }).collect();
-        return Ok(mapped_watched_episodes);
+        Ok(mapped_watched_episodes)
     }
 
     pub fn delete_by_username_and_episode(username1: String, conn: &mut DbConnection) ->Result<(),Error>{
@@ -244,13 +245,15 @@ impl EpisodeAction{
             _ => panic!("Unknown episode action: {}", s),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl fmt::Display for EpisodeAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EpisodeAction::New => "new".to_string(),
-            EpisodeAction::Download => "download".to_string(),
-            EpisodeAction::Play => "play".to_string(),
-            EpisodeAction::Delete => "delete".to_string(),
+            EpisodeAction::New => write!(f, "new"),
+            EpisodeAction::Download => write!(f, "download"),
+            EpisodeAction::Play => write!(f, "play"),
+            EpisodeAction::Delete => write!(f, "delete"),
         }
     }
 }

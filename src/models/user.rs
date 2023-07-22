@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
+use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
 use crate::dbconfig::schema::users;
 use crate::DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
@@ -21,21 +21,21 @@ pub struct User {
     pub role: String,
     pub password: Option<String>,
     pub explicit_consent: bool,
-    pub created_at: NaiveDateTime
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct UserWithoutPassword{
+pub struct UserWithoutPassword {
     pub id: i32,
     pub username: String,
     pub role: String,
     pub created_at: NaiveDateTime,
-    pub explicit_consent: bool
+    pub explicit_consent: bool,
 }
 
 
-impl User{
+impl User {
     pub fn new(id: i32, username: String, role: Role, password: Option<String>, created_at:
     NaiveDateTime, explicit_consent: bool) -> Self {
         User {
@@ -44,20 +44,17 @@ impl User{
             role: role.to_string(),
             password,
             created_at,
-            explicit_consent
+            explicit_consent,
         }
     }
 
     pub fn find_by_username(username_to_find: &str, conn: &mut DbConnection) ->
-                                                                             Result<User, CustomError> {
+    Result<User, CustomError> {
         use crate::dbconfig::schema::users::dsl::*;
-        match var(USERNAME) {
-             Ok(res)=> {
-                if res==username_to_find {
-                    return Ok(User::create_admin_user());
-                }
+        if let Ok(res) = var(USERNAME) {
+            if res == username_to_find {
+                return Ok(User::create_admin_user());
             }
-            _ => {}
         }
 
         let opt_user = users.filter(username.eq(username_to_find))
@@ -73,14 +70,12 @@ impl User{
     pub fn insert_user(&mut self, conn: &mut DbConnection) -> Result<User, Error> {
         use crate::dbconfig::schema::users::dsl::*;
 
-        match  var(USERNAME){
-            Ok(res) => {
-                if res==self.username {
-                    return Err(Error::new(std::io::ErrorKind::Other, "Username already exists"));
-                }
-            },
-            Err(_) => {}
+        if let Ok(res) = var(USERNAME) {
+            if res == self.username {
+                return Err(Error::new(std::io::ErrorKind::Other, "Username already exists"));
+            }
         }
+
 
         let res = diesel::insert_into(users::table())
             .values((
@@ -88,7 +83,7 @@ impl User{
                 role.eq(self.role.clone()),
                 password.eq(self.password.clone()),
                 created_at.eq(chrono::Utc::now().naive_utc())
-                ))
+            ))
             .get_result::<User>(conn).unwrap();
         Ok(res)
     }
@@ -115,8 +110,8 @@ impl User{
         Ok(User::map_to_dto(user.unwrap()))
     }
 
-    pub(crate) fn create_admin_user() ->User{
-        User{
+    pub(crate) fn create_admin_user() -> User {
+        User {
             id: 9999,
             username: var(USERNAME).unwrap().to_string(),
             role: Role::Admin.to_string(),
@@ -126,18 +121,18 @@ impl User{
         }
     }
 
-    pub fn map_to_dto(user: Self) -> UserWithoutPassword{
-        UserWithoutPassword{
+    pub fn map_to_dto(user: Self) -> UserWithoutPassword {
+        UserWithoutPassword {
             id: user.id,
             explicit_consent: user.explicit_consent,
             username: user.username.clone(),
             role: user.role.clone(),
-            created_at: user.created_at
+            created_at: user.created_at,
         }
     }
 
-    pub fn create_standard_admin_user() -> User{
-        User{
+    pub fn create_standard_admin_user() -> User {
+        User {
             id: 9999,
             username: STANDARD_USER.to_string(),
             role: Role::Admin.to_string(),
@@ -151,63 +146,63 @@ impl User{
         use crate::dbconfig::schema::users::dsl::*;
 
         let loaded_users = users.load::<User>(conn).unwrap();
-        loaded_users.into_iter().map(|user| User::map_to_dto(user)).collect()
+        loaded_users.into_iter().map(User::map_to_dto).collect()
     }
 
     /**
-        * Returns the username from the request header if the BASIC_AUTH environment variable is set to true
-        * Otherwise returns None
+     * Returns the username from the request header if the BASIC_AUTH environment variable is set to true
+     * Otherwise returns None
      */
-    pub fn get_username_from_req_header(req: &actix_web::HttpRequest) -> Result<Option<String>, Error>{
-        if var(BASIC_AUTH).is_ok()|| var(OIDC_AUTH).is_ok() {
+    pub fn get_username_from_req_header(req: &actix_web::HttpRequest) -> Result<Option<String>, Error> {
+        if var(BASIC_AUTH).is_ok() || var(OIDC_AUTH).is_ok() {
             let auth_header = req.headers().get(USERNAME);
             if auth_header.is_none() {
                 return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
             }
-            return Ok(Some(auth_header.unwrap().to_str().unwrap().parse().unwrap()))
+            return Ok(Some(auth_header.unwrap().to_str().unwrap().parse().unwrap()));
         }
         Ok(None)
     }
 
-    pub fn get_gpodder_req_header(req: &actix_web::HttpRequest) -> Result<String, Error>{
-            let auth_header = req.headers().get(USERNAME);
-            if auth_header.is_none() {
-                return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
-            }
-            return Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap())
+    pub fn get_gpodder_req_header(req: &actix_web::HttpRequest) -> Result<String, Error> {
+        let auth_header = req.headers().get(USERNAME);
+        if auth_header.is_none() {
+            return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
+        }
+        return Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap());
     }
 
 
     pub fn check_if_admin_or_uploader(username: &Option<String>, conn: &mut DbConnection) ->
-                                                                                          Result<Option<HttpResponse>, CustomError> {
-        if username.is_some(){
+    Result<Option<HttpResponse>, CustomError> {
+        if username.is_some() {
             let found_user = User::find_by_username(&username.clone().unwrap(), conn)?;
-            if found_user.role.ne(&Role::Admin.to_string()) && found_user.role.ne(&Role::Uploader.to_string()){
+            if found_user.role.ne(&Role::Admin.to_string()) && found_user.role.ne(&Role::Uploader.to_string()) {
                 return Err(CustomError::Forbidden);
             }
         }
         Ok(None)
     }
 
-    pub fn check_if_admin(username: &Option<String>, conn: &mut DbConnection) -> Result<(),CustomError>{
-        if username.is_some(){
+    pub fn check_if_admin(username: &Option<String>, conn: &mut DbConnection) -> Result<(), CustomError> {
+        if username.is_some() {
             let found_user = User::find_by_username(&username.clone().unwrap(), conn)?;
 
-            if found_user.role != Role::Admin.to_string(){
+            if found_user.role != Role::Admin.to_string() {
                 return Err(CustomError::Forbidden);
             }
         }
         Ok(())
     }
 
-    pub fn delete_by_username(username_to_search: String, conn: &mut DbConnection)->Result<(), Error>{
+    pub fn delete_by_username(username_to_search: String, conn: &mut DbConnection) -> Result<(), Error> {
         use crate::dbconfig::schema::users::dsl::*;
         diesel::delete(users.filter(username.eq(username_to_search))).execute(conn)
             .expect("Error deleting user");
         Ok(())
     }
 
-    pub fn update_user(user: User, conn: &mut DbConnection)->Result<(), Error>{
+    pub fn update_user(user: User, conn: &mut DbConnection) -> Result<(), Error> {
         use crate::dbconfig::schema::users::dsl::*;
         diesel::update(users.filter(id.eq(user.clone().id)))
             .set(user).execute(conn)
@@ -215,11 +210,11 @@ impl User{
         Ok(())
     }
 
-    pub fn is_privileged_user(&self) ->bool{
+    pub fn is_privileged_user(&self) -> bool {
         self.role.eq(&Role::Admin.to_string()) || self.role.eq(&Role::Uploader.to_string())
     }
 
-    pub fn is_admin(&self) ->bool{
+    pub fn is_admin(&self) -> bool {
         self.role.eq(&Role::Admin.to_string())
     }
 }

@@ -19,7 +19,45 @@ pub fn opt_or_empty_string<T:ToString>(opt: Option<T>) ->  String {
             s.to_string()
         },
         None => {
-            return "".to_string()
+            "".to_string()
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::time::{get_current_timestamp, get_current_timestamp_str, opt_or_empty_string};
+
+    #[test]
+    fn test_get_current_timestamp(){
+        let timestamp = get_current_timestamp();
+
+        assert!(timestamp > 0);
+    }
+
+    #[test]
+    fn test_get_current_timestamp_str(){
+        let timestamp = get_current_timestamp_str();
+
+        assert!(timestamp.timestamp() > 0);
+    }
+
+    #[test]
+    fn test_opt_or_empty_string(){
+        let opt = Some("test");
+
+        assert_eq!(opt_or_empty_string(opt),"test".to_string());
+    }
+    #[test]
+    fn test_opt_or_empty_string_with_empty_string(){
+        let opt = Some("");
+
+        assert_eq!(opt_or_empty_string(opt),"");
+    }
+    #[test]
+    fn test_opt_or_empty_string_with_none(){
+        let opt:Option<String> = None;
+
+        assert_eq!(opt_or_empty_string(opt),"");
     }
 }

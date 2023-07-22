@@ -82,15 +82,13 @@ fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtensio
                                            mut channel_builder: ChannelBuilder,
                                            podcast: Option<Podcast>,
                                            env: EnvironmentService) -> Channel {
-    match podcast {
-        Some(e) => {
-            match e.image_url.len() > 0 {
-                true => itunes_ext.set_image(env.server_url + &*e.image_url),
-                false => itunes_ext.set_image(env.server_url + &*e.original_image_url)
-            }
+    if let Some(e) = podcast {
+        match !e.image_url.is_empty() {
+            true => itunes_ext.set_image(env.server_url + &*e.image_url),
+            false => itunes_ext.set_image(env.server_url + &*e.original_image_url)
         }
-        _ => {}
     }
+
     channel_builder
         .itunes_ext(itunes_ext)
         .build()
@@ -112,32 +110,26 @@ pub async fn get_rss_feed_for_podcast(
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), id.clone())?;
+    let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), *id)?;
 
     let downloaded_episodes =
-        podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(id.clone(),
+        podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(*id,
                                                                            &mut conn.get
                                                                            ().unwrap())?;
 
     let mut itunes_owner = get_itunes_owner("", "");
 
-    match podcast.author.clone() {
-        Some(author) =>
-            itunes_owner =
-                get_itunes_owner(&author, "local@local.com"),
-        _ => {}
-    }
+        if let Some(author) = podcast.author.clone() { itunes_owner =
+           get_itunes_owner(&author, "local@local.com") }
+
 
     let mut categories: Vec<Category> = vec![];
-    match podcast.keywords.clone() {
-        Some(keyword) => {
-            let keywords: Vec<String> = keyword.split(",").map(|s| s.to_string()).collect();
-            categories = keywords
-                .iter()
-                .map(|keyword| CategoryBuilder::default().name(keyword).build())
-                .collect();
-        }
-        _ => {}
+    if let Some(keyword) = podcast.keywords.clone() {
+        let keywords: Vec<String> = keyword.split(',').map(|s| s.to_string()).collect();
+        categories = keywords
+            .iter()
+            .map(|keyword| CategoryBuilder::default().name(keyword).build())
+            .collect();
     }
 
     let itunes_ext = ITunesChannelExtensionBuilder::default()
@@ -148,7 +140,7 @@ pub async fn get_rss_feed_for_podcast(
                 .keywords
                 .clone()
                 .unwrap()
-                .split(",")
+                .split(',')
                 .map(|s| s.to_string())
                 .collect(),
         ))
@@ -206,7 +198,7 @@ fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> 
                 .enclosure(Some(enclosure))
                 .itunes_ext(itunes_extension)
                 .build();
-            return item;
+            item
         })
         .collect::<Vec<Item>>()
 }

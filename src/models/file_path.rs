@@ -82,15 +82,15 @@ impl FilenameBuilder {
         let resulting_directory = self.clone().create_podcast_episode_dir(format!("{}/{}",self
             .directory.clone(), self.episode.clone()),conn)?;
 
-        return Ok((format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix.clone
+        Ok((format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix.clone
         ()),format!("{}/{}.{}", resulting_directory,self.image_filename.clone(), self.image_suffix
-            .clone())));
+            .clone())))
     }
 
 
     fn create_podcast_episode_dir(self,dirname:String,conn: &mut DbConnection)->Result<String,
         CustomError>{
-        Ok(PathService::check_if_podcast_episode_directory_available
-            (&dirname, self.podcast, conn)?)
+        PathService::check_if_podcast_episode_directory_available
+            (&dirname, self.podcast, conn)
     }
 }

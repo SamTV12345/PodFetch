@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::Mutex;
@@ -15,7 +16,7 @@ use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::Jwk;
 use log::info;
 use serde_json::{from_str, Value};
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
+use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
 use crate::{DbPool};
 use crate::models::user::User;
 use sha256::digest;
@@ -33,16 +34,11 @@ impl AuthFilter {
     }
 }
 
+#[derive(Default)]
 pub struct AuthFilterMiddleware<S>{
     service: Rc<S>
 }
 
-impl Default for AuthFilter {
-    fn default() -> Self {
-        Self {
-        }
-    }
-}
 
 impl<S, B> Transform<S, ServiceRequest> for AuthFilter
     where
@@ -78,22 +74,21 @@ impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        if var(BASIC_AUTH).is_ok() {
-            return self.handle_basic_auth(req);
-        }
-        else if var(OIDC_AUTH).is_ok(){
-            return self.handle_oidc_auth(req)
-        }
-        else{
+        return if var(BASIC_AUTH).is_ok() {
+            self.handle_basic_auth(req)
+        } else if var(OIDC_AUTH).is_ok() {
+            self.handle_oidc_auth(req)
+        } else {
             // It can only be no auth
-            return self.handle_no_auth(req);
+            self.handle_no_auth(req)
         }
     }
 }
 
+type MyFuture<B, Error> = Pin<Box<dyn Future<Output = Result<ServiceResponse<EitherBody<B>>, Error>>>>;
+
 impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>, S::Future: 'static {
-    fn handle_basic_auth(&self, req: ServiceRequest) ->
-    Pin<Box<dyn futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>> {
+    fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let opt_auth_header = req.headers().get("Authorization");
         if opt_auth_header.is_none() {
             return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
@@ -103,8 +98,8 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
             Ok(auth) => {
                 let (username, password) = AuthFilter::extract_basic_auth(auth);
                 let res = req.app_data::<web::Data<DbPool>>().unwrap();
-                let found_user = User::find_by_username(username.as_str(), &mut *res.get().unwrap
-                ());
+                let found_user = User::find_by_username(username.as_str(), &mut res.get().unwrap());
+
                 if found_user.is_err() {
                     return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized"))
                         .map_into_right_body()))
@@ -117,7 +112,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                             req.extensions_mut().insert(unwrapped_user);
                             let service = Rc::clone(&self.service);
                             async move {
-                                return service
+                                service
                                     .call(req)
                                     .await
                                     .map(|res| res.map_into_left_body())
@@ -135,7 +130,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                     req.extensions_mut().insert(unwrapped_user);
                     let service = Rc::clone(&self.service);
                     async move {
-                        return service
+                        service
                             .call(req)
                             .await
                             .map(|res| res.map_into_left_body())
@@ -151,7 +146,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
         }
     }
 
-    fn handle_oidc_auth(&self, req: ServiceRequest) -> Pin<Box<dyn futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>> {
+    fn handle_oidc_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let token_res = req.headers().get("Authorization").unwrap().to_str();
         if token_res.is_err() {
             return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
@@ -199,7 +194,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
 
         let jwk_string = serde_json::to_string(&custom_jwk).unwrap();
 
-        let jwk = from_str::<Jwk>(&*jwk_string).unwrap();
+        let jwk = from_str::<Jwk>(&jwk_string).unwrap();
         let key = DecodingKey::from_jwk(&jwk).unwrap();
         let validation = Validation::new(Algorithm::RS256);
         return match decode::<Value>(&token, &key, &validation) {
@@ -248,13 +243,12 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
         }
     }
 
-    fn handle_no_auth(&self, req: ServiceRequest) -> Pin<Box<dyn
-    futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>>{
+    fn handle_no_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let user = User::create_standard_admin_user();
         req.extensions_mut().insert(user);
         let service = Rc::clone(&self.service);
         async move {
-            return service
+            service
                 .call(req)
                 .await
                 .map(|res| res.map_into_left_body())
@@ -266,11 +260,11 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
 impl AuthFilter{
     pub fn extract_basic_auth(auth: &str) -> (String, String) {
         let auth = auth.to_string();
-        let auth = auth.split(" ").collect::<Vec<&str>>();
+        let auth = auth.split(' ').collect::<Vec<&str>>();
         let auth = auth[1];
         let auth = general_purpose::STANDARD.decode(auth).unwrap();
         let auth = String::from_utf8(auth).unwrap();
-        let auth = auth.split(":").collect::<Vec<&str>>();
+        let auth = auth.split(':').collect::<Vec<&str>>();
         let username = auth[0];
         let password = auth[1];
         (username.to_string(), password.to_string())
@@ -278,14 +272,13 @@ impl AuthFilter{
 
     pub fn get_jwk() -> CustomJwkSet {
         let jwk_uri = var("OIDC_JWKS").expect("OIDC_JWKS must be set");
-        let response = reqwest::blocking::get(jwk_uri).unwrap()
-            .json::<CustomJwkSet>().unwrap();
-        response
+         reqwest::blocking::get(jwk_uri).unwrap()
+            .json::<CustomJwkSet>().unwrap()
     }
 
     pub fn basic_auth_login(rq: String) -> (String, String) {
         let (u,p) = Self::extract_basic_auth(rq.as_str());
 
-        return (u.to_string(),p.to_string())
+        (u.to_string(),p.to_string())
     }
 }
