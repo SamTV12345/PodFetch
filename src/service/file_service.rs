@@ -189,6 +189,7 @@ PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut Db
     ->Result<(String, String), CustomError> {
     let image_save_path;
     let podcast_save_path;
+    // not yet downloaded
     if podcast_episode.local_image_url.trim().len()==0 {
         if settings.use_existing_filename {
             let podcast_file_name = get_filename_of_url(&podcast_episode.url);
@@ -273,5 +274,159 @@ fn remove_extension(filename: &str) -> &str {
         &filename[..dot_idx]
     } else {
         filename
+    }
+}
+
+
+#[cfg(test)]
+mod tests{
+    use std::path::Path;
+    use crate::models::podcast_episode::PodcastEpisode;
+    use crate::models::podcasts::Podcast;
+    use crate::service::file_service::{determine_image_and_local_podcast_audio_url, perform_replacement};
+
+    fn setup_podcast_directory(){
+
+        if Path::new("podcasts").exists() {
+            std::fs::remove_dir_all("podcasts").unwrap();
+        }
+        std::fs::create_dir("podcasts").unwrap();
+        std::fs::create_dir("podcasts/test").unwrap();
+        std::fs::create_dir("podcasts/test/test-1").unwrap();
+    }
+
+    fn get_podcast() -> Podcast {
+        Podcast {
+            id: 1,
+            image_url: "https://www.example.com/test.jpg".to_string(),
+            directory_id: "test".to_string(),
+            directory_name: "test".to_string(),
+            language: Option::from("en".to_string()),
+            keywords: Option::from("test".to_string()),
+            last_build_date: Option::from("test".to_string()),
+            author: None,
+            active: false,
+            explicit: Some("yes".to_string()),
+            name: "".to_string(),
+            rssfeed: "".to_string(),
+            summary: None,
+            original_image_url: "".to_string(),
+        }
+    }
+
+    fn get_podcast_episode() -> PodcastEpisode {
+        crate::models::podcast_episode::PodcastEpisode {
+            id: 1,
+            podcast_id: 1,
+            name: "test".to_string(),
+            url: "https://www.example.com/test.mp3".to_string(),
+            date_of_recording: "".to_string(),
+            image_url: "https://www.example.com/image.mp3".to_string(),
+            total_time: 0,
+            local_url: "".to_string(),
+            local_image_url: "".to_string(),
+            description: "".to_string(),
+            status: "".to_string(),
+            download_time: None,
+            episode_id: "test".to_string(),
+            guid: "202".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_remove_file_suffix(){
+        let filename = "test.mp3";
+        let filename_without_suffix = super::remove_extension(filename);
+        assert_eq!(filename_without_suffix,"test");
+    }
+
+    #[test]
+    fn test_remove_file_suffix_long_name(){
+        let filename = "testz398459345z!?234.mp3";
+        let filename_without_suffix = super::remove_extension(filename);
+        assert_eq!(filename_without_suffix,"testz398459345z!?234");
+    }
+
+    #[test]
+    fn get_filename_of_url_test(){
+        let url = "https://www.example.com/test.mp3";
+        let filename = super::get_filename_of_url(url);
+        assert_eq!(filename.unwrap(),"test");
+    }
+
+    #[test]
+    fn get_filename_of_url_test_with_numbers(){
+        let url = "https://www.example823459274892347.com234/mypodcast.mp3";
+        let filename = super::get_filename_of_url(url);
+        assert_eq!(filename.unwrap(),"mypodcast");
+    }
+
+    #[test]
+    fn test_perform_replacement_dash_and_underscore(){
+        let title = "test: test";
+        let settings = crate::models::settings::Setting{
+            id: 1,
+            auto_download: false,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 0,
+            podcast_format: "test{podcasttitle}".to_string(),
+            episode_format: "test123{episodetitle}".to_string(),
+            replacement_strategy: "replace-with-dash-and-underscore".to_string(),
+            replace_invalid_characters: true,
+            use_existing_filename: false,
+
+            podcast_prefill: 0,
+        };
+
+        let result = perform_replacement(title, settings);
+
+        assert_eq!(result,"test -  test");
+    }
+
+    #[test]
+    fn test_perform_replacement_remove(){
+        let title = "test: test";
+        let settings = crate::models::settings::Setting{
+            id: 1,
+            auto_download: false,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 0,
+            podcast_format: "test{podcasttitle}".to_string(),
+            episode_format: "test123{episodetitle}".to_string(),
+            replacement_strategy: "remove".to_string(),
+            replace_invalid_characters: true,
+            use_existing_filename: false,
+
+            podcast_prefill: 0,
+        };
+
+        let result = perform_replacement(title, settings);
+
+        assert_eq!(result,"test test");
+    }
+
+    #[test]
+    fn test_perform_replacement_replace_with_dash(){
+        let title = "test: test";
+        let settings = crate::models::settings::Setting{
+            id: 1,
+            auto_download: false,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 0,
+            podcast_format: "test{podcasttitle}".to_string(),
+            episode_format: "test123{episodetitle}".to_string(),
+            replacement_strategy: "replace-with-dash".to_string(),
+            replace_invalid_characters: true,
+            use_existing_filename: false,
+
+            podcast_prefill: 0,
+        };
+
+        let result = perform_replacement(title, settings);
+
+        assert_eq!(result,"test- test");
     }
 }

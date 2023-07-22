@@ -81,12 +81,22 @@ impl Role{
 
 // environment keys
 pub const OIDC_AUTH:&str = "OIDC_AUTH";
+pub const OIDC_REDIRECT_URI:&str = "OIDC_REDIRECT_URI";
+pub const OIDC_AUTHORITY:&str = "OIDC_AUTHORITY";
+pub const OIDC_CLIENT_ID:&str = "OIDC_CLIENT_ID";
+pub const OIDC_SCOPE:&str = "OIDC_SCOPE";
+
 pub const BASIC_AUTH:&str = "BASIC_AUTH";
 
 
 pub const USERNAME:&str = "USERNAME";
 pub const PASSWORD:&str = "PASSWORD";
 
+pub const SERVER_URL: &str = "SERVER_URL";
+
+pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
+
+pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 
 pub const STANDARD_USER: &str = "user123";
 
@@ -97,4 +107,15 @@ closing bracket ({}).";
 pub const PODCAST_FILENAME: &str = "podcast";
 pub const PODCAST_IMAGENAME:&str = "image";
 
-pub const POLLING_INTERVAL: u32 = 300;
+pub const POLLING_INTERVAL_DEFAULT: u32 = 300;
+
+
+// podindex config
+
+pub const PODINDEX_API_KEY: &str = "PODINDEX_API_KEY";
+pub const PODINDEX_API_SECRET: &str = "PODINDEX_API_SECRET";
+
+
+// GPodder config
+
+pub const GPODDER_INTEGRATION_ENABLED: &str = "GPODDER_INTEGRATION_ENABLED";
