@@ -2,7 +2,7 @@ use std::env;
 use crate::models::settings::ConfigModel;
 use std::env::var;
 use regex::Regex;
-use crate::constants::constants::{BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME};
+use crate::constants::constants::{BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -34,10 +34,10 @@ impl EnvironmentService {
         let oidc_configured = var(OIDC_AUTH).is_ok();
         if oidc_configured{
             option_oidc_config = Some(OidcConfig{
-                redirect_uri: var("OIDC_REDIRECT_URI").expect("OIDC redirect uri not configured"),
-                authority: var("OIDC_AUTHORITY").expect("OIDC authority not configured"),
-                client_id: var("OIDC_CLIENT_ID").expect("OIDC client id not configured"),
-                scope: var("OIDC_SCOPE").unwrap_or("openid profile email".to_string())
+                redirect_uri: var(OIDC_REDIRECT_URI).expect("OIDC redirect uri not configured"),
+                authority: var(OIDC_AUTHORITY).expect("OIDC authority not configured"),
+                client_id: var(OIDC_CLIENT_ID).expect("OIDC client id not configured"),
+                scope: var(OIDC_SCOPE).unwrap_or("openid profile email".to_string())
             });
         }
         let mut server_url = var(SERVER_URL).unwrap_or("http://localhost:8000".to_string());
