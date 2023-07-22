@@ -281,57 +281,8 @@ fn remove_extension(filename: &str) -> &str {
 #[cfg(test)]
 mod tests{
     use std::path::Path;
-    use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
-    use crate::service::file_service::{determine_image_and_local_podcast_audio_url, perform_replacement};
-
-    fn setup_podcast_directory(){
-
-        if Path::new("podcasts").exists() {
-            std::fs::remove_dir_all("podcasts").unwrap();
-        }
-        std::fs::create_dir("podcasts").unwrap();
-        std::fs::create_dir("podcasts/test").unwrap();
-        std::fs::create_dir("podcasts/test/test-1").unwrap();
-    }
-
-    fn get_podcast() -> Podcast {
-        Podcast {
-            id: 1,
-            image_url: "https://www.example.com/test.jpg".to_string(),
-            directory_id: "test".to_string(),
-            directory_name: "test".to_string(),
-            language: Option::from("en".to_string()),
-            keywords: Option::from("test".to_string()),
-            last_build_date: Option::from("test".to_string()),
-            author: None,
-            active: false,
-            explicit: Some("yes".to_string()),
-            name: "".to_string(),
-            rssfeed: "".to_string(),
-            summary: None,
-            original_image_url: "".to_string(),
-        }
-    }
-
-    fn get_podcast_episode() -> PodcastEpisode {
-        crate::models::podcast_episode::PodcastEpisode {
-            id: 1,
-            podcast_id: 1,
-            name: "test".to_string(),
-            url: "https://www.example.com/test.mp3".to_string(),
-            date_of_recording: "".to_string(),
-            image_url: "https://www.example.com/image.mp3".to_string(),
-            total_time: 0,
-            local_url: "".to_string(),
-            local_image_url: "".to_string(),
-            description: "".to_string(),
-            status: "".to_string(),
-            download_time: None,
-            episode_id: "test".to_string(),
-            guid: "202".to_string(),
-        }
-    }
+    use crate::service::file_service::{perform_replacement};
 
     #[test]
     fn test_remove_file_suffix(){

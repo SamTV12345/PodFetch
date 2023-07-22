@@ -66,6 +66,9 @@ urlencoding="2.1.2"
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.55"
 
+[dev-dependencies]
+serial_test = {version="2.0.0"}
+
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.

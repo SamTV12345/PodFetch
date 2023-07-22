@@ -143,11 +143,30 @@ impl EnvironmentService {
 #[cfg(test)]
 mod tests{
     use crate::service::environment_service::EnvironmentService;
-    use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, USERNAME};
-    use std::env::set_var;
+    use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
+    use std::env::{set_var,remove_var};
+    use serial_test::serial;
+
+    fn do_env_cleanup(){
+        remove_var(SERVER_URL);
+        remove_var(PODINDEX_API_KEY);
+        remove_var(PODINDEX_API_SECRET);
+        remove_var(POLLING_INTERVAL);
+        remove_var(BASIC_AUTH);
+        remove_var(USERNAME);
+        remove_var(PASSWORD);
+        remove_var(OIDC_AUTH);
+        remove_var(OIDC_REDIRECT_URI);
+        remove_var(OIDC_AUTHORITY);
+        remove_var(OIDC_CLIENT_ID);
+        remove_var(OIDC_SCOPE);
+    }
 
     #[test]
-    fn test_get_config(){
+    #[serial]
+    fn test_get_config() {
+        do_env_cleanup();
+
         set_var(SERVER_URL, "http://localhost:8000");
         set_var(POLLING_INTERVAL, "10");
         set_var(BASIC_AUTH, "true");
@@ -171,14 +190,18 @@ mod tests{
     }
 
     #[test]
-    fn test_getting_server_url(){
+    #[serial]
+    fn test_getting_server_url() {
+        do_env_cleanup();
         set_var(SERVER_URL, "http://localhost:8000");
         let env_service = EnvironmentService::new();
         assert_eq!(env_service.get_server_url(), "http://localhost:8000/");
     }
 
     #[test]
-    fn test_get_config_without_oidc(){
+    #[serial]
+    fn test_get_config_without_oidc() {
+        do_env_cleanup();
         set_var(SERVER_URL, "http://localhost:8000");
         set_var(PODINDEX_API_KEY, "test");
         set_var(PODINDEX_API_SECRET, "test");
@@ -196,19 +219,24 @@ mod tests{
     }
 
     #[test]
-    fn test_get_podindex_api_key(){
+    #[serial]
+    fn test_get_podindex_api_key() {
+        do_env_cleanup();
         set_var(PODINDEX_API_KEY, "test");
         set_var(PODINDEX_API_SECRET, "testsecret");
-        let mut env_service = EnvironmentService::new();
+        let env_service = EnvironmentService::new();
 
         assert_eq!(env_service.get_podindex_api_key(), "test");
         assert_eq!(env_service.get_podindex_api_secret(), "testsecret");
+
     }
 
     #[test]
-    fn test_get_polling_interval(){
+    #[serial]
+    fn test_get_polling_interval() {
+        do_env_cleanup();
         set_var(POLLING_INTERVAL, "20");
-        let mut env_service = EnvironmentService::new();
+        let env_service = EnvironmentService::new();
         assert_eq!(env_service.get_polling_interval(), 20);
     }
 }

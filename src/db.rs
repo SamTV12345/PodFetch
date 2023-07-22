@@ -1,7 +1,7 @@
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use diesel::prelude::*;
-use diesel::{debug_query, RunQueryDsl};
+use diesel::{RunQueryDsl};
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::{DbConnection};
 use crate::models::favorites::Favorite;
