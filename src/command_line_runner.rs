@@ -22,21 +22,21 @@ use crate::models::podcasts::Podcast;
 use crate::utils::error::CustomError;
 
 
-pub fn start_command_line(mut args: Args){
+pub fn start_command_line(mut args: Args) {
     println!("Starting from command line");
     match args.nth(1).unwrap().as_str() {
-        "help"|"--help"=>{
+        "help" | "--help" => {
             println!(r" The following commands are available:
             users => Handles user management
             podcasts => Handles podcast management
             ")
         }
-        "podcasts"=>{
+        "podcasts" => {
             println!("Podcast management");
-            match args.nth(0).unwrap().as_str() {
-                "refresh"=> {
-                    let podcast_rss_feed = args.nth(0);
-                    if podcast_rss_feed.is_none(){
+            match args.next().unwrap().as_str() {
+                "refresh" => {
+                    let podcast_rss_feed = args.next();
+                    if podcast_rss_feed.is_none() {
                         println!("Please provide a podcast rss feed url");
                         exit(1);
                     }
@@ -45,81 +45,71 @@ pub fn start_command_line(mut args: Args){
                     let conn = &mut establish_connection();
 
 
-                    let replaced_feed = rss_feed.replace("'", "").replace(" ","");
+                    let replaced_feed = rss_feed.replace("'", "").replace(" ", "");
                     println!("Refreshing podcast {}", replaced_feed);
 
                     let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn).expect("Error getting podcast");
 
                     let mut podcast_episode_service = PodcastEpisodeService::new();
                     podcast_episode_service.insert_podcast_episodes(conn, podcast.clone()).unwrap();
-                    podcast_service.schedule_episode_download( podcast,None, conn).unwrap();
-
+                    podcast_service.schedule_episode_download(podcast, None, conn).unwrap();
                 }
-                "refresh-all"=> {
+                "refresh-all" => {
                     let conn = &mut establish_connection();
-                    let podcasts  = Podcast::get_all_podcasts(&mut establish_connection());
+                    let podcasts = Podcast::get_all_podcasts(&mut establish_connection());
                     let mut podcast_service = PodcastService::new();
-                    for podcast in podcasts.unwrap(){
-                            println!("Refreshing podcast {}", podcast.name);
+                    for podcast in podcasts.unwrap() {
+                        println!("Refreshing podcast {}", podcast.name);
 
                         let mut podcast_episode_service = PodcastEpisodeService::new();
                         podcast_episode_service.insert_podcast_episodes(&mut establish_connection
                             (), podcast.clone()).unwrap();
-                            podcast_service.schedule_episode_download( podcast,None, conn).unwrap();
+                        podcast_service.schedule_episode_download(podcast, None, conn).unwrap();
                     }
                 }
-                "list"=>{
+                "list" => {
                     let podcasts = Podcast::get_all_podcasts(&mut establish_connection());
                     match podcasts {
-                        Ok(podcasts)=>{
+                        Ok(podcasts) => {
                             println!("Id - Name - RSS Feed");
-                            for podcast in podcasts{
+                            for podcast in podcasts {
                                 println!("{} - {} - {}", podcast.id, podcast.name, podcast.rssfeed);
                             }
-                        },
-                        Err(..)=>{
+                        }
+                        Err(..) => {
                             println!("Error getting podcasts");
                         }
                     }
-                },
-                "help"|"--help"=>{
+                }
+                "help" | "--help" => {
                     println!(r" The following commands are available:
                     refresh => Refreshes a podcast
                     refresh-all => Refreshes all podcasts
                     list => Lists all podcasts
                     ")
                 }
-                _=>{
+                _ => {
                     println!("Unknown command");
                 }
             }
-        },
-        "users"=>{
+        }
+        "users" => {
             println!("User management");
-            match args.nth(0).unwrap().as_str() {
-                "add"=> {
+            match args.next().unwrap().as_str() {
+                "add" => {
                     let mut user = read_user_account().unwrap();
 
 
-                    println!("Should a user with the following settings be applied {:?}",user);
+                    println!("Should a user with the following settings be applied {:?}", user);
 
-                    match ask_for_confirmation(){
-                        Ok(..)=>{
-                            user.password = Some(digest(user.password.unwrap()));
-                            match User::insert_user(&mut user, &mut establish_connection()){
-                                Ok(..)=>{
-                                    println!("User succesfully created")
-                                },
-                                Err(..)=>{
-
-                                }
-                            }
-                        },
-                        Err(..)=> {
+                    if let Ok(..) = ask_for_confirmation() {
+                        user.password = Some(digest(user.password.unwrap()));
+                        if let Ok(..) = User::insert_user(&mut user, &mut establish_connection()) {
+                            println!("User succesfully created")
                         }
                     }
                 }
-                "remove"=> {
+                "remove" => {
                     let mut username = String::new();
                     // remove user
                     let available_users = list_users();
@@ -127,8 +117,8 @@ pub fn start_command_line(mut args: Args){
                                &mut username);
                     username = trim_string(username);
                     println!("{}", username);
-                    match available_users.iter().find(|u|u.username==username){
-                        Some(..)=>{
+                    match available_users.iter().find(|u| u.username == username) {
+                        Some(..) => {
                             PodcastHistoryItem::delete_by_username(trim_string(username.clone()),
                                                                    &mut establish_connection())
                                 .expect("Error deleting entries for podcast history item");
@@ -149,14 +139,14 @@ pub fn start_command_line(mut args: Args){
                             User::delete_by_username(trim_string(username.clone()),
                                                      &mut establish_connection())
                                 .expect("Error deleting user");
-                        println!("User deleted")
-                        },
-                        None=>{
+                            println!("User deleted")
+                        }
+                        None => {
                             println!("Username not found")
                         }
                     }
                 }
-                "update"=>{
+                "update" => {
                     //update a user
                     list_users();
                     let mut username = String::new();
@@ -169,14 +159,13 @@ pub fn start_command_line(mut args: Args){
                         establish_connection()).unwrap();
 
                     do_user_update(user)
-
                 }
-                "list"=> {
+                "list" => {
                     // list users
 
                     list_users();
                 }
-                "help"|"--help"=>{
+                "help" | "--help" => {
                     println!(r" The following commands are available:
                     add => Adds a user
                     remove => Removes a user
@@ -188,8 +177,8 @@ pub fn start_command_line(mut args: Args){
                     error!("Command not found")
                 }
             }
-        },
-        "debug"=>{
+        }
+        "debug" => {
             create_debug_message();
         }
         _ => {
@@ -209,12 +198,11 @@ fn list_users() -> Vec<UserWithoutPassword> {
 }
 
 
-pub fn read_user_account()->Result<User, CustomError>{
+pub fn read_user_account() -> Result<User, CustomError> {
     let mut username = String::new();
-    let password;
 
-    let role = Role::VALUES.map(|v|{
-        return v.to_string()
+    let role = Role::VALUES.map(|v| {
+        return v.to_string();
     }).join(", ");
     retry_read("Enter your username: ", &mut username);
 
@@ -224,10 +212,10 @@ pub fn read_user_account()->Result<User, CustomError>{
         println!("User does not exist");
     }
 
-    password = retry_read_secret("Enter your password: ");
-    let assigned_role = retry_read_role(&format!("Select your role {}",&role));
+    let password = retry_read_secret("Enter your password: ");
+    let assigned_role = retry_read_role(&format!("Select your role {}", &role));
 
-    let user = User{
+    let user = User {
         id: 0,
         username: trim_string(username.clone()),
         role: assigned_role.to_string(),
@@ -239,12 +227,12 @@ pub fn read_user_account()->Result<User, CustomError>{
     Ok(user)
 }
 
-pub fn retry_read(prompt: &str, input: &mut String){
-    println!("{}",prompt);
+pub fn retry_read(prompt: &str, input: &mut String) {
+    println!("{}", prompt);
     stdin().read_line(input).unwrap();
-    match  input.len()>0{
+    match !input.is_empty() {
         true => {
-            if input.trim().len()==0{
+            if input.trim().is_empty() {
                 retry_read(prompt, input);
             }
         }
@@ -255,13 +243,13 @@ pub fn retry_read(prompt: &str, input: &mut String){
 }
 
 
-pub fn retry_read_secret(prompt: &str)->String{
-    println!("{}",prompt);
+pub fn retry_read_secret(prompt: &str) -> String {
+    println!("{}", prompt);
     stdout().flush().unwrap();
     let input = read_password().unwrap();
-    match  input.len()>0{
+    match input.len() > 0 {
         true => {
-            if input.trim().len()==0{
+            if input.trim().len() == 0 {
                 retry_read_secret(prompt);
             }
         }
@@ -272,72 +260,71 @@ pub fn retry_read_secret(prompt: &str)->String{
     input
 }
 
-pub fn retry_read_role(prompt: &str)->Role{
+pub fn retry_read_role(prompt: &str) -> Role {
     let mut input = String::new();
-    println!("{}",prompt);
+    println!("{}", prompt);
     stdin().read_line(&mut input).unwrap();
     let res = Role::from_str(&trim_string(input));
-    match res{
-        Err(..)=> {
+    match res {
+        Err(..) => {
             println!("Error setting role. Please choose one of the possible roles.");
-            return retry_read_role(prompt);
+            retry_read_role(prompt)
         }
-        Ok(..)=>{
+        Ok(..) => {
             res.unwrap()
         }
     }
 }
 
-fn ask_for_confirmation()->Result<(),Error>{
+fn ask_for_confirmation() -> Result<(), Error> {
     let mut input = String::new();
     println!("Y[es]/N[o]");
     stdin().read_line(&mut input).expect("Error reading from terminal");
-    match input.to_lowercase().starts_with("y") {
-        true=>Ok(()),
-        false=>Err(Error::new(ErrorKind::WouldBlock, "Interrupted by user."))
+    match input.to_lowercase().starts_with('y') {
+        true => Ok(()),
+        false => Err(Error::new(ErrorKind::WouldBlock, "Interrupted by user."))
     }
 }
 
 
-fn trim_string(string_to_trim: String)->String{
-    string_to_trim.trim_end_matches("\n").trim().parse().unwrap()
+fn trim_string(string_to_trim: String) -> String {
+    string_to_trim.trim_end_matches('\n').trim().parse().unwrap()
 }
 
 
-fn do_user_update(mut user:User){
+fn do_user_update(mut user: User) {
     let mut input = String::new();
-    println!("The following settings of a user should be updated: {:?}",user);
+    println!("The following settings of a user should be updated: {:?}", user);
     println!("Enter which field of a user should be updated [role, password, \
     explicit_consent]");
     stdin().read_line(&mut input)
         .expect("Error reading from terminal");
     input = trim_string(input);
     match input.as_str() {
-        "role" =>{
+        "role" => {
             user.role = Role::to_string(&retry_read_role("Enter the new role [user,admin]"));
             User::update_user(user, &mut establish_connection())
                 .expect("Error updating role");
             println!("Role updated");
-        },
-        "password"=>{
+        }
+        "password" => {
             let mut password = retry_read_secret("Enter the new username");
             password = digest(password);
             user.password = Some(password);
             User::update_user(user, &mut establish_connection())
                 .expect("Error updating username");
             println!("Password updated");
-        },
-        "explicit_consent"=>{
+        }
+        "explicit_consent" => {
             user.explicit_consent = !user.explicit_consent;
             User::update_user(user, &mut establish_connection())
                 .expect("Error updating explicit_consent");
             println!("Explicit consent updated");
         }
-        _=>{
+        _ => {
             println!("Field not found");
         }
     }
-
 }
 
 
@@ -359,17 +346,16 @@ pub fn create_debug_message() {
     println!("Rustc Version: {}", built_info::RUSTC_VERSION);
     println!("Rustc: {}", built_info::RUSTC_VERSION);
 
-    let podcasts  = Podcast::get_all_podcasts(&mut establish_connection());
+    let podcasts = Podcast::get_all_podcasts(&mut establish_connection());
 
     match podcasts {
         Ok(podcasts) => {
-            podcasts.iter().for_each(|p|{
+            podcasts.iter().for_each(|p| {
                 println!("Podcast: {:?}", p);
             });
-        },
+        }
         Err(e) => {
             println!("Error: {:?}", e);
         }
     }
-
 }

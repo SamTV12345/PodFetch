@@ -280,8 +280,6 @@ fn remove_extension(filename: &str) -> &str {
 
 #[cfg(test)]
 mod tests{
-    use std::path::Path;
-    use crate::models::podcasts::Podcast;
     use crate::service::file_service::{perform_replacement};
 
     #[test]

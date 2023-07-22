@@ -75,19 +75,19 @@ impl Actor for WsConn {
 }
 
 // The `StreamHandler` trait is used to handle the messages that are sent over the socket.
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
+impl StreamHandler<Result<Message, ws::ProtocolError>> for WsConn {
     // The `handle()` function is where we'll determine the response
     // to the client's messages. So, for example, if we ping the client,
     // it should respond with a pong. These two messages are necessary
     // for the `hb()` function to maintain the connection status.
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: Result<Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
             // Ping/Pong will be used to make sure the connection is still alive
             Ok(Message::Ping(msg)) => {
                 self.hb = Instant::now();
                 ctx.pong(&msg);
             }
-            Ok(ws::Message::Pong(_)) => {
+            Ok(Message::Pong(_)) => {
                 self.hb = Instant::now();
             }
             // Text will echo any text received back to the client (for now)

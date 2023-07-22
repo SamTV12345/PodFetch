@@ -273,7 +273,7 @@ impl PodcastEpisodeService {
                             podcast.clone(),
                             item.clone(),
                             Some("ui/default.jpg".parse().unwrap()),
-                            duration_episode as i32,
+                            duration_episode,
                         );
                         podcast_inserted.push(inserted_episode);
                     }

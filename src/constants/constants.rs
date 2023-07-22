@@ -123,3 +123,7 @@ pub const GPODDER_INTEGRATION_ENABLED: &str = "GPODDER_INTEGRATION_ENABLED";
 pub const DATABASE_URL: &str = "DATABASE_URL";
 
 pub const DATABASE_URL_DEFAULT_SQLITE: &str = "sqlite://./db/podcast.db";
+
+
+pub const CSS: &str = "css";
+pub const JS: &str = "javascript";

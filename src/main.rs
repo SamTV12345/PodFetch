@@ -29,7 +29,7 @@ use tokio::task::spawn_blocking;
 
 mod controllers;
 use crate::config::dbconfig::{ConnectionOptions, establish_connection, get_database_url};
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::constants::constants::{BASIC_AUTH, CSS, JS, OIDC_AUTH, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -345,11 +345,8 @@ pub fn get_ui_config() -> Scope {
                     return Ok(ServiceResponse::new(req.clone(), file.into_response(&req)))
                 }
             }
-            if type_of.contains("css"){
+            if type_of.contains(CSS) || type_of.contains(JS) {
                 content  = fix_links(&content)
-            }
-            else if type_of.contains("javascript"){
-                content = fix_links(&content)
             }
             let res = HttpResponse::Ok()
                 .content_type(type_of)
@@ -428,7 +425,7 @@ pub fn check_server_config(service1: EnvironmentService) {
     }
 
     if var(TELEGRAM_API_ENABLED).is_ok(){
-        if !var(TELEGRAM_BOT_TOKEN).is_ok() || !var(TELEGRAM_BOT_CHAT_ID).is_ok() {
+        if var(TELEGRAM_BOT_TOKEN).is_err() || var(TELEGRAM_BOT_CHAT_ID).is_err() {
             eprintln!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
             exit(1);
         }
