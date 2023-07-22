@@ -95,3 +95,42 @@ struct ErrorResponse {
     pub error: String,
     pub message: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::error::{CustomError, map_db_error, map_io_error};
+    use actix_web::http::StatusCode;
+    use actix_web::ResponseError;
+    use diesel::result::Error;
+    use std::io::ErrorKind;
+
+    #[test]
+    fn test_map_io_error() {
+        let io_error = std::io::Error::new(ErrorKind::NotFound, "File not found");
+        let custom_error = map_io_error(io_error);
+        assert_eq!(custom_error.status_code(), StatusCode::NOT_FOUND);
+        assert_eq!(custom_error.to_string(), "Requested file was not found");
+    }
+
+    #[test]
+    fn test_map_db_error() {
+        let db_error = Error::NotFound;
+        let custom_error = map_db_error(db_error);
+        assert_eq!(custom_error.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(custom_error.to_string(), "Unknown Internal Error");
+    }
+
+    #[test]
+    fn test_custom_error() {
+        let custom_error = CustomError::NotFound;
+        assert_eq!(custom_error.status_code(), StatusCode::NOT_FOUND);
+        assert_eq!(custom_error.to_string(), "Requested file was not found");
+    }
+
+    #[test]
+    fn test_custom_conflict_message() {
+        let custom_error = CustomError::Conflict("An error occured".to_string());
+        assert_eq!(custom_error.status_code(), StatusCode::CONFLICT);
+        assert_eq!(custom_error.to_string(), "The following error occurred: An error occured");
+    }
+}
