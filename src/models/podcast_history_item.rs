@@ -99,7 +99,7 @@ impl PodcastHistoryItem{
                     .optional()
                     .map_err(map_db_error)?;
 
-                return match history_item {
+                match history_item {
                     Some(found_history_item) => {
                         let option_episode = Episode::get_watch_log_by_username_and_episode
                             (username_to_find.clone(), conn, found_podcast.clone().url);
@@ -126,10 +126,10 @@ impl PodcastHistoryItem{
                         username: STANDARD_USER.to_string(),
                         date: Utc::now().naive_utc()
                     }),
-                };
+                }
             }
             None => {
-                return Err(CustomError::NotFound);
+                Err(CustomError::NotFound)
             }
         }
     }
@@ -177,13 +177,13 @@ impl PodcastHistoryItem{
                         let podcast_dto = mapping_service
                             .map_podcastepisode_to_dto(&podcast_episode);
                         let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id).unwrap();
-                        let podcast_watch_model = mapping_service
+                        
+                        mapping_service
                             .map_podcast_history_item_to_with_podcast_episode(
                                 &podcast_watch_model.clone(),
                                 podcast_dto,
                                 podcast,
-                            );
-                        return podcast_watch_model;
+                            )
                     }
                     None => {
                         panic!("Podcast episode not found");
@@ -203,7 +203,7 @@ impl PodcastHistoryItem{
         use crate::dbconfig::schema::podcasts;
         use crate::dbconfig::schema::podcast_episodes;
 
-        Ok(podcast_history_items::table
+        podcast_history_items::table
             .inner_join(podcast_episodes::table.on(podcast_history_items::episode_id.eq(podcast_episodes::episode_id)))
             .inner_join(podcasts::table)
             .filter(podcast_history_items::episode_id.eq(podcast_episodes::episode_id))
@@ -211,6 +211,6 @@ impl PodcastHistoryItem{
             .filter(podcast_history_items::username.eq(username_to_search))
             .filter(podcast_history_items::date.ge(since))
             .load::<(PodcastHistoryItem, PodcastEpisode, Podcast)>(conn)
-            .map_err(map_db_error)?)
+            .map_err(map_db_error)
     }
 }

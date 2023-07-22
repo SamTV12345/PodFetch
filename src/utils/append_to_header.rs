@@ -4,7 +4,7 @@ use regex::Regex;
 
 pub fn add_basic_auth_headers_conditionally(url: String, header_map: &mut
 reqwest::header::HeaderMap) {
-    if url.contains("@") {
+    if url.contains('@') {
         let re = Regex::new(r".*//([^/?#\s]+)@.*").unwrap();
         if let Some(captures) = re.captures(&url) {
             if let Some(auth) = captures.get(1) {

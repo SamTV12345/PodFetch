@@ -17,7 +17,7 @@ impl SettingsService{
 
     pub fn get_settings(&mut self, conn: &mut DbConnection) -> Result<Option<Setting>,
         CustomError> {
-        Ok(Setting::get_settings(conn)?)
+        Setting::get_settings(conn)
     }
 
     pub fn update_settings(&mut self, settings: Setting, conn: &mut DbConnection) ->
@@ -36,7 +36,7 @@ impl SettingsService{
         settings_.replacement_strategy = update_model.replacement_strategy.to_string();
         settings_.episode_format = update_model.episode_format;
         settings_.podcast_format = update_model.podcast_format;
-        Ok(self.update_settings(settings_, conn)?)
+        self.update_settings(settings_, conn)
     }
 
 
@@ -48,6 +48,6 @@ impl SettingsService{
         if !update_setttings.episode_format.contains("{}"){
             return Err(CustomError::Conflict(ERR_SETTINGS_FORMAT.to_string()))
         }
-        return Ok(update_setttings)
+        Ok(update_setttings)
     }
 }

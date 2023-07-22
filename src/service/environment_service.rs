@@ -43,14 +43,14 @@ impl EnvironmentService {
         }
         let mut server_url = var(SERVER_URL).unwrap_or("http://localhost:8000".to_string());
         // Add trailing slash if not present
-        if !server_url.ends_with("/") {
+        if !server_url.ends_with('/') {
             server_url+= "/"
         }
 
-        if  !var(SUB_DIRECTORY).is_ok(){
+        if  var(SUB_DIRECTORY).is_err(){
             let re = Regex::new(r"^http[s]?://[^/]+(/.*)?$").unwrap();
-            let directory = re.captures(&*server_url).unwrap().get(1).unwrap().as_str();
-            if directory.ends_with("/"){
+            let directory = re.captures(&server_url).unwrap().get(1).unwrap().as_str();
+            if directory.ends_with('/'){
                 env::set_var(SUB_DIRECTORY, &directory[0..directory.len()-1]);
             }
             else{
@@ -88,7 +88,7 @@ impl EnvironmentService {
     }
 
     pub fn get_polling_interval(&self) -> u32 {
-        self.polling_interval.clone()
+        self.polling_interval
     }
 
     pub fn get_environment(&self) {
@@ -108,15 +108,15 @@ impl EnvironmentService {
         log::info!("Database url is set to: {}", &get_database_url());
         log::info!(
             "Podindex API key&secret configured: {}",
-            self.podindex_api_key.len() > 0 && self.podindex_api_secret.len() > 0
+            !self.podindex_api_key.is_empty() && !self.podindex_api_secret.is_empty()
         );
         println!("\n");
     }
 
     pub fn get_config(&mut self) -> ConfigModel {
         ConfigModel {
-            podindex_configured: self.podindex_api_key.len() > 0
-                && self.podindex_api_secret.len() > 0,
+            podindex_configured: !self.podindex_api_key.is_empty()
+                && !self.podindex_api_secret.is_empty(),
             rss_feed: self.server_url.clone() + "rss",
             server_url: self.server_url.clone(),
             basic_auth: self.http_basic,
@@ -180,11 +180,11 @@ mod tests{
         set_var(OIDC_SCOPE, "openid profile email");
         let mut env_service = EnvironmentService::new();
         let config = env_service.get_config();
-        assert_eq!(config.podindex_configured, false);
+        assert!(!config.podindex_configured);
         assert_eq!(config.rss_feed, "http://localhost:8000/rss");
         assert_eq!(config.server_url, "http://localhost:8000/");
-        assert_eq!(config.basic_auth, true);
-        assert_eq!(config.oidc_configured, true);
+        assert!(config.basic_auth);
+        assert!(config.oidc_configured);
         assert_eq!(config.oidc_config.clone().unwrap().clone().client_id, "test");
         assert_eq!(config.oidc_config.clone().unwrap().clone().redirect_uri, "http://localhost:8000/oidc");
         assert_eq!(config.oidc_config.clone().unwrap().clone().scope, "openid profile email");
@@ -212,11 +212,11 @@ mod tests{
         set_var(PASSWORD, "test");
         let mut env_service = EnvironmentService::new();
         let config = env_service.get_config();
-        assert_eq!(config.podindex_configured, true);
+        assert!(config.podindex_configured);
         assert_eq!(config.rss_feed, "http://localhost:8000/rss");
         assert_eq!(config.server_url, "http://localhost:8000/");
-        assert_eq!(config.basic_auth, true);
-        assert_eq!(config.oidc_configured, false);
+        assert!(config.basic_auth);
+        assert!(!config.oidc_configured);
     }
 
     #[test]

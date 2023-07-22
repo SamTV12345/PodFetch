@@ -405,18 +405,14 @@ pub fn check_server_config(service1: EnvironmentService) {
         exit(1);
     }
 
-    if service1.http_basic {
-        if service1.password.is_empty() || service1.username.is_empty() {
-            eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
-            exit(1);
-        }
+    if service1.http_basic && (service1.password.is_empty() || service1.username.is_empty()) {
+        eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
+        exit(1);
     }
 
-    if service1.gpodder_integration_enabled{
-        if !(service1.http_basic || service1.oidc_configured){
-            eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
-            exit(1);
-        }
+    if service1.gpodder_integration_enabled && !(service1.http_basic || service1.oidc_configured) {
+        eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
+        exit(1);
     }
 
     if service1.http_basic && service1.oidc_configured{
@@ -424,11 +420,9 @@ pub fn check_server_config(service1: EnvironmentService) {
         exit(1);
     }
 
-    if var(TELEGRAM_API_ENABLED).is_ok(){
-        if var(TELEGRAM_BOT_TOKEN).is_err() || var(TELEGRAM_BOT_CHAT_ID).is_err() {
-            eprintln!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
-            exit(1);
-        }
+    if var(TELEGRAM_API_ENABLED).is_ok() && (var(TELEGRAM_BOT_TOKEN).is_err() || var(TELEGRAM_BOT_CHAT_ID).is_err()) {
+        eprintln!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
+        exit(1);
     }
 }
 

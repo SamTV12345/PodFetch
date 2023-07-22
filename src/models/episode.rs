@@ -81,7 +81,7 @@ impl Episode{
         EpisodeDto {
             podcast: self.podcast.clone(),
             episode: self.episode.clone(),
-            timestamp: self.timestamp.clone(),
+            timestamp: self.timestamp,
             guid: self.guid.clone(),
             action: EpisodeAction::from_string(&self.action),
             started: self.started,
@@ -98,7 +98,7 @@ impl Episode{
             device: episode_dto.device.clone(),
             podcast: episode_dto.podcast.clone(),
             episode: episode_dto.episode.clone(),
-            timestamp: episode_dto.timestamp.clone(),
+            timestamp: episode_dto.timestamp,
             guid: episode_dto.guid.clone(),
             action: episode_dto.action.clone().to_string(),
             started: episode_dto.started,
@@ -136,7 +136,8 @@ impl Episode{
         use diesel::JoinOnDsl;
         use diesel::Table;
 
-        let query = episodes
+        
+        episodes
             .inner_join(podcast_episode_table.on(podcast.eq(rssfeed)))
             .filter(username.eq(username1))
             .filter(episode.eq(episode_1))
@@ -144,8 +145,7 @@ impl Episode{
             .select(episodes::all_columns())
             .first::<Episode>(conn)
             .optional()
-            .expect("");
-        return query;
+            .expect("")
     }
 
     pub fn convert_to_podcast_history_item(&self, podcast_1: Podcast,pod_episode: PodcastEpisode)
@@ -197,7 +197,7 @@ impl Episode{
                 podcast: found_podcast.clone(),
             }
         }).collect();
-        return Ok(mapped_watched_episodes);
+        Ok(mapped_watched_episodes)
     }
 
     pub fn delete_by_username_and_episode(username1: String, conn: &mut DbConnection) ->Result<(),Error>{

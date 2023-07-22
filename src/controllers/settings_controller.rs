@@ -147,14 +147,14 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<Environmen
     for podcast in podcasts_found {
         let mut outline = XMLElement::new("outline");
         if podcast.summary.is_some(){
-            outline.add_attribute("text", &*podcast.summary.unwrap());
+            outline.add_attribute("text", &podcast.summary.unwrap());
         }
-        outline.add_attribute("title", &*podcast.name);
+        outline.add_attribute("title", &podcast.name);
         outline.add_attribute("type", "rss");
         match type_of {
-            Mode::LOCAL => outline.add_attribute("xmlUrl", &*format!("{}rss/{}", &*env_service
+            Mode::LOCAL => outline.add_attribute("xmlUrl", &format!("{}rss/{}", &*env_service
                 .get_server_url(), podcast.id)),
-            Mode::ONLINE => outline.add_attribute("xmlUrl", &*podcast.rssfeed),
+            Mode::ONLINE => outline.add_attribute("xmlUrl", &podcast.rssfeed),
         }
         body.add_child(outline).expect("TODO: panic message");
     }

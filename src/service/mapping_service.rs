@@ -47,7 +47,7 @@ impl MappingService {
         let favorite = podcast_favorite_grouped.1.is_some() && podcast_favorite_grouped.1.clone()
             .unwrap().favored;
      PodcastDto{
-            id: podcast_favorite_grouped.0.id.clone(),
+            id: podcast_favorite_grouped.0.id,
             name: podcast_favorite_grouped.0.name.clone(),
          directory_id: podcast_favorite_grouped.0.directory_id.clone(),
             rssfeed: podcast_favorite_grouped.0.rssfeed.clone(),
@@ -59,7 +59,7 @@ impl MappingService {
             explicit: podcast_favorite_grouped.0.clone().explicit,
             last_build_date: podcast_favorite_grouped.0.clone().last_build_date,
             author: podcast_favorite_grouped.0.author.clone(),
-            active: podcast_favorite_grouped.0.active.clone(),
+            active: podcast_favorite_grouped.0.active,
             original_image_url: podcast_favorite_grouped.0.original_image_url.clone(),
             favorites: favorite
      }
@@ -88,7 +88,7 @@ impl MappingService {
             local_url: podcast_episode.local_url.clone(),
             local_image_url:  podcast_episode.local_image_url.clone(),
             status: podcast_episode.status.clone(),
-            download_time: podcast_episode.download_time.clone(),
+            download_time: podcast_episode.download_time,
             guid: podcast_episode.guid.clone(),
         }
     }

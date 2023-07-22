@@ -91,11 +91,11 @@ Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result
         let (podcast_episode, podcast, favorite) = podcast_episode.clone();
         let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast_episode);
 
-        return TimeLinePodcastEpisode {
+        TimeLinePodcastEpisode {
             podcast_episode: mapped_podcast_episode,
             podcast,
             favorite
-        };
+        }
         }).collect::<Vec<TimeLinePodcastEpisode>>();
     Ok(HttpResponse::Ok().json(TimeLinePodcastItem{
         data: mapped_timeline,

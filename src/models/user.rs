@@ -151,7 +151,7 @@ impl User{
         use crate::dbconfig::schema::users::dsl::*;
 
         let loaded_users = users.load::<User>(conn).unwrap();
-        loaded_users.into_iter().map(|user| User::map_to_dto(user)).collect()
+        loaded_users.into_iter().map(User::map_to_dto).collect()
     }
 
     /**

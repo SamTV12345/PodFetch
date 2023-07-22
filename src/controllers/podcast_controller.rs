@@ -100,7 +100,7 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
     let filter = Filter::new(username.clone(), query.title.clone(), _order.clone().to_bool(),Some
                 (_latest_pub.clone()
                 .to_string()),only_favored);
-    Filter::save_filter(filter, &mut *conn.get().unwrap())?;
+    Filter::save_filter(filter, &mut conn.get().unwrap())?;
 
     match query.favored_only {
         true => {
@@ -167,10 +167,10 @@ pub async fn find_all_podcasts(
         .lock()
         .ignore_poison();
     let username = requester.unwrap().username.clone();
-    let podcasts;
+    
 
 
-    podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap(), username, mapping_service)?;
+    let podcasts = PodcastService::get_podcasts(&mut conn.get().unwrap(), username, mapping_service)?;
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -387,13 +387,13 @@ pub async fn add_podcast_from_podindex(
 fn start_download_podindex(id: i32, lobby: Data<Addr<Lobby>>, conn: &mut DbConnection)
     ->Result<Podcast, CustomError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let podcast = rt.block_on(async {
+    
+    rt.block_on(async {
         let mut podcast_service = PodcastService::new();
-        return podcast_service
+        podcast_service
             .insert_podcast_from_podindex(conn, id, lobby)
-            .await;
-    });
-    return podcast
+            .await
+    })
 }
 
 #[utoipa::path(
@@ -550,7 +550,7 @@ async fn insert_outline(
     environment: EnvironmentService,
     conn: Data<DbPool>
 ) {
-    if podcast.outlines.len() > 0 {
+    if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
             insert_outline(
                 outline_nested,
@@ -654,18 +654,18 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     }
 
 
-    let podcast = Podcast::get_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
+    let podcast = Podcast::get_podcast(&mut db.get().unwrap(), *id).expect("Error \
         finding podcast");
     if data.delete_files{
         FileService::delete_podcast_files(&podcast.directory_name);
     }
 
-    PodcastHistoryItem::delete_watchtime(&mut *db.get().unwrap(), id.clone()).expect("Error deleting \
+    PodcastHistoryItem::delete_watchtime(&mut db.get().unwrap(), *id).expect("Error deleting \
     watchtime");
-    PodcastEpisode::delete_episodes_of_podcast(&mut *db.get().unwrap(), id.clone()).expect("Error \
+    PodcastEpisode::delete_episodes_of_podcast(&mut db.get().unwrap(), *id).expect("Error \
     deleting \
     episodes of podcast");
-    Podcast::delete_podcast(&mut *db.get().unwrap(), id.clone())?;
+    Podcast::delete_podcast(&mut db.get().unwrap(), *id)?;
     Ok(HttpResponse::Ok().into())
 }
 #[derive(Debug, Deserialize)]

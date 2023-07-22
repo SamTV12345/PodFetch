@@ -154,7 +154,7 @@ impl PodcastEpisode{
             .expect("Error inserting podcast episode");
 
 
-        return inserted_podcast;
+        inserted_podcast
     }
 
 
@@ -371,7 +371,7 @@ impl PodcastEpisode{
     PodcastEpisode {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
-        diesel::update(podcast_episodes.find(episode_to_update.id.clone()))
+        diesel::update(podcast_episodes.find(episode_to_update.id))
             .set(episode_to_update)
             .get_result::<PodcastEpisode>(conn)
             .expect("Error updating podcast episode")

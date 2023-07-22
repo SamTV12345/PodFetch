@@ -68,9 +68,7 @@ pub fn map_io_error(e: std::io::Error) -> CustomError {
 
 pub fn map_io_extra_error(e: fs_extra::error::Error) ->CustomError {
     error!("IO extra error: {}", e);
-    match e.kind {
-        _ => CustomError::Unknown,
-    }
+    CustomError::Unknown
 }
 
 pub fn map_db_error(e: diesel::result::Error) -> CustomError {
@@ -85,7 +83,7 @@ pub fn map_db_error(e: diesel::result::Error) -> CustomError {
 pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
     error!("Error during reqwest: {}",e);
 
-    return CustomError::BadRequest("Error requesting resource from server".to_string())
+    CustomError::BadRequest("Error requesting resource from server".to_string())
 }
 
 

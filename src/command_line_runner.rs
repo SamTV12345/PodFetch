@@ -45,7 +45,7 @@ pub fn start_command_line(mut args: Args) {
                     let conn = &mut establish_connection();
 
 
-                    let replaced_feed = rss_feed.replace("'", "").replace(" ", "");
+                    let replaced_feed = rss_feed.replace(['\'', ' '], "");
                     println!("Refreshing podcast {}", replaced_feed);
 
                     let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn).expect("Error getting podcast");
@@ -202,7 +202,7 @@ pub fn read_user_account() -> Result<User, CustomError> {
     let mut username = String::new();
 
     let role = Role::VALUES.map(|v| {
-        return v.to_string();
+        v.to_string()
     }).join(", ");
     retry_read("Enter your username: ", &mut username);
 
@@ -247,9 +247,9 @@ pub fn retry_read_secret(prompt: &str) -> String {
     println!("{}", prompt);
     stdout().flush().unwrap();
     let input = read_password().unwrap();
-    match input.len() > 0 {
+    match !input.is_empty() {
         true => {
-            if input.trim().len() == 0 {
+            if input.trim().is_empty() {
                 retry_read_secret(prompt);
             }
         }

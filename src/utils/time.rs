@@ -19,7 +19,7 @@ pub fn opt_or_empty_string<T:ToString>(opt: Option<T>) ->  String {
             s.to_string()
         },
         None => {
-            return "".to_string()
+            "".to_string()
         },
     }
 }

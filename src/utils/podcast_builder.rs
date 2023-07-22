@@ -23,7 +23,7 @@ pub struct PodcastExtra {
 
 impl PodcastBuilder {
     pub fn new(podcast_id: i32) -> PodcastBuilder {
-        return PodcastBuilder {
+        PodcastBuilder {
             id: podcast_id,
             description: "".to_string(),
             language: "".to_string(),
@@ -31,19 +31,19 @@ impl PodcastBuilder {
             last_build_date: "".to_string(),
             explicit: false,
             author: "".to_string(),
-        };
+        }
     }
 
     pub fn description(&mut self, description: String) -> &mut PodcastBuilder {
         self.description = description;
-        return self;
+        self
     }
 
     pub fn language(&mut self, language: Option<String>) -> &mut PodcastBuilder {
         if language.is_some() {
             self.language = language.unwrap();
         }
-        return self;
+        self
     }
 
     pub fn keywords(&mut self, keywords: Vec<ITunesCategory>) -> &mut PodcastBuilder {
@@ -52,14 +52,14 @@ impl PodcastBuilder {
             .map(|x| x.text.clone())
             .collect::<Vec<String>>()
             .join(",");
-        return self;
+        self
     }
 
     pub fn last_build_date(&mut self, last_build_date: Option<String>) -> &mut PodcastBuilder {
         if last_build_date.is_some() {
             self.last_build_date = last_build_date.unwrap();
         }
-        return self;
+        self
     }
 
     pub fn explicit(&mut self, explicit: Option<String>) -> &mut PodcastBuilder {
@@ -69,7 +69,7 @@ impl PodcastBuilder {
             }
             None => {}
         }
-        return self;
+        self
     }
 
     pub fn author(&mut self, author: Option<String>) -> &mut PodcastBuilder {
@@ -79,19 +79,19 @@ impl PodcastBuilder {
             }
             None => {}
         }
-        return self;
+        self
     }
 
     pub fn build(&self) -> PodcastExtra {
-        return PodcastExtra {
-            id: self.id.clone(),
-            explicit: self.explicit.clone(),
+        PodcastExtra {
+            id: self.id,
+            explicit: self.explicit,
             description: self.description.clone(),
             language: self.language.clone(),
             keywords: self.keywords.clone(),
             last_build_date: self.last_build_date.clone(),
             author: self.author.clone(),
-        };
+        }
     }
 }
 
@@ -108,7 +108,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"");
         assert_eq!(podcast_builder.keywords,"");
         assert_eq!(podcast_builder.last_build_date,"");
-        assert_eq!(podcast_builder.explicit,false);
+        assert!(!podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"");
     }
 
@@ -121,7 +121,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"");
         assert_eq!(podcast_builder.keywords,"");
         assert_eq!(podcast_builder.last_build_date,"");
-        assert_eq!(podcast_builder.explicit,false);
+        assert!(!podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"");
     }
 
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"en");
         assert_eq!(podcast_builder.keywords,"");
         assert_eq!(podcast_builder.last_build_date,"");
-        assert_eq!(podcast_builder.explicit,false);
+        assert!(!podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"");
     }
 
@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"");
         assert_eq!(podcast_builder.keywords,"test,test2");
         assert_eq!(podcast_builder.last_build_date,"");
-        assert_eq!(podcast_builder.explicit,false);
+        assert!(!podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"");
     }
 
@@ -169,7 +169,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"");
         assert_eq!(podcast_builder.keywords,"");
         assert_eq!(podcast_builder.last_build_date,"22.03.2023");
-        assert_eq!(podcast_builder.explicit,false);
+        assert!(!podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"");
     }
 
@@ -182,7 +182,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"");
         assert_eq!(podcast_builder.keywords,"");
         assert_eq!(podcast_builder.last_build_date,"");
-        assert_eq!(podcast_builder.explicit,true);
+        assert!(podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"");
     }
 
@@ -195,7 +195,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"");
         assert_eq!(podcast_builder.keywords,"");
         assert_eq!(podcast_builder.last_build_date,"");
-        assert_eq!(podcast_builder.explicit,false);
+        assert!(!podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"yes");
     }
 
@@ -221,7 +221,7 @@ mod tests {
         assert_eq!(podcast_builder.language,"en");
         assert_eq!(podcast_builder.keywords,"test,test2");
         assert_eq!(podcast_builder.last_build_date,"22.03.2023");
-        assert_eq!(podcast_builder.explicit,true);
+        assert!(podcast_builder.explicit);
         assert_eq!(podcast_builder.author,"yes");
     }
 }

@@ -125,7 +125,7 @@ impl PodcastEpisodeService {
             status: "unread".to_string(),
         };
         Notification::insert_notification(notification,conn).unwrap();
-        return Ok(podcast);
+        Ok(podcast)
     }
 
     pub fn get_last_n_podcast_episodes(conn: &mut DbConnection, podcast: Podcast) ->
@@ -171,7 +171,7 @@ impl PodcastEpisodeService {
         }
 
 
-        self.update_podcast_fields(channel.clone(), podcast.id.clone(),conn)?;
+        self.update_podcast_fields(channel.clone(), podcast.id,conn)?;
 
         let mut podcast_inserted = Vec::new();
 
@@ -183,7 +183,7 @@ impl PodcastEpisodeService {
                 }
                 None => {
                     let env = EnvironmentService::new();
-                    let url = env.server_url.clone().to_owned() + &"ui/default.jpg".to_string();
+                    let url = env.server_url.clone().to_owned() + "ui/default.jpg";
                     Podcast::update_original_image_url(&url, podcast.id,conn)?;
                 }
             }
@@ -280,7 +280,7 @@ impl PodcastEpisodeService {
                 }
             }
         }
-        return Ok(podcast_inserted);
+        Ok(podcast_inserted)
     }
 
 
@@ -312,11 +312,11 @@ impl PodcastEpisodeService {
     }
 
     fn parse_duration(duration_str: &str) -> u32 {
-        let parts: Vec<&str> = duration_str.split(":").collect();
+        let parts: Vec<&str> = duration_str.split(':').collect();
         match parts.len() {
             1 => {
-                let seconds = parts[0].parse::<u32>().unwrap_or(0);
-                seconds
+                
+                parts[0].parse::<u32>().unwrap_or(0)
             }
             2 => {
                 let minutes = parts[0].parse::<u32>().unwrap_or(0);
@@ -342,7 +342,7 @@ impl PodcastEpisodeService {
 
     pub fn get_url_file_suffix(url: &str) -> String {
         let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
-        let capture = re.captures(&url).unwrap();
+        let capture = re.captures(url).unwrap();
         return capture.get(1).unwrap().as_str().to_owned();
     }
 
@@ -353,13 +353,13 @@ impl PodcastEpisodeService {
             .iter()
             .map(|podcast| self.mapping_service.map_podcastepisode_to_dto(podcast))
             .collect::<Vec<PodcastEpisode>>();
-        return Ok(podcast_dto);
+        Ok(podcast_dto)
     }
 
     pub fn find_all_downloaded_podcast_episodes(&mut self, conn:&mut DbConnection, env: EnvironmentService) ->
                                                                                    Result<Vec<PodcastEpisode>, CustomError> {
         let result = PodcastEpisode::get_episodes(conn);
-        Ok(self.map_rss_podcast_episodes(env, result)?)
+        self.map_rss_podcast_episodes(env, result)
     }
 
     fn map_rss_podcast_episodes(&mut self, env: EnvironmentService, result: Vec<PodcastEpisode>)
@@ -368,7 +368,7 @@ impl PodcastEpisodeService {
             .iter()
             .map(|podcast| {
                 let mut podcast_episode_dto = self.mapping_service.map_podcastepisode_to_dto(podcast);
-                return if podcast_episode_dto.is_downloaded() {
+                if podcast_episode_dto.is_downloaded() {
                     let local_url = self.map_to_local_url(&podcast_episode_dto.clone().local_url);
                     let local_image_url = self.map_to_local_url(&podcast_episode_dto.clone()
                         .local_image_url);
@@ -376,7 +376,7 @@ impl PodcastEpisodeService {
                     podcast_episode_dto.local_image_url = env.server_url.clone() + &local_image_url;
                     podcast_episode_dto.local_url = env.server_url.clone() + &local_url;
 
-                    return podcast_episode_dto
+                    podcast_episode_dto
                 } else {
                     podcast_episode_dto.local_image_url = podcast_episode_dto.clone().image_url;
                     podcast_episode_dto.local_url = podcast_episode_dto.clone().url;
@@ -389,7 +389,7 @@ impl PodcastEpisodeService {
 
 
     fn map_to_local_url(&mut self, url: &str) -> String {
-        let splitted_url = url.split("/").collect::<Vec<&str>>();
+        let splitted_url = url.split('/').collect::<Vec<&str>>();
         splitted_url.iter()
             .map(|s| return if s.starts_with("podcasts.")|| s.starts_with("image.") {
                 s.to_string()
@@ -407,7 +407,7 @@ impl PodcastEpisodeService {
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         let env = EnvironmentService::new();
         let result = PodcastEpisode::get_episodes_by_podcast_id(podcast_id, conn);
-        Ok(self.map_rss_podcast_episodes(env, result)?)
+        self.map_rss_podcast_episodes(env, result)
     }
 
     fn update_podcast_fields(&mut self, feed: Channel, podcast_id: i32, conn:&mut DbConnection)
@@ -456,13 +456,13 @@ impl PodcastEpisodeService {
     pub fn get_podcast_episodes_of_podcast(conn: &mut DbConnection, id_num: i32, last_id:
     Option<String>)
         -> Result<Vec<PodcastEpisode>, CustomError> {
-        Ok(PodcastEpisode::get_podcast_episodes_of_podcast(conn,id_num, last_id)?)
+        PodcastEpisode::get_podcast_episodes_of_podcast(conn,id_num, last_id)
     }
 
     pub fn get_podcast_episode_by_id(conn: &mut DbConnection, id_num: &str) ->
                                                                    Result<Option<PodcastEpisode>,
                                                                        CustomError> {
-        Ok(PodcastEpisode::get_podcast_episode_by_id(conn, id_num)?)
+        PodcastEpisode::get_podcast_episode_by_id(conn, id_num)
     }
 
     fn do_request_to_podcast_server(podcast:Podcast) ->RequestReturnType{
@@ -472,7 +472,7 @@ impl PodcastEpisodeService {
 
             move |attempt|{
 
-                if attempt.previous().len() > 0 {
+                if !attempt.previous().is_empty() {
                     *is_redirected.lock().unwrap() = true;
                 }
                 attempt.follow()
@@ -489,7 +489,7 @@ impl PodcastEpisodeService {
         let url = result.url().clone().to_string();
         let content = result.text().unwrap().clone();
 
-        return RequestReturnType {
+        RequestReturnType {
             url,
             content
         }

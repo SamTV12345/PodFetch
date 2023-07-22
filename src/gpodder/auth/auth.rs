@@ -44,7 +44,7 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
         return Err(CustomError::Forbidden)
     }
     if unwrapped_username == env.username && password == env.password {
-        return Ok(HttpResponse::Ok().finish());
+        Ok(HttpResponse::Ok().finish())
     } else {
         let user =  User::find_by_username(&unwrapped_username, conn)?;
         if user.clone().password.unwrap()== digest(password) {
@@ -53,7 +53,7 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
                     let user_cookie = create_session_cookie(session);
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
         } else {
-                    return  Err(CustomError::Forbidden)
+                    Err(CustomError::Forbidden)
          }
         }
 }

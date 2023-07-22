@@ -128,7 +128,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                     req.extensions_mut().insert(unwrapped_user);
                     let service = Rc::clone(&self.service);
                     async move {
-                        return service
+                        service
                             .call(req)
                             .await
                             .map(|res| res.map_into_left_body())
@@ -259,7 +259,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
 impl AuthFilter{
     pub fn extract_basic_auth(auth: &str) -> (String, String) {
         let auth = auth.to_string();
-        let auth = auth.split(" ").collect::<Vec<&str>>();
+        let auth = auth.split(' ').collect::<Vec<&str>>();
         let auth = auth[1];
         let auth = general_purpose::STANDARD.decode(auth).unwrap();
         let auth = String::from_utf8(auth).unwrap();
@@ -278,6 +278,6 @@ impl AuthFilter{
     pub fn basic_auth_login(rq: String) -> (String, String) {
         let (u,p) = Self::extract_basic_auth(rq.as_str());
 
-        return (u.to_string(),p.to_string())
+        (u.to_string(),p.to_string())
     }
 }
