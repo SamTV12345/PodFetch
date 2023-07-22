@@ -1,8 +1,12 @@
 import {enqueueSnackbar} from "notistack";
 import {TFunction} from "i18next";
 
-export const handleAddPodcast = (resp: number, podcast: string, t: TFunction)=>{
+export const handleAddPodcast = (resp: number|null, podcast: string, t: TFunction)=>{
 
+    if (resp === null) {
+        enqueueSnackbar(t('error'),{variant: "error"})
+        return
+    }
     switch (resp) {
         case 409:
             enqueueSnackbar(t('already-added',{

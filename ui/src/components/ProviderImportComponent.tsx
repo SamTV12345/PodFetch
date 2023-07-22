@@ -33,10 +33,10 @@ export const ProviderImportComponent:FC<ProviderImportComponent> = ({selectedSea
         axios.post(apiURL+"/podcast/"+selectedSearchType,podcast)
             .then((err:any)=> {
                 dispatch(setModalOpen(false))
-                handleAddPodcast(err.response!.status, searchedPodcasts!.find((v)=>v.id === podcast.trackId)?.title!, t)
+                handleAddPodcast(err.response ? err.response.status: null, searchedPodcasts!.find((v)=>v.id === podcast.trackId)?.title!, t)
             })
             .catch((err:AxiosError)=>{
-                handleAddPodcast(err.response!.status, searchedPodcasts!.find((v)=>v.id === podcast.trackId)?.title!, t)
+                handleAddPodcast(err.response ? err.response.status: null, searchedPodcasts!.find((v)=>v.id === podcast.trackId)?.title!, t)
             })
     }
 
