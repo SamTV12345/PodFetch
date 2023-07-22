@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,7 @@ use diesel::ExpressionMethods;
 
 use crate::{DbConnection};
 
-use crate::models::models::PodcastWatchedEpisodeModelWithPodcastEpisode;
+use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
@@ -57,8 +58,8 @@ impl Episode{
             .optional()
             .expect("");
 
-        if res.is_some() {
-            return Ok(res.unwrap())
+        if let Some(unwrapped_res) = res {
+            return Ok(unwrapped_res)
         }
 
         diesel::insert_into(episodes)
@@ -244,13 +245,15 @@ impl EpisodeAction{
             _ => panic!("Unknown episode action: {}", s),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl fmt::Display for EpisodeAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EpisodeAction::New => "new".to_string(),
-            EpisodeAction::Download => "download".to_string(),
-            EpisodeAction::Play => "play".to_string(),
-            EpisodeAction::Delete => "delete".to_string(),
+            EpisodeAction::New => write!(f, "new"),
+            EpisodeAction::Download => write!(f, "download"),
+            EpisodeAction::Play => write!(f, "play"),
+            EpisodeAction::Delete => write!(f, "delete"),
         }
     }
 }

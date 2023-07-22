@@ -5,7 +5,7 @@ use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use sha256::{digest};
-use crate::constants::constants::Role;
+use crate::constants::inner_constants::Role;
 use crate::DbConnection;
 use crate::utils::error::CustomError;
 

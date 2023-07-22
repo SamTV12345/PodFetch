@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use actix_web::{HttpRequest, HttpResponse, post, get, put, Responder, web, delete};
 use actix_web::web::Data;
-use crate::constants::constants::{Role, USERNAME};
+use crate::constants::inner_constants::{Role, USERNAME};
 use crate::DbPool;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;

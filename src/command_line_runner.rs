@@ -5,7 +5,7 @@ use std::str::FromStr;
 use log::error;
 use sha256::{digest};
 use crate::config::dbconfig::establish_connection;
-use crate::constants::constants::Role;
+use crate::constants::inner_constants::Role;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::utils::time::get_current_timestamp_str;
 use rpassword::read_password;
@@ -102,9 +102,9 @@ pub fn start_command_line(mut args: Args) {
 
                     println!("Should a user with the following settings be applied {:?}", user);
 
-                    if let Ok(..) = ask_for_confirmation() {
+                    if ask_for_confirmation().is_ok() {
                         user.password = Some(digest(user.password.unwrap()));
-                        if let Ok(..) = User::insert_user(&mut user, &mut establish_connection()) {
+                        if User::insert_user(&mut user, &mut establish_connection()).is_ok() {
                             println!("User succesfully created")
                         }
                     }

@@ -1,6 +1,6 @@
 pub enum SearchType {
-    ITUNES,
-    PODINDEX,
+    ITunes,
+    Podindex,
 }
 
 impl TryFrom<i32> for SearchType {
@@ -8,8 +8,8 @@ impl TryFrom<i32> for SearchType {
 
     fn try_from(v: i32) -> Result<Self, Self::Error> {
         match v {
-            x if x == SearchType::PODINDEX as i32 => Ok(SearchType::PODINDEX),
-            x if x == SearchType::ITUNES as i32 => Ok(SearchType::ITUNES),
+            x if x == SearchType::Podindex as i32 => Ok(SearchType::Podindex),
+            x if x == SearchType::ITunes as i32 => Ok(SearchType::ITunes),
             _ => Err(()),
         }
     }

@@ -60,7 +60,8 @@ impl FileService {
         Ok(())
     }
 
-    pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &String, conn:&mut DbConnection)
+    pub fn create_podcast_directory_exists(podcast_title: &str, podcast_id: &str, conn:&mut
+    DbConnection)
         ->Result<String, CustomError> {
         let escaped_title = prepare_podcast_title_to_directory(podcast_title,conn)?;
         if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
@@ -137,8 +138,8 @@ DbConnection)
     let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
     if retrieved_settings.use_existing_filename{
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
-        if res_of_filename.is_ok(){
-                return Ok(res_of_filename.unwrap());
+        if let Ok(res_unwrapped) =res_of_filename {
+                return Ok(res_unwrapped);
         }
     }
     let final_string = perform_replacement(&podcast_episode.name,

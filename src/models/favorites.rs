@@ -114,21 +114,21 @@ impl Favorite{
             OrderOption::Title=> {
                 use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(podcasttitle.asc());
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(podcasttitle.desc());
                     }
                 }
             }
             OrderOption::PublishedDate => {
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(date_of_recording.asc());
 
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(date_of_recording.desc());
                     }
                 }
@@ -177,21 +177,21 @@ impl Favorite{
             OrderOption::Title=> {
                 use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(podcasttitle.asc());
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(podcasttitle.desc());
                     }
                 }
             }
             OrderOption::PublishedDate => {
                 match order {
-                    OrderCriteria::ASC => {
+                    OrderCriteria::Asc => {
                         query = query.order_by(date_of_recording.asc());
 
                     }
-                    OrderCriteria::DESC => {
+                    OrderCriteria::Desc => {
                         query = query.order_by(date_of_recording.desc());
                     }
                 }

@@ -1,7 +1,6 @@
-pub mod dto_models;
 pub mod itunes_models;
 pub mod messages;
-pub mod models;
+pub mod dto_models;
 pub mod opml_model;
 pub mod search_type;
 pub mod settings;
@@ -25,3 +24,4 @@ pub mod podcast_dto;
 pub mod podcast_episode;
 pub mod podcast_history_item;
 pub mod notification;
+pub mod misc_models;

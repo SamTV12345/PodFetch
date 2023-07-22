@@ -1,11 +1,11 @@
 
 use std::sync::{MutexGuard};
-use crate::constants::constants::{PodcastType, ITUNES_URL};
+use crate::constants::inner_constants::{PodcastType, ITUNES_URL};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 
 use crate::models::messages::BroadcastMessage;
-use crate::models::models::PodcastInsertModel;
+use crate::models::misc_models::PodcastInsertModel;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -34,6 +34,12 @@ pub struct PodcastService {
     pub client: Client,
     pub podcast_episode_service: PodcastEpisodeService,
     pub environment_service: EnvironmentService,
+}
+
+impl Default for PodcastService {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PodcastService {
@@ -210,7 +216,6 @@ impl PodcastService {
                                 lobby.clone(),
                                 conn
                             )?;
-                        return Ok(());
                     }
                 }
                 Ok(())

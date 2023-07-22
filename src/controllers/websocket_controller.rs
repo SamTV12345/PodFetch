@@ -82,15 +82,13 @@ fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtensio
                                            mut channel_builder: ChannelBuilder,
                                            podcast: Option<Podcast>,
                                            env: EnvironmentService) -> Channel {
-    match podcast {
-        Some(e) => {
-            match !e.image_url.is_empty() {
-                true => itunes_ext.set_image(env.server_url + &*e.image_url),
-                false => itunes_ext.set_image(env.server_url + &*e.original_image_url)
-            }
+    if let Some(e) = podcast {
+        match !e.image_url.is_empty() {
+            true => itunes_ext.set_image(env.server_url + &*e.image_url),
+            false => itunes_ext.set_image(env.server_url + &*e.original_image_url)
         }
-        _ => {}
     }
+
     channel_builder
         .itunes_ext(itunes_ext)
         .build()
@@ -121,23 +119,17 @@ pub async fn get_rss_feed_for_podcast(
 
     let mut itunes_owner = get_itunes_owner("", "");
 
-    match podcast.author.clone() {
-        Some(author) =>
-            itunes_owner =
-                get_itunes_owner(&author, "local@local.com"),
-        _ => {}
-    }
+        if let Some(author) = podcast.author.clone() { itunes_owner =
+           get_itunes_owner(&author, "local@local.com") }
+
 
     let mut categories: Vec<Category> = vec![];
-    match podcast.keywords.clone() {
-        Some(keyword) => {
-            let keywords: Vec<String> = keyword.split(',').map(|s| s.to_string()).collect();
-            categories = keywords
-                .iter()
-                .map(|keyword| CategoryBuilder::default().name(keyword).build())
-                .collect();
-        }
-        _ => {}
+    if let Some(keyword) = podcast.keywords.clone() {
+        let keywords: Vec<String> = keyword.split(',').map(|s| s.to_string()).collect();
+        categories = keywords
+            .iter()
+            .map(|keyword| CategoryBuilder::default().name(keyword).build())
+            .collect();
     }
 
     let itunes_ext = ITunesChannelExtensionBuilder::default()

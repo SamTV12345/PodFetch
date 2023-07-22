@@ -18,17 +18,15 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
     -> Result<HttpResponse, CustomError> {
     let env = env_service.lock().ignore_poison();
     let conn = &mut conn.get().unwrap();
-    match rq.clone().cookie("sessionid") {
-        Some(cookie) => {
-            let session = cookie.value();
-            let opt_session = Session::find_by_session_id(session, conn);
-                if opt_session.is_ok(){
-                    let user_cookie = create_session_cookie(opt_session.unwrap());
-                    return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
-                }
-        }
-        None=>{}
-    }
+        if let Some(cookie) = rq.clone().cookie("sessionid") {
+                let session = cookie.value();
+                let opt_session = Session::find_by_session_id(session, conn);
+                   if let Ok(unwrapped_session) = opt_session {
+                          let user_cookie = create_session_cookie(unwrapped_session);
+                           return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
+                      }
+          }
+
 
     let opt_authorization = rq.headers().get("Authorization");
 
@@ -69,7 +67,7 @@ fn create_session_cookie(session: Session) -> Cookie<'static> {
 
 #[cfg(test)]
 mod tests{
-    use crate::gpodder::auth::auth::create_session_cookie;
+    use crate::gpodder::auth::authentication::create_session_cookie;
     use crate::models::session::Session;
 
     #[test]

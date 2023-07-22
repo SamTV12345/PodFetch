@@ -23,11 +23,11 @@ pub struct OptionalId {
 impl OptionalId {}
 
 #[utoipa::path(
-context_path="/api/v1",
+context_path = "/api/v1",
 responses(
 (status = 200, description = "Finds all podcast episodes of a given podcast id.", body =
 [PodcastEpisode])),
-tag="podcast_episodes"
+tag = "podcast_episodes"
 )]
 #[get("/podcast/{id}/episodes")]
 pub async fn find_all_podcast_episodes_of_podcast(
@@ -35,7 +35,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     last_podcast_episode: Query<OptionalId>,
     mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>) -> Result<HttpResponse, CustomError> {
-    let mapping_service = mapping_service.lock() .ignore_poison();
+    let mapping_service = mapping_service.lock().ignore_poison();
 
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
@@ -59,7 +59,7 @@ pub struct TimeLinePodcastEpisode {
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TimeLinePodcastItem{
+pub struct TimeLinePodcastItem {
     data: Vec<TimeLinePodcastEpisode>,
     total_elements: i64,
 }
@@ -68,24 +68,24 @@ pub struct TimeLinePodcastItem{
 #[serde(rename_all = "camelCase")]
 pub struct TimelineQueryParams {
     pub favored_only: bool,
-    pub last_timestamp: Option<String>
+    pub last_timestamp: Option<String>,
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+context_path = "/api/v1",
 responses(
 (status = 200, description = "Gets the current timeline of the user")),
-tag="podcasts"
+tag = "podcasts"
 )]
 #[get("/podcasts/timeline")]
-pub async fn get_timeline(conn: Data<DbPool>,  requester: Option<web::ReqData<User>>, mapping_service:
+pub async fn get_timeline(conn: Data<DbPool>, requester: Option<web::ReqData<User>>, mapping_service:
 Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result<HttpResponse,
     CustomError> {
     let mapping_service = mapping_service.lock().ignore_poison().clone();
 
 
     let res = TimelineItem::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
-                                   favored_only.into_inner());
+                                         favored_only.into_inner());
 
     let mapped_timeline = res.data.iter().map(|podcast_episode| {
         let (podcast_episode, podcast, favorite) = podcast_episode.clone();
@@ -94,12 +94,12 @@ Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result
         TimeLinePodcastEpisode {
             podcast_episode: mapped_podcast_episode,
             podcast,
-            favorite
+            favorite,
         }
-        }).collect::<Vec<TimeLinePodcastEpisode>>();
-    Ok(HttpResponse::Ok().json(TimeLinePodcastItem{
+    }).collect::<Vec<TimeLinePodcastEpisode>>();
+    Ok(HttpResponse::Ok().json(TimeLinePodcastItem {
         data: mapped_timeline,
-        total_elements: res.total_elements
+        total_elements: res.total_elements,
     }))
 }
 
@@ -107,34 +107,30 @@ Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result
  * id is the episode id (uuid)
  */
 #[utoipa::path(
-context_path="/api/v1",
+context_path = "/api/v1",
 responses(
 (status = 200, description = "Starts the download of a given podcast episode")),
-tag="podcast_episodes"
+tag = "podcast_episodes"
 )]
 #[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>,
-                                                  requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError>{
-    if !requester.unwrap().is_privileged_user(){
-        return Err(CustomError::Forbidden)
+                                                  requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
+    if !requester.unwrap().is_privileged_user() {
+        return Err(CustomError::Forbidden);
     }
 
     thread::spawn(move || {
         let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id
             .into_inner()).unwrap();
-        match res {
-            Some(podcast_episode) => {
-                let podcast = Podcast::get_podcast(&mut conn.get().unwrap(),podcast_episode
-                    .podcast_id).unwrap();
-                PodcastEpisodeService::perform_download(
-                    &podcast_episode,
-                    podcast_episode.clone(),
-                    podcast,
-                    &mut conn.get().unwrap()
-                ).unwrap();
-            }
-            None => {
-            }
+        if let Some(podcast_episode) = res {
+            let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), podcast_episode
+                .podcast_id).unwrap();
+            PodcastEpisodeService::perform_download(
+                &podcast_episode,
+                podcast_episode.clone(),
+                podcast,
+                &mut conn.get().unwrap(),
+            ).unwrap();
         }
     });
 

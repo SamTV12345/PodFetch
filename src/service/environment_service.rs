@@ -3,7 +3,7 @@ use crate::models::settings::ConfigModel;
 use std::env::var;
 use regex::Regex;
 use crate::config::dbconfig::get_database_url;
-use crate::constants::constants::{BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME};
+use crate::constants::inner_constants::{BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -28,6 +28,13 @@ pub struct EnvironmentService {
     pub oidc_configured: bool,
     pub gpodder_integration_enabled: bool
 }
+
+impl Default for EnvironmentService {
+    fn default() -> Self {
+              Self::new()
+     }
+ }
+
 
 impl EnvironmentService {
     pub fn new() -> EnvironmentService {
@@ -144,7 +151,7 @@ impl EnvironmentService {
 #[cfg(test)]
 mod tests{
     use crate::service::environment_service::EnvironmentService;
-    use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
+    use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
     use std::env::{set_var,remove_var};
     use serial_test::serial;
 

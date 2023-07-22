@@ -6,7 +6,7 @@ use diesel::{Queryable, Insertable, Identifiable, RunQueryDsl, QueryDsl, Optiona
 use diesel::associations::HasTable;
 use diesel::ExpressionMethods;
 use uuid::Uuid;
-use crate::constants::constants::Role;
+use crate::constants::inner_constants::Role;
 use crate::DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
 

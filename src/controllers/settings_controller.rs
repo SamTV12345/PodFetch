@@ -88,7 +88,7 @@ pub async fn run_cleanup(
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Mode{
-    LOCAL,ONLINE
+    Local,Online
 }
 
 #[utoipa::path(
@@ -152,9 +152,9 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, env_service: MutexGuard<Environmen
         outline.add_attribute("title", &podcast.name);
         outline.add_attribute("type", "rss");
         match type_of {
-            Mode::LOCAL => outline.add_attribute("xmlUrl", &format!("{}rss/{}", &*env_service
+            Mode::Local => outline.add_attribute("xmlUrl", &format!("{}rss/{}", &*env_service
                 .get_server_url(), podcast.id)),
-            Mode::ONLINE => outline.add_attribute("xmlUrl", &podcast.rssfeed),
+            Mode::Online => outline.add_attribute("xmlUrl", &podcast.rssfeed),
         }
         body.add_child(outline).expect("TODO: panic message");
     }

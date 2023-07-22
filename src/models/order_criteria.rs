@@ -1,14 +1,18 @@
+use std::fmt::{Display, Formatter};
+
 #[derive(Serialize, Deserialize, Debug,Clone)]
 pub enum OrderCriteria {
-    ASC,
-    DESC
+    #[serde(rename = "ASC")]
+    Asc,
+    #[serde(rename = "DESC")]
+    Desc
 }
 
 impl OrderCriteria{
-    pub fn to_bool(self)->bool{
+    pub fn to_bool(&self)->bool{
         match self{
-            OrderCriteria::ASC=>true,
-            OrderCriteria::DESC=>false
+            OrderCriteria::Asc =>true,
+            OrderCriteria::Desc =>false
         }
     }
 }
@@ -19,14 +23,15 @@ pub enum OrderOption{
     Title
 }
 
-impl OrderOption{
-    pub fn to_string(self)->String{
+impl Display for OrderOption{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self{
-            OrderOption::PublishedDate=>"PublishedDate".to_string(),
-            OrderOption::Title=>"Title".to_string()
+            OrderOption::PublishedDate=>write!(f,"PublishedDate"),
+            OrderOption::Title=>write!(f,"Title")
         }
     }
-
+}
+impl OrderOption{
     pub fn from_string(s: String)->Self{
         match s.as_str(){
             "PublishedDate"=>OrderOption::PublishedDate,

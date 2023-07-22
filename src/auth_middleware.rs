@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::Mutex;
@@ -15,7 +16,7 @@ use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
 use jsonwebtoken::jwk::Jwk;
 use log::info;
 use serde_json::{from_str, Value};
-use crate::constants::constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
+use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
 use crate::{DbPool};
 use crate::models::user::User;
 use sha256::digest;
@@ -84,9 +85,10 @@ impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
     }
 }
 
+type MyFuture<B, Error> = Pin<Box<dyn Future<Output = Result<ServiceResponse<EitherBody<B>>, Error>>>>;
+
 impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>, S::Future: 'static {
-    fn handle_basic_auth(&self, req: ServiceRequest) ->
-    Pin<Box<dyn futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>> {
+    fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let opt_auth_header = req.headers().get("Authorization");
         if opt_auth_header.is_none() {
             return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
@@ -144,7 +146,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
         }
     }
 
-    fn handle_oidc_auth(&self, req: ServiceRequest) -> Pin<Box<dyn futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>> {
+    fn handle_oidc_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let token_res = req.headers().get("Authorization").unwrap().to_str();
         if token_res.is_err() {
             return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
@@ -241,8 +243,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
         }
     }
 
-    fn handle_no_auth(&self, req: ServiceRequest) -> Pin<Box<dyn
-    futures_util::Future<Output=Result<ServiceResponse<EitherBody<B>>, Error>>>>{
+    fn handle_no_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let user = User::create_standard_admin_user();
         req.extensions_mut().insert(user);
         let service = Rc::clone(&self.service);

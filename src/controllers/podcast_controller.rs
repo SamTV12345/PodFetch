@@ -1,7 +1,7 @@
 use crate::models::dto_models::PodcastFavorUpdateModel;
-use crate::models::models::{PodcastAddModel, PodcastInsertModel};
+use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
-use crate::models::search_type::SearchType::{ITUNES, PODINDEX};
+use crate::models::search_type::SearchType::{ITunes, Podindex};
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
@@ -26,7 +26,7 @@ use std::thread;
 use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
 use tokio::task::spawn_blocking;
-use crate::constants::constants::{PodcastType};
+use crate::constants::inner_constants::{PodcastType};
 
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -81,20 +81,20 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
                              ->Result<HttpResponse,CustomError>{
 
     let query = query.into_inner();
-    let _order = query.order.unwrap_or(OrderCriteria::ASC);
+    let _order = query.order.unwrap_or(OrderCriteria::Asc);
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
-    let only_favored;
+
     let opt_filter = Filter::get_filter_by_username(requester.clone().unwrap().username.clone(),
                                                     &mut conn.get().unwrap()).await?;
 
-    match opt_filter {
+    let only_favored = match opt_filter {
         Some(filter)=>{
-            only_favored = filter.only_favored;
+             filter.only_favored
         },
         None=>{
-            only_favored = true
+            true
         }
-    }
+    };
 
     let username = requester.unwrap().username.clone();
     let filter = Filter::new(username.clone(), query.title.clone(), _order.clone().to_bool(),Some
@@ -104,25 +104,31 @@ pub async fn search_podcasts(query: web::Query<PodcastSearchModel>, conn:Data<Db
 
     match query.favored_only {
         true => {
-            let podcasts = _podcast_service.lock().ignore_poison().search_podcasts_favored( _order
-                                                                                               .clone(), query.title,
-                                                                                   _latest_pub
-                                                                                       .clone(),
-                                                                                   _mapping_service.lock()
-                                                                                       .ignore_poison(),
-                                                                                   &mut conn.get().unwrap
-                                                                                   (),username)?;
+            let podcasts;
+            {
+                podcasts = _podcast_service.lock().ignore_poison().search_podcasts_favored(_order
+                                                                                                   .clone(), query.title,
+                                                                                               _latest_pub
+                                                                                                   .clone(),
+                                                                                               _mapping_service.lock()
+                                                                                                   .ignore_poison(),
+                                                                                               &mut conn.get().unwrap
+                                                                                               (), username)?;
+            }
             Ok(HttpResponse::Ok().json(podcasts))
         }
         false => {
-            let podcasts = _podcast_service.lock().ignore_poison().search_podcasts( _order.clone(),
-                                                                                   _mapping_service.lock().ignore_poison(),
-                                                                                   query.title,
-                                                                                   _latest_pub
-                                                                                        .clone(),
-                                                                                   &mut conn.get
-                                                                                   ().unwrap(),
-                                                                                    username)?;
+            let podcasts;
+            {
+                podcasts = _podcast_service.lock().ignore_poison().search_podcasts( _order.clone(),
+                _mapping_service.lock().ignore_poison(),
+                query.title,
+                _latest_pub
+                .clone(),
+                & mut conn.get
+                ().unwrap(),
+                username) ?;
+            }
             Ok(HttpResponse::Ok().json(podcasts))
         }
     }
@@ -193,23 +199,25 @@ pub async fn find_podcast(
 
     let (type_of, podcast) = podcast_col.into_inner();
     return match type_of.try_into() {
-        Ok(ITUNES) => {
-            let mut podcast_service = podcast_service
-                .lock()
-                .ignore_poison();
-            log::debug!("Searching for podcast: {}", podcast);
-            let res = podcast_service.find_podcast(&podcast).await;
+        Ok(ITunes) => {
+            let res;
+            {
+                let mut podcast_service = podcast_service
+                    .lock()
+                    .ignore_poison().clone();
+                log::debug!("Searching for podcast: {}", podcast);
+                res = podcast_service.find_podcast(&podcast).await;
+            }
             Ok(HttpResponse::Ok().json(res))
         }
-        Ok(PODINDEX) => {
+        Ok(Podindex) => {
             let mut environment = EnvironmentService::new();
 
             if !environment.get_config().podindex_configured {
                 return Ok(HttpResponse::BadRequest().json("Podindex is not configured"));
             }
-            let mut podcast_service = podcast_service
-                .lock()
-                .expect("Error locking podcastservice");
+            let mut podcast_service = podcast_service.lock()
+                .ignore_poison().clone();
 
             Ok(HttpResponse::Ok().json(podcast_service.find_podcast_on_podindex(&podcast).await?))
         }
@@ -280,9 +288,7 @@ pub async fn add_podcast_by_feed(
     podcast_service: Data<Mutex<PodcastService>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
-    let mut podcast_service = podcast_service
-        .lock()
-        .ignore_poison();
+
 
     if !requester.unwrap().is_privileged_user(){
         return Err(CustomError::Forbidden);
@@ -300,18 +306,24 @@ pub async fn add_podcast_by_feed(
     let channel = Channel::read_from(&*bytes).unwrap();
     let num = rand::thread_rng().gen_range(100..10000000);
 
-    let res = podcast_service.handle_insert_of_podcast(
-                        &mut conn.get().unwrap(),
-                        PodcastInsertModel {
-                            feed_url: rss_feed.clone().rss_feed_url.clone(),
-                            title: channel.title.clone(),
-                            id: num,
-                            image_url: channel.image.map(|i| i.url)
-                                .unwrap_or(get_default_image()),
-                        },
-                        MappingService::new(),
-                        lobby,
-                    ).await?;
+    let res;
+    {
+        let mut podcast_service = podcast_service
+            .lock()
+            .ignore_poison().clone();
+         res = podcast_service.handle_insert_of_podcast(
+            &mut conn.get().unwrap(),
+            PodcastInsertModel {
+                feed_url: rss_feed.clone().rss_feed_url.clone(),
+                title: channel.title.clone(),
+                id: num,
+                image_url: channel.image.map(|i| i.url)
+                    .unwrap_or(get_default_image()),
+            },
+            MappingService::new(),
+            lobby,
+        ).await?;
+    }
 
     Ok(HttpResponse::Ok().json(res))
 }

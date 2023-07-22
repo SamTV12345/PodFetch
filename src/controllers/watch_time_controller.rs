@@ -1,4 +1,4 @@
-use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
+use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
 use actix_web::{get, post, web, HttpResponse};
 use std::sync::{Mutex};

@@ -97,9 +97,9 @@ Responder {
                     let mut first_split = episode.episode.split('?');
                     let res = first_split.next();
 
-                    if res.is_some() {
-                        episode_url = res.unwrap().parse().unwrap()
-                    }
+                    if let Some(unwrapped_res) = res {
+                        episode_url = unwrapped_res.parse().unwrap()
+                    };
 
                     let podcast_episode = PodcastEpisode::query_podcast_episode_by_url(&mut conn.get()
                         .unwrap(),

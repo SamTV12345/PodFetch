@@ -1,5 +1,5 @@
 
-use crate::constants::constants::ERR_SETTINGS_FORMAT;
+use crate::constants::inner_constants::ERR_SETTINGS_FORMAT;
 use crate::controllers::settings_controller::{UpdateNameSettings};
 use crate::DbConnection;
 use crate::models::settings::Setting;

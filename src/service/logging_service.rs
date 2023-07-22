@@ -6,24 +6,23 @@ use std::io::Write;
 pub fn init_logging() {
     Builder::new()
         .format(|buf, record| {
-            let symbol;
-            match record.level() {
+            let symbol = match record.level() {
                 Level::Info=>{
-                    symbol = "ℹ️"
+                    "ℹ️"
                 }
                 Level::Error => {
-                    symbol = "❌"
+                    "❌"
                 }
                 Level::Warn => {
-                    symbol = "⚠️"
+                    "⚠️"
                 }
                 Level::Debug => {
-                    symbol = "🐛"
+                    "🐛"
                 }
                 Level::Trace => {
-                    symbol = "🔍"
+                    "🔍"
                 }
-            }
+            };
             writeln!(
                 buf,
                 "{} {} - {}",

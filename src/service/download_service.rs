@@ -10,7 +10,7 @@ use std::io;
 use reqwest::header::HeaderMap;
 
 use crate::config::dbconfig::establish_connection;
-use crate::constants::constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
+use crate::constants::inner_constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::FilenameBuilder;
 use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
@@ -38,10 +38,9 @@ impl DownloadService {
         let settings_in_db = SettingsService::new().get_settings(conn)?.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
-        let paths;
-        match settings_in_db.use_existing_filename {
+        let paths = match settings_in_db.use_existing_filename {
             true=>{
-                paths = FilenameBuilder::default()
+                FilenameBuilder::default()
                     .with_podcast(podcast.clone())
                     .with_suffix(&suffix)
                     .with_episode(podcast_episode.clone(), conn)?
@@ -49,10 +48,10 @@ impl DownloadService {
                     .with_image_filename(PODCAST_IMAGENAME)
                     .with_image_suffix(&image_suffix)
                     .with_raw_directory(conn)?
-                    .build(conn)?;
+                    .build(conn)?
             },
             false=>{
-                paths = FilenameBuilder::default()
+                 FilenameBuilder::default()
                     .with_suffix(&suffix)
                     .with_image_suffix(&image_suffix)
                     .with_episode(podcast_episode.clone(), conn)?
@@ -60,9 +59,9 @@ impl DownloadService {
                     .with_podcast(podcast.clone())
                     .with_image_filename(PODCAST_IMAGENAME)
                     .with_filename(PODCAST_FILENAME)
-                    .build(conn)?;
+                    .build(conn)?
             }
-        }
+        };
 
 
         let client = ClientBuilder::new()

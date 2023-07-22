@@ -1,4 +1,4 @@
-use crate::constants::constants::PodcastType;
+use crate::constants::inner_constants::PodcastType;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 

@@ -4,12 +4,12 @@ use crate::DbConnection;
 use diesel::Queryable;
 use diesel::QueryId;
 use diesel::QueryableByName;
-use crate::models::models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
+use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use utoipa::ToSchema;
 use diesel::Selectable;
 use crate::models::episode::{Episode, EpisodeAction};
 use diesel::sql_types::*;
-use crate::constants::constants::STANDARD_USER;
+use crate::constants::inner_constants::STANDARD_USER;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::mapping_service::MappingService;
@@ -103,8 +103,7 @@ impl PodcastHistoryItem{
                     Some(found_history_item) => {
                         let option_episode = Episode::get_watch_log_by_username_and_episode
                             (username_to_find.clone(), conn, found_podcast.clone().url);
-                        if option_episode.is_some(){
-                            let episode = option_episode.unwrap();
+                        if let Some(episode) = option_episode {
                             if episode.action == EpisodeAction::Play.to_string() && episode
                                 .position.unwrap()>found_history_item.watched_time && episode.timestamp>found_history_item.date{
 

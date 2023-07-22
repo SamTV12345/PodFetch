@@ -129,14 +129,11 @@ impl SubscriptionChangesToClient {
             let opt_sub = Self::find_by_podcast(username.to_string(), device_id.to_string(), c
                 .to_string(), conn).expect("Error retrieving \
                                              subscription");
-            match opt_sub {
-                Some(s)=>{
+            if let Some(s) = opt_sub {
                     diesel::update(subscriptions.
                         filter(dsl_types::id.eq(s.id)))
                         .set(dsl_types::deleted.eq(Some(Utc::now().naive_utc())))
                         .execute(conn).unwrap();
-                },
-                None=>{}
             }
         });
 

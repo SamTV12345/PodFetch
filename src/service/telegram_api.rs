@@ -1,6 +1,6 @@
 use std::env::var;
 use frankenstein::{Api, ParseMode, SendMessageParams, TelegramApi};
-use crate::constants::constants::{TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::constants::inner_constants::{TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 

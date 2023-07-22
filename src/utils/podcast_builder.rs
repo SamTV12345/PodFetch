@@ -40,8 +40,8 @@ impl PodcastBuilder {
     }
 
     pub fn language(&mut self, language: Option<String>) -> &mut PodcastBuilder {
-        if language.is_some() {
-            self.language = language.unwrap();
+        if let Some(language) = language {
+            self.language = language;
         }
         self
     }
@@ -56,29 +56,24 @@ impl PodcastBuilder {
     }
 
     pub fn last_build_date(&mut self, last_build_date: Option<String>) -> &mut PodcastBuilder {
-        if last_build_date.is_some() {
-            self.last_build_date = last_build_date.unwrap();
+        if let Some(last_build_date) = last_build_date {
+            self.last_build_date = last_build_date;
         }
         self
     }
 
     pub fn explicit(&mut self, explicit: Option<String>) -> &mut PodcastBuilder {
-        match explicit {
-            Some(explicit) => {
-                self.explicit = explicit == "yes";
-            }
-            None => {}
+        if let Some(explicit) = explicit {
+            self.explicit = explicit == "yes";
         }
         self
     }
 
     pub fn author(&mut self, author: Option<String>) -> &mut PodcastBuilder {
-        match author {
-            Some(author) => {
-                self.author = author;
-            }
-            None => {}
+        if let Some(author) = author {
+                         self.author = author;
         }
+
         self
     }
 
