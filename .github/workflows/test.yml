@@ -19,6 +19,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
+      - name: Add required index.html
+        run: |
+          touch ./static/index.html
       - uses: actions-rs/cargo@v1
         with:
           command: test
