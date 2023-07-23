@@ -161,5 +161,13 @@
   "invite-status-all": "All invitations",
   "invite-status-accepted": "Accepted invites",
   "invite-status-pending": "Pending invites",
-  "invite-status-expired": "Expired invites"
+  "invite-status-expired": "Expired invites",
+  "already-added": "Podcast {{name}} already added",
+  "playlists": "Playlists",
+  "add-playlist": "Add playlist",
+  "create-playlist": "Create playlist",
+  "playlist-name": "Playlist name",
+  "update-playlist": "Update playlist",
+  "updated-playlist": "Playlist updated",
+  "created-playlist": "Playlist created"
 }

@@ -160,5 +160,13 @@
   "invite-status-all": "Alle Einladungsstatus",
   "invite-status-accepted": "Akzeptierte Einladungen",
   "invite-status-pending": "Ausstehende Einladungen",
-  "invite-status-expired": "Abgelaufene Einladungen"
+  "invite-status-expired": "Abgelaufene Einladungen",
+
+  "playlists": "Playlisten",
+  "add-playlist": "Playlist hinzufügen",
+  "create-playlist": "Playlist erstellen",
+  "playlist-name": "Name der Playlist",
+  "update-playlist": "Playlist aktualisieren",
+  "updated-playlist": "Playlist aktualisiert",
+  "created-playlist": "Playlist erstellt"
 }

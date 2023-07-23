@@ -20,6 +20,11 @@ export type LoginData = {
     rememberMe: boolean
 }
 
+type LoginError = {
+    code: string,
+    error: string,
+    message: string
+}
 export const Login = () => {
     const dispatch = useAppDispatch()
     const configModel = useAppSelector(state => state.common.configModel)

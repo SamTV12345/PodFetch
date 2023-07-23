@@ -5,6 +5,7 @@ import { EpisodeSearch } from './EpisodeSearch'
 
 export const EpisodeSearchModal = () => {
     const [open, setOpen] = useState<boolean>(false)
+    const navigate = useNavigate()
 
     useCtrlPressed(() => {
         setOpen(!open)
@@ -24,7 +25,10 @@ export const EpisodeSearchModal = () => {
                     - 24rem
                     - Or, for when screen height is smaller: viewport height - vertical padding/spacing - height of search field
                 */}
-                <EpisodeSearch onClickResult={() => setOpen(false)} classNameResults="max-h-[min(24rem,calc(100vh-3rem-3rem))]" showBlankState={false} />
+                <EpisodeSearch onClickResult={(episode) => {
+                    setOpen(false)
+                    navigate(`/podcasts/${episode.podcast_id}/episodes/${episode.id}`)
+                    }} classNameResults="max-h-[min(24rem,calc(100vh-3rem-3rem))]" showBlankState={false} />
             </div>
         </div>, document.getElementById('modal')!
     )

@@ -28,18 +28,18 @@ impl PlaylistItem {
             .optional()
             .map_err(map_db_error)?;
 
-        if res.is_some() {
-            return Ok(res.unwrap())
+        if let Some(unwrapped_res) = res {
+            return Ok(unwrapped_res)
         }
 
-        Ok(diesel::insert_into(playlist_items)
+        diesel::insert_into(playlist_items)
             .values((
                 playlist_id.eq(&self.playlist_id),
                 episode.eq(&self.episode),
                 position.eq(&self.position)
             ))
             .get_result::<PlaylistItem>(conn)
-            .map_err(map_db_error)?)
+            .map_err(map_db_error)
     }
 
     pub fn delete_playlist_item(playlist_id_1: String, episode_1: i32, conn: &mut DbConnection) ->
@@ -63,9 +63,10 @@ impl PlaylistItem {
                                                                                              Result<Vec<PlaylistItem>, CustomError> {
         use crate::dbconfig::schema::playlist_items::dsl::*;
 
-        Ok(playlist_items.filter(playlist_id.eq(playlist_id_1))
-            .order(position.asc())
-            .load::<PlaylistItem>(conn)
-            .map_err(map_db_error)?)
+               playlist_items.filter(playlist_id.eq(playlist_id_1))
+                   .order(position.asc())
+                   .load::<PlaylistItem>(conn)
+                   .map_err(map_db_error)
+
     }
 }

@@ -31,14 +31,14 @@ impl Playlist {
             .optional()
             .map_err(map_db_error)?;
 
-        if res.is_some() {
-            return Ok(res.unwrap())
+        if let Some(unwrapped_res) = res {
+            return Ok(unwrapped_res)
         }
 
-        Ok(diesel::insert_into(playlists)
+        diesel::insert_into(playlists)
             .values(self)
             .get_result::<Playlist>(conn)
-            .map_err(map_db_error)?)
+            .map_err(map_db_error)
     }
 
     pub fn delete_playlist(playlist_id_1: String, conn: &mut DbConnection) -> Result<(),
@@ -67,11 +67,31 @@ impl Playlist {
         Err(CustomError::NotFound)
     }
 
-    pub fn get_playlists(conn: &mut DbConnection) -> Result<Vec<Playlist>, CustomError> {
+    pub fn get_playlist_by_user_and_id(playlist_id_1: String, user_id_1: i32, conn: &mut DbConnection) -> Result<Playlist,
+        CustomError> {
         use crate::dbconfig::schema::playlists::dsl::*;
 
-        Ok(playlists.load::<Playlist>(conn)
-            .map_err(map_db_error)?)
+        let res = playlists.filter(id.eq(playlist_id_1))
+            .filter(user_id.eq(user_id_1))
+            .first::<Playlist>(conn)
+            .optional()
+            .map_err(map_db_error)?;
+
+        if let Some(unwrapped_res) = res {
+            return Ok(unwrapped_res)
+        }
+
+        Err(CustomError::NotFound)
+    }
+
+    pub fn get_playlists(conn: &mut DbConnection, user_id1: i32) -> Result<Vec<Playlist>,
+        CustomError> {
+        use crate::dbconfig::schema::playlists::dsl::*;
+
+        playlists
+            .filter(user_id.eq(user_id1))
+            .load::<Playlist>(conn)
+            .map_err(map_db_error)
     }
 
     pub fn create_new_playlist(conn: &mut DbConnection, playlist_dto: PlaylistDtoPost, user_id: i32)
@@ -89,7 +109,8 @@ impl Playlist {
                 episode: x.episode,
                 position: i as i32
             };
-            playlist_item_to_insert.insert_playlist_item(conn).expect("Error inserting playlist item");
+            playlist_item_to_insert.insert_playlist_item(conn)
+                .expect("Error inserting playlist item");
         });
 
         let items = PlaylistItem::get_playlist_items_by_playlist_id(inserted_playlist.id.clone(),
@@ -98,13 +119,13 @@ impl Playlist {
         Ok(playlist_dto_returned)
     }
 
-    fn to_playlist_dto(self, item: Vec<PlaylistItem>, conn: &mut DbConnection) -> PlaylistDto {
+    fn to_playlist_dto(&self, item: Vec<PlaylistItem>, conn: &mut DbConnection) -> PlaylistDto {
         let episodes = item.iter().map(|x| PodcastEpisode::get_podcast_episode_by_internal_id
             (conn, x.episode).expect("").expect("")).collect::<Vec<PodcastEpisode>>();
 
         PlaylistDto {
-            id: self.id,
-            name: self.name,
+            id: self.id.clone(),
+            name: self.name.clone(),
             items: episodes
         }
     }
@@ -113,14 +134,14 @@ impl Playlist {
     DbConnection, user_id_1: i32) ->
                                   Result<usize, CustomError> {
         use crate::dbconfig::schema::playlists::dsl::*;
-        Ok(diesel::update(playlists
+        diesel::update(playlists
             .filter(id.eq(playlist_id_1))
             .filter(user_id.eq(user_id_1)))
             .set(
                 name.eq(playlist_dto.name)
             )
             .execute(conn)
-            .map_err(map_db_error)?)
+            .map_err(map_db_error)
     }
 
     pub fn update_playlist(conn: &mut DbConnection, playlist_dto: PlaylistDtoPost, playlist_id: String,
@@ -148,14 +169,57 @@ impl Playlist {
             playlist_item_to_insert.insert_playlist_item(conn).expect("Error inserting playlist item");
         });
 
-
-        Self::get_podcast_dto(playlist_id, conn, playlist_to_be_updated)
+        let updated_playlist = Self::get_playlist_by_id(playlist_id.clone(), conn)?;
+        Self::get_podcast_dto(playlist_id, conn, updated_playlist, user_id)
     }
 
-    fn get_podcast_dto(playlist_id: String, conn: &mut DbConnection, playlist: Playlist) ->
+    pub(crate) fn get_podcast_dto(playlist_id: String, conn: &mut DbConnection, playlist:
+    Playlist, user_id: i32) ->
                                                                                          Result<PlaylistDto, CustomError> {
+        if playlist.user_id != user_id{
+            return Err(CustomError::Forbidden)
+        }
         let items_in_playlist = PlaylistItem::get_playlist_items_by_playlist_id(playlist_id, conn)?;
 
         Ok(playlist.to_playlist_dto(items_in_playlist, conn))
+    }
+
+    pub fn delete_playlist_by_id(playlist_id: String, conn: &mut DbConnection, user_id1: i32) ->
+                                                                                              Result<(), CustomError> {
+        use crate::dbconfig::schema::playlists::dsl::*;
+
+        let playlist_to_delete = Playlist::get_playlist_by_id(playlist_id.clone(), conn)?;
+
+        if playlist_to_delete.user_id != user_id1 {
+            return Err(CustomError::Forbidden)
+        }
+
+        PlaylistItem::delete_playlist_item_by_playlist_id(playlist_id.clone(), conn)?;
+        diesel::delete(playlists
+            .filter(id.eq(playlist_id))
+            .filter(user_id.eq(user_id1)))
+            .execute(conn)
+            .map_err(map_db_error)?;
+        Ok(())
+    }
+
+    pub async fn delete_playlist_item(playlist_id_1:String, episode_id:i32, conn: &mut
+    DbConnection, user_id: i32) -> Result<(), CustomError> {
+
+        let found_podcast = Self::get_playlist_by_id(playlist_id_1.clone(), conn)?;
+
+        if found_podcast.user_id!=user_id {
+            return Err(CustomError::Forbidden)
+        }
+
+
+        use crate::dbconfig::schema::playlist_items::dsl::*;
+
+        diesel::delete(playlist_items
+            .filter(playlist_id.eq(playlist_id))
+            .filter(episode.eq(episode_id)))
+            .execute(conn)
+            .map_err(map_db_error)?;
+        Ok(())
     }
 }

@@ -111,6 +111,12 @@ impl User {
     }
 
     pub(crate) fn create_admin_user() -> User {
+        use crate::constants::inner_constants::PASSWORD;
+
+        let password:Option<String> = std::env::var(PASSWORD)
+            .map(Some)
+            .map_err(|_|None::<String>)
+            .unwrap();
         User {
             id: 9999,
             username: var(USERNAME).unwrap().to_string(),

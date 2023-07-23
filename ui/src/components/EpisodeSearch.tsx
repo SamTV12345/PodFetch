@@ -11,7 +11,7 @@ import { EmptyResultIcon } from '../icons/EmptyResultIcon'
 
 type EpisodeSearchProps = {
     classNameResults?: string,
-    onClickResult?: () => void,
+    onClickResult?: (e:PodcastEpisode) => void,
     resultsMaxHeight?: string,
     showBlankState?: boolean
 }
