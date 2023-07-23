@@ -69,7 +69,7 @@ tags(
 (name = "notifications", description = "Notification management endpoints."),
 (name = "settings", description = "Settings management endpoints. Settings are globally scoped."),
 (name = "info", description = "Gets multiple  information about your installation."),
-
+(name = "playlist", description = "Playlist management endpoints."),
 ),
 modifiers(&SecurityAddon)
 )]

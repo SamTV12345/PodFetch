@@ -49,6 +49,7 @@ use crate::controllers::websocket_controller::{
 pub use controllers::controller_utils::*;
 use crate::auth_middleware::{AuthFilter};
 use crate::command_line_runner::start_command_line;
+use crate::controllers::playlist_controller::add_playlist;
 use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users, onboard_user, update_role};
 
 mod constants;
@@ -313,6 +314,7 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
         .service(add_podcast_from_podindex)
         .service(delete_podcast)
         .service(get_opml)
+        .service(add_playlist)
         .service(delete_podcast_episode_locally)
 }
 
