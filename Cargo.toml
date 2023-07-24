@@ -49,7 +49,7 @@ futures = "0.3.28"
 utoipa-swagger-ui = {version = "3.1.3", features = ["actix-web"] }
 clokwerk= "0.4.0"
 tokio = {version = "1.29.1", features = ["full"]}
-serde = "1.0.171"
+serde = "1.0.175"
 serde_derive = "1.0.152"
 sysinfo = {version = "0.29.4", features = ["serde"]}
 fs_extra = "1.3.0"
