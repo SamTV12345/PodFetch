@@ -171,7 +171,7 @@ After successful setup you should see on the settings page a green checkmark nex
 
 Podfetch supports the [GPodder API](https://gpoddernet.readthedocs.io/en/latest/api/index.html).
 
-You need to set the following environment variable to `true` to enable it:
+The following environment variable must be set to `true` to enable it:
 | Variable            | Description                           | Default |
 |---------------------|---------------------------------------|---------|
 | GPODDER_INTEGRATION_ENABLED    | Activates the GPodder integration via your `SERVER_URL` | false|
