@@ -125,6 +125,12 @@ Hosting options are described here: [HOSTING.md](docs/HOSTING.md)
 
 The cli usage is described here: [CLI.md](docs/CLI.md)
 
+# User creation
+
+You can create an admin, user, or uploader either through [CLI](docs/CLI.md) or via invites.
+
+To generate an invite, log into Podfetch → Top Right Icon → User Administration → Invites
+
 # Environment Variables
 
 | Variable         | Description                                   | Default                  |
@@ -161,16 +167,18 @@ To configure it you need to create an account on that website. After creating an
 
 After successful setup you should see on the settings page a green checkmark next to the Podindex config section.
 
-# GPodder
+# GPodder API
 
-Podfetch also supports the GPodder api. You can use your current GPodder account to login to Podfetch and continue using your current podcast app.
-To do that just go to the settings page and enter your GPodder username and password.
+Podfetch supports the [GPodder API](https://gpoddernet.readthedocs.io/en/latest/api/index.html).
 
-To enable it you need to set the following environment variables:
+You need to set the following environment variable to `true` to enable it:
 | Variable            | Description                           | Default |
 |---------------------|---------------------------------------|---------|
-| GPODDER_INTEGRATION_ENABLED    | Activates the GPodder integration via your server url  | false|
+| GPODDER_INTEGRATION_ENABLED    | Activates the GPodder integration via your `SERVER_URL` | false|
 
+You will also need to set up [`BASIC_AUTH` or `OIDC_AUTH`](docs/AUTH.md) and [create a user](#user-creation).
+
+You can use your new user account to log into podcast apps that supports the GPodder API by using your `SERVER_URL` and login information.
 
 # Roadmap
 
