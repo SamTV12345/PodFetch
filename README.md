@@ -2,7 +2,7 @@
 
 [![dependency status](https://deps.rs/repo/github/SamTV12345/PodFetch/status.svg)](https://deps.rs/repo/github/SamTV12345/PodFetch)
 
-Podfetch is a self-hosted podcast manager. 
+Podfetch is a self-hosted podcast manager.
 It is a web app that lets you download podcasts and listen to them online.
 It is written in Rust and uses React for the frontend.
 It also contains a GPodder integration so you can continue using your current podcast app.
@@ -121,9 +121,15 @@ Several Auth methods are described here: [AUTH.md](docs/AUTH.md)
 
 Hosting options are described here: [HOSTING.md](docs/HOSTING.md)
 
-# CLI usage
+# CLI Usage
 
-The cli usage is described here: [CLI.md](docs/CLI.md)
+The CLI usage is described here: [CLI.md](docs/CLI.md)
+
+# User Creation
+
+You can create an admin, user, or uploader either through [CLI](docs/CLI.md) or via invites.
+
+To generate an invite, log into Podfetch → Top Right Icon → User Administration → Invites
 
 # Environment Variables
 
@@ -141,7 +147,7 @@ The cli usage is described here: [CLI.md](docs/CLI.md)
 ## Internationalization
 Podfetch is currently available in English and German. If you want to add a new language you can do so by adding a new file to the `i18n` folder and adding the translations to the file.
 
-# RSS feed
+# RSS Feed
 
 Podfetch offers an own feed to download podcast episodes. You can add the url <SERVER_URL>/rss to your favorite podcast app like gPodder to download and play episodes.
 
@@ -158,19 +164,22 @@ To configure it you need to create an account on that website. After creating an
 
 * % means an empty string is configured as default
 
-
 After successful setup you should see on the settings page a green checkmark next to the Podindex config section.
 
-# GPodder
+# GPodder API
 
-Podfetch also supports the GPodder api. You can use your current GPodder account to login to Podfetch and continue using your current podcast app.
-To do that just go to the settings page and enter your GPodder username and password.
+Podfetch supports the [GPodder API](https://gpoddernet.readthedocs.io/en/latest/api/index.html).
 
-To enable it you need to set the following environment variables:
+The following environment variable must be set to `true` to enable it:
 | Variable            | Description                           | Default |
 |---------------------|---------------------------------------|---------|
-| GPODDER_INTEGRATION_ENABLED    | Activates the GPodder integration via your server url  | false|
+| GPODDER_INTEGRATION_ENABLED    | Activates the GPodder integration via your `SERVER_URL` | false|
 
+You will also need to set up [`BASIC_AUTH` or `OIDC_AUTH`](docs/AUTH.md) and [create a user](#user-creation).
+
+You can use your new user account to log into podcast apps that supports the GPodder API by using your `SERVER_URL` and login information.
+
+See [wiki/GPodder-API](https://github.com/SamTV12345/PodFetch/wiki/GPodder-API) for more info.
 
 # Roadmap
 
@@ -191,3 +200,4 @@ To enable it you need to set the following environment variables:
 - [x] Telegram Bot api to get alerted when new episodes are downloaded.
 - [ ] Like episodes.
 - [ ] Delete podcasts.
+
