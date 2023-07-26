@@ -29,6 +29,6 @@ podfetch podcasts --help
 ## Usage in docker
 
 ```bash
-docker ps #This will help obtain the container's name
-docker exec -it <your-docker-id/name> /app/podfetch <your-command> # Will execute your desired command in the container
+docker ps #This will help you obtain the container's id and name
+docker exec -it <container id or name> /app/podfetch <your-command> # Will execute your desired command in the container
 ```
