@@ -179,6 +179,8 @@ You will also need to set up [`BASIC_AUTH` or `OIDC_AUTH`](docs/AUTH.md) and [cr
 
 You can use your new user account to log into podcast apps that supports the GPodder API by using your `SERVER_URL` and login information.
 
+See [wiki/GPodder-API](https://github.com/SamTV12345/PodFetch/wiki/GPodder-API) for more info.
+
 # Roadmap
 
 - [x] Add podcasts via Itunes api
