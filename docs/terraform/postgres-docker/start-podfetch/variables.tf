@@ -4,7 +4,6 @@ variable "server_url" {
 }
 
 variable "podcast_dir" {
-    default = "/var/podfetch/podcasts"
     description = "The directory where podcasts are stored"
 }
 

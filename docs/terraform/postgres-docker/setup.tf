@@ -29,6 +29,8 @@ module "deploy-traefik-images" {
   traefik_acme_location = var.traefik_acme_location
   traefik_dynamic_conf_location = var.traefik_dynamic_conf_location
   traefik_toml_location = var.traefik_toml_location
+  public_port = var.traefik-http-port
+  public_port_https = var.traefik-https-port
 }
 
 module "deploy-postgres-db" {
@@ -39,6 +41,7 @@ module "deploy-postgres-db" {
   db_name = var.postgres_db
   db_password = var.postgres_password
   db_user = var.postgres_user
+  db_dir = var.postgres-dir
 }
 
 module "deploy-podfetch" {
@@ -47,4 +50,5 @@ module "deploy-podfetch" {
   db_name = var.postgres_db
   db_password = var.postgres_password
   db_user = var.postgres_user
+  podcast_dir = var.postgres-dir
 }

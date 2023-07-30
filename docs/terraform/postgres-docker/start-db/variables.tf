@@ -12,5 +12,4 @@ variable "db_name" {
 
 variable "db_dir" {
     description = "The database directory"
-    default = "/var/podfetch/db"
 }

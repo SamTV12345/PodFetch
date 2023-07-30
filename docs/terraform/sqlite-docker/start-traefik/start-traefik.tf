@@ -7,10 +7,9 @@ terraform {
   }
 }
 
-resource "docker_network" "traefik-proxy" {
-  name = "traefik-proxy"
+resource "docker_network" "sqlite-traefik-proxy" {
+  name = "sqlite-traefik-proxy"
 }
-
 
 
 resource "docker_container" "traefik" {
@@ -28,7 +27,7 @@ resource "docker_container" "traefik" {
   }
 
   networks_advanced {
-    name = "traefik-proxy"
+    name = "sqlite-traefik-proxy"
   }
 
   volumes {
