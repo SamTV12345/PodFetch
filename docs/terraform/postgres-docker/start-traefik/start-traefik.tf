@@ -7,8 +7,9 @@ terraform {
   }
 }
 
-
-
+resource "docker_network" "postgres-traefik-proxy" {
+  name = "postgres-traefik-proxy"
+}
 
 
 resource "docker_container" "traefik" {
@@ -26,7 +27,7 @@ resource "docker_container" "traefik" {
   }
 
   networks_advanced {
-    name = "traefik-proxy"
+    name = "postgres-traefik-proxy"
   }
 
   volumes {

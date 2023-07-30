@@ -7,7 +7,9 @@ terraform {
   }
 }
 
-
+resource "docker_network" "traefik-proxy" {
+  name = "traefik-proxy"
+}
 
 
 

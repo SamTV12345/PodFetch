@@ -9,7 +9,14 @@ variable "podcast_dir" {
 }
 
 
-variable "db_dir" {
-    default = "/var/podfetch/db"
-    description = "The directory where the podfetch database is stored"
+variable "db_user" {
+    description = "The database user"
+}
+
+variable "db_password" {
+    description = "The database password"
+}
+
+variable "db_name" {
+    description = "The database name"
 }

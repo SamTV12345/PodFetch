@@ -7,6 +7,7 @@ terraform {
   }
 }
 
+
 resource "docker_container" "podfetch" {
   name    = "podfetch"
   image   = "samuel19982/podfetch"
@@ -22,11 +23,7 @@ resource "docker_container" "podfetch" {
   }
 
   networks_advanced {
-    name = "traefik-proxy"
-  }
-
-  networks_advanced {
-    name = "podfetch-internal"
+    name = "sqlite-traefik-proxy"
   }
 
   env = [

@@ -1,14 +1,3 @@
-variable "public_port" {
-    description = "The public port to access the application"
-    default     = 80
-}
-
-variable "public_port_https" {
-    description = "The public port to access the application"
-    default     = 443
-}
-
-
 variable "traefik_toml_location" {
   description = "The location of the traefik.toml file"
 }

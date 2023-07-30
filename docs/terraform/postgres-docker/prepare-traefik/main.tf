@@ -7,7 +7,7 @@ resource "local_file" "traefik_toml" {
   filename = var.traefik_toml_location
 }
 resource "local_file" "traefik_access_log" {
-  content = "<<EOF"
+  content = ""
   filename = var.traefik_access_log_location
 }
 
