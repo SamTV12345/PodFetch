@@ -1,0 +1,19 @@
+[global]
+    checkNewVersion = true
+    sendAnonymousUsage = true
+
+[entryPoints]
+[entryPoints.web]
+address = ":80"
+
+[entryPoints.websecure]
+address = ":443"
+
+
+[log]
+level = "DEBUG"
+
+[accessLog]
+filePath = "/var/log/traefik/access.log"
+
+[providers.docker]

@@ -113,6 +113,12 @@ volumes:
   postgres:
 ```
 
+### Terraform
+
+For terraform have a look at the setup directory. 
+There you will find everything needed to start with your infrastructure as code.
+
+
 # Auth
 
 Several Auth methods are described here: [AUTH.md](docs/AUTH.md)
