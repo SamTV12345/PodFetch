@@ -12,3 +12,7 @@ podcast.db-wal
 
 static/*.jpg
 local-configs
+.terraform.lock.hcl
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
