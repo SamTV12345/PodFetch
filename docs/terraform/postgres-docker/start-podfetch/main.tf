@@ -25,6 +25,10 @@ resource "docker_container" "podfetch" {
     name = "traefik-proxy"
   }
 
+  networks_advanced {
+    name = "podfetch-internal"
+  }
+
   env = [
     "SERVER_URL=${var.server_url}"
   ]

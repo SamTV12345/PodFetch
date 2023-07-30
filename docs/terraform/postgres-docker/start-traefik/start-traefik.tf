@@ -7,6 +7,10 @@ terraform {
   }
 }
 
+
+
+
+
 resource "docker_container" "traefik" {
   name = "traefik_proxy"
   image = "traefik"
@@ -20,6 +24,7 @@ resource "docker_container" "traefik" {
     internal = 443
     external = var.public_port_https
   }
+
   networks_advanced {
     name = "traefik-proxy"
   }
