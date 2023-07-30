@@ -15,3 +15,8 @@ resource "local_file" "traefik-dynamic-conf" {
   source      = "${var.path-to-samples}/dynamic.toml"
   filename = var.traefik_dynamic_conf_location
 }
+
+resource "local_file" "traefik_acme_json" {
+  filename = var.traefik_acme_location
+  content = ""
+}
