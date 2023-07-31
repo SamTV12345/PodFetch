@@ -26,7 +26,7 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_io_error};
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -483,6 +483,18 @@ impl PodcastEpisodeService {
             url,
             content,
         }
+    }
+
+    pub(crate) fn delete_podcast_episode_locally(episode_id: &str, conn: &mut DbConnection) ->
+                                                                                            Result<PodcastEpisode,
+        CustomError>{
+        let episode = PodcastEpisode::get_podcast_episode_by_id(conn, episode_id)?;
+        if episode.is_none() {
+            return Err(CustomError::NotFound);
+        }
+        let podcast = Podcast::get_podcast(conn, episode.clone().unwrap().podcast_id).unwrap();
+        FileService::cleanup_old_episode(podcast, episode.clone().unwrap()).map_err(map_io_error)?;
+        return Ok(episode.unwrap())
     }
 }
 
