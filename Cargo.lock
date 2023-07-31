@@ -2540,9 +2540,9 @@ dependencies = [
 
 [[package]]
 name = "sha256"
-version = "1.2.0"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b11f1548fd635c4b698ffdc817d44dfb725700392b1082bbc241167579bee0c8"
+checksum = "386f700b0c798d92ac20a53342c240ff9d58030c3b845fbaeb92eead3a774792"
 dependencies = [
  "async-trait",
  "bytes",
