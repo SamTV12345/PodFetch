@@ -1,10 +1,11 @@
 import {createPortal} from "react-dom"
 import {useTranslation} from "react-i18next"
-import {preparePath, removeHTML} from "../utils/Utilities"
+import {apiURL, preparePath, removeHTML} from "../utils/Utilities"
 import {useAppDispatch, useAppSelector} from "../store/hooks"
 import {setInfoModalPodcastOpen} from "../store/CommonSlice"
 import {Heading2} from "./Heading2"
 import "material-symbols/outlined.css"
+import axios from "axios";
 
 export const PodcastInfoModal = () => {
     const dispatch = useAppDispatch()
@@ -21,6 +22,12 @@ export const PodcastInfoModal = () => {
         document.body.appendChild(element)
         element.click()
         document.body.removeChild(element)
+    }
+
+    const deleteEpisodeDownloadOnServer = (episodeId: string) => {
+        axios.delete(apiURL + "/episodes/" + episodeId + "/download").then(() => {
+            dispatch(setInfoModalPodcastOpen(false))
+        })
     }
 
     return createPortal( <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setInfoModalPodcastOpen(false))}
@@ -45,6 +52,7 @@ export const PodcastInfoModal = () => {
 
                         }
                     }}>save</span>
+                    {selectedPodcastEpisode?.status === 'D'&& <span onClick={()=>deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer  text-red-600" title={t('delete') as string}>delete</span>}
                 </div>
 
                 {selectedPodcastEpisode&&<p className="leading-[1.75] text-sm text-stone-900" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>

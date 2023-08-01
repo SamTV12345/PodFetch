@@ -206,16 +206,17 @@ impl PodcastService {
         match settings {
             Some(settings) => {
                 if settings.auto_download {
-                    let result = PodcastEpisodeService::
-                    get_last_n_podcast_episodes(conn, podcast.clone())?;
+                    let result = PodcastEpisodeService::get_last_n_podcast_episodes(conn, podcast.clone())?;
                     for podcast_episode in result {
-                        self.podcast_episode_service
-                            .download_podcast_episode_if_not_locally_available(
-                                podcast_episode,
-                                podcast.clone(),
-                                lobby.clone(),
-                                conn
-                            )?;
+                        if !podcast_episode.deleted {
+                            self.podcast_episode_service
+                                .download_podcast_episode_if_not_locally_available(
+                                    podcast_episode,
+                                    podcast.clone(),
+                                    lobby.clone(),
+                                    conn
+                                )?;
+                        }
                     }
                 }
                 Ok(())

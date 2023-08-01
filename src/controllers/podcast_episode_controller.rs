@@ -1,17 +1,21 @@
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use actix_web::web::{Data, Query};
-use actix_web::{get, put};
+use actix_web::{delete, get, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::sync::Mutex;
 use std::thread;
+use actix::Addr;
+use crate::constants::inner_constants::PodcastType;
 use crate::db::TimelineItem;
 use crate::DbPool;
 use crate::models::favorites::Favorite;
+use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
+use crate::models::web_socket_message::Lobby;
 use crate::mutex::LockResultExt;
 use crate::utils::error::CustomError;
 
@@ -126,13 +130,50 @@ pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: D
             let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), podcast_episode
                 .podcast_id).unwrap();
             PodcastEpisodeService::perform_download(
-                &podcast_episode,
-                podcast_episode.clone(),
+                &podcast_episode.clone(),
                 podcast,
                 &mut conn.get().unwrap(),
             ).unwrap();
+            PodcastEpisode::update_deleted(&mut conn.get().unwrap(),&podcast_episode.clone().episode_id,
+                                           false).unwrap();
+
         }
     });
 
     Ok(HttpResponse::Ok().json("Download started"))
 }
+
+/**
+ * id is the episode id (uuid)
+ */
+#[utoipa::path(
+context_path = "/api/v1",
+responses(
+(status = 204, description = "Removes the download of a given podcast episode. This very episode \
+won't be included in further checks/downloads unless done by user.")),
+tag = "podcast_episodes"
+)]
+#[delete("/episodes/{id}/download")]
+pub async fn delete_podcast_episode_locally(id: web::Path<String>,
+                                            requester: Option<web::ReqData<User>>, db:
+                                            Data<DbPool>, lobby: Data<Addr<Lobby>>)
+    ->  Result<HttpResponse, CustomError> {
+
+    if !requester.unwrap().is_privileged_user() {
+        return Err(CustomError::Forbidden);
+    }
+
+    let delted_podcast_episode = PodcastEpisodeService::delete_podcast_episode_locally(&id
+        .into_inner(), &mut db.get().unwrap())?;
+    lobby.do_send(BroadcastMessage{
+        podcast_episode: Some(delted_podcast_episode),
+        podcast_episodes: None,
+        type_of: PodcastType::DeletePodcastEpisode,
+        podcast: None,
+        message: "Deleted podcast episode locally".to_string()
+    });
+
+
+    Ok(HttpResponse::NoContent().finish())
+}
+

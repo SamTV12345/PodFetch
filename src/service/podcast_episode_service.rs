@@ -26,7 +26,7 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError};
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -79,8 +79,7 @@ impl PodcastEpisodeService {
             }
             Ok(false) => {
                 let podcast_inserted = Self::perform_download(
-                    &podcast_episode,
-                    podcast_episode_cloned,
+                    &podcast_episode_cloned,
                     podcast_cloned,
                     conn,
                 )?;
@@ -114,13 +113,12 @@ impl PodcastEpisodeService {
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
-        podcast_episode_cloned: PodcastEpisode,
         podcast_cloned: Podcast,
         conn: &mut DbConnection,
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned)?;
+        download_service.download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
         let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)
             .unwrap();
         let notification = Notification {
@@ -483,6 +481,20 @@ impl PodcastEpisodeService {
             url,
             content,
         }
+    }
+
+    pub(crate) fn delete_podcast_episode_locally(episode_id: &str, conn: &mut DbConnection) ->
+                                                                                            Result<PodcastEpisode,
+        CustomError>{
+        let episode = PodcastEpisode::get_podcast_episode_by_id(conn, episode_id)?;
+        if episode.is_none() {
+            return Err(CustomError::NotFound);
+        }
+        let podcast = Podcast::get_podcast(conn, episode.clone().unwrap().podcast_id).unwrap();
+        FileService::cleanup_old_episode(podcast, episode.clone().unwrap())?;
+        PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id, conn);
+        PodcastEpisode::update_deleted(conn,episode_id, true)?;
+        Ok(episode.unwrap())
     }
 }
 

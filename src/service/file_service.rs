@@ -104,12 +104,13 @@ impl FileService {
         PodcastEpisode::update_podcast_image(podcast_id, &file_path, conn).unwrap();
     }
 
-    pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> std::io::Result<()> {
+    pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
+        let settings = Setting::get_settings(&mut establish_connection())?;
         std::fs::remove_dir_all(format!(
-            "podcasts/{}/{}",
-            podcast.directory_id, episode.episode_id
-        ))
+            "{}/'{}'",
+            podcast.directory_name, perform_replacement(&episode.name, settings.unwrap())
+        )).map_err(map_io_error)
     }
 
     pub fn delete_podcast_files(podcast_dir: &str){

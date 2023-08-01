@@ -9,6 +9,7 @@ pub enum PodcastType {
     AddPodcast,
     AddPodcastEpisode,
     AddPodcastEpisodes,
+    DeletePodcastEpisode,
     RefreshPodcast,
     OpmlAdded,
     OpmlErrored

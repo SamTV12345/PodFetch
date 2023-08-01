@@ -148,5 +148,6 @@
   "auto-download-explanation": "Si esta opción está activa, los episodios se descargarán automáticamente cuando se añada un podcast",
   "default-episode-format-explanation": "Especifica el formato por defecto para los episodios. Solo afecta la estructura de directorio y su nomenclatura.",
   "standard-podcast-format-explanation": "Especifica el formato estándar para los podcasts. Solo afecta la estructura de directorio y su nomenclatura",
-  "colon-replacement-explanation": "Especifica el carácter que sustituirá a los dos puntos. Esto es útil ya que los dos puntos no se pueden usar en un nombre de fichero."
+  "colon-replacement-explanation": "Especifica el carácter que sustituirá a los dos puntos. Esto es útil ya que los dos puntos no se pueden usar en un nombre de fichero.",
+  "podcast-episode-deleted": "Episodio {{name}} borrado"
 }

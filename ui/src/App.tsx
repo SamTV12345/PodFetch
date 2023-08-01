@@ -21,7 +21,7 @@ import {
     checkIfOpmlAdded,
     checkIfOpmlErrored,
     checkIfPodcastAdded,
-    checkIfPodcastEpisodeAdded,
+    checkIfPodcastEpisodeAdded, checkIfPodcastEpisodeDeleted,
     checkIfPodcastRefreshed
 } from "./utils/MessageIdentifier"
 import {Notification} from "./models/Notification"
@@ -102,6 +102,18 @@ const App: FC<PropsWithChildren> = ({children}) => {
                         })
                         dispatch(setSelectedEpisodes(podcastUpdated))
                     }
+                }
+                else if (checkIfPodcastEpisodeDeleted(parsed)){
+                    const updatedPodcastEpisodes = store.getState().common.selectedEpisodes.map(e=>{
+                        if(e.episode_id === parsed.podcast_episode.episode_id){
+                            const clonedPodcast = Object.assign({}, parsed.podcast_episode);
+                            clonedPodcast.status = "N"
+                            return clonedPodcast
+                        }
+                        return e
+                    })
+                    enqueueSnackbar(t('podcast-episode-deleted', {name: parsed.podcast_episode.name}), {variant: "success"})
+                    dispatch(setSelectedEpisodes(updatedPodcastEpisodes))
                 }
                 else if (checkIfPodcastRefreshed(parsed)){
                     const podcast = parsed.podcast

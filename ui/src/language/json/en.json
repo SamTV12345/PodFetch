@@ -150,5 +150,6 @@
   "standard-podcast-format-explanation": "Specifies the standard format for the podcasts. This only affects the folder structure and naming.",
   "standard-episode-format-explanation": "Specifies the standard format for the episodes. This only affects the folder structure and naming.",
   "colon-replacement-explanation": "Specifies by which character the colon should be replaced. This is useful because the colon cannot be used in the file name.",
-  "already-added": "Podcast {{name}} already added"
+  "already-added": "Podcast {{name}} already added",
+  "podcast-episode-deleted": "Podcast episode {{name}} deleted"
 }

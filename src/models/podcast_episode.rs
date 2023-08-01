@@ -4,7 +4,7 @@ use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
 use diesel::{BoolExpressionMethods, delete, insert_into, OptionalExtension, RunQueryDsl, TextExpressionMethods};
 use diesel::dsl::sql;
 use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
+use diesel::sql_types::{Integer, Text, Nullable, Timestamp, Bool};
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use rss::{Guid, Item};
@@ -45,7 +45,9 @@ pub struct PodcastEpisode {
     #[diesel(sql_type = Nullable<Timestamp>)]
     pub(crate) download_time: Option<NaiveDateTime>,
     #[diesel(sql_type = Text)]
-    pub(crate) guid: String
+    pub(crate) guid: String,
+    #[diesel(sql_type = Bool)]
+    pub (crate) deleted: bool,
 }
 
 impl PodcastEpisode{
@@ -374,5 +376,19 @@ impl PodcastEpisode{
             .set(episode_to_update)
             .get_result::<PodcastEpisode>(conn)
             .expect("Error updating podcast episode")
+    }
+
+    /*
+        Updates the deleted status. Deleted means that the user decided to forcefully remove the
+        local episode. Thus it should not be redownloaded with the scheduled download
+     */
+    pub fn update_deleted(conn: &mut DbConnection, episode_to_update:&str, deleted_status:bool)
+        ->Result<usize, CustomError> {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+
+        diesel::update(podcast_episodes.filter(episode_id.eq(episode_to_update)))
+            .set(deleted.eq(deleted_status))
+            .execute(conn)
+            .map_err(map_db_error)
     }
 }

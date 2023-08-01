@@ -149,5 +149,6 @@
   "standard-episode-format-explanation":"Gibt das Standardformat für die Episoden an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
   "standard-podcast-format-explanation":"Gibt das Standardformat für die Podcasts an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
   "colon-replacement-explanation": "Gibt an, durch welches Zeichen der Doppelpunkt ersetzt werden soll. Dies ist nützlich, da der Doppelpunkt nicht im Dateinamen verwendet werden kann.",
-  "already-added": "Podcast {{name}} bereits hinzugefügt"
+  "already-added": "Podcast {{name}} bereits hinzugefügt",
+  "podcast-episode-deleted": "Podcast-Episode {{name}} gelöscht"
 }
