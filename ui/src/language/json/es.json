@@ -149,5 +149,10 @@
   "default-episode-format-explanation": "Especifica el formato por defecto para los episodios. Solo afecta la estructura de directorio y su nomenclatura.",
   "standard-podcast-format-explanation": "Especifica el formato estándar para los podcasts. Solo afecta la estructura de directorio y su nomenclatura",
   "colon-replacement-explanation": "Especifica el carácter que sustituirá a los dos puntos. Esto es útil ya que los dos puntos no se pueden usar en un nombre de fichero.",
-  "podcast-episode-deleted": "Episodio {{name}} borrado"
+  "podcast-episode-deleted": "Episodio {{name}} borrado",
+
+  "invite-status-all": "Todos invitados",
+  "invite-status-pending": "Pendiente invitados",
+  "invite-status-accepted": "Invitación aceptada",
+  "invite-status-expired": "Invitación expirada"
 }

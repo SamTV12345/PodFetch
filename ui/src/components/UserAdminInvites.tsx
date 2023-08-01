@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react"
+import {useEffect, useMemo, useState} from "react"
 import {useTranslation} from "react-i18next"
 import axios from "axios"
 import {useSnackbar} from "notistack"
@@ -10,6 +10,7 @@ import {CustomButtonPrimary} from "./CustomButtonPrimary"
 import {Loading} from "./Loading"
 import {ErrorIcon} from "../icons/ErrorIcon"
 import "material-symbols/outlined.css"
+import {CustomSelect, Option} from "./CustomSelect";
 
 export type Invite = {
     id: string,
@@ -19,12 +20,59 @@ export type Invite = {
     expiresAt: string
 }
 
+enum InviteTypeSelection {
+    all = "all",
+    pending = "pending",
+    accepted = "accepted",
+    expired = "expired"
+}
+
+const INVITE_KEY_PREFIX = "invite-status-"
+
+const options:Option[] = [
+    {
+        label: "All",
+        value: InviteTypeSelection.all,
+        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.all
+    },
+    {
+        value: InviteTypeSelection.accepted,
+        label: "Accepted",
+        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.accepted
+    },
+    {
+        value: InviteTypeSelection.pending,
+        label: "Pending",
+        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.pending
+    },
+    {
+        value: InviteTypeSelection.expired,
+        label: "Expired",
+        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.expired
+    }
+]
+
+
 export const UserAdminInvites = () => {
     const {t} = useTranslation()
     const {enqueueSnackbar} = useSnackbar()
     const dispatch = useAppDispatch()
     const invites = useAppSelector(state=>state.common.invites)
     const [error,setError] = useState<boolean>()
+    const [selectedInviteType, setSelectedInviteType] = useState<InviteTypeSelection>(InviteTypeSelection.all)
+
+    const filteredInvites = useMemo(()=>{
+       switch (selectedInviteType){
+              case InviteTypeSelection.all:
+                    return invites
+                case InviteTypeSelection.pending:
+                    return invites.filter(v=>v.acceptedAt == null && v.expiresAt > new Date().toISOString())
+                case InviteTypeSelection.accepted:
+                    return invites.filter(v=>v.acceptedAt !== null)
+                case InviteTypeSelection.expired:
+                    return invites.filter(v=>v.expiresAt < new Date().toISOString() && v.acceptedAt == null)
+       }
+    }, [invites, selectedInviteType])
 
     useEffect(()=>{
         axios.get(apiURL+"/users/invites").then(v=> {
@@ -46,7 +94,8 @@ export const UserAdminInvites = () => {
     return (
         <div>
             <CreateInviteModal />
-
+            <CustomSelect  options={options} value={selectedInviteType}
+                           onChange={v=>setSelectedInviteType(v as InviteTypeSelection)}/>
             <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={()=>{
                 dispatch(setCreateInviteModalOpen(true))
             }}>
@@ -82,7 +131,7 @@ export const UserAdminInvites = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {invites.map(i=>
+                        {filteredInvites.map(i=>
                             <tr className="border-b border-stone-300" key={i.id}>
                                 <td className="pr-2 py-4">
                                     <button className="text-left text-stone-900 hover:text-stone-600" onClick={()=>{

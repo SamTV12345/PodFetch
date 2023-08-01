@@ -150,5 +150,10 @@
   "standard-podcast-format-explanation":"Gibt das Standardformat für die Podcasts an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
   "colon-replacement-explanation": "Gibt an, durch welches Zeichen der Doppelpunkt ersetzt werden soll. Dies ist nützlich, da der Doppelpunkt nicht im Dateinamen verwendet werden kann.",
   "already-added": "Podcast {{name}} bereits hinzugefügt",
-  "podcast-episode-deleted": "Podcast-Episode {{name}} gelöscht"
+  "podcast-episode-deleted": "Podcast-Episode {{name}} gelöscht",
+
+  "invite-status-all": "Alle Einladungsstatus",
+  "invite-status-accepted": "Akzeptierte Einladungen",
+  "invite-status-pending": "Ausstehende Einladungen",
+  "invite-status-expired": "Abgelaufene Einladungen"
 }

@@ -150,5 +150,10 @@
   "standard-podcast-format-explanation" : "Indique le format par défaut pour les podcasts. Cela n'affecte que la structure des dossiers et leur dénomination.",
   "colon-replacement-explanation" : "Indique par quel caractère le deux-points doit être remplacé. Ceci est utile car le deux-points ne peut pas être utilisé dans le nom de fichier",
   "already-added": "Podcast {{name}} déjà ajouté",
-  "podcast-episode-deleted": "Épisode {{name}} supprimé"
+  "podcast-episode-deleted": "Épisode {{name}} supprimé",
+
+  "invite-status-all": "Toutes invitations",
+  "invite-status-pending": "Invitations en attente",
+  "invite-status-accepted": "Invitations acceptées",
+  "invite-status-expired": "Invitations expirées"
 }

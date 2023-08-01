@@ -4,7 +4,7 @@ import {TFunction} from "i18next"
 import * as Select from "@radix-ui/react-select"
 import "material-symbols/outlined.css"
 
-type Option = {
+export type Option = {
     label?: string,
     translationKey?: string,
     value: string
