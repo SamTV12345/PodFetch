@@ -51,8 +51,8 @@ export const Login = () => {
                 setTimeout(()=>navigate('/'), 100)
 
             })
-            .catch((e: AxiosError) => {
-               setAlert(e.response!.data as string)
+            .catch((e: AxiosError<ErrorModel>) => {
+               setAlert(e.response!.data.message)
             })
     }
 

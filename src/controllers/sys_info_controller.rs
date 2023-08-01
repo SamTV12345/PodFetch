@@ -77,7 +77,6 @@ pub async fn login(
     }
     let db_user = User::find_by_username(&auth.0.username, &mut db.get().unwrap())?;
 
-
     if db_user.password.unwrap() == digest(auth.0.password) {
                 return Ok(HttpResponse::Ok().json("Login successful"));
     }
