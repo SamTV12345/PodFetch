@@ -150,5 +150,10 @@
   "standard-podcast-format-explanation": "Format nazw podcastów. To ustawienie dotyczy jedynie struktury plików i katalogów oraz ich nazewnictwa.",
   "colon-replacement-explanation": "Określa sposób zamiany dwukropka na inny znak. PodFetch nie zezwala na występowanie dwukropków w nazwach plików.",
   "already-added": "Podcast {{name}} został już dodany.",
-  "podcast-episode-deleted": "Odcinek {{name}} został usunięty."
+  "podcast-episode-deleted": "Odcinek {{name}} został usunięty.",
+
+  "invite-status-all": "Wszystkie",
+  "invite-status-accepted": "Zaakceptowane",
+  "invite-status-pending": "Oczekujące",
+  "invite-status-expired": "Wygasłe zaproszenie"
 }
