@@ -149,5 +149,6 @@
   "default-episode-format-explanation": "Format nazw plików odcinków. To ustawienie dotyczy jedynie struktury plików i katalogów oraz ich nazewnictwa.",
   "standard-podcast-format-explanation": "Format nazw podcastów. To ustawienie dotyczy jedynie struktury plików i katalogów oraz ich nazewnictwa.",
   "colon-replacement-explanation": "Określa sposób zamiany dwukropka na inny znak. PodFetch nie zezwala na występowanie dwukropków w nazwach plików.",
-  "already-added": "Podcast {{name}} został już dodany."
+  "already-added": "Podcast {{name}} został już dodany.",
+  "podcast-episode-deleted": "Odcinek {{name}} został usunięty."
 }

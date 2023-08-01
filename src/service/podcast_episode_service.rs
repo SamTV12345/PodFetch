@@ -79,8 +79,7 @@ impl PodcastEpisodeService {
             }
             Ok(false) => {
                 let podcast_inserted = Self::perform_download(
-                    &podcast_episode,
-                    podcast_episode_cloned,
+                    &podcast_episode_cloned,
                     podcast_cloned,
                     conn,
                 )?;
@@ -114,13 +113,12 @@ impl PodcastEpisodeService {
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
-        podcast_episode_cloned: PodcastEpisode,
         podcast_cloned: Podcast,
         conn: &mut DbConnection,
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode_cloned, podcast_cloned)?;
+        download_service.download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
         let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)
             .unwrap();
         let notification = Notification {
@@ -493,7 +491,9 @@ impl PodcastEpisodeService {
             return Err(CustomError::NotFound);
         }
         let podcast = Podcast::get_podcast(conn, episode.clone().unwrap().podcast_id).unwrap();
-        FileService::cleanup_old_episode(podcast, episode.clone().unwrap()).map_err(map_io_error)?;
+        FileService::cleanup_old_episode(podcast, episode.clone().unwrap())?;
+        PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id, conn);
+        PodcastEpisode::update_deleted(conn,episode_id, true)?;
         return Ok(episode.unwrap())
     }
 }

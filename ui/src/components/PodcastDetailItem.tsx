@@ -61,6 +61,11 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,epi
                         // Prevent icon click from triggering info modal
                         e.stopPropagation()
 
+                        // Prevent another download if already downloaded
+                        if (episode.status === 'D') {
+                            return
+                        }
+
                         axios.put(apiURL + "/podcast/" + episode.episode_id + "/episodes/download")
                             .then(()=>{
                                 enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})

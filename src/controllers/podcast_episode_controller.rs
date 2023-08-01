@@ -130,11 +130,13 @@ pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: D
             let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), podcast_episode
                 .podcast_id).unwrap();
             PodcastEpisodeService::perform_download(
-                &podcast_episode,
-                podcast_episode.clone(),
+                &podcast_episode.clone(),
                 podcast,
                 &mut conn.get().unwrap(),
             ).unwrap();
+            PodcastEpisode::update_deleted(&mut conn.get().unwrap(),&podcast_episode.clone().episode_id,
+                                           false).unwrap();
+
         }
     });
 
@@ -147,7 +149,8 @@ pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: D
 #[utoipa::path(
 context_path = "/api/v1",
 responses(
-(status = 204, description = "Starts the download of a given podcast episode")),
+(status = 204, description = "Removes the download of a given podcast episode. This very episode \
+won't be included in further checks/downloads unless done by user.")),
 tag = "podcast_episodes"
 )]
 #[delete("/episodes/{id}/download")]
