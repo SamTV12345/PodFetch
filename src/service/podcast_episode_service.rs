@@ -26,7 +26,7 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
-use crate::utils::error::{CustomError, map_io_error};
+use crate::utils::error::{CustomError};
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -494,7 +494,7 @@ impl PodcastEpisodeService {
         FileService::cleanup_old_episode(podcast, episode.clone().unwrap())?;
         PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id, conn);
         PodcastEpisode::update_deleted(conn,episode_id, true)?;
-        return Ok(episode.unwrap())
+        Ok(episode.unwrap())
     }
 }
 

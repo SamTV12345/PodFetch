@@ -107,10 +107,6 @@ impl FileService {
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
         let settings = Setting::get_settings(&mut establish_connection())?;
-        println!("{}",format!(
-            "{}/'{}'",
-            podcast.directory_name, perform_replacement(&episode.name, settings.clone().unwrap())
-        ));
         std::fs::remove_dir_all(format!(
             "{}/'{}'",
             podcast.directory_name, perform_replacement(&episode.name, settings.unwrap())

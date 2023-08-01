@@ -174,6 +174,6 @@ pub async fn delete_podcast_episode_locally(id: web::Path<String>,
     });
 
 
-    return Ok(HttpResponse::NoContent().finish());
+    Ok(HttpResponse::NoContent().finish())
 }
 
