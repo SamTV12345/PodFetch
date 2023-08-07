@@ -64,7 +64,7 @@ urlencoding="2.1.3"
 
 
 [target.'cfg(not(windows))'.dependencies]
-openssl = "0.10.55"
+openssl = "0.10.56"
 
 [dev-dependencies]
 serial_test = {version="2.0.0"}
