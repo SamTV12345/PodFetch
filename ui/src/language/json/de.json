@@ -1,4 +1,9 @@
 {
+  "theme": "Aussehen",
+  "system": "System",
+  "light": "Licht",
+  "dark": "Dunkel",
+
   "homepage": "Startseite",
   "podcasts": "Podcast",
   "all-subscriptions": "Alle Abonnements",

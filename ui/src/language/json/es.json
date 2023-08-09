@@ -1,4 +1,9 @@
 {
+  "theme": "Apariencia",
+  "system": "Configuracion del sistema",
+  "light": "Modo día",
+  "dark": "Modo noche",
+
   "homepage": "Página principal",
   "last-listened": "Último escuchado",
   "podcasts": "Podcast",
