@@ -13,6 +13,7 @@ use crate::models::podcasts::Podcast;
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 use diesel::AsChangeset;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
@@ -241,9 +242,8 @@ impl PodcastEpisode{
                 diesel::update(podcast_episodes)
                     .filter(episode_id_column.eq(episode_id))
                     .set((
-                        local_image_url_column.eq(image_url),
-                        local_url_column.eq(local_download_url),
-                    ))
+                        local_image_url_column.eq(PodcastEpisodeService::map_to_local_url(image_url)),
+                        local_url_column.eq(PodcastEpisodeService::map_to_local_url(local_download_url))))
                     .execute(conn)
                     .expect("Error updating local image url");
                 Ok(())

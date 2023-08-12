@@ -384,8 +384,8 @@ impl PodcastEpisodeService {
             .map(|podcast| {
                 let mut podcast_episode_dto = self.mapping_service.map_podcastepisode_to_dto(podcast);
                 if podcast_episode_dto.is_downloaded() {
-                    let local_url = self.map_to_local_url(&podcast_episode_dto.clone().local_url);
-                    let local_image_url = self.map_to_local_url(&podcast_episode_dto.clone()
+                    let local_url = Self::map_to_local_url(&podcast_episode_dto.clone().local_url);
+                    let local_image_url = Self::map_to_local_url(&podcast_episode_dto.clone()
                         .local_image_url);
 
                     podcast_episode_dto.local_image_url = env.server_url.clone() + &local_image_url;
@@ -403,7 +403,7 @@ impl PodcastEpisodeService {
     }
 
 
-    fn map_to_local_url(&mut self, url: &str) -> String {
+    pub fn map_to_local_url(url: &str) -> String {
         let splitted_url = url.split('/').collect::<Vec<&str>>();
         splitted_url.iter()
             .map(|s| return if s.starts_with("podcasts.") || s.starts_with("image.") {
