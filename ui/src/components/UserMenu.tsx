@@ -1,16 +1,15 @@
-import {FC} from "react"
-import {useAuth} from "react-oidc-context"
-import {useAppSelector} from "../store/hooks"
-import {CustomDropdownMenu} from "./CustomDropdownMenu"
-import {MenuItem} from "./CustomDropdownMenu"
-import "material-symbols/outlined.css"
+import { FC } from 'react'
+import { useAuth } from 'react-oidc-context'
+import { useAppSelector } from '../store/hooks'
+import { CustomDropdownMenu } from './CustomDropdownMenu'
+import { MenuItem } from './CustomDropdownMenu'
+import 'material-symbols/outlined.css'
 
-export const UserMenu:FC = () => {
-    
+export const UserMenu: FC = () => {
     const config = useAppSelector(state => state.common.configModel)
-    const configModel = useAppSelector(state=>state.common.configModel)
+    const configModel = useAppSelector(state => state.common.configModel)
 
-    const menuItems:Array<MenuItem> = [
+    const menuItems: Array<MenuItem> = [
         {
             iconName: 'settings',
             translationKey: 'settings',
@@ -41,7 +40,11 @@ export const UserMenu:FC = () => {
         })
     }
 
-    const trigger = () => <span className="material-symbols-outlined text-stone-900 hover:text-stone-600">account_circle</span>
+    const trigger = () => (
+        <span className="material-symbols-outlined text-[--fg-color] hover:text-[--fg-color-hover]">account_circle</span>
+    )
 
-    return <CustomDropdownMenu menuItems={menuItems} trigger={trigger()}/>
+    return (
+        <CustomDropdownMenu menuItems={menuItems} trigger={trigger()} />
+    )
 }

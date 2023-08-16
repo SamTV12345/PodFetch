@@ -2,8 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --bg-color: theme(colors.white);
+    --fg-color: theme(colors.stone.900);
+    --fg-color-hover: theme(colors.stone.600);
+    --fg-color-disabled: theme(colors.stone.500);
+    --fg-icon-color: theme(colors.stone.800);
+    --fg-icon-color-hover: theme(colors.stone.600);
+
+    --fg-secondary-color: theme(colors.stone.500);
+    --fg-secondary-icon-color: theme(colors.stone.400);
+
+    --accent-color: theme(colors.mustard.600);
+    --accent-color-hover: theme(colors.mustard.500);
+
+    --border-color: theme(colors.stone.200);
+
+    --input-bg-color: theme(colors.stone.200);
+    --input-fg-color: theme(colors.stone.600);
+    --input-fg-color-disabled: theme(colors.stone.400);
+    --input-icon-color: theme(colors.stone.500);
+
+    --select-text-color: theme(colors.stone.600);
+    --select-icon-color: theme(colors.stone.500);
+
+    --slider-bg-color: theme(colors.stone.300);
+    --slider-fg-color: var(--fg-color);
+
+    --modal-close-color: theme(colors.stone.400);
+    --modal-close-color-hover: theme(colors.stone.500);
+
+    --shadow-opacity: 0.2;
+    --shadow-opacity-hover: 0.5;
+
+    --danger-bg-color: theme(colors.red.100);
+    --danger-fg-color: theme(colors.red.700);
+    --danger-fg-color-hover: theme(colors.red.500);
+
+    --success-fg-color: theme(colors.green.700);
+    --success-fg-color-hover: theme(colors.green.500);
+}
+
+:root.dark {
+    --bg-color: theme(colors.stone.900);
+    --fg-color: theme(colors.stone.300);
+    --fg-color-hover: theme(colors.stone.500);
+    --fg-color-disabled: theme(colors.stone.500);
+    --fg-icon-color: theme(colors.stone.400);
+    --fg-icon-color-hover: theme(colors.stone.500);
+
+    --fg-secondary-color: theme(colors.stone.500);
+    --fg-secondary-icon-color: theme(colors.stone.600);
+
+    --accent-color: theme(colors.mustard.500);
+    --accent-color-hover: theme(colors.mustard.400);
+
+    --border-color: theme(colors.stone.700);
+
+    --input-bg-color: theme(colors.stone.800);
+    --input-fg-color: theme(colors.stone.400);
+    --input-fg-color-disabled: theme(colors.stone.600);
+    --input-icon-color: theme(colors.stone.500);
+
+    --select-text-color: theme(colors.stone.400);
+    --select-icon-color: theme(colors.stone.500);
+
+    --slider-bg-color: theme(colors.stone.700);
+    --slider-fg-color: var(--fg-color);
+
+    --modal-action-color: theme(colors.stone.600);
+    --modal-action-color-hover: theme(colors.stone.500);
+
+    --shadow-opacity: 0.8;
+    --shadow-opacity-hover: 1;
+
+    --danger-bg-color: theme(colors.red.950);
+    --danger-fg-color: theme(colors.red.600);
+    --danger-fg-color-hover: theme(colors.red.700);
+
+    --success-fg-color: theme(colors.green.600);
+    --success-fg-color-hover: theme(colors.green.700);
+}
+
 * {
     font-family: 'Poppins', sans-serif;
+}
+
+html {
+    background-color: var(--bg-color);
 }
 
 /* Icons */
@@ -16,19 +102,21 @@
   font-variation-settings: 'FILL' 1;
 }
 
-/* Sidebar */
-
-#primary-navigation a.active {
-    background-color: rgba(192,124,3,0.1);
-    @apply text-mustard-600;
-}
-
 /* Header */
 
 .i18n-dropdown {
     @apply border-0;
     @apply p-0;
-    @apply text-stone-900;
+}
+
+.i18n-dropdown,
+.i18n-dropdown .icon {
+    color: var(--fg-color);
+}
+
+.i18n-dropdown:hover,
+.i18n-dropdown:hover .icon {
+    color: var(--fg-color-hover);
 }
 
 .i18n-dropdown .value,
@@ -51,30 +139,26 @@
     }
 }
 
-.i18n-dropdown .icon {
-    @apply text-stone-900;
-}
-
 /* Applies horizontal scrolling shadows for smaller screens (https://lea.verou.me/2012/04/background-attachment-local/) */
 .scrollbox-x {
     background:
         /* Shadow covers */
-        linear-gradient(to right, white 50%, rgba(255,255,255,0)),
-        linear-gradient(to right, rgba(255,255,255,0), white 50%) 100% 0,
+        linear-gradient(to right, var(--bg-color) 50%, rgba(255,255,255,0)),
+        linear-gradient(to right, rgba(255,255,255,0), var(--bg-color) 50%) 100% 0,
 
         /* Shadows */
-        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
-        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)) 100% 0;
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)) 100% 0;
     background:
         /* Shadow covers */
-        linear-gradient(to right, white 50%, rgba(255,255,255,0)),
-        linear-gradient(to right, rgba(255,255,255,0), white 50%) 100% 0,
+        linear-gradient(to right, var(--bg-color) 50%, rgba(255,255,255,0)),
+        linear-gradient(to right, rgba(255,255,255,0), var(--bg-color) 50%) 100% 0,
 
         /* Shadows */
-        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
-        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)) 100% 0;
+        radial-gradient(farthest-side at 0 50%, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)) 100% 0;
     background-attachment: local, local, scroll, scroll;
-    background-color: white;
+    background-color: var(--bg-color);
     background-repeat: no-repeat;
     background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
     overflow-x: auto;
@@ -84,22 +168,22 @@
 .scrollbox-y {
 	background:
 		/* Shadow covers */
-		linear-gradient(white 50%, rgba(255,255,255,0)),
-		linear-gradient(rgba(255,255,255,0), white 50%) 0 100%,
+		linear-gradient(var(--bg-color) 50%, rgba(255,255,255,0)),
+		linear-gradient(rgba(255,255,255,0), var(--bg-color) 50%) 0 100%,
 
 		/* Shadows */
-		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.2), rgba(0,0,0,0)),
-		radial-gradient(farthest-side at  100%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
+		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)),
+		radial-gradient(farthest-side at  100%, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)) 0 100%;
 	background:
 		/* Shadow covers */
-		linear-gradient(white 50%, rgba(255,255,255,0)),
-		linear-gradient(rgba(255,255,255,0), white 50%) 0 100%,
+		linear-gradient(var(--bg-color) 50%, rgba(255,255,255,0)),
+		linear-gradient(rgba(255,255,255,0), var(--bg-color) 50%) 0 100%,
 
 		/* Shadows */
-		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.2), rgba(0,0,0,0)),
-		radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
+		radial-gradient(farthest-side at 50% 0, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)),
+		radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,var(--shadow-opacity)), rgba(0,0,0,0)) 0 100%;
     background-attachment: local, local, scroll, scroll;
-	background-color: white;
+	background-color: var(--bg-color);
     background-repeat: no-repeat;
 	background-size: 100% 40px, 100% 40px, 100% 14px, 100% 14px;
     overflow-y: auto;

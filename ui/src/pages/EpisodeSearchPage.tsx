@@ -1,9 +1,9 @@
-import {useTranslation} from "react-i18next"
-import {Heading1} from "../components/Heading1"
-import {EpisodeSearch} from "../components/EpisodeSearch"
+import { useTranslation } from 'react-i18next'
+import { Heading1 } from '../components/Heading1'
+import { EpisodeSearch } from '../components/EpisodeSearch'
 
 export const EpisodeSearchPage = () => {
-    const {t} = useTranslation()
+    const { t } = useTranslation()
 
     return (
         <>

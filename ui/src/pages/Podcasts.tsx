@@ -1,27 +1,27 @@
-import {FC, useEffect, useMemo} from "react"
-import {useLocation} from "react-router-dom"
-import {useTranslation} from "react-i18next"
-import axios, {AxiosResponse} from "axios"
-import {useDebounce} from "../utils/useDebounce"
+import { FC, useEffect, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import axios, { AxiosResponse } from 'axios'
+import { useDebounce } from '../utils/useDebounce'
 import {
     apiURL,
     getFiltersDefault,
     OrderCriteriaSortingType, TIME_ASCENDING, TIME_DESCENDING,
     TITLE_ASCENDING,
     TITLE_DESCENDING
-} from "../utils/Utilities"
-import {useAppDispatch, useAppSelector} from "../store/hooks"
-import {Podcast, setFilters, setPodcasts} from "../store/CommonSlice"
-import {setModalOpen} from "../store/ModalSlice"
-import {Order} from "../models/Order"
-import {Filter} from "../models/Filter"
-import {AddPodcastModal} from "../components/AddPodcastModal"
-import {CustomButtonPrimary} from "../components/CustomButtonPrimary"
-import {CustomInput} from "../components/CustomInput"
-import {CustomSelect} from "../components/CustomSelect"
-import {Heading1} from "../components/Heading1"
-import {PodcastCard} from "../components/PodcastCard"
-import "material-symbols/outlined.css"
+} from '../utils/Utilities'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { Podcast, setFilters, setPodcasts } from '../store/CommonSlice'
+import { setModalOpen } from '../store/ModalSlice'
+import { Order } from '../models/Order'
+import { Filter } from '../models/Filter'
+import { AddPodcastModal } from '../components/AddPodcastModal'
+import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
+import { CustomInput } from '../components/CustomInput'
+import { CustomSelect } from '../components/CustomSelect'
+import { Heading1 } from '../components/Heading1'
+import { PodcastCard } from '../components/PodcastCard'
+import 'material-symbols/outlined.css'
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -34,25 +34,27 @@ const orderOptions = [
     { value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A' }
 ]
 
-export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
-    const podcasts = useAppSelector(state=>state.common.podcasts)
+export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     const dispatch = useAppDispatch()
+    const filters = useAppSelector(state => state.common.filters)
+    const podcasts = useAppSelector(state => state.common.podcasts)
     let location = useLocation();
-    const {t} = useTranslation()
-    const filters = useAppSelector(state=>state.common.filters)
-    const memorizedSelection = useMemo(()=>{
-        return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
-    },[filters])
+    const { t } = useTranslation()
 
-    const refreshAllPodcasts = ()=>{
-        axios.post(apiURL+"/podcast/all")
+    const memorizedSelection = useMemo(() => {
+        return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
+    }, [filters])
+
+    const refreshAllPodcasts = () => {
+        axios.post(apiURL + '/podcast/all')
     }
 
-    const performFilter =()=>{
-        if(filters === undefined){
+    const performFilter = () => {
+        if (filters === undefined) {
             return
         }
-        axios.get(apiURL + "/podcasts/search", {
+
+        axios.get(apiURL + '/podcasts/search', {
             params: {
                 title: filters?.title,
                 order: filters?.ascending?Order.ASC:Order.DESC,
@@ -65,17 +67,16 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
             })
     }
 
-    useDebounce(()=> {
+    useDebounce(() => {
         performFilter()
     },500, [filters])
 
-    useEffect(()=>{
-        axios.get(apiURL+"/podcasts/filter")
-            .then((c:AxiosResponse<Filter>)=>{
-                if(c.data === null){
+    useEffect(() => {
+        axios.get(apiURL + '/podcasts/filter')
+            .then((c: AxiosResponse<Filter>) => {
+                if (c.data === null) {
                     dispatch(setFilters(getFiltersDefault()))
-                }
-                else{
+                } else {
                     dispatch(setFilters({
                         ascending: c.data.ascending,
                         filter: c.data.filter,
@@ -85,7 +86,7 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
                     }))
                 }
             })
-    },[location])
+    }, [location])
 
     return (
         <div>
@@ -96,12 +97,12 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
                 <div className="flex gap-2 items-center">
                     <Heading1>{t('all-subscriptions')}</Heading1>
 
-                    <span className="material-symbols-outlined cursor-pointer text-stone-800 hover:text-stone-600" onClick={()=>{
+                    <span className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]" onClick={()=>{
                         refreshAllPodcasts()
                     }}>refresh</span>
                 </div>
 
-                <CustomButtonPrimary className="flex items-center" onClick={()=>{
+                <CustomButtonPrimary className="flex items-center" onClick={() => {
                     dispatch(setModalOpen(true))
                 }}>
                     <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
@@ -113,10 +114,10 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
                 <span className="flex-1 relative">
                     <CustomInput className="pl-10 w-full" type="text" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))} placeholder={t('search')!} value={filters?.title || ''} />
 
-                    <span className="material-symbols-outlined absolute left-2 top-2 text-stone-500">search</span>
+                    <span className="material-symbols-outlined absolute left-2 top-2 text-[--input-icon-color]">search</span>
                 </span>
 
-                <CustomSelect iconName="sort" onChange={(v)=> {
+                <CustomSelect iconName="sort" onChange={(v) => {
                     let converted = JSON.parse(v) as OrderCriteriaSortingType
                     dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
                 }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
@@ -124,11 +125,11 @@ export const Podcasts:FC<PodcastsProps> = ({onlyFavorites})=>{
 
             {/* Podcast list */}
             <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
-                {!onlyFavorites&&podcasts.map((podcast)=>{
+                {!onlyFavorites && podcasts.map((podcast) => {
                     return <PodcastCard podcast={podcast} key={podcast.id} />
                 })}
 
-                {onlyFavorites&&podcasts.filter(podcast=>podcast.favorites).map((podcast)=>{
+                {onlyFavorites && podcasts.filter(podcast => podcast.favorites).map((podcast) => {
                     return <PodcastCard podcast={podcast} key={podcast.id} />
                 })}
             </div>
