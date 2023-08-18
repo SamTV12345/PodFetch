@@ -1,17 +1,17 @@
-import {FC, useEffect, useState} from "react"
-import {useTranslation} from "react-i18next"
-import {Controller, SubmitHandler, useForm} from "react-hook-form"
-import axios, {AxiosResponse} from "axios"
-import {enqueueSnackbar} from "notistack"
-import {apiURL} from "../utils/Utilities"
-import {Setting} from "../models/Setting"
-import {UpdateNameSettings} from "../models/UpdateNameSettings"
-import {CustomButtonPrimary} from "./CustomButtonPrimary"
-import {CustomSelect} from "../components/CustomSelect"
-import {CustomInput} from "../components/CustomInput"
-import {Loading} from "../components/Loading"
+import { FC, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import axios, { AxiosResponse } from 'axios'
+import { enqueueSnackbar } from 'notistack'
+import { apiURL } from '../utils/Utilities'
+import { Setting } from '../models/Setting'
+import { UpdateNameSettings } from '../models/UpdateNameSettings'
+import { CustomButtonPrimary } from './CustomButtonPrimary'
+import { CustomSelect } from '../components/CustomSelect'
+import { CustomInput } from '../components/CustomInput'
+import { Loading } from '../components/Loading'
 import { CustomCheckbox } from '../components/CustomCheckbox'
-import {SettingsInfoIcon} from "./SettingsInfoIcon";
+import { SettingsInfoIcon } from './SettingsInfoIcon'
 
 type SettingsProps = {
     intialSettings: Setting
@@ -32,27 +32,28 @@ const options = [
     }
 ]
 
-export const SettingsNaming:FC = ()=>{
+export const SettingsNaming: FC = () => {
     const [settings, setSettings] = useState<Setting>()
 
     /* Fetch existing settings */
-    useEffect(()=>{
-        axios.get(apiURL+"/settings").then((res:AxiosResponse<Setting>)=>{
-            setSettings(res.data)
-        })
-    },[])
+    useEffect(() => {
+        axios.get(apiURL + '/settings')
+            .then((res:AxiosResponse<Setting>) => {
+                setSettings(res.data)
+            })
+    }, [])
 
-    if(settings === undefined){
+    if (settings === undefined) {
         return <Loading />
     }
 
     return <Settings intialSettings={settings} />
 }
 
-const Settings:FC<SettingsProps> = ({intialSettings}) => {
-    const {t} = useTranslation()
+const Settings: FC<SettingsProps> = ({ intialSettings }) => {
+    const { t } = useTranslation()
 
-    const {control, formState: {}, handleSubmit, register} = useForm<UpdateNameSettings>({
+    const { control, formState: {}, handleSubmit, register } = useForm<UpdateNameSettings>({
         defaultValues: {
             replacementStrategy: intialSettings.replacementStrategy,
             episodeFormat: intialSettings.episodeFormat,
@@ -63,10 +64,10 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
         }
     })
 
-    const update_settings:SubmitHandler<UpdateNameSettings> = (data)=>{
-        axios.put(apiURL+"/settings/name", data satisfies UpdateNameSettings)
-            .then(()=>{
-                enqueueSnackbar(t('settings-saved'), {variant: "success"})
+    const update_settings: SubmitHandler<UpdateNameSettings> = (data) => {
+        axios.put(apiURL + '/settings/name', data satisfies UpdateNameSettings)
+            .then(() => {
+                enqueueSnackbar(t('settings-saved'), { variant: 'success' })
             })
     }
 
@@ -74,7 +75,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
         <form onSubmit={handleSubmit(update_settings)}>
             <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10">
                 <fieldset className="xs:contents mb-4">
-                    <legend className="self-start mb-2 xs:mb-0 text-stone-900">{t('rename-podcasts')}</legend>
+                    <legend className="self-start mb-2 xs:mb-0 text-[--fg-color]">{t('rename-podcasts')}</legend>
 
                     <div className="flex flex-col gap-2">
                         <div className="flex">
@@ -85,7 +86,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                                 <CustomCheckbox id="use-existing-filenames" name={name} onChange={onChange} value ={value} />
                             )} />
 
-                            <label className="ml-2 text-sm text-stone-600" htmlFor="use-existing-filenames">{t('use-existing-filenames')}</label>
+                            <label className="ml-2 text-sm text-[--fg-secondary-color]" htmlFor="use-existing-filenames">{t('use-existing-filenames')}</label>
                         </div>
                         <div className="flex">
                             <Controller
@@ -95,13 +96,13 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                                 <CustomCheckbox id="replace-invalid-characters" name={name} onChange={onChange} value ={value} />
                             )} />
 
-                            <label className="ml-2 text-sm text-stone-600" htmlFor="replace-invalid-characters">{t('replace-invalid-characters-description')}</label>
+                            <label className="ml-2 text-sm text-[--fg-secondary-color]" htmlFor="replace-invalid-characters">{t('replace-invalid-characters-description')}</label>
                         </div>
                     </div>
                 </fieldset>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-stone-900 flex gap-1" htmlFor="colon-replacement">{t('colon-replacement')} <SettingsInfoIcon headerKey="colon-replacement" textKey="auto-download-explanation"/></label>
+                    <label className="text-[--fg-color] flex gap-1" htmlFor="colon-replacement">{t('colon-replacement')} <SettingsInfoIcon headerKey="colon-replacement" textKey="auto-download-explanation"/></label>
 
                     <Controller
                     name="replacementStrategy"
@@ -112,7 +113,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-stone-900 flex gap-1" htmlFor="episode-format">{t('standard-episode-format')} <SettingsInfoIcon headerKey="standard-episode-format" textKey="standard-episode-format-explanation"/></label>
+                    <label className="text-[--fg-color] flex gap-1" htmlFor="episode-format">{t('standard-episode-format')} <SettingsInfoIcon headerKey="standard-episode-format" textKey="standard-episode-format-explanation"/></label>
 
                     <Controller
                     name="episodeFormat"
@@ -123,7 +124,7 @@ const Settings:FC<SettingsProps> = ({intialSettings}) => {
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-stone-900 flex gap-1" htmlFor="podcast-format">{t('standard-podcast-format')} <SettingsInfoIcon headerKey="standard-podcast-format" textKey="standard-podcast-format-explanation"/></label>
+                    <label className="text-[--fg-color] flex gap-1" htmlFor="podcast-format">{t('standard-podcast-format')} <SettingsInfoIcon headerKey="standard-podcast-format" textKey="standard-podcast-format-explanation"/></label>
 
                     <Controller
                     name="podcastFormat"

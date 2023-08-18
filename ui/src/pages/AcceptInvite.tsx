@@ -1,23 +1,23 @@
-import {useEffect, useState} from "react"
-import {Controller, SubmitHandler, useForm} from "react-hook-form"
-import {useTranslation} from "react-i18next"
-import {useNavigate, useParams} from "react-router-dom"
-import axios from "axios"
-import {enqueueSnackbar} from "notistack"
-import {apiURL, formatTime} from "../utils/Utilities"
-import {CustomButtonPrimary} from "../components/CustomButtonPrimary"
-import {CustomInput} from "../components/CustomInput"
-import {Heading2} from "../components/Heading2"
-import {Loading} from "../components/Loading"
-import {LoginData} from "./Login"
+import { useEffect, useState } from 'react'
+import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import axios from 'axios'
+import { enqueueSnackbar } from 'notistack'
+import { apiURL, formatTime } from '../utils/Utilities'
+import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
+import { CustomInput } from '../components/CustomInput'
+import { Heading2 } from '../components/Heading2'
+import { Loading } from '../components/Loading'
+import { LoginData } from './Login'
 
 export const AcceptInvite = () => {
-    const navigate = useNavigate();
+    const { control, handleSubmit, formState: {} } = useForm<LoginData>()
+    const navigate = useNavigate()
     const params = useParams()
-    const {t} = useTranslation()
     const [invite, setInvite] = useState<Invite>()
     const [errored, setErrored] = useState<boolean>(false)
-    const {control, handleSubmit, formState: {}} = useForm<LoginData>();
+    const { t } = useTranslation()
 
     type Invite = {
         id: string,
@@ -29,77 +29,78 @@ export const AcceptInvite = () => {
     }
 
     useEffect(() => {
-        axios.get(apiURL+"/users/invites/"+params.id).then((res) => {
-            setInvite(res.data)
+        axios.get(apiURL + '/users/invites/' + params.id)
+            .then((res) => {
+                setInvite(res.data)
             })
             .catch(() => {
                 setErrored(true)
             })
-    },[])
+    }, [])
 
     if (!invite && !errored) {
-        return <Loading/>
+        return <Loading />
     }
 
     const onSubmit: SubmitHandler<LoginData> = (data) => {
-        axios.post(apiURL+"/users/", {
+        axios.post(apiURL + '/users/', {
             username: data.username,
             password: data.password,
             inviteId: params.id
         }).then(() => {
-            enqueueSnackbar(t('account-created'), {variant: "success"})
+            enqueueSnackbar(t('account-created'), { variant: 'success' })
             navigate('/')
         }).catch(() => {
-            enqueueSnackbar(t('password-too-weak'), {variant: "error"})
+            enqueueSnackbar(t('password-too-weak'), { variant: 'error' })
         })
     }
 
     if (!invite) {
-        return <Loading/>
+        return <Loading />
     }
 
     return (
         <div className="flex flex-col items-center xs:justify-center bg-stone-900 h-full w-full">
             <span className="flex items-center gap-2 xs:mb-10 px-4 py-3 text-white">
-                <span className="material-symbols-outlined text-mustard-600">auto_detect_voice</span>
+                <span className="material-symbols-outlined text-[--accent-color]">auto_detect_voice</span>
                 <span className="font-bold font-['Inter_variable']">Podfetch</span>
             </span>
 
-            <div className="bg-white max-w-sm p-8 rounded-2xl w-full">
+            <div className="bg-[--bg-color] max-w-sm p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full">
                 <Heading2 className="mb-10 text-center">
                     {t('create-account')}
                 </Heading2>
 
                 <dl className="grid xs:grid-cols-2 gap-5 mb-10">
                     <div>
-                        <dt className="font-medium text-sm">
+                        <dt className="font-medium text-sm text-[--fg-color]">
                             {t('role')}
                         </dt>
-                        <dd className="text-sm text-stone-500">
+                        <dd className="text-sm text-[--fg-secondary-color]">
                             {t(invite.role)}
                         </dd>
                     </div>
                     <div>
-                        <dt className="font-medium text-sm">
+                        <dt className="font-medium text-sm text-[--fg-color]">
                             {t('explicit-content')}
                         </dt>
-                        <dd className="text-sm text-stone-500">
+                        <dd className="text-sm text-[--fg-secondary-color]">
                             {invite.explicitContent ? t('yes') : t('no')}
                         </dd>
                     </div>
                     <div>
-                        <dt className="font-medium text-sm">
+                        <dt className="font-medium text-sm text-[--fg-color]">
                             {t('invite-created')}
                         </dt>
-                        <dd className="text-sm text-stone-500">
+                        <dd className="text-sm text-[--fg-secondary-color]">
                             {formatTime(invite.createdAt)}
                         </dd>
                     </div>
                     <div>
-                        <dt className="font-medium text-sm">
+                        <dt className="font-medium text-sm text-[--fg-color]">
                             {t('invite-expires-at')}
                         </dt>
-                        <dd className="text-sm text-stone-500">
+                        <dd className="text-sm text-[--fg-secondary-color]">
                             {formatTime(invite.expiresAt)}
                         </dd>
                     </div>
@@ -107,7 +108,7 @@ export const AcceptInvite = () => {
 
                 <form className="flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm text-stone-900" htmlFor="username">{t('username')!}</label>
+                        <label className="text-sm text-[--fg-color]" htmlFor="username">{t('username')!}</label>
 
                         <Controller
                         name="username"
@@ -117,7 +118,7 @@ export const AcceptInvite = () => {
                         )} />
                     </div>
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm text-stone-900" htmlFor="password">{t('password')}</label>
+                        <label className="text-sm text-[--fg-color]" htmlFor="password">{t('password')}</label>
 
                         <Controller
                         name="password"

@@ -1,23 +1,23 @@
-import {createPortal} from "react-dom"
-import {useTranslation} from "react-i18next"
-import {apiURL, preparePath, removeHTML} from "../utils/Utilities"
-import {useAppDispatch, useAppSelector} from "../store/hooks"
-import {setInfoModalPodcastOpen} from "../store/CommonSlice"
-import {Heading2} from "./Heading2"
-import "material-symbols/outlined.css"
-import axios from "axios";
+import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
+import axios from 'axios'
+import { apiURL, preparePath, removeHTML } from '../utils/Utilities'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { setInfoModalPodcastOpen } from '../store/CommonSlice'
+import { Heading2 } from './Heading2'
+import 'material-symbols/outlined.css'
 
 export const PodcastInfoModal = () => {
     const dispatch = useAppDispatch()
-    const selectedPodcastEpisode = useAppSelector(state=>state.common.infoModalPodcast)
-    const infoModalOpen = useAppSelector(state=>state.common.infoModalPodcastOpen)
-    const {t} =  useTranslation()
+    const infoModalOpen = useAppSelector(state => state.common.infoModalPodcastOpen)
+    const selectedPodcastEpisode = useAppSelector(state => state.common.infoModalPodcast)
+    const { t } =  useTranslation()
 
     const download = (url: string, filename: string) => {
         const element = document.createElement('a')
         element.setAttribute('href', url)
         element.setAttribute('download', filename)
-        element.setAttribute("target", "_blank")
+        element.setAttribute('target', '_blank')
         element.style.display = 'none'
         document.body.appendChild(element)
         element.click()
@@ -25,38 +25,55 @@ export const PodcastInfoModal = () => {
     }
 
     const deleteEpisodeDownloadOnServer = (episodeId: string) => {
-        axios.delete(apiURL + "/episodes/" + episodeId + "/download").then(() => {
+        axios.delete(apiURL + '/episodes/' + episodeId + '/download').then(() => {
             dispatch(setInfoModalPodcastOpen(false))
         })
     }
 
-    return createPortal( <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={()=>dispatch(setInfoModalPodcastOpen(false))}
-        className={`fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden transition-opacity z-30
-         ${!infoModalOpen&&'pointer-events-none'}
-         ${infoModalOpen?'opacity-100':'opacity-0'}`}>
-
-            <div className={`relative bg-white max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)] ${infoModalOpen?'opacity-100':'opacity-0'}`} onClick={e=>e.stopPropagation()}>
-                <button type="button" onClick={()=>dispatch(setInfoModalPodcastOpen(false))}
-                        className="absolute top-4 right-4 bg-transparent"
-                        data-modal-hide="defaultModal">
-                    <span className="material-symbols-outlined text-stone-400 hover:text-stone-600">close</span>
+    return createPortal(
+        <div
+            id="defaultModal"
+            tabIndex={-1}
+            aria-hidden="true"
+            onClick={() => dispatch(setInfoModalPodcastOpen(false))}
+            className={`fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden transition-opacity z-30
+            ${!infoModalOpen && 'pointer-events-none'}
+            ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
+        >
+            <div className={`relative bg-[--bg-color] max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
+                <button
+                    type="button"
+                    onClick={() => dispatch(setInfoModalPodcastOpen(false))}
+                    className="absolute top-4 right-4 bg-transparent"
+                    data-modal-hide="defaultModal"
+                >
+                    <span className="material-symbols-outlined text-[--modal-close-color] hover:text-[--modal-close-color-hover]">close</span>
                     <span className="sr-only">Close modal</span>
                 </button>
 
                 <div className="mb-4">
                     <Heading2 className="inline align-middle mr-2">{selectedPodcastEpisode?.name || ''}</Heading2>
 
-                    <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-stone-800 hover:text-stone-600' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={()=>{
-                        if(selectedPodcastEpisode) {
-                            selectedPodcastEpisode.status == 'D'?download(preparePath(selectedPodcastEpisode.local_url), selectedPodcastEpisode?.name+".mp3"):download(selectedPodcastEpisode?.url, selectedPodcastEpisode?.name)
-
+                    {/* Save icon */}
+                    <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
+                        if (selectedPodcastEpisode) {
+                            selectedPodcastEpisode.status == 'D'
+                            ? download(preparePath(selectedPodcastEpisode.local_url), selectedPodcastEpisode?.name + '.mp3')
+                            : download(selectedPodcastEpisode?.url, selectedPodcastEpisode?.name)
                         }
                     }}>save</span>
-                    {selectedPodcastEpisode?.status === 'D'&& <span onClick={()=>deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer  text-red-600" title={t('delete') as string}>delete</span>}
+
+                    {/* Delete icon */}
+                    {selectedPodcastEpisode?.status === 'D' &&
+                        <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer text-[--danger-fg-color] hover:text-[--danger-fg-color-hover]" title={t('delete') as string}>delete</span>
+                    }
                 </div>
 
-                {selectedPodcastEpisode&&<p className="leading-[1.75] text-sm text-stone-900" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
-                </p>}
+                {selectedPodcastEpisode &&
+                    <p className="leading-[1.75] text-sm text-[--fg-color]" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
+                    </p>
+                }
             </div>
-    </div>, document.getElementById('modal1')!)
+        </div>, document.getElementById('modal1')!
+    )
 }

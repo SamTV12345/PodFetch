@@ -1,7 +1,7 @@
-import {useState} from "react"
-import i18n from "../language/i18n"
-import {CustomSelect} from './CustomSelect'
-import "material-symbols/outlined.css"
+import { useState } from 'react'
+import i18n from '../language/i18n'
+import { CustomSelect } from './CustomSelect'
+import 'material-symbols/outlined.css'
 
 const languageOptions = [
     { value: 'de-DE', label: 'Deutsch' },
@@ -11,7 +11,7 @@ const languageOptions = [
     { value: 'es', label: 'Español' }
 ]
 
-export const Dropdown = ()=>{
+export const LanguageDropdown = () => {
     const [language, setLanguage] = useState<string>(i18n.language)
 
     /* Responsiveness handled via stylesheet */

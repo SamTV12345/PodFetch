@@ -1,47 +1,51 @@
-import {FC, useEffect, useRef, useState} from "react"
-import {ArcElement, Chart as ChartJS, ChartArea, ChartData, ChartOptions, Legend, Tooltip, TooltipItem} from "chart.js"
-import {Doughnut} from "react-chartjs-2"
+import { FC, useEffect, useRef, useState } from 'react'
+import { ArcElement, Chart as ChartJS, ChartArea, ChartData, ChartOptions, Legend, Tooltip, TooltipItem } from 'chart.js'
+import { Doughnut } from 'react-chartjs-2'
 
 interface CustomGaugeChartProps {
-    fill?: string | string[];
-    labels?: string[];
-    labelUnit?: 'capacity' | 'percent';
-    max: number;
-    value: number;
+    fill?: string | string[]
+    labels?: string[]
+    labelUnit?: 'capacity' | 'percent'
+    max: number
+    value: number
 }
 
 function createGradient(ctx: CanvasRenderingContext2D, area: ChartArea, fill: string[]) {
-    const gradient = ctx.createLinearGradient(area.left, 0, area.right, 0);
+    const gradient = ctx.createLinearGradient(area.left, 0, area.right, 0)
 
-    gradient.addColorStop(0, fill[0]);
-    gradient.addColorStop(1, fill[1]);
+    gradient.addColorStop(0, fill[0])
+    gradient.addColorStop(1, fill[1])
   
-    return gradient;
+    return gradient
 }
   
-export const CustomGaugeChart:FC<CustomGaugeChartProps> = ({fill, labels, labelUnit, max, value}) => {
+export const CustomGaugeChart: FC<CustomGaugeChartProps> = ({ fill, labels, labelUnit, max, value }) => {
     const chartRef = useRef<ChartJS<'doughnut'>>(null)
     const [chartData, setChartData] = useState<ChartData<'doughnut'>>({
         datasets: []
     })
     const [chartOptions, setChartOptions] = useState<ChartOptions<'doughnut'>>()
 
-    const gigaByte = Math.pow(10,9)
-    const teraByte = Math.pow(10,12)
+    const gigaByte = Math.pow(10, 9)
+    const teraByte = Math.pow(10, 12)
 
     useEffect(() => {
-        const chart = chartRef.current;
+        const chart = chartRef.current
 
-        if (!chart) {
-            return;
-        }
+        if (!chart) return
+
+        /* Get CSS variables */
+        const style = getComputedStyle(document.body);
+        const bgColor = style.getPropertyValue('--bg-color');
+        const sliderBgColor = style.getPropertyValue('--slider-bg-color');
 
         const chartData = {
             labels,
             datasets: [{
                 data: [value, max - value],
-                backgroundColor: [(fill instanceof Array ? createGradient(chart.ctx, chart.chartArea, fill) : fill), '#e7e5e4'],
-                borderRadius: [{innerStart: 16, outerStart: 16, innerEnd: 0, outerEnd: 0}, {innerStart: 0, outerStart: 0, innerEnd: 16, outerEnd: 16}]
+                backgroundColor: [(fill instanceof Array ? createGradient(chart.ctx, chart.chartArea, fill) : fill), sliderBgColor],
+                borderColor: bgColor,
+                borderRadius: [{ innerStart: 16, outerStart: 16, innerEnd: 0, outerEnd: 0 }, { innerStart: 0, outerStart: 0, innerEnd: 16, outerEnd: 16 }]
             }],
         }
 
@@ -63,14 +67,13 @@ export const CustomGaugeChart:FC<CustomGaugeChartProps> = ({fill, labels, labelU
                             }
 
                             if (labelUnit === 'capacity') {
-                                if(context.parsed > teraByte){
-                                    return label + ": " + (context.parsed/teraByte).toFixed(2) + " TB"
-                                }
-                                else{
-                                    return label + ": " + (context.parsed/gigaByte).toFixed(2) + " GB"
+                                if (context.parsed > teraByte) {
+                                    return label + ': ' + (context.parsed / teraByte).toFixed(2) + ' TB'
+                                } else {
+                                    return label + ': ' + (context.parsed / gigaByte).toFixed(2) + ' GB'
                                 }
                             } else if (labelUnit === 'percent') {
-                                return label + ": " + context.parsed.toFixed(2) + " %"
+                                return label + ': ' + context.parsed.toFixed(2) + ' %'
                             } else {
                                 return label
                             }                            
@@ -92,7 +95,7 @@ export const CustomGaugeChart:FC<CustomGaugeChartProps> = ({fill, labels, labelU
         <div className="relative w-11/12 mx-auto">
             <Doughnut data={chartData} options={chartOptions} ref={chartRef} />
 
-            <span className="flex items-center justify-center absolute inset-0 pl-2 pt-6 text-4xl xs:text-3xl sm:text-4xl md:text-3xl text-stone-900 -z-10">{Math.round(value / max * 100)}%</span>
+            <span className="flex items-center justify-center absolute inset-0 pl-2 pt-6 text-4xl xs:text-3xl sm:text-4xl md:text-3xl text-[--fg-color] -z-10">{Math.round(value / max * 100)}%</span>
         </div>
     )
 }

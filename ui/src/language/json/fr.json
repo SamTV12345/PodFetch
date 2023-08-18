@@ -1,4 +1,9 @@
 {
+  "theme": "Aspect",
+  "system": "Système",
+  "light": "Clair",
+  "dark": "Sombre",
+
   "homepage" : "Accueil",
   "podcasts" : "Podcast",
   "add-new": "Ajouter un nouveau",

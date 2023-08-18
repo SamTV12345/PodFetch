@@ -1,4 +1,9 @@
 {
+  "theme": "Theme",
+  "system": "System",
+  "light": "Light",
+  "dark": "Dark",
+
   "homepage": "Home",
   "last-listened": "Recently listened",
   "podcasts": "Podcast",

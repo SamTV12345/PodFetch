@@ -1,16 +1,16 @@
-import {FC} from "react"
-import {Waypoint} from "react-waypoint"
-import {useParams} from "react-router-dom"
-import {useTranslation} from "react-i18next"
-import axios, {AxiosResponse} from "axios"
-import {useSnackbar} from "notistack"
-import {store} from "../store/store"
-import {useAppDispatch, useAppSelector} from "../store/hooks"
-import {addPodcastEpisodes, PodcastEpisode, setEpisodeDownloaded, setInfoModalPodcast, setInfoModalPodcastOpen} from "../store/CommonSlice"
-import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice"
-import {apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities"
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel"
-import "material-symbols/outlined.css"
+import { FC } from 'react'
+import { useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { Waypoint } from 'react-waypoint'
+import axios, { AxiosResponse } from 'axios'
+import { useSnackbar } from 'notistack'
+import { store } from '../store/store'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { addPodcastEpisodes, PodcastEpisode, setEpisodeDownloaded, setInfoModalPodcast, setInfoModalPodcastOpen } from '../store/CommonSlice'
+import { setCurrentPodcast, setCurrentPodcastEpisode, setPlaying } from '../store/AudioPlayerSlice'
+import { apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML } from '../utils/Utilities'
+import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
+import 'material-symbols/outlined.css'
 
 type PodcastDetailItemProps = {
     episode: PodcastEpisode,
@@ -18,20 +18,21 @@ type PodcastDetailItemProps = {
     episodesLength: number
 }
 
-export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,episodesLength}) => {
-    const {t} =  useTranslation()
-    const params = useParams()
+export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength }) => {
     const dispatch = useAppDispatch()
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
-    const {enqueueSnackbar} = useSnackbar()
+    const params = useParams()
+    const { enqueueSnackbar } = useSnackbar()
+    const { t } =  useTranslation()
 
     if (currentPodcast === undefined) {
+        /* TODO: Translate */
         return <div>"Nicht gefunden"</div>
     }
 
     return (
         <>
-            <div key={episode.episode_id} id={"episode_" + episode.id} className="
+            <div key={episode.episode_id} id={'episode_' + episode.id} className="
                 grid
                 grid-cols-[1fr_auto] grid-rows-[auto_auto_auto]
                 xs:grid-cols-[auto_1fr_auto]
@@ -55,9 +56,9 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,epi
                     self-center
                     grid grid-cols-[7rem_1fr] gap-x-4 items-center
                 ">
-                    <span className="text-sm text-stone-500">{formatTime(episode.date_of_recording)}</span>
+                    <span className="text-sm text-[--fg-secondary-color]">{formatTime(episode.date_of_recording)}</span>
 
-                    <span title={t('download-to-server') as string} className={`material-symbols-outlined text-stone-800 ${episode.status === 'D' ? 'cursor-auto filled' : 'cursor-pointer hover:text-stone-600'}`} onClick={(e)=>{
+                    <span title={t('download-to-server') as string} className={`material-symbols-outlined text-[--fg-icon-color] ${episode.status === 'D' ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
                         // Prevent icon click from triggering info modal
                         e.stopPropagation()
 
@@ -78,7 +79,7 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,epi
                 <span className="
                     col-start-1 col-end-2 row-start-2 row-end-3
                     xs:col-start-2 xs:col-end-3
-                    font-bold leading-tight text-stone-900 transition-color group-hover:text-stone-600
+                    font-bold leading-tight text-[--fg-color] transition-color group-hover:text-[--fg-color-hover]
                 ">{episode.name}</span>
 
                 {/* Description */}
@@ -86,19 +87,19 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,epi
                     line-clamp-3
                     col-start-1 col-end-3 row-start-3 row-end-4
                     xs:col-start-2 xs:col-end-3
-                    leading-[1.75] text-sm text-stone-900 transition-color group-hover:text-stone-600
+                    leading-[1.75] text-sm text-[--fg-color] transition-color group-hover:text-[--fg-color-hover]
                 " dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
 
                 {/* Play button */}
                 <span className="
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
-                    self-center material-symbols-outlined cursor-pointer !text-5xl text-stone-900 hover:text-stone-600 active:scale-90
-                " key={episode.episode_id + "icon"} onClick={(e) => {
+                    self-center material-symbols-outlined cursor-pointer !text-5xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90
+                " key={episode.episode_id + 'icon'} onClick={(e) => {
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
 
-                    axios.get(apiURL + "/podcast/episode/" + episode.episode_id)
+                    axios.get(apiURL + '/podcast/episode/' + episode.episode_id)
                         .then((response: AxiosResponse<PodcastWatchedModel>) => {
                             episode.status === 'D'
                             ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode, response.data)))
@@ -112,12 +113,12 @@ export const PodcastDetailItem:FC<PodcastDetailItemProps> = ({episode, index,epi
 
             {/* Infinite scroll */
             index === (episodesLength - 5) &&
-                <Waypoint key={index+"waypoint"} onEnter={()=>{
-                    axios.get(apiURL+"/podcast/"+params.id+"/episodes?last_podcast_episode="+episode.date_of_recording)
-                        .then((response)=>{
+                <Waypoint key={index + 'waypoint'} onEnter={() => {
+                    axios.get(apiURL + '/podcast/' + params.id + '/episodes?last_podcast_episode=' + episode.date_of_recording)
+                        .then((response) => {
                             dispatch(addPodcastEpisodes(response.data))
                         })
-                }}/>
+                }} />
             }
         </>
     )

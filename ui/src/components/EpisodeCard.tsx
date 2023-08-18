@@ -1,10 +1,10 @@
-import {FC} from "react"
-import axios, {AxiosResponse} from "axios"
-import {apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode} from "../utils/Utilities"
-import {store} from "../store/store"
-import {useAppDispatch} from "../store/hooks"
-import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice"
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel"
+import { FC} from 'react'
+import axios, { AxiosResponse } from 'axios'
+import { apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode } from '../utils/Utilities'
+import { store } from '../store/store'
+import { useAppDispatch } from '../store/hooks'
+import { setCurrentPodcast, setCurrentPodcastEpisode, setPlaying } from '../store/AudioPlayerSlice'
+import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import { Podcast, PodcastEpisode } from '../store/CommonSlice'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 
@@ -39,7 +39,7 @@ export const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|PodcastEp
 
 }
 
-export const EpisodeCard:FC<EpisodeCardProps> = ({podcast, podcastEpisode, totalTime, watchedTime}) => {
+export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, totalTime, watchedTime }) => {
     const dispatch = useAppDispatch()
 
     return (
@@ -66,15 +66,15 @@ export const EpisodeCard:FC<EpisodeCardProps> = ({podcast, podcastEpisode, total
                 {/* Progress bar */
                 totalTime && watchedTime && (
                     <div className="absolute bottom-0 inset-x-0 bg-stone-900">
-                        <div className="bg-mustard-600 h-1.5" style={{width: (watchedTime/totalTime)*100+"%"}}></div>
+                        <div className="bg-[--accent-color] h-1.5" style={{width: (watchedTime/totalTime)*100+"%"}}></div>
                     </div>
                 )}
             </div>
 
             {/* Titles */}
             <div>
-                <span className="block font-bold leading-[1.2] mb-2 text-sm text-stone-900 transition-color group-hover:text-stone-600">{podcastEpisode.name}</span>
-                <span className="block leading-[1.2] text-xs text-stone-900">{podcast.name}</span>
+                <span className="block font-bold leading-[1.2] mb-2 text-sm text-[--fg-color] transition-colors group-hover:text-[--fg-color-hover]">{podcastEpisode.name}</span>
+                <span className="block leading-[1.2] text-xs text-[--fg-color]">{podcast.name}</span>
             </div>
 
             {/* TODO: Remaining time */}

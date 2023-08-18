@@ -1,25 +1,25 @@
-import {useEffect, useState} from "react"
-import {Link} from "react-router-dom"
-import {useTranslation} from "react-i18next"
-import axios from "axios"
-import {apiURL} from "../utils/Utilities"
-import {PodcastWatchedEpisodeModel} from "../models/PodcastWatchedEpisodeModel"
-import {TimeLineModel, TimelineHATEOASModel} from "../models/TimeLineModel"
-import {EpisodeCard} from "../components/EpisodeCard"
-import {Heading2} from "../components/Heading2"
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import axios from 'axios'
+import { apiURL} from '../utils/Utilities'
+import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
+import { TimeLineModel, TimelineHATEOASModel } from '../models/TimeLineModel'
+import { EpisodeCard } from '../components/EpisodeCard'
+import { Heading2 } from '../components/Heading2'
 
 export const Homepage = () => {
-    const {t} = useTranslation()
     const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
     const [latestEpisodes, setLatestEpisodes] = useState<TimeLineModel[]>([])
+    const { t } = useTranslation()
 
     useEffect(()=>{
-        axios.get<PodcastWatchedEpisodeModel[]>(apiURL+"/podcast/episode/lastwatched")
+        axios.get<PodcastWatchedEpisodeModel[]>(apiURL + '/podcast/episode/lastwatched')
             .then((response) => {
                 setPodcastWatched(response.data)
             })
 
-        axios.get<TimelineHATEOASModel>(apiURL + "/podcasts/timeline", {
+        axios.get<TimelineHATEOASModel>(apiURL + '/podcasts/timeline', {
             params: {
                 favoredOnly: false
             }
@@ -55,7 +55,7 @@ export const Homepage = () => {
             <div>
                 <div className="flex items-center gap-4 mb-2">
                     <Heading2>{t('latest-episodes')}</Heading2>
-                    <Link className="text-sm text-mustard-600 hover:text-mustard-500" to="timeline">{t('view-more')}</Link>
+                    <Link className="text-sm text-[--accent-color] hover:text-[--accent-color-hover]" to="timeline">{t('view-more')}</Link>
                 </div>
 
                 <div className={`

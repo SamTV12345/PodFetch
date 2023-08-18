@@ -1,4 +1,9 @@
 {
+  "theme": "Wygląd",
+  "system": "System",
+  "light": "Światło",
+  "dark": "Ciemny",
+
   "homepage": "Strona główna",
   "last-listened": "Niedawno słuchane",
   "podcasts": "Podcasty",

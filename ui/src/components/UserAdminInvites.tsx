@@ -1,16 +1,16 @@
-import {useEffect, useMemo, useState} from "react"
-import {useTranslation} from "react-i18next"
-import axios from "axios"
-import {useSnackbar} from "notistack"
-import {useAppDispatch, useAppSelector} from "../store/hooks"
-import {setCreateInviteModalOpen, setInvites} from "../store/CommonSlice"
-import {apiURL, formatTime} from "../utils/Utilities"
-import {CreateInviteModal} from "./CreateInviteModal"
-import {CustomButtonPrimary} from "./CustomButtonPrimary"
-import {Loading} from "./Loading"
-import {ErrorIcon} from "../icons/ErrorIcon"
-import "material-symbols/outlined.css"
-import {CustomSelect, Option} from "./CustomSelect";
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import axios from 'axios'
+import { useSnackbar } from 'notistack'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { setCreateInviteModalOpen, setInvites } from '../store/CommonSlice'
+import { apiURL, formatTime } from '../utils/Utilities'
+import { CreateInviteModal } from './CreateInviteModal'
+import { CustomButtonPrimary } from './CustomButtonPrimary'
+import { CustomSelect, Option } from './CustomSelect'
+import { Loading } from './Loading'
+import { ErrorIcon } from '../icons/ErrorIcon'
+import 'material-symbols/outlined.css'
 
 export type Invite = {
     id: string,
@@ -21,82 +21,84 @@ export type Invite = {
 }
 
 enum InviteTypeSelection {
-    all = "all",
-    pending = "pending",
-    accepted = "accepted",
-    expired = "expired"
+    all = 'all',
+    pending = 'pending',
+    accepted = 'accepted',
+    expired = 'expired'
 }
 
-const INVITE_KEY_PREFIX = "invite-status-"
+const INVITE_KEY_PREFIX = 'invite-status-'
 
-const options:Option[] = [
+const options: Option[] = [
     {
-        label: "All",
+        label: 'All',
         value: InviteTypeSelection.all,
-        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.all
+        translationKey: INVITE_KEY_PREFIX + InviteTypeSelection.all
     },
     {
         value: InviteTypeSelection.accepted,
-        label: "Accepted",
-        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.accepted
+        label: 'Accepted',
+        translationKey: INVITE_KEY_PREFIX + InviteTypeSelection.accepted
     },
     {
         value: InviteTypeSelection.pending,
-        label: "Pending",
-        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.pending
+        label: 'Pending',
+        translationKey: INVITE_KEY_PREFIX + InviteTypeSelection.pending
     },
     {
         value: InviteTypeSelection.expired,
-        label: "Expired",
-        translationKey: INVITE_KEY_PREFIX+InviteTypeSelection.expired
+        label: 'Expired',
+        translationKey: INVITE_KEY_PREFIX + InviteTypeSelection.expired
     }
 ]
 
 
 export const UserAdminInvites = () => {
-    const {t} = useTranslation()
-    const {enqueueSnackbar} = useSnackbar()
     const dispatch = useAppDispatch()
-    const invites = useAppSelector(state=>state.common.invites)
-    const [error,setError] = useState<boolean>()
+    const invites = useAppSelector(state => state.common.invites)
+    const { enqueueSnackbar } = useSnackbar()
+    const [error, setError] = useState<boolean>()
     const [selectedInviteType, setSelectedInviteType] = useState<InviteTypeSelection>(InviteTypeSelection.all)
+    const { t } = useTranslation()
 
-    const filteredInvites = useMemo(()=>{
-       switch (selectedInviteType){
-              case InviteTypeSelection.all:
-                    return invites
-                case InviteTypeSelection.pending:
-                    return invites.filter(v=>v.acceptedAt == null && v.expiresAt > new Date().toISOString())
-                case InviteTypeSelection.accepted:
-                    return invites.filter(v=>v.acceptedAt !== null)
-                case InviteTypeSelection.expired:
-                    return invites.filter(v=>v.expiresAt < new Date().toISOString() && v.acceptedAt == null)
+    const filteredInvites = useMemo(() => {
+       switch (selectedInviteType) {
+            case InviteTypeSelection.all:
+                return invites
+            case InviteTypeSelection.pending:
+                return invites.filter(v => v.acceptedAt == null && v.expiresAt > new Date().toISOString())
+            case InviteTypeSelection.accepted:
+                return invites.filter(v => v.acceptedAt !== null)
+            case InviteTypeSelection.expired:
+                return invites.filter(v => v.expiresAt < new Date().toISOString() && v.acceptedAt == null)
        }
     }, [invites, selectedInviteType])
 
-    useEffect(()=>{
-        axios.get(apiURL+"/users/invites").then(v=> {
-            dispatch(setInvites(v.data))
-            setError(false)
-        }).catch(()=>{
-                    setError(true)
-                })
-        }, [])
+    useEffect(() => {
+        axios.get(apiURL + '/users/invites')
+            .then(v => {
+                dispatch(setInvites(v.data))
+                setError(false)
+            }).catch(() => {
+                setError(true)
+            })
+    }, [])
 
-    if (error === undefined){
+    if (error === undefined) {
         return <Loading />
     }
 
-    if(error){
+    if (error) {
         return <ErrorIcon text={t('not-admin')} />
     }
 
     return (
         <div>
             <CreateInviteModal />
-            <CustomSelect  options={options} value={selectedInviteType}
-                           onChange={v=>setSelectedInviteType(v as InviteTypeSelection)}/>
-            <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={()=>{
+
+            <CustomSelect options={options} value={selectedInviteType} onChange={v => setSelectedInviteType(v as InviteTypeSelection)} />
+
+            <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={() => {
                 dispatch(setCreateInviteModalOpen(true))
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
@@ -108,9 +110,9 @@ export const UserAdminInvites = () => {
                 xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
                 md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
             `}>
-                <table className="text-left text-sm text-stone-900 w-full">
+                <table className="text-left text-sm text-[--fg-color] w-full">
                     <thead>
-                        <tr className="border-b border-stone-300">
+                        <tr className="border-b border-[--border-color]">
                             <th scope="col" className="pr-2 py-3">
                                 ID
                             </th>
@@ -132,13 +134,14 @@ export const UserAdminInvites = () => {
                     </thead>
                     <tbody>
                         {filteredInvites.map(i=>
-                            <tr className="border-b border-stone-300" key={i.id}>
+                            <tr className="border-b border-[--border-color]" key={i.id}>
                                 <td className="pr-2 py-4">
-                                    <button className="text-left text-stone-900 hover:text-stone-600" onClick={()=>{
-                                        axios.get(apiURL+"/users/invites/"+i.id+"/link").then(v=>{
-                                            navigator.clipboard.writeText(v.data)
-                                            enqueueSnackbar(t('invite-link-copied'), {autoHideDuration: 2000})
-                                        })
+                                    <button className="text-left text-[--fg-color] hover:text-[--fg-color-hover]" onClick={() => {
+                                        axios.get(apiURL + '/users/invites/' + i.id + '/link')
+                                            .then(v => {
+                                                navigator.clipboard.writeText(v.data)
+                                                enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000 })
+                                            })
                                     }} title={t('copy-link') || ''}>
                                         {i.id}
                                         <span className="material-symbols-outlined align-middle ml-1">link</span>
@@ -161,10 +164,11 @@ export const UserAdminInvites = () => {
                                     )}
                                 </td>
                                 <td className="pl-2 py-4">
-                                    <button className="flex items-center float-right text-red-700 hover:text-red-500" onClick={()=>{
-                                        axios.delete(apiURL+"/users/invites/"+i.id).then(()=>{
-                                            enqueueSnackbar(t('invite-deleted'), {variant: "success"})
-                                            dispatch(setInvites(invites.filter(v=>v.id !== i.id)))
+                                    <button className="flex items-center float-right text-[--danger-fg-color] hover:text-[--danger-fg-color-hover]" onClick={() => {
+                                        axios.delete(apiURL + '/users/invites/' + i.id)
+                                            .then(() => {
+                                                enqueueSnackbar(t('invite-deleted'), { variant: 'success' })
+                                                dispatch(setInvites(invites.filter(v => v.id !== i.id)))
                                         })
                                     }}>
                                         <span className="material-symbols-outlined mr-1">delete</span>
