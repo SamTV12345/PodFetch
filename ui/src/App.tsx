@@ -30,14 +30,8 @@ import {Root} from "./routing/Root"
 import {AcceptInvite} from "./pages/AcceptInvite"
 import {Login} from "./pages/Login"
 import "./App.css"
-import {HomePageSelector} from "./pages/HomePageSelector";
-} from './utils/MessageIdentifier'
-import { Notification } from './models/Notification'
-import { Root } from './routing/Root'
-import { AcceptInvite } from './pages/AcceptInvite'
-import { Homepage } from './pages/Homepage'
-import { Login } from './pages/Login'
 import './App.css'
+import {HomePageSelector} from "./pages/HomePageSelector";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>

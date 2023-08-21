@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useCtrlPressed, useKeyDown } from '../hooks/useKeyDown'
 import { EpisodeSearch } from './EpisodeSearch'
+import {useNavigate} from "react-router-dom";
 
 export const EpisodeSearchModal = () => {
     const [open, setOpen] = useState<boolean>(false)

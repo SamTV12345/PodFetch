@@ -159,8 +159,7 @@
   "invite-status-all": "Todos invitados",
   "invite-status-pending": "Pendiente invitados",
   "invite-status-accepted": "Invitación aceptada",
-  "invite-status-expired": "Invitación expirada"
-  "colon-replacement-explanation": "Especifica el carácter que sustituirá a los dos puntos. Esto es útil ya que los dos puntos no se pueden usar en un nombre de fichero.",
+  "invite-status-expired": "Invitación expirada",
   "playlists": "Listas de reproducción",
   "add-playlist": "Añadir lista de reproducción",
   "create-playlist": "Crear lista de reproducción",

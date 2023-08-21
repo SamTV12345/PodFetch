@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use dotenv::var;
-use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, Role, STANDARD_USER, USERNAME};
+use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
 use crate::dbconfig::schema::users;
 use crate::DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
