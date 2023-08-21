@@ -5,13 +5,14 @@ import axios, {AxiosResponse} from "axios"
 import {enqueueSnackbar} from "notistack"
 import {useAppDispatch, useAppSelector} from "../store/hooks"
 import {apiURL} from "../utils/Utilities"
-import {CustomButtonPrimary} from "./CustomButtonPrimary"
 import {Heading2} from "./Heading2"
 import "material-symbols/outlined.css"
 import {PlaylistDto, PlaylistDtoPost, PlaylistDtoPut, PlaylistItem} from "../models/Playlist";
 import {setCreatePlaylistOpen, setPlaylist} from "../store/PlaylistSlice";
 import {PlaylistData} from "./PlaylistData";
 import {PlaylistSearchEpisode} from "./PlaylistSearchEpisode";
+import {PlaylistSubmitViewer} from "./PlaylistSubmitViewer";
+import {FormProvider} from "react-hook-form";
 
 
 
@@ -68,7 +69,7 @@ export const CreatePlaylistModal = () => {
         <div aria-hidden="true" id="defaultModal" onClick={()=>dispatch(setCreatePlaylistOpen(false))} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-x-hidden overflow-y-auto z-30 ${playListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
 
             {/* Modal */}
-            <div className="relative bg-white max-w-5xl md:w-[50%] p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)]" onClick={e=>e.stopPropagation()}>
+            <div className="relative bg-[--bg-color] text-[--fg-color] max-w-5xl md:w-[50%] p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)]" onClick={e=>e.stopPropagation()}>
 
                 {/* Close button */}
                 <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={()=>dispatch(setCreatePlaylistOpen(false))}>
@@ -83,7 +84,7 @@ export const CreatePlaylistModal = () => {
                 }}>
 
                     <div className="mt-5 mb-5 ">
-                    <Heading2 className="mb-4">{t('add-playlist')}</Heading2>
+                    <Heading2 className="mb-4 text-[--fg-color]">{t('add-playlist')}</Heading2>
                     </div>
 
                     {/* Playlist data like name */}
@@ -109,16 +110,7 @@ export const CreatePlaylistModal = () => {
                     </div>
 
                     {stage === 2 &&
-                        <><CustomButtonPrimary type="submit" className="float-right" onClick={()=>{
-                            axios.post(apiURL+'/playlist', currentPlaylistToEdit)
-                                .then((v: AxiosResponse<PlaylistDto>)=>{
-                                    enqueueSnackbar(t('invite-created'), {variant: "success"})
-                                    dispatch(setPlaylist([...playlists,v.data]))
-                                    dispatch(setCreatePlaylistOpen(false))
-                                })
-                        }}>{currentPlaylistToEdit?.id===-1?t('create-playlist'):t('update-playlist')}</CustomButtonPrimary>
-                            <br/>
-                        </>
+                            <PlaylistSubmitViewer/>
                     }
                 </form>
             </div>

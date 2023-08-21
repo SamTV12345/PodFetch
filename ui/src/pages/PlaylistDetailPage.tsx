@@ -11,6 +11,7 @@ import {useEffect} from "react";
 import {setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
+import {PodcastInfoModal} from "../components/PodcastInfoModal";
 
 export const PlaylistDetailPage = ()=>{
     const {t} = useTranslation()
@@ -59,7 +60,7 @@ export const PlaylistDetailPage = ()=>{
 
     return selectedPlaylist&&<div>
         <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
-
+        <PodcastInfoModal/>
         {selectedPlaylist.items.map((episode, index) => {
             return <PodcastDetailItem episode={episode} key={episode.id} index={index} episodesLength={selectedPlaylist.items.length}/>
         })}

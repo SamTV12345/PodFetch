@@ -18,7 +18,6 @@ export const PlaylistPage = ()=>{
     const {t} = useTranslation()
     const playlist = useAppSelector(state=>state.playlist.playlist)
     const navigate = useNavigate()
-    const [creating, setCreating] = useState<boolean>(false)
 
     useEffect(()=>{
         if (playlist.length ===0){
@@ -33,7 +32,6 @@ export const PlaylistPage = ()=>{
            <CreatePlaylistModal/>
 
             <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={()=>{
-                setCreating(true)
                 dispatch(setCurrentPlaylistToEdit({name: '',items:[],id: -1} as PlaylistDto))
                 dispatch(setCreatePlaylistOpen(true))
             }}>
@@ -41,44 +39,44 @@ export const PlaylistPage = ()=>{
             </CustomButtonPrimary>
 
             <div className={`
-                scrollbox-x
+                scrollbox-x 
                 w-[calc(100vw-2rem)] ${/* viewport - padding */ ''}
                 xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
                 md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
             `}>
-                <table className="text-left text-sm text-stone-900 w-full">
+                <table className="text-left text-sm text-stone-900 w-full text-[--fg-color]">
                     <thead>
                     <tr className="border-b border-stone-300">
-                        <th scope="col" className="pr-2 py-3">
+                        <th scope="col" className="pr-2 py-3 text-[--fg-color]">
                             {t('playlist-name')}
                         </th>
                     </tr>
                     </thead>
                     <tbody>
                     {playlist.map(i=>
-                        <tr className="border-b border-stone-300" key={i.id}>
-                            <td className="px-2 py-4 flex items-center">
+                        <tr className="border-b border-stone-300 " key={i.id}>
+                            <td className="px-2 py-4 flex items-center text-[--fg-color]">
                                 {i.name}
                                 <button className="flex ml-2" onClick={(e)=>{
                                     e.preventDefault()
 
                                     axios.get(apiURL+"/playlist/"+i.id).then((response:AxiosResponse<PlaylistDto>)=> {
                                         dispatch(setCurrentPlaylistToEdit(response.data))
-                                        setCreating(false)
                                         dispatch(setCreatePlaylistOpen(true))
                                     })
                                 }} title={t('change-role')}>
-                                    <span className="material-symbols-outlined text-stone-900 hover:text-stone-600">edit</span>
+                                    <span className="material-symbols-outlined text-[--fg-color] hover:text-stone-600">edit</span>
                                 </button>
                             </td>
                             <td className="pl-2 py-4 gap-4">
                                 <button className="flex float-left" onClick={(e)=>{
                                     e.preventDefault()
                                     dispatch(setCurrentPlaylistToEdit(i))
+                                    dispatch(setCreatePlaylistOpen(true))
 
-                                    dispatch(setModalOpen(true))
                                 }} title={t('change-role')}>
-                                    <span className="material-symbols-outlined text-stone-900 hover:text-stone-600"  onClick={()=>{
+                                    <span className="material-symbols-outlined hover:text-stone-600 text-[--fg-color]"
+                                          onClick={()=>{
                                         navigate("/playlist/"+i.id)
                                     }}>visibility</span>
                                 </button>

@@ -168,5 +168,6 @@
   "playlist-name": "Name der Playlist",
   "update-playlist": "Playlist aktualisieren",
   "updated-playlist": "Playlist aktualisiert",
-  "created-playlist": "Playlist erstellt"
+  "created-playlist": "Playlist erstellt",
+  "episode-name": "Name der Episode"
 }

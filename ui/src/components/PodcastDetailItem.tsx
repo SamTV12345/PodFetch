@@ -25,11 +25,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
 
-    if (currentPodcast === undefined) {
-        /* TODO: Translate */
-        return <div>"Nicht gefunden"</div>
-    }
-
     return (
         <>
             <div key={episode.episode_id} id={'episode_' + episode.id} className="

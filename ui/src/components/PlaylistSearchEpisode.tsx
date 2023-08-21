@@ -26,24 +26,24 @@ export const PlaylistSearchEpisode = ()=>{
             }))
         }} classNameResults="max-h-[min(20rem,calc(100vh-3rem-3rem))]"
                                                   showBlankState={false} />
-    <div className={`scrollbox-x`}>
-        <table className="text-left text-sm text-stone-900 w-full overflow-y-auto">
+    <div className={`scrollbox-x  p-2`}>
+        <table className="text-left text-sm text-stone-900 w-full overflow-y-auto text-[--fg-color]">
             <thead>
             <tr className="border-b border-stone-300">
-                <th scope="col" className="pr-2 py-3">
+                <th scope="col" className="pr-2 py-3 text-[--fg-color]">
                     #
                 </th>
-                <th scope="col" className="px-2 py-3">
+                <th scope="col" className="px-2 py-3 text-[--fg-color]">
                     {t('episode-name')}
                 </th>
-                <th scope="col" className="px-2 py-3">
+                <th scope="col" className="px-2 py-3 text-[--fg-color]">
                     {t('actions')}
                 </th>
             </tr>
             </thead>
             <tbody className="">
             {currentPlayListToEdit?.items.map((item, index) => {
-                return <tr draggable onDrop={e=>{
+                return <tr className="border-2 border-white" draggable onDrop={e=>{
                     e.preventDefault()
                     const dropIndex = index
                     const dragIndex = parseInt(e.dataTransfer.getData("text/plain"))
@@ -58,10 +58,10 @@ export const PlaylistSearchEpisode = ()=>{
                         items: newItems
                     }))
                 }} onDragOver={(e)=>item.id!=itemCurrentlyDragged?.id&&e.preventDefault()} onDragStart={e=>handleDragStart(item, index, e)}>
-                    <td>
+                    <td className="text-[--fg-color] p-2">
                         {index}
                     </td>
-                    <td>
+                    <td className="text-[--fg-color]">
                         {item.name}
                     </td>
                     <td>

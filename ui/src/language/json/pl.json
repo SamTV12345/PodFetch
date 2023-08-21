@@ -161,12 +161,12 @@
   "invite-status-accepted": "Zaakceptowane",
   "invite-status-pending": "Oczekujące",
   "invite-status-expired": "Wygasłe zaproszenie",
-  "already-added": "Podcast {{name}} został już dodany.",
   "playlists": "Playlisty",
   "add-playlist": "Dodaj playlistę",
   "create-playlist": "Stwórz playlistę",
   "playlist-name": "Nazwa playlisty",
   "update-playlist": "Aktualizuj playlistę",
   "updated-playlist": "Playlista została zaktualizowana",
-  "created-playlist": "Playlista została utworzona"
+  "created-playlist": "Playlista została utworzona",
+  "episode-name": "Nazwa odcinka"
 }
