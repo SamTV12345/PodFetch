@@ -121,7 +121,7 @@ impl User {
             id: 9999,
             username: var(USERNAME).unwrap().to_string(),
             role: Role::Admin.to_string(),
-            password: Some(var(PASSWORD).unwrap().to_string()),
+            password,
             explicit_consent: true,
             created_at: Default::default(),
         }
