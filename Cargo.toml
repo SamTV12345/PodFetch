@@ -44,7 +44,7 @@ regex = "1.9.3"
 xml-builder = "0.5.2"
 diesel = { version = "2.1.0", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
-utoipa = { version = "3.4.4", features = ["actix_extras"] }
+utoipa = { version = "3.5.0", features = ["actix_extras"] }
 futures = "0.3.28"
 utoipa-swagger-ui = {version = "3.1.5", features = ["actix-web"] }
 clokwerk= "0.4.0"
