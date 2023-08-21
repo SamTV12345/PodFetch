@@ -178,7 +178,9 @@ diesel::table! {
 }
 
 diesel::joinable!(favorites -> podcasts (podcast_id));
+diesel::joinable!(playlist_items -> episodes (episode));
 diesel::joinable!(playlist_items -> playlists (playlist_id));
+diesel::joinable!(playlists -> users (user_id));
 diesel::joinable!(playlist_items -> podcast_episodes (episode));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(podcast_history_items -> podcasts (podcast_id));

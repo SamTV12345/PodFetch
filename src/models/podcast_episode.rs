@@ -55,6 +55,21 @@ impl PodcastEpisode{
         self.status == "D"
     }
 
+    pub fn get_podcast_episode_by_internal_id(
+        conn: &mut DbConnection,
+        podcast_episode_id_to_be_found: i32,
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+
+        let found_podcast_episode = podcast_episodes
+            .filter(id.eq(podcast_episode_id_to_be_found))
+            .first::<PodcastEpisode>(conn)
+            .optional()
+            .map_err(map_db_error)?;
+
+        Ok(found_podcast_episode)
+    }
+
     pub fn get_podcast_episode_by_id(
         conn: &mut DbConnection,
         podcas_episode_id_to_be_found: &str,

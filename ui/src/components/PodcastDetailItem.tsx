@@ -25,11 +25,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
 
-    if (currentPodcast === undefined) {
-        /* TODO: Translate */
-        return <div>"Nicht gefunden"</div>
-    }
-
     return (
         <>
             <div key={episode.episode_id} id={'episode_' + episode.id} className="
@@ -43,7 +38,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 dispatch(setInfoModalPodcastOpen(true))
             }}>
                 {/* Thumbnail */}
-                <img src={currentPodcast.image_url} alt={currentPodcast.name} className="
+                <img src={episode.image_url} alt={episode.name} className="
                     hidden xs:block
                     col-start-1 col-end-2 row-start-1 row-end-4
                     self-center rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]
@@ -105,7 +100,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode, response.data)))
                             : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode, response.data)))
 
-                            dispatch(setCurrentPodcast(currentPodcast))
+                            currentPodcast&& dispatch(setCurrentPodcast(currentPodcast))
                             dispatch(setPlaying(true))
                         })
                 }}>play_circle</span>

@@ -16,9 +16,9 @@ diesel::table! {
         username -> Varchar,
         device -> Varchar,
         podcast -> Varchar,
-        episode -> Text,
+        episode -> Varchar,
         timestamp -> Timestamp,
-        guid -> Nullable<Text>,
+        guid -> Nullable<Varchar>,
         action -> Varchar,
         started -> Nullable<Int4>,
         position -> Nullable<Int4>,
@@ -62,6 +62,22 @@ diesel::table! {
         message -> Text,
         created_at -> Text,
         status -> Text,
+    }
+}
+
+diesel::table! {
+    playlist_items (playlist_id, episode) {
+        playlist_id -> Text,
+        episode -> Int4,
+        position -> Int4,
+    }
+}
+
+diesel::table! {
+    playlists (id) {
+        id -> Text,
+        name -> Text,
+        user_id -> Int4,
     }
 }
 
@@ -162,6 +178,8 @@ diesel::table! {
 }
 
 diesel::joinable!(favorites -> podcasts (podcast_id));
+diesel::joinable!(playlist_items -> playlists (playlist_id));
+diesel::joinable!(playlist_items -> podcast_episodes (episode));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
 
@@ -172,6 +190,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     filters,
     invites,
     notifications,
+    playlist_items,
+    playlists,
     podcast_episodes,
     podcast_history_items,
     podcasts,

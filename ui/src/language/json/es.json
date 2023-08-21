@@ -159,5 +159,13 @@
   "invite-status-all": "Todos invitados",
   "invite-status-pending": "Pendiente invitados",
   "invite-status-accepted": "Invitación aceptada",
-  "invite-status-expired": "Invitación expirada"
+  "invite-status-expired": "Invitación expirada",
+  "playlists": "Listas de reproducción",
+  "add-playlist": "Añadir lista de reproducción",
+  "create-playlist": "Crear lista de reproducción",
+  "playlist-name": "Nombre de la lista de reproducción",
+  "update-playlist": "Actualizar lista de reproducción",
+  "updated-playlist": "Lista de reproducción actualizada",
+  "created-playlist": "Lista de reproducción creada",
+  "episode-name": "Nombre del episodio"
 }

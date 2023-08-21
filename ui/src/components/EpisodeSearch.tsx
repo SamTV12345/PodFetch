@@ -11,12 +11,14 @@ import { EmptyResultIcon } from '../icons/EmptyResultIcon'
 
 type EpisodeSearchProps = {
     classNameResults?: string,
-    onClickResult?: () => void,
+    onClickResult?: (e:PodcastEpisode) => void,
     resultsMaxHeight?: string,
     showBlankState?: boolean
 }
 
-export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', onClickResult = () => null, resultsMaxHeight = 'none', showBlankState = true }) => {
+export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', onClickResult = () => null,
+                                                          resultsMaxHeight = 'none',
+                                                          showBlankState = true }) => {
     const navigate = useNavigate()
     const [searching, setSearching] = useState<boolean>()
     const [searchName, setSearchName] = useState<string>('')
@@ -63,8 +65,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                 <ul className={`flex flex-col gap-10 overflow-y-auto my-4 px-8 py-6 scrollbox-y ${classNameResults}`}>
                     {searchResults.map((episode, i) => (
                         <li className="flex gap-4 cursor-pointer group" key={i} onClick={() => {
-                            onClickResult()
-                            navigate(`/podcasts/${episode.podcast_id}/episodes/${episode.id}`)
+                            onClickResult(episode)
                         }}>
                             {/* Thumbnail */}
                             <img alt={episode.name} className="

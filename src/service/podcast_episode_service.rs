@@ -13,6 +13,7 @@ use actix::Addr;
 use actix_web::web;
 use diesel::{OptionalExtension, RunQueryDsl};
 use dotenv::var;
+use log::error;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::{ACCEPT, HeaderMap};
@@ -105,7 +106,7 @@ impl PodcastEpisodeService {
             }
 
             _ => {
-                println!("Error checking if podcast episode is downloaded.");
+                error!("Error checking if podcast episode is downloaded.");
             }
         }
         Ok(())
@@ -157,21 +158,7 @@ impl PodcastEpisodeService {
             Self::update_episodes_on_redirect(conn, channel.items());
         }
 
-        if channel.itunes_ext.is_some() {
-            let extension = channel.itunes_ext.clone().unwrap();
-
-            if extension.new_feed_url.is_some() {
-                let new_url = extension.new_feed_url.unwrap();
-                Podcast::update_podcast_urls_on_redirect(podcast.id, new_url, conn);
-
-                let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone());
-
-                let channel = Channel::read_from(returned_data_from_server.content.as_bytes())
-                    .unwrap();
-                let items = channel.items();
-                Self::update_episodes_on_redirect(conn, items);
-            }
-        }
+        Self::handle_itunes_extension(conn, &podcast, &channel);
 
 
         self.update_podcast_fields(channel.clone(), podcast.id, conn)?;
@@ -179,17 +166,7 @@ impl PodcastEpisodeService {
         let mut podcast_inserted = Vec::new();
 
 
-        match channel.image() {
-            Some(image) => {
-                Podcast::update_original_image_url(&image.url.to_string(), podcast.id,
-                                                   conn)?;
-            }
-            None => {
-                let env = EnvironmentService::new();
-                let url = env.server_url.clone().to_owned() + "ui/default.jpg";
-                Podcast::update_original_image_url(&url, podcast.id, conn)?;
-            }
-        }
+        Self::handle_podcast_image_insert(conn, &podcast, &channel)?;
 
         for (_, item) in channel.items.iter().enumerate() {
             let itunes_ext = item.clone().itunes_ext;
@@ -278,6 +255,39 @@ impl PodcastEpisodeService {
             }
         }
         Ok(podcast_inserted)
+    }
+
+    fn handle_podcast_image_insert(conn: &mut DbConnection, podcast: &Podcast, channel: &Channel) -> Result<(), CustomError> {
+        match channel.image() {
+            Some(image) => {
+                Podcast::update_original_image_url(&image.url.to_string(), podcast.id,
+                                                   conn)?;
+            }
+            None => {
+                let env = EnvironmentService::new();
+                let url = env.server_url.clone().to_owned() + "ui/default.jpg";
+                Podcast::update_original_image_url(&url, podcast.id, conn)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_itunes_extension(conn: &mut DbConnection, podcast: &Podcast, channel: &Channel) {
+        if channel.itunes_ext.is_some() {
+            let extension = channel.itunes_ext.clone().unwrap();
+
+            if extension.new_feed_url.is_some() {
+                let new_url = extension.new_feed_url.unwrap();
+                Podcast::update_podcast_urls_on_redirect(podcast.id, new_url, conn);
+
+                let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone());
+
+                let channel = Channel::read_from(returned_data_from_server.content.as_bytes())
+                    .unwrap();
+                let items = channel.items();
+                Self::update_episodes_on_redirect(conn, items);
+            }
+        }
     }
 
 

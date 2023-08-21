@@ -160,5 +160,13 @@
   "invite-status-all": "Toutes invitations",
   "invite-status-pending": "Invitations en attente",
   "invite-status-accepted": "Invitations acceptées",
-  "invite-status-expired": "Invitations expirées"
+  "invite-status-expired": "Invitations expirées",
+  "playlists": "Playlists",
+  "add-playlist": "Ajouter une playlist",
+  "create-playlist": "Créer une playlist",
+  "playlist-name": "Nom de la playlist",
+  "update-playlist": "Mettre à jour la playlist",
+  "updated-playlist": "Playlist mise à jour",
+  "created-playlist": "Playlist créée",
+  "episode-name": "Nom de l'épisode"
 }

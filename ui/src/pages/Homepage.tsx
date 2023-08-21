@@ -31,7 +31,7 @@ export const Homepage = () => {
 
     return (
         <>
-            <div className="mb-12">
+            <div className="mb-8">
                 <Heading2 className="mb-2">{t('last-listened')}</Heading2>
 
                 <div className={`
