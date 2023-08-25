@@ -369,7 +369,8 @@ impl PodcastEpisodeService {
     pub fn find_all_downloaded_podcast_episodes_with_top_k(&mut self, conn: &mut DbConnection,
                                                            env: EnvironmentService, top_k: i32)
         -> Result<Vec<PodcastEpisode>, CustomError> {
-        PodcastEpisode::get_podcast_episodes_by_podcast_to_k(conn, top_k)
+        PodcastEpisode::get_podcast_episodes_by_podcast_to_k(conn, top_k);
+        Ok(vec![])
     }
 
 

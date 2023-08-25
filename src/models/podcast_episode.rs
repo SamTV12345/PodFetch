@@ -411,25 +411,24 @@ impl PodcastEpisode{
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
         use crate::dbconfig::schema::podcast_episodes as p_episode;
-        use crate::dbconfig::schema::podcasts::dsl::id as p_id;
         use crate::dbconfig::schema::podcasts as podcast_1;
-
+        use crate::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::dbconfig::schema::podcasts::id as pod_id;
         let (podcast_episode1, podcast_episode2) = diesel::alias!(p_episode as p1,
             p_episode as p2);
 
         let (podcast_in_table) = diesel::alias!(podcast_1 as p1);
 
         let result = podcast_episode1
-            .inner_join(podcast_episode1.on(podcast_episode1.field(podcast_id).eq
-            (podcast_in_table.field(p_id))))
+            .inner_join(podcasts.on(pod_id.eq(podcast_episode1.field(podcast_id_column))))
             .filter(podcast_episode1.field(date_of_recording).eq_any(
                 podcast_episode2.select(podcast_episode2.field(date_of_recording))
                     .filter(podcast_episode2.field(podcast_id_column)
-                        .eq(podcast_in_table.field(podcast_id)))
+                        .eq(podcast_in_table.field(pod_id)))
                     .order(podcast_episode2.field(date_of_recording).desc())
                     .limit(top_k.into())
             ))
-            .load::<(Podcast,PodcastEpisode)>(conn)
+            .load::<(PodcastEpisode,Podcast)>(conn)
             .expect("Error loading podcasts");
     }
 }
