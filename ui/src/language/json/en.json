@@ -169,5 +169,6 @@
   "update-playlist": "Update playlist",
   "updated-playlist": "Playlist updated",
   "created-playlist": "Playlist created",
-  "episode-name": "Episode name"
+  "episode-name": "Episode name",
+  "clear-all": "Clear all"
 }

@@ -168,5 +168,6 @@
   "update-playlist": "Mettre à jour la playlist",
   "updated-playlist": "Playlist mise à jour",
   "created-playlist": "Playlist créée",
-  "episode-name": "Nom de l'épisode"
+  "episode-name": "Nom de l'épisode",
+  "clear-all": "Tout effacer"
 }

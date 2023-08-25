@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import { apiURL } from '../utils/Utilities'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { removeNotification } from '../store/CommonSlice'
+import {removeNotification, setNotifications} from '../store/CommonSlice'
 import { Notification } from '../models/Notification'
 import 'material-symbols/outlined.css'
 
@@ -29,7 +29,7 @@ export const Notifications: FC = () => {
             })
     }
 
-    const displayNotifications = () => {
+    const DisplayNotification = () => {
         if (notifications.length === 0) {
             return (
                 <div className="text-center place-items-center flex px-5 text-sm text-[--fg-color-disabled]">
@@ -53,7 +53,7 @@ export const Notifications: FC = () => {
                             paddingTop: { delay: 0.15, ease: 'easeOut', duration: 0.1 }
                         }}>
                             {notification.message}
-    
+
                             <span className="material-symbols-outlined cursor-pointer text-[--modal-close-color] hover:text-[--modal-close-color-hover]" onClick={()=>{dismissNotification(notification)}}>close</span>
                         </motion.div>
                     ))}
@@ -69,9 +69,20 @@ export const Notifications: FC = () => {
             </Popover.Trigger>
 
             <Popover.Portal>
-                <Popover.Content className="bg-[--bg-color] max-h-80 max-w-xs overflow-y-auto py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
-                    {displayNotifications()}
-
+                <Popover.Content className="relative bg-[--bg-color] max-h-80 max-w-xs overflow-y-auto py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
+                    <div className="flex w-full">
+                        <div className="grow"/>
+                         <button className="border-b-[--border-color] flex active:scale-95
+                         text-sm text-[--fg-color] border-[2px] rounded-2xl  pl-2 pr-2 float-right mr-3 mb-3" onClick={()=>{
+                             notifications.forEach(n=>{
+                                    dismissNotification(n)
+                             })
+                             setNotifications([])
+                         }}>{t('clear-all')}</button>
+                    </div>
+                    <div>
+                       <DisplayNotification />
+                    </div>
                     <Popover.Arrow className="fill-[--bg-color]" />
                 </Popover.Content>
             </Popover.Portal>
