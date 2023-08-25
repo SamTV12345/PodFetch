@@ -346,7 +346,7 @@ impl PodcastEpisodeService {
     }
 
     pub fn get_url_file_suffix(url: &str) -> String {
-        let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
+        let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
         let capture = re.captures(url).unwrap();
         return capture.get(1).unwrap().as_str().to_owned();
     }

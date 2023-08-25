@@ -51,20 +51,19 @@ pub async fn get_rss_feed(
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let downloaded_episodes;
 
-    match query {
+    let downloaded_episodes = match query {
         Some(q) => {
-            downloaded_episodes = podcast_service
+             podcast_service
                 .find_all_downloaded_podcast_episodes_with_top_k(&mut db.get()
                     .unwrap(), q.top)?
         },
         None => {
-            downloaded_episodes = podcast_service
+            podcast_service
                 .find_all_downloaded_podcast_episodes(&mut db.get()
-                    .unwrap(), env.clone())?;
+                    .unwrap(), env.clone())?
         }
-    }
+    };
 
     let server_url = env.get_server_url();
 
