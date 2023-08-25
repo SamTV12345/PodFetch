@@ -167,5 +167,6 @@
   "update-playlist": "Actualizar lista de reproducción",
   "updated-playlist": "Lista de reproducción actualizada",
   "created-playlist": "Lista de reproducción creada",
-  "episode-name": "Nombre del episodio"
+  "episode-name": "Nombre del episodio",
+  "clear-all": "Borrar todo"
 }
