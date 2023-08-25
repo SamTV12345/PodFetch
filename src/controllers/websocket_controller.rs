@@ -57,8 +57,7 @@ pub async fn get_rss_feed(
         Some(q) => {
             downloaded_episodes = podcast_service
                 .find_all_downloaded_podcast_episodes_with_top_k(&mut db.get()
-                    .unwrap(), env.clone(), q.top)?
-                .collect::<Vec<PodcastEpisode>>();
+                    .unwrap(), q.top)?
         },
         None => {
             downloaded_episodes = podcast_service
