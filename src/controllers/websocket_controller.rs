@@ -32,8 +32,8 @@ pub async fn start_connection(
 }
 
 #[derive(Deserialize, Serialize)]
-struct RSSQuery {
-    top: Option<i32>
+pub struct RSSQuery {
+    top: i32
 }
 
 #[utoipa::path(
@@ -56,10 +56,8 @@ pub async fn get_rss_feed(
     match query {
         Some(q) => {
             downloaded_episodes = podcast_service
-                .find_all_downloaded_podcast_episodes(&mut db.get()
-                    .unwrap(), env.clone())?
-                .into_iter()
-                .take(q.top.unwrap_or(10) as usize)
+                .find_all_downloaded_podcast_episodes_with_top_k(&mut db.get()
+                    .unwrap(), env.clone(), q.top)?
                 .collect::<Vec<PodcastEpisode>>();
         },
         None => {

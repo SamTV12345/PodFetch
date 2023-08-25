@@ -424,7 +424,7 @@ impl PodcastEpisode{
             .filter(podcast_episode1.field(date_of_recording).eq_any(
                 podcast_episode2.select(podcast_episode2.field(date_of_recording))
                     .filter(podcast_episode2.field(podcast_id_column)
-                        .eq(podcast_in_table.field(pod_id)))
+                        .eq(pod_id))
                     .order(podcast_episode2.field(date_of_recording).desc())
                     .limit(top_k.into())
             ))
