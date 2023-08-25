@@ -346,7 +346,7 @@ impl PodcastEpisodeService {
     }
 
     pub fn get_url_file_suffix(url: &str) -> String {
-        let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
+        let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
         let capture = re.captures(url).unwrap();
         return capture.get(1).unwrap().as_str().to_owned();
     }
@@ -365,6 +365,12 @@ impl PodcastEpisodeService {
         let result = PodcastEpisode::get_episodes(conn);
         self.map_rss_podcast_episodes(env, result)
     }
+
+    pub fn find_all_downloaded_podcast_episodes_with_top_k(&mut self, conn: &mut DbConnection, top_k: i32)
+        -> Result<Vec<PodcastEpisode>, CustomError> {
+        PodcastEpisode::get_podcast_episodes_by_podcast_to_k(conn, top_k)
+    }
+
 
     fn map_rss_podcast_episodes(&mut self, env: EnvironmentService, result: Vec<PodcastEpisode>)
                                 -> Result<Vec<PodcastEpisode>, CustomError> {

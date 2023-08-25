@@ -1,7 +1,7 @@
 use crate::dbconfig::schema::*;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
-use diesel::{BoolExpressionMethods, delete, insert_into, OptionalExtension, RunQueryDsl, TextExpressionMethods};
+use diesel::{BoolExpressionMethods, delete, insert_into, JoinOnDsl, OptionalExtension, RunQueryDsl, TextExpressionMethods};
 use diesel::dsl::sql;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp, Bool};
@@ -404,6 +404,30 @@ impl PodcastEpisode{
         diesel::update(podcast_episodes.filter(episode_id.eq(episode_to_update)))
             .set(deleted.eq(deleted_status))
             .execute(conn)
+            .map_err(map_db_error)
+    }
+
+    pub fn get_podcast_episodes_by_podcast_to_k(conn: &mut DbConnection, top_k: i32)
+    -> Result<Vec<PodcastEpisode>, CustomError> {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
+        use crate::dbconfig::schema::podcast_episodes as p_episode;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::dbconfig::schema::podcasts::id as pod_id;
+        let (podcast_episode1, podcast_episode2) = diesel::alias!(p_episode as p1,
+            p_episode as p2);
+
+         podcast_episode1
+            .inner_join(podcasts.on(pod_id.eq(podcast_episode1.field(podcast_id_column))))
+            .filter(podcast_episode1.field(date_of_recording).eq_any(
+                podcast_episode2.select(podcast_episode2.field(date_of_recording))
+                    .filter(podcast_episode2.field(podcast_id_column)
+                        .eq(pod_id))
+                    .order(podcast_episode2.field(date_of_recording).desc())
+                    .limit(top_k.into())
+            ))
+            .load::<(PodcastEpisode, Podcast)>(conn)
+            .map(|x|x.into_iter().map(|(x,_)| (x)).collect::<Vec<_>>())
             .map_err(map_db_error)
     }
 }
