@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use std::env;
 use std::time::Duration;
 use crate::constants::inner_constants::{DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE};
+#[cfg(sqlite)]
 use crate::DbConnection;
 
 #[derive(Debug)]

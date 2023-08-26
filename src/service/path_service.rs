@@ -5,6 +5,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
 use crate::service::file_service::{prepare_podcast_episode_title_to_directory};
+use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, map_io_error};
 
 
@@ -39,8 +40,11 @@ impl PathService {
         }
     }
 
-    pub fn get_image_podcast_path_with_podcast_prefix(directory: &str, suffix: &str) -> String {
-        format!("{}/image.{}", directory, suffix)
+    pub fn get_image_podcast_path_with_podcast_prefix(directory: &str, suffix: &str) -> (String,
+                                                                                         String) {
+        let file_path = format!("{}/image.{}", directory, suffix);
+        let url_path =  format!("{}/image.{}", PodcastEpisodeService::map_to_local_url(directory), suffix);
+        (file_path,url_path)
     }
 
     pub fn check_if_podcast_episode_directory_available(base_path:&str, _podcast: Podcast,_conn: &mut DbConnection) ->

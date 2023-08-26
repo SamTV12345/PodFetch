@@ -384,8 +384,8 @@ impl PodcastEpisodeService {
             .map(|podcast| {
                 let mut podcast_episode_dto = self.mapping_service.map_podcastepisode_to_dto(podcast);
                 if podcast_episode_dto.is_downloaded() {
-                    let local_url = self.map_to_local_url(&podcast_episode_dto.clone().local_url);
-                    let local_image_url = self.map_to_local_url(&podcast_episode_dto.clone()
+                    let local_url = Self::map_to_local_url(&podcast_episode_dto.clone().local_url);
+                    let local_image_url = Self::map_to_local_url(&podcast_episode_dto.clone()
                         .local_image_url);
 
                     podcast_episode_dto.local_image_url = env.server_url.clone() + &local_image_url;
@@ -403,16 +403,12 @@ impl PodcastEpisodeService {
     }
 
 
-    fn map_to_local_url(&mut self, url: &str) -> String {
-        let splitted_url = url.split('/').collect::<Vec<&str>>();
-        splitted_url.iter()
-            .map(|s| return if s.starts_with("podcasts.") || s.starts_with("image.") {
-                s.to_string()
-            } else {
-                urlencoding::encode(s).clone().to_string()
-            })
-        .collect::<Vec<_>>()
-            .join("/")
+    pub fn map_to_local_url(url: &str) -> String {
+        let mut splitted_url = url.split('/').collect::<Vec<&str>>();
+        let new_last_part =urlencoding::encode(splitted_url.last().unwrap()).clone().to_string();
+        splitted_url.pop();
+        splitted_url.push(&new_last_part);
+        splitted_url.join("/")
     }
 
     pub fn find_all_downloaded_podcast_episodes_by_podcast_id(

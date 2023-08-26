@@ -33,6 +33,7 @@ actix-web = {version="4.3.0", features=["rustls"]}
 jsonwebtoken = {version="8.2.0"}
 log = "0.4.20"
 futures-util = "0.3.28"
+substring = "1.4.5"
 opml = "1.1.5"
 rand = "0.8.5"
 env_logger = "0.10.0"

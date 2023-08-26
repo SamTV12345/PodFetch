@@ -13,6 +13,8 @@ use crate::models::podcasts::Podcast;
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 use diesel::AsChangeset;
+use diesel::query_source::Alias;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
@@ -209,15 +211,14 @@ impl PodcastEpisode{
         conn: &mut DbConnection,
         podcast_episode_id: i32,
         number_to_download: i32
-    ) -> Result<Vec<PodcastEpisode>, String> {
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
-        let podcasts = podcast_episodes
+        podcast_episodes
             .filter(podcast_id.eq(podcast_episode_id))
             .limit(number_to_download as i64)
             .order(date_of_recording.desc())
             .load::<PodcastEpisode>(conn)
-            .expect("Error loading podcasts");
-        Ok(podcasts)
+            .map_err(map_db_error)
     }
 
     pub fn update_total_podcast_time_and_image(
@@ -225,7 +226,7 @@ impl PodcastEpisode{
         image_url: &str,
         local_download_url: &str,
         conn: &mut DbConnection,
-    ) -> Result<(), String> {
+    ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
@@ -234,39 +235,35 @@ impl PodcastEpisode{
             .filter(episode_id_column.eq(episode_id))
             .first::<PodcastEpisode>(conn)
             .optional()
-            .expect("Error loading podcast episode by id");
+            .map_err(map_db_error)?;
 
-        match result {
-            Some(..) => {
-                diesel::update(podcast_episodes)
-                    .filter(episode_id_column.eq(episode_id))
-                    .set((
-                        local_image_url_column.eq(image_url),
-                        local_url_column.eq(local_download_url),
-                    ))
-                    .execute(conn)
-                    .expect("Error updating local image url");
-                Ok(())
-            }
-            None => {
-                panic!("Podcast episode not found");
-            }
+        if result.is_some() {
+            diesel::update(podcast_episodes)
+                .filter(episode_id_column.eq(episode_id))
+                .set((
+                    local_image_url_column.eq(PodcastEpisodeService::map_to_local_url(image_url)),
+                    local_url_column.eq(PodcastEpisodeService::map_to_local_url(local_download_url)),
+                ))
+                .execute(conn)
+                .expect("Error updating local image url");
         }
+        Ok(())
     }
 
-    pub fn delete_episodes_of_podcast(conn: &mut DbConnection, podcast_id: i32) -> Result<(), String> {
+    pub fn delete_episodes_of_podcast(conn: &mut DbConnection, podcast_id: i32) -> Result<(),
+        CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
-
 
         delete(podcast_episodes)
             .filter(podcast_id_column.eq(podcast_id))
             .execute(conn)
-            .expect("Error deleting podcast episodes");
+            .map_err(map_db_error)?;
         Ok(())
     }
 
-    pub fn update_podcast_image(id: &str, image_url: &str, conn: &mut DbConnection) -> Result<(), String> {
+    pub fn update_podcast_image(id: &str, image_url: &str, conn: &mut DbConnection) -> Result<(),
+                                                                                               CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::dbconfig::schema::podcasts::dsl::image_url as image_url_column;
         use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
@@ -281,7 +278,7 @@ impl PodcastEpisode{
                 diesel::update(dsl_podcast.filter(directory_id.eq(id)))
                     .set(image_url_column.eq(image_url))
                     .execute(conn)
-                    .expect("Error updating podcast episode");
+                    .map_err(map_db_error)?;
                 Ok(())
             }
             None => {
@@ -290,7 +287,7 @@ impl PodcastEpisode{
         }
     }
 
-    pub fn check_if_downloaded(download_episode_url: &str, conn: &mut DbConnection) -> Result<bool, String> {
+    pub fn check_if_downloaded(download_episode_url: &str, conn: &mut DbConnection) -> Result<bool, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         use crate::dbconfig::schema::podcast_episodes::url as podcast_episode_url;
@@ -319,7 +316,7 @@ impl PodcastEpisode{
         download_url_of_episode: &str,
         status_to_insert: &str,
         conn: &mut DbConnection,
-    ) -> Result<PodcastEpisode, String> {
+    ) -> Result<PodcastEpisode, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         let updated_podcast =
@@ -418,16 +415,15 @@ impl PodcastEpisode{
             p_episode as p2);
 
          podcast_episode1
+                 .select(Alias::fields(&podcast_episode1, p_episode::all_columns))
             .inner_join(podcasts.on(pod_id.eq(podcast_episode1.field(podcast_id_column))))
             .filter(podcast_episode1.field(date_of_recording).eq_any(
                 podcast_episode2.select(podcast_episode2.field(date_of_recording))
-                    .filter(podcast_episode2.field(podcast_id_column)
-                        .eq(pod_id))
+                    .filter(podcast_episode2.field(podcast_id_column).eq(pod_id))
                     .order(podcast_episode2.field(date_of_recording).desc())
                     .limit(top_k.into())
             ))
-            .load::<(PodcastEpisode, Podcast)>(conn)
-            .map(|x|x.into_iter().map(|(x,_)| (x)).collect::<Vec<_>>())
+            .load::<PodcastEpisode>(conn)
             .map_err(map_db_error)
     }
 }

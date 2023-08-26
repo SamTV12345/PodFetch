@@ -102,10 +102,10 @@ impl FileService {
         let image_response = self.client.get(image_url).send().await.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(image_url);
         let file_path = PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix);
-        let mut image_out = std::fs::File::create(file_path.clone()).unwrap();
+        let mut image_out = std::fs::File::create(file_path.0.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
-        PodcastEpisode::update_podcast_image(podcast_id, &file_path, conn).unwrap();
+        PodcastEpisode::update_podcast_image(podcast_id, &file_path.1, conn).unwrap();
     }
 
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> Result<(), CustomError> {
