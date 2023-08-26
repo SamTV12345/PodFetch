@@ -31,6 +31,11 @@ pub async fn start_connection(
     Ok(resp)
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct RSSQuery {
+    top: i32
+}
+
 #[utoipa::path(
 context_path = "/api/v1",
 responses(
@@ -40,14 +45,25 @@ responses(
 pub async fn get_rss_feed(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
     db: Data<DbPool>, env: Data<Mutex<EnvironmentService>>,
+    query: Option<web::Query<RSSQuery>>,
 ) -> Result<HttpResponse, CustomError> {
     let env = env.lock().ignore_poison();
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let downloaded_episodes = podcast_service
-        .find_all_downloaded_podcast_episodes(&mut db.get()
-            .unwrap(), env.clone())?;
+
+    let downloaded_episodes = match query {
+        Some(q) => {
+             podcast_service
+                .find_all_downloaded_podcast_episodes_with_top_k(&mut db.get()
+                    .unwrap(), q.top)?
+        },
+        None => {
+            podcast_service
+                .find_all_downloaded_podcast_episodes(&mut db.get()
+                    .unwrap(), env.clone())?
+        }
+    };
 
     let server_url = env.get_server_url();
 
