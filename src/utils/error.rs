@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_map_io_error() {
         let io_error = std::io::Error::new(ErrorKind::NotFound, "File not found");
-        let custom_error = map_io_error(io_error);
+        let custom_error = map_io_error(io_error, None);
         assert_eq!(custom_error.status_code(), StatusCode::NOT_FOUND);
         assert_eq!(custom_error.to_string(), "Requested file was not found");
     }
