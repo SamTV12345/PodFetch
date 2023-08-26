@@ -12,7 +12,6 @@ use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
 use diesel::{OptionalExtension, RunQueryDsl};
-use diesel::query_dsl::InternalJoinDsl;
 use dotenv::var;
 use log::error;
 use regex::Regex;
