@@ -95,7 +95,8 @@ impl FilenameBuilder {
                 .create_podcast_episode_dir(self.directory.clone(),conn)?;
 
             let image_last_slash = self.podcast.image_url.rfind("/").unwrap();
-
+            println!("Resulting base string {}", self.podcast.image_url.substring(0,
+                                                                                image_last_slash));
             return Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", resulting_directory,
                                                self.filename.clone(), self.suffix.clone()),
                  format!("{}/{}.{}", resulting_directory,self.image_filename.clone(),
@@ -105,7 +106,7 @@ impl FilenameBuilder {
                         .clone(), self.suffix.clone()),
                     format!("{}/{}.{}", self.podcast.image_url.substring(0,image_last_slash), self
                             .image_filename
-                        .clone(), self.suffix.clone()))
+                        .clone(), self.image_suffix.clone()))
             );
         }
         let resulting_directory = self.clone().create_podcast_episode_dir(format!("{}/{}",self
@@ -113,7 +114,8 @@ impl FilenameBuilder {
 
         Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", resulting_directory,self.filename.clone(),
                                            self.suffix.clone())
-                                   ,format!("{}/{}.{}", resulting_directory,self.image_filename.clone(), self.image_suffix.clone()),
+                                   ,format!("{}/{}.{}", resulting_directory,self.image_filename.clone(),
+                                            self.image_suffix.clone()),
                                    format!("{}/{}.{}", self.podcast.image_url, self.filename.clone(), self.suffix.clone()),
                                    format!("{}/{}.{}", self.podcast.image_url, self
                                        .image_filename.clone(), self.suffix.clone())))
