@@ -406,10 +406,8 @@ impl PodcastEpisodeService {
     pub fn map_to_local_url(url: &str) -> String {
         let mut splitted_url = url.split('/').collect::<Vec<&str>>();
         let new_last_part =urlencoding::encode(splitted_url.last().unwrap()).clone().to_string();
-        println!("New last part: {}", new_last_part);
         splitted_url.pop();
         splitted_url.push(&new_last_part);
-        println!("Splitted url: {:?}", splitted_url);
         splitted_url.join("/")
     }
 

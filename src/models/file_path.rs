@@ -1,9 +1,11 @@
+use std::fmt::format;
 use substring::Substring;
 use crate::DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::{prepare_podcast_episode_title_to_directory};
 use crate::service::path_service::PathService;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 
 #[derive(Default, Clone, Debug)]
@@ -91,6 +93,7 @@ impl FilenameBuilder {
 
     pub fn build(self,conn: &mut DbConnection)->Result<FilenameBuilderReturn,CustomError>{
         let image_last_slash = self.podcast.image_url.rfind("/").unwrap();
+        let base_url = self.podcast.image_url.substring(0,image_last_slash);
 
         if self.raw_filename{
             let resulting_directory = self.clone()
@@ -100,30 +103,33 @@ impl FilenameBuilder {
                                                self.filename.clone(), self.suffix.clone()),
                  format!("{}/{}.{}", resulting_directory,self.image_filename.clone(),
                    self.image_suffix.clone()),
-                    format!("{}/{}.{}", self.podcast.image_url.substring(0,image_last_slash), self
+                    format!("{}/{}.{}", base_url, self
                         .filename
                         .clone(), self.suffix.clone()),
-                    format!("{}/{}.{}", self.podcast.image_url.substring(0,image_last_slash), self
+                    format!("{}/{}.{}", base_url, self
                             .image_filename
                         .clone(), self.image_suffix.clone()))
             );
         }
+        let sub_episode_path = format!("/{}", self.episode.clone());
         let resulting_directory = self.clone().create_podcast_episode_dir(format!("{}/{}",self
             .directory.clone(), self.episode.clone()),conn)?;
+        let resulting_link = format!("{base_url}/{}", PodcastEpisodeService::map_to_local_url(&sub_episode_path));
 
-        Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", resulting_directory,self.filename.clone(),
+        Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", resulting_directory,
+                                              self.filename.clone(),
                                            self.suffix.clone())
-                                   ,format!("{}/{}.{}", resulting_directory,self.image_filename.clone(),
+                                   ,format!("{}/{}.{}", resulting_directory,
+                                            self.image_filename.clone(),
                                             self.image_suffix.clone()),
-                                   format!("{}/{}.{}", self.podcast.image_url.substring(0,image_last_slash),
+                                   format!("{}{}.{}", resulting_link,
                                            self.filename.clone(), self.suffix.clone()),
-                                   format!("{}/{}.{}", self.podcast.image_url.substring(0,image_last_slash)
+                                   format!("{}{}.{}", resulting_link
                                            , self.image_filename.clone(), self.image_suffix.clone())))
     }
 
 
-    fn create_podcast_episode_dir(self,dirname:String,conn: &mut DbConnection)->Result<String,
-        CustomError>{
+    fn create_podcast_episode_dir(self,dirname:String,conn: &mut DbConnection)->Result<String, CustomError>{
         PathService::check_if_podcast_episode_directory_available
             (&dirname, self.podcast, conn)
     }
