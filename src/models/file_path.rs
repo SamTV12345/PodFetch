@@ -122,9 +122,9 @@ impl FilenameBuilder {
                                    ,format!("{}/{}.{}", resulting_directory,
                                             self.image_filename.clone(),
                                             self.image_suffix.clone()),
-                                   format!("{}{}.{}", resulting_link,
+                                   format!("{}/{}.{}", resulting_link,
                                            self.filename.clone(), self.suffix.clone()),
-                                   format!("{}{}.{}", resulting_link
+                                   format!("{}/{}.{}", resulting_link
                                            , self.image_filename.clone(), self.image_suffix.clone())))
     }
 
