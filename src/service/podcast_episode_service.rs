@@ -12,6 +12,7 @@ use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
 use diesel::{OptionalExtension, RunQueryDsl};
+use diesel::query_dsl::InternalJoinDsl;
 use dotenv::var;
 use log::error;
 use regex::Regex;
@@ -404,15 +405,11 @@ impl PodcastEpisodeService {
 
 
     pub fn map_to_local_url(url: &str) -> String {
-        let splitted_url = url.split('/').collect::<Vec<&str>>();
-        splitted_url.iter()
-            .map(|s| return if s.starts_with("podcasts.") || s.starts_with("image.") {
-                s.to_string()
-            } else {
-                urlencoding::encode(s).clone().to_string()
-            })
-        .collect::<Vec<_>>()
-            .join("/")
+        let mut splitted_url = url.split('/').collect::<Vec<&str>>();
+        let new_last_part =urlencoding::encode(splitted_url.last().unwrap()).clone().to_string();
+        splitted_url.pop();
+        splitted_url.push(&new_last_part);
+        splitted_url.join("/")
     }
 
     pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
