@@ -57,8 +57,8 @@ impl ResponseError for CustomError {
     }
 }
 
-pub fn map_io_error(e: std::io::Error) -> CustomError {
-    error!("IO error: {}", e);
+pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
+    error!("IO error: {} for path {}", e, path.unwrap_or("".to_string()));
     match e.kind() {
         std::io::ErrorKind::NotFound => CustomError::NotFound,
         std::io::ErrorKind::PermissionDenied => CustomError::Forbidden,
@@ -66,8 +66,8 @@ pub fn map_io_error(e: std::io::Error) -> CustomError {
     }
 }
 
-pub fn map_io_extra_error(e: fs_extra::error::Error) ->CustomError {
-    error!("IO extra error: {}", e);
+pub fn map_io_extra_error(e: fs_extra::error::Error, path: Option<String>) ->CustomError {
+    error!("IO extra error: {} for path {}", e, path.unwrap_or("".to_string()));
     CustomError::Unknown
 }
 

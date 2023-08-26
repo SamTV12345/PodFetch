@@ -27,7 +27,7 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
-use crate::utils::error::{CustomError};
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Clone)]
 pub struct PodcastEpisodeService {
@@ -155,10 +155,10 @@ impl PodcastEpisodeService {
             log::info!("The podcast {} has moved to {}", podcast.name,
                 returned_data_from_podcast_insert.url);
             Podcast::update_podcast_urls_on_redirect(podcast.id, returned_data_from_podcast_insert.url, conn);
-            Self::update_episodes_on_redirect(conn, channel.items());
+            Self::update_episodes_on_redirect(conn, channel.items())?;
         }
 
-        Self::handle_itunes_extension(conn, &podcast, &channel);
+        Self::handle_itunes_extension(conn, &podcast, &channel)?;
 
 
         self.update_podcast_fields(channel.clone(), podcast.id, conn)?;
@@ -272,7 +272,8 @@ impl PodcastEpisodeService {
         Ok(())
     }
 
-    fn handle_itunes_extension(conn: &mut DbConnection, podcast: &Podcast, channel: &Channel) {
+    fn handle_itunes_extension(conn: &mut DbConnection, podcast: &Podcast, channel: &Channel)
+        ->Result<(), CustomError> {
         if channel.itunes_ext.is_some() {
             let extension = channel.itunes_ext.clone().unwrap();
 
@@ -285,15 +286,17 @@ impl PodcastEpisodeService {
                 let channel = Channel::read_from(returned_data_from_server.content.as_bytes())
                     .unwrap();
                 let items = channel.items();
-                Self::update_episodes_on_redirect(conn, items);
+                Self::update_episodes_on_redirect(conn, items)?;
             }
         }
+        Ok(())
     }
 
 
-    fn update_episodes_on_redirect(conn: &mut DbConnection, items: &[Item]) {
+    fn update_episodes_on_redirect(conn: &mut DbConnection, items: &[Item]) ->Result<(), CustomError> {
         for (_, item) in items.iter().enumerate() {
-            let opt_found_podcast_episode = Self::get_podcast_episode_by_guid(conn, item.title.as_ref().unwrap());
+            let opt_found_podcast_episode = Self::get_podcast_episode_by_guid(conn, item.title
+                .as_ref().unwrap())?;
             if let Some(found_podcast_episode) = opt_found_podcast_episode{
                 let mut podcast_episode = found_podcast_episode.clone();
                 if item.itunes_ext.is_some() {
@@ -304,17 +307,19 @@ impl PodcastEpisodeService {
                 PodcastEpisode::update_podcast_episode(conn, podcast_episode);
             }
         }
+        Ok(())
     }
 
     fn get_podcast_episode_by_guid(conn: &mut DbConnection, guid_to_search: &str) ->
-    Option<PodcastEpisode> {
+                                                                                  Result<Option<PodcastEpisode>, CustomError> {
         use diesel::QueryDsl;
         use diesel::ExpressionMethods;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         podcast_episodes
             .filter(guid.eq(guid_to_search))
             .first::<PodcastEpisode>(conn)
-            .optional().expect("Error loading podcast episode")
+            .optional()
+            .map_err(map_db_error)
     }
 
     fn parse_duration(duration_str: &str) -> u32 {
@@ -346,7 +351,7 @@ impl PodcastEpisodeService {
     }
 
     pub fn get_url_file_suffix(url: &str) -> String {
-        let re = Regex::new(r#"\.(\w+)(?:\?.*)?$"#).unwrap();
+        let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
         let capture = re.captures(url).unwrap();
         return capture.get(1).unwrap().as_str().to_owned();
     }

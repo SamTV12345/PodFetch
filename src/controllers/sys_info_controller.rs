@@ -26,9 +26,11 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    let podcast_byte_size = get_size("podcasts")
-        .map_err(map_io_extra_error)?;
-    Ok(HttpResponse::Ok().json(SysExtraInfo {
+    const PATH:&str = "podcasts";
+    let podcast_byte_size = get_size(PATH)
+        .map_err(|e|map_io_extra_error(e, Some(PATH.to_string())))?;
+    Ok(HttpResponse::Ok()
+        .json(SysExtraInfo {
         system: sys,
         podcast_directory: podcast_byte_size,
     }))

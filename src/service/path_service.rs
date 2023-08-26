@@ -47,7 +47,7 @@ impl PathService {
                                                                                           Result<String, CustomError> {
         let mut i = 0;
         if !Path::new(&base_path).exists() {
-            std::fs::create_dir(base_path).map_err(map_io_error)?;
+            std::fs::create_dir(base_path.clone()).map_err(|v|map_io_error(v, Some(base_path.to_string())))?;
             return Ok(base_path.to_string());
         }
 
@@ -57,7 +57,7 @@ impl PathService {
         let final_path = format!("{}-{}",base_path, i);
         // This is save to insert because this directory does not exist
         std::fs::create_dir(&final_path)
-            .map_err(map_io_error)?;
+            .map_err(|v|map_io_error(v,Some(base_path.to_string())))?;
         Ok(final_path)
     }
 }

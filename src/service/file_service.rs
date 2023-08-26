@@ -64,9 +64,13 @@ impl FileService {
     DbConnection)
         ->Result<String, CustomError> {
         let escaped_title = prepare_podcast_title_to_directory(podcast_title,conn)?;
-        if !Path::new(&format!("podcasts/{}", escaped_title)).exists() {
-            std::fs::create_dir(format!("podcasts/{}", escaped_title)).map_err(map_io_error)?;
-            Ok(format!("podcasts/{}", escaped_title))
+        let escaped_path = format!("podcasts/{}", escaped_title);
+        if !Path::new(&escaped_path).exists() {
+            std::fs::create_dir(escaped_path.clone()).map_err(|err|map_io_error(err,
+                                                                                Some(escaped_path
+                                                                                    .clone())
+            ))?;
+            Ok(escaped_path)
         }
         else{
             // Check if this is a new podcast with the same name as an old one
@@ -76,7 +80,7 @@ impl FileService {
             match podcast {
                 Some(_)=>{
                     // is the same podcast
-                    Ok(format!("podcasts/{}", escaped_title))
+                    Ok(escaped_path)
                 }
                 None=>{
                     // has not been inserted into the database yet
@@ -86,7 +90,7 @@ impl FileService {
                     }
                     // This is save to insert because this directory does not exist
                     std::fs::create_dir(format!("podcasts/{}-{}", escaped_title, i))
-                        .expect("Error creating directory");
+                        .map_err(|err|map_io_error(err,Some(format!("podcasts/{}-{}", escaped_title, i))))?;
                     Ok(format!("podcasts/{}-{}", escaped_title, i))
                 }
             }
@@ -107,10 +111,11 @@ impl FileService {
     pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
         let settings = Setting::get_settings(&mut establish_connection())?;
-        std::fs::remove_dir_all(format!(
+        let path = format!(
             "{}/'{}'",
             podcast.directory_name, perform_replacement(&episode.name, settings.unwrap())
-        )).map_err(map_io_error)
+        );
+        std::fs::remove_dir_all(path.clone()).map_err(|v|map_io_error(v, Some(path)))
     }
 
     pub fn delete_podcast_files(podcast_dir: &str){
