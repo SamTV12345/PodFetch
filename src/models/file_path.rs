@@ -91,7 +91,7 @@ impl FilenameBuilder {
     }
 
     pub fn build(self,conn: &mut DbConnection)->Result<FilenameBuilderReturn,CustomError>{
-        let image_last_slash = self.podcast.image_url.rfind("/").unwrap();
+        let image_last_slash = self.podcast.image_url.rfind('/').unwrap();
         let base_url = self.podcast.image_url.substring(0,image_last_slash);
 
         if self.raw_filename{

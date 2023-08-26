@@ -44,7 +44,7 @@ impl PathService {
                                                                                          String) {
         let file_path = format!("{}/image.{}", directory, suffix);
         let url_path =  format!("{}/image.{}", PodcastEpisodeService::map_to_local_url(directory), suffix);
-        return (file_path,url_path)
+        (file_path,url_path)
     }
 
     pub fn check_if_podcast_episode_directory_available(base_path:&str, _podcast: Podcast,_conn: &mut DbConnection) ->

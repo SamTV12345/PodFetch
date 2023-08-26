@@ -237,7 +237,7 @@ impl PodcastEpisode{
             .optional()
             .map_err(map_db_error)?;
 
-        if let Some(..) = result {
+        if result.is_some() {
             diesel::update(podcast_episodes)
                 .filter(episode_id_column.eq(episode_id))
                 .set((
