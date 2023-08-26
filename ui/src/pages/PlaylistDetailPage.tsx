@@ -26,16 +26,16 @@ export const PlaylistDetailPage = ()=>{
             if(metadata.percentage>99){
                 axios.delete(apiURL+"/playlist/"+params.id+"/episode/"+current_podcast_episode!.id)
                     .then(()=>{
-                        const currentIndex = selectedPlaylist!.items.findIndex(i=>i.id===current_podcast_episode!.id)
+                        const currentIndex = selectedPlaylist!.items.findIndex(i=>i.podcastEpisode.id===current_podcast_episode!.id)
                         if(currentIndex === selectedPlaylist!.items.length-1){
                             return
                         }
                         const nextEpisode = selectedPlaylist!.items[currentIndex+1]
-                        axios.get(apiURL + "/podcast/episode/" + nextEpisode.episode_id)
+                        axios.get(apiURL + "/podcast/episode/" + nextEpisode.podcastEpisode.episode_id)
                             .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                                nextEpisode.status === 'D'
-                                    ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data)))
-                                    : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data)))
+                                nextEpisode.podcastEpisode.status === 'D'
+                                    ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data)))
+                                    : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data)))
 
                                 dispatch(setPlaying(true))
                             })
@@ -43,7 +43,7 @@ export const PlaylistDetailPage = ()=>{
                     dispatch(setSelectedPlaylist({
                         id: selectedPlaylist!.id,
                         name: selectedPlaylist!.name,
-                        items: selectedPlaylist!.items.filter(i=>i.id!==current_podcast_episode!.id)
+                        items: selectedPlaylist!.items.filter(i=>i.podcastEpisode.id!==current_podcast_episode!.id)
                     }))
                 })
             }
@@ -62,7 +62,7 @@ export const PlaylistDetailPage = ()=>{
         <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
         <PodcastInfoModal/>
         {selectedPlaylist.items.map((episode, index) => {
-            return <PodcastDetailItem episode={episode} key={episode.id} index={index} episodesLength={selectedPlaylist.items.length}/>
+            return <PodcastDetailItem episode={episode} key={episode.podcastEpisode.id} index={index} episodesLength={selectedPlaylist.items.length}/>
         })}
     </div>
 }

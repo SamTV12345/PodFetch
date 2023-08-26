@@ -13,6 +13,7 @@ use crate::DbPool;
 use crate::models::favorites::Favorite;
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
@@ -26,6 +27,14 @@ pub struct OptionalId {
 
 impl OptionalId {}
 
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PodcastEpisodeWithHistory {
+    pub podcast_episode: PodcastEpisode,
+    pub podcast_history_item: Option<PodcastHistoryItem>,
+}
+
 #[utoipa::path(
 context_path = "/api/v1",
 responses(
@@ -36,6 +45,7 @@ tag = "podcast_episodes"
 #[get("/podcast/{id}/episodes")]
 pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
+    requester: Option<web::ReqData<User>>,
     last_podcast_episode: Query<OptionalId>,
     mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>) -> Result<HttpResponse, CustomError> {
@@ -44,12 +54,19 @@ pub async fn find_all_podcast_episodes_of_podcast(
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(&mut conn.get().unwrap(), id_num,
-                                                                     last_podcast_episode.last_podcast_episode)?;
+                                                                     last_podcast_episode
+                                                                         .last_podcast_episode,
+                                                                     requester.unwrap().into_inner())?;
     let mapped_podcasts = res
         .into_iter()
-        .map(|podcast| mapping_service
-            .map_podcastepisode_to_dto(&podcast))
-        .collect::<Vec<PodcastEpisode>>();
+        .map(|podcast| {
+            let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast.0);
+            return PodcastEpisodeWithHistory{
+                podcast_episode: mapped_podcast_episode,
+                podcast_history_item: podcast.1,
+            };
+        })
+        .collect::<Vec<PodcastEpisodeWithHistory>>();
     Ok(HttpResponse::Ok()
         .json(mapped_podcasts))
 }

@@ -19,7 +19,6 @@ type EpisodeSearchProps = {
 export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', onClickResult = () => null,
                                                           resultsMaxHeight = 'none',
                                                           showBlankState = true }) => {
-    const navigate = useNavigate()
     const [searching, setSearching] = useState<boolean>()
     const [searchName, setSearchName] = useState<string>('')
     const [searchResults, setSearchResults] = useState<PodcastEpisode[]>([])
@@ -43,7 +42,8 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
         <>
             {/* Search field */}
             <div className="flex items-center relative">
-                <CustomInput className="pl-10 w-full" id="search-input" onChange={(v) => setSearchName(v.target.value)} placeholder={t('search-episodes')!} type="text" value={searchName} />
+                <CustomInput className="pl-10 w-full" id="search-input" onChange={(v) =>
+                    setSearchName(v.target.value)} placeholder={t('search-episodes')!} type="text" value={searchName} />
 
                 <span className="material-symbols-outlined absolute left-2 text-[--input-icon-color]">search</span>
             </div>

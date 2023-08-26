@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::io::Error;
 use chrono::NaiveDateTime;
@@ -129,7 +128,8 @@ impl Episode{
     }
 
     pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut DbConnection,
-                                                 episode_1: String) ->Option<Episode>{
+                                                 episode_1: String) ->Result<Option<Episode>,
+        CustomError> {
 
         use crate::dbconfig::schema::episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::*;
@@ -146,7 +146,7 @@ impl Episode{
             .select(episodes::all_columns())
             .first::<Episode>(conn)
             .optional()
-            .expect("")
+            .map_err(map_db_error)
     }
 
     pub fn convert_to_podcast_history_item(&self, podcast_1: Podcast,pod_episode: PodcastEpisode)
@@ -167,26 +167,20 @@ impl Episode{
                                          CustomError>{
         use crate::dbconfig::schema::episodes::dsl::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcasts as podcast_table;
         use diesel::JoinOnDsl;
-        let mut map:HashMap<String,Podcast> = HashMap::new();
 
         let query = podcast_episodes
             .inner_join(episodes.on(podcast.eq(url)))
+            .inner_join(podcast_table::table.on(podcast_table::rssfeed.eq(podcast)))
             .filter(username.eq(username1))
-            .load::<(PodcastEpisode,Episode)>(conn)
+            .load::<(PodcastEpisode,Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
 
-
         let mapped_watched_episodes = query.iter().map(|e|{
-            let opt_podcast = map.get(&*e.clone().1.podcast);
-            if opt_podcast.is_none(){
-                let podcast_found = Podcast::get_podcast_by_rss_feed(e.clone().1.podcast, conn).unwrap();
-                map.insert(e.clone().1.podcast.clone(),podcast_found.clone());
-            }
-            let found_podcast = map.get(&e.clone().1.podcast).cloned().unwrap();
             PodcastWatchedEpisodeModelWithPodcastEpisode{
                 id: e.clone().1.id,
-                podcast_id: found_podcast.id,
+                podcast_id: e.clone().2.id,
                 episode_id: e.clone().0.episode_id,
                 url: e.clone().0.url,
                 name: e.clone().0.name,
@@ -195,7 +189,7 @@ impl Episode{
                 date: e.clone().1.timestamp,
                 total_time: e.clone().0.total_time,
                 podcast_episode: e.clone().0,
-                podcast: found_podcast.clone(),
+                podcast: e.2.clone(),
             }
         }).collect();
         Ok(mapped_watched_episodes)

@@ -102,7 +102,7 @@ impl PodcastHistoryItem{
                 match history_item {
                     Some(found_history_item) => {
                         let option_episode = Episode::get_watch_log_by_username_and_episode
-                            (username_to_find.clone(), conn, found_podcast.clone().url);
+                            (username_to_find.clone(), conn, found_podcast.clone().url)?;
                         if let Some(episode) = option_episode {
                             if episode.action == EpisodeAction::Play.to_string() && episode
                                 .position.unwrap()>found_history_item.watched_time && episode.timestamp>found_history_item.date{

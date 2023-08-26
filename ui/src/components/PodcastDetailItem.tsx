@@ -11,9 +11,10 @@ import { setCurrentPodcast, setCurrentPodcastEpisode, setPlaying } from '../stor
 import { apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML } from '../utils/Utilities'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import 'material-symbols/outlined.css'
+import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 
 type PodcastDetailItemProps = {
-    episode: PodcastEpisode,
+    episode: EpisodesWithOptionalTimeline,
     index: number,
     episodesLength: number
 }
@@ -27,18 +28,18 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
 
     return (
         <>
-            <div key={episode.episode_id} id={'episode_' + episode.id} className="
+            <div key={episode.podcastEpisode.episode_id} id={'episode_' + episode.podcastEpisode.id} className="
                 grid
                 grid-cols-[1fr_auto] grid-rows-[auto_auto_auto]
                 xs:grid-cols-[auto_1fr_auto]
                 gap-x-4 gap-y-0 xs:gap-y-2
                 items-center group cursor-pointer mb-12
             " onClick={() => {
-                dispatch(setInfoModalPodcast(episode))
+                dispatch(setInfoModalPodcast(episode.podcastEpisode))
                 dispatch(setInfoModalPodcastOpen(true))
             }}>
                 {/* Thumbnail */}
-                <img src={episode.image_url} alt={episode.name} className="
+                <img src={episode.podcastEpisode.image_url} alt={episode.podcastEpisode.name} className="
                     hidden xs:block
                     col-start-1 col-end-2 row-start-1 row-end-4
                     self-center rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]
@@ -51,21 +52,22 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     self-center
                     grid grid-cols-[7rem_1fr] gap-x-4 items-center
                 ">
-                    <span className="text-sm text-[--fg-secondary-color]">{formatTime(episode.date_of_recording)}</span>
+                    <span className="text-sm text-[--fg-secondary-color]">{formatTime(episode.podcastEpisode.date_of_recording)}</span>
 
-                    <span title={t('download-to-server') as string} className={`material-symbols-outlined text-[--fg-icon-color] ${episode.status === 'D' ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
+                    <span title={t('download-to-server') as string} className={`material-symbols-outlined text-[--fg-icon-color]
+                     ${episode.podcastEpisode.status === 'D' ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
                         // Prevent icon click from triggering info modal
                         e.stopPropagation()
 
                         // Prevent another download if already downloaded
-                        if (episode.status === 'D') {
+                        if (episode.podcastEpisode.status === 'D') {
                             return
                         }
 
-                        axios.put(apiURL + "/podcast/" + episode.episode_id + "/episodes/download")
+                        axios.put(apiURL + "/podcast/" + episode.podcastEpisode.episode_id + "/episodes/download")
                             .then(()=>{
                                 enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
-                                dispatch(setEpisodeDownloaded(episode.episode_id))
+                                dispatch(setEpisodeDownloaded(episode.podcastEpisode.episode_id))
                             })
                     }}>cloud_download</span>
                 </div>
@@ -75,7 +77,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     col-start-1 col-end-2 row-start-2 row-end-3
                     xs:col-start-2 xs:col-end-3
                     font-bold leading-tight text-[--fg-color] transition-color group-hover:text-[--fg-color-hover]
-                ">{episode.name}</span>
+                ">{episode.podcastEpisode.name}</span>
 
                 {/* Description */}
                 <div className="
@@ -83,22 +85,22 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     col-start-1 col-end-3 row-start-3 row-end-4
                     xs:col-start-2 xs:col-end-3
                     leading-[1.75] text-sm text-[--fg-color] transition-color group-hover:text-[--fg-color-hover]
-                " dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
+                " dangerouslySetInnerHTML={removeHTML(episode.podcastEpisode.description)}></div>
 
                 {/* Play button */}
                 <span className="
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
                     self-center material-symbols-outlined cursor-pointer !text-5xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90
-                " key={episode.episode_id + 'icon'} onClick={(e) => {
+                " key={episode.podcastEpisode.episode_id + 'icon'} onClick={(e) => {
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
 
-                    axios.get(apiURL + '/podcast/episode/' + episode.episode_id)
+                    axios.get(apiURL + '/podcast/episode/' + episode.podcastEpisode.episode_id)
                         .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                            episode.status === 'D'
-                            ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode, response.data)))
-                            : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode, response.data)))
+                            episode.podcastEpisode.status === 'D'
+                            ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data)))
+                            : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data)))
 
                             currentPodcast&& dispatch(setCurrentPodcast(currentPodcast))
                             dispatch(setPlaying(true))
@@ -109,7 +111,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
             {/* Infinite scroll */
             index === (episodesLength - 5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    axios.get(apiURL + '/podcast/' + params.id + '/episodes?last_podcast_episode=' + episode.date_of_recording)
+                    axios.get(apiURL + '/podcast/' + params.id + '/episodes?last_podcast_episode=' + episode.podcastEpisode.date_of_recording)
                         .then((response) => {
                             dispatch(addPodcastEpisodes(response.data))
                         })

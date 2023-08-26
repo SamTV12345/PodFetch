@@ -1,8 +1,8 @@
 use actix_web::{delete, get, HttpResponse, post, put, web};
 use actix_web::web::Data;
+use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::DbPool;
 use crate::models::playlist::Playlist;
-use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
 use crate::utils::error::CustomError;
 
@@ -21,7 +21,7 @@ pub struct PlaylistItem {
 pub struct PlaylistDto {
     pub id: String,
     pub name: String,
-    pub items: Vec<PodcastEpisode>
+    pub items: Vec<PodcastEpisodeWithHistory>
 }
 
 
@@ -77,8 +77,9 @@ pub async fn get_playlist_by_id(requester: Option<web::ReqData<User>>, conn: Dat
     let user_id = requester.clone().unwrap().id;
     let playlist = Playlist::get_playlist_by_user_and_id(playlist_id.clone(), user_id,
                                           &mut conn.get().unwrap())?;
-    let playlist = Playlist::get_podcast_dto(playlist_id.clone(), &mut conn.get().unwrap(),
-                                             playlist,user_id)?;
+    // TODO hand over the timeline
+    let playlist = Playlist::get_playlist_dto(playlist_id.clone(), &mut conn.get().unwrap(),
+                                              playlist, user_id)?;
     Ok(HttpResponse::Ok().json(playlist))
 }
 

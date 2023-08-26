@@ -32,7 +32,7 @@ pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>, co
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Gets the last watched podcasts.")),
+(status = 200, description = "Gets the last watched podcast episodes.")),
 tag="watchtime"
 )]
 #[get("/podcast/episode/lastwatched")]

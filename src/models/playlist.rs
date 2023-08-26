@@ -170,10 +170,10 @@ impl Playlist {
         });
 
         let updated_playlist = Self::get_playlist_by_id(playlist_id.clone(), conn)?;
-        Self::get_podcast_dto(playlist_id, conn, updated_playlist, user_id)
+        Self::get_playlist_dto(playlist_id, conn, updated_playlist, user_id)
     }
 
-    pub(crate) fn get_podcast_dto(playlist_id: String, conn: &mut DbConnection, playlist:
+    pub(crate) fn get_playlist_dto(playlist_id: String, conn: &mut DbConnection, playlist:
     Playlist, user_id: i32) ->
                                                                                          Result<PlaylistDto, CustomError> {
         if playlist.user_id != user_id{

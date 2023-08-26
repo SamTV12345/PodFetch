@@ -34,7 +34,7 @@ export const CreatePlaylistModal = () => {
     const handlePlaylistCreateOrUpdate = ()=>{
         const itemsMappedToIDs = currentPlaylistToEdit!.items.map(item=>{
             return {
-                episode: item.id
+                episode: item.podcastEpisode.id
             } satisfies PlaylistItem
         })
 
