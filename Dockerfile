@@ -8,7 +8,7 @@ RUN  npm install && npm run build
 FROM rust:alpine3.17 as dependency-cache
 USER root
 
-RUN apk add pkgconfig openssl-dev libc-dev
+RUN apk add pkgconfig openssl-dev libc-dev perl make
 WORKDIR /app/src
 
 ADD Cargo.lock .
@@ -24,7 +24,7 @@ USER root
 
 WORKDIR /app/src
 
-RUN apk add pkgconfig openssl-dev libc-dev
+RUN apk add pkgconfig openssl-dev libc-dev perl make
 
 
 COPY --from=dependency-cache /usr/local/cargo /usr/local/cargo
