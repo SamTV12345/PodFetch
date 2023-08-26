@@ -1,3 +1,4 @@
+use substring::Substring;
 use crate::DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -16,6 +17,25 @@ pub struct FilenameBuilder {
     filename: String,
     raw_filename: bool,
     podcast: Podcast
+}
+
+
+pub struct FilenameBuilderReturn{
+    pub filename: String,
+    pub image_filename: String,
+    pub local_file_url: String,
+    pub local_image_url: String,
+}
+
+impl FilenameBuilderReturn {
+    pub fn new(filename: String, image_filename: String, local_file_url: String, local_image_url: String) -> Self {
+        FilenameBuilderReturn {
+            filename,
+            image_filename,
+            local_file_url,
+            local_image_url,
+        }
+    }
 }
 
 impl FilenameBuilder {
@@ -69,22 +89,34 @@ impl FilenameBuilder {
         self
     }
 
-    pub fn build(self,conn: &mut DbConnection)->Result<(String, String),CustomError>{
+    pub fn build(self,conn: &mut DbConnection)->Result<FilenameBuilderReturn,CustomError>{
         if self.raw_filename{
-            let resulting_directory = self.clone().create_podcast_episode_dir(self.directory.clone
-            (),conn)?;
-            return Ok((format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix
-                .clone()),
-                    format!("{}/{}.{}", resulting_directory,self.image_filename.clone(),
-                                  self.image_suffix
-                .clone())));
+            let resulting_directory = self.clone()
+                .create_podcast_episode_dir(self.directory.clone(),conn)?;
+
+            let image_last_slash = self.podcast.image_url.rfind("/").unwrap();
+
+            return Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", resulting_directory,
+                                               self.filename.clone(), self.suffix.clone()),
+                 format!("{}/{}.{}", resulting_directory,self.image_filename.clone(),
+                   self.image_suffix.clone()),
+                    format!("{}/{}.{}", self.podcast.image_url.substring(0,image_last_slash), self
+                        .filename
+                        .clone(), self.suffix.clone()),
+                    format!("{}/{}.{}", self.podcast.image_url.substring(0,image_last_slash), self
+                            .image_filename
+                        .clone(), self.suffix.clone()))
+            );
         }
         let resulting_directory = self.clone().create_podcast_episode_dir(format!("{}/{}",self
             .directory.clone(), self.episode.clone()),conn)?;
 
-        Ok((format!("{}/{}.{}", resulting_directory,self.filename.clone(), self.suffix.clone
-        ()),format!("{}/{}.{}", resulting_directory,self.image_filename.clone(), self.image_suffix
-            .clone())))
+        Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", resulting_directory,self.filename.clone(),
+                                           self.suffix.clone())
+                                   ,format!("{}/{}.{}", resulting_directory,self.image_filename.clone(), self.image_suffix.clone()),
+                                   format!("{}/{}.{}", self.podcast.image_url, self.filename.clone(), self.suffix.clone()),
+                                   format!("{}/{}.{}", self.podcast.image_url, self
+                                       .image_filename.clone(), self.suffix.clone())))
     }
 
 
