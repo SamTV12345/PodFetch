@@ -13,6 +13,7 @@ use crate::models::podcasts::Podcast;
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 use diesel::AsChangeset;
+use diesel::query_source::Alias;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, map_db_error};
 
@@ -414,6 +415,7 @@ impl PodcastEpisode{
             p_episode as p2);
 
          podcast_episode1
+                 .select(Alias::fields(&podcast_episode1, p_episode::all_columns))
             .inner_join(podcasts.on(pod_id.eq(podcast_episode1.field(podcast_id_column))))
             .filter(podcast_episode1.field(date_of_recording).eq_any(
                 podcast_episode2.select(podcast_episode2.field(date_of_recording))
@@ -422,8 +424,7 @@ impl PodcastEpisode{
                     .order(podcast_episode2.field(date_of_recording).desc())
                     .limit(top_k.into())
             ))
-            .load::<(PodcastEpisode, Podcast)>(conn)
-            .map(|x|x.into_iter().map(|(x,_)| (x)).collect::<Vec<_>>())
+            .load::<PodcastEpisode>(conn)
             .map_err(map_db_error)
     }
 }
