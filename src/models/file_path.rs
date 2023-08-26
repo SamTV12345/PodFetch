@@ -1,4 +1,3 @@
-use std::fmt::format;
 use substring::Substring;
 use crate::DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
