@@ -128,15 +128,15 @@ impl PodcastService {
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
         lobby: Data<Addr<Lobby>>) ->Result<Podcast,CustomError>{
-        let opt_podcast = Podcast::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone() );
+        let opt_podcast = Podcast::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone());
         if opt_podcast.is_some() {
             return Err(CustomError::Conflict(format!("Podcast with feed url {} already exists", podcast_insert.feed_url)));
         }
 
         let fileservice = FileService::new();
 
-        let podcast_directory_created = FileService::create_podcast_directory_exists(&podcast_insert.title.clone(),
-                                                                                     &podcast_insert.id.clone().to_string(), conn)?;
+        let podcast_directory_created = FileService::create_podcast_directory_exists(
+            &podcast_insert.title.clone(), &podcast_insert.id.clone().to_string(), conn)?;
 
         let inserted_podcast = Podcast::add_podcast_to_database(
             conn,
@@ -148,8 +148,9 @@ impl PodcastService {
         )?;
 
         fileservice
-            .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(), &podcast_insert
-                .image_url.clone().to_string(), &podcast_insert.id.clone().to_string(), conn)
+            .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(),
+                                    &podcast_insert.image_url.clone().to_string(),
+                                    &podcast_insert.id.clone().to_string(), conn)
             .await;
         let podcast = Podcast::get_podcast_by_track_id(conn, podcast_insert.id)
             .unwrap();
