@@ -114,7 +114,7 @@ impl FilenameBuilder {
         let sub_episode_path = format!("/{}", self.episode.clone());
         let resulting_directory = self.clone().create_podcast_episode_dir(format!("{}/{}",self
             .directory.clone(), self.episode.clone()),conn)?;
-        let resulting_link = format!("{base_url}/{}", PodcastEpisodeService::map_to_local_url(&sub_episode_path));
+        let resulting_link = format!("{base_url}{}", PodcastEpisodeService::map_to_local_url(&sub_episode_path));
 
         Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", resulting_directory,
                                               self.filename.clone(),
