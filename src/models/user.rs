@@ -220,6 +220,18 @@ impl User {
         self.role.eq(&Role::Admin.to_string()) || self.role.eq(&Role::Uploader.to_string())
     }
 
+    pub fn get_user_by_userid(user_id: i32, conn: &mut DbConnection) -> Result<User, CustomError> {
+        use crate::dbconfig::schema::users::dsl::*;
+        let user = users.filter(id.eq(user_id))
+            .first::<User>(conn)
+            .optional()
+            .map_err(map_db_error)?;
+        if user.is_none() {
+            return Err(CustomError::NotFound);
+        }
+        Ok(user.unwrap())
+    }
+
     pub fn is_admin(&self) -> bool {
         self.role.eq(&Role::Admin.to_string())
     }

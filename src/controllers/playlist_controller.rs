@@ -38,7 +38,7 @@ pub async fn add_playlist(requester: Option<web::ReqData<User>>, conn: Data<DbPo
     let playlist = playlist.into_inner();
 
     let res = Playlist::create_new_playlist(&mut conn.get().unwrap(),
-                                            playlist, user.id)?;
+                                            playlist, user)?;
 
 
     Ok(HttpResponse::Ok().json(res))
@@ -58,7 +58,7 @@ pub async fn update_playlist(requester: Option<web::ReqData<User>>, conn: Data<D
     let playlist = playlist.into_inner();
 
     let res = Playlist::update_playlist(&mut conn.get().unwrap(),
-                                            playlist, playlist_id.clone(),user.id)?;
+                                            playlist, playlist_id.clone(),user)?;
 
 
     Ok(HttpResponse::Ok().json(res))
@@ -74,12 +74,11 @@ pub async fn get_all_playlists(requester: Option<web::ReqData<User>>, conn: Data
 #[get("/playlist/{playlist_id}")]
 pub async fn get_playlist_by_id(requester: Option<web::ReqData<User>>, conn: Data<DbPool>,
                                 playlist_id: web::Path<String>) -> Result<HttpResponse, CustomError>{
-    let user_id = requester.clone().unwrap().id;
-    let playlist = Playlist::get_playlist_by_user_and_id(playlist_id.clone(), user_id,
+    let user_id = requester.clone().unwrap();
+    let playlist = Playlist::get_playlist_by_user_and_id(playlist_id.clone(), user_id.clone().into_inner(),
                                           &mut conn.get().unwrap())?;
-    // TODO hand over the timeline
     let playlist = Playlist::get_playlist_dto(playlist_id.clone(), &mut conn.get().unwrap(),
-                                              playlist, user_id)?;
+                                              playlist, user_id.clone().into_inner())?;
     Ok(HttpResponse::Ok().json(playlist))
 }
 
