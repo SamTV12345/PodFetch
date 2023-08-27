@@ -667,7 +667,6 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
         return Err(CustomError::Forbidden);
     }
 
-
     let podcast = Podcast::get_podcast(&mut db.get().unwrap(), *id).expect("Error \
         finding podcast");
     if data.delete_files{

@@ -108,14 +108,10 @@ impl FileService {
         PodcastEpisode::update_podcast_image(podcast_id, &file_path.1, conn).unwrap();
     }
 
-    pub fn cleanup_old_episode(podcast: Podcast, episode: PodcastEpisode) -> Result<(), CustomError> {
+    pub fn cleanup_old_episode(episode: PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
-        let settings = Setting::get_settings(&mut establish_connection())?;
-        let path = format!(
-            "{}/'{}'",
-            podcast.directory_name, perform_replacement(&episode.name, settings.unwrap())
-        );
-        std::fs::remove_dir_all(path.clone()).map_err(|v|map_io_error(v, Some(path)))
+        let path = move_one_path_up(&episode.file_image_path.unwrap());
+        std::fs::remove_dir_all(&path).map_err(|v|map_io_error(v, Some(path)))
     }
 
     pub fn delete_podcast_files(podcast_dir: &str){
@@ -123,6 +119,13 @@ impl FileService {
     }
 }
 
+
+fn move_one_path_up(path: &str) -> String {
+    let mut split = path.split("/").collect::<Vec<&str>>();
+    split.pop();
+
+    split.join("/")
+}
 
 pub fn prepare_podcast_title_to_directory(title: &str, conn:&mut DbConnection) ->Result<String,
     CustomError> {
@@ -185,83 +188,6 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
         }
     }
     deunicode::deunicode(&final_string)
-}
-
-
-/*
-First image, then podcast
-*/
-pub fn determine_image_and_local_podcast_audio_url(podcast:Podcast, podcast_episode:
-PodcastEpisode, image_suffix: &str, suffix: &str, settings:Setting, conn:&mut DbConnection )
-    ->Result<(String, String), CustomError> {
-    let image_save_path;
-    let podcast_save_path;
-    // not yet downloaded
-    if podcast_episode.local_image_url.trim().is_empty() {
-        if settings.use_existing_filename {
-            let podcast_file_name = get_filename_of_url(&podcast_episode.url);
-            if podcast_file_name.is_err(){
-                // Just insert the name of the episode
-                image_save_path = PathService::get_image_path(
-                    &podcast.clone().directory_name,
-                    Some(podcast_episode.clone()),
-                    image_suffix,
-                    &podcast_episode.name,
-                    conn
-                )?;
-            }
-            else {
-                // Insert the filename as requested by user
-                image_save_path = PathService::get_image_path(
-                    &podcast.clone().directory_name,
-                    None,
-                    image_suffix,
-                    &podcast_file_name.unwrap(),
-                    conn
-                )?;
-            }
-        } else {
-            image_save_path = PathService::get_image_path(
-                &podcast.clone().directory_name,
-                Some(podcast_episode.clone()),
-                image_suffix,
-                &podcast_episode.name
-                    ,conn
-            )?;
-        }
-    }
-    else{
-        image_save_path = podcast_episode.clone().local_image_url
-    }
-
-    if podcast_episode.local_url.trim().is_empty(){
-        if settings.use_existing_filename {
-            let podcast_file_name = get_filename_of_url(&podcast_episode.url);
-
-            if podcast_file_name.is_err(){
-                podcast_save_path = PathService::get_podcast_episode_path(
-                    &podcast.directory_name.clone(),
-                    Some(podcast_episode),
-                    suffix, &podcast_file_name.unwrap(),conn)?;
-            }
-            else{
-                podcast_save_path = PathService::get_podcast_episode_path(
-                    &podcast.directory_name.clone(),
-                    None,
-                    suffix, &podcast_file_name.unwrap(),conn)?;
-            }
-        }
-        else{
-            podcast_save_path = PathService::get_podcast_episode_path(
-                &podcast.directory_name.clone(),
-                Some(podcast_episode.clone()),
-                suffix, &podcast_episode.name,conn)?;
-        }
-    }
-    else{
-        podcast_save_path = podcast_episode.clone().local_url;
-    }
-    Ok((image_save_path, podcast_save_path))
 }
 
 

@@ -247,17 +247,25 @@ impl PodcastEpisode{
             .map_err(map_db_error)
     }
 
-    pub fn update_total_podcast_time_and_image(
+    pub fn update_local_paths(
         episode_id: &str,
         image_url: &str,
         local_download_url: &str,
+        file_image_path: &str,
+        file_episode_path: &str,
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::dbconfig::schema::podcast_episodes::dsl::file_episode_path as
+        file_episode_path_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::file_image_path as
+        file_image_path_column;
+
         let result = podcast_episodes
+
             .filter(episode_id_column.eq(episode_id))
             .first::<PodcastEpisode>(conn)
             .optional()
@@ -269,9 +277,11 @@ impl PodcastEpisode{
                 .set((
                     local_image_url_column.eq(PodcastEpisodeService::map_to_local_url(image_url)),
                     local_url_column.eq(PodcastEpisodeService::map_to_local_url(local_download_url)),
+                    file_episode_path_column.eq(file_episode_path),
+                    file_image_path_column.eq(file_image_path),
                 ))
                 .execute(conn)
-                .expect("Error updating local image url");
+                .map_err(map_db_error)?;
         }
         Ok(())
     }
@@ -383,7 +393,9 @@ impl PodcastEpisode{
     pub fn update_download_status_of_episode(id_to_find: i32, conn: &mut DbConnection) {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         do_retry(||{diesel::update(podcast_episodes.filter(id.eq(id_to_find)))
-            .set((status.eq("N"), download_time.eq(sql("NULL"))))
+            .set((status.eq("N"), download_time.eq(sql("NULL")),
+                local_url.eq(""), local_image_url.eq(""),
+                file_episode_path.eq(sql("NULL")), file_image_path.eq(sql("NULL"))))
             .get_result::<PodcastEpisode>(conn)}
         ).expect("Error updating podcast episode");
     }
