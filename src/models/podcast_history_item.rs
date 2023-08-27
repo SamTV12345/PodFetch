@@ -72,13 +72,13 @@ impl PodcastHistoryItem{
     }
 
     pub fn delete_watchtime(conn: &mut DbConnection, podcast_id_to_delete: i32) -> Result<(),
-        String> {
+        CustomError> {
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
 
         delete(podcast_history_items)
             .filter(podcast_id.eq(podcast_id_to_delete))
             .execute(conn)
-            .expect("Error inserting podcast episode");
+            .map_err(map_db_error)?;
         Ok(())
     }
 
@@ -141,13 +141,8 @@ impl PodcastHistoryItem{
         use crate::dbconfig::schema::podcast_history_items;
         
         use crate::dbconfig::schema::podcast_history_items::dsl::episode_id as ehid;
-
-        
-        
-        
-        
-        
-        
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as eid;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         use diesel::NullableExpressionMethods;
 
         let (history_item1, history_item2) = diesel::alias!(podcast_history_items as p1, podcast_history_items
@@ -159,37 +154,24 @@ impl PodcastHistoryItem{
             .group_by(history_item1.field(ehid));
 
         let result = history_item2
+            .inner_join(podcast_episodes.on(history_item2.field(ehid).eq(eid)))
             .filter(history_item2.field(podcast_history_items::username).eq(designated_username))
             .filter(history_item2.field(podcast_history_items::date).nullable().eq_any( subquery))
-            .load::<PodcastHistoryItem>(conn)
+            .load::<(PodcastHistoryItem, PodcastEpisode)>(conn)
             .map_err(map_db_error)?;
 
 
-        let podcast_watch_episode = result
-            .iter()
-            .map(|podcast_watch_model| {
-                let optional_podcast = PodcastEpisode::get_podcast_episode_by_id(conn,&podcast_watch_model
-                    .episode_id)
-                    .unwrap();
-                match optional_podcast {
-                    Some(podcast_episode) => {
-                        let podcast_dto = mapping_service
-                            .map_podcastepisode_to_dto(&podcast_episode);
-                        let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id).unwrap();
-                        
-                        mapping_service
-                            .map_podcast_history_item_to_with_podcast_episode(
-                                &podcast_watch_model.clone(),
-                                podcast_dto,
-                                podcast,
-                            )
-                    }
-                    None => {
-                        panic!("Podcast episode not found");
-                    }
-                }
-            })
-            .collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
+        let podcast_watch_episode = result.iter().map(|(podcast_history_item, podcast_episode)| {
+            let podcast_dto = mapping_service
+                .map_podcastepisode_to_dto(podcast_episode);
+            let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id).unwrap();
+            mapping_service
+                .map_podcast_history_item_to_with_podcast_episode(
+                    &podcast_history_item.clone(),
+                    podcast_dto,
+                    podcast,
+                )
+        }).collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
         Ok(podcast_watch_episode)
     }
 

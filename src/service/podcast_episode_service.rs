@@ -5,7 +5,7 @@ use crate::models::podcasts::Podcast;
 use crate::models::messages::BroadcastMessage;
 use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
-use crate::service::file_service::{determine_image_and_local_podcast_audio_url, FileService};
+use crate::service::file_service::{FileService};
 use crate::service::mapping_service::MappingService;
 
 use crate::utils::podcast_builder::PodcastBuilder;
@@ -58,27 +58,13 @@ impl PodcastEpisodeService {
         lobby: Option<web::Data<Addr<Lobby>>>,
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
-        let mut settings_service = SettingsService::new();
-        let settings = settings_service.get_settings(conn)?.unwrap();
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
-        let suffix = Self::get_url_file_suffix(&podcast_episode_cloned.url);
-        let image_suffix = Self::get_url_file_suffix(&podcast_episode_cloned.image_url);
-
-
-        let (image_save_path, podcast_save_path) = determine_image_and_local_podcast_audio_url
-            (podcast.clone(), podcast_episode.clone(), &suffix, &image_suffix, settings, conn)?;
 
 
         match PodcastEpisode::check_if_downloaded(&podcast_episode.url, conn) {
             Ok(true) => {
-                PodcastEpisode::update_total_podcast_time_and_image(
-                    &podcast_episode_cloned.episode_id,
-                    &image_save_path,
-                    &podcast_save_path.clone(),
-                    conn,
-                )
-                    .expect("Error saving total time of podcast episode.");
+
             }
             Ok(false) => {
                 let podcast_inserted = Self::perform_download(
@@ -446,13 +432,12 @@ impl PodcastEpisodeService {
         let old_podcast_episodes = PodcastEpisode::get_podcast_episodes_older_than_days(days, conn);
 
         log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
-        for old_podcast in old_podcast_episodes {
-            let podcast = Podcast::get_podcast(conn, old_podcast.clone().podcast_id).unwrap();
-            let res = FileService::cleanup_old_episode(podcast, old_podcast.clone());
+        for old_podcast_episode in old_podcast_episodes {
+            let res = FileService::cleanup_old_episode(old_podcast_episode.clone());
 
             match res {
                 Ok(_) => {
-                    PodcastEpisode::update_download_status_of_episode(old_podcast.clone().id, conn);
+                    PodcastEpisode::update_download_status_of_episode(old_podcast_episode.clone().id, conn);
                 }
                 Err(e) => {
                     println!("Error deleting podcast episode.{}", e);
@@ -511,8 +496,7 @@ impl PodcastEpisodeService {
         if episode.is_none() {
             return Err(CustomError::NotFound);
         }
-        let podcast = Podcast::get_podcast(conn, episode.clone().unwrap().podcast_id).unwrap();
-        FileService::cleanup_old_episode(podcast, episode.clone().unwrap())?;
+        FileService::cleanup_old_episode(episode.clone().unwrap())?;
         PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id, conn);
         PodcastEpisode::update_deleted(conn,episode_id, true)?;
         Ok(episode.unwrap())

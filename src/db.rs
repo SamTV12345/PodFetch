@@ -6,6 +6,7 @@ use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::{DbConnection};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -16,7 +17,7 @@ pub struct TimelineItem {
 
 impl TimelineItem {
     pub fn get_timeline(username_to_search: String, conn: &mut DbConnection, favored_only: TimelineQueryParams)
-                        -> TimelineItem {
+                        -> Result<TimelineItem, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::*;
         use crate::dbconfig::schema::podcasts::id as pid;
@@ -58,12 +59,12 @@ impl TimelineItem {
             }
         }
         let results = total_count.get_result::<i64>(conn).expect("Error counting results");
-        let result = query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).expect("Error \
-        loading podcast episode by id");
+        let result = query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).map_err
+        (map_db_error)?;
 
-        TimelineItem {
+        Ok(TimelineItem {
             total_elements: results,
             data: result,
-        }
+        })
     }
 }

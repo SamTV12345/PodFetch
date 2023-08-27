@@ -96,6 +96,8 @@ impl MappingService {
             download_time: podcast_episode.download_time,
             guid: podcast_episode.guid.clone(),
             deleted: podcast_episode.deleted,
+            file_episode_path: None,
+            file_image_path: None,
         }
     }
 

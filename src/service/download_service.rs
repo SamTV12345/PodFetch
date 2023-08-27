@@ -77,22 +77,24 @@ impl DownloadService {
         let mut image_response = client.get(podcast_episode.image_url.clone()).headers(header_map).send()
             .unwrap();
 
-        let mut podcast_out = std::fs::File::create(paths.filename).unwrap();
-        let mut image_out = std::fs::File::create(paths.image_filename.clone()).unwrap();
+        let mut podcast_out = std::fs::File::create(&paths.filename).unwrap();
+        let mut image_out = std::fs::File::create(&paths.image_filename).unwrap();
 
         if !self.file_service.check_if_podcast_main_image_downloaded(&podcast.clone()
             .directory_id,  conn)
         {
-            let mut image_podcast = std::fs::File::create(paths.image_filename.clone()).unwrap();
+            let mut image_podcast = std::fs::File::create(&paths.image_filename).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
         }
 
         io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
 
-        PodcastEpisode::update_total_podcast_time_and_image(
+        PodcastEpisode::update_local_paths(
                 &podcast_episode.episode_id,
                 &paths.local_image_url,
                 &paths.local_file_url,
+                &paths.image_filename,
+                &paths.filename,
             conn)?;
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
         Ok(())

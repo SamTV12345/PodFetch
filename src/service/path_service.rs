@@ -12,19 +12,6 @@ use crate::utils::error::{CustomError, map_io_error};
 pub struct PathService {}
 
 impl PathService {
-    pub fn get_podcast_episode_path(directory: &str, episode: Option<PodcastEpisode>, suffix:
-    &str, filename: &str, conn: &mut DbConnection)
-        -> Result<String, CustomError> {
-        match episode {
-            Some(episode) => {
-                Ok(format!("{}/{}/podcast.{}", directory,
-                        prepare_podcast_episode_title_to_directory(episode, conn)?, suffix))
-            },
-            None => {
-                Ok(format!("{}/{}/podcast.{}", directory, filename, suffix))
-            }
-        }
-    }
 
     pub fn get_image_path(directory: &str, episode: Option<PodcastEpisode>, _suffix: &str,
                           filename: &str,

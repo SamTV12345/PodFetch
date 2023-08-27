@@ -106,7 +106,7 @@ Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result
 
 
     let res = TimelineItem::get_timeline(requester.unwrap().username.clone(), &mut conn.get().unwrap(),
-                                         favored_only.into_inner());
+                                         favored_only.into_inner())?;
 
     let mapped_timeline = res.data.iter().map(|podcast_episode| {
         let (podcast_episode, podcast, favorite) = podcast_episode.clone();
