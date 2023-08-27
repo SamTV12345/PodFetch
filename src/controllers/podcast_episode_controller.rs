@@ -61,10 +61,10 @@ pub async fn find_all_podcast_episodes_of_podcast(
         .into_iter()
         .map(|podcast| {
             let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast.0);
-            return PodcastEpisodeWithHistory{
+            PodcastEpisodeWithHistory{
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast.1,
-            };
+            }
         })
         .collect::<Vec<PodcastEpisodeWithHistory>>();
     Ok(HttpResponse::Ok()
