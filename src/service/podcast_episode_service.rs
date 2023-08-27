@@ -22,6 +22,8 @@ use rss::{Channel, Item};
 
 use crate::DbConnection;
 use crate::models::notification::Notification;
+use crate::models::podcast_history_item::PodcastHistoryItem;
+use crate::models::user::User;
 
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
@@ -459,10 +461,12 @@ impl PodcastEpisodeService {
         }
     }
 
+
     pub fn get_podcast_episodes_of_podcast(conn: &mut DbConnection, id_num: i32, last_id:
-    Option<String>)
-                                           -> Result<Vec<PodcastEpisode>, CustomError> {
-        PodcastEpisode::get_podcast_episodes_of_podcast(conn, id_num, last_id)
+    Option<String>, user: User)
+                                           -> Result<Vec<(PodcastEpisode,
+                                                          Option<PodcastHistoryItem>)>, CustomError> {
+        PodcastEpisode::get_podcast_episodes_of_podcast(conn, id_num, last_id, user)
     }
 
     pub fn get_podcast_episode_by_id(conn: &mut DbConnection, id_num: &str) ->

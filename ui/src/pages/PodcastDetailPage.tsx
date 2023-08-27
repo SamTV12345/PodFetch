@@ -13,6 +13,7 @@ import { PodcastDetailItem } from '../components/PodcastDetailItem'
 import { PodcastInfoModal } from '../components/PodcastInfoModal'
 import { Switcher } from '../components/Switcher'
 import 'material-symbols/outlined.css'
+import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 
 export const PodcastDetailPage = () => {
     const dispatch = useAppDispatch()
@@ -32,7 +33,7 @@ export const PodcastDetailPage = () => {
             dispatch(setCurrentPodcast(response.data))
         }).then(() => {
             axios.get(apiURL + '/podcast/' + params.id + '/episodes')
-                .then((response) => {
+                .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
                     dispatch(setSelectedEpisodes(response.data))
 
                     if (params.podcastid) {
@@ -106,7 +107,7 @@ export const PodcastDetailPage = () => {
                         order-2
                         col-start-1 col-end-4 row-start-2 row-end-3
                         sm:col-start-1 sm:col-end-3
-                        lg:col-start-2 lg:col-end-3 
+                        lg:col-start-2 lg:col-end-3
                         self-start xs:self-end
                     ">
                         <Heading1 className="inline align-middle mr-2">{currentPodcast.name}</Heading1>

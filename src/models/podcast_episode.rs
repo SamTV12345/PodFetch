@@ -1,8 +1,8 @@
 use crate::dbconfig::schema::*;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::prelude::{Queryable, Identifiable, Selectable, QueryableByName};
-use diesel::{BoolExpressionMethods, delete, insert_into, JoinOnDsl, OptionalExtension, RunQueryDsl, TextExpressionMethods};
-use diesel::dsl::sql;
+use diesel::{BoolExpressionMethods, delete, insert_into, JoinOnDsl, NullableExpressionMethods, OptionalExtension, RunQueryDsl, TextExpressionMethods};
+use diesel::dsl::{max, sql};
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp, Bool};
 use diesel::QueryDsl;
@@ -15,6 +15,8 @@ use crate::utils::time::opt_or_empty_string;
 use diesel::AsChangeset;
 use diesel::query_source::Alias;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::models::podcast_history_item::PodcastHistoryItem;
+use crate::models::user::User;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Identifiable,QueryableByName, Selectable, Debug, PartialEq, Clone, ToSchema,
@@ -180,26 +182,45 @@ impl PodcastEpisode{
         conn: &mut DbConnection,
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
-    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        user: User,
+    ) -> Result<Vec<(PodcastEpisode, Option<PodcastHistoryItem>)>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::dbconfig::schema::podcast_history_items::episode_id as eid;
+        use crate::dbconfig::schema::podcast_history_items as phistory;
+        use crate::dbconfig::schema::podcast_history_items::date as phistory_date;
+        use crate::dbconfig::schema::podcast_history_items::username as phistory_username;
+        let (ph1, ph2) = diesel::alias!(phistory as ph1, phistory as ph2);
+
+        let subquery = ph2
+            .select(max(ph2.field(phistory_date)))
+            .filter(ph2.field(eid).eq(episode_id))
+            .filter(ph2.field(phistory_username).eq(user.username))
+            .group_by(ph2.field(eid));
+
         match last_id {
             Some(last_id) => {
                 let podcasts_found = podcast_episodes
                     .filter(podcast_id.eq(podcast_id_to_be_searched))
+                    .left_join(ph1.on(ph1.field(eid).eq(episode_id)))
+                        .filter(ph1.field(phistory_date).nullable().eq_any(subquery)
+                            .or(ph1.field(phistory_date).is_null()))
                     .filter(date_of_recording.lt(last_id))
                     .order(date_of_recording.desc())
                     .limit(75)
-                    .load::<PodcastEpisode>(conn)
+                    .load::<(PodcastEpisode, Option<PodcastHistoryItem>)>(conn)
                     .map_err(map_db_error)?;
                 Ok(podcasts_found)
             }
             None => {
                 let podcasts_found = podcast_episodes
+                    .left_join(ph1.on(ph1.field(eid).eq(episode_id)))
+                    .filter(ph1.field(phistory_date).nullable().eq_any(subquery)
+                        .or(ph1.field(phistory_date).is_null()))
                     .filter(podcast_id.eq(podcast_id_to_be_searched))
                     .order(date_of_recording.desc())
                     .limit(75)
-                    .load::<PodcastEpisode>(conn)
+                    .load::<(PodcastEpisode, Option<PodcastHistoryItem>)>(conn)
                     .expect("Error loading podcasts");
 
                 Ok(podcasts_found)

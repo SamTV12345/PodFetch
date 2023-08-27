@@ -22,7 +22,7 @@ export const PlaylistSearchEpisode = ()=>{
             dispatch(setCurrentPlaylistToEdit({
                 id: currentPlayListToEdit!.id,
                 name: currentPlayListToEdit!.name,
-                items: [...currentPlayListToEdit!.items, e]
+                items: [...currentPlayListToEdit!.items, {podcastEpisode: e}]
             }))
         }} classNameResults="max-h-[min(20rem,calc(100vh-3rem-3rem))]"
                                                   showBlankState={false} />
@@ -57,12 +57,12 @@ export const PlaylistSearchEpisode = ()=>{
                         id: currentPlayListToEdit!.id,
                         items: newItems
                     }))
-                }} onDragOver={(e)=>item.id!=itemCurrentlyDragged?.id&&e.preventDefault()} onDragStart={e=>handleDragStart(item, index, e)}>
+                }} onDragOver={(e)=>item.podcastEpisode.id!=itemCurrentlyDragged?.id&&e.preventDefault()} onDragStart={e=>handleDragStart(item.podcastEpisode, index, e)}>
                     <td className="text-[--fg-color] p-2">
                         {index}
                     </td>
                     <td className="text-[--fg-color]">
-                        {item.name}
+                        {item.podcastEpisode.name}
                     </td>
                     <td>
                         <button className="flex text-red-700 hover:text-red-500" onClick={e=>{
@@ -70,7 +70,7 @@ export const PlaylistSearchEpisode = ()=>{
                             dispatch(setCurrentPlaylistToEdit({
                                 name: currentPlayListToEdit!.name,
                                 id: currentPlayListToEdit!.id,
-                                items: currentPlayListToEdit!.items.filter(i=>i.id!==item.id)
+                                items: currentPlayListToEdit!.items.filter(i=>i.podcastEpisode.id!==item.podcastEpisode.id)
                             }))
                         }}><span className="material-symbols-outlined mr-1">delete</span>
                             {t('delete')}</button>

@@ -19,7 +19,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const skipToPreviousEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
-        const index = episodes.findIndex(e => e.id === currentPodcastEpisode.id)
+        const index = episodes.findIndex(e => e.podcastEpisode.id === currentPodcastEpisode.id)
 
         if (index === -1) return
 
@@ -31,7 +31,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const skipToNextEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
-        const index = episodes.findIndex(e => e.id === currentPodcastEpisode.id)
+        const index = episodes.findIndex(e => e.podcastEpisode.id === currentPodcastEpisode.id)
 
         if (index === -1) return
 
@@ -43,8 +43,8 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const switchToEpisodes = (index: number) => {
         if (refItem === undefined || refItem.current === undefined|| refItem.current === null) return
 
-        dispatch(setCurrentPodcastEpisode(episodes[index]))
-        refItem.current.src = episodes[index].local_url
+        dispatch(setCurrentPodcastEpisode(episodes[index].podcastEpisode))
+        refItem.current.src = episodes[index].podcastEpisode.local_url
         refItem.current.load()
         refItem.current?.play()
         dispatch(setPlaying(true))

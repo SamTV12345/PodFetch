@@ -8,6 +8,7 @@ import {ConfirmModalProps} from "../components/ConfirmModal";
 import {Invite} from "../components/UserAdminInvites";
 import {TimelineHATEOASModel, TimeLineModel} from "../models/TimeLineModel";
 import {Filter} from "../models/Filter";
+import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 
 export type Podcast = {
     directory: string,
@@ -42,7 +43,7 @@ export type PodcastEpisode = {
 
 // Define a type for the slice state
 interface CommonProps {
-    selectedEpisodes: PodcastEpisode[]
+    selectedEpisodes: EpisodesWithOptionalTimeline[]
     sidebarCollapsed: boolean,
     podcasts:Podcast[],
     searchedPodcasts: AgnosticPodcastDataModel[]|undefined,
@@ -107,7 +108,7 @@ export const commonSlice = createSlice({
                 return podcast
           })
         },
-        setSelectedEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
+        setSelectedEpisodes: (state, action:PayloadAction<EpisodesWithOptionalTimeline[]>) => {
             state.selectedEpisodes = action.payload
         },
         setSearchedPodcasts: (state, action:PayloadAction<AgnosticPodcastDataModel[]>) => {
@@ -127,8 +128,8 @@ export const commonSlice = createSlice({
         },
         setEpisodeDownloaded: (state, action:PayloadAction<string>) => {
             state.selectedEpisodes = state.selectedEpisodes.map((episode) => {
-                if(episode.episode_id === action.payload) {
-                    episode.status = 'D'
+                if(episode.podcastEpisode.episode_id === action.payload) {
+                    episode.podcastEpisode.status = 'D'
                 }
                 return episode
             })
@@ -180,7 +181,7 @@ export const commonSlice = createSlice({
             }  satisfies TimelineHATEOASModel
             //[...state.timeLineEpisodes, ...action.payload]
         },
-        addPodcastEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
+        addPodcastEpisodes: (state, action:PayloadAction<EpisodesWithOptionalTimeline[]>) => {
             state.selectedEpisodes = [...state.selectedEpisodes, ...action.payload]
         },
         setFilters: (state, action:PayloadAction<Filter>) => {
@@ -195,7 +196,8 @@ export const commonSlice = createSlice({
 }})
 
 export const {
-    setSidebarCollapsed, setInfoHeading,setInfoText, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, podcastDeleted, setCurrentDetailedPodcastId, setConfigModel, setPodcasts, setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
+    setSidebarCollapsed, setInfoHeading,setInfoText, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, podcastDeleted, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,
+    setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
 } = commonSlice.actions
 
 export default commonSlice.reducer

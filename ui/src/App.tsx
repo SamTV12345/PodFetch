@@ -1,5 +1,5 @@
 import { FC, PropsWithChildren, Suspense, useEffect, useState } from 'react'
-import { createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom'
+import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
@@ -15,7 +15,7 @@ import {
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
     SettingsViewLazyLoad,
-    TimeLineViewLazyLoad, PlaylistViewLazyLoad
+    TimeLineViewLazyLoad, PlaylistViewLazyLoad, HomepageViewLazyLoad
 } from "./utils/LazyLoading"
 import {
     checkIfOpmlAdded,
@@ -32,20 +32,28 @@ import {Login} from "./pages/Login"
 import "./App.css"
 import './App.css'
 import {HomePageSelector} from "./pages/HomePageSelector";
+import {EpisodesWithOptionalTimeline} from "./models/EpisodesWithOptionalTimeline";
+import {PlaylistPage} from "./pages/PlaylistPage";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
         <Route path="/" element={<Root/>}>
-            <Route index element={<HomePageSelector/>}/>
+            <Route index element={<Navigate to="home"/>}/>
+            <Route path="home" element={<HomePageSelector/>}>
+                <Route index element={<Navigate to="view"/>}/>
+                <Route path="view" element={<Suspense><HomepageViewLazyLoad /></Suspense>}/>
+                <Route path={"playlist"}>
+                    <Route index element={<Suspense><PlaylistPage/></Suspense>}></Route>
+                    <Route path={":id"} element={<Suspense><PlaylistViewLazyLoad/></Suspense>}/>
+                </Route>
+            </Route>
             <Route path={"podcasts"}>
                 <Route index element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
                 <Route path={"search"} element={<Suspense><EpisodeSearchViewLazyLoad/></Suspense>}/>
             </Route>
-            <Route path={"playlist"}>
-                <Route path={":id"} element={<Suspense><PlaylistViewLazyLoad/></Suspense>}/>
-            </Route>
+
             <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad /></Suspense>} />
             <Route path={"favorites"}>
                 <Route element={<PodcastViewLazyLoad onlyFavorites={true} />} index />
@@ -90,15 +98,18 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                         enqueueSnackbar(t('new-podcast-episode-added', { name: parsed.podcast_episode.name }), { variant: 'success' })
 
                         const downloadedPodcastEpisode = parsed.podcast_episode
-                        let res = store.getState().common.selectedEpisodes.find(p => p.id === downloadedPodcastEpisode.id)
+                        let res = store.getState().common.selectedEpisodes.find(p => p.podcastEpisode.id === downloadedPodcastEpisode.id)
 
                         if (res == undefined) {
                             // This is a completely new episode
-                            dispatch(setSelectedEpisodes([...store.getState().common.selectedEpisodes, downloadedPodcastEpisode]))
+                            dispatch(setSelectedEpisodes([...store.getState().common.selectedEpisodes, {
+                                podcastEpisode: downloadedPodcastEpisode
+                            }]))
                         }
 
-                        let podcastUpdated = store.getState().common.selectedEpisodes.map(p => {
-                            if (p.id === downloadedPodcastEpisode.id) {
+                        let podcastUpdated:EpisodesWithOptionalTimeline[] = store.getState().common.selectedEpisodes
+                            .map(p => {
+                            if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
                                 const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
 
                                 foundDownload.status = 'D'
@@ -107,7 +118,9 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                                 foundDownload.image_url = downloadedPodcastEpisode.image_url
                                 foundDownload.local_image_url = downloadedPodcastEpisode.local_image_url
 
-                                return foundDownload
+                                return {
+                                    podcastEpisode: foundDownload
+                                } satisfies EpisodesWithOptionalTimeline
                             }
 
                             return p
@@ -117,12 +130,14 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                     }
                 } else if (checkIfPodcastEpisodeDeleted(parsed)) {
                     const updatedPodcastEpisodes = store.getState().common.selectedEpisodes.map(e => {
-                        if (e.episode_id === parsed.podcast_episode.episode_id) {
+                        if (e.podcastEpisode.episode_id === parsed.podcast_episode.episode_id) {
                             const clonedPodcast = Object.assign({}, parsed.podcast_episode)
 
                             clonedPodcast.status = 'N'
 
-                            return clonedPodcast
+                            return {
+                                podcastEpisode: clonedPodcast
+                            }
                         }
 
                         return e

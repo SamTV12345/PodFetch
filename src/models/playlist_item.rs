@@ -1,10 +1,14 @@
 use diesel::{Queryable, QueryableByName};
+use diesel::dsl::max;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text};
 use diesel::prelude::*;
 use diesel::ExpressionMethods;
 use crate::dbconfig::schema::playlist_items;
 use crate::DbConnection;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_history_item::PodcastHistoryItem;
+use crate::models::user::User;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Serialize, Deserialize, Debug,Queryable, QueryableByName,Insertable, Clone, ToSchema)]
@@ -59,13 +63,32 @@ impl PlaylistItem {
         Ok(())
     }
 
-    pub fn get_playlist_items_by_playlist_id(playlist_id_1: String, conn: &mut DbConnection) ->
-                                                                                             Result<Vec<PlaylistItem>, CustomError> {
+    pub fn get_playlist_items_by_playlist_id(playlist_id_1: String, conn: &mut DbConnection, user: User) ->
+                                                                                             Result<Vec<(PlaylistItem,PodcastEpisode,Option<PodcastHistoryItem>)>, CustomError> {
         use crate::dbconfig::schema::playlist_items::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::id as eid;
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as epid;
+        use crate::dbconfig::schema::podcast_history_items::date as phistory_date;
+        use crate::dbconfig::schema::podcast_history_items::username as phistory_username;
+        use crate::dbconfig::schema::podcast_history_items::episode_id as phistory_episode_id;
+        use crate::dbconfig::schema::podcast_history_items as phistory;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+        let (ph1, ph2) = diesel::alias!(phistory as ph1, phistory as ph2);
 
-               playlist_items.filter(playlist_id.eq(playlist_id_1))
+        let subquery = ph2
+            .select(max(ph2.field(phistory_date)))
+            .filter(ph2.field(phistory_episode_id).eq(epid))
+            .filter(ph2.field(phistory_username)
+                .eq(user.username))
+            .group_by(ph2.field(phistory_episode_id));
+
+        playlist_items
+                   .filter(playlist_id.eq(playlist_id_1))
+                    .inner_join(podcast_episodes.on(episode.eq(eid)))
+                    .left_join(ph1.on(ph1.field(phistory_episode_id).eq(epid)))
+                   .filter(ph1.field(phistory_date).nullable().eq_any(subquery))
                    .order(position.asc())
-                   .load::<PlaylistItem>(conn)
+                   .load::<(PlaylistItem,PodcastEpisode,Option<PodcastHistoryItem>)>(conn)
                    .map_err(map_db_error)
 
     }

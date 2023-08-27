@@ -1,9 +1,10 @@
 import {PodcastEpisode} from "../store/CommonSlice";
+import {EpisodesWithOptionalTimeline} from "./EpisodesWithOptionalTimeline";
 
 export type PlaylistDto = {
     id: number,
     name: string,
-    items: PodcastEpisode[]
+    items: EpisodesWithOptionalTimeline[]
 }
 
 export type PlaylistDtoPost = {

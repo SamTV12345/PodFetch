@@ -98,16 +98,16 @@ impl Favorite{
 
     pub fn search_podcasts_favored(conn: &mut DbConnection, order: OrderCriteria, title: Option<String>,
                                    latest_pub: OrderOption,
-                                   designated_username: String) ->Result<Vec<(Podcast, Favorite)
-    >,CustomError>{
+                                   designated_username: String) ->Result<Vec<(Podcast, Favorite)>,CustomError>{
         use crate::dbconfig::schema::podcasts::dsl::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
 
 
-        let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
-            .inner_join(favorites::table.on(podcastsid.eq(favorites::dsl::podcast_id).and
-            (favorites::dsl::username.eq(designated_username))))
+        let mut query = podcasts
+            .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
+            .inner_join(favorites::table.on(podcastsid.eq(favorites::dsl::podcast_id)
+                .and(favorites::dsl::username.eq(designated_username))))
             .into_boxed();
 
         match latest_pub {

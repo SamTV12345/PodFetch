@@ -77,7 +77,7 @@ export const PlaylistPage = ()=>{
                                 }} title={t('change-role')}>
                                     <span className="material-symbols-outlined hover:text-stone-600 text-[--fg-color]"
                                           onClick={()=>{
-                                        navigate("/playlist/"+i.id)
+                                        navigate(i.id)
                                     }}>visibility</span>
                                 </button>
                                 <button className="flex float-right text-red-700 hover:text-red-500" onClick={(e)=>{

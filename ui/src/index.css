@@ -280,3 +280,7 @@ html {
 #summary a {
     @apply text-mustard-600;
 }
+
+.home-page-selector .active {
+    @apply border-b-2 border-mustard-600 text-mustard-600;
+}
