@@ -181,13 +181,8 @@ export const commonSlice = createSlice({
             }  satisfies TimelineHATEOASModel
             //[...state.timeLineEpisodes, ...action.payload]
         },
-        addPodcastEpisodes: (state, action:PayloadAction<PodcastEpisode[]>) => {
-            const res:EpisodesWithOptionalTimeline[] = action.payload.map(e=>{
-                return {
-                    podcastEpisode: e
-                } satisfies EpisodesWithOptionalTimeline
-            } )
-            state.selectedEpisodes = [...state.selectedEpisodes, ...res]
+        addPodcastEpisodes: (state, action:PayloadAction<EpisodesWithOptionalTimeline[]>) => {
+            state.selectedEpisodes = [...state.selectedEpisodes, ...action.payload]
         },
         setFilters: (state, action:PayloadAction<Filter>) => {
             state.filters = action.payload

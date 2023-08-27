@@ -25,7 +25,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
-
+    const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
     return (
         <>
             <div key={episode.podcastEpisode.episode_id} id={'episode_' + episode.podcastEpisode.id} className="
@@ -111,8 +111,12 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
             {/* Infinite scroll */
             index === (episodesLength - 5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    axios.get(apiURL + '/podcast/' + params.id + '/episodes?last_podcast_episode=' + episode.podcastEpisode.date_of_recording)
-                        .then((response) => {
+                    axios.get(apiURL + '/podcast/' + params.id + '/episodes',{
+                        params: {
+                            last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1].podcastEpisode.date_of_recording
+                        }
+                    })
+                        .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
                             dispatch(addPodcastEpisodes(response.data))
                         })
                 }} />
