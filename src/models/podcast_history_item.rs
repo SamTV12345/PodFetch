@@ -163,7 +163,7 @@ impl PodcastHistoryItem{
 
         let podcast_watch_episode = result.iter().map(|(podcast_history_item, podcast_episode)| {
             let podcast_dto = mapping_service
-                .map_podcastepisode_to_dto(&podcast_episode);
+                .map_podcastepisode_to_dto(podcast_episode);
             let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id).unwrap();
             mapping_service
                 .map_podcast_history_item_to_with_podcast_episode(

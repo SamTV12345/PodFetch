@@ -78,12 +78,12 @@ impl DownloadService {
             .unwrap();
 
         let mut podcast_out = std::fs::File::create(&paths.filename).unwrap();
-        let mut image_out = std::fs::File::create(&paths.image_filename.clone()).unwrap();
+        let mut image_out = std::fs::File::create(&paths.image_filename).unwrap();
 
         if !self.file_service.check_if_podcast_main_image_downloaded(&podcast.clone()
             .directory_id,  conn)
         {
-            let mut image_podcast = std::fs::File::create(paths.image_filename.clone()).unwrap();
+            let mut image_podcast = std::fs::File::create(&paths.image_filename).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
         }
 

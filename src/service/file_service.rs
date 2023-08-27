@@ -121,10 +121,11 @@ impl FileService {
 
 
 fn move_one_path_up(path: &str) -> String {
-    let mut split = path.split("/").collect::<Vec<&str>>();
+    const SEPARATOR: &str = "/";
+    let mut split = path.split(SEPARATOR).collect::<Vec<&str>>();
     split.pop();
 
-    split.join("/")
+    split.join(SEPARATOR)
 }
 
 pub fn prepare_podcast_title_to_directory(title: &str, conn:&mut DbConnection) ->Result<String,
