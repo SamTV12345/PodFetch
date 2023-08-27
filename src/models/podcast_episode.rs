@@ -53,6 +53,10 @@ pub struct PodcastEpisode {
     pub(crate) guid: String,
     #[diesel(sql_type = Bool)]
     pub (crate) deleted: bool,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub(crate) file_episode_path: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub(crate) file_image_path: Option<String>
 }
 
 impl PodcastEpisode{
