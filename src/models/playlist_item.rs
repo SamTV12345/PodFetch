@@ -92,4 +92,13 @@ impl PlaylistItem {
                    .map_err(map_db_error)
 
     }
+
+    pub fn delete_playlist_item_by_episode_id(episode_id_1: i32, conn: &mut DbConnection) ->
+                                                                                           Result<(), CustomError> {
+        use crate::dbconfig::schema::playlist_items::dsl::*;
+
+        diesel::delete(playlist_items.filter(episode.eq(episode_id_1))).execute(conn)
+            .map_err(map_db_error)?;
+        Ok(())
+    }
 }

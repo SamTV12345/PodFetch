@@ -72,13 +72,13 @@ impl PodcastHistoryItem{
     }
 
     pub fn delete_watchtime(conn: &mut DbConnection, podcast_id_to_delete: i32) -> Result<(),
-        String> {
+        CustomError> {
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
 
         delete(podcast_history_items)
             .filter(podcast_id.eq(podcast_id_to_delete))
             .execute(conn)
-            .expect("Error inserting podcast episode");
+            .map_err(map_db_error)?;
         Ok(())
     }
 

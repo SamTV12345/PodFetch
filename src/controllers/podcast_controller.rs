@@ -644,6 +644,8 @@ async fn insert_outline(
 
 }
 use utoipa::ToSchema;
+use crate::controllers::playlist_controller::PlaylistItem;
+use crate::models::playlist::Playlist;
 use crate::utils::error::{CustomError, map_reqwest_error};
 
 #[derive(Deserialize,ToSchema)]
@@ -671,12 +673,8 @@ pub async fn delete_podcast(data: web::Json<DeletePodcast>, db: Data<DbPool>, id
     if data.delete_files{
         FileService::delete_podcast_files(&podcast.directory_name);
     }
-
-    PodcastHistoryItem::delete_watchtime(&mut db.get().unwrap(), *id).expect("Error deleting \
-    watchtime");
-    PodcastEpisode::delete_episodes_of_podcast(&mut db.get().unwrap(), *id).expect("Error \
-    deleting \
-    episodes of podcast");
+    PodcastHistoryItem::delete_watchtime(&mut db.get().unwrap(), *id)?;
+    PodcastEpisode::delete_episodes_of_podcast(&mut db.get().unwrap(), *id)?;
     Podcast::delete_podcast(&mut db.get().unwrap(), *id)?;
     Ok(HttpResponse::Ok().into())
 }

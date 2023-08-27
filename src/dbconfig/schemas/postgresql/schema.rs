@@ -16,9 +16,9 @@ diesel::table! {
         username -> Varchar,
         device -> Varchar,
         podcast -> Varchar,
-        episode -> Varchar,
+        episode -> Text,
         timestamp -> Timestamp,
-        guid -> Nullable<Varchar>,
+        guid -> Nullable<Text>,
         action -> Varchar,
         started -> Nullable<Int4>,
         position -> Nullable<Int4>,
@@ -98,6 +98,8 @@ diesel::table! {
         download_time -> Nullable<Timestamp>,
         guid -> Text,
         deleted -> Bool,
+        file_episode_path -> Nullable<Text>,
+        file_image_path -> Nullable<Text>,
     }
 }
 

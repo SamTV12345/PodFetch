@@ -14,6 +14,7 @@ use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;
 use diesel::AsChangeset;
 use diesel::query_source::Alias;
+use crate::models::playlist_item::PlaylistItem;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;
@@ -275,6 +276,10 @@ impl PodcastEpisode{
         CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+
+        Self::get_episodes_by_podcast_id(podcast_id, conn).iter().for_each(|episode|{
+            PlaylistItem::delete_playlist_item_by_episode_id(episode.id, conn).expect("Error deleting episode");
+        });
 
         delete(podcast_episodes)
             .filter(podcast_id_column.eq(podcast_id))
