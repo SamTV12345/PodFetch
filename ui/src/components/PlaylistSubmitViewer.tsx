@@ -1,7 +1,7 @@
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
-import {PlaylistDto} from "../models/Playlist";
+import {PlaylistDto, PlaylistDtoPost, PlaylistItem} from "../models/Playlist";
 import {enqueueSnackbar} from "notistack";
 import {setCreatePlaylistOpen, setPlaylist} from "../store/PlaylistSlice";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
@@ -14,16 +14,27 @@ export const PlaylistSubmitViewer = ()=>{
     const currentPlaylistToEdit = useAppSelector(state=>state.playlist.currentPlaylistToEdit)
     const playlists = useAppSelector(state=>state.playlist.playlist)
 
-    const data = useFormContext()
-    console.log(data)
+
+    const savePlaylist = ()=>{
+        const idsToMap:PlaylistItem[] = currentPlaylistToEdit!.items.map(item=>{
+            return{
+                episode: item.podcastEpisode.id
+            }})
+
+        axios.post(apiURL+'/playlist', {
+            name: currentPlaylistToEdit?.name!,
+            items: idsToMap
+        } satisfies PlaylistDtoPost)
+            .then((v: AxiosResponse<PlaylistDto>)=>{
+                dispatch(setPlaylist([...playlists,v.data]))
+                dispatch(setCreatePlaylistOpen(false))
+            })
+    }
+
+
     return <>
         <CustomButtonPrimary type="submit" className="float-right" onClick={()=>{
-            axios.post(apiURL+'/playlist', currentPlaylistToEdit)
-                .then((v: AxiosResponse<PlaylistDto>)=>{
-                    enqueueSnackbar(t('invite-created'), {variant: "success"})
-                    dispatch(setPlaylist([...playlists,v.data]))
-                    dispatch(setCreatePlaylistOpen(false))
-                })
+            savePlaylist()
         }}>{currentPlaylistToEdit?.id===-1?t('create-playlist'):t('update-playlist')}</CustomButtonPrimary>
         <br/>
     </>

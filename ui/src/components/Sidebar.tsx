@@ -25,7 +25,7 @@ export const Sidebar = () => {
             </span>
 
             <ul className="flex flex-col gap-2">
-                <SidebarItem iconName="home" path="./" translationKey="homepage"/>
+                <SidebarItem iconName="home" path="./home" translationKey="homepage"/>
                 <SidebarItem iconName="podcasts" path="podcasts" translationKey="all-subscriptions"/>
                 <SidebarItem iconName="favorite" path="favorites" translationKey="favorites"/>
                 <SidebarItem iconName="magic_button" path="timeline" translationKey="timeline"/>

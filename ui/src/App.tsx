@@ -1,5 +1,5 @@
 import { FC, PropsWithChildren, Suspense, useEffect, useState } from 'react'
-import { createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom'
+import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
@@ -15,7 +15,7 @@ import {
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
     SettingsViewLazyLoad,
-    TimeLineViewLazyLoad, PlaylistViewLazyLoad
+    TimeLineViewLazyLoad, PlaylistViewLazyLoad, HomepageViewLazyLoad
 } from "./utils/LazyLoading"
 import {
     checkIfOpmlAdded,
@@ -33,20 +33,27 @@ import "./App.css"
 import './App.css'
 import {HomePageSelector} from "./pages/HomePageSelector";
 import {EpisodesWithOptionalTimeline} from "./models/EpisodesWithOptionalTimeline";
+import {PlaylistPage} from "./pages/PlaylistPage";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
         <Route path="/" element={<Root/>}>
-            <Route index element={<HomePageSelector/>}/>
+            <Route index element={<Navigate to="home"/>}/>
+            <Route path="home" element={<HomePageSelector/>}>
+                <Route index element={<Navigate to="view"/>}/>
+                <Route path="view" element={<Suspense><HomepageViewLazyLoad /></Suspense>}/>
+                <Route path={"playlist"}>
+                    <Route index element={<Suspense><PlaylistPage/></Suspense>}></Route>
+                    <Route path={":id"} element={<Suspense><PlaylistViewLazyLoad/></Suspense>}/>
+                </Route>
+            </Route>
             <Route path={"podcasts"}>
                 <Route index element={<Suspense><PodcastViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
                 <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad/></Suspense>}/>
                 <Route path={"search"} element={<Suspense><EpisodeSearchViewLazyLoad/></Suspense>}/>
             </Route>
-            <Route path={"playlist"}>
-                <Route path={":id"} element={<Suspense><PlaylistViewLazyLoad/></Suspense>}/>
-            </Route>
+
             <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad /></Suspense>} />
             <Route path={"favorites"}>
                 <Route element={<PodcastViewLazyLoad onlyFavorites={true} />} index />
