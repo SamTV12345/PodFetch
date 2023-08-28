@@ -34,6 +34,12 @@ export const SystemInfoPage: FC = () => {
             .then((response: AxiosResponse<SysExtraInfo>) => setSystemInfo(response.data))
         axios.get(apiURL + '/info')
             .then(c => setVersionInfo(c.data))
+
+        const updateInterval = setInterval(() => {
+            axios.get(apiURL + '/sys/info')
+                .then((response: AxiosResponse<SysExtraInfo>) => setSystemInfo(response.data))
+        }, 5000)
+        return () => clearInterval(updateInterval)
     }, [])
 
     if (!systemInfo) {
