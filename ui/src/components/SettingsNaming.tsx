@@ -7,10 +7,10 @@ import { apiURL } from '../utils/Utilities'
 import { Setting } from '../models/Setting'
 import { UpdateNameSettings } from '../models/UpdateNameSettings'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
-import { CustomSelect } from '../components/CustomSelect'
-import { CustomInput } from '../components/CustomInput'
-import { Loading } from '../components/Loading'
-import { CustomCheckbox } from '../components/CustomCheckbox'
+import { CustomSelect } from './CustomSelect'
+import { CustomInput } from './CustomInput'
+import { Loading } from './Loading'
+import { CustomCheckbox } from './CustomCheckbox'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
 
 type SettingsProps = {
@@ -53,14 +53,16 @@ export const SettingsNaming: FC = () => {
 const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     const { t } = useTranslation()
 
-    const { control, formState: {}, handleSubmit, register } = useForm<UpdateNameSettings>({
+    const { control, formState: {}, handleSubmit, register }
+        = useForm<UpdateNameSettings>({
         defaultValues: {
             replacementStrategy: intialSettings.replacementStrategy,
             episodeFormat: intialSettings.episodeFormat,
             replaceInvalidCharacters: intialSettings.replaceInvalidCharacters,
             /* TODO: Fix inconsistency - /api/v1/settings uses useExistingFilename whereas /api/v1/settings/name uses useExistingFilenames */
             useExistingFilenames: intialSettings.useExistingFilename,
-            podcastFormat: intialSettings.podcastFormat
+            podcastFormat: intialSettings.podcastFormat,
+            directPaths: intialSettings.directPaths
         }
     })
 
@@ -124,7 +126,8 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-[--fg-color] flex gap-1" htmlFor="podcast-format">{t('standard-podcast-format')} <SettingsInfoIcon headerKey="standard-podcast-format" textKey="standard-podcast-format-explanation"/></label>
+                    <label className="text-[--fg-color] flex gap-1" htmlFor="podcast-format">{t('standard-podcast-format')}
+                        <SettingsInfoIcon headerKey="standard-podcast-format" textKey="standard-podcast-format-explanation"/></label>
 
                     <Controller
                     name="podcastFormat"
@@ -133,6 +136,20 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                         <CustomInput id="podcast-format" name={name} onChange={onChange} value={value} />
                     )} />
                 </div>
+                <fieldset className="xs:contents mb-4">
+                    <legend className="self-start mb-2 xs:mb-0 text-[--fg-color]">{t('use-direct-paths')}</legend>
+
+                    <div className="flex flex-col gap-2">
+                        <div className="flex">
+                            <Controller
+                                name="directPaths"
+                                control={control}
+                                render={({ field: { name, onChange, value }}) => (
+                                    <CustomCheckbox id="directPaths" name={name} onChange={onChange} value ={value} />
+                                )} />
+                        </div>
+                    </div>
+                </fieldset>
             </div>
 
             <CustomButtonPrimary className="float-right" type="submit">{t('save')}</CustomButtonPrimary>

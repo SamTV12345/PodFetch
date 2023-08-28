@@ -154,6 +154,7 @@ diesel::table! {
         replacement_strategy -> Text,
         episode_format -> Text,
         podcast_format -> Text,
+        direct_paths -> Bool,
     }
 }
 

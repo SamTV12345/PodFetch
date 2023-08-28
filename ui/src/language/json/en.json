@@ -170,5 +170,6 @@
   "updated-playlist": "Playlist updated",
   "created-playlist": "Playlist created",
   "episode-name": "Episode name",
-  "clear-all": "Clear all"
+  "clear-all": "Clear all",
+  "use-direct-paths": "Use direct paths"
 }

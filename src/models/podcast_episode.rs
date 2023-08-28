@@ -15,7 +15,6 @@ use crate::utils::time::opt_or_empty_string;
 use diesel::AsChangeset;
 use diesel::query_source::Alias;
 use crate::models::playlist_item::PlaylistItem;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;
 use crate::utils::error::{CustomError, map_db_error};
@@ -275,8 +274,8 @@ impl PodcastEpisode{
             diesel::update(podcast_episodes)
                 .filter(episode_id_column.eq(episode_id))
                 .set((
-                    local_image_url_column.eq(PodcastEpisodeService::map_to_local_url(image_url)),
-                    local_url_column.eq(PodcastEpisodeService::map_to_local_url(local_download_url)),
+                    local_image_url_column.eq(image_url),
+                    local_url_column.eq(local_download_url),
                     file_episode_path_column.eq(file_episode_path),
                     file_image_path_column.eq(file_image_path),
                 ))

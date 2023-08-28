@@ -21,11 +21,10 @@ responses(
 tag="podcast_episodes"
 )]
 #[get("/settings")]
-pub async fn get_settings(settings_service: Data<Mutex<SettingsService>>, conn:Data<DbPool>) ->
-                                                                                             Result<HttpResponse, CustomError> {
-    let mut settings_service = settings_service.lock().ignore_poison();
+pub async fn get_settings(conn:Data<DbPool>) -> Result<HttpResponse, CustomError> {
 
-    let settings = settings_service.get_settings(&mut conn.get().unwrap())?;
+    let settings = Setting::get_settings(&mut conn.get().unwrap())?;
+    println!("Settings: {:?}", settings);
     match settings {
         Some(settings) => Ok(HttpResponse::Ok().json(settings)),
         None => Err(CustomError::NotFound)
@@ -180,8 +179,7 @@ pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
 
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get()
-        .unwrap())?;
+    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get().unwrap())?;
     Ok(HttpResponse::Ok().json(settings))
 }
 
@@ -195,7 +193,8 @@ pub struct UpdateNameSettings{
     pub replace_invalid_characters: bool,
     pub replacement_strategy: ReplacementStrategy,
     pub episode_format: String,
-    pub podcast_format: String
+    pub podcast_format: String,
+    pub direct_paths: bool
 }
 
 #[derive(Deserialize, Clone)]

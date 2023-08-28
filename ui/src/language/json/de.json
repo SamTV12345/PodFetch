@@ -84,7 +84,7 @@
   "cancel": "Abbrechen",
   "podcast-deleted": "Podcast {{name}} gelöscht",
   "manage-podcasts": "Podcasts verwalten",
-  "data-retention": "Vorratsdatenspeicherung",
+  "data-retention": "Podcastaufbewahrung",
   "opml-export": "OPML-Export",
   "local": "Lokal",
   "online": "Online",
@@ -170,5 +170,6 @@
   "updated-playlist": "Playlist aktualisiert",
   "created-playlist": "Playlist erstellt",
   "episode-name": "Name der Episode",
-  "clear-all": "Alle löschen"
+  "clear-all": "Alle löschen",
+  "use-direct-paths": "Direkte Pfade verwenden"
 }

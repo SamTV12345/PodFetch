@@ -9,5 +9,6 @@ export type Setting = {
     replaceInvalidCharacters: boolean,
     replacementStrategy: string,
     episodeFormat: string,
-    podcastFormat: string
+    podcastFormat: string,
+    directPaths: boolean,
 }

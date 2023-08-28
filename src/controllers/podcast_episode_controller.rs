@@ -135,7 +135,9 @@ tag = "podcast_episodes"
 )]
 #[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: Data<DbPool>,
-                                                  requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
+                                                  requester: Option<web::ReqData<User>>) ->
+                                                                                                                              Result<HttpResponse,
+    CustomError> {
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
@@ -149,7 +151,7 @@ pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: D
             PodcastEpisodeService::perform_download(
                 &podcast_episode.clone(),
                 podcast,
-                &mut conn.get().unwrap(),
+                &mut conn.get().unwrap()
             ).unwrap();
             PodcastEpisode::update_deleted(&mut conn.get().unwrap(),&podcast_episode.clone().episode_id,
                                            false).unwrap();
