@@ -5,7 +5,7 @@ import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import { store } from './store/store'
 import { useAppDispatch, useAppSelector } from './store/hooks'
-import { addPodcast, PodcastEpisode, setNotifications, setSelectedEpisodes } from './store/CommonSlice'
+import { addPodcast, setNotifications, setSelectedEpisodes } from './store/CommonSlice'
 import { setMessages, setProgress } from './store/opmlImportSlice'
 import { apiURL, configWSUrl, isJsonString } from './utils/Utilities'
 import {
@@ -34,6 +34,12 @@ import './App.css'
 import {HomePageSelector} from "./pages/HomePageSelector";
 import {EpisodesWithOptionalTimeline} from "./models/EpisodesWithOptionalTimeline";
 import {PlaylistPage} from "./pages/PlaylistPage";
+import {SettingsData} from "./components/SettingsData";
+import {SettingsOPMLExport} from "./components/SettingsOPMLExport";
+import {SettingsNaming} from "./components/SettingsNaming";
+import {SettingsPodcastDelete} from "./components/SettingsPodcastDelete";
+import {UserAdminUsers} from "./components/UserAdminUsers";
+import {UserAdminInvites} from "./components/UserAdminInvites";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -61,8 +67,18 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route path={":id/episodes/:podcastid"} element={<Suspense><PodcastDetailViewLazyLoad /></Suspense>} />
             </Route>
             <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad /></Suspense>} />
-            <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad /></Suspense>} />
-            <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad /></Suspense>} />
+            <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad /></Suspense>}>
+                <Route index element={<Navigate  to="retention"/>}/>
+                <Route path="retention" element={<SettingsData/>}/>
+                <Route path="opml" element={<SettingsOPMLExport/>}/>
+                <Route path="naming" element={<SettingsNaming/>}/>
+                <Route path="podcasts" element={<SettingsPodcastDelete/>}/>
+            </Route>
+            <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad /></Suspense>}>
+                <Route index element={<Navigate to="users"/>}/>
+                <Route path="users" element={<UserAdminUsers/>}/>
+                <Route path="invites" element={<UserAdminInvites/>}/>
+            </Route>
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/invite/:id" element={<AcceptInvite />}></Route>
