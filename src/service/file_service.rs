@@ -111,24 +111,24 @@ impl FileService {
 
     pub fn cleanup_old_episode(episode: PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
-        let splitted_url = episode.url.split("/").collect::<Vec<&str>>();
-        return match splitted_url.len() as i32 == MAX_FILE_TREE_DEPTH {
+        let splitted_url = episode.url.split('/').collect::<Vec<&str>>();
+        match splitted_url.len() as i32 == MAX_FILE_TREE_DEPTH {
            true=>{
                let path = move_one_path_up(&episode.file_image_path.unwrap());
                std::fs::remove_dir_all(&path).map_err(|v|map_io_error(v, Some(path)))
            }
             false=>{
                 if episode.file_episode_path.is_some() {
-                    std::fs::remove_file(&episode.file_episode_path.clone().unwrap()).map_err
+                    std::fs::remove_file(episode.file_episode_path.clone().unwrap()).map_err
                     (|e|map_io_error(e, episode.file_episode_path))?;
                 }
                 if episode.file_image_path.is_some(){
-                    std::fs::remove_file(&episode.file_image_path.clone().unwrap()).map_err
+                    std::fs::remove_file(episode.file_image_path.clone().unwrap()).map_err
                     (|e|map_io_error(e, episode.file_image_path))?;
                 }
                 Ok(())
             }
-        };
+        }
     }
 
     pub fn delete_podcast_files(podcast_dir: &str){

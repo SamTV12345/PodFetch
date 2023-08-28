@@ -105,7 +105,7 @@ impl FilenameBuilder {
 
         match self.raw_filename{
             true=> {
-                return match self.settings.direct_paths {
+                match self.settings.direct_paths {
                     true => {
                         let episode_to_encode = format!("/{}", self.episode.clone());
                         let encoded_episode_url = PodcastEpisodeService::map_to_local_url(&episode_to_encode);
@@ -132,7 +132,7 @@ impl FilenameBuilder {
                         let episode_to_encode = format!("/{}", self.episode.clone());
                         let encoded_episode_url = PodcastEpisodeService::map_to_local_url(&episode_to_encode);
                         let resulting_link = format!("{base_url}{episode_url}", base_url = base_url, episode_url = encoded_episode_url);
-                        return self.create_direct_path_dirs(resulting_link)
+                        self.create_direct_path_dirs(resulting_link)
                     }
                     false=>{
                         let sub_episode_path = format!("/{}", self.episode.clone());
