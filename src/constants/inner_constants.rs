@@ -128,3 +128,6 @@ pub const DATABASE_URL_DEFAULT_SQLITE: &str = "sqlite://./db/podcast.db";
 
 pub const CSS: &str = "css";
 pub const JS: &str = "javascript";
+
+
+pub const MAX_FILE_TREE_DEPTH:i32 = 4;

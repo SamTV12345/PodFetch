@@ -12,7 +12,7 @@ use reqwest::header::HeaderMap;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::FilenameBuilder;
-use crate::service::settings_service::SettingsService;
+use crate::models::settings::Setting;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::error::CustomError;
 
@@ -35,14 +35,16 @@ impl DownloadService {
         -> Result<(),CustomError> {
         let conn = &mut establish_connection();
         let suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.url);
-        let settings_in_db = SettingsService::new().get_settings(conn)?.unwrap();
+        let settings_in_db = Setting::get_settings(conn)?.unwrap();
         let image_suffix = PodcastEpisodeService::get_url_file_suffix(&podcast_episode.image_url);
 
+        //TODO Continue here with the direct path and also add test cases
         let paths = match settings_in_db.use_existing_filename {
             true=>{
                 FilenameBuilder::default()
                     .with_podcast(podcast.clone())
                     .with_suffix(&suffix)
+                    .with_settings(settings_in_db)
                     .with_episode(podcast_episode.clone(), conn)?
                     .with_filename(PODCAST_FILENAME)
                     .with_image_filename(PODCAST_IMAGENAME)
@@ -53,6 +55,7 @@ impl DownloadService {
             false=>{
                  FilenameBuilder::default()
                     .with_suffix(&suffix)
+                     .with_settings(settings_in_db)
                     .with_image_suffix(&image_suffix)
                     .with_episode(podcast_episode.clone(), conn)?
                     .with_podcast_directory(&podcast.directory_name)

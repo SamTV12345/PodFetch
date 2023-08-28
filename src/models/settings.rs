@@ -10,7 +10,8 @@ use crate::constants::inner_constants::DEFAULT_SETTINGS;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(
-    Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,ToSchema
+    Serialize, Deserialize, Queryable, Insertable, Debug, Clone, Identifiable, AsChangeset,
+ToSchema, Default
 )]
 #[serde(rename_all = "camelCase")]
 pub struct Setting {
@@ -24,7 +25,8 @@ pub struct Setting {
     pub use_existing_filename: bool,
     pub replacement_strategy: String,
     pub episode_format: String,
-    pub podcast_format: String
+    pub podcast_format: String,
+    pub direct_paths: bool
 }
 
 #[derive(Serialize, Deserialize)]

@@ -98,7 +98,8 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                         enqueueSnackbar(t('new-podcast-episode-added', { name: parsed.podcast_episode.name }), { variant: 'success' })
 
                         const downloadedPodcastEpisode = parsed.podcast_episode
-                        let res = store.getState().common.selectedEpisodes.find(p => p.podcastEpisode.id === downloadedPodcastEpisode.id)
+                        let res = store.getState().common.selectedEpisodes
+                            .find(p => p.podcastEpisode.id === downloadedPodcastEpisode.id)
 
                         if (res == undefined) {
                             // This is a completely new episode
@@ -110,17 +111,15 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                         let podcastUpdated:EpisodesWithOptionalTimeline[] = store.getState().common.selectedEpisodes
                             .map(p => {
                             if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
-                                const foundDownload = JSON.parse(JSON.stringify(p)) as PodcastEpisode
+                                const foundDownload = JSON.parse(JSON.stringify(p)) as EpisodesWithOptionalTimeline
 
-                                foundDownload.status = 'D'
-                                foundDownload.url = downloadedPodcastEpisode.url
-                                foundDownload.local_url = downloadedPodcastEpisode.local_url
-                                foundDownload.image_url = downloadedPodcastEpisode.image_url
-                                foundDownload.local_image_url = downloadedPodcastEpisode.local_image_url
+                                foundDownload.podcastEpisode.status = 'D'
+                                foundDownload.podcastEpisode.url = downloadedPodcastEpisode.url
+                                foundDownload.podcastEpisode.local_url = downloadedPodcastEpisode.local_url
+                                foundDownload.podcastEpisode.image_url = downloadedPodcastEpisode.image_url
+                                foundDownload.podcastEpisode.local_image_url = downloadedPodcastEpisode.local_image_url
 
-                                return {
-                                    podcastEpisode: foundDownload
-                                } satisfies EpisodesWithOptionalTimeline
+                                return foundDownload
                             }
 
                             return p

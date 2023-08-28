@@ -56,7 +56,7 @@ impl PodcastEpisodeService {
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
         lobby: Option<web::Data<Addr<Lobby>>>,
-        conn: &mut DbConnection,
+        conn: &mut DbConnection
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
@@ -70,7 +70,7 @@ impl PodcastEpisodeService {
                 let podcast_inserted = Self::perform_download(
                     &podcast_episode_cloned,
                     podcast_cloned,
-                    conn,
+                    conn
                 )?;
                 let mapped_dto = self
                     .mapping_service

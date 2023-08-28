@@ -11,6 +11,7 @@ use std::str::FromStr;
 use crate::models::podcast_episode::PodcastEpisode;
 use regex::Regex;
 use crate::config::dbconfig::establish_connection;
+use crate::constants::inner_constants::MAX_FILE_TREE_DEPTH;
 
 use crate::controllers::settings_controller::ReplacementStrategy;
 use crate::DbConnection;
@@ -110,8 +111,24 @@ impl FileService {
 
     pub fn cleanup_old_episode(episode: PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
-        let path = move_one_path_up(&episode.file_image_path.unwrap());
-        std::fs::remove_dir_all(&path).map_err(|v|map_io_error(v, Some(path)))
+        let splitted_url = episode.url.split('/').collect::<Vec<&str>>();
+        match splitted_url.len() as i32 == MAX_FILE_TREE_DEPTH {
+           true=>{
+               let path = move_one_path_up(&episode.file_image_path.unwrap());
+               std::fs::remove_dir_all(&path).map_err(|v|map_io_error(v, Some(path)))
+           }
+            false=>{
+                if episode.file_episode_path.is_some() {
+                    std::fs::remove_file(episode.file_episode_path.clone().unwrap()).map_err
+                    (|e|map_io_error(e, episode.file_episode_path))?;
+                }
+                if episode.file_image_path.is_some(){
+                    std::fs::remove_file(episode.file_image_path.clone().unwrap()).map_err
+                    (|e|map_io_error(e, episode.file_image_path))?;
+                }
+                Ok(())
+            }
+        }
     }
 
     pub fn delete_podcast_files(podcast_dir: &str){
@@ -260,6 +277,7 @@ mod tests{
             use_existing_filename: false,
 
             podcast_prefill: 0,
+            direct_paths: false,
         };
 
         let result = perform_replacement(title, settings);
@@ -283,6 +301,7 @@ mod tests{
             use_existing_filename: false,
 
             podcast_prefill: 0,
+            direct_paths: false,
         };
 
         let result = perform_replacement(title, settings);
@@ -306,6 +325,7 @@ mod tests{
             use_existing_filename: false,
 
             podcast_prefill: 0,
+            direct_paths: false,
         };
 
         let result = perform_replacement(title, settings);
