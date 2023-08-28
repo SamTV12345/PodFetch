@@ -41,7 +41,7 @@ chrono = {version  = "0.4.23", default-features=false, features = ["serde"]}
 actix-web-actors = "4.2.0"
 rss = "2.0.6"
 frankenstein = "0.27.0"
-regex = "1.9.3"
+regex = "1.9.4"
 xml-builder = "0.5.2"
 diesel = { version = "2.1.0", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
