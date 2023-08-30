@@ -176,7 +176,7 @@ export const PodcastDetailPage = () => {
                     <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
 
                     {selectedEpisodes.map((episode, index) => (
-                        <PodcastDetailItem episode={episode} key={index} index={index} episodesLength={selectedEpisodes.length} />
+                        <PodcastDetailItem episode={episode} key={episode.podcastHistoryItem?.id} index={index} episodesLength={selectedEpisodes.length} />
                     ))}
                 </div>
             </div>

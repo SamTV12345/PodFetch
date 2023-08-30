@@ -5,7 +5,7 @@ import { store } from '../store/store'
 import { useAppDispatch } from '../store/hooks'
 import { setCurrentPodcast, setCurrentPodcastEpisode, setPlaying } from '../store/AudioPlayerSlice'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
-import { Podcast, PodcastEpisode } from '../store/CommonSlice'
+import {Podcast, PodcastEpisode, setPodcastAlreadyPlayed, setPodcastEpisodeAlreadyPlayed} from '../store/CommonSlice'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 
 type EpisodeCardProps = {
@@ -44,16 +44,27 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
 
     return (
         <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
-            axios.get(apiURL+"/podcast/episode/"+podcastEpisode.episode_id)
-                .then((response: AxiosResponse<PodcastWatchedModel>)=>{
-                    if (podcastEpisode.local_image_url.trim().length>1){
-                        store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(podcastEpisode, response.data)))
+            axios.get(apiURL + '/podcast/episode/' + podcastEpisode.episode_id)
+                .then((response: AxiosResponse<PodcastWatchedModel>) => {
+
+                    const playedPercentage = response.data.watchedTime * 100 / podcastEpisode.total_time
+                    if(playedPercentage < 95) {
+                        podcastEpisode.status === 'D'
+                            ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(podcastEpisode, response.data)))
+                            : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(podcastEpisode, response.data)))
+
+                        dispatch(setCurrentPodcast(podcast))
+                        dispatch(setPlaying(true))
                     }
                     else{
-                        store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(podcastEpisode, response.data)))
+                        dispatch(setPodcastEpisodeAlreadyPlayed({
+                            podcastEpisode:{
+                                podcastEpisode: podcastEpisode
+                            },
+                            podcastWatchModel: response.data
+                        }))
+                        dispatch(setPodcastAlreadyPlayed(true))
                     }
-                    dispatch(setCurrentPodcast(podcast))
-                    dispatch(setPlaying(true))
                 })
         }}>
 

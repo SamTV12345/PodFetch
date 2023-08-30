@@ -12,6 +12,8 @@ import 'material-symbols/outlined.css'
 import {store} from "../store/store";
 import axios, {AxiosResponse} from "axios";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import {setSelectedEpisodes} from "../store/CommonSlice";
+import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 
 type PlayerTimeControlsProps = {
     refItem: RefObject<HTMLAudioElement>
@@ -24,7 +26,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const isPlaying  = useAppSelector(state => state.audioPlayer.isPlaying)
     const speed = useAppSelector(state => state.audioPlayer.playBackRate)
     const time  = useAppSelector(state => state.audioPlayer.metadata?.currentTime)
-
+    const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
     const skipToPreviousEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
@@ -84,6 +86,19 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         } else {
             if (time && currentPodcastEpisode) {
                 logCurrentPlaybackTime(currentPodcastEpisode.episode_id, time)
+                const mappedEpisodes:EpisodesWithOptionalTimeline[] = selectedEpisodes.map(e=>{
+                    if(e.podcastEpisode.episode_id === currentPodcastEpisode.episode_id){
+                        return {
+                            ...e,
+                           podcastHistoryItem:{
+                                 ...e.podcastHistoryItem!,
+                               watchedTime: time
+                           }
+                        } satisfies EpisodesWithOptionalTimeline
+                    }
+                    return e
+                })
+                dispatch(setSelectedEpisodes(mappedEpisodes))
             }
 
             dispatch(setPlaying(false))

@@ -40,8 +40,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         return Math.round(episode.podcastHistoryItem.watchedTime*100/episode.podcastEpisode.total_time)
     }, [episode.podcastHistoryItem?.watchedTime])
 
-    console.log(episode.podcastHistoryItem?.watchedTime)
-
     const playedTime = useMemo(()=>{
         if(percentagePlayed === 0){
             return t('not-yet-played')
@@ -53,7 +51,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
 
     return (
         <>
-            <div key={episode.podcastEpisode.episode_id} id={'episode_' + episode.podcastEpisode.id} className="
+            <div id={'episode_' + episode.podcastEpisode.id} className="
                 grid
                 grid-cols-[1fr_auto] grid-rows-[auto_auto_auto]
                 xs:grid-cols-[auto_1fr_auto]
@@ -125,9 +123,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     axios.get(apiURL + '/podcast/episode/' + episode.podcastEpisode.episode_id)
                         .then((response: AxiosResponse<PodcastWatchedModel>) => {
 
-                            console.log(response.data)
                             const playedPercentage = response.data.watchedTime * 100 / episode.podcastEpisode.total_time
-                            console.log(playedPercentage)
                             if(playedPercentage < 95) {
                                 episode.podcastEpisode.status === 'D'
                                     ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data)))
