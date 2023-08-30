@@ -12,7 +12,6 @@ use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
 use diesel::{OptionalExtension, RunQueryDsl};
-use dotenv::var;
 use log::error;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
@@ -29,6 +28,7 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
+use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Clone)]
@@ -88,7 +88,7 @@ impl PodcastEpisodeService {
                     })
                 }
 
-                if var(TELEGRAM_API_ENABLED).is_ok() {
+                if is_env_var_present_and_true(TELEGRAM_API_ENABLED){
                     send_new_episode_notification(podcast_episode, podcast)
                 }
             }

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<Container version="2">
+    <Name>PodFetch</Name>
+    <Repository>samuel19982/podfetch:latest</Repository>
+    <Registry>https://hub.docker.com/r/samuel19982/podfetch</Registry>
+    <Network>bridge</Network>
+    <MyIP/>
+    <Shell>bash</Shell>
+    <Privileged>false</Privileged>
+    <Support>https://github.com/SamTV12345/PodFetch/issues</Support>
+    <Project>https://github.com/SamTV12345/PodFetch/wiki</Project>
+    <Overview/>
+    <Category>MediaServer:Music MediaServer:Other</Category>
+    <WebUI>http://[IP]:[PORT:8000]</WebUI>
+    <TemplateURL/>
+    <Icon>https://raw.githubusercontent.com/SamTV12345/PodFetch/main/ui/public/favicon.ico</Icon>
+    <ExtraParams/>
+    <PostArgs/>
+    <CPUset/>
+    <DateInstalled>1693407192</DateInstalled>
+    <DonateText/>
+    <DonateLink/>
+    <Requires/>
+    <Config Name="Host Port 1" Target="8000" Default="" Mode="tcp" Description="Public UI and API port." Type="Port" Display="always" Required="false" Mask="false"/>
+    <Config Name="Database path for SQLite" Target="/app/db" Default="" Mode="rw" Description="" Type="Path" Display="always" Required="false" Mask="false"/>
+    <Config Name="Server URL" Target="SERVER_URL" Default="" Mode="" Description="Url to your PodFetch server instance" Type="Variable" Display="always" Required="true" Mask="false"/>
+    <Config Name="Podcast path" Target="/app/podcasts" Default="" Mode="rw" Description="Path where your podcasts are saved" Type="Path" Display="always" Required="true" Mask="false"/>
+    <Config Name="Basic auth" Target="BASIC_AUTH" Default="" Mode="" Description="Indicates if present that basic auth should be added" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+    <Config Name="Basic auth username" Target="USERNAME" Default="" Mode="" Description="Your basic auth username" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+    <Config Name="Basic auth password" Target="PASSWORD" Default="" Mode="" Description="Your basic auth password" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+    <Config Name="Oidc auth" Target="OIDC_AUTH" Default="" Mode="" Description="Indicates that OIDC auth should be used" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+    <Config Name="OIDC authority" Target="OIDC_AUTHORITY&#9;" Default="" Mode="" Description="The url of the OIDC authority." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+    <Config Name="OIDC client id" Target="OIDC_CLIENT_ID" Default="" Mode="" Description="Client id of the oidc client. Note that this is a public client without a secret" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+    <Config Name="OIDC Redirect URI" Target="OIDC_REDIRECT_URI" Default="" Mode="" Description="Redirect URI of PodFetch. This is normally your server url variable + /ui/login" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+    <Config Name="OIDC scope" Target="OIDC_SCOPE" Default="openid profile email" Mode="" Description="Scope of the OIDC token" Type="Variable" Display="advanced" Required="false" Mask="false">openid profile email</Config>
+    <Config Name="OIDC JWKS url" Target="OIDC_JWKS" Default="" Mode="" Description="The JWKS token uri, e.g. /realms/master/protocol/openid-connect/certs" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>

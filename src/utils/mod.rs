@@ -4,3 +4,4 @@ pub mod do_retry;
 pub mod time;
 pub mod append_to_header;
 pub mod error;
+pub mod environment_variables;

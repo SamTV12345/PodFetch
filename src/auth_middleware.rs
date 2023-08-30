@@ -23,6 +23,7 @@ use sha256::digest;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::mutex::LockResultExt;
 use crate::service::jwkservice::JWKService;
+use crate::utils::environment_variables::is_env_var_present_and_true;
 
 pub struct AuthFilter {
 }
@@ -74,9 +75,9 @@ impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        return if var(BASIC_AUTH).is_ok() {
+        return if is_env_var_present_and_true(BASIC_AUTH) {
             self.handle_basic_auth(req)
-        } else if var(OIDC_AUTH).is_ok() {
+        } else if is_env_var_present_and_true(OIDC_AUTH) {
             self.handle_oidc_auth(req)
         } else {
             // It can only be no auth
