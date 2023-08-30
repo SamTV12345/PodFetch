@@ -8,7 +8,6 @@ import { store } from '../store/store'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
     addPodcastEpisodes,
-    PodcastEpisode,
     setEpisodeDownloaded,
     setInfoModalPodcast,
     setInfoModalPodcastOpen,
