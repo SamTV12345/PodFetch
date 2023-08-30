@@ -12,7 +12,7 @@ type AudioPlayerProps = {
 
 export const AudioPlayer: FC<AudioPlayerProps> = ({ refItem, audioAmplifier, setAudioAmplifier }) => {
     const detailedAudioPodcastOpen = useAppSelector(state => state.common.detailedAudioPlayerOpen)
-
+    
     return <>
         {!detailedAudioPodcastOpen && <DrawerAudioPlayer refItem={refItem} audioAmplifier={audioAmplifier} />}
         <HiddenAudioPlayer refItem={refItem} setAudioAmplifier={setAudioAmplifier} />

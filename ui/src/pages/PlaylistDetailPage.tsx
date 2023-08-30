@@ -12,6 +12,7 @@ import {setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
+import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 
 export const PlaylistDetailPage = ()=>{
     const {t} = useTranslation()
@@ -61,6 +62,7 @@ export const PlaylistDetailPage = ()=>{
     return selectedPlaylist&&<div>
         <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
         <PodcastInfoModal/>
+        <PodcastEpisodeAlreadyPlayed/>
         {selectedPlaylist.items.map((episode, index) => {
             return <PodcastDetailItem episode={episode} key={episode.podcastEpisode.id} index={index} episodesLength={selectedPlaylist.items.length}/>
         })}

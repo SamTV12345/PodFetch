@@ -170,5 +170,9 @@
   "created-playlist": "Playlista została utworzona",
   "episode-name": "Nazwa odcinka",
   "clear-all": "Wyczyść wszystko",
-  "use-direct-paths": "Użyj bezpośrednich ścieżek"
+  "use-direct-paths": "Użyj bezpośrednich ścieżek",
+  "not-yet-played": "Nieodtworzone",
+  "podcast-episode-played": "{{percentage}} został odtworzony.",
+  "restart-playing": "Restartuj odtwarzanie",
+  "you-already-listened": "Już odtworzono"
 }

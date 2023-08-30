@@ -284,3 +284,7 @@ html {
 .home-page-selector .active {
     @apply border-b-2 border-mustard-600 text-mustard-600;
 }
+
+.settings-selector .active {
+    @apply border-b-2 border-[--accent-color] text-[--accent-color];
+}

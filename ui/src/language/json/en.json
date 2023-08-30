@@ -171,5 +171,9 @@
   "created-playlist": "Playlist created",
   "episode-name": "Episode name",
   "clear-all": "Clear all",
-  "use-direct-paths": "Use direct paths"
+  "use-direct-paths": "Use direct paths",
+  "not-yet-played": "Not yet played",
+  "podcast-episode-played": "{{percentage}} played",
+  "restart-playing": "Restart playing",
+  "you-already-listened": "You already listened to the episode {{name}}. Do you want to restart playing?"
 }

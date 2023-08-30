@@ -169,5 +169,9 @@
   "created-playlist": "Lista de reproducción creada",
   "episode-name": "Nombre del episodio",
   "clear-all": "Borrar todo",
-  "use-direct-paths": "Usar rutas directas"
+  "use-direct-paths": "Usar rutas directas",
+  "not-yet-played": "No reproducido todavía",
+  "podcast-episode-played": "{{percentage}} reproducido",
+  "restart-playing": "Reiniciar reproducción",
+  "you-already-listened": "Ya has escuchado este episodio. Quieres reiniciar la reproducción?"
 }

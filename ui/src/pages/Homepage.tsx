@@ -7,6 +7,7 @@ import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel
 import { TimeLineModel, TimelineHATEOASModel } from '../models/TimeLineModel'
 import { EpisodeCard } from '../components/EpisodeCard'
 import { Heading2 } from '../components/Heading2'
+import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 
 export const Homepage = () => {
     const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
@@ -31,6 +32,7 @@ export const Homepage = () => {
 
     return (
         <>
+            <PodcastEpisodeAlreadyPlayed/>
             <div className="mb-8">
                 <Heading2 className="mb-2">{t('last-listened')}</Heading2>
 
