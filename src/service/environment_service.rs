@@ -4,6 +4,7 @@ use std::env::var;
 use regex::Regex;
 use crate::config::dbconfig::get_database_url;
 use crate::constants::inner_constants::{BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME};
+use crate::utils::environment_variables::is_env_var_present_and_true;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -39,7 +40,7 @@ impl Default for EnvironmentService {
 impl EnvironmentService {
     pub fn new() -> EnvironmentService {
         let mut option_oidc_config = None;
-        let oidc_configured = var(OIDC_AUTH).is_ok();
+        let oidc_configured = is_env_var_present_and_true(OIDC_AUTH);
         if oidc_configured{
             option_oidc_config = Some(OidcConfig{
                 redirect_uri: var(OIDC_REDIRECT_URI).expect("OIDC redirect uri not configured"),
@@ -73,12 +74,12 @@ impl EnvironmentService {
                 .unwrap(),
             podindex_api_key: var(PODINDEX_API_KEY).unwrap_or("".to_string()),
             podindex_api_secret: var(PODINDEX_API_SECRET).unwrap_or("".to_string()),
-            http_basic: var(BASIC_AUTH).is_ok(),
+            http_basic: is_env_var_present_and_true(BASIC_AUTH),
             username: var(USERNAME).unwrap_or("".to_string()),
             password: var(PASSWORD).unwrap_or("".to_string()),
             oidc_configured,
             oidc_config: option_oidc_config,
-            gpodder_integration_enabled: var(GPODDER_INTEGRATION_ENABLED).is_ok()
+            gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED)
         }
     }
 

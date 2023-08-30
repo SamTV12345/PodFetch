@@ -11,6 +11,7 @@ use dotenv::var;
 use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
 use crate::dbconfig::schema::users;
 use crate::DbConnection;
+use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
@@ -160,7 +161,7 @@ impl User {
      * Otherwise returns None
      */
     pub fn get_username_from_req_header(req: &actix_web::HttpRequest) -> Result<Option<String>, Error> {
-        if var(BASIC_AUTH).is_ok() || var(OIDC_AUTH).is_ok() {
+        if is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH) {
             let auth_header = req.headers().get(USERNAME);
             if auth_header.is_none() {
                 return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));

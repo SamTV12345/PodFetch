@@ -73,6 +73,7 @@ use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
+use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::CustomError;
 
 
@@ -326,7 +327,7 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig){
-    if var(BASIC_AUTH).is_ok()||var(OIDC_AUTH).is_ok() {
+    if is_env_var_present_and_true(BASIC_AUTH)|| is_env_var_present_and_true(OIDC_AUTH) {
         cfg.service(get_secure_user_management());
     }
 }
