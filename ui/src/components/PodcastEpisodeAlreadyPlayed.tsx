@@ -1,8 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import {setInfoModalPodcastOpen, setPodcastAlreadyPlayed} from '../store/CommonSlice'
-import { Heading2 } from './Heading2'
+import {setPodcastAlreadyPlayed} from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import {CustomButtonSecondary} from "./CustomButtonSecondary";
@@ -18,21 +17,6 @@ export const PodcastEpisodeAlreadyPlayed = () => {
     const selectedPodcastEpisode = useAppSelector(state => state.common.podcastEpisodeAlreadyPlayed)
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
     const {t} = useTranslation()
-
-    const percentagePlayed = useMemo(()=>{
-        if(!selectedPodcastEpisode ||!selectedPodcastEpisode.podcastEpisode.podcastHistoryItem){
-            return 0
-        }
-        return Math.round(selectedPodcastEpisode.podcastEpisode.podcastHistoryItem.watchedTime*100/selectedPodcastEpisode.podcastEpisode.podcastEpisode.total_time)
-    }, [selectedPodcastEpisode?.podcastEpisode.podcastHistoryItem])
-    const playedTime = useMemo(()=>{
-        if(percentagePlayed === 0){
-            return t('not-yet-played')
-        }
-        return t('podcast-episode-played',{
-            percentage: percentagePlayed+"%"
-        })
-    },[selectedPodcastEpisode])
 
     return createPortal(
         <div

@@ -35,13 +35,13 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
     const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
     const percentagePlayed = useMemo(()=>{
         if(!episode.podcastHistoryItem){
-            return 0
+            return -1
         }
         return Math.round(episode.podcastHistoryItem.watchedTime*100/episode.podcastEpisode.total_time)
     }, [episode.podcastHistoryItem?.watchedTime])
 
     const playedTime = useMemo(()=>{
-        if(percentagePlayed === 0){
+        if(percentagePlayed === -1){
             return t('not-yet-played')
         }
         return t('podcast-episode-played',{
