@@ -170,5 +170,9 @@
   "created-playlist": "Playlist créée",
   "episode-name": "Nom de l'épisode",
   "clear-all": "Tout effacer",
-  "use-direct-paths": "Utiliser des chemins directs"
+  "use-direct-paths": "Utiliser des chemins directs",
+  "not-yet-played": "Pas encore joué",
+  "podcast-episode-played": "{{percentage}} joué",
+  "restart-playing": "Recommencer à jouer",
+  "you-already-listened": "Vous avez déjà écouté cet épisode. Vous pouvez le réécouter en cliquant sur le bouton ci-dessous"
 }

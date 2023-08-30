@@ -98,8 +98,8 @@ diesel::table! {
         download_time -> Nullable<Timestamp>,
         guid -> Text,
         deleted -> Bool,
-        file_episode_path -> Text,
-        file_image_path -> Text,
+        file_episode_path -> Nullable<Text>,
+        file_image_path -> Nullable<Text>,
     }
 }
 

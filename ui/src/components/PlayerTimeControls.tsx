@@ -1,8 +1,19 @@
-import { FC, RefObject } from 'react'
-import { logCurrentPlaybackTime, SKIPPED_TIME } from '../utils/Utilities'
+import {FC, RefObject, useEffect} from 'react'
+import {
+    apiURL,
+    logCurrentPlaybackTime,
+    prepareOnlinePodcastEpisode,
+    preparePodcastEpisode,
+    SKIPPED_TIME
+} from '../utils/Utilities'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { setCurrentPodcastEpisode, setPlayBackRate, setPlaying } from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
+import {store} from "../store/store";
+import axios, {AxiosResponse} from "axios";
+import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import {setSelectedEpisodes} from "../store/CommonSlice";
+import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 
 type PlayerTimeControlsProps = {
     refItem: RefObject<HTMLAudioElement>
@@ -15,7 +26,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const isPlaying  = useAppSelector(state => state.audioPlayer.isPlaying)
     const speed = useAppSelector(state => state.audioPlayer.playBackRate)
     const time  = useAppSelector(state => state.audioPlayer.metadata?.currentTime)
-
+    const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
     const skipToPreviousEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
@@ -27,6 +38,14 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
 
         switchToEpisodes(index - 1)
     }
+
+    useEffect(() => {
+        refItem.current!.onended = () => {
+            logCurrentPlaybackTime(store.getState().audioPlayer.currentPodcastEpisode!.episode_id,
+                store.getState().audioPlayer.currentPodcastEpisode!.total_time)
+        }
+    }, []);
+
 
     const skipToNextEpisode = () => {
         if (currentPodcastEpisode === undefined) return
@@ -43,11 +62,19 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const switchToEpisodes = (index: number) => {
         if (refItem === undefined || refItem.current === undefined|| refItem.current === null) return
 
-        dispatch(setCurrentPodcastEpisode(episodes[index].podcastEpisode))
-        refItem.current.src = episodes[index].podcastEpisode.local_url
-        refItem.current.load()
-        refItem.current?.play()
-        dispatch(setPlaying(true))
+        const nextEpisode = episodes[index].podcastEpisode
+        axios.get(apiURL + "/podcast/episode/" + nextEpisode.episode_id)
+            .then((response: AxiosResponse<PodcastWatchedModel>) => {
+                dispatch(setCurrentPodcastEpisode(nextEpisode))
+                nextEpisode.status === 'D'
+                    ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data)))
+                    : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data)))
+                refItem.current!.src = episodes[index].podcastEpisode.local_url
+                refItem.current!.load()
+                refItem.current?.play()
+                dispatch(setPlaying(true))
+            })
+
     }
 
     const handleButton = () => {
@@ -59,6 +86,19 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         } else {
             if (time && currentPodcastEpisode) {
                 logCurrentPlaybackTime(currentPodcastEpisode.episode_id, time)
+                const mappedEpisodes:EpisodesWithOptionalTimeline[] = selectedEpisodes.map(e=>{
+                    if(e.podcastEpisode.episode_id === currentPodcastEpisode.episode_id){
+                        return {
+                            ...e,
+                           podcastHistoryItem:{
+                                 ...e.podcastHistoryItem!,
+                               watchedTime: time
+                           }
+                        } satisfies EpisodesWithOptionalTimeline
+                    }
+                    return e
+                })
+                dispatch(setSelectedEpisodes(mappedEpisodes))
             }
 
             dispatch(setPlaying(false))

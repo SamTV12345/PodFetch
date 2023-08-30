@@ -3,13 +3,8 @@ import {useState} from "react";
 import {Heading1} from "../components/Heading1";
 import {NavLink, Outlet, useNavigate} from "react-router-dom";
 
-type SelectableSection = 'home'|'playlist'
 export const HomePageSelector = ()=>{
     const {t} = useTranslation()
-    const [selectedSection, setSelectedSection] = useState<SelectableSection>('home')
-    const navigate = useNavigate()
-
-
     return (
         <>
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-x-6 gap-y-6 mb-6 xs:mb-10">

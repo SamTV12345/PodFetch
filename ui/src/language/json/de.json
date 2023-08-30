@@ -171,5 +171,9 @@
   "created-playlist": "Playlist erstellt",
   "episode-name": "Name der Episode",
   "clear-all": "Alle löschen",
-  "use-direct-paths": "Direkte Pfade verwenden"
+  "use-direct-paths": "Direkte Pfade verwenden",
+  "not-yet-played": "Noch nicht gespielt",
+  "podcast-episode-played": "{{percentage}} abgespielt",
+  "restart-playing": "Erneut abspielen",
+  "you-already-listened": "Die Episode {{name}} wurde bereits abgespielt. Möchtest du sie nochmal anhören oder eine andere Episode auswählen?"
 }
