@@ -14,6 +14,7 @@ import { PodcastInfoModal } from '../components/PodcastInfoModal'
 import { Switcher } from '../components/Switcher'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
+import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 
 export const PodcastDetailPage = () => {
     const dispatch = useAppDispatch()
@@ -86,6 +87,7 @@ export const PodcastDetailPage = () => {
         <Fragment key={'detail'}>
             <div className="max-w-4xl">
                 <PodcastInfoModal/>
+                <PodcastEpisodeAlreadyPlayed/>
 
                 {/* Header */}
                 <div className="

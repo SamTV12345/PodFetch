@@ -1,8 +1,17 @@
-import { FC, RefObject } from 'react'
-import { logCurrentPlaybackTime, SKIPPED_TIME } from '../utils/Utilities'
+import {FC, RefObject, useEffect} from 'react'
+import {
+    apiURL,
+    logCurrentPlaybackTime,
+    prepareOnlinePodcastEpisode,
+    preparePodcastEpisode,
+    SKIPPED_TIME
+} from '../utils/Utilities'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { setCurrentPodcastEpisode, setPlayBackRate, setPlaying } from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
+import {store} from "../store/store";
+import axios, {AxiosResponse} from "axios";
+import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 
 type PlayerTimeControlsProps = {
     refItem: RefObject<HTMLAudioElement>
@@ -28,6 +37,14 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         switchToEpisodes(index - 1)
     }
 
+    useEffect(() => {
+        refItem.current!.onended = () => {
+            logCurrentPlaybackTime(store.getState().audioPlayer.currentPodcastEpisode!.episode_id,
+                store.getState().audioPlayer.currentPodcastEpisode!.total_time)
+        }
+    }, []);
+
+
     const skipToNextEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
@@ -43,11 +60,19 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const switchToEpisodes = (index: number) => {
         if (refItem === undefined || refItem.current === undefined|| refItem.current === null) return
 
-        dispatch(setCurrentPodcastEpisode(episodes[index].podcastEpisode))
-        refItem.current.src = episodes[index].podcastEpisode.local_url
-        refItem.current.load()
-        refItem.current?.play()
-        dispatch(setPlaying(true))
+        const nextEpisode = episodes[index].podcastEpisode
+        axios.get(apiURL + "/podcast/episode/" + nextEpisode.episode_id)
+            .then((response: AxiosResponse<PodcastWatchedModel>) => {
+                dispatch(setCurrentPodcastEpisode(nextEpisode))
+                nextEpisode.status === 'D'
+                    ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data)))
+                    : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data)))
+                refItem.current!.src = episodes[index].podcastEpisode.local_url
+                refItem.current!.load()
+                refItem.current?.play()
+                dispatch(setPlaying(true))
+            })
+
     }
 
     const handleButton = () => {

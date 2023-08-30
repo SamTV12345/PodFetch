@@ -29,7 +29,7 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
                             ...podcastEpisode,
                             time: response.data.watchedTime
                         }))
-                        refItem.current!.currentTime = podcastEpisode.time
+                        refItem.current!.currentTime = podcastEpisode.time!
                     })
             } else {
                 refItem.current!.currentTime = podcastEpisode.time

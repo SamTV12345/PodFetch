@@ -9,6 +9,7 @@ import {Invite} from "../components/UserAdminInvites";
 import {TimelineHATEOASModel, TimeLineModel} from "../models/TimeLineModel";
 import {Filter} from "../models/Filter";
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
+import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 
 export type Podcast = {
     directory: string,
@@ -34,11 +35,17 @@ export type PodcastEpisode = {
     url: string,
     date_of_recording: string,
     image_url: string,
-    time: number,
+    total_time: number,
     local_url: string,
     local_image_url:string,
     description: string,
-    status: "D"|"N"|"P"
+    status: "D"|"N"|"P",
+    time?: number
+}
+
+type PodcastEpisodeWithPodcastWatchModel = {
+    podcastEpisode: EpisodesWithOptionalTimeline,
+    podcastWatchModel: PodcastWatchedModel
 }
 
 // Define a type for the slice state
@@ -50,6 +57,7 @@ interface CommonProps {
     notifications: Notification[],
     infoModalPodcast: PodcastEpisode|undefined,
     infoModalPodcastOpen: boolean,
+    podcastAlreadyPlayed: boolean,
     detailedAudioPlayerOpen: boolean,
     configModel: ConfigModel|undefined,
     currentDetailedPodcastId: number|undefined,
@@ -62,7 +70,8 @@ interface CommonProps {
     timeLineEpisodes: TimelineHATEOASModel|undefined
     filters: Filter|undefined,
     infoHeading: string|undefined,
-    infoText: string|undefined
+    infoText: string|undefined,
+    podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel|undefined
 }
 
 // Define the initial state using that type
@@ -86,7 +95,9 @@ const initialState: CommonProps = {
     timeLineEpisodes:undefined,
     filters: undefined,
     infoHeading: undefined,
-    infoText: undefined
+    infoText: undefined,
+    podcastAlreadyPlayed: false,
+    podcastEpisodeAlreadyPlayed: undefined
 }
 
 export const commonSlice = createSlice({
@@ -192,12 +203,18 @@ export const commonSlice = createSlice({
         },
         setInfoText: (state, action:PayloadAction<string>) => {
             state.infoText = action.payload
+        },
+        setPodcastAlreadyPlayed: (state, action:PayloadAction<boolean>) => {
+            state.podcastAlreadyPlayed = action.payload
+        },
+        setPodcastEpisodeAlreadyPlayed: (state, action:PayloadAction<PodcastEpisodeWithPodcastWatchModel>) => {
+            state.podcastEpisodeAlreadyPlayed = action.payload
         }
 }})
 
 export const {
     setSidebarCollapsed, setInfoHeading,setInfoText, addTimelineEpisodes, setFilters, addPodcastEpisodes, setTimeLineEpisodes,setInvites, setCreateInviteModalOpen, setUsers, setSelectedUser, setConfirmModalData, setLoginData, addPodcast, podcastDeleted, setCurrentDetailedPodcastId, setConfigModel, setPodcasts,
-    setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications, removeNotification, setInfoModalPodcast, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen
+    setSelectedEpisodes, setSearchedPodcasts, updateLikePodcast, setEpisodeDownloaded, setNotifications,setPodcastEpisodeAlreadyPlayed, removeNotification, setInfoModalPodcast,setPodcastAlreadyPlayed, setInfoModalPodcastOpen, setDetailedAudioPlayerOpen,
 } = commonSlice.actions
 
 export default commonSlice.reducer
