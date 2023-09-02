@@ -175,5 +175,5 @@
   "not-yet-played": "Not yet played",
   "podcast-episode-played": "{{percentage}} played",
   "restart-playing": "Restart playing",
-  "you-already-listened": "You already listened to the episode {{name}}. Do you want to restart playing?"
+  "you-already-listened": "You already listened to the episode <name/>. Do you want to restart playing?"
 }

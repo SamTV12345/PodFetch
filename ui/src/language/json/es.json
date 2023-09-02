@@ -173,5 +173,5 @@
   "not-yet-played": "No reproducido todavía",
   "podcast-episode-played": "{{percentage}} reproducido",
   "restart-playing": "Reiniciar reproducción",
-  "you-already-listened": "Ya has escuchado este episodio. Quieres reiniciar la reproducción?"
+  "you-already-listened": "Ya has escuchado el episodio <name/>. Quieres reiniciar la reproducción?"
 }
