@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
+import {Trans, useTranslation} from 'react-i18next'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {setPodcastAlreadyPlayed} from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
@@ -8,7 +8,7 @@ import {CustomButtonSecondary} from "./CustomButtonSecondary";
 import {useMemo} from "react";
 import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
 import {store} from "../store/store";
-import {prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities";
+import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
@@ -18,6 +18,14 @@ export const PodcastEpisodeAlreadyPlayed = () => {
     const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
     const {t} = useTranslation()
 
+    const displayPodcastName = useMemo(() => {
+        if(!selectedPodcastEpisode) {
+            return {
+                __html: ''
+            }
+        }
+        return removeHTML(selectedPodcastEpisode?.podcastEpisode.podcastEpisode.name!)
+    }, [selectedPodcastEpisode])
     return createPortal(
         <div
             id="defaultModal"
@@ -40,9 +48,11 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                 </button>
 
                 <div className="text-white mb-5">
-                    {t('you-already-listened',{
-                        name:selectedPodcastEpisode?.podcastEpisode.podcastEpisode.name
-                    })}
+                    <Trans t={t} i18nKey={'you-already-listened'} components={{
+                        name: <span dangerouslySetInnerHTML={displayPodcastName}/>
+                    }}>
+
+                    </Trans>
                 </div>
 
                 <div className="flex gap-3 float-right">
