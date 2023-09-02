@@ -142,7 +142,7 @@ To generate an invite, log into Podfetch → Top Right Icon → User Administrat
 | Variable         | Description                                   | Default                  |
 |------------------|-----------------------------------------------|--------------------------|
 | POLLING_INTERVAL | Interval in minutes to check for new episodes | 300                      |
-| SERVER_URL       | URL of the server                             | http://localhost:8000    |
+| SERVER_URL       | URL of the server/the URL of the proxy        | http://localhost:8000    |
 | DATABASE_URL     | URL of the database                           | sqlite://./db/podcast.db |
 
 
