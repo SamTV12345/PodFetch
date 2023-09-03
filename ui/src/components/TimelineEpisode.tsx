@@ -7,21 +7,24 @@ import { addTimelineEpisodes } from '../store/CommonSlice'
 import { apiURL } from '../utils/Utilities'
 import { TimelineHATEOASModel, TimeLineModel } from '../models/TimeLineModel'
 import { EpisodeCard } from './EpisodeCard'
+import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 
 type TimelineEpisodeProps = {
     podcastEpisode: TimeLineModel,
     index: number,
     timelineLength: number,
     totalLength: number,
-    timeLineEpisodes: TimelineHATEOASModel
+    timeLineEpisodes: TimelineHATEOASModel,
+    notListened: boolean,
+    podcastHistoryItem?: PodcastWatchedModel
 }
 
-export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode, index, timelineLength, timeLineEpisodes }) => {
+export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podcastHistoryItem, notListened, index, timelineLength, timeLineEpisodes }) => {
     const dispatch = useAppDispatch()
 
     return (
         <>
-            <EpisodeCard podcast={podcastEpisode.podcast} podcastEpisode={podcastEpisode.podcast_episode} />
+            <EpisodeCard watchedTime={podcastHistoryItem?.watchedTime} totalTime={podcastEpisode?.podcast_episode.total_time} podcast={podcastEpisode.podcast} podcastEpisode={podcastEpisode.podcast_episode} />
 
             {/*Infinite scroll */
             timeLineEpisodes.data.length === index + 1 &&
@@ -29,7 +32,8 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode, inde
                     axios.get(apiURL + '/podcasts/timeline', {
                         params:{
                             lastTimestamp: podcastEpisode.podcast_episode.date_of_recording,
-                            favoredOnly: store.getState().common.filters?.onlyFavored
+                            favoredOnly: store.getState().common.filters?.onlyFavored,
+                            notListened: notListened
                         }
                     })
                         .then((response: AxiosResponse<TimelineHATEOASModel>) => {

@@ -41,7 +41,7 @@ export const Timeline = () => {
                     dispatch(setTimeLineEpisodes(c.data))
                 })
         }
-    }, [filter])
+    }, [filter,notListened])
 
     if(timeLineEpisodes === undefined){
         return <Loading/>
@@ -63,7 +63,7 @@ export const Timeline = () => {
                     }))}/>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
+                    <span className="text-xs text-[--fg-secondary-color]">{t('not-yet-played')}</span>
 
                     <Switcher checked={notListened} setChecked={() => setNotListened(!notListened)}/>
                 </div>
@@ -86,6 +86,8 @@ export const Timeline = () => {
                         </>) : ''}
 
                         <TimelineEpisode
+                            podcastHistoryItem={e.history}
+                            notListened={notListened}
                             podcastEpisode={e}
                             key={e.podcast_episode.episode_id+index + "Parent"}
                             index={index}
