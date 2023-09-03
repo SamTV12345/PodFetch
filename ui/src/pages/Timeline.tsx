@@ -1,4 +1,4 @@
-import { Fragment, useEffect } from 'react'
+import {Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { apiURL, formatTime, getFiltersDefault } from '../utils/Utilities'
@@ -16,15 +16,14 @@ export const Timeline = () => {
     const timeLineEpisodes = useAppSelector(state => state.common.timeLineEpisodes)
     const filter = useAppSelector(state => state.common.filters)
     const { t } = useTranslation()
-
-    let currentTime = ""
+    const [notListened, setNotListened] = useState(false)
 
     useEffect(() => {
         !filter && axios.get(apiURL + '/podcasts/filter')
             .then((filterAxiosResponse: AxiosResponse<Filter>) => {
                 filterAxiosResponse.data == null && dispatch(setFilters(getFiltersDefault()))
 
-                filterAxiosResponse.data &&dispatch(setFilters(filterAxiosResponse.data))
+                filterAxiosResponse.data && dispatch(setFilters(filterAxiosResponse.data))
             })
     }, [])
 
@@ -34,7 +33,8 @@ export const Timeline = () => {
 
             axios.get(apiURL + '/podcasts/timeline', {
                 params: {
-                    favoredOnly: favoredOnly === undefined ? false : favoredOnly
+                    favoredOnly: favoredOnly === undefined ? false : favoredOnly,
+                    notListened: notListened
                 }
             })
                 .then((c: AxiosResponse<TimelineHATEOASModel>) => {
@@ -53,6 +53,7 @@ export const Timeline = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
                 <Heading1>{t('timeline')}</Heading1>
 
+                <div className="flex flex-row gap-5">
                 <div className="flex items-center gap-3">
                     <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
 
@@ -60,6 +61,12 @@ export const Timeline = () => {
                         ...filter as Filter,
                         onlyFavored: !filter?.onlyFavored
                     }))}/>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
+
+                    <Switcher checked={notListened} setChecked={() => setNotListened(!notListened)}/>
+                </div>
                 </div>
             </div>
 

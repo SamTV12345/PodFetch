@@ -2,16 +2,18 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use diesel::prelude::*;
 use diesel::{RunQueryDsl};
+use diesel::dsl::max;
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::{DbConnection};
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
+use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineItem {
-    pub data: Vec<(PodcastEpisode, Podcast, Option<Favorite>)>,
+    pub data: Vec<(PodcastEpisode, Podcast, Option<PodcastHistoryItem>, Option<Favorite>)>,
     pub total_elements: i64,
 }
 
@@ -26,16 +28,35 @@ impl TimelineItem {
         use crate::dbconfig::schema::favorites::username as f_username;
         use crate::dbconfig::schema::favorites::podcast_id as f_podcast_id;
         use crate::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
+        use crate::dbconfig::schema::podcast_history_items as phi_struct;
+        use crate::dbconfig::schema::podcast_history_items::username as phi_username;
+        use crate::dbconfig::schema::podcast_history_items::date as phistory_date;
+        use crate::dbconfig::schema::podcast_history_items::episode_id as ehid;
 
         Filter::save_decision_for_timeline(username_to_search.clone(), conn, favored_only.favored_only);
 
-        let mut query = podcast_episodes.inner_join(podcasts.on(e_podcast_id.eq(pid)))
+        let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
+
+        let subquery = ph2
+            .select(max(ph2.field(phistory_date)))
+            .filter(ph2.field(ehid).eq(episode_id))
+            .filter(ph2.field(phi_username)
+                .eq(username_to_search.clone()))
+            .group_by(ph2.field(ehid));
+
+        let mut query = podcast_episodes
+            .inner_join(podcasts.on(e_podcast_id.eq(pid)))
+            .left_join(ph1.on(ph1.field(ehid).eq(episode_id).and(ph1.field(phi_username).eq
+            (username_to_search.clone()))))
             .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
             .order(date_of_recording.desc())
             .limit(20)
             .into_boxed();
 
-        let mut total_count = podcast_episodes.inner_join(podcasts.on(e_podcast_id.eq(pid)))
+        let mut total_count = podcast_episodes
+            .inner_join(podcasts.on(e_podcast_id.eq(pid)))
+            .left_join(ph1.on(ph1.field(ehid).eq(episode_id).and(ph1.field(phi_username).eq
+            (username_to_search.clone()))))
             .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
             .count()
             .into_boxed();
@@ -58,8 +79,16 @@ impl TimelineItem {
 
             }
         }
-        let results = total_count.get_result::<i64>(conn).expect("Error counting results");
-        let result = query.load::<(PodcastEpisode, Podcast, Option<Favorite>)>(conn).map_err
+
+        if favored_only.not_listened {
+            query = query.filter(ph1.field(phistory_date).nullable().ne_all(subquery.clone()));
+            total_count = total_count.filter(ph1.field(phistory_date).nullable().ne_all(subquery));
+        }
+        let results = total_count.get_result::<i64>(conn).map_err(map_db_error)?;
+        let result = query.load::<(PodcastEpisode, Podcast, Option<PodcastHistoryItem>,
+                                   Option<Favorite>)>
+        (conn)
+            .map_err
         (map_db_error)?;
 
         Ok(TimelineItem {

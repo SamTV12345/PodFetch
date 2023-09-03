@@ -75,6 +75,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
 pub struct TimeLinePodcastEpisode {
     podcast_episode: PodcastEpisode,
     podcast: Podcast,
+    history: Option<PodcastHistoryItem>,
     favorite: Option<Favorite>,
 }
 
@@ -90,6 +91,7 @@ pub struct TimeLinePodcastItem {
 pub struct TimelineQueryParams {
     pub favored_only: bool,
     pub last_timestamp: Option<String>,
+    pub not_listened: bool,
 }
 
 #[utoipa::path(
@@ -109,12 +111,13 @@ Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result
                                          favored_only.into_inner())?;
 
     let mapped_timeline = res.data.iter().map(|podcast_episode| {
-        let (podcast_episode, podcast, favorite) = podcast_episode.clone();
+        let (podcast_episode, podcast,history, favorite) = podcast_episode.clone();
         let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast_episode);
 
         TimeLinePodcastEpisode {
             podcast_episode: mapped_podcast_episode,
             podcast,
+            history,
             favorite,
         }
     }).collect::<Vec<TimeLinePodcastEpisode>>();
