@@ -44,20 +44,18 @@ impl TimelineItem {
                 .eq(username_to_search.clone()))
             .group_by(ph2.field(ehid));
 
-        let mut query = podcast_episodes
+        let part_query = podcast_episodes
             .inner_join(podcasts.on(e_podcast_id.eq(pid)))
-            .left_join(ph1.on(ph1.field(ehid).eq(episode_id).and(ph1.field(phi_username).eq
-            (username_to_search.clone()))))
+            .left_join(ph1.on(ph1.field(ehid).eq(episode_id)))
+            .filter(ph1.field(phistory_date).nullable().eq_any(subquery.clone())
+                .or(ph1.field(phistory_date).is_null()))
             .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
-            .order(date_of_recording.desc())
+            .order(date_of_recording.desc());
+        let mut query = part_query.clone()
             .limit(20)
             .into_boxed();
 
-        let mut total_count = podcast_episodes
-            .inner_join(podcasts.on(e_podcast_id.eq(pid)))
-            .left_join(ph1.on(ph1.field(ehid).eq(episode_id).and(ph1.field(phi_username).eq
-            (username_to_search.clone()))))
-            .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
+        let mut total_count = part_query
             .count()
             .into_boxed();
 
