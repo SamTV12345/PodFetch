@@ -22,7 +22,7 @@ rpassword = "7.2.0"
 reqwest = { version = "0.11.20", features = ["stream", "json","blocking"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 actix = "0.13.1"
-async-recursion = "1.0.2"
+async-recursion = "1.0.5"
 base64 = "0.21.3"
 uuid = {version="1.4.0", features = ["v4", "serde"]}
 libsqlite3-sys = {version = "0.26.0", features = ["bundled"], optional = true}
