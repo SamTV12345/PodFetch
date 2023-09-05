@@ -21,7 +21,7 @@ awc =  {version="3.1.1", features = ["rustls"]}
 rpassword = "7.2.0"
 reqwest = { version = "0.11.20", features = ["stream", "json","blocking"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
-actix = "0.13.0"
+actix = "0.13.1"
 async-recursion = "1.0.2"
 base64 = "0.21.1"
 uuid = {version="1.4.0", features = ["v4", "serde"]}
