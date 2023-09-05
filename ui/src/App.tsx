@@ -7,7 +7,7 @@ import { store } from './store/store'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { addPodcast, setNotifications, setSelectedEpisodes } from './store/CommonSlice'
 import { setMessages, setProgress } from './store/opmlImportSlice'
-import { apiURL, configWSUrl, isJsonString } from './utils/Utilities'
+import {apiURL, configWSUrl, decodeHTMLEntities, isJsonString} from './utils/Utilities'
 import {
     UserAdminViewLazyLoad,
     EpisodeSearchViewLazyLoad,
@@ -108,10 +108,10 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                     const podcast = parsed.podcast
 
                     dispatch(addPodcast(podcast))
-                    enqueueSnackbar(t('new-podcast-added', { name: podcast.name }), { variant: 'success' })
+                    enqueueSnackbar(t('new-podcast-added', { name: decodeHTMLEntities(podcast.name) }), { variant: 'success' })
                 } else if (checkIfPodcastEpisodeAdded(parsed)) {
                     if (store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
-                        enqueueSnackbar(t('new-podcast-episode-added', { name: parsed.podcast_episode.name }), { variant: 'success' })
+                        enqueueSnackbar(t('new-podcast-episode-added', { name: decodeHTMLEntities(parsed.podcast_episode.name) }), { variant: 'success' })
 
                         const downloadedPodcastEpisode = parsed.podcast_episode
                         let res = store.getState().common.selectedEpisodes
@@ -158,12 +158,12 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                         return e
                     })
 
-                    enqueueSnackbar(t('podcast-episode-deleted', { name: parsed.podcast_episode.name }), { variant: 'success' })
+                    enqueueSnackbar(t('podcast-episode-deleted', { name: decodeHTMLEntities(parsed.podcast_episode.name) }), { variant: 'success' })
                     dispatch(setSelectedEpisodes(updatedPodcastEpisodes))
                 } else if (checkIfPodcastRefreshed(parsed)) {
                     const podcast = parsed.podcast
 
-                    enqueueSnackbar(t('podcast-refreshed', { name: podcast.name }), { variant: 'success' })
+                    enqueueSnackbar(t('podcast-refreshed', { name: decodeHTMLEntities(podcast.name) }), { variant: 'success' })
                 } else if (checkIfOpmlAdded(parsed)) {
                     dispatch(setProgress([...store.getState().opmlImport.progress,true]))
                 } else if (checkIfOpmlErrored(parsed)) {
