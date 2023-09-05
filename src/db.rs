@@ -68,6 +68,7 @@ impl TimelineItem {
 
 
                 query = query.filter(f_username.eq(username_to_search.clone()));
+                query = query.filter(favored.eq(true));
                 total_count = total_count.filter(f_username.eq(username_to_search.clone()));
             }
             false => {
