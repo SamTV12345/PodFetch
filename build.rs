@@ -4,7 +4,6 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 
-use built::Options;
 
 fn main() {
         #[cfg(feature = "sqlite")]
@@ -13,15 +12,13 @@ fn main() {
         println!("cargo:rustc-cfg=mysql");
         #[cfg(feature = "postgresql")]
         println!("cargo:rustc-cfg=postgresql");
-        let mut opts = Options::default();
-        opts.set_dependencies(true);
         let maybe_vaultwarden_version =
             env::var("VW_VERSION").or_else(|_| env::var("BWRS_VERSION")).or_else(|_| version_from_git_info());
 
         #[cfg(feature = "postgresql")]
         version_from_git_info().expect("Error retrieving git information");
 
-        create_git_sqlite(opts);
+        create_git_sqlite();
         if let Ok(version) = maybe_vaultwarden_version {
                 println!("cargo:rustc-env=VW_VERSION={version}");
                 println!("cargo:rustc-env=CARGO_PKG_VERSION={version}");
@@ -38,11 +35,12 @@ fn main() {
 }
 
 
-fn create_git_sqlite(opts: Options) {
+fn create_git_sqlite() {
         let src = env::var("CARGO_MANIFEST_DIR").unwrap();
         let dst = Path::new(&env::var("OUT_DIR").unwrap()).join("built.rs");
         println!("Path: {:?}", dst);
-        built::write_built_file_with_opts(&opts, src.as_ref(), &dst)
+        let path = Path::new(&src);
+        built::write_built_file_with_opts(Option::from(path), &dst)
             .expect("Failed to acquire build-time information");
 }
 
