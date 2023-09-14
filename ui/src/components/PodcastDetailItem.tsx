@@ -111,7 +111,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 " dangerouslySetInnerHTML={removeHTML(episode.podcastEpisode.description)}></div>
 
                 {/* Play button */}
-                <span className={`${percentagePlayed >=95 && 'text-gray-500'}
+                <span className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'text-gray-500'}
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
                     self-center material-symbols-outlined cursor-pointer !text-5xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90
@@ -121,9 +121,8 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
 
                     axios.get(apiURL + '/podcast/episode/' + episode.podcastEpisode.episode_id)
                         .then((response: AxiosResponse<PodcastWatchedModel>) => {
-
                             const playedPercentage = response.data.watchedTime * 100 / episode.podcastEpisode.total_time
-                            if(playedPercentage < 95) {
+                            if(playedPercentage < 95 || episode.podcastEpisode.total_time === 0){
                                 episode.podcastEpisode.status === 'D'
                                     ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data)))
                                     : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data)))
@@ -133,7 +132,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             }
                             else{
                                 dispatch(setPodcastEpisodeAlreadyPlayed({
-                                    podcastEpisode:episode,
+                                    podcastEpisode: episode,
                                     podcastWatchModel: response.data
                                 }))
                                 dispatch(setPodcastAlreadyPlayed(true))

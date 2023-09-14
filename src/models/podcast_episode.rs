@@ -97,7 +97,7 @@ impl PodcastEpisode{
         conn: &mut DbConnection,
         podcas_episode_url_to_be_found: &str,
         i: Option<i32>,
-    ) -> Result<Option<PodcastEpisode>, String> {
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
        let found_podcast_epsiode = if let Some(i_unwrapped) = i{
              podcast_episodes
@@ -105,14 +105,14 @@ impl PodcastEpisode{
                     .and(podcast_id.eq(i_unwrapped)))
                 .first::<PodcastEpisode>(conn)
                 .optional()
-                .expect("Error loading podcast by id")
+                 .map_err(map_db_error)?
         }
         else{
             podcast_episodes
                 .filter(url.eq(podcas_episode_url_to_be_found))
                 .first::<PodcastEpisode>(conn)
                 .optional()
-                .expect("Error loading podcast by id")
+                .map_err(map_db_error)?
         };
 
 

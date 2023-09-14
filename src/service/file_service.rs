@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::models::podcasts::Podcast;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
 
@@ -10,6 +9,7 @@ use std::str::FromStr;
 
 use crate::models::podcast_episode::PodcastEpisode;
 use regex::Regex;
+use tokio::task::spawn_blocking;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::MAX_FILE_TREE_DEPTH;
 
@@ -19,6 +19,7 @@ use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::{CustomError, map_io_error};
+use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 
 #[derive(Clone)]
 pub struct FileService {
@@ -98,10 +99,15 @@ impl FileService {
         }
     }
 
-    pub async fn download_podcast_image(&self, podcast_path: &str, image_url: &str, podcast_id: &str, conn: &mut DbConnection) {
+    pub async fn download_podcast_image(&self, podcast_path: &str, image_url: String,
+                                        podcast_id: &str, conn: &mut DbConnection) {
+        let cloned_image_url = image_url.clone();
+        let image_suffix = spawn_blocking(move ||{
+            let client = reqwest::blocking::Client::new();
+            return determine_file_extension(&cloned_image_url.clone(), &client, FileType::Image);
+        }).await.unwrap();
 
         let image_response = self.client.get(image_url).send().await.unwrap();
-        let image_suffix = PodcastEpisodeService::get_url_file_suffix(image_url);
         let file_path = PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix);
         let mut image_out = std::fs::File::create(file_path.0.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
