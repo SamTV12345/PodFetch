@@ -149,7 +149,7 @@ impl PodcastService {
 
         fileservice
             .download_podcast_image(&inserted_podcast.directory_name.clone().to_string(),
-                                    &podcast_insert.image_url.clone().to_string(),
+                                    podcast_insert.image_url.clone().to_string(),
                                     &podcast_insert.id.clone().to_string(), conn)
             .await;
         let podcast = Podcast::get_podcast_by_track_id(conn, podcast_insert.id)
@@ -175,8 +175,7 @@ impl PodcastService {
                     let mut podcast_episode_service = PodcastEpisodeService::new();
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
                     let inserted_podcasts =
-                        podcast_episode_service.insert_podcast_episodes(&mut conn, podcast.clone
-                        ()).unwrap();
+                        podcast_episode_service.insert_podcast_episodes(&mut conn, podcast.clone()).unwrap();
 
                     lobby.get_ref().do_send(BroadcastMessage {
                         podcast_episode: None,

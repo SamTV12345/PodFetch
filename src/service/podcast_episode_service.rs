@@ -1,3 +1,4 @@
+use std::io::Error;
 use std::sync::{Arc, Mutex};
 use crate::constants::inner_constants::{PodcastType, TELEGRAM_API_ENABLED};
 use crate::models::podcast_episode::PodcastEpisode;
@@ -176,9 +177,9 @@ impl PodcastEpisodeService {
                                 continue;
                             }
 
-                            let result_unwrapped = result.clone().unwrap();
+                            let result_unwrapped = result.unwrap();
 
-                            if let Some(result_unwrapped_non_opt) = result_unwrapped {
+                            if let Some(result_unwrapped_non_opt) = result_unwrapped.clone() {
                                 if result_unwrapped_non_opt.clone().podcast_id != podcast.id {
                                     let inserted_episode = PodcastEpisode::insert_podcast_episodes(conn,
                                                                                                    podcast.clone(),
@@ -195,12 +196,11 @@ impl PodcastEpisodeService {
                                 }
                             }
 
-                            if result.clone().unwrap().is_none() {
+                            if result_unwrapped.is_none() {
                                 // Insert new podcast episode
                                 if let Some(duration) = itunes_ext.clone().duration {
                                     duration_episode = Self::parse_duration(&duration);
                                 }
-
 
                                 let inserted_episode = PodcastEpisode::insert_podcast_episodes(conn,
                                                                                                podcast.clone(),
@@ -338,10 +338,13 @@ impl PodcastEpisodeService {
         }
     }
 
-    pub fn get_url_file_suffix(url: &str) -> String {
+    pub fn get_url_file_suffix(url: &str) -> Result<String, Error> {
         let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
-        let capture = re.captures(url).unwrap();
-        return capture.get(1).unwrap().as_str().to_owned();
+        let capture = re.captures(url);
+        if capture.is_none(){
+            return Err(Error::new(std::io::ErrorKind::Other, "No"));
+        }
+        return Ok(capture.unwrap().get(1).unwrap().as_str().to_string());
     }
 
     pub fn query_for_podcast(&mut self, query: &str, conn: &mut DbConnection) -> Result<Vec<PodcastEpisode>, CustomError> {

@@ -193,7 +193,7 @@ fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> 
                 .length(episode.clone().total_time.to_string())
                 .mime_type(format!(
                     "audio/{}",
-                    &*PodcastEpisodeService::get_url_file_suffix(&episode.clone().local_url)
+                    PodcastEpisodeService::get_url_file_suffix(&episode.clone().local_url).unwrap()
                 ))
                 .build();
 
