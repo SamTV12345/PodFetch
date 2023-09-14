@@ -23,27 +23,33 @@ pub fn determine_file_extension(url: &str, client: &reqwest::blocking::Client, f
             match mime_type {
                 Some(mime_type) => {
                     let complete_extension = mime_type.to_str().unwrap();
-                    let file_extension = complete_extension.split("/").last().unwrap();
-                    if complete_extension.contains("audio") || complete_extension.contains("image") {
-                        let f_ext = file_extension.split(";").next().unwrap().to_string();
-                        return f_ext;
+                    if let Some(extension) =  complete_extension.split('/').last() {
+                            let file_extension = extension;
+                            if complete_extension.contains("audio") || complete_extension.contains("image") {
+                                if file_extension.contains(';'){
+                                    let f_ext = file_extension.split(';').next().unwrap().to_string();
+                                    return f_ext;
+                                }
+                                return file_extension.to_string();
+                            }
                     }
 
-                    get_suffix_by_url(&url, &file_type)
+
+                    get_suffix_by_url(url, &file_type)
                 },
                 None => {
-                    get_suffix_by_url(&url, &file_type)
+                    get_suffix_by_url(url, &file_type)
                 }
             }
         },
         Err(..) => {
-            get_suffix_by_url(&url, &file_type)
+            get_suffix_by_url(url, &file_type)
         }
     }
 }
 
-fn get_suffix_by_url(url: &&str, file_type: &FileType) -> String {
-    let result_suffix = PodcastEpisodeService::get_url_file_suffix(&url);
+fn get_suffix_by_url(url: &str, file_type: &FileType) -> String {
+    let result_suffix = PodcastEpisodeService::get_url_file_suffix(url);
     match result_suffix {
         Ok(suffix) => suffix,
         Err(..) => {

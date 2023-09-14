@@ -104,7 +104,7 @@ impl FileService {
         let cloned_image_url = image_url.clone();
         let image_suffix = spawn_blocking(move ||{
             let client = reqwest::blocking::Client::new();
-            return determine_file_extension(&cloned_image_url.clone(), &client, FileType::Image);
+            determine_file_extension(&cloned_image_url.clone(), &client, FileType::Image)
         }).await.unwrap();
 
         let image_response = self.client.get(image_url).send().await.unwrap();
