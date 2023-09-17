@@ -4,7 +4,7 @@
 - Set the  `SERVER_URL` environment variable to the url of the proxy.
 - Turn on websocket support in your proxy
 
-&rarr; You won't be able to use your service via the plain local url as the websocket connection will fail.
+You won't be able to use your service via the plain local url as the websocket connection will fail.
 
 If the SERVER_URL starts with
 - https => Secured Websocket (wss)
