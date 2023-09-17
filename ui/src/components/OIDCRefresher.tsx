@@ -20,10 +20,10 @@ export const OIDCRefresher: FC<PropsWithChildren> = ({ children }) => {
     })
 
     useEffect(() => {
-        if (auth.user?.access_token) {
-            axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.access_token
+        if (auth.user?.id_token) {
+            axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.id_token
         }
-    }, [auth.user?.access_token])
+    }, [auth.user?.id_token])
 
     return (
         <>

@@ -10,7 +10,7 @@ export const OIDCButton = () => {
     const { t } = useTranslation()
 
     if (auth.isAuthenticated && auth.user) {
-        axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.access_token;
+        axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.id_token;
         navigate('/')
     }
 
