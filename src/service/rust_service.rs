@@ -1,6 +1,6 @@
 
 use std::sync::{MutexGuard};
-use crate::constants::inner_constants::{PodcastType, ITUNES_URL};
+use crate::constants::inner_constants::{PodcastType, ITUNES_URL, COMMON_USER_AGENT};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 
@@ -271,7 +271,7 @@ impl PodcastService {
 
         let hashed_auth_key = format!("{:x}", hasher.finalize());
 
-        headers.insert("User-Agent", HeaderValue::from_str("Podfetch").unwrap());
+        headers.insert("User-Agent", HeaderValue::from_str(COMMON_USER_AGENT).unwrap());
         headers.insert(
             "X-Auth-Key",
             HeaderValue::from_str(&self.environment_service.podindex_api_key.clone()).unwrap(),

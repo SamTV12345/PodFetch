@@ -26,7 +26,7 @@ use std::thread;
 use actix_web::dev::PeerAddr;
 use actix_web::http::{Method};
 use tokio::task::spawn_blocking;
-use crate::constants::inner_constants::{PodcastType};
+use crate::constants::inner_constants::{COMMON_USER_AGENT, PodcastType};
 
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -295,6 +295,7 @@ pub async fn add_podcast_by_feed(
     }
     let client = AsyncClientBuilder::new().build().unwrap();
     let mut header_map = HeaderMap::new();
+    header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
     let result = client.get(rss_feed.clone().rss_feed_url)
         .headers(header_map)
@@ -302,8 +303,9 @@ pub async fn add_podcast_by_feed(
         .await
         .map_err(map_reqwest_error)?;
 
-    let bytes = result.bytes().await.unwrap();
-    let channel = Channel::read_from(&*bytes).unwrap();
+    let bytes = result.text().await.unwrap();
+    println!("{}", bytes);
+    let channel = Channel::read_from(bytes.as_bytes()).unwrap();
     let num = rand::thread_rng().gen_range(100..10000000);
 
     let res;

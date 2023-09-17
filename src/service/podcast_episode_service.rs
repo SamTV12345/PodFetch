@@ -1,6 +1,6 @@
 use std::io::Error;
 use std::sync::{Arc, Mutex};
-use crate::constants::inner_constants::{PodcastType, TELEGRAM_API_ENABLED};
+use crate::constants::inner_constants::{COMMON_USER_AGENT, PodcastType, TELEGRAM_API_ENABLED};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::messages::BroadcastMessage;
@@ -477,7 +477,7 @@ impl PodcastEpisodeService {
         })).build().unwrap();
         let mut header_map = HeaderMap::new();
         header_map.append(ACCEPT, "application/rss+xml,application/xml".parse().unwrap());
-        header_map.append("User-Agent", "PostmanRuntime/7.32.2".parse().unwrap());
+        header_map.append("User-Agent", COMMON_USER_AGENT.parse().unwrap());
         let result = client
             .get(podcast.clone().rssfeed)
             .headers(header_map)
