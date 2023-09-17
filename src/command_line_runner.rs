@@ -302,7 +302,8 @@ fn do_user_update(mut user: User) {
     input = trim_string(input);
     match input.as_str() {
         "role" => {
-            user.role = Role::to_string(&retry_read_role("Enter the new role [user,admin]"));
+            user.role = Role::to_string(&retry_read_role("Enter the new role [user,\
+            uploader or admin]"));
             User::update_user(user, &mut establish_connection())
                 .expect("Error updating role");
             println!("Role updated");
