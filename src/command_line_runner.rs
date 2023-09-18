@@ -151,7 +151,7 @@ pub fn start_command_line(mut args: Args) {
                     list_users();
                     let mut username = String::new();
 
-                    retry_read("Please enter the username of the user you want to delete",
+                    retry_read("Please enter the username of the user you want to update",
                                &mut username);
                     username = trim_string(username);
                     println!(">{}<", username);
@@ -296,7 +296,7 @@ fn do_user_update(mut user: User) {
     let mut input = String::new();
     println!("The following settings of a user should be updated: {:?}", user);
     println!("Enter which field of a user should be updated [role, password, \
-    explicit_consent]");
+    consent]");
     stdin().read_line(&mut input)
         .expect("Error reading from terminal");
     input = trim_string(input);
@@ -309,18 +309,18 @@ fn do_user_update(mut user: User) {
             println!("Role updated");
         }
         "password" => {
-            let mut password = retry_read_secret("Enter the new username");
+            let mut password = retry_read_secret("Enter the new password");
             password = digest(password);
             user.password = Some(password);
             User::update_user(user, &mut establish_connection())
-                .expect("Error updating username");
+                .expect("Error updating password");
             println!("Password updated");
         }
-        "explicit_consent" => {
+        "consent" => {
             user.explicit_consent = !user.explicit_consent;
             User::update_user(user, &mut establish_connection())
-                .expect("Error updating explicit_consent");
-            println!("Explicit consent updated");
+                .expect("Error switching consent");
+            println!("Consent preference switched");
         }
         _ => {
             println!("Field not found");
