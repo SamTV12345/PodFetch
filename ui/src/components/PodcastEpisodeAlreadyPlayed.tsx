@@ -47,7 +47,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                     <span className="sr-only">Close modal</span>
                 </button>
 
-                <div className="text-white mb-5">
+                <div className="text-[--fg-color] mb-5">
                     <Trans t={t} i18nKey={'you-already-listened'} components={{
                         name: <span dangerouslySetInnerHTML={displayPodcastName}/>
                     }}>
