@@ -189,7 +189,7 @@ use crate::utils::error::CustomError;
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNameSettings{
-    pub use_existing_filenames: bool,
+    pub use_existing_filename: bool,
     pub replace_invalid_characters: bool,
     pub replacement_strategy: ReplacementStrategy,
     pub episode_format: String,

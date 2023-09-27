@@ -50,9 +50,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                 <div className="text-[--fg-color] mb-5">
                     <Trans t={t} i18nKey={'you-already-listened'} components={{
                         name: <span dangerouslySetInnerHTML={displayPodcastName}/>
-                    }}>
-
-                    </Trans>
+                    }}/>
                 </div>
 
                 <div className="flex gap-3 float-right">

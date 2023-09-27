@@ -59,8 +59,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
             replacementStrategy: intialSettings.replacementStrategy,
             episodeFormat: intialSettings.episodeFormat,
             replaceInvalidCharacters: intialSettings.replaceInvalidCharacters,
-            /* TODO: Fix inconsistency - /api/v1/settings uses useExistingFilename whereas /api/v1/settings/name uses useExistingFilenames */
-            useExistingFilenames: intialSettings.useExistingFilename,
+            useExistingFilename: intialSettings.useExistingFilename,
             podcastFormat: intialSettings.podcastFormat,
             directPaths: intialSettings.directPaths
         }
@@ -82,7 +81,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     <div className="flex flex-col gap-2">
                         <div className="flex">
                             <Controller
-                            name="useExistingFilenames"
+                            name="useExistingFilename"
                             control={control}
                             render={({ field: { name, onChange, value }}) => (
                                 <CustomCheckbox id="use-existing-filenames" name={name} onChange={onChange} value ={value} />

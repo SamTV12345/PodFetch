@@ -89,7 +89,9 @@ export const UserAdminInvites = () => {
     }
 
     if (error) {
-        return <ErrorIcon text={t('not-admin')} />
+        return <div className="w-full md:w-3/4 mx-auto">
+            <ErrorIcon text={t('not-admin')} />
+        </div>
     }
 
     return (

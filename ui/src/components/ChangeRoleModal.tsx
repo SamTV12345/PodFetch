@@ -4,7 +4,7 @@ import { enqueueSnackbar } from 'notistack'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { setSelectedUser, setUsers } from '../store/CommonSlice'
 import { setModalOpen } from '../store/ModalSlice'
-import { apiURL, capitalizeFirstLetter } from '../utils/Utilities'
+import { apiURL } from '../utils/Utilities'
 import { User } from '../models/User'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'
@@ -24,9 +24,8 @@ export const ChangeRoleModal = () => {
     const { t } = useTranslation()
 
     const changeRole = () => {
-        /* TODO: Inconsistency between GET (lowercase role) and PUT (capitalized role) */
         axios.put(apiURL + '/users/' + selectedUser?.username + '/role', {
-            role: capitalizeFirstLetter(selectedUser?.role),
+            role: selectedUser?.role,
             explicitConsent: selectedUser?.explicitConsent
         })
             .then(() => {

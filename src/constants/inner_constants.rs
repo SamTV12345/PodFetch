@@ -41,6 +41,7 @@ pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";
 
 // User management roles
 #[derive( Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
 pub enum Role {
     Admin,
     Uploader,

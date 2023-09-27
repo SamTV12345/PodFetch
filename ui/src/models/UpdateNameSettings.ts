@@ -1,5 +1,5 @@
 export interface UpdateNameSettings {
-    useExistingFilenames: boolean,
+    useExistingFilename: boolean,
     replaceInvalidCharacters: boolean,
     replacementStrategy: string,
     episodeFormat: string
