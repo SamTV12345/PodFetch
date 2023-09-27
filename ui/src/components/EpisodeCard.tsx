@@ -87,8 +87,6 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
                 <span className="block font-bold leading-[1.2] mb-2 text-sm text-[--fg-color] transition-colors group-hover:text-[--fg-color-hover]">{podcastEpisode.name}</span>
                 <span className="block leading-[1.2] text-xs text-[--fg-color]">{podcast.name}</span>
             </div>
-
-            {/* TODO: Remaining time */}
         </div>
     )
 }

@@ -174,5 +174,6 @@
   "not-yet-played": "Pas encore écouté",
   "podcast-episode-played": "{{percentage}} joué",
   "restart-playing": "Recommencer à jouer",
-  "you-already-listened": "Vous avez déjà écouté l'épisode <name/>. Vous pouvez le réécouter en cliquant sur le bouton ci-dessous"
+  "you-already-listened": "Vous avez déjà écouté l'épisode <name/>. Vous pouvez le réécouter en cliquant sur le bouton ci-dessous",
+  "podcast-not-found": "Podcast non trouvé"
 }

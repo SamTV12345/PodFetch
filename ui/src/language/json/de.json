@@ -175,5 +175,6 @@
   "not-yet-played": "Noch nicht gespielt",
   "podcast-episode-played": "{{percentage}} abgespielt",
   "restart-playing": "Erneut abspielen",
-  "you-already-listened": "Die Episode <name/> wurde bereits abgespielt. Möchtest du sie nochmal anhören oder eine andere Episode auswählen?"
+  "you-already-listened": "Die Episode <name/> wurde bereits abgespielt. Möchtest du sie nochmal anhören oder eine andere Episode auswählen?",
+  "podcast-not-found": "Podcast nicht gefunden"
 }

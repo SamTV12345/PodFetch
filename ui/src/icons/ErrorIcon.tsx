@@ -17,7 +17,7 @@ export const ErrorIcon:FC<ErrorIconProps> = ({text})=>{
             <rect
                 width="221.04945"
                 height="89.43364"
-                fill="#ffffff"
+                fill="none"
                 id="rect2"
                 x="-1.4312183"
                 y="-2.8122706"
@@ -33,12 +33,12 @@ export const ErrorIcon:FC<ErrorIconProps> = ({text})=>{
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="m 74.645983,82.423464 c -12.1503,0 -22,-8.091569 -22,-18.072795 0,-9.981226 9.8497,-18.072794 22,-18.072794 0.5167,0 1.0292,0.01463 1.537,0.04346 -0.3528,-1.650845 -0.537,-3.350864 -0.537,-5.087029 0,-15.784443 15.222,-28.580233 33.999997,-28.580233 14.991,0 27.716,8.155453 32.239,19.476168 1.071,-0.09415 2.159,-0.142481 3.261,-0.142481 16.845,0 30.5,11.290453 30.5,25.217852 0,13.231807 -12.325,24.147775 -28,25.19936 v 0.01849 H 91.153983 Z m 11.996,0 h -6.9646 z"
-                fill="#ffffff"
+                fill="none"
                 id="path6"
                 style={{strokeWidth:0.91684}} />
             <path
                 d="m 86.641983,82.423464 h -6.9646 m -5.0314,0 c -12.1503,0 -22,-8.091569 -22,-18.072795 0,-9.981226 9.8497,-18.072794 22,-18.072794 0.5167,0 1.0292,0.01463 1.537,0.04346 -0.3528,-1.650845 -0.537,-3.350864 -0.537,-5.087029 0,-15.784443 15.222,-28.580233 33.999997,-28.580233 14.991,0 27.716,8.155453 32.239,19.476168 1.071,-0.09415 2.159,-0.142481 3.261,-0.142481 16.845,0 30.5,11.290453 30.5,25.217852 0,13.231807 -12.325,24.147775 -28,25.19936 v 0.01849 H 91.153983 Z"
-                stroke="#1f64e7"
+                stroke="#c07c03"
                 strokeWidth="2.2921"
                 strokeLinecap="round"
                 id="path8" />
@@ -51,19 +51,19 @@ export const ErrorIcon:FC<ErrorIconProps> = ({text})=>{
                 style={{strokeWidth:0.91684}} />
             <path
                 d="m 110.14598,70.655133 c 3.038,0 5.5,-2.069546 5.5,-4.623273 0,-2.553728 -2.462,-4.623273 -5.5,-4.623273 -3.038,0 -5.5,2.069545 -5.5,4.623273 0,2.553727 2.462,4.623273 5.5,4.623273 z"
-                stroke="#1f64e7"
+                stroke="#c07c03"
                 strokeWidth="2.2921"
                 id="path12" />
             <path
                 d="m 94.645983,56.365016 6.999997,-4.617389 -6.999997,-4.395808"
-                stroke="#1f64e7"
+                stroke="#c07c03"
                 strokeWidth="2.2921"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 id="path14" />
             <path
                 d="m 125.64598,56.365016 -7,-4.617389 7,-4.395808"
-                stroke="#1f64e7"
+                stroke="#c07c03"
                 strokeWidth="2.2921"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -105,7 +105,7 @@ export const ErrorIcon:FC<ErrorIconProps> = ({text})=>{
                 style={{strokeWidth:0.91684}}/>
         </svg>
 
-    <div className="absolute icon-size p-2 rounded-1.8 inline-block whitespace-nowrap text-center align-baseline font-bold uppercase leading-none text-blue-600 text-2xl">{text}</div>
+    <div className="icon-size p-2 rounded-1.8 inline-block whitespace-nowrap text-center align-baseline font-bold uppercase leading-none text-blue-600 text-2xl">{text}</div>
     </div>
 
 }

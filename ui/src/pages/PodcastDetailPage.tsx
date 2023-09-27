@@ -15,6 +15,7 @@ import { Switcher } from '../components/Switcher'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
+import {ErrorIcon} from "../icons/ErrorIcon";
 
 export const PodcastDetailPage = () => {
     const dispatch = useAppDispatch()
@@ -79,8 +80,9 @@ export const PodcastDetailPage = () => {
     }, [params])
 
     if (currentPodcast === undefined) {
-        /* TODO: Translate */
-        return <div>"Nicht gefunden"</div>
+            return <div className="w-full md:w-3/4 mx-auto">
+                <ErrorIcon text={t('podcast-not-found')} />
+            </div>
     }
 
     return (

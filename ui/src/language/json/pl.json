@@ -174,5 +174,6 @@
   "not-yet-played": "Nieodtworzone",
   "podcast-episode-played": "{{percentage}} został odtworzony.",
   "restart-playing": "Restartuj odtwarzanie",
-  "you-already-listened": "Już odtworzono <name/>"
+  "you-already-listened": "Już odtworzono <name/>",
+  "podcast-not-found": "Nie znaleziono podcastu"
 }
