@@ -32,7 +32,7 @@ impl SettingsService{
         Self::validate_settings(update_model.clone())?;
 
         settings_.replace_invalid_characters = update_model.replace_invalid_characters;
-        settings_.use_existing_filename = update_model.use_existing_filenames;
+        settings_.use_existing_filename = update_model.use_existing_filename;
         settings_.direct_paths = update_model.direct_paths;
         settings_.replacement_strategy = update_model.replacement_strategy.to_string();
         settings_.episode_format = update_model.episode_format;

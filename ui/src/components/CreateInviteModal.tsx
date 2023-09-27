@@ -57,7 +57,6 @@ export const CreateInviteModal = () => {
                 </div>
 
                 <CustomButtonPrimary className="float-right" onClick={() => {
-                    /* TODO: Inconsistency between GET (lowercase role) and PUT (capitalized role) */
                     axios.post(apiURL + '/users/invites', invite)
                         .then((v) => {
                             enqueueSnackbar(t('invite-created'), { variant: 'success' })

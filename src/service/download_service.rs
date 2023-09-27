@@ -55,7 +55,7 @@ impl DownloadService {
         let mut image_response = client.get(podcast_episode.image_url.clone()).headers(header_map).send()
             .unwrap();
 
-        //TODO Continue here with the direct path and also add test cases
+
         let paths = match settings_in_db.use_existing_filename {
             true=>{
                 FilenameBuilder::default()

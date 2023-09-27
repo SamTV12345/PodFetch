@@ -166,7 +166,6 @@ impl FilenameBuilder {
     }
 
     fn create_direct_path_dirs (self, resulting_link: String) -> Result<FilenameBuilderReturn, CustomError> {
-        // TODO Adapt this code for direct paths
         Ok(FilenameBuilderReturn::new(format!("{}/{}.{}", self.podcast.directory_name,
                                               self.episode.clone(),
                                               self.suffix.clone())
