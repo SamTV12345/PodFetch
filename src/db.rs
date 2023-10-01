@@ -49,13 +49,17 @@ impl TimelineItem {
             .left_join(ph1.on(ph1.field(ehid).eq(episode_id)))
             .filter(ph1.field(phistory_date).nullable().eq_any(subquery.clone())
                 .or(ph1.field(phistory_date).is_null()))
-            .left_join(favorites.on(f_username.eq(username_to_search.clone()).and(f_podcast_id.eq(pid))))
-            .order(date_of_recording.desc());
-        let mut query = part_query.clone()
+            .left_join(favorites.on(f_username.eq(username_to_search.clone())
+                .and(f_podcast_id.eq(pid))));
+
+        let mut query = part_query
+            .clone()
+            .order(date_of_recording.desc())
             .limit(20)
             .into_boxed();
 
         let mut total_count = part_query
+            .clone()
             .count()
             .into_boxed();
 
@@ -72,9 +76,9 @@ impl TimelineItem {
                 total_count = total_count.filter(f_username.eq(username_to_search.clone()));
             }
             false => {
-                           if let Some(last_id) = favored_only.last_timestamp {
-                                 query = query.filter(date_of_recording.lt(last_id));
-                  }
+                if let Some(last_id) = favored_only.last_timestamp {
+                    query = query.filter(date_of_recording.lt(last_id));
+                }
 
             }
         }
@@ -88,7 +92,7 @@ impl TimelineItem {
                                    Option<Favorite>)>
         (conn)
             .map_err
-        (map_db_error)?;
+            (map_db_error)?;
 
         Ok(TimelineItem {
             total_elements: results,
