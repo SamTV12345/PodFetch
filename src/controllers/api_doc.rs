@@ -7,8 +7,10 @@ use crate::models::podcast_episode::PodcastEpisode;
 use models::podcasts::Podcast;
 use std::future;
 use std::future::Ready;
-use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
-use utoipa::{Modify, OpenApi};
+use utoipa::{
+    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
+    Modify, OpenApi,
+};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::controllers::podcast_episode_controller::__path_find_all_podcast_episodes_of_podcast;
 use crate::controllers::watch_time_controller::*;
