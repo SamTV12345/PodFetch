@@ -38,7 +38,7 @@ impl PathService {
                                                                                           Result<String, CustomError> {
         let mut i = 0;
         if !Path::new(&base_path).exists() {
-            std::fs::create_dir(base_path.clone()).map_err(|v|map_io_error(v, Some(base_path.to_string())))?;
+            std::fs::create_dir(base_path).map_err(|v|map_io_error(v, Some(base_path.to_string())))?;
             return Ok(base_path.to_string());
         }
 
