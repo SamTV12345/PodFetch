@@ -62,11 +62,13 @@ impl PodcastService {
             .unwrap();
         log::info!("Found podcast: {}", result.url());
         let res_of_search =  result.json().await;
-        if res_of_search.is_err() {
+
+        if let Ok(res) = res_of_search {
+            res
+        }
+        else {
             log::error!("Error searching for podcast: {}", res_of_search.err().unwrap());
             serde_json::from_str("{}").unwrap()
-        } else {
-            res_of_search.unwrap()
         }
     }
 
