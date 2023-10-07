@@ -10,14 +10,14 @@ use crate::service::environment_service::EnvironmentService;
 use awc::cookie::{Cookie, SameSite};
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_r2d2_error};
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool>,
                    env_service: Data<Mutex<EnvironmentService>>)
     -> Result<HttpResponse, CustomError> {
     let env = env_service.lock().ignore_poison();
-    let conn = &mut conn.get().unwrap();
+    let conn = &mut conn.get().map_err(map_r2d2_error)?;
         if let Some(cookie) = rq.clone().cookie("sessionid") {
                 let session = cookie.value();
                 let opt_session = Session::find_by_session_id(session, conn);

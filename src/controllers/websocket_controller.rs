@@ -1,3 +1,4 @@
+use std::ops::DerefMut;
 use crate::controllers::web_socket::WsConn;
 
 use crate::models::podcast_episode::PodcastEpisode;
@@ -13,7 +14,7 @@ use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, 
 use std::sync::{Mutex};
 use crate::DbPool;
 use crate::mutex::LockResultExt;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_r2d2_error};
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -126,7 +127,7 @@ pub async fn get_rss_feed_for_podcast(
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), *id)?;
+    let podcast = Podcast::get_podcast(&mut conn.get().map_err(map_r2d2_error)?.deref_mut(), *id)?;
 
     let downloaded_episodes =
         podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(*id,

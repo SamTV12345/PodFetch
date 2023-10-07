@@ -97,11 +97,12 @@ pub fn run_poll(
     mut podcast_service: PodcastService,
     mut podcast_episode_service: PodcastEpisodeService)->Result<(),CustomError> {
     //check for new episodes
-    let podcats_result = Podcast::get_all_podcasts(&mut establish_connection()).unwrap();
+    let conn = &mut establish_connection();
+    let podcats_result = Podcast::get_all_podcasts(conn)?;
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
-            podcast_episode_service.insert_podcast_episodes(&mut establish_connection(), podcast)?;
+            podcast_episode_service.insert_podcast_episodes(conn, podcast)?;
             podcast_service.schedule_episode_download(podcast_clone, None, &mut
                 establish_connection())?;
         }

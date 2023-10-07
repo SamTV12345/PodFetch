@@ -29,7 +29,7 @@ impl Playlist {
     pub fn insert_playlist(&self, conn: &mut DbConnection) -> Result<Playlist, CustomError> {
         use crate::dbconfig::schema::playlists::dsl::*;
 
-        let res = playlists.filter(name.eq(self.clone().name))
+        let res = playlists.filter(name.eq(self.name.clone()))
             .first::<Playlist>(conn)
             .optional()
             .map_err(map_db_error)?;

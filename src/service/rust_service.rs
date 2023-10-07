@@ -276,7 +276,7 @@ impl PodcastService {
         headers.insert("User-Agent", HeaderValue::from_str(COMMON_USER_AGENT).unwrap());
         headers.insert(
             "X-Auth-Key",
-            HeaderValue::from_str(&self.environment_service.podindex_api_key.clone()).unwrap(),
+            HeaderValue::from_str(&self.environment_service.podindex_api_key).unwrap(),
         );
         headers.insert(
             "X-Auth-Date",

@@ -38,15 +38,15 @@ impl PodcastHistoryItem{
     pub fn delete_by_username(username1: String, conn: &mut DbConnection) -> Result<(),
         diesel::result::Error>{
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
-        diesel::delete(podcast_history_items.filter(username.eq(username1)))
+        delete(podcast_history_items.filter(username.eq(username1)))
             .execute(conn)?;
         Ok(())
     }
 
     pub fn log_watchtime(conn: &mut DbConnection, watch_model: PodcastWatchedPostModel,
                          designated_username: String) -> Result<(), CustomError> {
-        let result = PodcastEpisode::get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)
-            .unwrap();
+        let result = PodcastEpisode::
+        get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)?;
 
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
         match result {

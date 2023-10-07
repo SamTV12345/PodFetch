@@ -80,6 +80,11 @@ pub fn map_db_error(e: diesel::result::Error) -> CustomError {
     }
 }
 
+pub fn map_r2d2_error(e: r2d2::Error) -> CustomError {
+    error!("R2D2 error: {}", e);
+    CustomError::Unknown
+}
+
 pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
     error!("Error during reqwest: {}",e);
 

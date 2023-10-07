@@ -1,3 +1,4 @@
+use std::ops::DerefMut;
 use std::sync::Mutex;
 use actix_web::{HttpRequest, HttpResponse, post, get, put, Responder, web, delete};
 use actix_web::web::Data;
@@ -8,7 +9,7 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::user_management_service::UserManagementService;
 use utoipa::ToSchema;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_r2d2_error};
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -77,7 +78,7 @@ tag="info"
 #[get("/users/{username}")]
 pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)-> Result<HttpResponse, CustomError>{
     let username = get_user_from_request(req);
-    let user = User::find_by_username(&username, &mut conn.get().unwrap())?;
+    let user = User::find_by_username(&username, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     Ok(HttpResponse::Ok().json(User::map_to_dto(user)))
 
 }
@@ -97,13 +98,13 @@ web::Path<String>, requester: Option<web::ReqData<User>>)
     if !requester.unwrap().is_admin(){
         return Err(CustomError::Forbidden)
     }
-    let mut user_to_update = User::find_by_username(&username, &mut conn.get().unwrap())?;
+    let mut user_to_update = User::find_by_username(&username, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     // Update to his/her designated role
     user_to_update.role = role.role.to_string();
     user_to_update.explicit_consent = role.explicit_consent;
 
-    let res = UserManagementService::update_user(user_to_update, &mut conn.get().unwrap())?;
+    let res = UserManagementService::update_user(user_to_update, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -135,18 +136,17 @@ responses(
 tag="info"
 )]
 #[get("/invites")]
-pub async fn get_invites(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->impl Responder{
+pub async fn get_invites(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->
+                                                                                   Result<HttpResponse, CustomError>{
     if !requester.unwrap().is_admin(){
-        return HttpResponse::Forbidden().body("You are not authorized to perform this action")
+        return Err(CustomError::Forbidden)
     }
 
-    let invites = UserManagementService::get_invites( &mut conn.get().unwrap());
+    let invites = UserManagementService::get_invites( &mut conn.get().map_err(map_r2d2_error)?
+        .deref_mut())?;
 
-    if invites.is_err(){
-        return HttpResponse::BadRequest().body(invites.err().unwrap().name().clone())
-    }
 
-    HttpResponse::Ok().json(invites.unwrap())
+    Ok(HttpResponse::Ok().json(invites))
 }
 
 #[utoipa::path(
@@ -156,11 +156,11 @@ responses(
 tag="info"
 )]
 #[get("/users/invites/{invite_id}")]
-pub async fn get_invite(conn: Data<DbPool>, invite_id: web::Path<String>)->
-    impl Responder{
-    match UserManagementService::get_invite(invite_id.into_inner(), &mut conn.get().unwrap()){
-        Ok(invite) => HttpResponse::Ok().json(invite),
-        Err(e) => HttpResponse::BadRequest().body(e.to_string())
+pub async fn get_invite(conn: Data<DbPool>, invite_id: web::Path<String>)-> Result<HttpResponse,
+    CustomError>{
+    match UserManagementService::get_invite(invite_id.into_inner(), &mut conn.get().map_err(map_r2d2_error)?.deref_mut()){
+        Ok(invite) => Ok(HttpResponse::Ok().json(invite)),
+        Err(e) => Ok(HttpResponse::BadRequest().body(e.to_string()))
     }
 }
 
@@ -171,17 +171,17 @@ responses(
 tag="info"
 )]
 #[delete("/{username}")]
-pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>,  requester: Option<web::ReqData<User>>)->impl
-Responder{
+pub async fn delete_user(conn:Data<DbPool>, username: web::Path<String>,  requester:
+Option<web::ReqData<User>>)-> Result<HttpResponse, CustomError>{
     if !requester.unwrap().is_admin(){
-        return HttpResponse::Forbidden().body("You are not authorized to perform this action")
+        return Err(CustomError::Forbidden)
     }
 
-    let user_to_delete = User::find_by_username(&username, &mut conn.get().unwrap()).unwrap();
-    match UserManagementService::delete_user(user_to_delete, &mut conn.get().unwrap())
+    let user_to_delete = User::find_by_username(&username, &mut conn.get().map_err(map_r2d2_error)?.deref_mut()).unwrap();
+    match UserManagementService::delete_user(user_to_delete, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())
     {
-        Ok(_) => HttpResponse::Ok().into(),
-        Err(e) => HttpResponse::BadRequest().body(e.to_string())
+        Ok(_) => Ok(HttpResponse::Ok().into()),
+        Err(e) => Err(CustomError::from(e).into())
     }
 }
 

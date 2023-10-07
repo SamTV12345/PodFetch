@@ -46,8 +46,8 @@ impl DownloadService {
 
 
         let mut header_map = HeaderMap::new();
-        add_basic_auth_headers_conditionally(podcast_episode.clone().url, &mut header_map);
-        let mut resp = client.get(podcast_episode.clone().url)
+        add_basic_auth_headers_conditionally(podcast_episode.url.clone(), &mut header_map);
+        let mut resp = client.get(podcast_episode.url.clone())
             .headers(header_map.clone())
             .send()
             .unwrap();

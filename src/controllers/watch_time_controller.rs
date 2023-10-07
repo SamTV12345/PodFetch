@@ -1,3 +1,4 @@
+use std::ops::DerefMut;
 use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
 use actix_web::{get, post, web, HttpResponse};
@@ -9,7 +10,7 @@ use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::mapping_service::MappingService;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_r2d2_error};
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -23,7 +24,7 @@ pub async fn log_watchtime(podcast_watch: web::Json<PodcastWatchedPostModel>, co
 
 
     let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
-    PodcastHistoryItem::log_watchtime(&mut conn.get().unwrap(),podcast_watch.0, requester.unwrap().username
+    PodcastHistoryItem::log_watchtime(&mut conn.get().map_err(map_r2d2_error)?.deref_mut(),podcast_watch.0, requester.unwrap().username
         .clone())?;
     log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
     Ok(HttpResponse::Ok().body("Watchtime logged."))
@@ -44,7 +45,7 @@ Option<web::ReqData<User>>, mapping_service:Data<Mutex<MappingService>>) -> Resu
                                                      designated_username
         .clone(), mapping_service.lock().ignore_poison().clone()).unwrap();
 
-    let episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().unwrap(),
+    let episodes = Episode::get_last_watched_episodes(designated_username, &mut conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
 
     let mut episodes_with_logs = last_watched.iter().map(|e|{
@@ -81,7 +82,7 @@ tag="watchtime"
 pub async fn get_watchtime(id: web::Path<String>, conn: Data<DbPool>, requester:
 Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
     let designated_username = requester.unwrap().username.clone();
-    let watchtime = PodcastHistoryItem::get_watchtime(&mut conn.get().unwrap(),&id,
+    let watchtime = PodcastHistoryItem::get_watchtime(&mut conn.get().map_err(map_r2d2_error)?.deref_mut(),&id,
                                                       designated_username)?;
     Ok(HttpResponse::Ok().json(watchtime))
 }

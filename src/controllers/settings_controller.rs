@@ -1,3 +1,4 @@
+use std::ops::DerefMut;
 use std::str::FromStr;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -23,7 +24,7 @@ tag="podcast_episodes"
 #[get("/settings")]
 pub async fn get_settings(conn:Data<DbPool>) -> Result<HttpResponse, CustomError> {
 
-    let settings = Setting::get_settings(&mut conn.get().unwrap())?;
+    let settings = Setting::get_settings(&mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     println!("Settings: {:?}", settings);
     match settings {
         Some(settings) => Ok(HttpResponse::Ok().json(settings)),
@@ -46,8 +47,7 @@ web::Json<Setting>, requester: Option<web::ReqData<User>>,conn:Data<DbPool>) -> 
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
-    let settings = settings_service.update_settings(settings.into_inner(),&mut conn.get().unwrap
-    ())?;
+    let settings = settings_service.update_settings(settings.into_inner(),&mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     Ok(HttpResponse::Ok().json(settings))
 }
 
@@ -74,7 +74,7 @@ pub async fn run_cleanup(
             pdservice
                 .lock()
                 .ignore_poison()
-                .cleanup_old_episodes(settings.auto_cleanup_days,&mut conn.get().unwrap());
+                .cleanup_old_episodes(settings.auto_cleanup_days,&mut conn.get().map_err(map_r2d2_error)?.deref_mut());
             Ok(HttpResponse::Ok().finish())
         }
         None => {
@@ -100,7 +100,8 @@ tag="podcasts"
 pub async fn get_opml(conn: Data<DbPool>, type_of: Path<Mode>, env_service:
 Data<Mutex<EnvironmentService>>) -> Result<HttpResponse, CustomError>{
     let env_service = env_service.lock().ignore_poison();
-    let podcasts_found = Podcast::get_all_podcasts(&mut conn.get().unwrap()).unwrap();
+    let podcasts_found = Podcast::get_all_podcasts(&mut conn.get().map_err(map_r2d2_error)?
+        .deref_mut())?;
 
     let mut xml = XMLBuilder::new().version(XMLVersion::XML1_1)
         .encoding("UTF-8".to_string())
@@ -179,12 +180,12 @@ pub async fn update_name(settings_service: Data<Mutex<SettingsService>>,
 
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get().unwrap())?;
+    let settings = settings_service.update_name(update_information.into_inner(), &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     Ok(HttpResponse::Ok().json(settings))
 }
 
 use utoipa::ToSchema;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_r2d2_error};
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

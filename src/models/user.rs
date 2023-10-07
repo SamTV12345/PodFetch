@@ -62,10 +62,11 @@ impl User {
             .first::<User>(conn)
             .optional()
             .map_err(map_db_error)?;
-        if opt_user.is_none() {
-            return Err(CustomError::NotFound);
+        return if let Some(user) = opt_user {
+            Ok(user)
+        } else {
+            Err(CustomError::NotFound)
         }
-        Ok(opt_user.unwrap())
     }
 
     pub fn insert_user(&mut self, conn: &mut DbConnection) -> Result<User, Error> {
@@ -182,8 +183,8 @@ impl User {
 
     pub fn check_if_admin_or_uploader(username: &Option<String>, conn: &mut DbConnection) ->
     Result<Option<HttpResponse>, CustomError> {
-        if username.is_some() {
-            let found_user = User::find_by_username(&username.clone().unwrap(), conn)?;
+        if let Some(username) =  username {
+            let found_user = User::find_by_username(username, conn)?;
             if found_user.role.ne(&Role::Admin.to_string()) && found_user.role.ne(&Role::Uploader.to_string()) {
                 return Err(CustomError::Forbidden);
             }
@@ -192,14 +193,15 @@ impl User {
     }
 
     pub fn check_if_admin(username: &Option<String>, conn: &mut DbConnection) -> Result<(), CustomError> {
-        if username.is_some() {
-            let found_user = User::find_by_username(&username.clone().unwrap(), conn)?;
+        if let Some(username_unwrapped) = username {
+            let found_user = User::find_by_username(username_unwrapped, conn)?;
 
             if found_user.role != Role::Admin.to_string() {
                 return Err(CustomError::Forbidden);
             }
+            return  Ok(())
         }
-        Ok(())
+       return Err(CustomError::Forbidden);
     }
 
     pub fn delete_by_username(username_to_search: String, conn: &mut DbConnection) -> Result<(), Error> {
