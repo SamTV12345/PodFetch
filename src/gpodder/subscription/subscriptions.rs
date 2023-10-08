@@ -1,9 +1,11 @@
-use actix_web::{HttpResponse, Responder, web};
+use std::ops::DerefMut;
+use actix_web::{HttpResponse, web};
 use actix_web::{get, post};
 use actix_web::web::Data;
 use crate::DbPool;
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
+use crate::utils::error::{CustomError, map_r2d2_error};
 use crate::utils::time::get_current_timestamp;
 
 #[derive(Deserialize, Serialize)]
@@ -26,29 +28,29 @@ pub struct SubscriptionPostResponse {
 #[get("/subscriptions/{username}/{deviceid}.json")]
 pub async fn get_subscriptions(paths: web::Path<(String, String)>,opt_flag:
                                 Option<web::ReqData<Session>>,
-                               query:web::Query<SubscriptionRetrieveRequest>, conn: Data<DbPool>) -> impl
-Responder {
+                               query:web::Query<SubscriptionRetrieveRequest>, conn: Data<DbPool>)
+    -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
             let username = paths.clone().0;
             let deviceid = paths.clone().1;
             if flag.username != username.clone() {
-                return HttpResponse::Unauthorized().finish();
+                return Err(CustomError::Forbidden)
             }
 
             let res = SubscriptionChangesToClient::get_device_subscriptions(&deviceid, &username, query
                 .since,
-                                                                            &mut conn.get().unwrap()).await;
+                                                                            conn.get().map_err(map_r2d2_error)?.deref_mut()).await;
 
             match res {
                 Ok(res) => {
-                    HttpResponse::Ok().json(res)
+                    Ok(HttpResponse::Ok().json(res))
                 },
-                Err(_) => HttpResponse::InternalServerError().finish()
+                Err(_) => Ok(HttpResponse::InternalServerError().finish())
             }
         }
         None => {
-            HttpResponse::Unauthorized().finish()
+            Err(CustomError::Forbidden)
         }
     }
 }
@@ -56,25 +58,27 @@ Responder {
 #[post("/subscriptions/{username}/{deviceid}.json")]
 pub async fn upload_subscription_changes(upload_request: web::Json<SubscriptionUpdateRequest>,
                                          opt_flag: Option<web::ReqData<Session>>,
-                                         paths: web::Path<(String, String)>, conn: Data<DbPool>)->impl Responder {
+                                         paths: web::Path<(String, String)>, conn: Data<DbPool>)
+    -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
             let username = paths.clone().0;
             let deviceid = paths.clone().1;
             if flag.username != username.clone() {
-                return HttpResponse::Unauthorized().finish();
+                return Err(CustomError::Forbidden)
             }
             SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
                                                               upload_request,
-                                                              &mut conn.get().unwrap()).await.expect("TODO: panic message");
+                                                              conn.get().map_err(map_r2d2_error)?.deref_mut())
+                .await.unwrap();
 
-            HttpResponse::Ok().json(SubscriptionPostResponse {
+            Ok(HttpResponse::Ok().json(SubscriptionPostResponse {
                 update_urls: vec![],
                 timestamp: get_current_timestamp()
-            })
+            }))
         }
         None => {
-            HttpResponse::Unauthorized().finish()
+            Err(CustomError::Forbidden)
         }
     }
 }

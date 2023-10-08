@@ -84,11 +84,11 @@ impl Podcast{
     }
 
     pub fn get_all_podcasts(conn: &mut DbConnection)
-                            -> Result<Vec<Podcast>, String> {
+                            -> Result<Vec<Podcast>, CustomError> {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         let result = podcasts
             .load::<Podcast>(conn)
-            .expect("Error loading podcasts");
+            .map_err(map_db_error)?;
         Ok(result)
     }
 

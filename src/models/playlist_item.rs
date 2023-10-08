@@ -26,8 +26,8 @@ impl PlaylistItem {
     pub fn insert_playlist_item(&self, conn: &mut DbConnection) -> Result<PlaylistItem, CustomError> {
         use crate::dbconfig::schema::playlist_items::dsl::*;
 
-        let res = playlist_items.filter(playlist_id.eq(self.clone().playlist_id)
-            .and(episode.eq(self.clone().episode)))
+        let res = playlist_items.filter(playlist_id.eq(self.playlist_id.clone())
+            .and(episode.eq(self.episode)))
             .first::<PlaylistItem>(conn)
             .optional()
             .map_err(map_db_error)?;

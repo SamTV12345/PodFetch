@@ -1,4 +1,5 @@
-use actix_web::{HttpResponse, Responder, web};
+use std::ops::DerefMut;
+use actix_web::{HttpResponse, web};
 
 use actix_web::{get,post};
 use actix_web::web::Data;
@@ -9,7 +10,7 @@ use chrono::NaiveDateTime;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::session::Session;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_r2d2_error};
 use crate::utils::time::{get_current_timestamp};
 
 #[derive(Serialize, Deserialize)]
@@ -76,12 +77,12 @@ pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>
 
 
 #[post("/episodes/{username}.json")]
-pub async fn upload_episode_actions(username: web::Path<String>, podcast_episode: web::Json<Vec<EpisodeDto>>,opt_flag: Option<web::ReqData<Session>>, conn: Data<DbPool>) -> impl
-Responder {
+pub async fn upload_episode_actions(username: web::Path<String>, podcast_episode: web::Json<Vec<EpisodeDto>>,opt_flag: Option<web::ReqData<Session>>, conn: Data<DbPool>)
+    -> Result<HttpResponse,CustomError>{
     match opt_flag {
         Some(flag) => {
             if flag.username != username.clone() {
-                return HttpResponse::Unauthorized().finish();
+                 return Ok(HttpResponse::Unauthorized().finish());
             }
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
@@ -101,20 +102,20 @@ Responder {
                         episode_url = unwrapped_res.parse().unwrap()
                     };
 
-                    let podcast_episode = PodcastEpisode::query_podcast_episode_by_url(&mut conn.get()
-                        .unwrap(),
+                    let podcast_episode = PodcastEpisode::query_podcast_episode_by_url(conn.get()
+                                                                                           .map_err(map_r2d2_error).unwrap().deref_mut(),
                                                                            &episode_url);
                     if podcast_episode.clone().unwrap().is_none() {
                     }
                 }
             });
-            HttpResponse::Ok().json(EpisodeActionPostResponse {
+            Ok(HttpResponse::Ok().json(EpisodeActionPostResponse {
                 update_urls: vec![],
                 timestamp: get_current_timestamp()
-            })
+            }))
         }
         None => {
-            HttpResponse::Unauthorized().finish()
+            Ok(HttpResponse::Unauthorized().finish())
         }
     }
 }

@@ -1,3 +1,4 @@
+use std::ops::DerefMut;
 use std::sync::{Mutex};
 use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web::web::Data;
@@ -10,17 +11,16 @@ use crate::service::environment_service::EnvironmentService;
 use awc::cookie::{Cookie, SameSite};
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, map_r2d2_error};
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool>,
                    env_service: Data<Mutex<EnvironmentService>>)
     -> Result<HttpResponse, CustomError> {
     let env = env_service.lock().ignore_poison();
-    let conn = &mut conn.get().unwrap();
         if let Some(cookie) = rq.clone().cookie("sessionid") {
                 let session = cookie.value();
-                let opt_session = Session::find_by_session_id(session, conn);
+                let opt_session = Session::find_by_session_id(session, conn.get().map_err(map_r2d2_error)?.deref_mut());
                    if let Ok(unwrapped_session) = opt_session {
                           let user_cookie = create_session_cookie(unwrapped_session);
                            return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
@@ -44,10 +44,10 @@ pub async fn login(username:web::Path<String>, rq: HttpRequest, conn:Data<DbPool
     if unwrapped_username == env.username && password == env.password {
         Ok(HttpResponse::Ok().finish())
     } else {
-        let user =  User::find_by_username(&unwrapped_username, conn)?;
+        let user =  User::find_by_username(&unwrapped_username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
         if user.clone().password.unwrap()== digest(password) {
                     let session = Session::new(user.username);
-                    Session::insert_session(&session, conn).expect("Error inserting session");
+                    Session::insert_session(&session, conn.get().map_err(map_r2d2_error)?.deref_mut()).expect("Error inserting session");
                     let user_cookie = create_session_cookie(session);
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
         } else {

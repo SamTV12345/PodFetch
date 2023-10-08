@@ -24,7 +24,7 @@ use crate::utils::error::CustomError;
 
 pub fn start_command_line(mut args: Args) {
     println!("Starting from command line");
-    match args.nth(1).unwrap().as_str() {
+    match args.next().unwrap().as_str() {
         "help" | "--help" => {
             println!(r" The following commands are available:
             users => Handles user management
@@ -36,23 +36,27 @@ pub fn start_command_line(mut args: Args) {
             match args.next().unwrap().as_str() {
                 "refresh" => {
                     let podcast_rss_feed = args.next();
-                    if podcast_rss_feed.is_none() {
-                        println!("Please provide a podcast rss feed url");
-                        exit(1);
+
+                    match podcast_rss_feed {
+                        Some(feed)=>{
+                            let mut podcast_service = PodcastService::new();
+                            let conn = &mut establish_connection();
+
+
+                            let replaced_feed = feed.replace(['\'', ' '], "");
+                            println!("Refreshing podcast {}", replaced_feed);
+
+                            let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn).expect("Error getting podcast");
+
+                            let mut podcast_episode_service = PodcastEpisodeService::new();
+                            podcast_episode_service.insert_podcast_episodes(conn, podcast.clone()).unwrap();
+                            podcast_service.schedule_episode_download(podcast, None, conn).unwrap();
+                        }
+                        None=>{
+                            println!("Please provide a podcast rss feed url");
+                            exit(1);
+                        }
                     }
-                    let rss_feed = podcast_rss_feed.clone().unwrap();
-                    let mut podcast_service = PodcastService::new();
-                    let conn = &mut establish_connection();
-
-
-                    let replaced_feed = rss_feed.replace(['\'', ' '], "");
-                    println!("Refreshing podcast {}", replaced_feed);
-
-                    let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn).expect("Error getting podcast");
-
-                    let mut podcast_episode_service = PodcastEpisodeService::new();
-                    podcast_episode_service.insert_podcast_episodes(conn, podcast.clone()).unwrap();
-                    podcast_service.schedule_episode_download(podcast, None, conn).unwrap();
                 }
                 "refresh-all" => {
                     let conn = &mut establish_connection();

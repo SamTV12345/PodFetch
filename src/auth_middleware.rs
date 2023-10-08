@@ -75,14 +75,15 @@ impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        return if is_env_var_present_and_true(BASIC_AUTH) {
-            self.handle_basic_auth(req)
-        } else if is_env_var_present_and_true(OIDC_AUTH) {
-            self.handle_oidc_auth(req)
-        } else {
-            // It can only be no auth
-            self.handle_no_auth(req)
-        }
+           if is_env_var_present_and_true(BASIC_AUTH) {
+                       self.handle_basic_auth(req)
+           } else if is_env_var_present_and_true(OIDC_AUTH) {
+                      self.handle_oidc_auth(req)
+           } else {
+                        // It can only be no auth
+                           self.handle_no_auth(req)
+            }
+
     }
 }
 
@@ -94,8 +95,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
         if opt_auth_header.is_none() {
             return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
         }
-        let authorization = opt_auth_header.unwrap().to_str();
-        return match authorization {
+        return match opt_auth_header.unwrap().to_str() {
             Ok(auth) => {
                 let (username, password) = AuthFilter::extract_basic_auth(auth);
                 let res = req.app_data::<web::Data<DbPool>>().unwrap();
@@ -107,7 +107,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                 }
                 let unwrapped_user = found_user.unwrap();
 
-                if unwrapped_user.clone().username == var(USERNAME).unwrap(){
+                if unwrapped_user.username.clone() == var(USERNAME).unwrap(){
                     return match password == var(PASSWORD).unwrap() {
                         true => {
                             req.extensions_mut().insert(unwrapped_user);
@@ -163,7 +163,7 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
         let binding = req.app_data::<web::Data<Mutex<JWKService>>>().cloned().unwrap();
         let mut jwk_service = binding.lock()
             .ignore_poison();
-        match jwk_service.clone().jwk {
+        match jwk_service.jwk.clone() {
             Some(jwk)=>{
                 if since_the_epoch-jwk_service.timestamp>3600{
                     //refetch and update timestamp

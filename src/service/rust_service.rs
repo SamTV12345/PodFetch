@@ -62,11 +62,13 @@ impl PodcastService {
             .unwrap();
         log::info!("Found podcast: {}", result.url());
         let res_of_search =  result.json().await;
-        if res_of_search.is_err() {
+
+        if let Ok(res) = res_of_search {
+            res
+        }
+        else {
             log::error!("Error searching for podcast: {}", res_of_search.err().unwrap());
             serde_json::from_str("{}").unwrap()
-        } else {
-            res_of_search.unwrap()
         }
     }
 
@@ -274,7 +276,7 @@ impl PodcastService {
         headers.insert("User-Agent", HeaderValue::from_str(COMMON_USER_AGENT).unwrap());
         headers.insert(
             "X-Auth-Key",
-            HeaderValue::from_str(&self.environment_service.podindex_api_key.clone()).unwrap(),
+            HeaderValue::from_str(&self.environment_service.podindex_api_key).unwrap(),
         );
         headers.insert(
             "X-Auth-Date",
