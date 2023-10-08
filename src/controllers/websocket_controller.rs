@@ -127,12 +127,11 @@ pub async fn get_rss_feed_for_podcast(
     let mut podcast_service = podcast_episode_service
         .lock()
         .ignore_poison();
-    let podcast = Podcast::get_podcast(&mut conn.get().map_err(map_r2d2_error)?.deref_mut(), *id)?;
+    let podcast = Podcast::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), *id)?;
 
     let downloaded_episodes =
         podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(*id,
-                                                                           &mut conn.get
-                                                                           ().unwrap())?;
+                                                                           conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     let mut itunes_owner = get_itunes_owner("", "");
 

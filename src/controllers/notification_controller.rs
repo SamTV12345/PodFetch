@@ -19,7 +19,7 @@ pub async fn get_unread_notifications(notification_service: Data<Mutex<Notificat
                                                                                              Result<HttpResponse, CustomError> {
     let notifications = notification_service
         .lock().ignore_poison()
-        .get_unread_notifications(&mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+        .get_unread_notifications(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     Ok(HttpResponse::Ok().json(notifications))
 }
 
@@ -42,6 +42,6 @@ pub async fn dismiss_notifications(
     notification_service.lock()
         .ignore_poison()
         .update_status_of_notification(id.id, "dismissed",
-                                       &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+                                       conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     Ok(HttpResponse::Ok().body(""))
 }

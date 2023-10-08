@@ -40,7 +40,7 @@ pub async fn get_subscriptions(paths: web::Path<(String, String)>,opt_flag:
 
             let res = SubscriptionChangesToClient::get_device_subscriptions(&deviceid, &username, query
                 .since,
-                                                                            &mut conn.get().map_err(map_r2d2_error)?.deref_mut()).await;
+                                                                            conn.get().map_err(map_r2d2_error)?.deref_mut()).await;
 
             match res {
                 Ok(res) => {
@@ -69,8 +69,7 @@ pub async fn upload_subscription_changes(upload_request: web::Json<SubscriptionU
             }
             SubscriptionChangesToClient::update_subscriptions(&deviceid, &username,
                                                               upload_request,
-                                                              &mut conn.get().map_err
-                                                              (map_r2d2_error)?.deref_mut())
+                                                              conn.get().map_err(map_r2d2_error)?.deref_mut())
                 .await.unwrap();
 
             Ok(HttpResponse::Ok().json(SubscriptionPostResponse {

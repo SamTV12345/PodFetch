@@ -54,7 +54,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
 
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
-    let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(&mut conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(),
                                                                      id_num, last_podcast_episode
                                                                          .last_podcast_episode,
                                                                      requester.unwrap().into_inner())?;
@@ -108,7 +108,7 @@ Data<Mutex<MappingService>>, favored_only: Query<TimelineQueryParams>) -> Result
     let mapping_service = mapping_service.lock().ignore_poison().clone();
 
 
-    let res = TimelineItem::get_timeline(requester.unwrap().username.clone(), &mut conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    let res = TimelineItem::get_timeline(requester.unwrap().username.clone(), conn.get().map_err(map_r2d2_error)?.deref_mut(),
                                          favored_only.into_inner())?;
 
     let mapped_timeline = res.data.iter().map(|podcast_episode| {
@@ -147,17 +147,18 @@ pub async fn download_podcast_episodes_of_podcast(id: web::Path<String>, conn: D
     }
 
     thread::spawn(move || {
-        let res = PodcastEpisode::get_podcast_episode_by_id(&mut conn.get().unwrap(), &id
+        let res = PodcastEpisode::get_podcast_episode_by_id(conn.get().map_err(map_r2d2_error).unwrap()
+                                                                .deref_mut(), &id
             .into_inner()).unwrap();
         if let Some(podcast_episode) = res {
-            let podcast = Podcast::get_podcast(&mut conn.get().unwrap(), podcast_episode
+            let podcast = Podcast::get_podcast(conn.get().map_err(map_r2d2_error).unwrap().deref_mut(), podcast_episode
                 .podcast_id).unwrap();
             PodcastEpisodeService::perform_download(
                 &podcast_episode.clone(),
                 podcast,
-                &mut conn.get().unwrap()
+                conn.get().map_err(map_r2d2_error).unwrap().deref_mut()
             ).unwrap();
-            PodcastEpisode::update_deleted(&mut conn.get().unwrap(),&podcast_episode.clone().episode_id,
+            PodcastEpisode::update_deleted(conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),&podcast_episode.clone().episode_id,
                                            false).unwrap();
 
         }

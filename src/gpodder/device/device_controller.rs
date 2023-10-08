@@ -26,12 +26,12 @@ pub async fn post_device(
 
             let device = Device::new(device_post.into_inner(), deviceid, username);
 
-            let result = device.save(&mut conn.get().map_err(map_r2d2_error)?.deref_mut()).unwrap();
+            let result = device.save(conn.get().map_err(map_r2d2_error)?.deref_mut()).unwrap();
 
             Ok(HttpResponse::Ok().json(result))
         }
         None=>{
-            return Err(CustomError::Forbidden);
+             Err(CustomError::Forbidden)
         }
     }
 }
@@ -42,15 +42,15 @@ Option<web::ReqData<Session>>, conn: Data<DbPool>) -> Result<HttpResponse, Custo
     match opt_flag {
         Some(flag) => {
             if flag.username!= query.clone(){
-                return Err(CustomError::Forbidden);
+                 return Err(CustomError::Forbidden);
             }
-            let devices = Device::get_devices_of_user(&mut conn.get().map_err(map_r2d2_error)?.deref_mut(), query.clone()).unwrap();
+            let devices = Device::get_devices_of_user(conn.get().map_err(map_r2d2_error)?.deref_mut(), query.clone()).unwrap();
 
             let dtos = devices.iter().map(|d| d.to_dto()).collect::<Vec<DeviceResponse>>();
             Ok(HttpResponse::Ok().json(dtos))
         }
         None => {
-            return Err(CustomError::Forbidden);
+             Err(CustomError::Forbidden)
         }
     }
 }

@@ -47,8 +47,7 @@ pub async fn onboard_user(user_onboarding: web::Json<UserOnboardingModel>, conn:
 
     let res = UserManagementService::onboard_user(user_to_onboard.username, user_to_onboard
         .password,
-                                                  user_to_onboard.invite_id, &mut conn.get()
-            .unwrap())?;
+                                                  user_to_onboard.invite_id, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
         Ok(HttpResponse::Ok().json(User::map_to_dto(res)))
 }
@@ -63,8 +62,7 @@ tag="info"
 pub async fn get_users(conn: Data<DbPool>, requester: Option<web::ReqData<User>>)->
                                                                                  Result<HttpResponse, CustomError>{
 
-    let res = UserManagementService::get_users(requester.unwrap().into_inner(),&mut conn.get()
-        .unwrap())?;
+    let res = UserManagementService::get_users(requester.unwrap().into_inner(),conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -78,7 +76,7 @@ tag="info"
 #[get("/users/{username}")]
 pub async fn get_user(req: HttpRequest, conn: Data<DbPool>)-> Result<HttpResponse, CustomError>{
     let username = get_user_from_request(req);
-    let user = User::find_by_username(&username, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let user = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     Ok(HttpResponse::Ok().json(User::map_to_dto(user)))
 
 }
@@ -98,13 +96,13 @@ web::Path<String>, requester: Option<web::ReqData<User>>)
     if !requester.unwrap().is_admin(){
         return Err(CustomError::Forbidden)
     }
-    let mut user_to_update = User::find_by_username(&username, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let mut user_to_update = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     // Update to his/her designated role
     user_to_update.role = role.role.to_string();
     user_to_update.explicit_consent = role.explicit_consent;
 
-    let res = UserManagementService::update_user(user_to_update, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let res = UserManagementService::update_user(user_to_update, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -124,8 +122,8 @@ Responder{
     let invite = invite.into_inner();
 
     let created_invite = UserManagementService::create_invite(invite.role, invite
-        .explicit_consent,&mut conn.get()
-        .unwrap(), requester.unwrap().into_inner()).expect("Error creating invite");
+        .explicit_consent,conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
+                                                              requester.unwrap().into_inner()).expect("Error creating invite");
     HttpResponse::Ok().json(created_invite)
 }
 
@@ -142,8 +140,7 @@ pub async fn get_invites(conn: Data<DbPool>, requester: Option<web::ReqData<User
         return Err(CustomError::Forbidden)
     }
 
-    let invites = UserManagementService::get_invites( &mut conn.get().map_err(map_r2d2_error)?
-        .deref_mut())?;
+    let invites = UserManagementService::get_invites( conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
 
     Ok(HttpResponse::Ok().json(invites))
@@ -158,7 +155,7 @@ tag="info"
 #[get("/users/invites/{invite_id}")]
 pub async fn get_invite(conn: Data<DbPool>, invite_id: web::Path<String>)-> Result<HttpResponse,
     CustomError>{
-    match UserManagementService::get_invite(invite_id.into_inner(), &mut conn.get().map_err(map_r2d2_error)?.deref_mut()){
+    match UserManagementService::get_invite(invite_id.into_inner(), conn.get().map_err(map_r2d2_error)?.deref_mut()){
         Ok(invite) => Ok(HttpResponse::Ok().json(invite)),
         Err(e) => Ok(HttpResponse::BadRequest().body(e.to_string()))
     }
@@ -177,11 +174,11 @@ Option<web::ReqData<User>>)-> Result<HttpResponse, CustomError>{
         return Err(CustomError::Forbidden)
     }
 
-    let user_to_delete = User::find_by_username(&username, &mut conn.get().map_err(map_r2d2_error)?.deref_mut()).unwrap();
-    match UserManagementService::delete_user(user_to_delete, &mut conn.get().map_err(map_r2d2_error)?.deref_mut())
+    let user_to_delete = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut()).unwrap();
+    match UserManagementService::delete_user(user_to_delete, conn.get().map_err(map_r2d2_error)?.deref_mut())
     {
         Ok(_) => Ok(HttpResponse::Ok().into()),
-        Err(e) => Err(CustomError::from(e).into())
+        Err(e) => Err(e)
     }
 }
 
@@ -201,8 +198,7 @@ pub async fn get_invite_link(conn: Data<DbPool>, invite_id: web::Path<String>,
 
 
     match UserManagementService::get_invite_link(invite_id.into_inner(),
-                                                 environment_service,&mut conn.get()
-        .unwrap()){
+                                                 environment_service,conn.get().map_err(map_r2d2_error).unwrap().deref_mut()){
         Ok(invite) => HttpResponse::Ok().json(invite),
         Err(e) => HttpResponse::BadRequest().body(e.to_string())
     }
@@ -219,7 +215,7 @@ pub async fn delete_invite(conn:Data<DbPool>, invite_id: web::Path<String>,reque
         return HttpResponse::Forbidden().body("You are not authorized to perform this action")
     }
 
-    match UserManagementService::delete_invite(invite_id.into_inner(), &mut conn.get().unwrap())
+    match UserManagementService::delete_invite(invite_id.into_inner(), conn.get().map_err(map_r2d2_error).unwrap().deref_mut())
     {
         Ok(_) => HttpResponse::Ok().into(),
         Err(e) => HttpResponse::BadRequest().body(e.to_string())
