@@ -24,7 +24,8 @@ use crate::utils::error::CustomError;
 
 pub fn start_command_line(mut args: Args) {
     println!("Starting from command line");
-    match args.next().unwrap().as_str() {
+    // This needs to be nth(1) because the first argument is the binary name
+    match args.nth(1).unwrap().as_str() {
         "help" | "--help" => {
             println!(r" The following commands are available:
             users => Handles user management
