@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import axios, {AxiosResponse } from 'axios'
 import { apiURL, removeHTML } from '../utils/Utilities'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { Podcast, setCurrentDetailedPodcastId, setSelectedEpisodes } from '../store/CommonSlice'
+import {Podcast, setCurrentDetailedPodcastId, setInfoModalPodcastOpen, setSelectedEpisodes} from '../store/CommonSlice'
 import { setCurrentPodcast } from '../store/AudioPlayerSlice'
 import { Chip } from '../components/Chip'
 import { Heading1 } from '../components/Heading1'
@@ -78,6 +78,12 @@ export const PodcastDetailPage = () => {
             }
         }
     }, [params])
+
+    useEffect(() => {
+        return ()=>{
+            dispatch(setInfoModalPodcastOpen(false))
+        }
+    }, []);
 
     if (currentPodcast === undefined) {
             return <div className="w-full md:w-3/4 mx-auto">
