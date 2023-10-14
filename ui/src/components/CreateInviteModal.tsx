@@ -57,7 +57,11 @@ export const CreateInviteModal = () => {
                 </div>
 
                 <CustomButtonPrimary className="float-right" onClick={() => {
-                    axios.post(apiURL + '/users/invites', invite)
+                    const modifiedInvite = {
+                        role: invite.role.toLowerCase(),
+                        explicitConsent: invite.explicitConsent
+                    } satisfies Invite
+                    axios.post(apiURL + '/users/invites', modifiedInvite)
                         .then((v) => {
                             enqueueSnackbar(t('invite-created'), { variant: 'success' })
                             dispatch(setInvites([...invites,v.data]))
