@@ -142,9 +142,10 @@ export const UserAdminInvites = () => {
                                         axios.get(apiURL + '/users/invites/' + i.id + '/link')
                                             .then(v => {
                                                 navigator.clipboard.writeText(v.data)
-                                                enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000 })
+                                                    .then(()=>enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000 }))
+
                                             })
-                                    }} title={t('copy-link') || ''}>
+                                    }} title={t('copy-link')}>
                                         {i.id}
                                         <span className="material-symbols-outlined align-middle ml-1">link</span>
                                     </button>
