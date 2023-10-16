@@ -1,7 +1,6 @@
 import { FC } from 'react'
 import { createPortal } from 'react-dom'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setModalOpen } from '../store/ModalSlice'
+import useModal from '../store/ModalSlice'
 import { Heading2 } from './Heading2'
 
 export interface ModalProps {
@@ -15,15 +14,15 @@ export interface ModalProps {
 }
 
 export const Modal: FC<ModalProps>  = ({ headerText,children }) => {
-    const openModal  = useAppSelector(state => state.modal.openModal)
-    const dispatch = useAppDispatch()
+    const openModal  = useModal(state => state.openModal)
+    const setModalOpen = useModal(state => state.setOpenModal)
 
     return openModal ? createPortal(
-        <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={() => dispatch(setModalOpen(false))}
+        <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={() => setModalOpen(false)}
         className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur h-screen overflow-x-hidden overflow-y-auto z-20">
 
             <div className="relative bg-[--bg-color] max-w-lg p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={() => dispatch(setModalOpen(false))}>
+                <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={() => setModalOpen(false)}>
                     <span className="material-symbols-outlined text-[--modal-close-color] hover:text-[--modal-close-color-hover]">close</span>
                     <span className="sr-only">Close modal</span>
                 </button>

@@ -1,31 +1,22 @@
-import {createSlice, PayloadAction} from '@reduxjs/toolkit'
 
 
 // Define a type for the slice state
+import {create} from "zustand";
+
 interface ModalProps {
     openModal:boolean,
-    openAddModal: boolean
+    openAddModal: boolean,
+    setOpenModal: (openModal: boolean) => void,
+    setOpenAddModal: (openAddModal: boolean) => void
 }
 
-// Define the initial state using that type
-const initialState: ModalProps = {
+
+const useModal = create<ModalProps>((set, get) => ({
     openModal: false,
     openAddModal: false,
-}
+    setOpenModal: (openModal: boolean) => set({openModal}),
+    setOpenAddModal: (openAddModal: boolean) => set({openAddModal})
+}))
 
-export const modalSlice = createSlice({
-    name: 'modalSlice',
-    initialState,
-    reducers: {
-        setModalOpen: (state, action)=>{
-            state.openModal = action.payload
-        },
-        setOpenAddModal: (state, action)=>{
-            state.openAddModal = action.payload
-        }
-    }
-})
 
-export const {setModalOpen, setOpenAddModal} = modalSlice.actions
-
-export default modalSlice.reducer
+export default useModal

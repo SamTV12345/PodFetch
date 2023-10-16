@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setCreateInviteModalOpen, setInvites } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { apiURL } from '../utils/Utilities'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'
@@ -24,20 +23,21 @@ const roleOptions = [
 ]
 
 export const CreateInviteModal = () => {
-    const dispatch = useAppDispatch()
-    const inviteModalOpen = useAppSelector(state => state.common.createInviteModalOpen)
-    const invites = useAppSelector(state => state.common.invites)
+    const inviteModalOpen = useCommon(state => state.createInviteModalOpen)
+    const invites = useCommon(state => state.invites)
     const [invite, setInvite] = useState<Invite>({ role: 'User', explicitConsent: false })
     const { t } = useTranslation()
+    const setCreateInviteModalOpen = useCommon(state => state.setCreateInviteModalOpen)
+    const setInvites = useCommon(state => state.setInvites)
 
     return createPortal(
-        <div aria-hidden="true" id="defaultModal" onClick={() => dispatch(setCreateInviteModalOpen(false))} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-x-hidden overflow-y-auto z-30 ${inviteModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
+        <div aria-hidden="true" id="defaultModal" onClick={() => setCreateInviteModalOpen(false)} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-x-hidden overflow-y-auto z-30 ${inviteModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
 
             {/* Modal */}
             <div className="relative bg-[--bg-color] max-w-5xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)]" onClick={e => e.stopPropagation()}>
 
                 {/* Close button */}
-                <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={() => dispatch(setCreateInviteModalOpen(false))}>
+                <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={() => setCreateInviteModalOpen(false)}>
                     <span className="material-symbols-outlined text-[--modal-close-color] hover:text-[--modal-close-color-hover]">close</span>
                     <span className="sr-only">{t('closeModal')}</span>
                 </button>
@@ -64,8 +64,8 @@ export const CreateInviteModal = () => {
                     axios.post(apiURL + '/users/invites', modifiedInvite)
                         .then((v) => {
                             enqueueSnackbar(t('invite-created'), { variant: 'success' })
-                            dispatch(setInvites([...invites,v.data]))
-                            dispatch(setCreateInviteModalOpen(false))
+                            setInvites([...invites,v.data])
+                            setCreateInviteModalOpen(false)
                         })
                 }}>{t('create-invite')}</CustomButtonPrimary>
 

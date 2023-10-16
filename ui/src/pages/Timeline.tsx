@@ -2,8 +2,7 @@ import {Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { apiURL, formatTime, getFiltersDefault } from '../utils/Utilities'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setFilters, setTimeLineEpisodes } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { Filter } from '../models/Filter'
 import { TimelineHATEOASModel } from '../models/TimeLineModel'
 import { Heading1 } from '../components/Heading1'
@@ -12,18 +11,20 @@ import { Switcher } from '../components/Switcher'
 import { TimelineEpisode } from '../components/TimelineEpisode'
 
 export const Timeline = () => {
-    const dispatch = useAppDispatch()
-    const timeLineEpisodes = useAppSelector(state => state.common.timeLineEpisodes)
-    const filter = useAppSelector(state => state.common.filters)
+    const timeLineEpisodes = useCommon(state => state.timeLineEpisodes)
+    const filter = useCommon(state => state.filters)
     const { t } = useTranslation()
     const [notListened, setNotListened] = useState(false)
+    const setFilters = useCommon(state => state.setFilters)
+    const setTimelineEpisodes = useCommon(state => state.setTimeLineEpisodes)
+
 
     useEffect(() => {
         !filter && axios.get(apiURL + '/podcasts/filter')
             .then((filterAxiosResponse: AxiosResponse<Filter>) => {
-                filterAxiosResponse.data == null && dispatch(setFilters(getFiltersDefault()))
+                filterAxiosResponse.data == null && setFilters(getFiltersDefault())
 
-                filterAxiosResponse.data && dispatch(setFilters(filterAxiosResponse.data))
+                filterAxiosResponse.data && setFilters(filterAxiosResponse.data)
             })
     }, [])
 
@@ -38,7 +39,7 @@ export const Timeline = () => {
                 }
             })
                 .then((c: AxiosResponse<TimelineHATEOASModel>) => {
-                    dispatch(setTimeLineEpisodes(c.data))
+                    setTimelineEpisodes(c.data)
                 })
         }
     }, [filter,notListened])
@@ -57,10 +58,10 @@ export const Timeline = () => {
                 <div className="flex items-center gap-3">
                     <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
 
-                    <Switcher checked={filter === undefined?true: filter.onlyFavored} setChecked={() => dispatch(setFilters({
+                    <Switcher checked={filter === undefined?true: filter.onlyFavored} setChecked={() => setFilters({
                         ...filter as Filter,
                         onlyFavored: !filter?.onlyFavored
-                    }))}/>
+                    })}/>
                 </div>
                 <div className="flex items-center gap-3">
                     <span className="text-xs text-[--fg-secondary-color]">{t('not-yet-played')}</span>

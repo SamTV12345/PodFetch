@@ -4,15 +4,14 @@ import axios, { AxiosError, AxiosResponse } from 'axios'
 import { apiURL } from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setSearchedPodcasts } from '../store/CommonSlice'
-import { setModalOpen } from '../store/ModalSlice'
+import useCommon from '../store/CommonSlice'
 import { AddTypes } from '../models/AddTypes'
 import { AgnosticPodcastDataModel, GeneralModel, PodIndexModel } from '../models/PodcastAddModel'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import 'material-symbols/outlined.css'
+import useModal from "../store/ModalSlice";
 
 type ProviderImportComponent = {
     selectedSearchType: AddTypes
@@ -24,16 +23,17 @@ export type AddPostPostModel = {
 }
 
 export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedSearchType }) => {
-    const dispatch = useAppDispatch()
-    const searchedPodcasts = useAppSelector(state => state.common.searchedPodcasts)
+    const setSearchedPodcasts = useCommon(state => state.setSearchedPodcasts)
+    const searchedPodcasts = useCommon(state => state.searchedPodcasts)
     const [loading, setLoading] = useState<boolean>()
     const [searchText, setSearchText] = useState<string>('')
     const { t } = useTranslation()
+    const setModalOpen = useModal(state => state.setOpenModal)
 
     const addPodcast = (podcast: AddPostPostModel) => {
         axios.post(apiURL + '/podcast/' + selectedSearchType, podcast)
             .then((err: any) => {
-                dispatch(setModalOpen(false))
+                setModalOpen(false)
                 err.response.status && handleAddPodcast(err.response.status,
                     searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
             })
@@ -58,7 +58,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                         }
                     })
 
-                    dispatch(setSearchedPodcasts(agnosticModel))
+                    setSearchedPodcasts(agnosticModel)
                 })
             : axios.get(apiURL + '/podcasts/1/' + searchText + '/search')
                 .then((v: AxiosResponse<PodIndexModel>) => {
@@ -71,7 +71,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                             imageUrl: podcast.artwork
                         }
                     })
-                    dispatch(setSearchedPodcasts(agnosticModel))
+                    setSearchedPodcasts(agnosticModel)
                 })
     }, 2000, [searchText])
 

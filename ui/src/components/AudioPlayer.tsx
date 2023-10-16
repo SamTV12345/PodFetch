@@ -1,8 +1,8 @@
 import { FC, RefObject } from 'react'
-import { useAppSelector } from '../store/hooks'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { DrawerAudioPlayer } from './DrawerAudioPlayer'
 import { HiddenAudioPlayer } from './HiddenAudioPlayer'
+import useCommon from "../store/CommonSlice";
 
 type AudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement>,
@@ -11,8 +11,8 @@ type AudioPlayerProps = {
 }
 
 export const AudioPlayer: FC<AudioPlayerProps> = ({ refItem, audioAmplifier, setAudioAmplifier }) => {
-    const detailedAudioPodcastOpen = useAppSelector(state => state.common.detailedAudioPlayerOpen)
-    
+    const detailedAudioPodcastOpen = useCommon(state => state.detailedAudioPlayerOpen)
+
     return <>
         {!detailedAudioPodcastOpen && <DrawerAudioPlayer refItem={refItem} audioAmplifier={audioAmplifier} />}
         <HiddenAudioPlayer refItem={refItem} setAudioAmplifier={setAudioAmplifier} />

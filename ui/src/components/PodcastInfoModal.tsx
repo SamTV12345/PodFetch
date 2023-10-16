@@ -2,17 +2,15 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { apiURL, preparePath, removeHTML } from '../utils/Utilities'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setInfoModalPodcastOpen } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
 
 export const PodcastInfoModal = () => {
-    const dispatch = useAppDispatch()
-    const infoModalOpen = useAppSelector(state => state.common.infoModalPodcastOpen)
-    const selectedPodcastEpisode = useAppSelector(state => state.common.infoModalPodcast)
+    const infoModalOpen = useCommon(state => state.infoModalPodcastOpen)
+    const selectedPodcastEpisode = useCommon(state => state.infoModalPodcast)
     const { t } =  useTranslation()
-
+    const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const download = (url: string, filename: string) => {
         const element = document.createElement('a')
         element.setAttribute('href', url)
@@ -26,7 +24,7 @@ export const PodcastInfoModal = () => {
 
     const deleteEpisodeDownloadOnServer = (episodeId: string) => {
         axios.delete(apiURL + '/episodes/' + episodeId + '/download').then(() => {
-            dispatch(setInfoModalPodcastOpen(false))
+            setInfoModalPodcastOpen(false)
         })
     }
 
@@ -35,7 +33,7 @@ export const PodcastInfoModal = () => {
             id="defaultModal"
             tabIndex={-1}
             aria-hidden="true"
-            onClick={() => dispatch(setInfoModalPodcastOpen(false))}
+            onClick={() => setInfoModalPodcastOpen(false)}
             className={`fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden transition-opacity z-30
             ${!infoModalOpen && 'pointer-events-none'}
             ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
@@ -43,7 +41,7 @@ export const PodcastInfoModal = () => {
             <div className={`relative bg-[--bg-color] max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
                 <button
                     type="button"
-                    onClick={() => dispatch(setInfoModalPodcastOpen(false))}
+                    onClick={() => setInfoModalPodcastOpen(false)}
                     className="absolute top-4 right-4 bg-transparent"
                     data-modal-hide="defaultModal"
                 >

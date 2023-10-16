@@ -2,22 +2,25 @@ import { FC, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { Podcast, setConfirmModalData, setPodcasts, podcastDeleted } from '../store/CommonSlice'
-import { setModalOpen } from '../store/ModalSlice'
+import useCommon, { Podcast} from '../store/CommonSlice'
 import { apiURL } from '../utils/Utilities'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
+import useModal from "../store/ModalSlice";
 
 export const SettingsPodcastDelete: FC = () => {
-    const dispatch = useAppDispatch()
-    const podcasts = useAppSelector(state => state.common.podcasts)
+    const podcasts = useCommon(state => state.podcasts)
     const { t } = useTranslation()
+    const setModalOpen = useModal(state => state.setOpenModal)
+    const setConfirmModalData  = useCommon(state => state.setConfirmModalData)
+    const setPodcasts = useCommon(state => state.setPodcasts)
+    const podcastDeleted = useCommon(state => state.podcastDeleted)
+
 
     useEffect(() => {
         if (podcasts.length === 0) {
             axios.get(apiURL + '/podcasts')
                 .then((v) => {
-                    dispatch(setPodcasts(v.data))
+                    setPodcasts(v.data)
                 })
         }
     }, [])
@@ -26,7 +29,7 @@ export const SettingsPodcastDelete: FC = () => {
         axios.delete(apiURL + '/podcast/' + podcast_id, { data: { delete_files: withFiles }})
             .then(() => {
                 enqueueSnackbar(t('podcast-deleted', { name: p.name }), { variant: 'success' })
-                dispatch(podcastDeleted(podcast_id))
+                podcastDeleted(podcast_id)
             })
     }
 
@@ -37,37 +40,37 @@ export const SettingsPodcastDelete: FC = () => {
                     <span className="xs:col-span-2 lg:col-span-1 text-[--fg-color]">{p.name}</span>
 
                     <CustomButtonSecondary onClick={() => {
-                        dispatch(setConfirmModalData({
+                        setConfirmModalData({
                             headerText: t('delete-podcast-with-files'),
                             onAccept:()=>{
                                 deletePodcast(true, p.id, p)
-                                dispatch(setModalOpen(false))
+                                setModalOpen(false)
                             },
                             onReject: ()=>{
-                                dispatch(setModalOpen(false))
+                               setModalOpen(false)
                             },
                             acceptText: t('delete-podcast-confirm'),
                             rejectText: t('cancel'),
                             bodyText: t('delete-podcast-with-files-body', {name: p.name})
-                        }))
-                        dispatch(setModalOpen(true))
+                        })
+                        setModalOpen(true)
                     }}>{t('delete-podcast-with-files')}</CustomButtonSecondary>
 
                     <CustomButtonSecondary onClick={() => {
-                        dispatch(setConfirmModalData({
+                        setConfirmModalData({
                             headerText: t('delete-podcast-without-files'),
                             onAccept:()=>{
                                 deletePodcast(false, p.id, p)
-                                dispatch(setModalOpen(false))
+                                setModalOpen(false)
                             },
                             onReject: ()=>{
-                                dispatch(setModalOpen(false))
+                                setModalOpen(false)
                             },
                             acceptText: t('delete-podcast-confirm'),
                             rejectText: t('cancel'),
                             bodyText: t('delete-podcast-without-files-body', {name: p.name})
-                        }))
-                        dispatch(setModalOpen(true))
+                        })
+                        setModalOpen(true)
                     }}>{t('delete-podcast-without-files')}</CustomButtonSecondary>
                 </div>
             ))}

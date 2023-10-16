@@ -1,13 +1,13 @@
 import { FC } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { useAppSelector } from '../store/hooks'
 import { CustomDropdownMenu } from './CustomDropdownMenu'
 import { MenuItem } from './CustomDropdownMenu'
 import 'material-symbols/outlined.css'
+import useCommon from "../store/CommonSlice";
 
 export const UserMenu: FC = () => {
-    const config = useAppSelector(state => state.common.configModel)
-    const configModel = useAppSelector(state => state.common.configModel)
+    const config = useCommon(state => state.configModel)
+    const configModel = useCommon(state => state.configModel)
 
     const menuItems: Array<MenuItem> = [
         {

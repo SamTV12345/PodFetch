@@ -1,6 +1,5 @@
 import React, { createRef, FC, useMemo, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setCurrentTimeUpdatePercentage } from '../store/AudioPlayerSlice'
+import useAudioPlayer from '../store/AudioPlayerSlice'
 import { logCurrentPlaybackTime } from '../utils/Utilities'
 
 type PlayerProgressBarProps = {
@@ -40,12 +39,12 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
 
     const control = createRef<HTMLElement>()
     const wrapper = createRef<HTMLDivElement>()
-    const dispatch = useAppDispatch()
-    const currentPodcastEpisode = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
-    const metadata = useAppSelector(state => state.audioPlayer.metadata)
-    const minute = useAppSelector(state => state.audioPlayer.metadata?.currentTime)
-    const time = useAppSelector(state => state.audioPlayer.metadata?.currentTime)
+    const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+    const metadata = useAudioPlayer(state => state.metadata)
+    const minute = useAudioPlayer(state => state.metadata?.currentTime)
+    const time = useAudioPlayer(state => state.metadata?.currentTime)
     const [mousePressed, setMousePressed] = useState(false);
+    const setCurrentTimeUpdatePercentage = useAudioPlayer(state => state.setCurrentTimeUpdatePercentage)
 
     const totalDuration = useMemo(() => {
         return convertToMinutes(metadata?.duration)
@@ -78,7 +77,7 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
 
     const calcTotalMovement = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
         if (mousePressed && metadata && audioplayerRef.current) {
-            dispatch(setCurrentTimeUpdatePercentage(metadata.percentage + e.movementX))
+            setCurrentTimeUpdatePercentage(metadata.percentage + e.movementX)
             audioplayerRef.current.currentTime = Math.floor(metadata.percentage + e.movementX / 100 * audioplayerRef.current.duration)
         }
     }

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { apiURL } from '../utils/Utilities'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
-import { useAppSelector } from '../store/hooks'
 import { Podcast } from '../store/CommonSlice'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 

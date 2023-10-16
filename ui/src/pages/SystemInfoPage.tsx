@@ -1,7 +1,6 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
-import { useAppSelector } from '../store/hooks'
 import { apiURL } from '../utils/Utilities'
 import { DiskModel } from '../models/DiskModel'
 import { SysExtraInfo } from '../models/SysExtraInfo'
@@ -10,6 +9,7 @@ import { Heading1 } from '../components/Heading1'
 import { Heading3 } from '../components/Heading3'
 import { Loading } from '../components/Loading'
 import 'material-symbols/outlined.css'
+import useCommon from "../store/CommonSlice";
 
 type VersionInfoModel = {
     commit: string,
@@ -21,7 +21,7 @@ type VersionInfoModel = {
 }
 
 export const SystemInfoPage: FC = () => {
-    const configModel = useAppSelector(state => state.common.configModel)
+    const configModel = useCommon(state => state.configModel)
     const [systemInfo, setSystemInfo] = useState<SysExtraInfo>()
     const [versionInfo, setVersionInfo] = useState<VersionInfoModel>()
     const { t } = useTranslation()

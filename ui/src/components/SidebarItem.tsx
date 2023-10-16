@@ -1,8 +1,7 @@
 import { FC } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAppDispatch } from '../store/hooks'
-import { setSidebarCollapsed } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 
 type SidebarItemProps = {
@@ -13,12 +12,12 @@ type SidebarItemProps = {
 }
 
 export const SidebarItem: FC<SidebarItemProps> = ({ path, translationKey, iconName, spaceBefore }) => {
-    const dispatch = useAppDispatch()
+    const setSidebarCollapsed = useCommon(state => state.setSidebarCollapsed)
     const { t } = useTranslation()
 
     const minimizeOnMobile = () => {
         if (window.screen.width < 768) {
-            dispatch(setSidebarCollapsed(true))
+            setSidebarCollapsed(true)
         }
     }
 

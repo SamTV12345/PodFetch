@@ -1,28 +1,26 @@
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import axios, {AxiosResponse} from "axios";
-import {apiURL, formatTime} from "../utils/Utilities";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
+import {apiURL} from "../utils/Utilities";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
-import {Simulate} from "react-dom/test-utils";
-import play = Simulate.play;
-import {setCreatePlaylistOpen, setCurrentPlaylistToEdit, setPlaylist} from "../store/PlaylistSlice";
-import {useEffect, useState} from "react";
+import usePlaylist from "../store/PlaylistSlice";
+import {useEffect} from "react";
 import {PlaylistDto} from "../models/Playlist";
 import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
 import {useNavigate} from "react-router-dom";
-import {setModalOpen} from "../store/ModalSlice";
 
 export const PlaylistPage = ()=>{
-    const dispatch = useAppDispatch()
     const {t} = useTranslation()
-    const playlist = useAppSelector(state=>state.playlist.playlist)
+    const setCreatePlaylistOpen = usePlaylist(state=>state.setCreatePlaylistOpen)
+    const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
+    const setPlaylist = usePlaylist(state=>state.setPlaylist)
+    const playlist = usePlaylist(state=>state.playlist)
     const navigate = useNavigate()
 
     useEffect(()=>{
         if (playlist.length ===0){
             axios.get(apiURL+"/playlist").then((response:AxiosResponse<PlaylistDto[]>)=>{
-                dispatch(setPlaylist(response.data))
+               setPlaylist(response.data)
             })
         }
     },[])
@@ -32,8 +30,8 @@ export const PlaylistPage = ()=>{
            <CreatePlaylistModal/>
 
             <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={()=>{
-                dispatch(setCurrentPlaylistToEdit({name: '',items:[],id: -1} as PlaylistDto))
-                dispatch(setCreatePlaylistOpen(true))
+               setCurrentPlaylistToEdit({name: '',items:[],id: -1} as PlaylistDto)
+                setCreatePlaylistOpen(true)
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
             </CustomButtonPrimary>
@@ -61,8 +59,8 @@ export const PlaylistPage = ()=>{
                                     e.preventDefault()
 
                                     axios.get(apiURL+"/playlist/"+i.id).then((response:AxiosResponse<PlaylistDto>)=> {
-                                        dispatch(setCurrentPlaylistToEdit(response.data))
-                                        dispatch(setCreatePlaylistOpen(true))
+                                        setCurrentPlaylistToEdit(response.data)
+                                        setCreatePlaylistOpen(true)
                                     })
                                 }} title={t('change-role')}>
                                     <span className="material-symbols-outlined text-[--fg-color] hover:text-stone-600">edit</span>
@@ -71,8 +69,8 @@ export const PlaylistPage = ()=>{
                             <td className="pl-2 py-4 gap-4">
                                 <button className="flex float-left" onClick={(e)=>{
                                     e.preventDefault()
-                                    dispatch(setCurrentPlaylistToEdit(i))
-                                    dispatch(setCreatePlaylistOpen(true))
+                                    setCurrentPlaylistToEdit(i)
+                                   setCreatePlaylistOpen(true)
 
                                 }} title={t('change-role')}>
                                     <span className="material-symbols-outlined hover:text-stone-600 text-[--fg-color]"
@@ -84,7 +82,7 @@ export const PlaylistPage = ()=>{
                                     e.preventDefault()
                                     axios.delete(apiURL+"/playlist/"+i.id).then(()=>{
                                         enqueueSnackbar(t('invite-deleted'), {variant: "success"})
-                                        dispatch(setPlaylist(playlist.filter(v=>v.id !== i.id)))
+                                        setPlaylist(playlist.filter(v=>v.id !== i.id))
                                     })
                                 }}>
                                     <span className="material-symbols-outlined mr-1">delete</span>

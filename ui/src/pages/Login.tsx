@@ -3,8 +3,7 @@ import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import axios, { AxiosError } from 'axios'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setLoginData } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { apiURL } from '../utils/Utilities'
 import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
 import { CustomCheckbox } from '../components/CustomCheckbox'
@@ -19,20 +18,14 @@ export type LoginData = {
     password: string,
     rememberMe: boolean
 }
-
-type LoginError = {
-    code: string,
-    error: string,
-    message: string
-}
 export const Login = () => {
-    const dispatch = useAppDispatch()
-    const configModel = useAppSelector(state => state.common.configModel)
+    const configModel = useCommon(state => state.configModel)
+    const setLoginData = useCommon(state => state.setLoginData)
     const navigate = useNavigate()
     const [alert, setAlert] = useState<string>()
     const { t } = useTranslation()
 
-    const { control, register, handleSubmit, formState: {} } = useForm<LoginData>({
+    const { control, handleSubmit, formState: {} } = useForm<LoginData>({
         defaultValues: {
             username: '',
             password: '',
@@ -53,7 +46,7 @@ export const Login = () => {
                     sessionStorage.setItem('auth', basicAuthString)
                 }
 
-                dispatch(setLoginData(data))
+                setLoginData(data)
 
                 axios.defaults.headers.common['Authorization'] = 'Basic ' + basicAuthString
 

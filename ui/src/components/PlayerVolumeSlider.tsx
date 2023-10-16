@@ -1,7 +1,6 @@
 import { FC, RefObject } from 'react'
 import * as Slider from '@radix-ui/react-slider'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setVolume } from '../store/AudioPlayerSlice'
+import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { VolumeIcon } from '../icons/VolumeIcon'
 
@@ -11,8 +10,8 @@ type PlayerVolumeSliderProps = {
 }
 
 export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ refItem, audioAmplifier }) => {
-    const dispatch = useAppDispatch()
-    const volume = useAppSelector(state => state.audioPlayer.volume)
+    const volume = useAudioPlayer(state => state.volume)
+    const setVolume = useAudioPlayer(state => state.setVolume)
 
     return (
         <div className="flex items-center gap-2 w-40 sm:w-full sm:px-0">
@@ -23,7 +22,7 @@ export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ refItem, audio
                 audioAmplifier && audioAmplifier.setVolume(Number(v) / 100)
 
                 if (refItem && refItem.current) {
-                    dispatch(setVolume(Number(v)))
+                    setVolume(Number(v))
                 }
             }}>
                 <Slider.Track className="relative grow bg-[--slider-bg-color] h-0.5">

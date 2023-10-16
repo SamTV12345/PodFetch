@@ -1,12 +1,10 @@
 import { FC} from 'react'
 import axios, { AxiosResponse } from 'axios'
 import { apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode } from '../utils/Utilities'
-import { store } from '../store/store'
-import { useAppDispatch } from '../store/hooks'
-import { setCurrentPodcast, setCurrentPodcastEpisode, setPlaying } from '../store/AudioPlayerSlice'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
-import {Podcast, PodcastEpisode, setPodcastAlreadyPlayed, setPodcastEpisodeAlreadyPlayed} from '../store/CommonSlice'
+import useCommon, {Podcast, PodcastEpisode} from '../store/CommonSlice'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
+import useAudioPlayer from "../store/AudioPlayerSlice";
 
 type EpisodeCardProps = {
     podcast: Podcast,
@@ -40,7 +38,12 @@ export const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|PodcastEp
 }
 
 export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, totalTime, watchedTime }) => {
-    const dispatch = useAppDispatch()
+    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
+    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
+    const setPlaying = useAudioPlayer(state => state.setPlaying)
+    const setPodcastAlreadyPlayed = useCommon(state => state.setPodcastAlreadyPlayed)
+    const setPodcastEpisodeAlreadyPlayed = useCommon(state => state.setPodcastEpisodeAlreadyPlayed)
+
 
     return (
         <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
@@ -50,20 +53,20 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
                     const playedPercentage = response.data.watchedTime * 100 / podcastEpisode.total_time
                     if(playedPercentage < 95) {
                         podcastEpisode.status === 'D'
-                            ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(podcastEpisode, response.data)))
-                            : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(podcastEpisode, response.data)))
+                            ? setCurrentPodcastEpisode(preparePodcastEpisode(podcastEpisode, response.data))
+                            : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(podcastEpisode, response.data))
 
-                        dispatch(setCurrentPodcast(podcast))
-                        dispatch(setPlaying(true))
+                        setCurrentPodcast(podcast)
+                        setPlaying(true)
                     }
                     else{
-                        dispatch(setPodcastEpisodeAlreadyPlayed({
+                        setPodcastEpisodeAlreadyPlayed({
                             podcastEpisode:{
                                 podcastEpisode: podcastEpisode
                             },
                             podcastWatchModel: response.data
-                        }))
-                        dispatch(setPodcastAlreadyPlayed(true))
+                        })
+                        setPodcastAlreadyPlayed(true)
                     }
                 })
         }}>

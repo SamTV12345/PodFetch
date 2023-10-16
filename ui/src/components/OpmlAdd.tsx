@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { apiURL } from '../utils/Utilities'
 import { FileItem, readFile } from '../utils/FileUtils'
-import { setInProgress } from '../store/opmlImportSlice'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
+import useOpmlImport from '../store/opmlImportSlice'
 import { AddTypes } from '../models/AddTypes'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 
@@ -15,9 +14,9 @@ type OpmlAddProps = {
 }
 
 export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
-    const opmlUploading = useAppSelector(state => state.opmlImport.inProgress)
-    const progress  = useAppSelector(state => state.opmlImport.progress)
-    const dispatch = useAppDispatch()
+    const opmlUploading = useOpmlImport(state => state.inProgress)
+    const progress  = useOpmlImport(state => state.progress)
+    const setInProgress = useOpmlImport(state => state.setInProgress)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [dragState, setDragState] = useState<DragState>("none")
     const [files, setFiles] = useState<FileItem[]>([])
@@ -26,7 +25,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 
     useEffect(() => {
         if (progress.length === podcastsToUpload) {
-            dispatch(setInProgress(false))
+            setInProgress(false)
         }
     }, [progress])
 
@@ -144,7 +143,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
             }
 
             <CustomButtonPrimary disabled={files.length === 0} onClick={() => {
-                dispatch(setInProgress(true))
+                setInProgress(true)
                 uploadOpml()
             }}>
                 {t('upload-opml')}

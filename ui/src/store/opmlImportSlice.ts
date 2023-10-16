@@ -1,33 +1,22 @@
-import {createSlice, PayloadAction} from "@reduxjs/toolkit";
+import {create} from "zustand";
 
 interface OpmlImportProps {
     progress: boolean[],
     messages: string[],
-    inProgress: boolean
+    inProgress: boolean,
+    setProgress: (progress: boolean[]) => void,
+    setMessages: (messages: string[]) => void,
+    setInProgress: (inProgress: boolean) => void
 }
 
-const initialState: OpmlImportProps = {
+
+const useOpmlImport = create<OpmlImportProps>((set) => ({
     progress: [],
     messages:[],
     inProgress: false,
-}
-export const opmlImportSlice = createSlice({
-    name: 'opmlImportSlice',
-    initialState,
-    reducers: {
-        setProgress: (state, action:PayloadAction<boolean[]>) => {
-            state.progress = action.payload
-        },
-        setMessages: (state, action:PayloadAction<string[]>) => {
-            state.messages = action.payload
-        },
-        setInProgress: (state, action:PayloadAction<boolean>) => {
-            state.inProgress = action.payload
-        }
-    }
-})
+    setProgress: (progress: boolean[]) => set({progress}),
+    setMessages: (messages: string[]) => set({messages}),
+    setInProgress: (inProgress: boolean) => set({inProgress})
+}))
 
-
-export const {setProgress,setInProgress,setMessages} = opmlImportSlice.actions
-
-export default opmlImportSlice.reducer
+export default useOpmlImport

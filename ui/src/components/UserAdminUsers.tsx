@@ -2,27 +2,28 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { useSnackbar } from 'notistack'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setSelectedUser, setUsers } from '../store/CommonSlice'
-import { setModalOpen } from '../store/ModalSlice'
+import useCommon from '../store/CommonSlice'
 import { apiURL, formatTime} from '../utils/Utilities'
 import { User } from '../models/User'
 import { ChangeRoleModal } from './ChangeRoleModal'
 import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
+import useModal from "../store/ModalSlice";
 
 export const UserAdminUsers = () => {
-    const dispatch = useAppDispatch()
-    const users = useAppSelector(state => state.common.users)
+    const setSelectedUser = useCommon(state => state.setSelectedUser)
+    const setUsers = useCommon(state => state.setUsers)
+    const users = useCommon(state => state.users)
     const [error, setError] = useState<boolean>()
     const {enqueueSnackbar} = useSnackbar()
     const { t } = useTranslation()
+    const setModalOpen = useModal(state => state.setOpenModal)
 
     useEffect(() => {
         axios.get(apiURL + '/users')
             .then(c => {
-                dispatch(setUsers(c.data))
+                setUsers(c.data)
                 setError(false)
             })
             .catch(() => setError(true))
@@ -32,7 +33,7 @@ export const UserAdminUsers = () => {
         axios.delete(apiURL + '/users/' + user.username)
             .then(() => {
                 enqueueSnackbar(t('user-deleted'), { variant: 'success' })
-                dispatch(setUsers(users.filter(u => u.username !== user.username)))
+                setUsers(users.filter(u => u.username !== user.username))
             })
     }
 
@@ -82,15 +83,15 @@ export const UserAdminUsers = () => {
                                     {t(v.role)}
 
                                     <button className="flex ml-2" onClick={() => {
-                                        dispatch(setSelectedUser({
+                                        setSelectedUser({
                                             role: v.role,
                                             id: v.id,
                                             createdAt: v.createdAt,
                                             explicitConsent: v.explicitConsent,
                                             username: v.username
-                                        }))
+                                        })
 
-                                        dispatch(setModalOpen(true))
+                                        setModalOpen(true)
                                     }} title={t('change-role') || ''}>
                                         <span className="material-symbols-outlined text-[--fg-color] hover:text-[--fg-color-hover]">edit</span>
                                     </button>

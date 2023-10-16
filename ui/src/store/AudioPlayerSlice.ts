@@ -1,5 +1,5 @@
-import {createSlice, PayloadAction} from "@reduxjs/toolkit";
 import {Podcast, PodcastEpisode} from "./CommonSlice";
+import {create} from "zustand";
 
 type AudioMetadata = {
     currentTime: number,
@@ -13,55 +13,43 @@ type AudioPlayerProps = {
     currentPodcast: Podcast|undefined,
     metadata: AudioMetadata|undefined,
     volume: number,
-    playBackRate: number
+    playBackRate: number,
+    setPlaying: (isPlaying: boolean) => void,
+    setCurrentPodcastEpisode: (currentPodcastEpisode: PodcastEpisode) => void,
+    setMetadata: (metadata: AudioMetadata) => void,
+    setCurrentTimeUpdate: (currentTime: number) => void,
+    setCurrentTimeUpdatePercentage: (percentage: number) => void,
+    setCurrentPodcast: (currentPodcast: Podcast) => void,
+    setVolume: (volume: number) => void,
+    setPlayBackRate: (playBackRate: number) => void
 }
 
-const initialState: AudioPlayerProps = {
+
+const useAudioPlayer = create<AudioPlayerProps>()((set, get) => ({
     isPlaying: false,
     currentPodcastEpisode: undefined,
     currentPodcast: undefined,
     metadata: undefined,
     volume: 100,
-    playBackRate: 1
-}
-
-export const AudioPlayerSlice = createSlice({
-    name: 'audioPlayer',
-    initialState: initialState,
-    reducers:{
-        setPlaying: (state, action:PayloadAction<boolean>) => {
-            state.isPlaying = action.payload
-        },
-        setCurrentPodcastEpisode: (state, action:PayloadAction<PodcastEpisode>) => {
-            state.currentPodcastEpisode = action.payload
-        },
-        setMetadata: (state, action:PayloadAction<AudioMetadata>) => {
-            state.metadata = action.payload
-        },
-        setCurrentTimeUpdate: (state, action:PayloadAction<number>) => {
-            if(state.metadata){
-                state.metadata.currentTime = action.payload
-                state.metadata.percentage = (state.metadata.currentTime/state.metadata.duration)*100
-            }
-        },
-        setCurrentTimeUpdatePercentage: (state, action:PayloadAction<number>) => {
-            if(state.metadata){
-                state.metadata.percentage = action.payload
-                state.metadata.currentTime = (state.metadata.percentage/100)*state.metadata.duration
-            }
-        },
-        setCurrentPodcast(state, action:PayloadAction<Podcast>){
-            state.currentPodcast = action.payload
-        },
-        setVolume(state, action:PayloadAction<number>){
-            state.volume = action.payload
-        },
-        setPlayBackRate(state, action:PayloadAction<number>){
-            state.playBackRate = action.payload
+    playBackRate: 1,
+    setPlaying: (isPlaying: boolean) => set({isPlaying}),
+    setCurrentPodcastEpisode: (currentPodcastEpisode: PodcastEpisode) => set({currentPodcastEpisode}),
+    setMetadata: (metadata: AudioMetadata) => set({metadata}),
+    setCurrentTimeUpdate: (currentTime: number) => {
+        const metadata = get().metadata
+        if(metadata){
+                set({metadata: {...metadata, currentTime, percentage: (currentTime/metadata.duration)*100}})
         }
-    }
-})
+    },
+    setCurrentTimeUpdatePercentage: (percentage: number) => {
+        const metadata = get().metadata
+        if(metadata){
+            set({metadata: {...metadata, percentage, currentTime: (percentage/100)*metadata.duration}})
+        }
+    },
+    setCurrentPodcast: (currentPodcast: Podcast) => set({currentPodcast}),
+    setVolume: (volume: number) => set({volume}),
+    setPlayBackRate: (playBackRate: number) => set({playBackRate})
+}))
 
-export const {setPlaying, setPlayBackRate,setCurrentPodcastEpisode,setVolume, setMetadata, setCurrentTimeUpdate, setCurrentTimeUpdatePercentage, setCurrentPodcast} = AudioPlayerSlice.actions
-
-export default AudioPlayerSlice.reducer
+export default useAudioPlayer

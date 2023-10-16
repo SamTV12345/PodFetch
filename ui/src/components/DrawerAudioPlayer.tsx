@@ -1,10 +1,10 @@
 import { FC, RefObject, useEffect } from 'react'
-import { useAppSelector } from '../store/hooks'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PlayerTimeControls } from './PlayerTimeControls'
 import { PlayerEpisodeInfo } from './PlayerEpisodeInfo'
 import { PlayerProgressBar } from './PlayerProgressBar'
 import { PlayerVolumeSlider } from './PlayerVolumeSlider'
+import useAudioPlayer from "../store/AudioPlayerSlice";
 
 type DrawerAudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement>,
@@ -12,9 +12,9 @@ type DrawerAudioPlayerProps = {
 }
 
 export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
-    const playing = useAppSelector(state => state.audioPlayer.isPlaying)
-    const podcast = useAppSelector(state => state.audioPlayer.currentPodcast)
-    const podcastEpisode = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
+    const playing = useAudioPlayer(state => state.isPlaying)
+    const podcast = useAudioPlayer(state => state.currentPodcast)
+    const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
 
     useEffect(() => {
         if (podcastEpisode && playing) {
