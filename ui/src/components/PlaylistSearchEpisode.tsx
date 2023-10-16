@@ -2,7 +2,6 @@ import {EpisodeSearch} from "./EpisodeSearch";
 import {DragEvent, useState} from "react";
 import {PodcastEpisode} from "../store/CommonSlice";
 import {useTranslation} from "react-i18next";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
 import usePlaylist from "../store/PlaylistSlice";
 
 
@@ -10,7 +9,6 @@ import usePlaylist from "../store/PlaylistSlice";
 export const PlaylistSearchEpisode = ()=>{
     const [itemCurrentlyDragged,setItemCurrentlyDragged] = useState<PodcastEpisode>()
     const {t} = useTranslation()
-    const dispatch = useAppDispatch()
     const currentPlayListToEdit = usePlaylist(state => state.currentPlaylistToEdit)
     const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
     const handleDragStart = (dragItem: PodcastEpisode, index: number, event: DragEvent<HTMLTableRowElement> )=>{

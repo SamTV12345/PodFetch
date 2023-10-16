@@ -1,6 +1,5 @@
 import { FC, RefObject } from 'react'
 import * as Slider from '@radix-ui/react-slider'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { VolumeIcon } from '../icons/VolumeIcon'
@@ -11,7 +10,6 @@ type PlayerVolumeSliderProps = {
 }
 
 export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ refItem, audioAmplifier }) => {
-    const dispatch = useAppDispatch()
     const volume = useAudioPlayer(state => state.volume)
     const setVolume = useAudioPlayer(state => state.setVolume)
 

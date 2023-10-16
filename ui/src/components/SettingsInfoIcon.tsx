@@ -1,6 +1,5 @@
 import { FC } from 'react'
-import { useAppDispatch } from '../store/hooks'
-import { setInfoHeading, setInfoModalPodcastOpen, setInfoText } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 
 type SettingsInfoIconProps = {
     headerKey: string
@@ -8,16 +7,18 @@ type SettingsInfoIconProps = {
 }
 
 export const SettingsInfoIcon: FC<SettingsInfoIconProps> = ({ textKey, headerKey }) => {
-    const dispatch = useAppDispatch()
+    const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const setInfoText = useCommon(state => state.setInfoText)
+    const setInfoHeading = useCommon(state => state.setInfoHeading)
 
     return (
         <button type="button">
             <span
                 className="material-symbols-outlined pointer active:scale-95"
                 onClick={() => {
-                    dispatch(setInfoHeading(headerKey))
-                    dispatch(setInfoText(textKey))
-                    dispatch(setInfoModalPodcastOpen(true))
+                    setInfoHeading(headerKey)
+                    setInfoText(textKey)
+                    setInfoModalPodcastOpen(true)
                 }}
             >info</span>
         </button>

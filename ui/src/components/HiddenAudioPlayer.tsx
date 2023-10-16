@@ -1,8 +1,6 @@
 import { FC, RefObject, useEffect } from 'react'
 import axios, { AxiosResponse } from 'axios'
 import useOnMount from '../hooks/useOnMount'
-import { store } from '../store/store'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { apiURL } from '../utils/Utilities'
 import { AudioAmplifier } from '../models/AudioAmplifier'
@@ -14,7 +12,6 @@ type HiddenAudioPlayerProps = {
 }
 
 export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudioAmplifier }) => {
-    const dispatch = useAppDispatch()
     const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
     const setMetadata = useAudioPlayer(state => state.setMetadata)
     const setCurrentTimeUpdate = useAudioPlayer(state => state.setCurrentTimeUpdate)

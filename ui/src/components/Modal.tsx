@@ -1,6 +1,5 @@
 import { FC } from 'react'
 import { createPortal } from 'react-dom'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
 import useModal from '../store/ModalSlice'
 import { Heading2 } from './Heading2'
 
@@ -16,7 +15,6 @@ export interface ModalProps {
 
 export const Modal: FC<ModalProps>  = ({ headerText,children }) => {
     const openModal  = useModal(state => state.openModal)
-    const dispatch = useAppDispatch()
     const setModalOpen = useModal(state => state.setOpenModal)
 
     return openModal ? createPortal(

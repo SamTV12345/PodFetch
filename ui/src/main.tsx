@@ -2,14 +2,11 @@ import React, { FC, PropsWithChildren, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { I18nextProvider } from 'react-i18next'
 import { AuthProvider } from 'react-oidc-context'
-import { Provider } from 'react-redux'
 import { RouterProvider } from 'react-router-dom'
 import axios, { AxiosResponse } from 'axios'
 import { SnackbarProvider } from 'notistack'
 import { router } from './App'
-import { store } from './store/store'
-import { useAppDispatch, useAppSelector } from './store/hooks'
-import { setConfigModel } from './store/CommonSlice'
+import useCommon from './store/CommonSlice'
 import i18n from './language/i18n'
 import { apiURL } from './utils/Utilities'
 import { ConfigModel } from './models/SysInfo'
@@ -29,12 +26,12 @@ import './index.css'
 import './assets/scss/style.scss'
 
 const AuthWrapper: FC<PropsWithChildren> = ({ children }) => {
-    const dispatch = useAppDispatch()
-    const configModel = useAppSelector(state => state.common.configModel)
+    const configModel = useCommon(state => state.configModel)
+    const setConfigModel = useCommon(state => state.setConfigModel)
 
     useEffect(() => {
         axios.get(apiURL + '/sys/config').then((v: AxiosResponse<ConfigModel>) => {
-            dispatch(setConfigModel(v.data))
+            setConfigModel(v.data)
         })
     }, [])
 
@@ -62,13 +59,11 @@ const AuthWrapper: FC<PropsWithChildren> = ({ children }) => {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
         <I18nextProvider i18n={i18n}>
-            <Provider store={store}>
                 <AuthWrapper>
                     <SnackbarProvider maxSnack={4} >
                         <RouterProvider router={router} />
                     </SnackbarProvider>
                 </AuthWrapper>
-            </Provider>
         </I18nextProvider>
     </React.StrictMode>,
 )

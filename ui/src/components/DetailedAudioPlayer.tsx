@@ -1,7 +1,6 @@
 import { FC, RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { useAppDispatch } from '../store/hooks'
-import { setDetailedAudioPlayerOpen } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { removeHTML } from '../utils/Utilities'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PlayerTimeControls } from './PlayerTimeControls'
@@ -17,13 +16,14 @@ type DetailedAudioPlayerProps = {
 }
 
 export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
-    const dispatch = useAppDispatch()
+    const setDetailedAudioPlayerOpen = useCommon(state=>state.setDetailedAudioPlayerOpen)
     const selectedPodcast = useAudioPlayer(state => state.currentPodcastEpisode)
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
 
     return createPortal(
         <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 bg-[--bg-color] md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
-            <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl text-[--fg-color] hover:text-[--fg-color-hover]" onClick={() => dispatch(setDetailedAudioPlayerOpen(false))}>close_fullscreen</span>
+            <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl text-[--fg-color] hover:text-[--fg-color-hover]"
+                  onClick={() => setDetailedAudioPlayerOpen(false)}>close_fullscreen</span>
 
             {/* Episode information */}
             <div className="

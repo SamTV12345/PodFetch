@@ -10,8 +10,7 @@ import {
     TITLE_ASCENDING,
     TITLE_DESCENDING
 } from '../utils/Utilities'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { Podcast, setFilters, setPodcasts } from '../store/CommonSlice'
+import useCommon, { Podcast,  } from '../store/CommonSlice'
 import { Order } from '../models/Order'
 import { Filter } from '../models/Filter'
 import { AddPodcastModal } from '../components/AddPodcastModal'
@@ -35,12 +34,13 @@ const orderOptions = [
 ]
 
 export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
-    const dispatch = useAppDispatch()
-    const filters = useAppSelector(state => state.common.filters)
-    const podcasts = useAppSelector(state => state.common.podcasts)
+    const filters = useCommon(state => state.filters)
+    const podcasts = useCommon(state => state.podcasts)
     let location = useLocation();
     const { t } = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
+    const setFilters = useCommon(state => state.setFilters)
+    const setPodcasts = useCommon(state => state.setPodcasts)
 
     const memorizedSelection = useMemo(() => {
         return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
@@ -64,7 +64,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
             }
         })
             .then((v: AxiosResponse<Podcast[]>) => {
-                dispatch(setPodcasts(v.data))
+                setPodcasts(v.data)
             })
     }
 
@@ -76,15 +76,15 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
         axios.get(apiURL + '/podcasts/filter')
             .then((c: AxiosResponse<Filter>) => {
                 if (c.data === null) {
-                    dispatch(setFilters(getFiltersDefault()))
+                    setFilters(getFiltersDefault())
                 } else {
-                    dispatch(setFilters({
+                    setFilters({
                         ascending: c.data.ascending,
                         filter: c.data.filter,
                         title: c.data.title,
                         username: c.data.username,
                         onlyFavored: c.data.onlyFavored
-                    }))
+                    })
                 }
             })
     }, [location])
@@ -113,14 +113,15 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
             {/* Search/sort */}
             <div className="flex flex-col md:flex-row gap-4 mb-10">
                 <span className="flex-1 relative">
-                    <CustomInput className="pl-10 w-full" type="text" onChange={v => dispatch(setFilters({...filters as Filter,title: v.target.value}))} placeholder={t('search')!} value={filters?.title || ''} />
+                    <CustomInput className="pl-10 w-full" type="text" onChange={v =>
+                        setFilters({...filters as Filter,title: v.target.value})} placeholder={t('search')!} value={filters?.title || ''} />
 
                     <span className="material-symbols-outlined absolute left-2 top-2 text-[--input-icon-color]">search</span>
                 </span>
 
                 <CustomSelect iconName="sort" onChange={(v) => {
                     let converted = JSON.parse(v) as OrderCriteriaSortingType
-                    dispatch(setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending}))
+                    setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending})
                 }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
             </div>
 

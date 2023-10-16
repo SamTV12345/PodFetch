@@ -2,8 +2,7 @@ import { createRef, FC } from 'react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { apiURL } from '../utils/Utilities'
-import { useAppDispatch } from '../store/hooks'
-import { Podcast, updateLikePodcast } from '../store/CommonSlice'
+import useCommon, { Podcast } from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 
 type PodcastCardProps = {
@@ -12,7 +11,7 @@ type PodcastCardProps = {
 
 export const PodcastCard: FC<PodcastCardProps> = ({ podcast }) => {
     const likeButton = createRef<HTMLElement>()
-    const dispatch = useAppDispatch()
+    const updateLikePodcast = useCommon(state => state.updateLikePodcast)
 
     const likePodcast = () => {
         axios.put(apiURL + '/podcast/favored', {
@@ -32,7 +31,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({ podcast }) => {
 
                     likeButton.current?.classList.toggle('fill-amber-400')
                     likePodcast()
-                    dispatch(updateLikePodcast(podcast.id))
+                    updateLikePodcast(podcast.id)
                 }}>favorite</span>
             </div>
 

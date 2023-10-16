@@ -1,5 +1,4 @@
 import React, { createRef, FC, useMemo, useState } from 'react'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { logCurrentPlaybackTime } from '../utils/Utilities'
 
@@ -40,7 +39,6 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
 
     const control = createRef<HTMLElement>()
     const wrapper = createRef<HTMLDivElement>()
-    const dispatch = useAppDispatch()
     const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
     const metadata = useAudioPlayer(state => state.metadata)
     const minute = useAudioPlayer(state => state.metadata?.currentTime)

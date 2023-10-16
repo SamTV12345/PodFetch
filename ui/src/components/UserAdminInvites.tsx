@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { useSnackbar } from 'notistack'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setCreateInviteModalOpen, setInvites } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { apiURL, formatTime } from '../utils/Utilities'
 import { CreateInviteModal } from './CreateInviteModal'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
@@ -54,12 +53,13 @@ const options: Option[] = [
 
 
 export const UserAdminInvites = () => {
-    const dispatch = useAppDispatch()
-    const invites = useAppSelector(state => state.common.invites)
+    const invites = useCommon(state => state.invites)
     const { enqueueSnackbar } = useSnackbar()
     const [error, setError] = useState<boolean>()
     const [selectedInviteType, setSelectedInviteType] = useState<InviteTypeSelection>(InviteTypeSelection.all)
     const { t } = useTranslation()
+    const setCreateInviteModalOpen = useCommon(state => state.setCreateInviteModalOpen)
+    const setInvites = useCommon(state => state.setInvites)
 
     const filteredInvites = useMemo(() => {
        switch (selectedInviteType) {
@@ -77,7 +77,7 @@ export const UserAdminInvites = () => {
     useEffect(() => {
         axios.get(apiURL + '/users/invites')
             .then(v => {
-                dispatch(setInvites(v.data))
+                setInvites(v.data)
                 setError(false)
             }).catch(() => {
                 setError(true)
@@ -101,7 +101,7 @@ export const UserAdminInvites = () => {
             <CustomSelect options={options} value={selectedInviteType} onChange={v => setSelectedInviteType(v as InviteTypeSelection)} />
 
             <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={() => {
-                dispatch(setCreateInviteModalOpen(true))
+                setCreateInviteModalOpen(true)
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
             </CustomButtonPrimary>
@@ -171,7 +171,7 @@ export const UserAdminInvites = () => {
                                         axios.delete(apiURL + '/users/invites/' + i.id)
                                             .then(() => {
                                                 enqueueSnackbar(t('invite-deleted'), { variant: 'success' })
-                                                dispatch(setInvites(invites.filter(v => v.id !== i.id)))
+                                                setInvites(invites.filter(v => v.id !== i.id))
                                         })
                                     }}>
                                         <span className="material-symbols-outlined mr-1">delete</span>

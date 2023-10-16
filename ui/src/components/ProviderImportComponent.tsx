@@ -4,8 +4,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios'
 import { apiURL } from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setSearchedPodcasts } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { AddTypes } from '../models/AddTypes'
 import { AgnosticPodcastDataModel, GeneralModel, PodIndexModel } from '../models/PodcastAddModel'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
@@ -24,8 +23,8 @@ export type AddPostPostModel = {
 }
 
 export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedSearchType }) => {
-    const dispatch = useAppDispatch()
-    const searchedPodcasts = useAppSelector(state => state.common.searchedPodcasts)
+    const setSearchedPodcasts = useCommon(state => state.setSearchedPodcasts)
+    const searchedPodcasts = useCommon(state => state.searchedPodcasts)
     const [loading, setLoading] = useState<boolean>()
     const [searchText, setSearchText] = useState<string>('')
     const { t } = useTranslation()
@@ -59,7 +58,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                         }
                     })
 
-                    dispatch(setSearchedPodcasts(agnosticModel))
+                    setSearchedPodcasts(agnosticModel)
                 })
             : axios.get(apiURL + '/podcasts/1/' + searchText + '/search')
                 .then((v: AxiosResponse<PodIndexModel>) => {
@@ -72,7 +71,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                             imageUrl: podcast.artwork
                         }
                     })
-                    dispatch(setSearchedPodcasts(agnosticModel))
+                    setSearchedPodcasts(agnosticModel)
                 })
     }, 2000, [searchText])
 

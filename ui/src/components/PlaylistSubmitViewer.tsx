@@ -2,14 +2,10 @@ import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
 import {PlaylistDto, PlaylistDtoPost, PlaylistItem} from "../models/Playlist";
-import {enqueueSnackbar} from "notistack";
 import usePlaylist from "../store/PlaylistSlice";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useTranslation} from "react-i18next";
-import {useFormContext} from "react-hook-form";
 
 export const PlaylistSubmitViewer = ()=>{
-    const dispatch = useAppDispatch()
     const {t} = useTranslation()
     const currentPlaylistToEdit = usePlaylist(state=>state.currentPlaylistToEdit)
     const playlists = usePlaylist(state=>state.playlist)

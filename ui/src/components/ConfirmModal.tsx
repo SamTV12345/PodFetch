@@ -1,7 +1,7 @@
-import { useAppSelector } from '../store/hooks'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { Modal } from './Modal'
+import useCommon from "../store/CommonSlice";
 
 export type ConfirmModalProps = {
     headerText: string,
@@ -13,7 +13,7 @@ export type ConfirmModalProps = {
 }
 
 export const ConfirmModal = () => {
-    const confirmModalData = useAppSelector(state => state.common.confirmModalData)
+    const confirmModalData = useCommon(state => state.confirmModalData)
 
     return (
         <Modal acceptText={confirmModalData?.acceptText} headerText={confirmModalData?.headerText} onAccept={() => {}} cancelText={confirmModalData?.rejectText} onCancel={() => {}} onDelete={() => {}}>

@@ -4,20 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
 import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
-import { store } from '../store/store'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import {
-    addPodcastEpisodes,
-    setEpisodeDownloaded,
-    setInfoModalPodcast,
-    setInfoModalPodcastOpen,
-    setPodcastAlreadyPlayed, setPodcastEpisodeAlreadyPlayed
-} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML } from '../utils/Utilities'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
+import useCommon from "../store/CommonSlice";
 
 type PodcastDetailItemProps = {
     episode: EpisodesWithOptionalTimeline,
@@ -26,12 +18,11 @@ type PodcastDetailItemProps = {
 }
 
 export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength }) => {
-    const dispatch = useAppDispatch()
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
-    const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
+    const selectedEpisodes = useCommon(state => state.selectedEpisodes)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const setPlaying = useAudioPlayer(state => state.setPlaying)
@@ -41,6 +32,12 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         }
         return Math.round(episode.podcastHistoryItem.watchedTime*100/episode.podcastEpisode.total_time)
     }, [episode.podcastHistoryItem?.watchedTime])
+    const addPodcastEpisodes = useCommon(state => state.addPodcastEpisodes)
+    const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
+    const setInfoModalPodcast = useCommon(state => state.setInfoModalPodcast)
+    const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const setPodcastAlreadyPlayed = useCommon(state => state.setPodcastAlreadyPlayed)
+    const setPodcastEpisodeAlreadyPlayed = useCommon(state => state.setPodcastEpisodeAlreadyPlayed)
 
     const playedTime = useMemo(()=>{
         if(percentagePlayed === -1){
@@ -60,8 +57,8 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 gap-x-4 gap-y-0 xs:gap-y-2
                 items-center group cursor-pointer mb-12
             " onClick={() => {
-                dispatch(setInfoModalPodcast(episode.podcastEpisode))
-                dispatch(setInfoModalPodcastOpen(true))
+                setInfoModalPodcast(episode.podcastEpisode)
+                setInfoModalPodcastOpen(true)
             }}>
                 {/* Thumbnail */}
                 <img src={episode.podcastEpisode.image_url} alt={episode.podcastEpisode.name} className="
@@ -93,7 +90,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         axios.put(apiURL + "/podcast/" + episode.podcastEpisode.episode_id + "/episodes/download")
                             .then(()=>{
                                 enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
-                                dispatch(setEpisodeDownloaded(episode.podcastEpisode.episode_id))
+                                setEpisodeDownloaded(episode.podcastEpisode.episode_id)
                             })
                     }}>cloud_download</span>
                 </div>
@@ -134,11 +131,11 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                                 setPlaying(true)
                             }
                             else{
-                                dispatch(setPodcastEpisodeAlreadyPlayed({
+                                setPodcastEpisodeAlreadyPlayed({
                                     podcastEpisode: episode,
                                     podcastWatchModel: response.data
-                                }))
-                                dispatch(setPodcastAlreadyPlayed(true))
+                                })
+                                setPodcastAlreadyPlayed(true)
                             }
                         })
                 }}>play_circle</span>
@@ -153,7 +150,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         }
                     })
                         .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
-                            dispatch(addPodcastEpisodes(response.data))
+                            addPodcastEpisodes(response.data)
                         })
                 }} />
             }

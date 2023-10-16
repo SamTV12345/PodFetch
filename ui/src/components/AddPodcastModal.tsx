@@ -1,17 +1,17 @@
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppSelector } from '../store/hooks'
 import { AddHeader } from './AddHeader'
 import { AddTypes } from '../models/AddTypes'
 import { FeedURLComponent } from './FeedURLComponent'
 import { Modal } from './Modal'
 import { OpmlAdd } from './OpmlAdd'
 import { ProviderImportComponent } from './ProviderImportComponent'
+import useCommon from "../store/CommonSlice";
 
 export const AddPodcastModal: FC = () => {
     const {t} = useTranslation()
     const [selectedSearchType, setSelectedSearchType] = useState<AddTypes>(AddTypes.ITUNES)
-    const configModel = useAppSelector(state => state.common.configModel)
+    const configModel = useCommon(state => state.configModel)
 
     return (
         <Modal onCancel={() => {}} onAccept={() => {}} headerText={t('add-podcast')!} onDelete={() => {}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"}>

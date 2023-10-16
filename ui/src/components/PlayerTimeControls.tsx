@@ -6,13 +6,11 @@ import {
     preparePodcastEpisode,
     SKIPPED_TIME
 } from '../utils/Utilities'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
-import {store} from "../store/store";
 import axios, {AxiosResponse} from "axios";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
-import {setSelectedEpisodes} from "../store/CommonSlice";
+import useCommon from "../store/CommonSlice";
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 
 type PlayerTimeControlsProps = {
@@ -20,13 +18,13 @@ type PlayerTimeControlsProps = {
 }
 
 export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => {
-    const dispatch = useAppDispatch()
+    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
-    const episodes = useAppSelector(state => state.common.selectedEpisodes)
+    const episodes = useCommon(state => state.selectedEpisodes)
     const isPlaying  = useAudioPlayer(state => state.isPlaying)
     const speed = useAudioPlayer(state => state.playBackRate)
     const time  = useAudioPlayer(state => state.metadata?.currentTime)
-    const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
+    const selectedEpisodes = useCommon(state => state.selectedEpisodes)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setPlaying = useAudioPlayer(state => state.setPlaying)
     const setPlaybackRate = useAudioPlayer(state => state.setPlayBackRate)
@@ -102,7 +100,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
                     }
                     return e
                 })
-                dispatch(setSelectedEpisodes(mappedEpisodes))
+                setSelectedEpisodes(mappedEpisodes)
             }
 
             setPlaying(false)

@@ -1,5 +1,4 @@
 import { FC, RefObject, useEffect } from 'react'
-import { useAppSelector } from '../store/hooks'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PlayerTimeControls } from './PlayerTimeControls'
 import { PlayerEpisodeInfo } from './PlayerEpisodeInfo'

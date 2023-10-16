@@ -4,15 +4,15 @@ import axios from 'axios'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import { apiURL } from '../utils/Utilities'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import {removeNotification, setNotifications} from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { Notification } from '../models/Notification'
 import 'material-symbols/outlined.css'
 
 export const Notifications: FC = () => {
-    const notifications = useAppSelector(state => state.common.notifications)
-    const dispatch = useAppDispatch()
+    const notifications = useCommon(state => state.notifications)
     const { t }  = useTranslation()
+    const removeNotification = useCommon(state => state.removeNotification)
+    const setNotifications = useCommon(state => state.setNotifications)
 
     const trigger = () => (
         <div className="flex items-center relative">
@@ -25,7 +25,7 @@ export const Notifications: FC = () => {
     const dismissNotification = (notification: Notification) => {
         axios.put(apiURL + '/notifications/dismiss', { id: notification.id })
             .then(() => {
-                dispatch(removeNotification(notification.id))
+                removeNotification(notification.id)
             })
     }
 

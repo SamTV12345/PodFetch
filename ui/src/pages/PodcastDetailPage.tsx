@@ -3,8 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import axios, {AxiosResponse } from 'axios'
 import { apiURL, removeHTML } from '../utils/Utilities'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import {Podcast, setCurrentDetailedPodcastId, setInfoModalPodcastOpen, setSelectedEpisodes} from '../store/CommonSlice'
+import useCommon, {Podcast} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { Chip } from '../components/Chip'
 import { Heading1 } from '../components/Heading1'
@@ -18,18 +17,20 @@ import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPl
 import {ErrorIcon} from "../icons/ErrorIcon";
 
 export const PodcastDetailPage = () => {
-    const dispatch = useAppDispatch()
-    const configModel = useAppSelector(state => state.common.configModel)
+    const configModel = useCommon(state => state.configModel)
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
-    const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
+    const selectedEpisodes = useCommon(state => state.selectedEpisodes)
     const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const params = useParams()
     const [lineClamp, setLineClamp] = useState(true)
     const { t } = useTranslation()
+    const setCurrentDetailedPodcastId = useCommon(state => state.setCurrentDetailedPodcastId)
+    const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
 
     useEffect(() => {
         if (params && !isNaN(parseFloat(params.id as string))) {
-            dispatch(setCurrentDetailedPodcastId(Number(params.id)))
+            setCurrentDetailedPodcastId(Number(params.id))
         }
 
         axios.get(apiURL + '/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
@@ -37,7 +38,7 @@ export const PodcastDetailPage = () => {
         }).then(() => {
             axios.get(apiURL + '/podcast/' + params.id + '/episodes')
                 .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
-                    dispatch(setSelectedEpisodes(response.data))
+                    setSelectedEpisodes(response.data)
 
                     if (params.podcastid) {
                         const element = document.getElementById('episode_' + params.podcastid)
@@ -82,7 +83,7 @@ export const PodcastDetailPage = () => {
 
     useEffect(() => {
         return ()=>{
-            dispatch(setInfoModalPodcastOpen(false))
+            setInfoModalPodcastOpen(false)
         }
     }, []);
 

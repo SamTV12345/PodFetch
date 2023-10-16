@@ -1,9 +1,8 @@
-import {FC, useEffect, useState} from "react"
+import {useEffect, useState} from "react"
 import {createPortal} from "react-dom"
 import {useTranslation} from "react-i18next"
 import axios, {AxiosResponse} from "axios"
 import {enqueueSnackbar} from "notistack"
-import {useAppDispatch, useAppSelector} from "../store/hooks"
 import {apiURL} from "../utils/Utilities"
 import {Heading2} from "./Heading2"
 import "material-symbols/outlined.css"
@@ -15,7 +14,6 @@ import {PlaylistSubmitViewer} from "./PlaylistSubmitViewer";
 
 
 export const CreatePlaylistModal = () => {
-    const dispatch = useAppDispatch()
     const playListOpen = usePlaylist(state=>state.createPlaylistOpen)
     const {t} = useTranslation()
     const playlists = usePlaylist(state=>state.playlist)

@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setLoginData } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { configWSUrl } from '../utils/Utilities'
 import App from '../App'
 import { AudioComponents } from '../components/AudioComponents'
@@ -13,16 +12,15 @@ import { MainContentPanel } from '../components/MainContentPanel'
 import { Sidebar } from '../components/Sidebar'
 
 export const Root = () => {
-    const dispatch = useAppDispatch()
-    const configModel = useAppSelector(state => state.common.configModel)
-    const auth = useAppSelector(state => state.common.loginData)
+    const configModel = useCommon(state => state.configModel)
+    const auth = useCommon(state => state.loginData)
     const navigate = useNavigate()
-
+    const setLoginData = useCommon(state => state.setLoginData)
     const extractLoginData = (auth_local: string) => {
         const test = atob(auth_local)
         const res = test.split(':')
 
-        auth_local && dispatch(setLoginData({ password: res[1], username: res[0] }))
+        auth_local && setLoginData({ password: res[1], username: res[0] })
         axios.defaults.headers.common['Authorization'] = 'Basic ' + auth_local
     }
 

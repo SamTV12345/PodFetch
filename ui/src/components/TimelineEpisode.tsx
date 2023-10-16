@@ -1,9 +1,7 @@
 import { FC } from 'react'
 import { Waypoint } from 'react-waypoint'
 import axios, { AxiosResponse } from 'axios'
-import { store } from '../store/store'
-import { useAppDispatch } from '../store/hooks'
-import { addTimelineEpisodes } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { apiURL } from '../utils/Utilities'
 import { TimelineHATEOASModel, TimeLineModel } from '../models/TimeLineModel'
 import { EpisodeCard } from './EpisodeCard'
@@ -19,8 +17,8 @@ type TimelineEpisodeProps = {
     podcastHistoryItem?: PodcastWatchedModel
 }
 
-export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podcastHistoryItem, notListened, index, timelineLength, timeLineEpisodes }) => {
-    const dispatch = useAppDispatch()
+export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podcastHistoryItem, notListened, index, timeLineEpisodes }) => {
+    const addTimelineEpisodes = useCommon(state => state.addTimelineEpisodes)
 
     return (
         <>
@@ -32,12 +30,12 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podca
                     axios.get(apiURL + '/podcasts/timeline', {
                         params:{
                             lastTimestamp: podcastEpisode.podcast_episode.date_of_recording,
-                            favoredOnly: store.getState().common.filters?.onlyFavored,
+                            favoredOnly: useCommon.getState().filters?.onlyFavored,
                             notListened: notListened
                         }
                     })
                         .then((response: AxiosResponse<TimelineHATEOASModel>) => {
-                            dispatch(addTimelineEpisodes(response.data))
+                            addTimelineEpisodes(response.data)
                         })
                 }} />
             }

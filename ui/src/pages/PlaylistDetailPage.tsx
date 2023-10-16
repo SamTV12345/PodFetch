@@ -2,7 +2,6 @@ import {Heading2} from "../components/Heading2";
 import {PodcastDetailItem} from "../components/PodcastDetailItem";
 import {useTranslation} from "react-i18next";
 import {useParams} from "react-router-dom";
-import {useAppDispatch, useAppSelector} from "../store/hooks";
 import axios, {AxiosResponse} from "axios";
 import {apiURL, prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities";
 import {PlaylistDto} from "../models/Playlist";
@@ -10,7 +9,6 @@ import usePlaylist from "../store/PlaylistSlice";
 import {useEffect} from "react";
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
-import {store} from "../store/store";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 
@@ -18,7 +16,6 @@ export const PlaylistDetailPage = ()=>{
     const {t} = useTranslation()
     const params = useParams()
     const selectedPlaylist = usePlaylist(state=>state.selectedPlaylist)
-    const dispatch = useAppDispatch()
     const metadata = useAudioPlayer(state=>state.metadata)
     const setCurrentPodcastEpisode = useAudioPlayer(state=>state.setCurrentPodcastEpisode)
     let current_podcast_episode = useAudioPlayer(state=>state.currentPodcastEpisode)

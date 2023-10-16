@@ -3,10 +3,8 @@ import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 're
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import { store } from './store/store'
-import { useAppDispatch, useAppSelector } from './store/hooks'
-import { addPodcast, setNotifications, setSelectedEpisodes } from './store/CommonSlice'
-import { setMessages, setProgress } from './store/opmlImportSlice'
+import useCommon from './store/CommonSlice'
+import useOpmlImport from './store/opmlImportSlice'
 import {apiURL, configWSUrl, decodeHTMLEntities, isJsonString} from './utils/Utilities'
 import {
     UserAdminViewLazyLoad,
@@ -88,11 +86,15 @@ export const router = createBrowserRouter(createRoutesFromElements(
 })
 
 const App: FC<PropsWithChildren> = ({ children }) => {
-    const dispatch = useAppDispatch()
-    const config = useAppSelector(state => state.common.configModel)
-    const podcasts = useAppSelector(state => state.common.podcasts)
+    const config = useCommon(state => state.configModel)
+    const podcasts = useCommon(state => state.podcasts)
+    const addPodcast = useCommon(state => state.addPodcast)
     const [socket, setSocket] = useState<WebSocket>()
     const { t } = useTranslation()
+    const setProgress = useOpmlImport(state => state.setProgress)
+    const setMessages = useOpmlImport(state => state.setMessages)
+    const setNotifications = useCommon(state => state.setNotifications)
+    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
 
     useEffect(() => {
         if (socket) {
@@ -107,24 +109,24 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                 if (checkIfPodcastAdded(parsed)) {
                     const podcast = parsed.podcast
 
-                    dispatch(addPodcast(podcast))
+                    addPodcast(podcast)
                     enqueueSnackbar(t('new-podcast-added', { name: decodeHTMLEntities(podcast.name) }), { variant: 'success' })
                 } else if (checkIfPodcastEpisodeAdded(parsed)) {
-                    if (store.getState().common.currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
+                    if (useCommon.getState().currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
                         enqueueSnackbar(t('new-podcast-episode-added', { name: decodeHTMLEntities(parsed.podcast_episode.name) }), { variant: 'success' })
 
                         const downloadedPodcastEpisode = parsed.podcast_episode
-                        let res = store.getState().common.selectedEpisodes
+                        let res = useCommon.getState().selectedEpisodes
                             .find(p => p.podcastEpisode.id === downloadedPodcastEpisode.id)
 
                         if (res == undefined) {
                             // This is a completely new episode
-                            dispatch(setSelectedEpisodes([...store.getState().common.selectedEpisodes, {
+                            setSelectedEpisodes([...useCommon.getState().selectedEpisodes, {
                                 podcastEpisode: downloadedPodcastEpisode
-                            }]))
+                            }])
                         }
 
-                        let podcastUpdated:EpisodesWithOptionalTimeline[] = store.getState().common.selectedEpisodes
+                        let podcastUpdated:EpisodesWithOptionalTimeline[] = useCommon.getState().selectedEpisodes
                             .map(p => {
                             if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
                                 const foundDownload = JSON.parse(JSON.stringify(p)) as EpisodesWithOptionalTimeline
@@ -141,10 +143,10 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                             return p
                         })
 
-                        dispatch(setSelectedEpisodes(podcastUpdated))
+                        setSelectedEpisodes(podcastUpdated)
                     }
                 } else if (checkIfPodcastEpisodeDeleted(parsed)) {
-                    const updatedPodcastEpisodes = store.getState().common.selectedEpisodes.map(e => {
+                    const updatedPodcastEpisodes = useCommon.getState().selectedEpisodes.map(e => {
                         if (e.podcastEpisode.episode_id === parsed.podcast_episode.episode_id) {
                             const clonedPodcast = Object.assign({}, parsed.podcast_episode)
 
@@ -159,18 +161,18 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                     })
 
                     enqueueSnackbar(t('podcast-episode-deleted', { name: decodeHTMLEntities(parsed.podcast_episode.name) }), { variant: 'success' })
-                    dispatch(setSelectedEpisodes(updatedPodcastEpisodes))
+                    setSelectedEpisodes(updatedPodcastEpisodes)
                 } else if (checkIfPodcastRefreshed(parsed)) {
                     const podcast = parsed.podcast
 
                     enqueueSnackbar(t('podcast-refreshed', { name: decodeHTMLEntities(podcast.name) }), { variant: 'success' })
                 } else if (checkIfOpmlAdded(parsed)) {
-                    dispatch(setProgress([...store.getState().opmlImport.progress,true]))
+                    setProgress([...useOpmlImport.getState().progress,true])
                 } else if (checkIfOpmlErrored(parsed)) {
                     const podcast = parsed
 
-                    dispatch(setProgress([...store.getState().opmlImport.progress,false]))
-                    dispatch(setMessages([...store.getState().opmlImport.messages, podcast.message]))
+                    setProgress([...useOpmlImport.getState().progress,false])
+                    setMessages([...useOpmlImport.getState().messages, podcast.message])
                 }
             }
 
@@ -191,7 +193,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
     const getNotifications = () => {
         axios.get(apiURL + '/notifications/unread')
             .then((response: AxiosResponse<Notification[]>) => {
-                dispatch(setNotifications(response.data))
+                setNotifications(response.data)
             })
     }
 

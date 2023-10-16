@@ -1,17 +1,15 @@
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
-import {useAppDispatch} from "../store/hooks";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
 import usePlaylist from "../store/PlaylistSlice";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {PlaylistDto} from "../models/Playlist";
 import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
 import {useNavigate} from "react-router-dom";
 
 export const PlaylistPage = ()=>{
-    const dispatch = useAppDispatch()
     const {t} = useTranslation()
     const setCreatePlaylistOpen = usePlaylist(state=>state.setCreatePlaylistOpen)
     const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
