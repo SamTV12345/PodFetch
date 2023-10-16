@@ -4,13 +4,13 @@ import axios from 'axios'
 import { useSnackbar } from 'notistack'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { setSelectedUser, setUsers } from '../store/CommonSlice'
-import { setModalOpen } from '../store/ModalSlice'
 import { apiURL, formatTime} from '../utils/Utilities'
 import { User } from '../models/User'
 import { ChangeRoleModal } from './ChangeRoleModal'
 import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
+import useModal from "../store/ModalSlice";
 
 export const UserAdminUsers = () => {
     const dispatch = useAppDispatch()
@@ -18,6 +18,7 @@ export const UserAdminUsers = () => {
     const [error, setError] = useState<boolean>()
     const {enqueueSnackbar} = useSnackbar()
     const { t } = useTranslation()
+    const setModalOpen = useModal(state => state.setOpenModal)
 
     useEffect(() => {
         axios.get(apiURL + '/users')
@@ -90,7 +91,7 @@ export const UserAdminUsers = () => {
                                             username: v.username
                                         }))
 
-                                        dispatch(setModalOpen(true))
+                                        setModalOpen(true)
                                     }} title={t('change-role') || ''}>
                                         <span className="material-symbols-outlined text-[--fg-color] hover:text-[--fg-color-hover]">edit</span>
                                     </button>

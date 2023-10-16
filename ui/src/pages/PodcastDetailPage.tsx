@@ -5,7 +5,7 @@ import axios, {AxiosResponse } from 'axios'
 import { apiURL, removeHTML } from '../utils/Utilities'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {Podcast, setCurrentDetailedPodcastId, setInfoModalPodcastOpen, setSelectedEpisodes} from '../store/CommonSlice'
-import { setCurrentPodcast } from '../store/AudioPlayerSlice'
+import useAudioPlayer from '../store/AudioPlayerSlice'
 import { Chip } from '../components/Chip'
 import { Heading1 } from '../components/Heading1'
 import { Heading2 } from '../components/Heading2'
@@ -20,8 +20,9 @@ import {ErrorIcon} from "../icons/ErrorIcon";
 export const PodcastDetailPage = () => {
     const dispatch = useAppDispatch()
     const configModel = useAppSelector(state => state.common.configModel)
-    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
+    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
+    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const params = useParams()
     const [lineClamp, setLineClamp] = useState(true)
     const { t } = useTranslation()
@@ -32,7 +33,7 @@ export const PodcastDetailPage = () => {
         }
 
         axios.get(apiURL + '/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
-            dispatch(setCurrentPodcast(response.data))
+            setCurrentPodcast(response.data)
         }).then(() => {
             axios.get(apiURL + '/podcast/' + params.id + '/episodes')
                 .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
@@ -161,7 +162,7 @@ export const PodcastDetailPage = () => {
                         <Switcher checked={currentPodcast.active} setChecked={() => {
                             axios.put(apiURL + '/podcast/' + params.id + '/active')
                                 .then(() => {
-                                    dispatch(setCurrentPodcast({ ...currentPodcast, active: !currentPodcast?.active }))
+                                    setCurrentPodcast({ ...currentPodcast, active: !currentPodcast?.active })
                                 })
                         }} />
                     </div>

@@ -3,7 +3,7 @@ import axios, {AxiosResponse} from "axios";
 import {apiURL} from "../utils/Utilities";
 import {PlaylistDto, PlaylistDtoPost, PlaylistItem} from "../models/Playlist";
 import {enqueueSnackbar} from "notistack";
-import {setCreatePlaylistOpen, setPlaylist} from "../store/PlaylistSlice";
+import usePlaylist from "../store/PlaylistSlice";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
 import {useTranslation} from "react-i18next";
 import {useFormContext} from "react-hook-form";
@@ -11,9 +11,10 @@ import {useFormContext} from "react-hook-form";
 export const PlaylistSubmitViewer = ()=>{
     const dispatch = useAppDispatch()
     const {t} = useTranslation()
-    const currentPlaylistToEdit = useAppSelector(state=>state.playlist.currentPlaylistToEdit)
-    const playlists = useAppSelector(state=>state.playlist.playlist)
-
+    const currentPlaylistToEdit = usePlaylist(state=>state.currentPlaylistToEdit)
+    const playlists = usePlaylist(state=>state.playlist)
+    const setCreatePlaylistOpen = usePlaylist(state=>state.setCreatePlaylistOpen)
+    const setPlaylist = usePlaylist(state=>state.setPlaylist)
 
     const savePlaylist = ()=>{
         const idsToMap:PlaylistItem[] = currentPlaylistToEdit!.items.map(item=>{
@@ -26,8 +27,8 @@ export const PlaylistSubmitViewer = ()=>{
             items: idsToMap
         } satisfies PlaylistDtoPost)
             .then((v: AxiosResponse<PlaylistDto>)=>{
-                dispatch(setPlaylist([...playlists,v.data]))
-                dispatch(setCreatePlaylistOpen(false))
+                setPlaylist([...playlists,v.data])
+                setCreatePlaylistOpen(false)
             })
     }
 

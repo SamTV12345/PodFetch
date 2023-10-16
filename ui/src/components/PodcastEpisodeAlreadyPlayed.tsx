@@ -6,7 +6,7 @@ import 'material-symbols/outlined.css'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import {CustomButtonSecondary} from "./CustomButtonSecondary";
 import {useMemo} from "react";
-import {setCurrentPodcast, setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
+import useAudioPlayer from "../store/AudioPlayerSlice";
 import {store} from "../store/store";
 import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
@@ -15,8 +15,11 @@ export const PodcastEpisodeAlreadyPlayed = () => {
     const dispatch = useAppDispatch()
     const infoModalOpen = useAppSelector(state => state.common.podcastAlreadyPlayed)
     const selectedPodcastEpisode = useAppSelector(state => state.common.podcastEpisodeAlreadyPlayed)
-    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
+    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
+    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const {t} = useTranslation()
+    const setPlaying = useAudioPlayer(state => state.setPlaying)
+    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
 
     const displayPodcastName = useMemo(() => {
         if(!selectedPodcastEpisode) {
@@ -56,8 +59,8 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                 <div className="flex gap-3 float-right">
                     <CustomButtonSecondary onClick={()=>dispatch(setPodcastAlreadyPlayed(false))}>{t('cancel')}</CustomButtonSecondary>
                     <CustomButtonPrimary onClick={()=>{
-                        dispatch(setCurrentPodcast(currentPodcast!))
-                        dispatch(setPlaying(true))
+                        setCurrentPodcast(currentPodcast!)
+                        setPlaying(true)
                         if(!selectedPodcastEpisode) {
                             return
                         }
@@ -68,10 +71,10 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                         }
 
                         selectedPodcastEpisode.podcastEpisode.podcastEpisode.status === 'D'
-                            ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,
-                                watchedModel )))
-                            : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,
-                                watchedModel)))
+                            ? setCurrentPodcastEpisode(preparePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,
+                                watchedModel ))
+                            : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,
+                                watchedModel))
                     }}>{t('restart-playing')}</CustomButtonPrimary>
                 </div>
             </div>

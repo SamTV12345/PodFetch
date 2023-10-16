@@ -12,7 +12,6 @@ import {
 } from '../utils/Utilities'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { Podcast, setFilters, setPodcasts } from '../store/CommonSlice'
-import { setModalOpen } from '../store/ModalSlice'
 import { Order } from '../models/Order'
 import { Filter } from '../models/Filter'
 import { AddPodcastModal } from '../components/AddPodcastModal'
@@ -22,6 +21,7 @@ import { CustomSelect } from '../components/CustomSelect'
 import { Heading1 } from '../components/Heading1'
 import { PodcastCard } from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
+import useModal from "../store/ModalSlice";
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -40,6 +40,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     const podcasts = useAppSelector(state => state.common.podcasts)
     let location = useLocation();
     const { t } = useTranslation()
+    const setModalOpen = useModal(state => state.setOpenModal)
 
     const memorizedSelection = useMemo(() => {
         return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
@@ -103,7 +104,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                 </div>
 
                 <CustomButtonPrimary className="flex items-center" onClick={() => {
-                    dispatch(setModalOpen(true))
+                   setModalOpen(true)
                 }}>
                     <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
                 </CustomButtonPrimary>

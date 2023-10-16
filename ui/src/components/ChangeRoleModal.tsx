@@ -3,13 +3,13 @@ import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { setSelectedUser, setUsers } from '../store/CommonSlice'
-import { setModalOpen } from '../store/ModalSlice'
 import { apiURL } from '../utils/Utilities'
 import { User } from '../models/User'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'
 import { Modal } from './Modal'
 import { Switcher } from './Switcher'
+import useModal from "../store/ModalSlice";
 
 const roleOptions = [
     { translationKey: 'admin', value: 'admin' },
@@ -22,6 +22,7 @@ export const ChangeRoleModal = () => {
     const selectedUser = useAppSelector(state => state.common.selectedUser)
     const users = useAppSelector(state => state.common.users)
     const { t } = useTranslation()
+    const setModalOpen = useModal(state => state.setOpenModal)
 
     const changeRole = () => {
         axios.put(apiURL + '/users/' + selectedUser?.username + '/role', {
@@ -44,7 +45,7 @@ export const ChangeRoleModal = () => {
                 })
 
                 dispatch(setUsers(mapped_users))
-                dispatch(setModalOpen(false))
+                setModalOpen(false)
             })
     }
 

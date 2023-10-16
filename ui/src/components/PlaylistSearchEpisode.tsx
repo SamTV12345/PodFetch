@@ -3,7 +3,7 @@ import {DragEvent, useState} from "react";
 import {PodcastEpisode} from "../store/CommonSlice";
 import {useTranslation} from "react-i18next";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {setCurrentPlaylistToEdit} from "../store/PlaylistSlice";
+import usePlaylist from "../store/PlaylistSlice";
 
 
 
@@ -11,7 +11,8 @@ export const PlaylistSearchEpisode = ()=>{
     const [itemCurrentlyDragged,setItemCurrentlyDragged] = useState<PodcastEpisode>()
     const {t} = useTranslation()
     const dispatch = useAppDispatch()
-    const currentPlayListToEdit = useAppSelector(state => state.playlist.currentPlaylistToEdit)
+    const currentPlayListToEdit = usePlaylist(state => state.currentPlaylistToEdit)
+    const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
     const handleDragStart = (dragItem: PodcastEpisode, index: number, event: DragEvent<HTMLTableRowElement> )=>{
         event.dataTransfer.setData("text/plain", index.toString())
         setItemCurrentlyDragged(dragItem)
@@ -19,11 +20,11 @@ export const PlaylistSearchEpisode = ()=>{
 
     return        <>
         <EpisodeSearch onClickResult={e=>{
-            dispatch(setCurrentPlaylistToEdit({
+            setCurrentPlaylistToEdit({
                 id: currentPlayListToEdit!.id,
                 name: currentPlayListToEdit!.name,
                 items: [...currentPlayListToEdit!.items, {podcastEpisode: e}]
-            }))
+            })
         }} classNameResults="max-h-[min(20rem,calc(100vh-3rem-3rem))]"
                                                   showBlankState={false} />
     <div className={`scrollbox-x  p-2`}>
@@ -52,11 +53,11 @@ export const PlaylistSearchEpisode = ()=>{
                     const dragItem = newItems[dragIndex]
                     newItems.splice(dragIndex, 1)
                     newItems.splice(dropIndex, 0, dragItem)
-                    dispatch(setCurrentPlaylistToEdit({
+                    setCurrentPlaylistToEdit({
                         name: currentPlayListToEdit!.name,
                         id: currentPlayListToEdit!.id,
                         items: newItems
-                    }))
+                    })
                 }} onDragOver={(e)=>item.podcastEpisode.id!=itemCurrentlyDragged?.id&&e.preventDefault()} onDragStart={e=>handleDragStart(item.podcastEpisode, index, e)}>
                     <td className="text-[--fg-color] p-2">
                         {index}
@@ -67,11 +68,11 @@ export const PlaylistSearchEpisode = ()=>{
                     <td>
                         <button className="flex text-red-700 hover:text-red-500" onClick={e=>{
                             e.preventDefault()
-                            dispatch(setCurrentPlaylistToEdit({
+                            setCurrentPlaylistToEdit({
                                 name: currentPlayListToEdit!.name,
                                 id: currentPlayListToEdit!.id,
                                 items: currentPlayListToEdit!.items.filter(i=>i.podcastEpisode.id!==item.podcastEpisode.id)
-                            }))
+                            })
                         }}><span className="material-symbols-outlined mr-1">delete</span>
                             {t('delete')}</button>
                     </td>

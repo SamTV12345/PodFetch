@@ -1,6 +1,6 @@
 import { FC, RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { useAppDispatch } from '../store/hooks'
 import { setDetailedAudioPlayerOpen } from '../store/CommonSlice'
 import { removeHTML } from '../utils/Utilities'
 import { AudioAmplifier } from '../models/AudioAmplifier'
@@ -8,6 +8,7 @@ import { PlayerTimeControls } from './PlayerTimeControls'
 import { PlayerProgressBar } from './PlayerProgressBar'
 import { PlayerVolumeSlider } from './PlayerVolumeSlider'
 import 'material-symbols/outlined.css'
+import useAudioPlayer from "../store/AudioPlayerSlice";
 
 type DetailedAudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement>,
@@ -17,8 +18,8 @@ type DetailedAudioPlayerProps = {
 
 export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
     const dispatch = useAppDispatch()
-    const selectedPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
-    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
+    const selectedPodcast = useAudioPlayer(state => state.currentPodcastEpisode)
+    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
 
     return createPortal(
         <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 bg-[--bg-color] md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>

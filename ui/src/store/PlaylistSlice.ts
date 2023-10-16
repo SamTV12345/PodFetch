@@ -1,37 +1,27 @@
-import {createSlice, PayloadAction} from "@reduxjs/toolkit";
 import {PlaylistDto} from "../models/Playlist";
+import {create} from "zustand";
 
 interface PlaylistState {
     playlist: PlaylistDto[],
     createPlaylistOpen: boolean,
     currentPlaylistToEdit: PlaylistDto|undefined,
-    selectedPlaylist: PlaylistDto|undefined
+    selectedPlaylist: PlaylistDto|undefined,
+    setPlaylist: (playlist: PlaylistDto[]) => void,
+    setCreatePlaylistOpen: (createPlaylistOpen: boolean) => void,
+    setCurrentPlaylistToEdit: (currentPlaylistToEdit: PlaylistDto) => void,
+    setSelectedPlaylist: (selectedPlaylist: PlaylistDto) => void
 }
 
-const initialState: PlaylistState = {
+
+const usePlaylist = create<PlaylistState>((set, get) => ({
     playlist: [],
     createPlaylistOpen: false,
     selectedPlaylist: undefined,
-    currentPlaylistToEdit: undefined
-}
-export const PlaylistSlice = createSlice({
-    name: 'playlist',
-    initialState,
-    reducers:{
-        setPlaylist: (state, action: PayloadAction<PlaylistDto[]>)=>{
-            state.playlist = action.payload
-        },
-        setCreatePlaylistOpen: (state, action: PayloadAction<boolean>)=>{
-            state.createPlaylistOpen = action.payload
-        },
-        setSelectedPlaylist: (state, action: PayloadAction<PlaylistDto>)=>{
-            state.selectedPlaylist = action.payload
-        },
-        setCurrentPlaylistToEdit: (state, action:PayloadAction<PlaylistDto>)=>{
-            state.currentPlaylistToEdit = action.payload
-        }
-    }
-})
+    currentPlaylistToEdit: undefined,
+    setPlaylist: (playlist: PlaylistDto[]) => set({playlist}),
+    setCreatePlaylistOpen: (createPlaylistOpen: boolean) => set({createPlaylistOpen}),
+    setSelectedPlaylist: (selectedPlaylist: PlaylistDto) => set({selectedPlaylist}),
+    setCurrentPlaylistToEdit: (currentPlaylistToEdit: PlaylistDto) => set({currentPlaylistToEdit})
+}))
 
-export const {setPlaylist, setCreatePlaylistOpen, setCurrentPlaylistToEdit,setSelectedPlaylist} = PlaylistSlice.actions
-export default PlaylistSlice.reducer
+export default usePlaylist

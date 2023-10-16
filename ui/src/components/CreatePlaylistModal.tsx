@@ -8,23 +8,22 @@ import {apiURL} from "../utils/Utilities"
 import {Heading2} from "./Heading2"
 import "material-symbols/outlined.css"
 import {PlaylistDto, PlaylistDtoPost, PlaylistDtoPut, PlaylistItem} from "../models/Playlist";
-import {setCreatePlaylistOpen, setPlaylist} from "../store/PlaylistSlice";
+import usePlaylist from "../store/PlaylistSlice";
 import {PlaylistData} from "./PlaylistData";
 import {PlaylistSearchEpisode} from "./PlaylistSearchEpisode";
 import {PlaylistSubmitViewer} from "./PlaylistSubmitViewer";
-import {FormProvider} from "react-hook-form";
-
-
 
 
 export const CreatePlaylistModal = () => {
     const dispatch = useAppDispatch()
-    const playListOpen = useAppSelector(state=>state.playlist.createPlaylistOpen)
+    const playListOpen = usePlaylist(state=>state.createPlaylistOpen)
     const {t} = useTranslation()
-    const playlists = useAppSelector(state=>state.playlist.playlist)
-    const currentPlaylistToEdit = useAppSelector(state=>state.playlist.currentPlaylistToEdit)
+    const playlists = usePlaylist(state=>state.playlist)
+    const currentPlaylistToEdit = usePlaylist(state=>state.currentPlaylistToEdit)
     const [stage,setStage] = useState<number>(0)
-    const createPlaylistOpen = useAppSelector(state=>state.playlist.createPlaylistOpen)
+    const createPlaylistOpen = usePlaylist(state=>state.createPlaylistOpen)
+    const setCreatePlaylistOpen = usePlaylist(state=>state.setCreatePlaylistOpen)
+    const setPlaylist = usePlaylist(state=>state.setPlaylist)
 
     {/* Reset to where the user opens the playlist again*/}
     useEffect(() => {
@@ -46,7 +45,7 @@ export const CreatePlaylistModal = () => {
                 items: itemsMappedToIDs
             } satisfies PlaylistDtoPut)
                 .then((e:AxiosResponse<PlaylistDto>)=>{
-                    dispatch(setPlaylist(playlists.map(p=>p.id===e.data.id?e.data:p)))
+                    setPlaylist(playlists.map(p=>p.id===e.data.id?e.data:p))
                     enqueueSnackbar(t('updated-playlist'), {variant: "success"})
                 })
             return
@@ -58,7 +57,7 @@ export const CreatePlaylistModal = () => {
                 items: itemsMappedToIDs
             } satisfies PlaylistDtoPost)
                 .then((e:AxiosResponse<PlaylistDto>) => {
-                    dispatch(setPlaylist([...playlists, e.data]))
+                    setPlaylist([...playlists, e.data])
                     enqueueSnackbar(t('created-playlist'), {variant: "success"})
                 })
         }
@@ -66,13 +65,14 @@ export const CreatePlaylistModal = () => {
 
 
     return createPortal(
-        <div aria-hidden="true" id="defaultModal" onClick={()=>dispatch(setCreatePlaylistOpen(false))} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-x-hidden overflow-y-auto z-30 ${playListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
+        <div aria-hidden="true" id="defaultModal" onClick={()=>setCreatePlaylistOpen(false)} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-x-hidden overflow-y-auto z-30 ${playListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
 
             {/* Modal */}
             <div className="relative bg-[--bg-color] text-[--fg-color] max-w-5xl md:w-[50%] p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)]" onClick={e=>e.stopPropagation()}>
 
                 {/* Close button */}
-                <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={()=>dispatch(setCreatePlaylistOpen(false))}>
+                <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal"
+                        onClick={()=>setCreatePlaylistOpen(false)}>
                     <span className="material-symbols-outlined text-stone-400 hover:text-stone-600">close</span>
                     <span className="sr-only">{t('closeModal')}</span>
                 </button>

@@ -43,7 +43,8 @@
     "react-router-dom": "^6.16.0",
     "react-waypoint": "^10.3.0",
     "redux": "^4.2.1",
-    "sanitize-html": "^2.11.0"
+    "sanitize-html": "^2.11.0",
+    "zustand": "^4.4.3"
   },
   "devDependencies": {
     "@types/react": "^18.2.28",

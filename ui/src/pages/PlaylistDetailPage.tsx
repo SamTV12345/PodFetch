@@ -6,9 +6,9 @@ import {useAppDispatch, useAppSelector} from "../store/hooks";
 import axios, {AxiosResponse} from "axios";
 import {apiURL, prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities";
 import {PlaylistDto} from "../models/Playlist";
-import {setSelectedPlaylist} from "../store/PlaylistSlice";
+import usePlaylist from "../store/PlaylistSlice";
 import {useEffect} from "react";
-import {setCurrentPodcastEpisode, setPlaying} from "../store/AudioPlayerSlice";
+import useAudioPlayer from "../store/AudioPlayerSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {store} from "../store/store";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
@@ -17,10 +17,13 @@ import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPl
 export const PlaylistDetailPage = ()=>{
     const {t} = useTranslation()
     const params = useParams()
-    const selectedPlaylist = useAppSelector(state=>state.playlist.selectedPlaylist)
+    const selectedPlaylist = usePlaylist(state=>state.selectedPlaylist)
     const dispatch = useAppDispatch()
-    const metadata = useAppSelector(state=>state.audioPlayer.metadata)
-    let current_podcast_episode = useAppSelector(state=>state.audioPlayer.currentPodcastEpisode)
+    const metadata = useAudioPlayer(state=>state.metadata)
+    const setCurrentPodcastEpisode = useAudioPlayer(state=>state.setCurrentPodcastEpisode)
+    let current_podcast_episode = useAudioPlayer(state=>state.currentPodcastEpisode)
+    const setPlaying = useAudioPlayer(state=>state.setPlaying)
+    const setSelectedPlaylist = usePlaylist(state=>state.setSelectedPlaylist)
 
     useEffect(() => {
         if(metadata){
@@ -35,17 +38,17 @@ export const PlaylistDetailPage = ()=>{
                         axios.get(apiURL + "/podcast/episode/" + nextEpisode.podcastEpisode.episode_id)
                             .then((response: AxiosResponse<PodcastWatchedModel>) => {
                                 nextEpisode.podcastEpisode.status === 'D'
-                                    ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data)))
-                                    : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data)))
+                                    ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data))
+                                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data))
 
-                                dispatch(setPlaying(true))
+                               setPlaying(true)
                             })
 
-                    dispatch(setSelectedPlaylist({
+                   setSelectedPlaylist({
                         id: selectedPlaylist!.id,
                         name: selectedPlaylist!.name,
                         items: selectedPlaylist!.items.filter(i=>i.podcastEpisode.id!==current_podcast_episode!.id)
-                    }))
+                    })
                 })
             }
         }
@@ -55,7 +58,7 @@ export const PlaylistDetailPage = ()=>{
     useEffect(()=>{
             axios.get(apiURL+"/playlist/"+params.id)
                 .then((response:AxiosResponse<PlaylistDto>)=>{
-                dispatch(setSelectedPlaylist(response.data))
+                setSelectedPlaylist(response.data)
         })
     },[])
 

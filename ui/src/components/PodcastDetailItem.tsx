@@ -13,7 +13,7 @@ import {
     setInfoModalPodcastOpen,
     setPodcastAlreadyPlayed, setPodcastEpisodeAlreadyPlayed
 } from '../store/CommonSlice'
-import { setCurrentPodcast, setCurrentPodcastEpisode, setPlaying } from '../store/AudioPlayerSlice'
+import useAudioPlayer from '../store/AudioPlayerSlice'
 import { apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML } from '../utils/Utilities'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import 'material-symbols/outlined.css'
@@ -27,11 +27,14 @@ type PodcastDetailItemProps = {
 
 export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength }) => {
     const dispatch = useAppDispatch()
-    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcast)
+    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
     const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
+    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
+    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
+    const setPlaying = useAudioPlayer(state => state.setPlaying)
     const percentagePlayed = useMemo(()=>{
         if(!episode.podcastHistoryItem){
             return -1
@@ -124,11 +127,11 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             const playedPercentage = response.data.watchedTime * 100 / episode.podcastEpisode.total_time
                             if(playedPercentage < 95 || episode.podcastEpisode.total_time === 0){
                                 episode.podcastEpisode.status === 'D'
-                                    ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data)))
-                                    : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data)))
+                                    ? setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data))
+                                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data))
 
-                                currentPodcast && dispatch(setCurrentPodcast(currentPodcast))
-                                dispatch(setPlaying(true))
+                                currentPodcast && setCurrentPodcast(currentPodcast)
+                                setPlaying(true)
                             }
                             else{
                                 dispatch(setPodcastEpisodeAlreadyPlayed({

@@ -6,13 +6,13 @@ import { useDebounce } from '../utils/useDebounce'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { setSearchedPodcasts } from '../store/CommonSlice'
-import { setModalOpen } from '../store/ModalSlice'
 import { AddTypes } from '../models/AddTypes'
 import { AgnosticPodcastDataModel, GeneralModel, PodIndexModel } from '../models/PodcastAddModel'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import 'material-symbols/outlined.css'
+import useModal from "../store/ModalSlice";
 
 type ProviderImportComponent = {
     selectedSearchType: AddTypes
@@ -29,11 +29,12 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     const [loading, setLoading] = useState<boolean>()
     const [searchText, setSearchText] = useState<string>('')
     const { t } = useTranslation()
+    const setModalOpen = useModal(state => state.setOpenModal)
 
     const addPodcast = (podcast: AddPostPostModel) => {
         axios.post(apiURL + '/podcast/' + selectedSearchType, podcast)
             .then((err: any) => {
-                dispatch(setModalOpen(false))
+                setModalOpen(false)
                 err.response.status && handleAddPodcast(err.response.status,
                     searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
             })

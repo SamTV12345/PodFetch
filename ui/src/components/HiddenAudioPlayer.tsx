@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from 'axios'
 import useOnMount from '../hooks/useOnMount'
 import { store } from '../store/store'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setCurrentPodcastEpisode, setCurrentTimeUpdate, setMetadata } from '../store/AudioPlayerSlice'
+import useAudioPlayer from '../store/AudioPlayerSlice'
 import { apiURL } from '../utils/Utilities'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
@@ -15,7 +15,10 @@ type HiddenAudioPlayerProps = {
 
 export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudioAmplifier }) => {
     const dispatch = useAppDispatch()
-    const podcastEpisode = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
+    const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+    const setMetadata = useAudioPlayer(state => state.setMetadata)
+    const setCurrentTimeUpdate = useAudioPlayer(state => state.setCurrentTimeUpdate)
+    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
 
     useEffect(() => {
         if (podcastEpisode && refItem && refItem.current) {
@@ -25,10 +28,10 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
                 // fetch time from server
                 axios.get(apiURL + '/podcast/episode/' + podcastEpisode.episode_id)
                     .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                        store.dispatch(setCurrentPodcastEpisode({
+                        setCurrentPodcastEpisode({
                             ...podcastEpisode,
                             time: response.data.watchedTime
-                        }))
+                        })
                         refItem.current!.currentTime = podcastEpisode.time!
                     })
             } else {
@@ -54,14 +57,14 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
             src={podcastEpisode?.local_url}
             id={'hiddenaudio'}
             onTimeUpdate={(e) => {
-                dispatch(setCurrentTimeUpdate(e.currentTarget.currentTime))
+               setCurrentTimeUpdate(e.currentTarget.currentTime)
             }}
             onLoadedMetadata={(e) => {
-                dispatch(setMetadata({
+                setMetadata({
                     currentTime: e.currentTarget.currentTime,
                     duration: e.currentTarget.duration,
                     percentage: 0
-                }))
+                })
             }}
         />
     )

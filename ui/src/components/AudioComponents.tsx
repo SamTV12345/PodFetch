@@ -3,10 +3,11 @@ import { useAppSelector } from '../store/hooks'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { AudioPlayer } from './AudioPlayer'
 import { DetailedAudioPlayer } from './DetailedAudioPlayer'
+import useAudioPlayer from "../store/AudioPlayerSlice";
 
 export const AudioComponents = () => {
     const ref = createRef<HTMLAudioElement>()
-    const currentPodcast = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
+    const currentPodcast = useAudioPlayer(state => state.currentPodcastEpisode)
     const detailedAudioPodcastOpen = useAppSelector(state => state.common.detailedAudioPlayerOpen)
     const [audioAmplifier,setAudioAmplifier] = useState<AudioAmplifier>()
 

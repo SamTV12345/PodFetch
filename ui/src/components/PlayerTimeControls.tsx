@@ -7,7 +7,7 @@ import {
     SKIPPED_TIME
 } from '../utils/Utilities'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { setCurrentPodcastEpisode, setPlayBackRate, setPlaying } from '../store/AudioPlayerSlice'
+import useAudioPlayer from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
 import {store} from "../store/store";
 import axios, {AxiosResponse} from "axios";
@@ -21,12 +21,16 @@ type PlayerTimeControlsProps = {
 
 export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => {
     const dispatch = useAppDispatch()
-    const currentPodcastEpisode = useAppSelector(state => state.audioPlayer.currentPodcastEpisode)
+    const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
     const episodes = useAppSelector(state => state.common.selectedEpisodes)
-    const isPlaying  = useAppSelector(state => state.audioPlayer.isPlaying)
-    const speed = useAppSelector(state => state.audioPlayer.playBackRate)
-    const time  = useAppSelector(state => state.audioPlayer.metadata?.currentTime)
+    const isPlaying  = useAudioPlayer(state => state.isPlaying)
+    const speed = useAudioPlayer(state => state.playBackRate)
+    const time  = useAudioPlayer(state => state.metadata?.currentTime)
     const selectedEpisodes = useAppSelector(state => state.common.selectedEpisodes)
+    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
+    const setPlaying = useAudioPlayer(state => state.setPlaying)
+    const setPlaybackRate = useAudioPlayer(state => state.setPlayBackRate)
+
     const skipToPreviousEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
@@ -41,8 +45,8 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
 
     useEffect(() => {
         refItem.current!.onended = () => {
-            logCurrentPlaybackTime(store.getState().audioPlayer.currentPodcastEpisode!.episode_id,
-                store.getState().audioPlayer.currentPodcastEpisode!.total_time)
+            logCurrentPlaybackTime(useAudioPlayer.getState().currentPodcastEpisode!.episode_id,
+                useAudioPlayer.getState().currentPodcastEpisode!.total_time)
         }
     }, []);
 
@@ -65,14 +69,14 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         const nextEpisode = episodes[index].podcastEpisode
         axios.get(apiURL + "/podcast/episode/" + nextEpisode.episode_id)
             .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                dispatch(setCurrentPodcastEpisode(nextEpisode))
+                setCurrentPodcastEpisode(nextEpisode)
                 nextEpisode.status === 'D'
-                    ? store.dispatch(setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data)))
-                    : store.dispatch(setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data)))
+                    ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data))
+                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data))
                 refItem.current!.src = episodes[index].podcastEpisode.local_url
                 refItem.current!.load()
                 refItem.current?.play()
-                dispatch(setPlaying(true))
+                setPlaying(true)
             })
 
     }
@@ -81,7 +85,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         if (refItem === undefined || refItem.current === undefined || refItem.current === null) return
 
         if (refItem.current.paused) {
-            dispatch(setPlaying(true))
+            setPlaying(true)
             refItem.current.play()
         } else {
             if (time && currentPodcastEpisode) {
@@ -101,7 +105,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
                 dispatch(setSelectedEpisodes(mappedEpisodes))
             }
 
-            dispatch(setPlaying(false))
+            setPlaying(false)
             refItem.current?.pause()
         }
     }
@@ -116,7 +120,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         }
 
         refItem.current.playbackRate = newSpeed
-        dispatch(setPlayBackRate(newSpeed))
+        setPlaybackRate(newSpeed)
     }
 
     return (

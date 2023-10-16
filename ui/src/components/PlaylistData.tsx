@@ -1,22 +1,23 @@
 import {CustomInput} from "./CustomInput";
 import {useTranslation} from "react-i18next";
 import {useAppDispatch, useAppSelector} from "../store/hooks";
-import {setCurrentPlaylistToEdit} from "../store/PlaylistSlice";
+import usePlaylist from "../store/PlaylistSlice";
 
 
 
 
 export const PlaylistData = ()=>{
     const {t} = useTranslation()
-    const currentPlaylistToEdit = useAppSelector(state=>state.playlist.currentPlaylistToEdit)
+    const currentPlaylistToEdit = usePlaylist(state=>state.currentPlaylistToEdit)
+    const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
     const dispatch = useAppDispatch()
 
     const changeName = (e:string)=>{
-        dispatch(setCurrentPlaylistToEdit({
+        setCurrentPlaylistToEdit({
             name: e,
             id: currentPlaylistToEdit!.id,
             items: currentPlaylistToEdit!.items
-        }))
+        })
     }
 
 
