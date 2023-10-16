@@ -6,7 +6,7 @@ build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
-built = {version="0.7.0", features=["chrono", "semver","cargo-lock"]}
+built = {version="0.7.1", features=["chrono", "semver","cargo-lock"]}
 
 [features]
 default = ["sqlite"]
@@ -19,18 +19,18 @@ sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel
 [dependencies]
 awc =  {version="3.2.0", features = ["rustls"]}
 rpassword = "7.2.0"
-reqwest = { version = "0.11.20", features = ["stream", "json","blocking"] }
+reqwest = { version = "0.11.22", features = ["stream", "json","blocking"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 actix = "0.13.1"
 async-recursion = "1.0.5"
 base64 = "0.21.4"
-uuid = {version="1.4.0", features = ["v4", "serde"]}
+uuid = {version="1.4.1", features = ["v4", "serde"]}
 libsqlite3-sys = {version = "0.26.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.1", optional = true}
-diesel_migrations = "2.0.0"
+diesel_migrations = "2.1.0"
 actix-files = "0.6.2"
 actix-web = {version="4.4.0", features=["rustls"]}
-jsonwebtoken = {version="8.2.0"}
+jsonwebtoken = {version="8.3.0"}
 log = "0.4.20"
 futures-util = "0.3.28"
 substring = "1.4.5"
@@ -41,7 +41,7 @@ chrono = {version  = "0.4.31", default-features=false, features = ["serde"]}
 actix-web-actors = "4.2.0"
 rss = "2.0.6"
 frankenstein = "0.29.1"
-regex = "1.9.6"
+regex = "1.10.1"
 xml-builder = "0.5.2"
 diesel = { version = "2.1.3", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
@@ -51,7 +51,7 @@ utoipa-swagger-ui = {version = "4.0.0", features = ["actix-web"] }
 clokwerk= "0.4.0"
 tokio = {version = "1.33.0", features = ["full"]}
 serde = "1.0.189"
-serde_derive = "1.0.152"
+serde_derive = "1.0.189"
 sysinfo = {version = "0.29.10", features = ["serde"]}
 fs_extra = "1.3.0"
 serde_json = "1.0.107"
