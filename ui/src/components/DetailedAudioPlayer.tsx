@@ -44,7 +44,8 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
                 </div>
 
                 {/* Description */}
-                <div className="md:max-h-60 lg:max-h-80 md:mb-10 overflow-y-auto xs:text-lg md:text-xl lg:text-2xl text-[--fg-color]" dangerouslySetInnerHTML={selectedPodcast?.description ? removeHTML(selectedPodcast.description) : { __html: '' }} />
+                <div className="md:max-h-60 lg:max-h-80 md:mb-10 overflow-y-auto xs:text-lg md:text-xl lg:text-2xl text-[--fg-color]"
+                     dangerouslySetInnerHTML={selectedPodcast?.description ? removeHTML(selectedPodcast.description) : { __html: '' }} />
             </div>
 
             {/* Player */}

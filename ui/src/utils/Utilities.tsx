@@ -15,7 +15,7 @@ import {OrderCriteria} from "../models/Order";
 const defaultOptions: IOptions = {
     allowedTags: ['b', 'i', 'em', 'strong', 'a'],
     allowedAttributes: {
-        'a': ['href']
+        'a': ['href', 'target']
     },
     allowedIframeHostnames: ['www.youtube.com']
 };
@@ -66,6 +66,7 @@ export const formatTime = (isoDate: string) => {
 }
 
 export const removeHTML = (html: string) => {
+    html = html.split('<a').join('<a target="_blank"')
     return {
         __html: sanitizeHtml(html, defaultOptions)
     }
