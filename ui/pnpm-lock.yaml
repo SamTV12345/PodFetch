@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -1476,8 +1476,8 @@ packages:
     resolution: {integrity: sha512-2/uRVMdRypf5z/TW/ncD/66l75P5hH2vM/GR8Jf8HLc2xnfJtmina6F6du8+v4Z2vTrMo7jC+W1tmEEuuELgkQ==}
     dev: false
 
-  /crypto-js@4.1.1:
-    resolution: {integrity: sha512-o2JlM7ydqd3Qk9CA0L4NL6mTzU2sdx96a+oOfPu8Mkl/PK51vSyoi8/rQ8NknZtk44vq15lmhAj9CIAGwgeWKw==}
+  /crypto-js@4.2.0:
+    resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
     dev: false
 
   /cssesc@3.0.0:
@@ -1915,7 +1915,7 @@ packages:
     resolution: {integrity: sha512-7RUKU+TJFQo+4X9R50IGJAIDF18uRBaFXyZn4VVCfwmwbSUhKcdDnw4zgeut3uEXkiD3NqURq+d88sDPxjf1FA==}
     engines: {node: '>=12.13.0'}
     dependencies:
-      crypto-js: 4.1.1
+      crypto-js: 4.2.0
       jwt-decode: 3.1.2
     dev: false
 
