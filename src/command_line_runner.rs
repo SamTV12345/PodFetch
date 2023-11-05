@@ -39,7 +39,7 @@ pub fn start_command_line(mut args: Args) {
                     let podcast_rss_feed = args.next();
 
                     match podcast_rss_feed {
-                        Some(feed)=>{
+                        Some(feed) => {
                             let mut podcast_service = PodcastService::new();
                             let conn = &mut establish_connection();
 
@@ -53,7 +53,7 @@ pub fn start_command_line(mut args: Args) {
                             podcast_episode_service.insert_podcast_episodes(conn, podcast.clone()).unwrap();
                             podcast_service.schedule_episode_download(podcast, None, conn).unwrap();
                         }
-                        None=>{
+                        None => {
                             println!("Please provide a podcast rss feed url");
                             exit(1);
                         }
@@ -182,14 +182,11 @@ pub fn start_command_line(mut args: Args) {
                     error!("Command not found")
                 }
             }
-        },
-        "migration"=>{
-            match args.nth(0).unwrap().as_str() {
-                "episodes"=>{
-                    Episode::migrate_episode_urls(&mut establish_connection());
-                    println!("Successfully migrated episode urls.")
-                },
-                _ => {}
+        }
+        "migration" => {
+            if args.next().unwrap().as_str() == "episodes" {
+                Episode::migrate_episode_urls(&mut establish_connection());
+                println!("Successfully migrated episode urls.")
             }
         }
         "debug" => {

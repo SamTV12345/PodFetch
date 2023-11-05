@@ -86,7 +86,7 @@ pub async fn upload_episode_actions(username: web::Path<String>, podcast_episode
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
                 let episode = Episode::convert_to_episode(episode, username.clone());
-                inserted_episodes.push(Episode::insert_episode(&episode.clone(), &mut conn
+                inserted_episodes.push(Episode::insert_episode(&episode.clone(), conn
                     .get()
                     .map_err(map_r2d2_error).unwrap()
                     .deref_mut()).unwrap());

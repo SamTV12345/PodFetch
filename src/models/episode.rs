@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods, debug_query, SqliteConnection, IntoSql};
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods};
 
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
@@ -189,7 +189,7 @@ impl Episode{
             .load::<(PodcastEpisode,Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
 
-        let query_1 = &podcast_episodes
+        let _query_1 = &podcast_episodes
             .inner_join(episodes.on(url.like(cleaned_url.concat("%"))))
             .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
             .filter(username.eq(username_to_find));
