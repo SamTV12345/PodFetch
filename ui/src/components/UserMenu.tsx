@@ -9,7 +9,7 @@ import useCommon from "../store/CommonSlice";
 const AccountTrigger = ()=>{
     const username = useCommon(state => state.loginData)
 
-    return <button className="flex gap-3"><span className="hidden md:block">{username?.username}</span><span className="material-symbols-outlined text-[--fg-color] hover:text-[--fg-color-hover]">account_circle</span></button>
+    return <button className="flex gap-3"><span className="hidden md:block text-[--fg-color]">{username?.username}</span><span className="material-symbols-outlined text-[--fg-color] hover:text-[--fg-color-hover]">account_circle</span></button>
 }
 
 export const UserMenu: FC = () => {
