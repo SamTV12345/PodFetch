@@ -8,6 +8,7 @@ use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
+use reqwest::Url;
 
 use crate::{DbConnection};
 
@@ -92,12 +93,16 @@ impl Episode{
     }
 
     pub fn convert_to_episode(episode_dto: &EpisodeDto, username: String)->Episode{
+        // Remove query parameters
+        let mut episode = Url::parse(&episode_dto.episode).unwrap();
+        episode.set_query(None);
+
         Episode {
             id: 0,
             username,
             device: episode_dto.device.clone(),
             podcast: episode_dto.podcast.clone(),
-            episode: episode_dto.episode.clone(),
+            episode: episode.to_string(),
             timestamp: episode_dto.timestamp,
             guid: episode_dto.guid.clone(),
             action: episode_dto.action.clone().to_string(),

@@ -89,25 +89,8 @@ pub async fn upload_episode_actions(username: web::Path<String>, podcast_episode
                 let episode = Episode::convert_to_episode(episode, username.clone());
                 inserted_episodes.push(Episode::insert_episode(&episode.clone(), &mut conn
                     .get()
-                    .unwrap())
-                    .expect("Unable to insert episode"));
-
-                if EpisodeAction::from_string(&episode.clone().action) == EpisodeAction::Play {
-                    let mut episode_url = episode.clone().episode;
-                    // Sometimes podcast provider like to check which browser access their podcast
-                    let mut first_split = episode.episode.split('?');
-                    let res = first_split.next();
-
-                    if let Some(unwrapped_res) = res {
-                        episode_url = unwrapped_res.parse().unwrap()
-                    };
-
-                    let podcast_episode = PodcastEpisode::query_podcast_episode_by_url(conn.get()
-                                                                                           .map_err(map_r2d2_error).unwrap().deref_mut(),
-                                                                           &episode_url);
-                    if podcast_episode.clone().unwrap().is_none() {
-                    }
-                }
+                    .map_err(map_r2d2_error).unwrap()
+                    .deref_mut()).unwrap());
             });
             Ok(HttpResponse::Ok().json(EpisodeActionPostResponse {
                 update_urls: vec![],

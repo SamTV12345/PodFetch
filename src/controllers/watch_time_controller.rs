@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ops::DerefMut;
 use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use actix_web::web::Data;
@@ -42,35 +43,37 @@ Option<web::ReqData<User>>, mapping_service:Data<Mutex<MappingService>>) -> Resu
 
     let designated_username = requester.unwrap().username.clone();
     let last_watched = PodcastHistoryItem::get_last_watched_podcasts(&mut establish_connection(),
-                                                     designated_username
+                                                                     designated_username
         .clone(), mapping_service.lock().ignore_poison().clone()).unwrap();
 
     let episodes = Episode::get_last_watched_episodes(designated_username,
-                                                      conn.get().map_err(map_r2d2_error)?.deref_mut(),
+                                                          conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
+    let mut last_watched_episodes:HashMap<String,
+        PodcastWatchedEpisodeModelWithPodcastEpisode> = HashMap::from_iter(last_watched.iter().map(|e| (e
+                                                                                             .episode_id
+                                                                                     .clone(), e.clone())));
 
-    let mut episodes_with_logs = last_watched.iter().map(|e|{
-        let episode = episodes.iter().find(|e1| e1.episode_id == e.episode_id);
-        match episode {
-            Some(episode) => {
-                if episode.watched_time>e.watched_time{
-                    return episode
+    episodes.iter().for_each(|v|{
+      match last_watched_episodes.contains_key(&v.episode_id){
+            true => {
+                let e1 = last_watched_episodes.get(&v.episode_id).unwrap();
+                if e1.date<v.date{
+                    last_watched_episodes.insert(v.episode_id.clone(), v.clone());
                 }
-                e
             },
-            None => {
-                e
+            false => {
+                last_watched_episodes.insert(v.episode_id.clone(), v.clone());
             }
-        }
-    }).collect::<Vec<&PodcastWatchedEpisodeModelWithPodcastEpisode>>();
-
-    episodes.iter().for_each(|x|{
-        if !episodes_with_logs.iter().any(|e| e.episode_id == x.episode_id){
-            episodes_with_logs.push(x);
-        }
+      }
     });
-    episodes_with_logs.sort_by(|a,b| a.date.cmp(&b.date).reverse());
-    Ok(HttpResponse::Ok().json(episodes_with_logs))
+
+    let mut extracted_values = last_watched_episodes
+        .values()
+        .cloned()
+        .collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
+    extracted_values.sort_by(|a,b| a.date.cmp(&b.date).reverse());
+    Ok(HttpResponse::Ok().json(extracted_values))
 }
 
 #[utoipa::path(
