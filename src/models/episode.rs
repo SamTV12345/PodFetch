@@ -2,14 +2,16 @@ use std::fmt;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension};
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods};
 
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
+use reqwest::Url;
 
 use crate::{DbConnection};
+use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 
 use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -41,6 +43,8 @@ pub struct Episode{
     pub position:Option<i32>,
     #[diesel(sql_type = Nullable<Integer>)]
     pub total:Option<i32>,
+    #[diesel(sql_type = Text)]
+    pub cleaned_url: String
 }
 
 
@@ -49,9 +53,9 @@ impl Episode{
         use crate::dbconfig::schema::episodes::dsl::*;
 
         let res = episodes.filter(timestamp.eq(self.clone().timestamp)
-            .and(device.eq(self.clone().device))
-            .and(podcast.eq(self.clone().podcast))
-            .and(episode.eq(self.clone().episode))
+            .and(device.eq(&self.clone().device))
+            .and(podcast.eq(&self.clone().podcast))
+            .and(episode.eq(&self.clone().episode))
             .and(timestamp.eq(self.clone().timestamp)))
             .first::<Episode>(conn)
             .optional()
@@ -61,6 +65,8 @@ impl Episode{
             return Ok(unwrapped_res)
         }
 
+        let mut cleaned_url_parsed = Url::parse(&self.episode).unwrap();
+        cleaned_url_parsed.set_query(None);
         diesel::insert_into(episodes)
             .values((
                 username.eq(&self.username),
@@ -72,7 +78,8 @@ impl Episode{
                 action.eq(&self.action),
                 started.eq(&self.started),
                 position.eq(&self.position),
-                total.eq(&self.total)
+                total.eq(&self.total),
+                cleaned_url.eq(&cleaned_url_parsed.to_string()),
                 ))
             .get_result(conn)
     }
@@ -87,11 +94,15 @@ impl Episode{
             started: self.started,
             position: self.position,
             total: self.total,
-            device: self.clone().device,
+            device: self.clone().device.clone(),
         }
     }
 
     pub fn convert_to_episode(episode_dto: &EpisodeDto, username: String)->Episode{
+        // Remove query parameters
+        let mut episode = Url::parse(&episode_dto.episode).unwrap();
+        episode.set_query(None);
+
         Episode {
             id: 0,
             username,
@@ -104,6 +115,7 @@ impl Episode{
             started: episode_dto.started,
             position: episode_dto.position,
             total: episode_dto.total,
+            cleaned_url: episode.to_string(),
         }
     }
     pub async fn get_actions_by_username(username1: String, conn: &mut DbConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
@@ -162,7 +174,7 @@ impl Episode{
         }
     }
 
-    pub fn get_last_watched_episodes(username1: String, conn: &mut DbConnection)
+    pub fn get_last_watched_episodes(username_to_find: String, conn: &mut DbConnection)
                                      ->Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>,
                                          CustomError>{
         use crate::dbconfig::schema::episodes::dsl::*;
@@ -171,24 +183,29 @@ impl Episode{
         use diesel::JoinOnDsl;
 
         let query = podcast_episodes
-            .inner_join(episodes.on(podcast.eq(url)))
-            .inner_join(podcast_table::table.on(podcast_table::rssfeed.eq(podcast)))
-            .filter(username.eq(username1))
+            .inner_join(episodes.on(url.like(cleaned_url.concat("%"))))
+            .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
+            .filter(username.eq(username_to_find.clone()))
             .load::<(PodcastEpisode,Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
+
+        let _query_1 = &podcast_episodes
+            .inner_join(episodes.on(url.like(cleaned_url.concat("%"))))
+            .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
+            .filter(username.eq(username_to_find));
 
         let mapped_watched_episodes = query.iter().map(|e|{
             PodcastWatchedEpisodeModelWithPodcastEpisode{
                 id: e.clone().1.id,
                 podcast_id: e.clone().2.id,
-                episode_id: e.clone().0.episode_id,
-                url: e.clone().0.url,
-                name: e.clone().0.name,
-                image_url: e.clone().0.image_url,
+                episode_id: e.0.episode_id.clone(),
+                url: e.0.url.clone(),
+                name: e.0.name.clone(),
+                image_url: e.0.image_url.clone(),
                 watched_time: e.clone().1.position.unwrap(),
                 date: e.clone().1.timestamp,
                 total_time: e.clone().0.total_time,
-                podcast_episode: e.clone().0,
+                podcast_episode: e.0.clone(),
                 podcast: e.2.clone(),
             }
         }).collect();
@@ -202,6 +219,20 @@ impl Episode{
                                    .execute(conn).expect("");
         Ok(())
     }
+
+    pub fn migrate_episode_urls(conn: &mut DbConnection){
+        let episodes_loaded = episodes_dsl
+            .load::<Episode>(conn)
+            .expect("");
+        episodes_loaded.iter().for_each(|e|{
+            let mut cleaned_url_parsed = Url::parse(&e.episode).unwrap();
+            cleaned_url_parsed.set_query(None);
+            diesel::update(
+                episodes_dsl.filter(episodes::id.eq(e.id)))
+                .set(episodes::cleaned_url.eq(cleaned_url_parsed.to_string()))
+                .execute(conn).expect("");
+        });
+        }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

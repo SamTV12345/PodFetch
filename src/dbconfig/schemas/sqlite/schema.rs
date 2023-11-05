@@ -23,6 +23,7 @@ diesel::table! {
         started -> Nullable<Integer>,
         position -> Nullable<Integer>,
         total -> Nullable<Integer>,
+        cleaned_url -> Text,
     }
 }
 
