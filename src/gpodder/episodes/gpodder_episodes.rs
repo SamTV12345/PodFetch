@@ -7,7 +7,6 @@ use actix_web::web::Data;
 use crate::DbPool;
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
 use chrono::NaiveDateTime;
-use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::session::Session;
 use crate::utils::error::{CustomError, map_r2d2_error};
@@ -34,8 +33,7 @@ pub struct EpisodeSinceRequest{
 #[get("/episodes/{username}.json")]
 pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>,
                                  opt_flag: Option<web::ReqData<Session>>,
-                                 since: web::Query<EpisodeSinceRequest>) -> Result<HttpResponse,
-    CustomError> {
+                                 since: web::Query<EpisodeSinceRequest>) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
             let username = username.clone();
@@ -60,6 +58,7 @@ pub async fn get_episode_actions(username: web::Path<String>, pool: Data<DbPool>
                     started: Option::from(watch_log.clone().0.watched_time),
                     position: Option::from(watch_log.clone().0.watched_time),
                     total: Option::from(watch_log.clone().1.total_time),
+                    cleaned_url: "".to_string()
                 }
             }).collect::<Vec<Episode>>();
 

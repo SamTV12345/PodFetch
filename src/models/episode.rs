@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension};
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods};
 
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
@@ -42,6 +42,8 @@ pub struct Episode{
     pub position:Option<i32>,
     #[diesel(sql_type = Nullable<Integer>)]
     pub total:Option<i32>,
+    #[diesel(sql_type = Text)]
+    pub cleaned_url: String
 }
 
 
@@ -50,9 +52,9 @@ impl Episode{
         use crate::dbconfig::schema::episodes::dsl::*;
 
         let res = episodes.filter(timestamp.eq(self.clone().timestamp)
-            .and(device.eq(self.clone().device))
-            .and(podcast.eq(self.clone().podcast))
-            .and(episode.eq(self.clone().episode))
+            .and(device.eq(&self.clone().device))
+            .and(podcast.eq(&self.clone().podcast))
+            .and(episode.eq(&self.clone().episode))
             .and(timestamp.eq(self.clone().timestamp)))
             .first::<Episode>(conn)
             .optional()
@@ -62,6 +64,8 @@ impl Episode{
             return Ok(unwrapped_res)
         }
 
+        let mut cleaned_url_parsed = Url::parse(&self.podcast).unwrap();
+        cleaned_url_parsed.set_query(None);
         diesel::insert_into(episodes)
             .values((
                 username.eq(&self.username),
@@ -73,7 +77,8 @@ impl Episode{
                 action.eq(&self.action),
                 started.eq(&self.started),
                 position.eq(&self.position),
-                total.eq(&self.total)
+                total.eq(&self.total),
+                cleaned_url.eq(&cleaned_url_parsed.to_string()),
                 ))
             .get_result(conn)
     }
@@ -88,7 +93,7 @@ impl Episode{
             started: self.started,
             position: self.position,
             total: self.total,
-            device: self.clone().device,
+            device: self.clone().device.clone(),
         }
     }
 
@@ -102,13 +107,14 @@ impl Episode{
             username,
             device: episode_dto.device.clone(),
             podcast: episode_dto.podcast.clone(),
-            episode: episode.to_string(),
+            episode: episode_dto.episode.clone(),
             timestamp: episode_dto.timestamp,
             guid: episode_dto.guid.clone(),
             action: episode_dto.action.clone().to_string(),
             started: episode_dto.started,
             position: episode_dto.position,
             total: episode_dto.total,
+            cleaned_url: episode.to_string(),
         }
     }
     pub async fn get_actions_by_username(username1: String, conn: &mut DbConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
@@ -167,7 +173,7 @@ impl Episode{
         }
     }
 
-    pub fn get_last_watched_episodes(username1: String, conn: &mut DbConnection)
+    pub fn get_last_watched_episodes(username_to_find: String, conn: &mut DbConnection)
                                      ->Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>,
                                          CustomError>{
         use crate::dbconfig::schema::episodes::dsl::*;
@@ -176,9 +182,9 @@ impl Episode{
         use diesel::JoinOnDsl;
 
         let query = podcast_episodes
-            .inner_join(episodes.on(podcast.eq(url)))
+            .inner_join(episodes.on(url.like(cleaned_url)))
             .inner_join(podcast_table::table.on(podcast_table::rssfeed.eq(podcast)))
-            .filter(username.eq(username1))
+            .filter(username.eq(username_to_find))
             .load::<(PodcastEpisode,Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
 
@@ -186,14 +192,14 @@ impl Episode{
             PodcastWatchedEpisodeModelWithPodcastEpisode{
                 id: e.clone().1.id,
                 podcast_id: e.clone().2.id,
-                episode_id: e.clone().0.episode_id,
-                url: e.clone().0.url,
-                name: e.clone().0.name,
-                image_url: e.clone().0.image_url,
+                episode_id: e.0.episode_id.clone(),
+                url: e.0.url.clone(),
+                name: e.0.name.clone(),
+                image_url: e.0.image_url.clone(),
                 watched_time: e.clone().1.position.unwrap(),
                 date: e.clone().1.timestamp,
                 total_time: e.clone().0.total_time,
-                podcast_episode: e.clone().0,
+                podcast_episode: e.0.clone(),
                 podcast: e.2.clone(),
             }
         }).collect();

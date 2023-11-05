@@ -47,8 +47,7 @@ Option<web::ReqData<User>>, mapping_service:Data<Mutex<MappingService>>) -> Resu
         .clone(), mapping_service.lock().ignore_poison().clone()).unwrap();
 
     let episodes = Episode::get_last_watched_episodes(designated_username,
-                                                          conn.get().map_err(map_r2d2_error)?.deref_mut(),
-    )?;
+                                                          conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     let mut last_watched_episodes:HashMap<String,
         PodcastWatchedEpisodeModelWithPodcastEpisode> = HashMap::from_iter(last_watched.iter().map(|e| (e
                                                                                              .episode_id
