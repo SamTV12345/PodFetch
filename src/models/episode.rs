@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::Error;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods};
+use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods, debug_query, SqliteConnection, IntoSql};
 
 use crate::dbconfig::schema::episodes;
 use utoipa::ToSchema;
@@ -11,6 +11,7 @@ use diesel::ExpressionMethods;
 use reqwest::Url;
 
 use crate::{DbConnection};
+use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 
 use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -64,7 +65,7 @@ impl Episode{
             return Ok(unwrapped_res)
         }
 
-        let mut cleaned_url_parsed = Url::parse(&self.podcast).unwrap();
+        let mut cleaned_url_parsed = Url::parse(&self.episode).unwrap();
         cleaned_url_parsed.set_query(None);
         diesel::insert_into(episodes)
             .values((
@@ -182,11 +183,16 @@ impl Episode{
         use diesel::JoinOnDsl;
 
         let query = podcast_episodes
-            .inner_join(episodes.on(url.like(cleaned_url)))
-            .inner_join(podcast_table::table.on(podcast_table::rssfeed.eq(podcast)))
-            .filter(username.eq(username_to_find))
+            .inner_join(episodes.on(url.like(cleaned_url.concat("%"))))
+            .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
+            .filter(username.eq(username_to_find.clone()))
             .load::<(PodcastEpisode,Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
+
+        let query_1 = &podcast_episodes
+            .inner_join(episodes.on(url.like(cleaned_url.concat("%"))))
+            .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
+            .filter(username.eq(username_to_find));
 
         let mapped_watched_episodes = query.iter().map(|e|{
             PodcastWatchedEpisodeModelWithPodcastEpisode{
@@ -213,6 +219,20 @@ impl Episode{
                                    .execute(conn).expect("");
         Ok(())
     }
+
+    pub fn migrate_episode_urls(conn: &mut DbConnection){
+        let episodes_loaded = episodes_dsl
+            .load::<Episode>(conn)
+            .expect("");
+        episodes_loaded.iter().for_each(|e|{
+            let mut cleaned_url_parsed = Url::parse(&e.episode).unwrap();
+            cleaned_url_parsed.set_query(None);
+            diesel::update(
+                episodes_dsl.filter(episodes::id.eq(e.id)))
+                .set(episodes::cleaned_url.eq(cleaned_url_parsed.to_string()))
+                .execute(conn).expect("");
+        });
+        }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -182,6 +182,15 @@ pub fn start_command_line(mut args: Args) {
                     error!("Command not found")
                 }
             }
+        },
+        "migration"=>{
+            match args.nth(0).unwrap().as_str() {
+                "episodes"=>{
+                    Episode::migrate_episode_urls(&mut establish_connection());
+                    println!("Successfully migrated episode urls.")
+                },
+                _ => {}
+            }
         }
         "debug" => {
             create_debug_message();
