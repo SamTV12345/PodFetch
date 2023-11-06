@@ -17,6 +17,10 @@ type PlayerTimeControlsProps = {
     refItem: RefObject<HTMLAudioElement>
 }
 
+
+const SPEED_STEPS = [0.5, 1,1.1,1.25, 1.5, 2, 2.5, 3]
+
+
 export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => {
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
@@ -111,14 +115,16 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const changeSpeed = () => {
         if (refItem.current === null) return
 
-        let newSpeed = speed + 0.5
+        const currentIndex = SPEED_STEPS.indexOf(speed)
 
-        if (newSpeed > 3) {
-            newSpeed = 1
+        if (currentIndex === SPEED_STEPS.length - 1) {
+            refItem.current.playbackRate = SPEED_STEPS[0]
+            setPlaybackRate(SPEED_STEPS[0])
+            return
         }
 
-        refItem.current.playbackRate = newSpeed
-        setPlaybackRate(newSpeed)
+        refItem.current.playbackRate = SPEED_STEPS[currentIndex + 1]
+        setPlaybackRate(SPEED_STEPS[currentIndex + 1])
     }
 
     return (
