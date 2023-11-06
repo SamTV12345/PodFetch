@@ -15,14 +15,17 @@ use clokwerk::{Scheduler, TimeUnits};
 use std::sync::{Mutex};
 use std::time::Duration;
 use std::{env, thread};
-use std::env::{args, var};
+use std::collections::HashSet;
+use std::env::{args, var, VarError};
 use std::io::Read;
+use std::ops::Deref;
 use std::process::exit;
 use actix_web::body::{BoxBody, EitherBody};
 use log::{info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use diesel::r2d2::{ConnectionManager};
+use jsonwebtoken::jwk::{AlgorithmParameters, CommonParameters, Jwk, KeyAlgorithm, RSAKeyParameters, RSAKeyType};
 use r2d2::{Pool};
 use regex::Regex;
 use tokio::task::spawn_blocking;
@@ -31,7 +34,7 @@ mod controllers;
 #[cfg(sqlite)]
 use crate::config::dbconfig::{ConnectionOptions};
 use crate::config::dbconfig::{establish_connection, get_database_url};
-use crate::constants::inner_constants::{BASIC_AUTH, CSS, JS, OIDC_AUTH, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::constants::inner_constants::{BASIC_AUTH, CSS, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -60,6 +63,7 @@ mod models;
 mod service;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
+use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
@@ -222,8 +226,74 @@ async fn main() -> std::io::Result<()> {
             thread::sleep(Duration::from_millis(1000));
         }
     });
+
+    let key_param: Option<RSAKeyParameters>;
+    let mut hash = HashSet::new();
+    let jwk: Option<Jwk>;
+
+    match var(OIDC_JWKS) {
+        Ok(jwk_uri)=>{
+            let resp =  reqwest::get(&jwk_uri).await.unwrap()
+                .json::<CustomJwkSet>().await;
+
+            match resp {
+                Ok(res) => {
+                    let oidc = res
+                        .clone()
+                        .keys
+                        .into_iter()
+                        .filter(|x| x.alg.eq(&"RS256"))
+                        .collect::<Vec<CustomJwk>>()
+                        .first()
+                        .map(|x| x.clone());
+
+                    if oidc.is_none() {
+                        panic!("No RS256 key found in JWKS")
+                    }
+
+                    key_param = Some(RSAKeyParameters {
+                        e: oidc.clone().unwrap().e,
+                        n: oidc.unwrap().n.clone(),
+                        key_type: RSAKeyType::RSA,
+                    });
+
+                    jwk = Some(Jwk{
+                        common: CommonParameters{
+                            public_key_use: None,
+                            key_id: None,
+                            x509_url: None,
+                            x509_chain: None,
+                            x509_sha1_fingerprint: None,
+                            key_operations: None,
+                            key_algorithm: Some(KeyAlgorithm::RS256),
+                            x509_sha256_fingerprint: None,
+                        },
+                        algorithm: AlgorithmParameters::RSA(key_param.clone().unwrap()),
+                    });
+                },
+                Err(_) => {
+                    panic!("Error downloading OIDC")
+                }
+            }
+        }
+        _ => {
+            key_param = None;
+            jwk = None;
+        }
+    }
+
+    match var(OIDC_CLIENT_ID){
+        Ok(client_id)=>{
+            hash.insert(client_id);
+        }
+        Err(_)=>{}
+    }
+
     HttpServer::new(move || {
         App::new()
+            .app_data(Data::new(key_param.clone()))
+            .app_data(Data::new(jwk.clone()))
+            .app_data(Data::new(hash.clone()))
             .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
             .service(get_gpodder_api(environment_service.clone()))
             .service(get_global_scope())
@@ -284,6 +354,8 @@ pub fn get_global_scope() -> Scope {
 
 fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<BoxBody>>, Error = actix_web::Error, InitError = ()>> {
     let middleware = AuthFilter::new();
+
+
     web::scope("")
         .wrap(middleware)
         .service(delete_playlist_item)
