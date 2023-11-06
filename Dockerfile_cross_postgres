@@ -21,6 +21,8 @@ COPY ./target/aarch64-unknown-linux-musl/release/podfetch /app/podfetch
 
 FROM ${TARGETARCH}${TARGETVARIANT} as final
 
+LABEL org.opencontainers.image.source="https://github.com/SamTV12345/PodFetch"
+
 
 EXPOSE 8000
 CMD ["./podfetch"]
