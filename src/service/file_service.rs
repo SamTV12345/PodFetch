@@ -186,7 +186,7 @@ DbConnection)
     let mut vars:HashMap<String, &str> = HashMap::new();
     vars.insert("episodetitle".to_string(), &final_string);
 
-    Ok(format!("'{}'",strfmt::strfmt(&fixed_string, &vars).unwrap()))
+    Ok(format!("'{}'",strfmt::strfmt(&fixed_string.trim(), &vars).unwrap()))
 }
 
 fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
@@ -211,7 +211,7 @@ fn perform_replacement(title: &str, retrieved_settings:Setting) -> String {
             final_string = final_string.replace(':', "-")
         }
     }
-    deunicode::deunicode(&final_string)
+    deunicode::deunicode(&final_string).trim().to_string()
 }
 
 
