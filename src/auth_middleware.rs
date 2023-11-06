@@ -3,8 +3,8 @@ use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+
 use actix::fut::{ok};
 use futures_util::FutureExt;
 use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage, web};
@@ -15,14 +15,14 @@ use base64::engine::general_purpose;
 use futures_util::future::{LocalBoxFuture, Ready};
 use dotenv::var;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
-use jsonwebtoken::jwk::{AlgorithmParameters, CommonParameters, Jwk, KeyAlgorithm, RSAKeyParameters, RSAKeyType};
+use jsonwebtoken::jwk::{Jwk};
 use log::info;
-use serde_json::{from_str, Value};
+use serde_json::{Value};
 use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
 use crate::{DbPool};
 use crate::models::user::User;
 use sha256::digest;
-use crate::models::oidc_model::{CustomJwk};
+
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
 pub struct AuthFilter {

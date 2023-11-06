@@ -16,9 +16,9 @@ use std::sync::{Mutex};
 use std::time::Duration;
 use std::{env, thread};
 use std::collections::HashSet;
-use std::env::{args, var, VarError};
+use std::env::{args, var};
 use std::io::Read;
-use std::ops::Deref;
+
 use std::process::exit;
 use actix_web::body::{BoxBody, EitherBody};
 use log::{info};
@@ -244,8 +244,7 @@ async fn main() -> std::io::Result<()> {
                         .into_iter()
                         .filter(|x| x.alg.eq(&"RS256"))
                         .collect::<Vec<CustomJwk>>()
-                        .first()
-                        .map(|x| x.clone());
+                        .first().cloned();
 
                     if oidc.is_none() {
                         panic!("No RS256 key found in JWKS")
@@ -282,12 +281,10 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    match var(OIDC_CLIENT_ID){
-        Ok(client_id)=>{
-            hash.insert(client_id);
-        }
-        Err(_)=>{}
+    if let Ok(client_id) = var(OIDC_CLIENT_ID) {
+        hash.insert(client_id);
     }
+
 
     HttpServer::new(move || {
         App::new()
