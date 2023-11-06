@@ -1,8 +1,10 @@
+use std::collections::HashSet;
 use std::future::Future;
+use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+
 use actix::fut::{ok};
 use futures_util::FutureExt;
 use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage, web};
@@ -13,16 +15,14 @@ use base64::engine::general_purpose;
 use futures_util::future::{LocalBoxFuture, Ready};
 use dotenv::var;
 use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
-use jsonwebtoken::jwk::Jwk;
+use jsonwebtoken::jwk::{Jwk};
 use log::info;
-use serde_json::{from_str, Value};
+use serde_json::{Value};
 use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
 use crate::{DbPool};
 use crate::models::user::User;
 use sha256::digest;
-use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
-use crate::mutex::LockResultExt;
-use crate::service::jwkservice::JWKService;
+
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
 pub struct AuthFilter {
@@ -154,50 +154,17 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
         }
         let token = token_res.unwrap().replace("Bearer ", "");
 
-        let start = SystemTime::now();
-        let since_the_epoch = start
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards").as_secs();
+        let jwk = req.app_data::<web::Data<Option<Jwk>>>().cloned().unwrap();
 
-        let response:CustomJwkSet;
-        let binding = req.app_data::<web::Data<Mutex<JWKService>>>().cloned().unwrap();
-        let mut jwk_service = binding.lock()
-            .ignore_poison();
-        match jwk_service.jwk.clone() {
-            Some(jwk)=>{
-                if since_the_epoch-jwk_service.timestamp>3600{
-                    //refetch and update timestamp
-                    info!("Renewing jwk set");
-                    response = AuthFilter::get_jwk();
-                    jwk_service.jwk = Some(response.clone());
-                    jwk_service.timestamp = since_the_epoch
-                }
-                else{
-                    info!("Using cached jwk set");
-                    response = jwk;
-                }
-            }
-            None=>{
-                // Fetch on cold start
-                response = AuthFilter::get_jwk();
-                jwk_service.jwk = Some(response.clone());
-                jwk_service.timestamp = since_the_epoch
-            }
-        }
+        // Create a DecodingKey from a PEM-encoded RSA string
 
-        // Filter out all unknown algorithms
-        let response = response.clone().keys.into_iter().filter(|x| {
-            x.alg.eq(&"RS256")
-        }).collect::<Vec<CustomJwk>>();
 
-        let jwk = response.clone();
-        let custom_jwk = jwk.get(0).expect("Your jwk set needs to have RS256");
+        let key = DecodingKey::from_jwk(&jwk.as_ref().clone().unwrap()).unwrap();
+        let mut validation = Validation::new(Algorithm::RS256);
+        validation.aud = Some(req.app_data::<web::Data<HashSet<String>>>().unwrap().clone().into_inner()
+            .deref().clone());
 
-        let jwk_string = serde_json::to_string(&custom_jwk).unwrap();
 
-        let jwk = from_str::<Jwk>(&jwk_string).unwrap();
-        let key = DecodingKey::from_jwk(&jwk).unwrap();
-        let validation = Validation::new(Algorithm::RS256);
         return match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => {
                 let username = decoded.claims.get("preferred_username").unwrap().as_str().unwrap();
@@ -237,7 +204,8 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                     }
                 }
             },
-            _ => {
+            Err(e) => {
+                info!("Error decoding token: {:?}", e);
                 Box::pin(ok(req.error_response(ErrorForbidden("Forbidden"))
                     .map_into_right_body()))
             }
@@ -269,12 +237,6 @@ impl AuthFilter{
         let username = auth[0];
         let password = auth[1];
         (username.to_string(), password.to_string())
-    }
-
-    pub fn get_jwk() -> CustomJwkSet {
-        let jwk_uri = var("OIDC_JWKS").expect("OIDC_JWKS must be set");
-         reqwest::blocking::get(jwk_uri).unwrap()
-            .json::<CustomJwkSet>().unwrap()
     }
 
     pub fn basic_auth_login(rq: String) -> (String, String) {
