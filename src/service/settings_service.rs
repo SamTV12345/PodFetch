@@ -1,7 +1,7 @@
 
 use crate::constants::inner_constants::ERR_SETTINGS_FORMAT;
 use crate::controllers::settings_controller::{UpdateNameSettings};
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::settings::Setting;
 use crate::utils::error::CustomError;
 

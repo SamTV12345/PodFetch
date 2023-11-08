@@ -4,7 +4,7 @@ use diesel::sql_types::{Integer, Text};
 use crate::dbconfig::schema::playlists;
 use diesel::prelude::*;
 use diesel::ExpressionMethods;
-use crate::DbConnection;
+use crate::{DBType as DbConnection, execute_with_conn};
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use uuid::Uuid;
@@ -26,6 +26,7 @@ pub struct Playlist {
 }
 
 impl Playlist {
+    #[allow(clippy::redundant_closure_call)]
     pub fn insert_playlist(&self, conn: &mut DbConnection) -> Result<Playlist, CustomError> {
         use crate::dbconfig::schema::playlists::dsl::*;
 
@@ -38,10 +39,10 @@ impl Playlist {
             return Ok(unwrapped_res)
         }
 
-        diesel::insert_into(playlists)
-            .values(self)
-            .get_result::<Playlist>(conn)
-            .map_err(map_db_error)
+        execute_with_conn!(conn, |conn|diesel::insert_into(playlists)
+                    .values(self)
+                    .get_result::<Playlist>(conn)
+                    .map_err(map_db_error));
     }
 
     pub fn delete_playlist(playlist_id_1: String, conn: &mut DbConnection) -> Result<(),

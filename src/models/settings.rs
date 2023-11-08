@@ -3,7 +3,7 @@ use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};
 use crate::service::environment_service::OidcConfig;
 use utoipa::ToSchema;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::utils::do_retry::do_retry;
 use diesel::insert_into;
 use crate::constants::inner_constants::DEFAULT_SETTINGS;

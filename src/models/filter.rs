@@ -4,7 +4,7 @@ use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use diesel::AsChangeset;
 use diesel::Queryable;
-use crate::DbConnection;
+use crate::{DBType as DbConnection, execute_with_conn};
 use utoipa::ToSchema;
 use crate::utils::error::{CustomError, map_db_error};
 
@@ -31,6 +31,7 @@ impl Filter{
         }
     }
 
+    #[allow(clippy::redundant_closure_call)]
     pub fn save_filter(self, conn: &mut DbConnection) -> Result<(), CustomError>{
         use crate::dbconfig::schema::filters::dsl::*;
 
@@ -43,9 +44,14 @@ impl Filter{
                    .map_err(map_db_error)?;
            },
            None=>{
-               diesel::insert_into(filters).values(self)
-                   .execute(conn)
-                   .map_err(map_db_error)?;
+
+               execute_with_conn!(conn, |conn| {diesel::insert_into(filters)
+                            .values(self)
+                            .execute(conn)
+                            .map_err(map_db_error)?;
+                   Ok(())
+               }
+               );
            }
        }
         Ok(())

@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use diesel::sql_types::{Integer, Text, Nullable, Bool};
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;

@@ -10,7 +10,7 @@ use diesel::ExpressionMethods;
 use dotenv::var;
 use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, Role, STANDARD_USER, USERNAME};
 use crate::dbconfig::schema::users;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{CustomError, map_db_error};
 

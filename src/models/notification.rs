@@ -1,4 +1,4 @@
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use diesel::Queryable;
 use utoipa::ToSchema;
 use crate::utils::do_retry::do_retry;

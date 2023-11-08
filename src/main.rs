@@ -31,7 +31,6 @@ use regex::Regex;
 use tokio::task::spawn_blocking;
 
 mod controllers;
-#[cfg(sqlite)]
 use crate::config::dbconfig::{ConnectionOptions};
 use crate::config::dbconfig::{establish_connection, get_database_url};
 use crate::constants::inner_constants::{BASIC_AUTH, CSS, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
@@ -56,6 +55,7 @@ use crate::auth_middleware::{AuthFilter};
 use crate::command_line_runner::start_command_line;
 use crate::controllers::playlist_controller::{add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists, get_playlist_by_id, update_playlist};
 use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users, onboard_user, update_role};
+use crate::dbconfig::DBType;
 
 mod constants;
 mod db;
@@ -90,10 +90,7 @@ mod gpodder;
 mod command_line_runner;
 mod auth_middleware;
 mod dbconfig;
-
-import_database_connections!();
-
-type DbPool = Pool<ConnectionManager<DbConnection>>;
+type DbPool = Pool<ConnectionManager<DBType>>;
 
 import_database_config!();
 
@@ -134,7 +131,7 @@ async fn index() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("Debug file located at {}", concat!(env!("OUT_DIR"), "/built.rs"));
-
+    init_logging();
 
     if args().len()>1 {
         spawn_blocking(move ||{
@@ -143,10 +140,41 @@ async fn main() -> std::io::Result<()> {
         exit(0)
     }
 
+    let conn =   establish_connection();
+
+    match conn {
+        DBType::Postgresql(mut conn)=>{
+            let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
+
+            if res_migration.is_err(){
+                panic!("Could not run migrations: {}",res_migration.err().unwrap());
+            }
+        }
+        DBType::Sqlite(mut conn) => {
+            let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
+
+            if res_migration.is_err(){
+                panic!("Could not run migrations: {}",res_migration.err().unwrap());
+            }
+        }
+    }
+
+
     let environment_service = EnvironmentService::new();
 
     check_server_config(environment_service.clone());
-    let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+    let pool;
+    {
+        let conn = establish_connection();
+        match conn {
+            DBType::Postgresql(_) => {
+                pool = init_postgres_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+            }
+            DBType::Sqlite(_) => {
+                pool = init_sqlite_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+            }
+        }
+    }
     let data_pool = Data::new(pool);
 
     //services
@@ -159,15 +187,8 @@ async fn main() -> std::io::Result<()> {
     let lobby = Lobby::default();
 
     let chat_server = lobby.start();
-    let mut connection = establish_connection();
-    let res_migration = connection.run_pending_migrations(MIGRATIONS);
-
-    if res_migration.is_err(){
-        panic!("Could not run migrations: {}",res_migration.err().unwrap());
-    }
 
     EnvironmentService::print_banner();
-    init_logging();
     match FileService::create_podcast_root_directory_exists(){
         Ok(_)=>{},
         Err(e)=>{
@@ -464,27 +485,6 @@ pub fn insert_default_settings_if_not_present() ->Result<(),CustomError> {
 }
 
 pub fn check_server_config(service1: EnvironmentService) {
-    let database_url = get_database_url();
-    #[cfg(sqlite)]
-    if !database_url.starts_with("sqlite"){
-        eprintln!("You are using sqlite as database but the database url does not start with sqlite. \
-        Please check your .env file.");
-        exit(1);
-    }
-
-    #[cfg(mysql)]
-    if !database_url.starts_with("mysql"){
-        eprintln!("You are using mySQL as database but the database url does not start with  \
-        sqlite. Please check your .env file.");
-        exit(1);
-    }
-
-    #[cfg(postgresql)]
-    if !database_url.starts_with("postgres"){
-        eprintln!("You are using postgres as database but the database url does not start with  \
-        postgres/postgresql. Please check your .env file.");
-        exit(1);
-    }
 
     if service1.http_basic && (service1.password.is_empty() || service1.username.is_empty()) {
         eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
@@ -507,26 +507,11 @@ pub fn check_server_config(service1: EnvironmentService) {
     }
 }
 
-#[cfg(sqlite)]
-async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<SqliteConnection>>,
-    String> {
-    let manager = ConnectionManager::<SqliteConnection>::new(database_url);
-    let pool = Pool::builder().max_size(16)
-        .connection_customizer(Box::new(ConnectionOptions {
-        enable_wal: true,
-        enable_foreign_keys: true,
-        busy_timeout: Some(Duration::from_secs(120)),
-    })).build(manager).unwrap();
-    Ok(pool)
-}
-
-
-#[cfg(postgresql)]
-async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DbConnection>>,
+async fn init_postgres_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DBType>>,
     String> {
     let db_connections = var("DB_CONNECTIONS").unwrap_or("10".to_string()).parse()
         .unwrap_or(10);
-    let manager = ConnectionManager::<DbConnection>::new(database_url);
+    let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder()
         .max_size(db_connections)
         .build(manager)
@@ -534,11 +519,16 @@ async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DbConn
     Ok(pool)
 }
 
-#[cfg(mysql)]
-async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DbConnection>>,
+
+
+async fn init_sqlite_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBType>>,
     String> {
-    let manager = ConnectionManager::<DbConnection>::new(database_url);
+    let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder().max_size(16)
-        .build(manager).unwrap();
+        .connection_customizer(Box::new(ConnectionOptions {
+        enable_wal: true,
+        enable_foreign_keys: true,
+        busy_timeout: Some(Duration::from_secs(120)),
+    })).build(manager).unwrap();
     Ok(pool)
 }

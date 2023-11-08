@@ -7,7 +7,7 @@ use diesel::associations::HasTable;
 use diesel::ExpressionMethods;
 use uuid::Uuid;
 use crate::constants::inner_constants::Role;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]

@@ -8,7 +8,7 @@ use diesel::sql_types::{Integer, Text, Nullable, Timestamp, Bool};
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use rss::{Guid, Item};
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::podcasts::Podcast;
 use crate::utils::do_retry::do_retry;
 use crate::utils::time::opt_or_empty_string;

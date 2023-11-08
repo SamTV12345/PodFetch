@@ -14,7 +14,7 @@ use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::MAX_FILE_TREE_DEPTH;
 
 use crate::controllers::settings_controller::ReplacementStrategy;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;

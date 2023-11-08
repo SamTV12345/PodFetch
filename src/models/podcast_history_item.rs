@@ -1,6 +1,6 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::{BoolExpressionMethods, delete, ExpressionMethods, insert_into, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use diesel::Queryable;
 use diesel::QueryId;
 use diesel::QueryableByName;

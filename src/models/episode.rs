@@ -10,7 +10,7 @@ use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use diesel::ExpressionMethods;
 use reqwest::Url;
 
-use crate::{DbConnection};
+use crate::DBType as DbConnection;
 use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 
 use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;

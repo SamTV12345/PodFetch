@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::dbconfig::schema::sessions;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
-use crate::DbConnection;
+use crate::{DBType as DbConnection, execute_with_conn};
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
 pub struct Session{
@@ -25,10 +25,13 @@ impl Session{
         }
     }
 
+    #[allow(clippy::redundant_closure_call)]
     pub fn insert_session(&self, conn: &mut DbConnection) -> Result<Self, diesel::result::Error>{
-        diesel::insert_into(sessions::table)
-            .values(self)
-            .get_result(conn)
+
+        execute_with_conn!(conn,|conn|diesel::insert_into(sessions::table)
+                    .values(self)
+                    .get_result(conn));
+
     }
 
     pub fn cleanup_sessions(conn: &mut DbConnection) -> Result<usize, diesel::result::Error>{
