@@ -6,24 +6,31 @@ use std::process::Command;
 
 
 fn main() {
-        let maybe_vaultwarden_version =
-            env::var("VW_VERSION").or_else(|_| env::var("BWRS_VERSION")).or_else(|_| version_from_git_info());
 
-        version_from_git_info().expect("Error retrieving git information");
-
-        create_git_sqlite();
-        if let Ok(version) = maybe_vaultwarden_version {
+        let result_of_git = version_from_git_info();
+        match result_of_git{
+            Ok(version) => {
                 println!("cargo:rustc-env=VW_VERSION={version}");
                 println!("cargo:rustc-env=CARGO_PKG_VERSION={version}");
                 println!("cargo:rustc-env=GIT_EXACT_TAG={version}");
-        }
-        else{
+            },
+            Err(e) => {
                 println!("cargo:rustc-env=VW_VERSION=unknown");
                 println!("cargo:rustc-env=CARGO_PKG_VERSION=unknown");
                 println!("cargo:rustc-env=GIT_EXACT_TAG=unknown");
                 println!("cargo:rustc-env=GIT_LAST_TAG=unknown");
                 println!("cargo:rustc-env=GIT_BRANCH=unknown");
                 println!("cargo:rustc-env=GIT_REV=unknown");
+            }
+        }
+
+        if let Ok(version) = version_from_git_info() {
+                println!("cargo:rustc-env=VW_VERSION={version}");
+                println!("cargo:rustc-env=CARGO_PKG_VERSION={version}");
+                println!("cargo:rustc-env=GIT_EXACT_TAG={version}");
+        }
+        else{
+                create_git_sqlite();
         }
 }
 
