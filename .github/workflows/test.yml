@@ -2,6 +2,8 @@ on:
   push:
     paths:
       - 'src/**'
+    branches:
+      - main
   pull_request:
     paths:
       - 'src/**'
