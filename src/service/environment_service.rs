@@ -113,7 +113,7 @@ impl EnvironmentService {
         log::info!("Developer specifications available at {}",self.server_url.clone()+"swagger-ui/index\
         .html#/");
         log::info!("GPodder integration enabled: {}", self.gpodder_integration_enabled);
-        log::info!("Database url is set to: {}", &get_database_url());
+        log::debug!("Database url is set to: {}", &get_database_url());
         log::info!(
             "Podindex API key&secret configured: {}",
             !self.podindex_api_key.is_empty() && !self.podindex_api_secret.is_empty()

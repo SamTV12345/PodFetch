@@ -186,6 +186,7 @@ impl Episode{
             .inner_join(episodes.on(url.like(cleaned_url.concat("%"))))
             .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
             .filter(username.eq(username_to_find.clone()))
+            .filter(action.eq("play"))
             .load::<(PodcastEpisode,Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
 
