@@ -9,7 +9,7 @@ build = "build.rs"
 built = {version="0.7.1", features=["chrono", "semver","cargo-lock"]}
 
 [features]
-default = ["sqlite"]
+default = ["sqlite", "postgresql"]
 mysql = ["diesel/mysql", "diesel_migrations/mysql", "diesel/mysql_backend"]
 postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", "r2d2_postgres",
     "diesel/postgres_backend"]
