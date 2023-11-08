@@ -45,8 +45,7 @@ pub fn establish_connection() -> DBType {
 
 
 pub fn get_database_url()->String{
-
     let url = env::var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string());
-    log::info!("Database url is set to {}", url);
+    log::debug!("Database url is set to {}", url);
     url
 }

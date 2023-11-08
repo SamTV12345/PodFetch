@@ -283,16 +283,18 @@ impl PodcastEpisodeService {
 
     fn update_episodes_on_redirect(conn: &mut DbConnection, items: &[Item]) ->Result<(), CustomError> {
         for (_, item) in items.iter().enumerate() {
-            let opt_found_podcast_episode = Self::get_podcast_episode_by_guid(conn, item.title
-                .as_ref().unwrap())?;
-            if let Some(found_podcast_episode) = opt_found_podcast_episode{
-                let mut podcast_episode = found_podcast_episode.clone();
-                if item.itunes_ext.is_some() {
-                    podcast_episode.image_url = item.itunes_ext.as_ref().unwrap().image.clone()
-                        .unwrap();
+            match  &item.guid{
+                Some(guid) => {
+                    let opt_found_podcast_episode = Self::get_podcast_episode_by_guid(conn, &guid.value)?;
+                    if let Some(found_podcast_episode) = opt_found_podcast_episode{
+                        let mut podcast_episode = found_podcast_episode.clone();
+                        podcast_episode.url = item.enclosure.as_ref().unwrap().url.to_string();
+                        PodcastEpisode::update_podcast_episode(conn, podcast_episode);
+                    }
                 }
-                podcast_episode.url = item.enclosure.as_ref().unwrap().url.to_string();
-                PodcastEpisode::update_podcast_episode(conn, podcast_episode);
+                None => {
+                    println!("No guid found for episode {:?}", item.title.as_ref());
+                }
             }
         }
         Ok(())
