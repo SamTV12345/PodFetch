@@ -20,7 +20,7 @@ use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::notification::Notification;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;

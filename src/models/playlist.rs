@@ -4,7 +4,7 @@ use diesel::sql_types::{Integer, Text};
 use crate::dbconfig::schema::playlists;
 use diesel::prelude::*;
 use diesel::ExpressionMethods;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use uuid::Uuid;
@@ -38,10 +38,20 @@ impl Playlist {
             return Ok(unwrapped_res)
         }
 
-        diesel::insert_into(playlists)
-            .values(self)
-            .get_result::<Playlist>(conn)
-            .map_err(map_db_error)
+        match conn {
+            DbConnection::Postgresql(conn)=>{
+                diesel::insert_into(playlists)
+                    .values(self)
+                    .get_result::<Playlist>(conn)
+                    .map_err(map_db_error)
+            }
+            DbConnection::Sqlite(conn)=>{
+                diesel::insert_into(playlists)
+                    .values(self)
+                    .get_result::<Playlist>(conn)
+                    .map_err(map_db_error)
+            }
+        }
     }
 
     pub fn delete_playlist(playlist_id_1: String, conn: &mut DbConnection) -> Result<(),

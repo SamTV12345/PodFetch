@@ -12,7 +12,7 @@ use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use crate::dbconfig::schema::subscriptions;
 use crate::utils::time::get_current_timestamp;
 use diesel::OptionalExtension;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 
 #[derive(Debug, Serialize, Deserialize,QueryableByName, Queryable,AsChangeset,Insertable, Clone, ToSchema)]
 #[diesel(treat_none_as_null = true)]

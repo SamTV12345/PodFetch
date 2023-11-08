@@ -5,7 +5,7 @@ use crate::models::user::User;
 use crate::dbconfig::schema::favorites;
 use serde::{Serialize, Deserialize};
 use diesel::sql_types::{Text, Integer, Bool};
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;

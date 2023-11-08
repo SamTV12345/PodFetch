@@ -11,7 +11,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::{DbConnection, unwrap_string};
+use crate::{DBType as DBConnection, unwrap_string};
 use actix::Addr;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -28,6 +28,7 @@ use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
 use crate::utils::error::{CustomError, map_reqwest_error};
+use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct PodcastService {

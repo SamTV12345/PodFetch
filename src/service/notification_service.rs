@@ -1,4 +1,4 @@
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::notification::Notification;
 use crate::utils::error::CustomError;
 

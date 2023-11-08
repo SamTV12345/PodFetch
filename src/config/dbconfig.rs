@@ -2,8 +2,9 @@ use diesel::prelude::*;
 use std::env;
 use std::time::Duration;
 use crate::constants::inner_constants::{DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE};
+use crate::dbconfig::DBType;
 #[cfg(sqlite)]
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 
 #[derive(Debug)]
 pub struct ConnectionOptions {
@@ -34,26 +35,9 @@ for ConnectionOptions
     }
 }
 
-#[cfg(sqlite)]
-pub fn establish_connection() -> DbConnection {
+pub fn establish_connection() -> DBType {
     let database_url = &get_database_url();
-    DbConnection::establish(database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
-}
-
-
-#[cfg(postgresql)]
-pub fn establish_connection()->PgConnection{
-    let database_url = &get_database_url();
-    println!("Connecting to {}", database_url);
-    PgConnection::establish(database_url)
-        .unwrap_or_else(|e| panic!("Error connecting to {} with error {}", database_url,e))
-}
-
-#[cfg(mysql)]
-pub fn establish_connection()->MysqlConnection{
-    let database_url = &get_database_url();
-    MysqlConnection::establish(database_url)
+    DBType::establish(database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
 

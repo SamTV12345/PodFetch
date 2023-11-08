@@ -5,7 +5,7 @@ use diesel::sql_types::{Integer, Text};
 use diesel::prelude::*;
 use diesel::ExpressionMethods;
 use crate::dbconfig::schema::playlist_items;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;

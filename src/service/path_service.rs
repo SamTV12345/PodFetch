@@ -1,6 +1,6 @@
 
 use std::path::Path;
-use crate::DbConnection;
+use crate::DBType as DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 

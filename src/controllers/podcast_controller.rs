@@ -8,7 +8,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::{DbConnection, DbPool, get_default_image, unwrap_string};
+use crate::{DbPool, get_default_image, unwrap_string};
 use actix::Addr;
 use actix_web::web::{Data, Path};
 use actix_web::{get, post, put, delete, HttpRequest, error, Error};
@@ -44,6 +44,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
+use crate::DBType as DbConnection;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
