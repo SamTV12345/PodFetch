@@ -24,14 +24,7 @@ fn main() {
             }
         }
 
-        if let Ok(version) = version_from_git_info() {
-                println!("cargo:rustc-env=VW_VERSION={version}");
-                println!("cargo:rustc-env=CARGO_PKG_VERSION={version}");
-                println!("cargo:rustc-env=GIT_EXACT_TAG={version}");
-        }
-        else{
-                create_git_sqlite();
-        }
+        create_git_sqlite();
 }
 
 
