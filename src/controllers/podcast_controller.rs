@@ -581,9 +581,23 @@ async fn insert_outline(
         }
         return;
     }
-    let feed_url = podcast.clone().xml_url.expect("No feed url");
+    let feed_url = podcast.clone().xml_url;
+    if feed_url.is_none() {
+        return;
+    }
 
-    let content = client.get(feed_url).send().unwrap().bytes().unwrap();
+    let feed_response = client.get(feed_url.unwrap()).send();
+    if feed_response.is_err() {
+        lobby.do_send(BroadcastMessage{
+            type_of: PodcastType::OpmlErrored,
+            message: feed_response.err().unwrap().to_string(),
+            podcast: None,
+            podcast_episodes: None,
+            podcast_episode: None,
+        });
+        return;
+    }
+    let content = feed_response.unwrap().bytes().unwrap();
 
     let channel = Channel::read_from(&content[..]);
 
@@ -595,7 +609,8 @@ async fn insert_outline(
             let image_url = match channel.image {
                 Some(image) => image.url,
                 None => {
-                    println!("No image found for podcast. Downloading from {}",environment.server_url
+                    log::info!("No image found for podcast. Downloading from {}",environment
+                        .server_url
                         .clone().to_owned() + "ui/default.jpg");
                     environment.server_url.clone().to_owned() + "ui/default.jpg"
                 },
