@@ -38,14 +38,14 @@ impl Device {
         }
     }
 
+    #[allow(clippy::redundant_closure_call)]
     pub fn save(&self, conn: &mut DbConnection) -> Result<Device, diesel::result::Error> {
         use crate::dbconfig::schema::devices::dsl::*;
 
         execute_with_conn!(
           conn, |conn|  diesel::insert_into(devices)
-                    .values(self)
-                    .get_result(conn)
-        );
+               .values(self)
+                    .get_result(conn));
     }
 
     pub fn get_devices_of_user(conn: &mut DbConnection, username_to_insert: String) ->

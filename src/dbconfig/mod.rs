@@ -37,7 +37,7 @@ macro_rules! execute_with_conn {
     ($conn:expr, $diesel_func:expr) => {
         match $conn {
             DbConnection::Sqlite(conn) => {
-                 return $diesel_func(conn)
+                return $diesel_func(conn)
             },
             DbConnection::Postgresql(conn) => {
                 return $diesel_func(conn)

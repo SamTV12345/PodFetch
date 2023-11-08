@@ -25,6 +25,7 @@ impl Session{
         }
     }
 
+    #[allow(clippy::redundant_closure_call)]
     pub fn insert_session(&self, conn: &mut DbConnection) -> Result<Self, diesel::result::Error>{
 
         execute_with_conn!(conn,|conn|diesel::insert_into(sessions::table)

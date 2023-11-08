@@ -26,6 +26,7 @@ pub struct Playlist {
 }
 
 impl Playlist {
+    #[allow(clippy::redundant_closure_call)]
     pub fn insert_playlist(&self, conn: &mut DbConnection) -> Result<Playlist, CustomError> {
         use crate::dbconfig::schema::playlists::dsl::*;
 

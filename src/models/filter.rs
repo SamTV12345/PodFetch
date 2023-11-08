@@ -31,6 +31,7 @@ impl Filter{
         }
     }
 
+    #[allow(clippy::redundant_closure_call)]
     pub fn save_filter(self, conn: &mut DbConnection) -> Result<(), CustomError>{
         use crate::dbconfig::schema::filters::dsl::*;
 
@@ -43,6 +44,7 @@ impl Filter{
                    .map_err(map_db_error)?;
            },
            None=>{
+
                execute_with_conn!(conn, |conn| {diesel::insert_into(filters)
                             .values(self)
                             .execute(conn)
