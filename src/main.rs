@@ -132,6 +132,7 @@ async fn index() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("Debug file located at {}", concat!(env!("OUT_DIR"), "/built.rs"));
+    init_logging();
 
     if args().len()>1 {
         spawn_blocking(move ||{
@@ -176,11 +177,8 @@ async fn main() -> std::io::Result<()> {
     let lobby = Lobby::default();
 
     let chat_server = lobby.start();
-    let mut connection = establish_connection();
-
 
     EnvironmentService::print_banner();
-    init_logging();
     match FileService::create_podcast_root_directory_exists(){
         Ok(_)=>{},
         Err(e)=>{
