@@ -4,7 +4,6 @@ use std::process::exit;
 use std::time::Duration;
 use crate::constants::inner_constants::{DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE};
 use crate::dbconfig::DBType;
-#[cfg(sqlite)]
 use crate::DBType as DbConnection;
 
 #[derive(Debug)]
@@ -14,7 +13,6 @@ pub struct ConnectionOptions {
     pub busy_timeout: Option<Duration>,
 }
 
-#[cfg(sqlite)]
 impl r2d2::CustomizeConnection<DbConnection, diesel::r2d2::Error>
 for ConnectionOptions
 {

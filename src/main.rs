@@ -31,7 +31,6 @@ use regex::Regex;
 use tokio::task::spawn_blocking;
 
 mod controllers;
-#[cfg(sqlite)]
 use crate::config::dbconfig::{ConnectionOptions};
 use crate::config::dbconfig::{establish_connection, get_database_url};
 use crate::constants::inner_constants::{BASIC_AUTH, CSS, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};

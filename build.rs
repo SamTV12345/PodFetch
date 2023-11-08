@@ -6,16 +6,9 @@ use std::process::Command;
 
 
 fn main() {
-        #[cfg(feature = "sqlite")]
-        println!("cargo:rustc-cfg=sqlite");
-        #[cfg(feature = "mysql")]
-        println!("cargo:rustc-cfg=mysql");
-        #[cfg(feature = "postgresql")]
-        println!("cargo:rustc-cfg=postgresql");
         let maybe_vaultwarden_version =
             env::var("VW_VERSION").or_else(|_| env::var("BWRS_VERSION")).or_else(|_| version_from_git_info());
 
-        #[cfg(feature = "postgresql")]
         version_from_git_info().expect("Error retrieving git information");
 
         create_git_sqlite();
