@@ -168,7 +168,7 @@ impl PodcastEpisode{
                 total_time.eq(duration),
                 podcast_id.eq(podcast.id),
                 episode_id.eq(uuid_podcast.to_string()),
-                name.eq(item.title.as_ref().unwrap().clone()),
+                name.eq(item.title.as_ref().unwrap_or(&"No title given".to_string())),
                 url.eq(item.enclosure.unwrap().url),
                 date_of_recording.eq(inserted_date),
                 image_url.eq(inserted_image_url),
