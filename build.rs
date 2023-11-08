@@ -14,7 +14,7 @@ fn main() {
                 println!("cargo:rustc-env=CARGO_PKG_VERSION={version}");
                 println!("cargo:rustc-env=GIT_EXACT_TAG={version}");
             },
-            Err(e) => {
+            Err(_) => {
                 println!("cargo:rustc-env=VW_VERSION=unknown");
                 println!("cargo:rustc-env=CARGO_PKG_VERSION=unknown");
                 println!("cargo:rustc-env=GIT_EXACT_TAG=unknown");
