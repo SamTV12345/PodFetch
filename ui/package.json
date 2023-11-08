@@ -41,7 +41,7 @@
     "react-router-dom": "^6.17.0",
     "react-waypoint": "^10.3.0",
     "sanitize-html": "^2.11.0",
-    "zustand": "^4.4.4"
+    "zustand": "^4.4.6"
   },
   "devDependencies": {
     "@types/react": "^18.2.31",
