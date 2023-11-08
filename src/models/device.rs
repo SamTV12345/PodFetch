@@ -4,7 +4,7 @@ use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::dbconfig::schema::devices;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
-use crate::DBType as DbConnection;
+use crate::{DBType as DbConnection, execute_with_conn};
 
 #[derive(Serialize, Deserialize, Queryable,Insertable, QueryableByName, Clone, ToSchema)]
 #[diesel(table_name=devices)]
@@ -40,19 +40,12 @@ impl Device {
 
     pub fn save(&self, conn: &mut DbConnection) -> Result<Device, diesel::result::Error> {
         use crate::dbconfig::schema::devices::dsl::*;
-        match conn {
-            DbConnection::Postgresql(conn)=>{
-                diesel::insert_into(devices)
-                    .values(self)
-                    .get_result(conn)
-            }
-            DbConnection::Sqlite(conn)=>{
-                diesel::insert_into(devices)
-                    .values(self)
-                    .get_result(conn)
-            }
-        }
 
+        execute_with_conn!(
+          conn, |conn|  diesel::insert_into(devices)
+                    .values(self)
+                    .get_result(conn)
+        );
     }
 
     pub fn get_devices_of_user(conn: &mut DbConnection, username_to_insert: String) ->

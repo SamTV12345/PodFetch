@@ -164,7 +164,18 @@ async fn main() -> std::io::Result<()> {
     let environment_service = EnvironmentService::new();
 
     check_server_config(environment_service.clone());
-    let pool = init_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+    let pool;
+    {
+        let conn = establish_connection();
+        match conn {
+            DBType::Postgresql(_) => {
+                pool = init_postgres_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+            }
+            DBType::Sqlite(_) => {
+                pool = init_sqlite_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+            }
+        }
+    }
     let data_pool = Data::new(pool);
 
     //services
@@ -497,8 +508,21 @@ pub fn check_server_config(service1: EnvironmentService) {
     }
 }
 
-#[cfg(sqlite)]
-async fn init_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DBType>>,
+async fn init_postgres_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DBType>>,
+    String> {
+    let db_connections = var("DB_CONNECTIONS").unwrap_or("10".to_string()).parse()
+        .unwrap_or(10);
+    let manager = ConnectionManager::<DBType>::new(database_url);
+    let pool = Pool::builder()
+        .max_size(db_connections)
+        .build(manager)
+        .expect("Failed to create pool.");
+    Ok(pool)
+}
+
+
+
+async fn init_sqlite_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBType>>,
     String> {
     let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder().max_size(16)

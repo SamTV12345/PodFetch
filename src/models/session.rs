@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::dbconfig::schema::sessions;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
-use crate::DBType as DbConnection;
+use crate::{DBType as DbConnection, execute_with_conn};
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
 pub struct Session{
@@ -26,18 +26,10 @@ impl Session{
     }
 
     pub fn insert_session(&self, conn: &mut DbConnection) -> Result<Self, diesel::result::Error>{
-        match conn {
-            DbConnection::Sqlite(conn)=>{
-                diesel::insert_into(sessions::table)
+
+        execute_with_conn!(conn,|conn|diesel::insert_into(sessions::table)
                     .values(self)
-                    .get_result(conn)
-            }
-            DbConnection::Postgresql(conn)=>{
-                diesel::insert_into(sessions::table)
-                    .values(self)
-                    .get_result(conn)
-            }
-        }
+                    .get_result(conn));
 
     }
 

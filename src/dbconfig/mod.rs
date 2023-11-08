@@ -31,3 +31,17 @@ macro_rules! import_database_config{
     pub const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
     }
 }
+
+#[macro_export]
+macro_rules! execute_with_conn {
+    ($conn:expr, $diesel_func:expr) => {
+        match $conn {
+            DbConnection::Sqlite(conn) => {
+                 return $diesel_func(conn)
+            },
+            DbConnection::Postgresql(conn) => {
+                return $diesel_func(conn)
+            },
+        }
+    };
+}

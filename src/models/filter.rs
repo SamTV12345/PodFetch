@@ -4,7 +4,7 @@ use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use diesel::AsChangeset;
 use diesel::Queryable;
-use crate::DBType as DbConnection;
+use crate::{DBType as DbConnection, execute_with_conn};
 use utoipa::ToSchema;
 use crate::utils::error::{CustomError, map_db_error};
 
@@ -43,18 +43,13 @@ impl Filter{
                    .map_err(map_db_error)?;
            },
            None=>{
-               match conn {
-                     DbConnection::Postgresql(conn)=>{
-                          diesel::insert_into(filters).values(self)
+               execute_with_conn!(conn, |conn| {diesel::insert_into(filters)
+                            .values(self)
                             .execute(conn)
                             .map_err(map_db_error)?;
-                     }
-                     DbConnection::Sqlite(conn)=>{
-                          diesel::insert_into(filters).values(self)
-                            .execute(conn)
-                            .map_err(map_db_error)?;
-                     }
+                   Ok(())
                }
+               );
            }
        }
         Ok(())
