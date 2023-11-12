@@ -132,29 +132,29 @@ impl DownloadService {
             });
         }
 
-        if let None = tag.title() {
+        if tag.title().is_none() {
             tag.set_title(podcast_episode.name);
         }
 
-        if let None = tag.artist() {
+        if tag.artist().is_none() {
             if let Some(author) = podcast.author{
                 tag.set_artist(author);
             }
         }
 
-        if let None = tag.album() {
+        if tag.album().is_none() {
             tag.set_album(podcast.name);
         }
 
         tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
 
-        if let None = tag.genres(){
+        if tag.genres().is_none() {
             if let Some(keywords) = podcast.keywords {
                 tag.set_genre(keywords);
             }
         }
 
-        if let None = tag.clone().comments().next() {
+        if tag.clone().comments().next().is_none() {
             tag.add_frame(id3::frame::Comment{
                 lang: podcast.language.unwrap_or("eng".to_string()),
                 description: "Comment".to_string(),
@@ -166,7 +166,7 @@ impl DownloadService {
             &podcast_episode
             .date_of_recording);
 
-        if let None = tag.track() {
+        if tag.track().is_none() {
             if let Ok(track_number) = track_number {
                 tag.set_track(track_number as u32);
             }
