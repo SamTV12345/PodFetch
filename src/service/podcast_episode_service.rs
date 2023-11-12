@@ -12,7 +12,7 @@ use crate::service::mapping_service::MappingService;
 use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
-use diesel::{OptionalExtension, RunQueryDsl};
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
@@ -302,8 +302,6 @@ impl PodcastEpisodeService {
 
     fn get_podcast_episode_by_guid(conn: &mut DbConnection, guid_to_search: &str) ->
                                                                                   Result<Option<PodcastEpisode>, CustomError> {
-        use diesel::QueryDsl;
-        use diesel::ExpressionMethods;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         podcast_episodes
             .filter(guid.eq(guid_to_search))
@@ -505,6 +503,18 @@ impl PodcastEpisodeService {
         PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id, conn);
         PodcastEpisode::update_deleted(conn,episode_id, true)?;
         Ok(episode.unwrap())
+    }
+
+    pub fn get_track_number_for_episode(conn: &mut DbConnection, podcast_id: i32, date_of_recording_to_search: &str)
+        -> Result<i64, CustomError> {
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+
+        podcast_episodes
+            .filter(crate::dbconfig::schema::podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(crate::dbconfig::schema::podcast_episodes::date_of_recording.le(date_of_recording_to_search))
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(map_db_error)
     }
 }
 

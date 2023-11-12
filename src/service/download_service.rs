@@ -6,12 +6,16 @@ use crate::service::mapping_service::MappingService;
 use reqwest::blocking::ClientBuilder;
 
 use std::io;
+use std::io::Read;
+use id3::{ErrorKind, Tag, TagLike, Version};
 use reqwest::header::HeaderMap;
 
 use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
-use crate::models::file_path::FilenameBuilder;
+use crate::dbconfig::DBType;
+use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::settings::Setting;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::error::CustomError;
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
@@ -104,6 +108,75 @@ impl DownloadService {
                 &paths.filename,
             conn)?;
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
+        Self::update_meta_data(paths,podcast_episode, podcast, conn)?;
+        Ok(())
+    }
+
+    fn update_meta_data(paths: FilenameBuilderReturn, podcast_episode: PodcastEpisode, podcast:
+        Podcast, conn: &mut DBType) ->Result<(),CustomError> {
+        let mut tag = match Tag::read_from_path(&paths.filename) {
+            Ok(tag) => tag,
+            Err(id3::Error{kind: ErrorKind::NoTag, ..}) => Tag::new(),
+            Err(err) => return Err(CustomError::Conflict(err.to_string()))
+        };
+
+        if let 0 = tag.pictures().count() {
+            let mut image_file = std::fs::File::open(paths.image_filename).unwrap();
+            let mut image_data = Vec::new();
+            let _ = image_file.read_to_end(&mut image_data);
+            tag.add_frame(id3::frame::Picture{
+                mime_type: "image/jpeg".to_string(),
+                picture_type: id3::frame::PictureType::CoverFront,
+                description: "Cover".to_string(),
+                data: image_data,
+            });
+        }
+
+        if let None = tag.title() {
+            tag.set_title(podcast_episode.name);
+        }
+
+        if let None = tag.artist() {
+            if let Some(author) = podcast.author{
+                tag.set_artist(author);
+            }
+        }
+
+        if let None = tag.album() {
+            tag.set_album(podcast.name);
+        }
+
+        tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
+
+        if let None = tag.genres(){
+            if let Some(keywords) = podcast.keywords {
+                tag.set_genre(keywords);
+            }
+        }
+
+        if let None = tag.clone().comments().next() {
+            tag.add_frame(id3::frame::Comment{
+                lang: podcast.language.unwrap_or("eng".to_string()),
+                description: "Comment".to_string(),
+                text: podcast_episode.description,
+            });
+        }
+
+        let track_number = PodcastEpisodeService::get_track_number_for_episode(conn,podcast.id,
+            &podcast_episode
+            .date_of_recording);
+
+        if let None = tag.track() {
+            if let Ok(track_number) = track_number {
+                tag.set_track(track_number as u32);
+            }
+        }
+
+        tag.write_to_path(paths.filename, Version::Id3v24)
+            .map(|_| ())
+            .map_err(|e|
+            CustomError::Conflict(e.to_string()))?;
+
         Ok(())
     }
 }
