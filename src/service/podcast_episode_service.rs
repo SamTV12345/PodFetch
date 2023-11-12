@@ -13,7 +13,6 @@ use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
 use actix_web::web;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use diesel::query_dsl::methods::GroupByDsl;
 use log::error;
 use regex::Regex;
 use reqwest::blocking::ClientBuilder;
@@ -510,10 +509,9 @@ impl PodcastEpisodeService {
         -> Result<i64, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 
-        GroupByDsl::group_by(podcast_episodes
+        podcast_episodes
             .filter(crate::dbconfig::schema::podcast_episodes::podcast_id.eq(podcast_id))
             .filter(crate::dbconfig::schema::podcast_episodes::date_of_recording.le(date_of_recording_to_search))
-            .order_by(crate::dbconfig::schema::podcast_episodes::date_of_recording.asc()), (crate::dbconfig::schema::podcast_episodes::podcast_id, crate::dbconfig::schema::podcast_episodes::date_of_recording))
             .count()
             .get_result::<i64>(conn)
             .map_err(map_db_error)
