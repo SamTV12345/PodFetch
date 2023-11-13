@@ -25,7 +25,7 @@
     "chart.js": "^4.4.0",
     "csstype": "^3.1.2",
     "framer-motion": "^10.16.4",
-    "i18next": "^23.6.0",
+    "i18next": "^23.7.3",
     "i18next-browser-languagedetector": "^7.1.0",
     "javascript-time-ago": "^2.5.9",
     "material-symbols": "^0.13.1",
