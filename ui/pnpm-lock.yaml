@@ -60,8 +60,8 @@ dependencies:
     specifier: ^2.5.9
     version: 2.5.9
   material-symbols:
-    specifier: ^0.13.1
-    version: 0.13.1
+    specifier: ^0.14.0
+    version: 0.14.0
   notistack:
     specifier: ^3.0.1
     version: 3.0.1(csstype@3.1.2)(react-dom@18.2.0)(react@18.2.0)
@@ -1825,8 +1825,8 @@ packages:
       js-tokens: 4.0.0
     dev: false
 
-  /material-symbols@0.13.1:
-    resolution: {integrity: sha512-m7FylIZ3NzsMpNcv233QkVyMEDoE8CJeI12ZTij4x3pOizaesgeBDE9rQ74JY4xX5gJW+BhTL/eV37brm/JplA==}
+  /material-symbols@0.14.0:
+    resolution: {integrity: sha512-b7jNKNvsUn5fjJFVPb0iKuORkmIzRZfAOA2p6p1+YufKYy3NE0u3aZ2w5rQ7/2IFnm66o8W51vfuEK2wVmMJ/A==}
     dev: false
 
   /merge2@1.4.1:
