@@ -36,7 +36,7 @@ futures-util = "0.3.29"
 substring = "1.4.5"
 opml = "1.1.5"
 rand = "0.8.5"
-env_logger = "0.10.0"
+env_logger = "0.10.1"
 chrono = {version  = "0.4.31", default-features=false, features = ["serde"]}
 actix-web-actors = "4.2.0"
 rss = "2.0.6"
