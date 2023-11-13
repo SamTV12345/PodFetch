@@ -87,10 +87,12 @@ volumes:
 version: '3'
 services:
   podfetch:
-    image: samuel19982/podfetch:postgres
+    image: samuel19982/podfetch:latest
     user: ${UID:-1000}:${GID:-1000}
     ports:
       - "80:8000"
+    depends_on:
+      - postgres
     volumes:
       - ./podcasts:/app/podcasts
     environment:

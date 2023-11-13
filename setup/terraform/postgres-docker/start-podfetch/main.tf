@@ -9,7 +9,7 @@ terraform {
 
 resource "docker_container" "podfetch" {
   name    = "podfetch"
-  image   = "samuel19982/podfetch:postgres"
+  image   = "samuel19982/podfetch:latest"
   restart = "always"
   labels {
     label = "traefik.enable"
