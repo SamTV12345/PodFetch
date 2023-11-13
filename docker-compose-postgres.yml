@@ -1,7 +1,7 @@
 version: '3'
 services:
   podfetch:
-    image: samuel19982/podfetch:postgres
+    image: samuel19982/podfetch:latest
     user: ${UID:-1000}:${GID:-1000}
     ports:
       - "80:8000"
@@ -11,6 +11,8 @@ services:
       - POLLING_INTERVAL=300
       - SERVER_URL=http://localhost:80
       - DATABASE_URL=postgresql://postgres:changeme@postgres/podfetch
+    depends_on:
+      - postgres
   postgres:
     image: postgres
     environment:
