@@ -176,5 +176,6 @@
   "podcast-episode-played": "{{percentage}} played",
   "restart-playing": "Restart playing",
   "you-already-listened": "You already listened to the episode <name/>. Do you want to restart playing?",
-  "podcast-not-found": "Podcast not found"
+  "podcast-not-found": "Podcast not found",
+  "original-rss-feed": "Original RSS feed"
 }

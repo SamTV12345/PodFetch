@@ -1,16 +1,16 @@
-import { Fragment, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import axios, {AxiosResponse } from 'axios'
-import { apiURL, removeHTML } from '../utils/Utilities'
+import {Fragment, useEffect, useState} from 'react'
+import {useParams} from 'react-router-dom'
+import {useTranslation} from 'react-i18next'
+import axios, {AxiosResponse} from 'axios'
+import {apiURL, removeHTML} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
-import { Chip } from '../components/Chip'
-import { Heading1 } from '../components/Heading1'
-import { Heading2 } from '../components/Heading2'
-import { PodcastDetailItem } from '../components/PodcastDetailItem'
-import { PodcastInfoModal } from '../components/PodcastInfoModal'
-import { Switcher } from '../components/Switcher'
+import {Chip} from '../components/Chip'
+import {Heading1} from '../components/Heading1'
+import {Heading2} from '../components/Heading2'
+import {PodcastDetailItem} from '../components/PodcastDetailItem'
+import {PodcastInfoModal} from '../components/PodcastInfoModal'
+import {Switcher} from '../components/Switcher'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
@@ -23,7 +23,7 @@ export const PodcastDetailPage = () => {
     const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const params = useParams()
     const [lineClamp, setLineClamp] = useState(true)
-    const { t } = useTranslation()
+    const {t} = useTranslation()
     const setCurrentDetailedPodcastId = useCommon(state => state.setCurrentDetailedPodcastId)
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
@@ -37,14 +37,14 @@ export const PodcastDetailPage = () => {
             setCurrentPodcast(response.data)
         }).then(() => {
             axios.get(apiURL + '/podcast/' + params.id + '/episodes')
-                .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
+                .then((response: AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
                     setSelectedEpisodes(response.data)
 
                     if (params.podcastid) {
                         const element = document.getElementById('episode_' + params.podcastid)
 
                         if (element) {
-                            element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+                            element.scrollIntoView({behavior: 'smooth', block: 'start', inline: 'nearest'})
                         }
                     }
                 })
@@ -76,21 +76,21 @@ export const PodcastDetailPage = () => {
             const element = document.getElementById('episode_' + params.podcastid)
 
             if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+                element.scrollIntoView({behavior: 'smooth', block: 'start', inline: 'nearest'})
             }
         }
     }, [params])
 
     useEffect(() => {
-        return ()=>{
+        return () => {
             setInfoModalPodcastOpen(false)
         }
     }, []);
 
     if (currentPodcast === undefined) {
-            return <div className="w-full md:w-3/4 mx-auto">
-                <ErrorIcon text={t('podcast-not-found')} />
-            </div>
+        return <div className="w-full md:w-3/4 mx-auto">
+            <ErrorIcon text={t('podcast-not-found')}/>
+        </div>
     }
 
     return (
@@ -124,12 +124,14 @@ export const PodcastDetailPage = () => {
                     ">
                         <Heading1 className="inline align-middle mr-2">{currentPodcast.name}</Heading1>
 
-                        <span className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]" onClick={() => {
-                            axios.post(apiURL + '/podcast/' + params.id + '/refresh')
-                                .then(() => {
-                                    console.log('Refreshed')
-                                })
-                        }}>refresh</span>
+                        <span
+                            className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                            onClick={() => {
+                                axios.post(apiURL + '/podcast/' + params.id + '/refresh')
+                                    .then(() => {
+                                        console.log('Refreshed')
+                                    })
+                            }}>refresh</span>
                     </div>
 
                     {/* Metadata */}
@@ -147,7 +149,20 @@ export const PodcastDetailPage = () => {
                             ))}
                         </div>}
 
-                        <span className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]" onClick={() => { window.open(configModel?.rssFeed + '/' + params.id) }}>rss_feed</span>
+                        <span className="grid grid-cols-1 md:grid-cols-2">
+                        <button className="flex gap-4" rel="noopener noreferrer"
+                                onClick={() => window.open(configModel?.rssFeed + '/' + params.id)}>
+                            <a rel="noopener noreferrer" className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                               target="_blank" href={configModel?.rssFeed + '/' + params.id}>rss_feed</a>
+                            <span className="text-[--fg-color]">PodFetch</span>
+                        </button>
+
+                        <button className="flex gap-4" rel="noopener noreferrer" onClick={() => window.open(currentPodcast.rssfeed)}>
+                            <a className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                               target="_blank" rel="noopener noreferrer" href={currentPodcast.rssfeed}>rss_feed</a>
+                            <span className="text-[--fg-color]">{t('original-rss-feed')}</span>
+                        </button>
+                            </span>
                     </div>
 
                     {/* Toggle */}
@@ -163,19 +178,22 @@ export const PodcastDetailPage = () => {
                         <Switcher checked={currentPodcast.active} setChecked={() => {
                             axios.put(apiURL + '/podcast/' + params.id + '/active')
                                 .then(() => {
-                                    setCurrentPodcast({ ...currentPodcast, active: !currentPodcast?.active })
+                                    setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active})
                                 })
-                        }} />
+                        }}/>
                     </div>
                 </div>
 
                 {/* Description */
-                currentPodcast.summary &&
+                    currentPodcast.summary &&
                     <div className="relative leading-[1.75] mb-8 text-sm text-[--fg-color]">
-                        <div id="summary" className={lineClamp?'line-clamp-3':''} dangerouslySetInnerHTML={removeHTML(currentPodcast.summary)}/>
-                        {(isOverflown('summary')||lineClamp)&&<div className="cursor-pointer underline text-[--accent-color] hover:text-[--accent-color-hover]"  onClick={() => {
-                            setLineClamp(!lineClamp)
-                        }}>
+                        <div id="summary" className={lineClamp ? 'line-clamp-3' : ''}
+                             dangerouslySetInnerHTML={removeHTML(currentPodcast.summary)}/>
+                        {(isOverflown('summary') || lineClamp) && <div
+                            className="cursor-pointer underline text-[--accent-color] hover:text-[--accent-color-hover]"
+                            onClick={() => {
+                                setLineClamp(!lineClamp)
+                            }}>
                             {lineClamp ? t('show-more') : t('show-less')}
                         </div>}
                     </div>
@@ -186,7 +204,8 @@ export const PodcastDetailPage = () => {
                     <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
 
                     {selectedEpisodes.map((episode, index) => (
-                        <PodcastDetailItem episode={episode} key={episode.podcastHistoryItem?.id} index={index} episodesLength={selectedEpisodes.length} />
+                        <PodcastDetailItem episode={episode} key={episode.podcastHistoryItem?.id} index={index}
+                                           episodesLength={selectedEpisodes.length}/>
                     ))}
                 </div>
             </div>
