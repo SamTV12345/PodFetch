@@ -150,16 +150,16 @@ export const PodcastDetailPage = () => {
                         </div>}
 
                         <span className="grid grid-cols-1 md:grid-cols-2">
-                        <button className="flex gap-4"
+                        <button className="flex gap-4" rel="noopener noreferrer"
                                 onClick={() => window.open(configModel?.rssFeed + '/' + params.id)}>
-                            <a className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                            <a rel="noopener noreferrer" className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
                                target="_blank" href={configModel?.rssFeed + '/' + params.id}>rss_feed</a>
                             <span className="text-[--fg-color]">PodFetch</span>
                         </button>
 
-                        <button className="flex gap-4" onClick={() => window.open(currentPodcast.rssfeed)}>
+                        <button className="flex gap-4" rel="noopener noreferrer" onClick={() => window.open(currentPodcast.rssfeed)}>
                             <a className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
-                               target="_blank" href={currentPodcast.rssfeed}>rss_feed</a>
+                               target="_blank" rel="noopener noreferrer" href={currentPodcast.rssfeed}>rss_feed</a>
                             <span className="text-[--fg-color]">{t('original-rss-feed')}</span>
                         </button>
                             </span>
