@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from 'react'
+import {FC, useEffect, useMemo, useRef, useState} from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { apiURL } from '../utils/Utilities'
@@ -6,7 +6,7 @@ import { FileItem, readFile } from '../utils/FileUtils'
 import useOpmlImport from '../store/opmlImportSlice'
 import { AddTypes } from '../models/AddTypes'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
-
+import * as txml from 'txml'
 type DragState = "none" | "allowed" | "invalid"
 
 type OpmlAddProps = {
@@ -22,6 +22,12 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
     const [files, setFiles] = useState<FileItem[]>([])
     const [podcastsToUpload, setPodcastsToUpload] = useState<number>(0)
     const { t } = useTranslation()
+    const translated_file_contents = useMemo(()=>{
+        for (let f of files) {
+            console.log(txml.parse(f.content))
+        }
+        return ""
+    },[files])
 
     useEffect(() => {
         if (progress.length === podcastsToUpload) {
@@ -114,11 +120,17 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
             {/* File(s) selected */
             files.length > 0 && !opmlUploading && files.length === 0 &&
                 <div className="leading-[1.75] text-sm text-[--fg-color] w-full">
-                    {t('following-file-uploaded')}
+                    {t('following-files-uploaded')}
                     <div className="" onClick={() => {setFiles([])}}>
                         {files[0].name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i>
                     </div>
                 </div>
+            }
+            {
+
+                files && files.map(file=>{
+                    return <span>{file.content}</span>
+                })
             }
             {/* Upload in progress */
             opmlUploading &&
