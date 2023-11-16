@@ -198,10 +198,12 @@ impl Favorite{
             }
         }
 
-        if title.is_some() {
+        sql_function!(fn lower(x: Text) -> Text);
+
+        if let Some(title) = title {
             use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
             query = query
-                .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+                .filter(lower(podcasttitle).like(format!("%{}%", title.to_lowercase())));
         }
 
         let mut matching_podcast_ids = vec![];
