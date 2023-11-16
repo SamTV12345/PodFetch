@@ -7,21 +7,11 @@ pub fn init_logging() {
     Builder::new()
         .format(|buf, record| {
             let symbol = match record.level() {
-                Level::Info=>{
-                    "ℹ️"
-                }
-                Level::Error => {
-                    "❌"
-                }
-                Level::Warn => {
-                    "⚠️"
-                }
-                Level::Debug => {
-                    "🐛"
-                }
-                Level::Trace => {
-                    "🔍"
-                }
+                Level::Info => "ℹ️",
+                Level::Error => "❌",
+                Level::Warn => "⚠️",
+                Level::Debug => "🐛",
+                Level::Trace => "🔍",
             };
             writeln!(
                 buf,

@@ -1,20 +1,23 @@
-use std::env;
-use crate::models::settings::ConfigModel;
-use std::env::var;
-use regex::Regex;
 use crate::config::dbconfig::get_database_url;
-use crate::constants::inner_constants::{BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME};
+use crate::constants::inner_constants::{
+    BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID,
+    OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET,
+    POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME,
+};
+use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
+use regex::Regex;
+use std::env;
+use std::env::var;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct OidcConfig{
+pub struct OidcConfig {
     authority: String,
     client_id: String,
     redirect_uri: String,
-    scope: String
+    scope: String,
 }
-
 
 #[derive(Clone)]
 pub struct EnvironmentService {
@@ -27,41 +30,39 @@ pub struct EnvironmentService {
     pub password: String,
     pub oidc_config: Option<OidcConfig>,
     pub oidc_configured: bool,
-    pub gpodder_integration_enabled: bool
+    pub gpodder_integration_enabled: bool,
 }
 
 impl Default for EnvironmentService {
     fn default() -> Self {
-              Self::new()
-     }
- }
-
+        Self::new()
+    }
+}
 
 impl EnvironmentService {
     pub fn new() -> EnvironmentService {
         let mut option_oidc_config = None;
         let oidc_configured = is_env_var_present_and_true(OIDC_AUTH);
-        if oidc_configured{
-            option_oidc_config = Some(OidcConfig{
+        if oidc_configured {
+            option_oidc_config = Some(OidcConfig {
                 redirect_uri: var(OIDC_REDIRECT_URI).expect("OIDC redirect uri not configured"),
                 authority: var(OIDC_AUTHORITY).expect("OIDC authority not configured"),
                 client_id: var(OIDC_CLIENT_ID).expect("OIDC client id not configured"),
-                scope: var(OIDC_SCOPE).unwrap_or("openid profile email".to_string())
+                scope: var(OIDC_SCOPE).unwrap_or("openid profile email".to_string()),
             });
         }
         let mut server_url = var(SERVER_URL).unwrap_or("http://localhost:8000".to_string());
         // Add trailing slash if not present
         if !server_url.ends_with('/') {
-            server_url+= "/"
+            server_url += "/"
         }
 
-        if  var(SUB_DIRECTORY).is_err(){
+        if var(SUB_DIRECTORY).is_err() {
             let re = Regex::new(r"^http[s]?://[^/]+(/.*)?$").unwrap();
             let directory = re.captures(&server_url).unwrap().get(1).unwrap().as_str();
-            if directory.ends_with('/'){
-                env::set_var(SUB_DIRECTORY, &directory[0..directory.len()-1]);
-            }
-            else{
+            if directory.ends_with('/') {
+                env::set_var(SUB_DIRECTORY, &directory[0..directory.len() - 1]);
+            } else {
                 env::set_var(SUB_DIRECTORY, directory);
             }
         }
@@ -79,7 +80,7 @@ impl EnvironmentService {
             password: var(PASSWORD).unwrap_or("".to_string()),
             oidc_configured,
             oidc_config: option_oidc_config,
-            gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED)
+            gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED),
         }
     }
 
@@ -110,9 +111,16 @@ impl EnvironmentService {
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
-        log::info!("Developer specifications available at {}",self.server_url.clone()+"swagger-ui/index\
-        .html#/");
-        log::info!("GPodder integration enabled: {}", self.gpodder_integration_enabled);
+        log::info!(
+            "Developer specifications available at {}",
+            self.server_url.clone()
+                + "swagger-ui/index\
+        .html#/"
+        );
+        log::info!(
+            "GPodder integration enabled: {}",
+            self.gpodder_integration_enabled
+        );
         log::debug!("Database url is set to: {}", &get_database_url());
         log::info!(
             "Podindex API key&secret configured: {}",
@@ -129,7 +137,7 @@ impl EnvironmentService {
             server_url: self.server_url.clone(),
             basic_auth: self.http_basic,
             oidc_configured: self.oidc_configured,
-            oidc_config: self.oidc_config.clone()
+            oidc_config: self.oidc_config.clone(),
         }
     }
 
@@ -150,13 +158,16 @@ impl EnvironmentService {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
+    use crate::constants::inner_constants::{
+        BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE,
+        PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME,
+    };
     use crate::service::environment_service::EnvironmentService;
-    use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
-    use std::env::{set_var,remove_var};
     use serial_test::serial;
+    use std::env::{remove_var, set_var};
 
-    fn do_env_cleanup(){
+    fn do_env_cleanup() {
         remove_var(SERVER_URL);
         remove_var(PODINDEX_API_KEY);
         remove_var(PODINDEX_API_SECRET);
@@ -193,9 +204,18 @@ mod tests{
         assert_eq!(config.server_url, "http://localhost:8000/");
         assert!(config.basic_auth);
         assert!(config.oidc_configured);
-        assert_eq!(config.oidc_config.clone().unwrap().clone().client_id, "test");
-        assert_eq!(config.oidc_config.clone().unwrap().clone().redirect_uri, "http://localhost:8000/oidc");
-        assert_eq!(config.oidc_config.clone().unwrap().clone().scope, "openid profile email");
+        assert_eq!(
+            config.oidc_config.clone().unwrap().clone().client_id,
+            "test"
+        );
+        assert_eq!(
+            config.oidc_config.clone().unwrap().clone().redirect_uri,
+            "http://localhost:8000/oidc"
+        );
+        assert_eq!(
+            config.oidc_config.clone().unwrap().clone().scope,
+            "openid profile email"
+        );
     }
 
     #[test]
@@ -237,7 +257,6 @@ mod tests{
 
         assert_eq!(env_service.get_podindex_api_key(), "test");
         assert_eq!(env_service.get_podindex_api_secret(), "testsecret");
-
     }
 
     #[test]

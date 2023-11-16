@@ -1,20 +1,24 @@
-use base64::Engine;
 use base64::engine::general_purpose;
+use base64::Engine;
 use regex::Regex;
 
-pub fn add_basic_auth_headers_conditionally(url: String, header_map: &mut
-reqwest::header::HeaderMap) {
+pub fn add_basic_auth_headers_conditionally(
+    url: String,
+    header_map: &mut reqwest::header::HeaderMap,
+) {
     if url.contains('@') {
         let re = Regex::new(r".*//([^/?#\s]+)@.*").unwrap();
         if let Some(captures) = re.captures(&url) {
             if let Some(auth) = captures.get(1) {
                 let b64_auth = general_purpose::STANDARD.encode(auth.as_str());
-                header_map.append("Authorization", ("Basic ".to_owned() + &b64_auth).parse().unwrap());
+                header_map.append(
+                    "Authorization",
+                    ("Basic ".to_owned() + &b64_auth).parse().unwrap(),
+                );
             }
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -27,8 +31,11 @@ mod tests {
 
         add_basic_auth_headers_conditionally(url.to_string(), &mut header_map);
 
-        assert_eq!(header_map.len(),1);
-        assert_eq!(header_map.get("Authorization").unwrap().to_str().unwrap(),"Basic dXNlcjpwYXNz");
+        assert_eq!(header_map.len(), 1);
+        assert_eq!(
+            header_map.get("Authorization").unwrap().to_str().unwrap(),
+            "Basic dXNlcjpwYXNz"
+        );
     }
 
     #[test]
@@ -38,8 +45,11 @@ mod tests {
 
         add_basic_auth_headers_conditionally(url.to_string(), &mut header_map);
 
-        assert_eq!(header_map.len(),1);
-        assert_eq!(header_map.get("Authorization").unwrap().to_str().unwrap(),"Basic dXNlcjEyMzEyMzpKbTdZQVQ4bTVZQThGb3J4N3c2d3NtVVhEdmNKbnk=");
+        assert_eq!(header_map.len(), 1);
+        assert_eq!(
+            header_map.get("Authorization").unwrap().to_str().unwrap(),
+            "Basic dXNlcjEyMzEyMzpKbTdZQVQ4bTVZQThGb3J4N3c2d3NtVVhEdmNKbnk="
+        );
     }
 
     #[test]
@@ -47,11 +57,11 @@ mod tests {
         let mut header_map = reqwest::header::HeaderMap::new();
         let url = "https://user:pass@localhost:8080";
 
-        header_map.append("Content-Type","application/json".parse().unwrap());
+        header_map.append("Content-Type", "application/json".parse().unwrap());
 
         add_basic_auth_headers_conditionally(url.to_string(), &mut header_map);
 
-        assert_eq!(header_map.len(),2)
+        assert_eq!(header_map.len(), 2)
     }
 
     #[test]
@@ -59,10 +69,10 @@ mod tests {
         let mut header_map = reqwest::header::HeaderMap::new();
         let url = "https://user:pass@localhost:8080";
 
-        header_map.append("Content-Type","application/json".parse().unwrap());
+        header_map.append("Content-Type", "application/json".parse().unwrap());
 
         add_basic_auth_headers_conditionally(url.to_string(), &mut header_map);
 
-        assert_eq!(header_map.len(),2)
+        assert_eq!(header_map.len(), 2)
     }
 }

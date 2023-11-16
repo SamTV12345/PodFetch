@@ -13,5 +13,5 @@ pub struct PodcastDto {
     pub author: Option<String>,
     pub active: bool,
     pub original_image_url: String,
-    pub favorites: bool
+    pub favorites: bool,
 }

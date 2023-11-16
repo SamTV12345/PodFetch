@@ -1,7 +1,7 @@
-pub mod routes;
-pub mod device;
-pub mod parametrization;
 pub mod auth;
-pub mod subscription;
+pub mod device;
 mod episodes;
+pub mod parametrization;
+pub mod routes;
 mod session_middleware;
+pub mod subscription;

@@ -12,7 +12,7 @@ pub enum PodcastType {
     DeletePodcastEpisode,
     RefreshPodcast,
     OpmlAdded,
-    OpmlErrored
+    OpmlErrored,
 }
 
 pub const DEFAULT_SETTINGS: PartialSettings = PartialSettings {
@@ -21,9 +21,8 @@ pub const DEFAULT_SETTINGS: PartialSettings = PartialSettings {
     auto_update: true,
     auto_cleanup: true,
     auto_cleanup_days: 30,
-    podcast_prefill: 5
+    podcast_prefill: 5,
 };
-
 
 pub struct PartialSettings {
     pub id: i32,
@@ -38,9 +37,8 @@ pub const TELEGRAM_BOT_TOKEN: &str = "TELEGRAM_BOT_TOKEN";
 pub const TELEGRAM_BOT_CHAT_ID: &str = "TELEGRAM_BOT_CHAT_ID";
 pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";
 
-
 // User management roles
-#[derive( Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     Admin,
@@ -48,8 +46,7 @@ pub enum Role {
     User,
 }
 
-
-impl fmt::Display for Role{
+impl fmt::Display for Role {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Role::Admin => {
@@ -65,7 +62,7 @@ impl fmt::Display for Role{
     }
 }
 
-impl FromStr for Role{
+impl FromStr for Role {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -77,22 +74,21 @@ impl FromStr for Role{
         }
     }
 }
-impl Role{
+impl Role {
     pub const VALUES: [Self; 3] = [Self::User, Self::Admin, Self::Uploader];
 }
 
 // environment keys
-pub const OIDC_AUTH:&str = "OIDC_AUTH";
-pub const OIDC_REDIRECT_URI:&str = "OIDC_REDIRECT_URI";
-pub const OIDC_AUTHORITY:&str = "OIDC_AUTHORITY";
-pub const OIDC_CLIENT_ID:&str = "OIDC_CLIENT_ID";
-pub const OIDC_SCOPE:&str = "OIDC_SCOPE";
+pub const OIDC_AUTH: &str = "OIDC_AUTH";
+pub const OIDC_REDIRECT_URI: &str = "OIDC_REDIRECT_URI";
+pub const OIDC_AUTHORITY: &str = "OIDC_AUTHORITY";
+pub const OIDC_CLIENT_ID: &str = "OIDC_CLIENT_ID";
+pub const OIDC_SCOPE: &str = "OIDC_SCOPE";
 
-pub const BASIC_AUTH:&str = "BASIC_AUTH";
+pub const BASIC_AUTH: &str = "BASIC_AUTH";
 
-
-pub const USERNAME:&str = "USERNAME";
-pub const PASSWORD:&str = "PASSWORD";
+pub const USERNAME: &str = "USERNAME";
+pub const PASSWORD: &str = "PASSWORD";
 
 pub const SERVER_URL: &str = "SERVER_URL";
 
@@ -102,21 +98,18 @@ pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 
 pub const STANDARD_USER: &str = "user123";
 
-
 pub const ERR_SETTINGS_FORMAT: &str = "A podcast/episode format needs to contain an opening and \
 closing bracket ({}).";
 
 pub const PODCAST_FILENAME: &str = "podcast";
-pub const PODCAST_IMAGENAME:&str = "image";
+pub const PODCAST_IMAGENAME: &str = "image";
 
 pub const POLLING_INTERVAL_DEFAULT: u32 = 300;
-
 
 // podindex config
 
 pub const PODINDEX_API_KEY: &str = "PODINDEX_API_KEY";
 pub const PODINDEX_API_SECRET: &str = "PODINDEX_API_SECRET";
-
 
 // GPodder config
 
@@ -126,13 +119,10 @@ pub const DATABASE_URL: &str = "DATABASE_URL";
 
 pub const DATABASE_URL_DEFAULT_SQLITE: &str = "sqlite://./db/podcast.db";
 
-
 pub const CSS: &str = "css";
 pub const JS: &str = "javascript";
 
-
-pub const MAX_FILE_TREE_DEPTH:i32 = 4;
-
+pub const MAX_FILE_TREE_DEPTH: i32 = 4;
 
 pub const COMMON_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36";

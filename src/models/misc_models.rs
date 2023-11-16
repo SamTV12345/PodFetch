@@ -1,11 +1,8 @@
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
-
-use utoipa::ToSchema;
 use chrono::NaiveDateTime;
-
-
+use utoipa::ToSchema;
 
 // decode request data
 #[derive(Deserialize)]
@@ -41,9 +38,6 @@ pub struct PodcastWatchedPostModel {
     pub time: i32,
 }
 
-
-
-
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastWatchedEpisodeModel {
@@ -73,5 +67,3 @@ pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub podcast_episode: PodcastEpisode,
     pub podcast: Podcast,
 }
-
-

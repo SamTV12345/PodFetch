@@ -1,4 +1,4 @@
-use std::sync::{LockResult};
+use std::sync::LockResult;
 
 /// Extension methods for [`LockResult`].
 ///

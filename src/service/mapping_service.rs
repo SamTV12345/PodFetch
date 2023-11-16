@@ -1,21 +1,20 @@
 use crate::models::favorites::Favorite;
-use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
-use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode};
+use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
-use crate::service::environment_service;
 use crate::models::podcasts::Podcast;
-
+use crate::service::environment_service;
 
 #[derive(Clone)]
 pub struct MappingService {
     env_service: environment_service::EnvironmentService,
 }
 impl Default for MappingService {
-       fn default() -> Self {
-                 Self::new()
-             }
+    fn default() -> Self {
+        Self::new()
     }
+}
 
 impl MappingService {
     pub fn new() -> MappingService {
@@ -44,17 +43,16 @@ impl MappingService {
         }
     }
 
-
-    pub fn map_podcast_to_podcast_dto_with_favorites(&self, podcast_favorite_grouped: &(Podcast,
-                                                                                       Option<Favorite>)
+    pub fn map_podcast_to_podcast_dto_with_favorites(
+        &self,
+        podcast_favorite_grouped: &(Podcast, Option<Favorite>),
     ) -> PodcastDto {
-
-        let favorite = podcast_favorite_grouped.1.is_some() && podcast_favorite_grouped.1.clone()
-            .unwrap().favored;
-     PodcastDto{
+        let favorite = podcast_favorite_grouped.1.is_some()
+            && podcast_favorite_grouped.1.clone().unwrap().favored;
+        PodcastDto {
             id: podcast_favorite_grouped.0.id,
             name: podcast_favorite_grouped.0.name.clone(),
-         directory_id: podcast_favorite_grouped.0.directory_id.clone(),
+            directory_id: podcast_favorite_grouped.0.directory_id.clone(),
             rssfeed: podcast_favorite_grouped.0.rssfeed.clone(),
             image_url: environment_service::EnvironmentService::get_server_url(&self.env_service)
                 + &podcast_favorite_grouped.0.image_url.clone(),
@@ -66,18 +64,19 @@ impl MappingService {
             author: podcast_favorite_grouped.0.author.clone(),
             active: podcast_favorite_grouped.0.active,
             original_image_url: podcast_favorite_grouped.0.original_image_url.clone(),
-            favorites: favorite
-     }
+            favorites: favorite,
+        }
     }
 
-    pub fn map_podcast_to_podcast_dto_with_favorites_option(&self, podcast_favorite_grouped: &
-    (Podcast, Favorite))->PodcastDto{
+    pub fn map_podcast_to_podcast_dto_with_favorites_option(
+        &self,
+        podcast_favorite_grouped: &(Podcast, Favorite),
+    ) -> PodcastDto {
         self.map_podcast_to_podcast_dto_with_favorites(&(
             podcast_favorite_grouped.0.clone(),
-            Some(podcast_favorite_grouped.1.clone())
+            Some(podcast_favorite_grouped.1.clone()),
         ))
     }
-
 
     pub fn map_podcastepisode_to_dto(&self, podcast_episode: &PodcastEpisode) -> PodcastEpisode {
         PodcastEpisode {
@@ -91,7 +90,7 @@ impl MappingService {
             image_url: podcast_episode.image_url.clone(),
             total_time: podcast_episode.total_time,
             local_url: podcast_episode.local_url.clone(),
-            local_image_url:  podcast_episode.local_image_url.clone(),
+            local_image_url: podcast_episode.local_image_url.clone(),
             status: podcast_episode.status.clone(),
             download_time: podcast_episode.download_time,
             guid: podcast_episode.guid.clone(),

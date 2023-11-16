@@ -4,48 +4,47 @@ use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
 
-
-use actix::fut::{ok};
-use futures_util::FutureExt;
-use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage, web};
+use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
+use crate::models::user::User;
+use crate::DbPool;
+use actix::fut::ok;
 use actix_web::body::{EitherBody, MessageBody};
 use actix_web::error::{ErrorForbidden, ErrorUnauthorized};
-use base64::Engine;
+use actix_web::{
+    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
+    web, Error, HttpMessage,
+};
 use base64::engine::general_purpose;
-use futures_util::future::{LocalBoxFuture, Ready};
+use base64::Engine;
 use dotenv::var;
-use jsonwebtoken::{Algorithm, decode, DecodingKey, Validation};
-use jsonwebtoken::jwk::{Jwk};
+use futures_util::future::{LocalBoxFuture, Ready};
+use futures_util::FutureExt;
+use jsonwebtoken::jwk::Jwk;
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
-use serde_json::{Value};
-use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
-use crate::{DbPool};
-use crate::models::user::User;
+use serde_json::Value;
 use sha256::digest;
 
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
-pub struct AuthFilter {
-}
+pub struct AuthFilter {}
 
 impl AuthFilter {
     pub fn new() -> Self {
-        AuthFilter {
-        }
+        AuthFilter {}
     }
 }
 
 #[derive(Default)]
-pub struct AuthFilterMiddleware<S>{
-    service: Rc<S>
+pub struct AuthFilterMiddleware<S> {
+    service: Rc<S>,
 }
 
-
 impl<S, B> Transform<S, ServiceRequest> for AuthFilter
-    where
-        S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-        S::Future: 'static,
-        B: MessageBody + 'static,
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S::Future: 'static,
+    B: MessageBody + 'static,
 {
     type Response = ServiceResponse<EitherBody<B>>;
     type Error = Error;
@@ -55,18 +54,16 @@ impl<S, B> Transform<S, ServiceRequest> for AuthFilter
 
     fn new_transform(&self, service: S) -> Self::Future {
         ok(AuthFilterMiddleware {
-            service: Rc::new(service)
+            service: Rc::new(service),
         })
     }
 }
 
-
-
 impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
-    where
-        S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-        S::Future: 'static,
-        B: MessageBody + 'static,
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S::Future: 'static,
+    B: MessageBody + 'static,
 {
     type Response = ServiceResponse<EitherBody<B>>;
     type Error = Error;
@@ -75,25 +72,32 @@ impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-           if is_env_var_present_and_true(BASIC_AUTH) {
-                       self.handle_basic_auth(req)
-           } else if is_env_var_present_and_true(OIDC_AUTH) {
-                      self.handle_oidc_auth(req)
-           } else {
-                        // It can only be no auth
-                           self.handle_no_auth(req)
-            }
-
+        if is_env_var_present_and_true(BASIC_AUTH) {
+            self.handle_basic_auth(req)
+        } else if is_env_var_present_and_true(OIDC_AUTH) {
+            self.handle_oidc_auth(req)
+        } else {
+            // It can only be no auth
+            self.handle_no_auth(req)
+        }
     }
 }
 
-type MyFuture<B, Error> = Pin<Box<dyn Future<Output = Result<ServiceResponse<EitherBody<B>>, Error>>>>;
+type MyFuture<B, Error> =
+    Pin<Box<dyn Future<Output = Result<ServiceResponse<EitherBody<B>>, Error>>>>;
 
-impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error>, S::Future: 'static {
+impl<S, B> AuthFilterMiddleware<S>
+where
+    B: 'static + MessageBody,
+    S: 'static + Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S::Future: 'static,
+{
     fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let opt_auth_header = req.headers().get("Authorization");
         if opt_auth_header.is_none() {
-            return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
+            return Box::pin(ok(req
+                .error_response(ErrorUnauthorized("Unauthorized"))
+                .map_into_right_body()));
         }
         return match opt_auth_header.unwrap().to_str() {
             Ok(auth) => {
@@ -102,12 +106,13 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                 let found_user = User::find_by_username(username.as_str(), &mut res.get().unwrap());
 
                 if found_user.is_err() {
-                    return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized"))
-                        .map_into_right_body()))
+                    return Box::pin(ok(req
+                        .error_response(ErrorUnauthorized("Unauthorized"))
+                        .map_into_right_body()));
                 }
                 let unwrapped_user = found_user.unwrap();
 
-                if unwrapped_user.username.clone() == var(USERNAME).unwrap(){
+                if unwrapped_user.username.clone() == var(USERNAME).unwrap() {
                     return match password == var(PASSWORD).unwrap() {
                         true => {
                             req.extensions_mut().insert(unwrapped_user);
@@ -119,38 +124,36 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                                     .map(|res| res.map_into_left_body())
                             }
                                 .boxed_local()
-                        },
-                        false => {
-                            Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized"))
-                                .map_into_right_body()))
                         }
-                    }
+                        false => Box::pin(ok(req
+                            .error_response(ErrorUnauthorized("Unauthorized"))
+                            .map_into_right_body())),
+                    };
                 }
 
                 if unwrapped_user.password.clone().unwrap() == digest(password) {
                     req.extensions_mut().insert(unwrapped_user);
                     let service = Rc::clone(&self.service);
-                    async move {
-                        service
-                            .call(req)
-                            .await
-                            .map(|res| res.map_into_left_body())
-                    }
+                    async move { service.call(req).await.map(|res| res.map_into_left_body()) }
                         .boxed_local()
                 } else {
-                    Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()))
+                    Box::pin(ok(req
+                        .error_response(ErrorUnauthorized("Unauthorized"))
+                        .map_into_right_body()))
                 }
-            },
-            Err(_) => {
-                Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()))
             }
-        }
+            Err(_) => Box::pin(ok(req
+                .error_response(ErrorUnauthorized("Unauthorized"))
+                .map_into_right_body())),
+        };
     }
 
     fn handle_oidc_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let token_res = req.headers().get("Authorization").unwrap().to_str();
         if token_res.is_err() {
-            return Box::pin(ok(req.error_response(ErrorUnauthorized("Unauthorized")).map_into_right_body()));
+            return Box::pin(ok(req
+                .error_response(ErrorUnauthorized("Unauthorized"))
+                .map_into_right_body()));
         }
         let token = token_res.unwrap().replace("Bearer ", "");
 
@@ -158,16 +161,25 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
 
         // Create a DecodingKey from a PEM-encoded RSA string
 
-
         let key = DecodingKey::from_jwk(&jwk.as_ref().clone().unwrap()).unwrap();
         let mut validation = Validation::new(Algorithm::RS256);
-        validation.aud = Some(req.app_data::<web::Data<HashSet<String>>>().unwrap().clone().into_inner()
-            .deref().clone());
-
+        validation.aud = Some(
+            req.app_data::<web::Data<HashSet<String>>>()
+                .unwrap()
+                .clone()
+                .into_inner()
+                .deref()
+                .clone(),
+        );
 
         return match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => {
-                let username = decoded.claims.get("preferred_username").unwrap().as_str().unwrap();
+                let username = decoded
+                    .claims
+                    .get("preferred_username")
+                    .unwrap()
+                    .as_str()
+                    .unwrap();
                 let pool = req.app_data::<web::Data<DbPool>>().cloned().unwrap();
                 let found_user = User::find_by_username(username, &mut pool.get().unwrap());
                 let service = Rc::clone(&self.service);
@@ -175,58 +187,53 @@ impl<S, B> AuthFilterMiddleware<S> where B: 'static + MessageBody, S: 'static + 
                 match found_user {
                     Ok(user) => {
                         req.extensions_mut().insert(user);
-                        async move {
-                            service
-                                .call(req)
-                                .await
-                                .map(|res| res.map_into_left_body())
-                        }
+                        async move { service.call(req).await.map(|res| res.map_into_left_body()) }
                             .boxed_local()
-                    },
+                    }
                     Err(_) => {
                         // User is authenticated so we can onboard him if he is new
-                        let user = User::insert_user(&mut User {
-                            id: 0,
-                            username: decoded.claims.get("preferred_username").unwrap().as_str().unwrap().to_string(),
-                            role: "user".to_string(),
-                            password: None,
-                            explicit_consent: false,
-                            created_at: chrono::Utc::now().naive_utc()
-                        }, &mut pool.get().unwrap()).expect("Error inserting user");
+                        let user = User::insert_user(
+                            &mut User {
+                                id: 0,
+                                username: decoded
+                                    .claims
+                                    .get("preferred_username")
+                                    .unwrap()
+                                    .as_str()
+                                    .unwrap()
+                                    .to_string(),
+                                role: "user".to_string(),
+                                password: None,
+                                explicit_consent: false,
+                                created_at: chrono::Utc::now().naive_utc(),
+                            },
+                            &mut pool.get().unwrap(),
+                        )
+                        .expect("Error inserting user");
                         req.extensions_mut().insert(user);
-                        async move {
-                            service
-                                .call(req)
-                                .await
-                                .map(|res| res.map_into_left_body())
-                        }
+                        async move { service.call(req).await.map(|res| res.map_into_left_body()) }
                             .boxed_local()
                     }
                 }
-            },
+            }
             Err(e) => {
                 info!("Error decoding token: {:?}", e);
-                Box::pin(ok(req.error_response(ErrorForbidden("Forbidden"))
+                Box::pin(ok(req
+                    .error_response(ErrorForbidden("Forbidden"))
                     .map_into_right_body()))
             }
-        }
+        };
     }
 
     fn handle_no_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let user = User::create_standard_admin_user();
         req.extensions_mut().insert(user);
         let service = Rc::clone(&self.service);
-        async move {
-            service
-                .call(req)
-                .await
-                .map(|res| res.map_into_left_body())
-        }
-            .boxed_local()
+        async move { service.call(req).await.map(|res| res.map_into_left_body()) }.boxed_local()
     }
 }
 
-impl AuthFilter{
+impl AuthFilter {
     pub fn extract_basic_auth(auth: &str) -> (String, String) {
         let auth = auth.to_string();
         let auth = auth.split(' ').collect::<Vec<&str>>();
@@ -240,8 +247,8 @@ impl AuthFilter{
     }
 
     pub fn basic_auth_login(rq: String) -> (String, String) {
-        let (u,p) = Self::extract_basic_auth(rq.as_str());
+        let (u, p) = Self::extract_basic_auth(rq.as_str());
 
-        (u.to_string(),p.to_string())
+        (u.to_string(), p.to_string())
     }
 }

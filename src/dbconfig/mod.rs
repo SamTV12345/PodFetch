@@ -8,25 +8,21 @@ pub enum DBType {
 }
 
 #[macro_export]
-macro_rules! import_database_config{
-    ()=>{
-    pub const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/sqlite");
+macro_rules! import_database_config {
+    () => {
+        pub const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/sqlite");
 
-
-    pub const POSTGRES_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/postgres");
-    }
+        pub const POSTGRES_MIGRATIONS: EmbeddedMigrations =
+            embed_migrations!("./migrations/postgres");
+    };
 }
 
 #[macro_export]
 macro_rules! execute_with_conn {
     ($conn:expr, $diesel_func:expr) => {
         match $conn {
-            DbConnection::Sqlite(conn) => {
-                return $diesel_func(conn)
-            },
-            DbConnection::Postgresql(conn) => {
-                return $diesel_func(conn)
-            },
+            DbConnection::Sqlite(conn) => return $diesel_func(conn),
+            DbConnection::Postgresql(conn) => return $diesel_func(conn),
         }
     };
 }

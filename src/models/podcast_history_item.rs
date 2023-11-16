@@ -1,22 +1,28 @@
-use chrono::{NaiveDateTime, Utc};
-use diesel::{BoolExpressionMethods, delete, ExpressionMethods, insert_into, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
-use crate::DBType as DbConnection;
-use diesel::Queryable;
-use diesel::QueryId;
-use diesel::QueryableByName;
-use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
-use utoipa::ToSchema;
-use diesel::Selectable;
-use crate::models::episode::{Episode, EpisodeAction};
-use diesel::sql_types::*;
 use crate::constants::inner_constants::STANDARD_USER;
+use crate::models::episode::{Episode, EpisodeAction};
+use crate::models::misc_models::{
+    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
+};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::mapping_service::MappingService;
-use crate::utils::error::{CustomError, map_db_error};
+use crate::utils::error::{map_db_error, CustomError};
+use crate::DBType as DbConnection;
+use chrono::{NaiveDateTime, Utc};
+use diesel::sql_types::*;
+use diesel::QueryId;
+use diesel::Queryable;
+use diesel::QueryableByName;
+use diesel::Selectable;
+use diesel::{
+    delete, insert_into, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension,
+    QueryDsl, RunQueryDsl,
+};
+use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId,Selectable,
-Debug)]
+#[derive(
+    Serialize, Deserialize, Queryable, QueryableByName, Clone, ToSchema, QueryId, Selectable, Debug,
+)]
 #[serde(rename_all = "camelCase")]
 #[diesel(table_name=crate::dbconfig::schema::podcast_history_items)]
 pub struct PodcastHistoryItem {
@@ -31,22 +37,26 @@ pub struct PodcastHistoryItem {
     #[diesel(sql_type = Timestamp,column_name=date)]
     pub date: NaiveDateTime,
     #[diesel(sql_type = Text,column_name=username)]
-    pub username: String
+    pub username: String,
 }
 
-impl PodcastHistoryItem{
-    pub fn delete_by_username(username1: String, conn: &mut DbConnection) -> Result<(),
-        diesel::result::Error>{
+impl PodcastHistoryItem {
+    pub fn delete_by_username(
+        username1: String,
+        conn: &mut DbConnection,
+    ) -> Result<(), diesel::result::Error> {
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
-        delete(podcast_history_items.filter(username.eq(username1)))
-            .execute(conn)?;
+        delete(podcast_history_items.filter(username.eq(username1))).execute(conn)?;
         Ok(())
     }
 
-    pub fn log_watchtime(conn: &mut DbConnection, watch_model: PodcastWatchedPostModel,
-                         designated_username: String) -> Result<(), CustomError> {
-        let result = PodcastEpisode::
-        get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)?;
+    pub fn log_watchtime(
+        conn: &mut DbConnection,
+        watch_model: PodcastWatchedPostModel,
+        designated_username: String,
+    ) -> Result<(), CustomError> {
+        let result =
+            PodcastEpisode::get_podcast_episode_by_id(conn, &watch_model.podcast_episode_id)?;
 
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
         match result {
@@ -71,8 +81,10 @@ impl PodcastHistoryItem{
         }
     }
 
-    pub fn delete_watchtime(conn: &mut DbConnection, podcast_id_to_delete: i32) -> Result<(),
-        CustomError> {
+    pub fn delete_watchtime(
+        conn: &mut DbConnection,
+        podcast_id_to_delete: i32,
+    ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
 
         delete(podcast_history_items)
@@ -85,7 +97,7 @@ impl PodcastHistoryItem{
     pub fn get_watchtime(
         conn: &mut DbConnection,
         podcast_id_tos_search: &str,
-        username_to_find: String
+        username_to_find: String,
     ) -> Result<PodcastHistoryItem, CustomError> {
         let result = PodcastEpisode::get_podcast_episode_by_id(conn, podcast_id_tos_search)?;
         use crate::dbconfig::schema::podcast_history_items::dsl::*;
@@ -93,7 +105,11 @@ impl PodcastHistoryItem{
         match result {
             Some(found_podcast) => {
                 let history_item = podcast_history_items
-                    .filter(episode_id.eq(podcast_id_tos_search).and(username.eq(username_to_find.clone())))
+                    .filter(
+                        episode_id
+                            .eq(podcast_id_tos_search)
+                            .and(username.eq(username_to_find.clone())),
+                    )
                     .order(date.desc())
                     .first::<PodcastHistoryItem>(conn)
                     .optional()
@@ -101,91 +117,112 @@ impl PodcastHistoryItem{
 
                 match history_item {
                     Some(found_history_item) => {
-                        let option_episode = Episode::get_watch_log_by_username_and_episode
-                            (username_to_find.clone(), conn, found_podcast.clone().url)?;
+                        let option_episode = Episode::get_watch_log_by_username_and_episode(
+                            username_to_find.clone(),
+                            conn,
+                            found_podcast.clone().url,
+                        )?;
                         if let Some(episode) = option_episode {
-                            if episode.action == EpisodeAction::Play.to_string() && episode
-                                .position.unwrap()>found_history_item.watched_time && episode.timestamp>found_history_item.date{
-
-                                let found_podcast_item = Podcast::get_podcast(conn,
-                                                                             found_history_item
-                                    .podcast_id)?;
-                                return Ok(Episode::convert_to_podcast_history_item(&episode,
-                                                                                   found_podcast_item,
-                                                                                   found_podcast));
+                            if episode.action == EpisodeAction::Play.to_string()
+                                && episode.position.unwrap() > found_history_item.watched_time
+                                && episode.timestamp > found_history_item.date
+                            {
+                                let found_podcast_item =
+                                    Podcast::get_podcast(conn, found_history_item.podcast_id)?;
+                                return Ok(Episode::convert_to_podcast_history_item(
+                                    &episode,
+                                    found_podcast_item,
+                                    found_podcast,
+                                ));
                             }
                         }
                         Ok(found_history_item)
-                    },
+                    }
                     None => Ok(PodcastHistoryItem {
                         id: 0,
                         podcast_id: found_podcast.podcast_id,
                         episode_id: found_podcast.episode_id,
                         watched_time: 0,
                         username: STANDARD_USER.to_string(),
-                        date: Utc::now().naive_utc()
+                        date: Utc::now().naive_utc(),
                     }),
                 }
             }
-            None => {
-                Err(CustomError::NotFound)
-            }
+            None => Err(CustomError::NotFound),
         }
     }
 
-
     pub fn get_last_watched_podcasts(
         conn: &mut DbConnection,
-        designated_username: String, mapping_service: MappingService) ->
-                                                                          Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
+        designated_username: String,
+        mapping_service: MappingService,
+    ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::podcast_history_items;
-        
-        use crate::dbconfig::schema::podcast_history_items::dsl::episode_id as ehid;
+
         use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as eid;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::dbconfig::schema::podcast_history_items::dsl::episode_id as ehid;
         use diesel::NullableExpressionMethods;
 
-        let (history_item1, history_item2) = diesel::alias!(podcast_history_items as p1, podcast_history_items
-            as p2);
+        let (history_item1, history_item2) =
+            diesel::alias!(podcast_history_items as p1, podcast_history_items as p2);
 
         let subquery = history_item1
-            .select(diesel::dsl::max(history_item1.field(podcast_history_items::date)))
-            .filter(history_item1.field(podcast_history_items::episode_id).eq(history_item1.field(ehid)))
+            .select(diesel::dsl::max(
+                history_item1.field(podcast_history_items::date),
+            ))
+            .filter(
+                history_item1
+                    .field(podcast_history_items::episode_id)
+                    .eq(history_item1.field(ehid)),
+            )
             .group_by(history_item1.field(ehid));
 
         let result = history_item2
             .inner_join(podcast_episodes.on(history_item2.field(ehid).eq(eid)))
-            .filter(history_item2.field(podcast_history_items::username).eq(designated_username))
-            .filter(history_item2.field(podcast_history_items::date).nullable().eq_any( subquery))
+            .filter(
+                history_item2
+                    .field(podcast_history_items::username)
+                    .eq(designated_username),
+            )
+            .filter(
+                history_item2
+                    .field(podcast_history_items::date)
+                    .nullable()
+                    .eq_any(subquery),
+            )
             .load::<(PodcastHistoryItem, PodcastEpisode)>(conn)
             .map_err(map_db_error)?;
 
-
-        let podcast_watch_episode = result.iter().map(|(podcast_history_item, podcast_episode)| {
-            let podcast_dto = mapping_service
-                .map_podcastepisode_to_dto(podcast_episode);
-            let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id).unwrap();
-            mapping_service
-                .map_podcast_history_item_to_with_podcast_episode(
+        let podcast_watch_episode = result
+            .iter()
+            .map(|(podcast_history_item, podcast_episode)| {
+                let podcast_dto = mapping_service.map_podcastepisode_to_dto(podcast_episode);
+                let podcast = Podcast::get_podcast(conn, podcast_episode.podcast_id).unwrap();
+                mapping_service.map_podcast_history_item_to_with_podcast_episode(
                     &podcast_history_item.clone(),
                     podcast_dto,
                     podcast,
                 )
-        }).collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
+            })
+            .collect::<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>();
         Ok(podcast_watch_episode)
     }
 
-    pub fn get_watch_logs_by_username(username_to_search: String, conn: &mut DbConnection,
-                                      since: NaiveDateTime)
-                                      ->
-                                      Result<Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)>,
-                                          CustomError> {
+    pub fn get_watch_logs_by_username(
+        username_to_search: String,
+        conn: &mut DbConnection,
+        since: NaiveDateTime,
+    ) -> Result<Vec<(PodcastHistoryItem, PodcastEpisode, Podcast)>, CustomError> {
+        use crate::dbconfig::schema::podcast_episodes;
         use crate::dbconfig::schema::podcast_history_items;
         use crate::dbconfig::schema::podcasts;
-        use crate::dbconfig::schema::podcast_episodes;
 
         podcast_history_items::table
-            .inner_join(podcast_episodes::table.on(podcast_history_items::episode_id.eq(podcast_episodes::episode_id)))
+            .inner_join(
+                podcast_episodes::table
+                    .on(podcast_history_items::episode_id.eq(podcast_episodes::episode_id)),
+            )
             .inner_join(podcasts::table)
             .filter(podcast_history_items::episode_id.eq(podcast_episodes::episode_id))
             .filter(podcast_history_items::podcast_id.eq(podcasts::id))

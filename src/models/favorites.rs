@@ -1,58 +1,79 @@
-use diesel::insert_into;
-use diesel::prelude::*;
-use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::dbconfig::schema::favorites;
-use serde::{Serialize, Deserialize};
-use diesel::sql_types::{Text, Integer, Bool};
-use crate::DBType as DbConnection;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
+use crate::models::user::User;
 use crate::service::mapping_service::MappingService;
-use crate::utils::error::{CustomError, map_db_error};
+use crate::utils::error::{map_db_error, CustomError};
+use crate::DBType as DbConnection;
+use diesel::insert_into;
+use diesel::prelude::*;
+use diesel::sql_types::{Bool, Integer, Text};
+use serde::{Deserialize, Serialize};
 
-#[derive(Queryable, Associations, Debug, PartialEq,QueryableByName, Serialize, Deserialize, Insertable,
-Clone,
-AsChangeset)]
+#[derive(
+    Queryable,
+    Associations,
+    Debug,
+    PartialEq,
+    QueryableByName,
+    Serialize,
+    Deserialize,
+    Insertable,
+    Clone,
+    AsChangeset,
+)]
 #[diesel(belongs_to(Podcast, foreign_key = podcast_id))]
 #[diesel(belongs_to(User, foreign_key = username))]
-pub struct Favorite{
+pub struct Favorite {
     #[diesel(sql_type = Text)]
     pub username: String,
     #[diesel(sql_type = Integer)]
     pub podcast_id: i32,
     #[diesel(sql_type = Bool)]
-    pub favored: bool
+    pub favored: bool,
 }
 
-impl Favorite{
-    pub fn delete_by_username(username1: String, conn: &mut DbConnection) -> Result<(),
-        diesel::result::Error>{
+impl Favorite {
+    pub fn delete_by_username(
+        username1: String,
+        conn: &mut DbConnection,
+    ) -> Result<(), diesel::result::Error> {
         use crate::dbconfig::schema::favorites::dsl::*;
         diesel::delete(favorites.filter(username.eq(username1))).execute(conn)?;
         Ok(())
     }
 
-    pub fn update_podcast_favor(podcast_id_1: &i32, favor: bool,
-                                conn: &mut DbConnection, username_1: String) ->
-                                Result<(), CustomError> {
+    pub fn update_podcast_favor(
+        podcast_id_1: &i32,
+        favor: bool,
+        conn: &mut DbConnection,
+        username_1: String,
+    ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::podcast_id;
         use crate::dbconfig::schema::favorites::dsl::username;
 
-        let res = f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1.clone())))
+        let res = f_db
+            .filter(
+                podcast_id
+                    .eq(podcast_id_1)
+                    .and(username.eq(username_1.clone())),
+            )
             .first::<Favorite>(conn)
             .optional()
             .map_err(map_db_error)?;
 
-        match res{
+        match res {
             Some(..) => {
-                diesel::update(f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1))))
-                    .set(favor_column.eq(favor))
-                    .execute(conn)
-                    .map_err(map_db_error)?;
+                diesel::update(
+                    f_db.filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1))),
+                )
+                .set(favor_column.eq(favor))
+                .execute(conn)
+                .map_err(map_db_error)?;
                 Ok(())
             }
             None => {
@@ -69,49 +90,53 @@ impl Favorite{
         }
     }
 
-    pub fn get_favored_podcasts(found_username: String,conn:&mut DbConnection,
-                                mapping_service:MappingService) ->
-    Result<Vec<PodcastDto>, CustomError> {
-        use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
+    pub fn get_favored_podcasts(
+        found_username: String,
+        conn: &mut DbConnection,
+        mapping_service: MappingService,
+    ) -> Result<Vec<PodcastDto>, CustomError> {
+        use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::username as user_favor;
-        use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
-        
+        use crate::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
 
-        let result:Vec<(Podcast, Favorite)> = dsl_podcast
+        let result: Vec<(Podcast, Favorite)> = dsl_podcast
             .inner_join(f_db)
-            .filter(
-                favor_column.eq(true).and(
-                    user_favor.eq(found_username)))
+            .filter(favor_column.eq(true).and(user_favor.eq(found_username)))
             .load::<(Podcast, Favorite)>(conn)
             .map_err(map_db_error)?;
 
-
-
         let mapped_result = result
             .iter()
-            .map(|podcast| mapping_service.map_podcast_to_podcast_dto_with_favorites_option
-            (podcast))
+            .map(|podcast| {
+                mapping_service.map_podcast_to_podcast_dto_with_favorites_option(podcast)
+            })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }
 
-    pub fn search_podcasts_favored(conn: &mut DbConnection, order: OrderCriteria, title: Option<String>,
-                                   latest_pub: OrderOption,
-                                   designated_username: String) ->Result<Vec<(Podcast, Favorite)>,CustomError>{
-        use crate::dbconfig::schema::podcasts::dsl::*;
+    pub fn search_podcasts_favored(
+        conn: &mut DbConnection,
+        order: OrderCriteria,
+        title: Option<String>,
+        latest_pub: OrderOption,
+        designated_username: String,
+    ) -> Result<Vec<(Podcast, Favorite)>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
-
+        use crate::dbconfig::schema::podcasts::dsl::*;
 
         let mut query = podcasts
             .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
-            .inner_join(favorites::table.on(podcastsid.eq(favorites::dsl::podcast_id)
-                .and(favorites::dsl::username.eq(designated_username))))
+            .inner_join(
+                favorites::table.on(podcastsid
+                    .eq(favorites::dsl::podcast_id)
+                    .and(favorites::dsl::username.eq(designated_username))),
+            )
             .into_boxed();
 
         match latest_pub {
-            OrderOption::Title=> {
+            OrderOption::Title => {
                 use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
                     OrderCriteria::Asc => {
@@ -122,59 +147,60 @@ impl Favorite{
                     }
                 }
             }
-            OrderOption::PublishedDate => {
-                match order {
-                    OrderCriteria::Asc => {
-                        query = query.order_by(date_of_recording.asc());
-
-                    }
-                    OrderCriteria::Desc => {
-                        query = query.order_by(date_of_recording.desc());
-                    }
+            OrderOption::PublishedDate => match order {
+                OrderCriteria::Asc => {
+                    query = query.order_by(date_of_recording.asc());
                 }
-            }
+                OrderCriteria::Desc => {
+                    query = query.order_by(date_of_recording.desc());
+                }
+            },
         }
 
         if title.is_some() {
             use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
-            query = query
-                .filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+            query = query.filter(podcasttitle.like(format!("%{}%", title.unwrap())));
         }
 
         let mut matching_podcast_ids = vec![];
         let pr = query
-            .load::<(Podcast, PodcastEpisode, Favorite)>(conn).map_err(map_db_error)?;
-        let distinct_podcasts:Vec<(Podcast, Favorite)> = pr.iter()
-            .filter(|c|{
-                if matching_podcast_ids.contains(&c.0.id){
+            .load::<(Podcast, PodcastEpisode, Favorite)>(conn)
+            .map_err(map_db_error)?;
+        let distinct_podcasts: Vec<(Podcast, Favorite)> = pr
+            .iter()
+            .filter(|c| {
+                if matching_podcast_ids.contains(&c.0.id) {
                     return false;
                 }
                 matching_podcast_ids.push(c.0.id);
                 true
-            }).map(|c|{
-            (c.clone().0, c.clone().2)
-        }).collect::<Vec<(Podcast, Favorite)>>();
+            })
+            .map(|c| (c.clone().0, c.clone().2))
+            .collect::<Vec<(Podcast, Favorite)>>();
         Ok(distinct_podcasts)
     }
 
-
-    pub fn search_podcasts(conn: &mut DbConnection, order: OrderCriteria, title: Option<String>,
-                           latest_pub: OrderOption,
-                           designated_username: String) -> Result<Vec<(Podcast, Option<Favorite>)
-    >, CustomError> {
-        use crate::dbconfig::schema::podcasts::dsl::*;
-        use crate::dbconfig::schema::podcast_episodes::dsl::*;
-        use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
+    pub fn search_podcasts(
+        conn: &mut DbConnection,
+        order: OrderCriteria,
+        title: Option<String>,
+        latest_pub: OrderOption,
+        designated_username: String,
+    ) -> Result<Vec<(Podcast, Option<Favorite>)>, CustomError> {
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::dbconfig::schema::favorites::dsl::username as f_username;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
+        use crate::dbconfig::schema::podcasts::dsl::*;
 
-        let mut query = podcasts.inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
+        let mut query = podcasts
+            .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
             .left_join(f_db.on(f_username.eq(designated_username).and(f_id.eq(podcast_id))))
             .into_boxed();
 
         match latest_pub {
-            OrderOption::Title=> {
+            OrderOption::Title => {
                 use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
                 match order {
                     OrderCriteria::Asc => {
@@ -185,41 +211,38 @@ impl Favorite{
                     }
                 }
             }
-            OrderOption::PublishedDate => {
-                match order {
-                    OrderCriteria::Asc => {
-                        query = query.order_by(date_of_recording.asc());
-
-                    }
-                    OrderCriteria::Desc => {
-                        query = query.order_by(date_of_recording.desc());
-                    }
+            OrderOption::PublishedDate => match order {
+                OrderCriteria::Asc => {
+                    query = query.order_by(date_of_recording.asc());
                 }
-            }
+                OrderCriteria::Desc => {
+                    query = query.order_by(date_of_recording.desc());
+                }
+            },
         }
 
         sql_function!(fn lower(x: Text) -> Text);
 
         if let Some(title) = title {
             use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;
-            query = query
-                .filter(lower(podcasttitle).like(format!("%{}%", title.to_lowercase())));
+            query = query.filter(lower(podcasttitle).like(format!("%{}%", title.to_lowercase())));
         }
 
         let mut matching_podcast_ids = vec![];
         let pr = query
             .load::<(Podcast, PodcastEpisode, Option<Favorite>)>(conn)
             .map_err(map_db_error)?;
-        let distinct_podcasts = pr.iter()
-            .filter(|c|{
-                if matching_podcast_ids.contains(&c.0.id){
+        let distinct_podcasts = pr
+            .iter()
+            .filter(|c| {
+                if matching_podcast_ids.contains(&c.0.id) {
                     return false;
                 }
                 matching_podcast_ids.push(c.0.id);
                 true
-            }).map(|c|{
-            (c.clone().0, c.clone().2)
-        }).collect::<Vec<(Podcast, Option<Favorite>)>>();
+            })
+            .map(|c| (c.clone().0, c.clone().2))
+            .collect::<Vec<(Podcast, Option<Favorite>)>>();
         Ok(distinct_podcasts)
     }
 }
