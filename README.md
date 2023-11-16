@@ -17,7 +17,7 @@ Every time a new commit is pushed to the main branch, a new docker image is buil
 - Rust
 - Cargo
 - Node
-- npm/yarn/pnpm
+- npm/yarn/pnpm/bun
 
 ### Building the app
 ```bash
@@ -25,8 +25,8 @@ Every time a new commit is pushed to the main branch, a new docker image is buil
 touch static/index.html
 cargo.exe run --color=always --package podfetch --bin podfetch
 cd ui
-<npm/yarn/pnpm> install
-<npm/yarn/pnpm> run dev
+<npm/yarn/pnpm/bun> install
+<npm/yarn/pnpm/bun> run dev
 ```
 
 If you want to run other databases you need to install the corresponding diesel cli. For example for postgres you need to install `diesel_cli --no-default-features --features postgres` and run the same command for running it with cargo.
