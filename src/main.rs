@@ -365,7 +365,7 @@ async fn main() -> std::io::Result<()> {
 }
 
 pub fn get_api_config() -> Scope {
-    web::scope("/api/v1").configure(|cfg| config(cfg))
+    web::scope("/api/v1").configure(config)
 }
 
 fn config(cfg: &mut web::ServiceConfig) {
