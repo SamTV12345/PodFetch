@@ -1,14 +1,14 @@
+use crate::models::user::User;
+use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
+use crate::DbPool;
 use actix_web::web::Data;
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
-use std::sync::{Mutex};
+use sha256::digest;
+use std::sync::Mutex;
 use sysinfo::{System, SystemExt};
-use crate::models::user::User;
-use crate::mutex::LockResultExt;
-use sha256::{digest};
-use crate::DbPool;
 pub mod built_info {
     // The file has been placed there by the build script.
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
@@ -26,19 +26,18 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    const PATH:&str = "podcasts";
-    let podcast_byte_size = get_size(PATH)
-        .map_err(|e|map_io_extra_error(e, Some(PATH.to_string())))?;
-    Ok(HttpResponse::Ok()
-        .json(SysExtraInfo {
+    const PATH: &str = "podcasts";
+    let podcast_byte_size =
+        get_size(PATH).map_err(|e| map_io_extra_error(e, Some(PATH.to_string())))?;
+    Ok(HttpResponse::Ok().json(SysExtraInfo {
         system: sys,
         podcast_directory: podcast_byte_size,
     }))
 }
+use crate::utils::error::{map_io_extra_error, CustomError};
 use utoipa::ToSchema;
-use crate::utils::error::{CustomError, map_io_extra_error};
 
-#[derive(Debug, Serialize,ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {
     pub system: System,
     pub podcast_directory: u64,
@@ -70,7 +69,7 @@ tag="sys"
 pub async fn login(
     auth: web::Json<LoginRequest>,
     env: Data<Mutex<EnvironmentService>>,
-    db: Data<DbPool>
+    db: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let env_service = env.lock().ignore_poison();
 
@@ -85,7 +84,7 @@ pub async fn login(
     }
 
     if db_user.password.unwrap() == digest(auth.0.password) {
-                return Ok(HttpResponse::Ok().json("Login successful"));
+        return Ok(HttpResponse::Ok().json("Login successful"));
     }
     log::warn!("Login failed for user {}", auth.0.username);
     Err(CustomError::Forbidden)
@@ -103,7 +102,7 @@ pub struct VersionInfo {
     pub r#ref: &'static str,
     pub commit: &'static str,
     pub ci: &'static str,
-    pub time:&'static str,
+    pub time: &'static str,
     pub os: &'static str,
 }
 
@@ -115,7 +114,7 @@ tag="info"
 )]
 #[get("/info")]
 pub async fn get_info() -> impl Responder {
-    let version = VersionInfo{
+    let version = VersionInfo {
         commit: env!("GIT_EXACT_TAG"),
         version: env!("VW_VERSION"),
         r#ref: env!("GIT_BRANCH"),

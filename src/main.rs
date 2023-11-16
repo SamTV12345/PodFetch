@@ -5,57 +5,76 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix::{Actor};
+use actix::Actor;
 use actix_files::{Files, NamedFile};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::sync::{Mutex};
-use std::time::Duration;
-use std::{env, thread};
 use std::collections::HashSet;
 use std::env::{args, var};
 use std::io::Read;
+use std::sync::Mutex;
+use std::time::Duration;
+use std::{env, thread};
 
-use std::process::exit;
 use actix_web::body::{BoxBody, EitherBody};
-use log::{info};
+use diesel::r2d2::ConnectionManager;
+use jsonwebtoken::jwk::{
+    AlgorithmParameters, CommonParameters, Jwk, KeyAlgorithm, RSAKeyParameters, RSAKeyType,
+};
+use log::info;
+use r2d2::Pool;
+use regex::Regex;
+use std::process::exit;
+use tokio::task::spawn_blocking;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use diesel::r2d2::{ConnectionManager};
-use jsonwebtoken::jwk::{AlgorithmParameters, CommonParameters, Jwk, KeyAlgorithm, RSAKeyParameters, RSAKeyType};
-use r2d2::{Pool};
-use regex::Regex;
-use tokio::task::spawn_blocking;
 
 mod controllers;
-use crate::config::dbconfig::{ConnectionOptions};
+use crate::auth_middleware::AuthFilter;
+use crate::command_line_runner::start_command_line;
+use crate::config::dbconfig::ConnectionOptions;
 use crate::config::dbconfig::{establish_connection, get_database_url};
-use crate::constants::inner_constants::{BASIC_AUTH, CSS, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::constants::inner_constants::{
+    BASIC_AUTH, CSS, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED,
+    TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN,
+};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, proxy_podcast, refresh_all_podcasts, search_podcasts};
+use crate::controllers::playlist_controller::{
+    add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
+    get_playlist_by_id, update_playlist,
+};
+use crate::controllers::podcast_controller::{
+    add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast,
+    find_podcast_by_id, get_filter, proxy_podcast, refresh_all_podcasts, search_podcasts,
+};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
-use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_timeline};
-use crate::controllers::settings_controller::{get_opml, get_settings, run_cleanup, update_name, update_settings};
+use crate::controllers::podcast_episode_controller::{
+    delete_podcast_episode_locally, download_podcast_episodes_of_podcast,
+    find_all_podcast_episodes_of_podcast, get_timeline,
+};
+use crate::controllers::settings_controller::{
+    get_opml, get_settings, run_cleanup, update_name, update_settings,
+};
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
+use crate::controllers::user_controller::{
+    create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users,
+    onboard_user, update_role,
+};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
-pub use controllers::controller_utils::*;
-use crate::auth_middleware::{AuthFilter};
-use crate::command_line_runner::start_command_line;
-use crate::controllers::playlist_controller::{add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists, get_playlist_by_id, update_playlist};
-use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users, onboard_user, update_role};
 use crate::dbconfig::DBType;
+pub use controllers::controller_utils::*;
 
 mod constants;
 mod db;
@@ -80,23 +99,23 @@ use crate::service::settings_service::SettingsService;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::CustomError;
 
-
 mod config;
 
-pub mod utils;
-pub mod mutex;
+mod auth_middleware;
+mod command_line_runner;
+mod dbconfig;
 mod exception;
 mod gpodder;
-mod command_line_runner;
-mod auth_middleware;
-mod dbconfig;
+pub mod mutex;
+pub mod utils;
 type DbPool = Pool<ConnectionManager<DBType>>;
 
 import_database_config!();
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
-    mut podcast_episode_service: PodcastEpisodeService)->Result<(),CustomError> {
+    mut podcast_episode_service: PodcastEpisodeService,
+) -> Result<(), CustomError> {
     //check for new episodes
     let conn = &mut establish_connection();
     let podcats_result = Podcast::get_all_podcasts(conn)?;
@@ -104,24 +123,23 @@ pub fn run_poll(
         if podcast.active {
             let podcast_clone = podcast.clone();
             podcast_episode_service.insert_podcast_episodes(conn, podcast)?;
-            podcast_service.schedule_episode_download(podcast_clone, None, &mut
-                establish_connection())?;
+            podcast_service.schedule_episode_download(
+                podcast_clone,
+                None,
+                &mut establish_connection(),
+            )?;
         }
     }
     Ok(())
 }
 
-fn fix_links(content: &str)->String{
-    let dir = var("SUB_DIRECTORY").unwrap()+"/ui/";
-    content.replace("/ui/",&dir)
+fn fix_links(content: &str) -> String {
+    let dir = var("SUB_DIRECTORY").unwrap() + "/ui/";
+    content.replace("/ui/", &dir)
 }
 
 async fn index() -> impl Responder {
-    let index_html = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/static/index.html"
-    ));
-
+    let index_html = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/static/index.html"));
 
     HttpResponse::Ok()
         .content_type("text/html")
@@ -130,35 +148,37 @@ async fn index() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Debug file located at {}", concat!(env!("OUT_DIR"), "/built.rs"));
+    println!(
+        "Debug file located at {}",
+        concat!(env!("OUT_DIR"), "/built.rs")
+    );
     init_logging();
 
-    if args().len()>1 {
-        spawn_blocking(move ||{
-            start_command_line(args())
-        }).await.expect("TODO: panic message");
+    if args().len() > 1 {
+        spawn_blocking(move || start_command_line(args()))
+            .await
+            .expect("TODO: panic message");
         exit(0)
     }
 
-    let conn =   establish_connection();
+    let conn = establish_connection();
 
     match conn {
-        DBType::Postgresql(mut conn)=>{
+        DBType::Postgresql(mut conn) => {
             let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
 
-            if res_migration.is_err(){
-                panic!("Could not run migrations: {}",res_migration.err().unwrap());
+            if res_migration.is_err() {
+                panic!("Could not run migrations: {}", res_migration.err().unwrap());
             }
         }
         DBType::Sqlite(mut conn) => {
             let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
 
-            if res_migration.is_err(){
-                panic!("Could not run migrations: {}",res_migration.err().unwrap());
+            if res_migration.is_err() {
+                panic!("Could not run migrations: {}", res_migration.err().unwrap());
             }
         }
     }
-
 
     let environment_service = EnvironmentService::new();
 
@@ -168,10 +188,14 @@ async fn main() -> std::io::Result<()> {
         let conn = establish_connection();
         match conn {
             DBType::Postgresql(_) => {
-                pool = init_postgres_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+                pool = init_postgres_db_pool(&get_database_url())
+                    .await
+                    .expect("Failed to connect to database");
             }
             DBType::Sqlite(_) => {
-                pool = init_sqlite_db_pool(&get_database_url()).await.expect("Failed to connect to database");
+                pool = init_sqlite_db_pool(&get_database_url())
+                    .await
+                    .expect("Failed to connect to database");
             }
         }
     }
@@ -189,11 +213,11 @@ async fn main() -> std::io::Result<()> {
     let chat_server = lobby.start();
 
     EnvironmentService::print_banner();
-    match FileService::create_podcast_root_directory_exists(){
-        Ok(_)=>{},
-        Err(e)=>{
-            log::error!("Could not create podcast root directory: {}",e);
-            panic!("Could not create podcast root directory: {}",e);
+    match FileService::create_podcast_root_directory_exists() {
+        Ok(_) => {}
+        Err(e) => {
+            log::error!("Could not create podcast root directory: {}", e);
+            panic!("Could not create podcast root directory: {}", e);
         }
     }
 
@@ -224,16 +248,20 @@ async fn main() -> std::io::Result<()> {
 
         scheduler.every(1.day()).run(move || {
             // Clears the session ids once per day
-            let conn= &mut establish_connection();
-            Session::cleanup_sessions(conn).expect("Error clearing old \
-            sessions");
+            let conn = &mut establish_connection();
+            Session::cleanup_sessions(conn).expect(
+                "Error clearing old \
+            sessions",
+            );
             let mut podcast_episode_service = PodcastEpisodeService::new();
             let settings = Setting::get_settings(conn).unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
-                        podcast_episode_service.cleanup_old_episodes(settings.auto_cleanup_days,
-                                                                     &mut establish_connection())
+                        podcast_episode_service.cleanup_old_episodes(
+                            settings.auto_cleanup_days,
+                            &mut establish_connection(),
+                        )
                     }
                 }
                 None => {
@@ -253,9 +281,12 @@ async fn main() -> std::io::Result<()> {
     let jwk: Option<Jwk>;
 
     match var(OIDC_JWKS) {
-        Ok(jwk_uri)=>{
-            let resp =  reqwest::get(&jwk_uri).await.unwrap()
-                .json::<CustomJwkSet>().await;
+        Ok(jwk_uri) => {
+            let resp = reqwest::get(&jwk_uri)
+                .await
+                .unwrap()
+                .json::<CustomJwkSet>()
+                .await;
 
             match resp {
                 Ok(res) => {
@@ -265,7 +296,8 @@ async fn main() -> std::io::Result<()> {
                         .into_iter()
                         .filter(|x| x.alg.eq(&"RS256"))
                         .collect::<Vec<CustomJwk>>()
-                        .first().cloned();
+                        .first()
+                        .cloned();
 
                     if oidc.is_none() {
                         panic!("No RS256 key found in JWKS")
@@ -277,8 +309,8 @@ async fn main() -> std::io::Result<()> {
                         key_type: RSAKeyType::RSA,
                     });
 
-                    jwk = Some(Jwk{
-                        common: CommonParameters{
+                    jwk = Some(Jwk {
+                        common: CommonParameters {
                             public_key_use: None,
                             key_id: None,
                             x509_url: None,
@@ -290,7 +322,7 @@ async fn main() -> std::io::Result<()> {
                         },
                         algorithm: AlgorithmParameters::RSA(key_param.clone().unwrap()),
                     });
-                },
+                }
                 Err(_) => {
                     panic!("Error downloading OIDC")
                 }
@@ -306,13 +338,12 @@ async fn main() -> std::io::Result<()> {
         hash.insert(client_id);
     }
 
-
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(key_param.clone()))
             .app_data(Data::new(jwk.clone()))
             .app_data(Data::new(hash.clone()))
-            .service(redirect("/", var("SUB_DIRECTORY").unwrap()+"/ui/"))
+            .service(redirect("/", var("SUB_DIRECTORY").unwrap() + "/ui/"))
             .service(get_gpodder_api(environment_service.clone()))
             .service(get_global_scope())
             .app_data(Data::new(chat_server.clone()))
@@ -325,23 +356,19 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(data_pool.clone())
             .app_data(Data::new(Mutex::new(JWKService::new())))
-            .wrap(Condition::new(cfg!(debug_assertions),Logger::default()))
+            .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
-        .workers(4)
+    .workers(4)
     .bind(("0.0.0.0", 8000))?
     .run()
     .await
 }
 
 pub fn get_api_config() -> Scope {
-    web::scope("/api/v1")
-        .configure(|cfg|{
-            config(cfg)
-        })
+    web::scope("/api/v1").configure(|cfg| config(cfg))
 }
 
-
-fn config(cfg: &mut web::ServiceConfig){
+fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(get_invite)
         .service(onboard_user)
         .service(login)
@@ -354,13 +381,11 @@ pub fn get_global_scope() -> Scope {
     let openapi = ApiDoc::openapi();
     let service = get_api_config();
 
-
     web::scope(&base_path)
         .service(get_client_parametrization)
         .service(proxy_podcast)
         .service(get_ui_config())
-        .service(Files::new("/podcasts", "podcasts")
-            .disable_content_disposition())
+        .service(Files::new("/podcasts", "podcasts").disable_content_disposition())
         .service(redirect("/swagger-ui", "/swagger-ui/"))
         .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
         .service(redirect("/", "./ui/"))
@@ -370,9 +395,16 @@ pub fn get_global_scope() -> Scope {
         .service(get_rss_feed_for_podcast)
 }
 
-fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<BoxBody>>, Error = actix_web::Error, InitError = ()>> {
+fn get_private_api() -> Scope<
+    impl ServiceFactory<
+        ServiceRequest,
+        Config = (),
+        Response = ServiceResponse<EitherBody<BoxBody>>,
+        Error = actix_web::Error,
+        InitError = (),
+    >,
+> {
     let middleware = AuthFilter::new();
-
 
     web::scope("")
         .wrap(middleware)
@@ -417,8 +449,8 @@ fn get_private_api() -> Scope<impl ServiceFactory<ServiceRequest, Config = (), R
         .service(delete_podcast_episode_locally)
 }
 
-pub fn config_secure_user_management(cfg: &mut web::ServiceConfig){
-    if is_env_var_present_and_true(BASIC_AUTH)|| is_env_var_present_and_true(OIDC_AUTH) {
+pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {
+    if is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH) {
         cfg.service(get_secure_user_management());
     }
 }
@@ -433,31 +465,26 @@ pub fn get_ui_config() -> Scope {
             let path = req.path();
 
             let test = Regex::new(r"/ui/(.*)").unwrap();
-            let rs =  test.captures(path).unwrap().get(1).unwrap().as_str();
-            let file = NamedFile::open_async(format!("{}/{}",
-                                                     "./static", rs)).await?;
+            let rs = test.captures(path).unwrap().get(1).unwrap().as_str();
+            let file = NamedFile::open_async(format!("{}/{}", "./static", rs)).await?;
             let mut content = String::new();
 
             let type_of = file.content_type().to_string();
             let res = file.file().read_to_string(&mut content);
 
             match res {
-                Ok(_) => {},
-                Err(_) => {
-                    return Ok(ServiceResponse::new(req.clone(), file.into_response(&req)))
-                }
+                Ok(_) => {}
+                Err(_) => return Ok(ServiceResponse::new(req.clone(), file.into_response(&req))),
             }
             if type_of.contains(CSS) || type_of.contains(JS) {
-                content  = fix_links(&content)
+                content = fix_links(&content)
             }
-            let res = HttpResponse::Ok()
-                .content_type(type_of)
-                .body(content);
-            Ok(ServiceResponse::new(req, res))}))
-
+            let res = HttpResponse::Ok().content_type(type_of).body(content);
+            Ok(ServiceResponse::new(req, res))
+        }))
 }
 
-pub fn get_secure_user_management() ->Scope{
+pub fn get_secure_user_management() -> Scope {
     web::scope("/users")
         .service(create_invite)
         .service(get_invites)
@@ -468,7 +495,7 @@ pub fn get_secure_user_management() ->Scope{
         .service(get_invite_link)
 }
 
-pub fn insert_default_settings_if_not_present() ->Result<(),CustomError> {
+pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     let conn = &mut establish_connection();
     let settings = Setting::get_settings(conn)?;
     match settings {
@@ -485,7 +512,6 @@ pub fn insert_default_settings_if_not_present() ->Result<(),CustomError> {
 }
 
 pub fn check_server_config(service1: EnvironmentService) {
-
     if service1.http_basic && (service1.password.is_empty() || service1.username.is_empty()) {
         eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
         exit(1);
@@ -496,20 +522,25 @@ pub fn check_server_config(service1: EnvironmentService) {
         exit(1);
     }
 
-    if service1.http_basic && service1.oidc_configured{
+    if service1.http_basic && service1.oidc_configured {
         eprintln!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
         exit(1);
     }
 
-    if var(TELEGRAM_API_ENABLED).is_ok() && (var(TELEGRAM_BOT_TOKEN).is_err() || var(TELEGRAM_BOT_CHAT_ID).is_err()) {
+    if var(TELEGRAM_API_ENABLED).is_ok()
+        && (var(TELEGRAM_BOT_TOKEN).is_err() || var(TELEGRAM_BOT_CHAT_ID).is_err())
+    {
         eprintln!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
         exit(1);
     }
 }
 
-async fn init_postgres_db_pool(database_url: &str)-> Result<Pool<ConnectionManager<DBType>>,
-    String> {
-    let db_connections = var("DB_CONNECTIONS").unwrap_or("10".to_string()).parse()
+async fn init_postgres_db_pool(
+    database_url: &str,
+) -> Result<Pool<ConnectionManager<DBType>>, String> {
+    let db_connections = var("DB_CONNECTIONS")
+        .unwrap_or("10".to_string())
+        .parse()
         .unwrap_or(10);
     let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder()
@@ -519,16 +550,18 @@ async fn init_postgres_db_pool(database_url: &str)-> Result<Pool<ConnectionManag
     Ok(pool)
 }
 
-
-
-async fn init_sqlite_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBType>>,
-    String> {
+async fn init_sqlite_db_pool(
+    database_url: &str,
+) -> Result<Pool<ConnectionManager<DBType>>, String> {
     let manager = ConnectionManager::<DBType>::new(database_url);
-    let pool = Pool::builder().max_size(16)
+    let pool = Pool::builder()
+        .max_size(16)
         .connection_customizer(Box::new(ConnectionOptions {
-        enable_wal: true,
-        enable_foreign_keys: true,
-        busy_timeout: Some(Duration::from_secs(120)),
-    })).build(manager).unwrap();
+            enable_wal: true,
+            enable_foreign_keys: true,
+            busy_timeout: Some(Duration::from_secs(120)),
+        }))
+        .build(manager)
+        .unwrap();
     Ok(pool)
 }

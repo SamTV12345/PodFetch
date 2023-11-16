@@ -1,26 +1,31 @@
+use chrono::NaiveDateTime;
+use diesel::{
+    BoolExpressionMethods, Insertable, OptionalExtension, QueryDsl, Queryable, QueryableByName,
+    RunQueryDsl, TextExpressionMethods,
+};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
-use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
-use diesel::{Queryable, QueryableByName, Insertable, RunQueryDsl, QueryDsl, BoolExpressionMethods, OptionalExtension, TextExpressionMethods};
 
 use crate::dbconfig::schema::episodes;
-use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
+use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::ExpressionMethods;
 use reqwest::Url;
+use utoipa::ToSchema;
 
-use crate::DBType as DbConnection;
 use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
+use crate::DBType as DbConnection;
 
 use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
-use crate::utils::error::{CustomError, map_db_error};
+use crate::utils::error::{map_db_error, CustomError};
 
-#[derive(Serialize, Deserialize, Debug,Queryable, QueryableByName,Insertable, Clone, ToSchema)]
-pub struct Episode{
+#[derive(
+    Serialize, Deserialize, Debug, Queryable, QueryableByName, Insertable, Clone, ToSchema,
+)]
+pub struct Episode {
     #[diesel(sql_type = Integer)]
     pub id: i32,
     #[diesel(sql_type = Text)]
@@ -38,31 +43,37 @@ pub struct Episode{
     #[diesel(sql_type = Text)]
     pub action: String,
     #[diesel(sql_type = Nullable<Integer>)]
-    pub started:Option<i32>,
+    pub started: Option<i32>,
     #[diesel(sql_type = Nullable<Integer>)]
-    pub position:Option<i32>,
+    pub position: Option<i32>,
     #[diesel(sql_type = Nullable<Integer>)]
-    pub total:Option<i32>,
+    pub total: Option<i32>,
     #[diesel(sql_type = Text)]
-    pub cleaned_url: String
+    pub cleaned_url: String,
 }
 
-
-impl Episode{
-    pub fn insert_episode(&self, conn: &mut DbConnection) -> Result<Episode, diesel::result::Error> {
+impl Episode {
+    pub fn insert_episode(
+        &self,
+        conn: &mut DbConnection,
+    ) -> Result<Episode, diesel::result::Error> {
         use crate::dbconfig::schema::episodes::dsl::*;
 
-        let res = episodes.filter(timestamp.eq(self.clone().timestamp)
-            .and(device.eq(&self.clone().device))
-            .and(podcast.eq(&self.clone().podcast))
-            .and(episode.eq(&self.clone().episode))
-            .and(timestamp.eq(self.clone().timestamp)))
+        let res = episodes
+            .filter(
+                timestamp
+                    .eq(self.clone().timestamp)
+                    .and(device.eq(&self.clone().device))
+                    .and(podcast.eq(&self.clone().podcast))
+                    .and(episode.eq(&self.clone().episode))
+                    .and(timestamp.eq(self.clone().timestamp)),
+            )
             .first::<Episode>(conn)
             .optional()
             .expect("");
 
         if let Some(unwrapped_res) = res {
-            return Ok(unwrapped_res)
+            return Ok(unwrapped_res);
         }
 
         let mut cleaned_url_parsed = Url::parse(&self.episode).unwrap();
@@ -80,7 +91,7 @@ impl Episode{
                 position.eq(&self.position),
                 total.eq(&self.total),
                 cleaned_url.eq(&cleaned_url_parsed.to_string()),
-                ))
+            ))
             .get_result(conn)
     }
 
@@ -98,7 +109,7 @@ impl Episode{
         }
     }
 
-    pub fn convert_to_episode(episode_dto: &EpisodeDto, username: String)->Episode{
+    pub fn convert_to_episode(episode_dto: &EpisodeDto, username: String) -> Episode {
         // Remove query parameters
         let mut episode = Url::parse(&episode_dto.episode).unwrap();
         episode.set_query(None);
@@ -118,38 +129,38 @@ impl Episode{
             cleaned_url: episode.to_string(),
         }
     }
-    pub async fn get_actions_by_username(username1: String, conn: &mut DbConnection, since_date: Option<NaiveDateTime>) ->Vec<Episode>{
-        use crate::dbconfig::schema::episodes::username;
+    pub async fn get_actions_by_username(
+        username1: String,
+        conn: &mut DbConnection,
+        since_date: Option<NaiveDateTime>,
+    ) -> Vec<Episode> {
         use crate::dbconfig::schema::episodes::dsl::episodes;
         use crate::dbconfig::schema::episodes::dsl::timestamp;
+        use crate::dbconfig::schema::episodes::username;
         match since_date {
-            Some(e)=>{
-                episodes
-                    .filter(username.eq(username1))
-                    .filter(timestamp.gt(e))
-                    .load::<Episode>(conn)
-                    .expect("")
-            },
-            None=>{
-                episodes
-                    .filter(username.eq(username1))
-                    .load::<Episode>(conn)
-                    .expect("")
-            }
+            Some(e) => episodes
+                .filter(username.eq(username1))
+                .filter(timestamp.gt(e))
+                .load::<Episode>(conn)
+                .expect(""),
+            None => episodes
+                .filter(username.eq(username1))
+                .load::<Episode>(conn)
+                .expect(""),
         }
     }
 
-    pub fn get_watch_log_by_username_and_episode(username1: String, conn: &mut DbConnection,
-                                                 episode_1: String) ->Result<Option<Episode>,
-        CustomError> {
-
+    pub fn get_watch_log_by_username_and_episode(
+        username1: String,
+        conn: &mut DbConnection,
+        episode_1: String,
+    ) -> Result<Option<Episode>, CustomError> {
         use crate::dbconfig::schema::episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::*;
         use crate::dbconfig::schema::podcasts::table as podcast_episode_table;
         use diesel::JoinOnDsl;
         use diesel::Table;
 
-        
         episodes
             .inner_join(podcast_episode_table.on(podcast.eq(rssfeed)))
             .filter(username.eq(username1))
@@ -161,9 +172,11 @@ impl Episode{
             .map_err(map_db_error)
     }
 
-    pub fn convert_to_podcast_history_item(&self, podcast_1: Podcast,pod_episode: PodcastEpisode)
-        ->
-                                                                              PodcastHistoryItem {
+    pub fn convert_to_podcast_history_item(
+        &self,
+        podcast_1: Podcast,
+        pod_episode: PodcastEpisode,
+    ) -> PodcastHistoryItem {
         PodcastHistoryItem {
             id: self.id,
             podcast_id: podcast_1.id,
@@ -174,9 +187,10 @@ impl Episode{
         }
     }
 
-    pub fn get_last_watched_episodes(username_to_find: String, conn: &mut DbConnection)
-                                     ->Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>,
-                                         CustomError>{
+    pub fn get_last_watched_episodes(
+        username_to_find: String,
+        conn: &mut DbConnection,
+    ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::episodes::dsl::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts as podcast_table;
@@ -187,7 +201,7 @@ impl Episode{
             .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
             .filter(username.eq(username_to_find.clone()))
             .filter(action.eq("play"))
-            .load::<(PodcastEpisode,Episode, Podcast)>(conn)
+            .load::<(PodcastEpisode, Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
 
         let _query_1 = &podcast_episodes
@@ -195,8 +209,9 @@ impl Episode{
             .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
             .filter(username.eq(username_to_find));
 
-        let mapped_watched_episodes = query.iter().map(|e|{
-            PodcastWatchedEpisodeModelWithPodcastEpisode{
+        let mapped_watched_episodes = query
+            .iter()
+            .map(|e| PodcastWatchedEpisodeModelWithPodcastEpisode {
                 id: e.clone().1.id,
                 podcast_id: e.clone().2.id,
                 episode_id: e.0.episode_id.clone(),
@@ -208,32 +223,34 @@ impl Episode{
                 total_time: e.clone().0.total_time,
                 podcast_episode: e.0.clone(),
                 podcast: e.2.clone(),
-            }
-        }).collect();
+            })
+            .collect();
         Ok(mapped_watched_episodes)
     }
 
-    pub fn delete_by_username_and_episode(username1: String, conn: &mut DbConnection) ->Result<(),Error>{
-        use crate::dbconfig::schema::episodes::username;
+    pub fn delete_by_username_and_episode(
+        username1: String,
+        conn: &mut DbConnection,
+    ) -> Result<(), Error> {
         use crate::dbconfig::schema::episodes::dsl::episodes;
+        use crate::dbconfig::schema::episodes::username;
         diesel::delete(episodes.filter(username.eq(username1)))
-                                   .execute(conn).expect("");
+            .execute(conn)
+            .expect("");
         Ok(())
     }
 
-    pub fn migrate_episode_urls(conn: &mut DbConnection){
-        let episodes_loaded = episodes_dsl
-            .load::<Episode>(conn)
-            .expect("");
-        episodes_loaded.iter().for_each(|e|{
+    pub fn migrate_episode_urls(conn: &mut DbConnection) {
+        let episodes_loaded = episodes_dsl.load::<Episode>(conn).expect("");
+        episodes_loaded.iter().for_each(|e| {
             let mut cleaned_url_parsed = Url::parse(&e.episode).unwrap();
             cleaned_url_parsed.set_query(None);
-            diesel::update(
-                episodes_dsl.filter(episodes::id.eq(e.id)))
+            diesel::update(episodes_dsl.filter(episodes::id.eq(e.id)))
                 .set(episodes::cleaned_url.eq(cleaned_url_parsed.to_string()))
-                .execute(conn).expect("");
+                .execute(conn)
+                .expect("");
         });
-        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -243,16 +260,15 @@ pub struct EpisodeDto {
     pub timestamp: NaiveDateTime,
     pub guid: Option<String>,
     pub action: EpisodeAction,
-    pub started:Option<i32>,
-    pub position:Option<i32>,
-    pub total:Option<i32>,
+    pub started: Option<i32>,
+    pub position: Option<i32>,
+    pub total: Option<i32>,
     pub device: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
-#[derive(PartialEq)]
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub enum EpisodeAction {
     New,
     Download,
@@ -260,8 +276,7 @@ pub enum EpisodeAction {
     Delete,
 }
 
-
-impl EpisodeAction{
+impl EpisodeAction {
     pub fn from_string(s: &str) -> Self {
         match s {
             "new" => EpisodeAction::New,

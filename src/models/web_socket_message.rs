@@ -20,8 +20,6 @@ pub struct Lobby {
     sessions: HashMap<Uuid, Socket>,
 }
 
-
-
 impl Handler<BroadcastMessage> for Lobby {
     type Result = ();
 

@@ -1,20 +1,26 @@
-use std::ops::DerefMut;
 use crate::controllers::web_socket::WsConn;
+use std::ops::DerefMut;
 
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::web_socket_message::Lobby;
+use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::DbPool;
 use actix::Addr;
 use actix_web::{get, web, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use rss::extension::itunes::{ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder, ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder};
-use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder};
-use std::sync::{Mutex};
-use crate::DbPool;
-use crate::mutex::LockResultExt;
-use crate::utils::error::{CustomError, map_r2d2_error};
+use rss::extension::itunes::{
+    ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
+    ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
+};
+use rss::{
+    Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
+    ItemBuilder,
+};
+use std::sync::Mutex;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -34,7 +40,7 @@ pub async fn start_connection(
 
 #[derive(Deserialize, Serialize)]
 pub struct RSSQuery {
-    top: i32
+    top: i32,
 }
 
 #[utoipa::path(
@@ -45,25 +51,18 @@ responses(
 #[get("/rss")]
 pub async fn get_rss_feed(
     podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
-    db: Data<DbPool>, env: Data<Mutex<EnvironmentService>>,
+    db: Data<DbPool>,
+    env: Data<Mutex<EnvironmentService>>,
     query: Option<web::Query<RSSQuery>>,
 ) -> Result<HttpResponse, CustomError> {
     let env = env.lock().ignore_poison();
-    let mut podcast_service = podcast_episode_service
-        .lock()
-        .ignore_poison();
+    let mut podcast_service = podcast_episode_service.lock().ignore_poison();
 
     let downloaded_episodes = match query {
-        Some(q) => {
-             podcast_service
-                .find_all_downloaded_podcast_episodes_with_top_k(&mut db.get()
-                    .unwrap(), q.top)?
-        },
-        None => {
-            podcast_service
-                .find_all_downloaded_podcast_episodes(&mut db.get()
-                    .unwrap(), env.clone())?
-        }
+        Some(q) => podcast_service
+            .find_all_downloaded_podcast_episodes_with_top_k(&mut db.get().unwrap(), q.top)?,
+        None => podcast_service
+            .find_all_downloaded_podcast_episodes(&mut db.get().unwrap(), env.clone())?,
     };
 
     let server_url = env.get_server_url();
@@ -87,28 +86,29 @@ pub async fn get_rss_feed(
         .title("Podfetch")
         .link(format!("{}{}", &server_url, &"rss"))
         .description("Your local rss feed for your podcasts")
-        .items(items.clone()).clone();
+        .items(items.clone())
+        .clone();
 
-    let channel = generate_itunes_extension_conditionally(itunes_ext, channel_builder,
-                                                          None, env.clone());
+    let channel =
+        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env.clone());
 
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
-fn generate_itunes_extension_conditionally(mut itunes_ext: ITunesChannelExtension,
-                                           mut channel_builder: ChannelBuilder,
-                                           podcast: Option<Podcast>,
-                                           env: EnvironmentService) -> Channel {
+fn generate_itunes_extension_conditionally(
+    mut itunes_ext: ITunesChannelExtension,
+    mut channel_builder: ChannelBuilder,
+    podcast: Option<Podcast>,
+    env: EnvironmentService,
+) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
             true => itunes_ext.set_image(env.server_url + &*e.image_url),
-            false => itunes_ext.set_image(env.server_url + &*e.original_image_url)
+            false => itunes_ext.set_image(env.server_url + &*e.original_image_url),
         }
     }
 
-    channel_builder
-        .itunes_ext(itunes_ext)
-        .build()
+    channel_builder.itunes_ext(itunes_ext).build()
 }
 
 #[utoipa::path(
@@ -124,20 +124,19 @@ pub async fn get_rss_feed_for_podcast(
 ) -> Result<HttpResponse, CustomError> {
     let env = EnvironmentService::new();
     let server_url = env.server_url.clone();
-    let mut podcast_service = podcast_episode_service
-        .lock()
-        .ignore_poison();
+    let mut podcast_service = podcast_episode_service.lock().ignore_poison();
     let podcast = Podcast::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), *id)?;
 
-    let downloaded_episodes =
-        podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(*id,
-                                                                           conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(
+        *id,
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    )?;
 
     let mut itunes_owner = get_itunes_owner("", "");
 
-        if let Some(author) = podcast.author.clone() { itunes_owner =
-           get_itunes_owner(&author, "local@local.com") }
-
+    if let Some(author) = podcast.author.clone() {
+        itunes_owner = get_itunes_owner(&author, "local@local.com")
+    }
 
     let mut categories: Vec<Category> = vec![];
     if let Some(keyword) = podcast.keywords.clone() {
@@ -174,11 +173,14 @@ pub async fn get_rss_feed_for_podcast(
         .title(podcast.name.clone())
         .link(format!("{}{}/{}", &server_url, &"rss", &id))
         .description(podcast.clone().summary.unwrap())
-        .items(items.clone()).clone();
+        .items(items.clone())
+        .clone();
 
-    let channel = generate_itunes_extension_conditionally(itunes_ext,
-                                                          channel_builder, Some(podcast
-            .clone()), env,
+    let channel = generate_itunes_extension_conditionally(
+        itunes_ext,
+        channel_builder,
+        Some(podcast.clone()),
+        env,
     );
 
     Ok(HttpResponse::Ok().body(channel.to_string()))

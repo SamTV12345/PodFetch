@@ -1,5 +1,5 @@
 use std::fmt;
-use std::fmt::{Formatter, write};
+use std::fmt::{write, Formatter};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Jwks {
@@ -16,15 +16,13 @@ pub struct Jwk {
     e: String,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CustomJwkSet {
     pub(crate) keys: Vec<CustomJwk>,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CustomJwk{
+pub struct CustomJwk {
     pub kid: String,
     pub kty: String,
     pub alg: String,
@@ -36,8 +34,12 @@ pub struct CustomJwk{
 
 impl fmt::Display for CustomJwk {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write(f, format_args!("kid: {}, kty: {}, alg: {}, use_: {}, n: {}, e: {}", self.kid,
-                              self.kty,
-              self.alg, self.use_, self.n, self.e))
+        write(
+            f,
+            format_args!(
+                "kid: {}, kty: {}, alg: {}, use_: {}, n: {}, e: {}",
+                self.kid, self.kty, self.alg, self.use_, self.n, self.e
+            ),
+        )
     }
 }

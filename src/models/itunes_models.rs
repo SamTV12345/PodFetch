@@ -1,11 +1,4 @@
-
-
-
-
 use utoipa::ToSchema;
-
-
-
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

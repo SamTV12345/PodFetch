@@ -2,8 +2,8 @@ use std::thread::sleep;
 use std::time::Duration;
 
 pub fn do_retry<F, T, E>(mut func: F) -> Result<T, E>
-    where
-        F: FnMut() -> Result<T, E>,
+where
+    F: FnMut() -> Result<T, E>,
 {
     let mut tries = 0;
 
@@ -16,7 +16,7 @@ pub fn do_retry<F, T, E>(mut func: F) -> Result<T, E>
                 if tries >= 10 {
                     return err;
                 }
-               sleep(Duration::from_millis(500))
+                sleep(Duration::from_millis(500))
             }
         }
     }

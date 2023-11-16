@@ -1,5 +1,3 @@
-
-
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use log::error;
@@ -29,7 +27,7 @@ impl CustomError {
             Self::Unknown => "Unknown".to_string(),
             Self::DatabaseError(_) => "DatabaseError".to_string(),
             Self::Conflict(e) => e.to_string(),
-            Self::BadRequest(e)=>e.to_string()
+            Self::BadRequest(e) => e.to_string(),
         }
     }
 }
@@ -37,12 +35,12 @@ impl CustomError {
 impl ResponseError for CustomError {
     fn status_code(&self) -> StatusCode {
         match *self {
-            Self::NotFound  => StatusCode::NOT_FOUND,
+            Self::NotFound => StatusCode::NOT_FOUND,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Conflict(_) => StatusCode::CONFLICT,
-            Self::BadRequest(_)=>StatusCode::BAD_REQUEST
+            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
         }
     }
 
@@ -58,7 +56,11 @@ impl ResponseError for CustomError {
 }
 
 pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
-    error!("IO error: {} for path {}", e, path.unwrap_or("".to_string()));
+    error!(
+        "IO error: {} for path {}",
+        e,
+        path.unwrap_or("".to_string())
+    );
     match e.kind() {
         std::io::ErrorKind::NotFound => CustomError::NotFound,
         std::io::ErrorKind::PermissionDenied => CustomError::Forbidden,
@@ -66,8 +68,12 @@ pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
     }
 }
 
-pub fn map_io_extra_error(e: fs_extra::error::Error, path: Option<String>) ->CustomError {
-    error!("IO extra error: {} for path {}", e, path.unwrap_or("".to_string()));
+pub fn map_io_extra_error(e: fs_extra::error::Error, path: Option<String>) -> CustomError {
+    error!(
+        "IO extra error: {} for path {}",
+        e,
+        path.unwrap_or("".to_string())
+    );
     CustomError::Unknown
 }
 
@@ -86,11 +92,10 @@ pub fn map_r2d2_error(e: r2d2::Error) -> CustomError {
 }
 
 pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
-    error!("Error during reqwest: {}",e);
+    error!("Error during reqwest: {}", e);
 
     CustomError::BadRequest("Error requesting resource from server".to_string())
 }
-
 
 #[derive(Serialize)]
 struct ErrorResponse {
@@ -101,7 +106,7 @@ struct ErrorResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::error::{CustomError, map_db_error, map_io_error};
+    use crate::utils::error::{map_db_error, map_io_error, CustomError};
     use actix_web::http::StatusCode;
     use actix_web::ResponseError;
     use diesel::result::Error;
@@ -119,7 +124,10 @@ mod tests {
     fn test_map_db_error() {
         let db_error = Error::NotFound;
         let custom_error = map_db_error(db_error);
-        assert_eq!(custom_error.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            custom_error.status_code(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
         assert_eq!(custom_error.to_string(), "Unknown Internal Error");
     }
 
@@ -134,6 +142,9 @@ mod tests {
     fn test_custom_conflict_message() {
         let custom_error = CustomError::Conflict("An error occured".to_string());
         assert_eq!(custom_error.status_code(), StatusCode::CONFLICT);
-        assert_eq!(custom_error.to_string(), "The following error occurred: An error occured");
+        assert_eq!(
+            custom_error.to_string(),
+            "The following error occurred: An error occured"
+        );
     }
 }
