@@ -24,7 +24,7 @@
     "axios": "^1.6.1",
     "chart.js": "^4.4.0",
     "csstype": "^3.1.2",
-    "framer-motion": "^10.16.4",
+    "framer-motion": "^10.16.5",
     "i18next": "^23.7.3",
     "i18next-browser-languagedetector": "^7.1.0",
     "javascript-time-ago": "^2.5.9",
