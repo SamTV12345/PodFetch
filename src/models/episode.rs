@@ -204,11 +204,6 @@ impl Episode {
             .load::<(PodcastEpisode, Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
 
-        let _query_1 = &podcast_episodes
-            .inner_join(episodes.on(url.like(cleaned_url.concat("%"))))
-            .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
-            .filter(username.eq(username_to_find));
-
         let mapped_watched_episodes = query
             .iter()
             .map(|e| PodcastWatchedEpisodeModelWithPodcastEpisode {
