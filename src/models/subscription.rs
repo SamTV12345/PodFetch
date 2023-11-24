@@ -146,7 +146,8 @@ impl SubscriptionChangesToClient {
                             dsl_types::username.eq(subscription.username),
                             dsl_types::device.eq(subscription.device),
                             dsl_types::podcast.eq(subscription.podcast),
-                            dsl_types::created.eq(subscription.created)))
+                            dsl_types::created.eq(subscription.created),
+                        ))
                         .execute(conn)
                         .unwrap();
                 }

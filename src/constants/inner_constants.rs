@@ -129,6 +129,5 @@ pub const COMMON_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) A
 
 pub const OIDC_JWKS: &str = "OIDC_JWKS";
 
-
 // Default device when viewing via web interface
 pub const DEFAULT_DEVICE: &str = "webview";

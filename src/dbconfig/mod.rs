@@ -31,7 +31,7 @@ macro_rules! execute_with_conn {
 macro_rules! insert_with_conn {
     ($conn:expr, $diesel_func:expr) => {
         match $conn {
-            DbConnection::Sqlite(conn) =>  $diesel_func(conn),
+            DbConnection::Sqlite(conn) => $diesel_func(conn),
             DbConnection::Postgresql(conn) => $diesel_func(conn),
         }
     };
