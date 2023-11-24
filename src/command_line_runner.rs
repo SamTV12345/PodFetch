@@ -218,9 +218,19 @@ pub fn start_command_line(mut args: Args) {
             }
         }
         "migration" => {
-            if args.next().unwrap().as_str() == "episodes" {
-                Episode::migrate_episode_urls(&mut establish_connection());
-                println!("Successfully migrated episode urls.")
+
+            match args.next().unwrap().as_str(){
+                "episodes"=>{
+                    Episode::migrate_episode_urls(&mut establish_connection());
+                    println!("Successfully migrated episode urls.")
+                }
+                "watchlog"=>{
+                    PodcastHistoryItem::migrate_watchlog(&mut establish_connection());
+                    println!("Successfully migrated history into episodes.")
+                }
+                _=>{
+                    error!("Command not found")
+                }
             }
         }
         "debug" => {
