@@ -1,4 +1,7 @@
-use crate::constants::inner_constants::STANDARD_USER;
+use crate::constants::inner_constants::{DEFAULT_DEVICE, STANDARD_USER};
+use crate::dbconfig::schema::episodes::dsl::episodes;
+use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+use crate::dbconfig::schema::podcast_history_items::dsl::podcast_history_items;
 use crate::models::episode::{Episode, EpisodeAction};
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
@@ -7,10 +10,9 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::mapping_service::MappingService;
 use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
+use crate::{insert_with_conn, DBType as DbConnection};
 use chrono::{NaiveDateTime, Utc};
 use diesel::sql_types::*;
-use diesel::QueryId;
 use diesel::Queryable;
 use diesel::QueryableByName;
 use diesel::Selectable;
@@ -18,6 +20,8 @@ use diesel::{
     delete, insert_into, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension,
     QueryDsl, RunQueryDsl,
 };
+use diesel::{QueryId};
+use reqwest::Url;
 use utoipa::ToSchema;
 
 #[derive(
@@ -124,7 +128,6 @@ impl PodcastHistoryItem {
                         )?;
                         if let Some(episode) = option_episode {
                             if episode.action == EpisodeAction::Play.to_string()
-                                && episode.position.unwrap() > found_history_item.watched_time
                                 && episode.timestamp > found_history_item.date
                             {
                                 let found_podcast_item =
@@ -160,7 +163,6 @@ impl PodcastHistoryItem {
         use crate::dbconfig::schema::podcast_history_items;
 
         use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as eid;
-        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         use crate::dbconfig::schema::podcast_history_items::dsl::episode_id as ehid;
         use diesel::NullableExpressionMethods;
 
@@ -230,5 +232,62 @@ impl PodcastHistoryItem {
             .filter(podcast_history_items::date.ge(since))
             .load::<(PodcastHistoryItem, PodcastEpisode, Podcast)>(conn)
             .map_err(map_db_error)
+    }
+
+    #[allow(clippy::redundant_closure_call)]
+    pub fn migrate_watchlog(conn: &mut DbConnection) {
+        use crate::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
+        use crate::dbconfig::schema::podcast_episodes::table as ep_podcast;
+        use crate::dbconfig::schema::podcasts::dsl as p_dsl;
+        use crate::dbconfig::schema::podcasts::table as p_table;
+
+        let history = podcast_history_items
+            .load::<PodcastHistoryItem>(conn)
+            .map_err(map_db_error)
+            .unwrap();
+
+        let mapped_episodes = history
+            .iter()
+            .map(|ph_item| {
+                let podcast = p_table
+                    .filter(p_dsl::id.eq(ph_item.podcast_id))
+                    .first::<Podcast>(conn)
+                    .unwrap();
+
+                let found_episode = ep_podcast
+                    .filter(pe_dsl::episode_id.eq(ph_item.episode_id.clone()))
+                    .first::<PodcastEpisode>(conn)
+                    .unwrap();
+
+                let mut cleaned_url_parsed = Url::parse(&found_episode.url.clone()).unwrap();
+                cleaned_url_parsed.set_query(None);
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+
+                let random_id = rng.gen_range(50000..100000);
+                Episode {
+                    id: random_id,
+                    username: ph_item.username.clone(),
+                    device: DEFAULT_DEVICE.to_string(),
+                    podcast: podcast.rssfeed,
+                    episode: found_episode.url,
+                    timestamp: ph_item.date,
+
+                    guid: Some(found_episode.guid.clone()),
+                    action: "play".to_string(),
+                    started: Some(0),
+                    position: Some(ph_item.watched_time),
+                    total: Some(found_episode.total_time),
+                    cleaned_url: cleaned_url_parsed.to_string(),
+                }
+            })
+            .collect::<Vec<Episode>>();
+
+        mapped_episodes.iter().for_each(|v| {
+            insert_with_conn!(conn, |conn| diesel::insert_into(episodes)
+                .values(v)
+                .execute(conn)
+                .unwrap());
+        })
     }
 }
