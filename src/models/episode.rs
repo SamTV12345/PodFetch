@@ -1,8 +1,5 @@
 use chrono::NaiveDateTime;
-use diesel::{
-    BoolExpressionMethods, Insertable, OptionalExtension, QueryDsl, QueryId, Queryable,
-    QueryableByName, RunQueryDsl, Selectable,
-};
+use diesel::{BoolExpressionMethods, Insertable, OptionalExtension, QueryDsl, QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable, NullableExpressionMethods};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
@@ -188,20 +185,33 @@ impl Episode {
         conn: &mut DbConnection,
     ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
         use crate::dbconfig::schema::episodes::dsl::guid as eguid;
-        use crate::dbconfig::schema::episodes::table as episode_table;
+        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::dbconfig::schema::podcast_episodes::dsl::guid as pguid;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::episodes::username as e_username;
-        use crate::dbconfig::schema::episodes::action as e_action;
         use crate::dbconfig::schema::podcasts as podcast_table;
         use diesel::JoinOnDsl;
         use diesel::NullableExpressionMethods;
 
+        let (episodes1, episodes2) = diesel::alias!(episodes as p1, episodes as p2);
+
+        let subquery = episodes2
+            .select(diesel::dsl::max(
+                episodes2.field(ep_dsl::timestamp),
+            ))
+            .filter(
+                episodes2
+                    .field(ep_dsl::episode)
+                    .eq(episodes2.field(ep_dsl::episode)),
+            )
+            .group_by(episodes2.field(ep_dsl::episode));
+
         let query = podcast_episodes
-            .inner_join(episode_table.on(pguid.nullable().eq(eguid)))
+            .inner_join(episodes1.on(pguid.nullable().eq(episodes1.field(eguid))))
             .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
-            .filter(e_username.eq(username_to_find.clone()))
-            .filter(e_action.eq("play"))
+            .filter(episodes1.field(e_username).eq(username_to_find.clone()))
+            .filter(episodes1.field(ep_dsl::timestamp).nullable().eq_any(subquery))
+            .filter(episodes1.field(ep_dsl::action).eq("play"))
             .load::<(PodcastEpisode, Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
 
