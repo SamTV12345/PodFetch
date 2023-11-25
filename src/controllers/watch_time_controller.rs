@@ -1,18 +1,18 @@
-use crate::config::dbconfig::establish_connection;
+
 use crate::models::episode::Episode;
 use crate::models::misc_models::{
-    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
+    PodcastWatchedPostModel,
 };
 use crate::models::user::User;
-use crate::mutex::LockResultExt;
-use crate::service::mapping_service::MappingService;
+
+
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix_web::web::Data;
 use actix_web::{get, post, web, HttpResponse};
-use std::collections::HashMap;
+
 use std::ops::DerefMut;
-use std::sync::Mutex;
+
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -54,7 +54,8 @@ pub async fn get_last_watched(
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
-    Ok(HttpResponse::Ok().json(episodes))
+    Ok(HttpResponse::Ok()
+        .json(episodes))
 }
 
 #[utoipa::path(

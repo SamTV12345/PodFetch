@@ -1,4 +1,5 @@
 use crate::dbconfig::schema::*;
+use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
@@ -20,7 +21,6 @@ use diesel::{
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
-use crate::models::episode::Episode;
 
 #[derive(
     Queryable,
@@ -197,12 +197,12 @@ impl PodcastEpisode {
         last_id: Option<String>,
         user: User,
     ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
+        use crate::dbconfig::schema::episodes as phistory;
+        use crate::dbconfig::schema::episodes::episode as eid;
+        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
+        use crate::dbconfig::schema::episodes::username as phistory_username;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         use crate::dbconfig::schema::podcast_episodes::*;
-        use crate::dbconfig::schema::episodes as phistory;
-        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
-        use crate::dbconfig::schema::episodes::episode as eid;
-        use crate::dbconfig::schema::episodes::username as phistory_username;
         let (ph1, ph2) = diesel::alias!(phistory as ph1, phistory as ph2);
 
         let subquery = ph2

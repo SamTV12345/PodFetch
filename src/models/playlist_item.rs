@@ -1,4 +1,5 @@
 use crate::dbconfig::schema::playlist_items;
+use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
@@ -9,7 +10,6 @@ use diesel::sql_types::{Integer, Text};
 use diesel::ExpressionMethods;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
-use crate::models::episode::Episode;
 
 #[derive(
     Serialize, Deserialize, Debug, Queryable, QueryableByName, Insertable, Clone, ToSchema,
@@ -85,14 +85,14 @@ impl PlaylistItem {
         conn: &mut DbConnection,
         user: User,
     ) -> Result<Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>, CustomError> {
+        use crate::dbconfig::schema::episodes as episode_item;
+        use crate::dbconfig::schema::episodes::episode as phistory_episode_id;
+        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
+        use crate::dbconfig::schema::episodes::username as phistory_username;
         use crate::dbconfig::schema::playlist_items::dsl::*;
         use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as epid;
         use crate::dbconfig::schema::podcast_episodes::dsl::id as eid;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
-        use crate::dbconfig::schema::episodes as episode_item;
-        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
-        use crate::dbconfig::schema::episodes::episode as phistory_episode_id;
-        use crate::dbconfig::schema::episodes::username as phistory_username;
         let (ph1, ph2) = diesel::alias!(episode_item as ph1, episode_item as ph2);
 
         let subquery = ph2

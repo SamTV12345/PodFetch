@@ -4,7 +4,7 @@ use std::ops::DerefMut;
 use actix_web::web::Data;
 use actix_web::{get, post};
 
-use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
+use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::session::Session;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::utils::time::get_current_timestamp;
@@ -43,7 +43,7 @@ pub async fn get_episode_actions(
             }
 
             let since_date = NaiveDateTime::from_timestamp_opt(since.since, 0);
-            let mut actions = Episode::get_actions_by_username(
+            let actions = Episode::get_actions_by_username(
                 username.clone(),
                 &mut pool.get().unwrap(),
                 since_date,

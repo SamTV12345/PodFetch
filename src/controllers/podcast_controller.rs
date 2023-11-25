@@ -698,8 +698,8 @@ async fn insert_outline(
         }),
     }
 }
-use utoipa::ToSchema;
 use crate::models::episode::Episode;
+use utoipa::ToSchema;
 
 use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
 

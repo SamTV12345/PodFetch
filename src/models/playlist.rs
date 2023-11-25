@@ -1,6 +1,7 @@
 use crate::controllers::playlist_controller::{PlaylistDto, PlaylistDtoPost};
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::dbconfig::schema::playlists;
+use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
@@ -13,7 +14,6 @@ use diesel::RunQueryDsl;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use crate::models::episode::Episode;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 pub struct Playlist {

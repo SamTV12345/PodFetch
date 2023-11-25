@@ -1,5 +1,6 @@
 use crate::constants::inner_constants::PodcastType;
 use crate::db::TimelineItem;
+use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -19,7 +20,6 @@ use serde_json::from_str;
 use std::ops::DerefMut;
 use std::sync::Mutex;
 use std::thread;
-use crate::models::episode::Episode;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {

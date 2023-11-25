@@ -20,10 +20,10 @@ use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 
+use crate::models::episode::Episode;
 use crate::models::notification::Notification;
 use crate::models::user::User;
 use crate::DBType as DbConnection;
-use crate::models::episode::Episode;
 
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
