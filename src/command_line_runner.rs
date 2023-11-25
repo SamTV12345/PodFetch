@@ -216,10 +216,6 @@ pub fn start_command_line(mut args: Args) {
             }
         }
         "migration" => match args.next().unwrap().as_str() {
-            "episodes" => {
-                Episode::migrate_episode_urls(&mut establish_connection());
-                println!("Successfully migrated episode urls.")
-            }
             _ => {
                 error!("Command not found")
             }

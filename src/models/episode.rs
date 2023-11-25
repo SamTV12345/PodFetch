@@ -10,8 +10,6 @@ use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::ExpressionMethods;
 use reqwest::Url;
 use utoipa::ToSchema;
-use crate::dbconfig::DBType;
-
 use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::DBType as DbConnection;
 
@@ -56,9 +54,7 @@ pub struct Episode {
     #[diesel(sql_type = Nullable<Integer>)]
     pub position: Option<i32>,
     #[diesel(sql_type = Nullable<Integer>)]
-    pub total: Option<i32>,
-    #[diesel(sql_type = Text)]
-    pub cleaned_url: String,
+    pub total: Option<i32>
 }
 
 impl Episode {
@@ -98,8 +94,7 @@ impl Episode {
                 action.eq(&self.action),
                 started.eq(&self.started),
                 position.eq(&self.position),
-                total.eq(&self.total),
-                cleaned_url.eq(&cleaned_url_parsed.to_string()),
+                total.eq(&self.total)
             ))
             .get_result(conn)
     }
@@ -134,8 +129,7 @@ impl Episode {
             action: episode_dto.action.clone().to_string(),
             started: episode_dto.started,
             position: episode_dto.position,
-            total: episode_dto.total,
-            cleaned_url: episode.to_string(),
+            total: episode_dto.total
         }
     }
     pub async fn get_actions_by_username(
@@ -251,18 +245,6 @@ impl Episode {
         Ok(())
     }
 
-    pub fn migrate_episode_urls(conn: &mut DbConnection) {
-        let episodes_loaded = episodes_dsl.load::<Episode>(conn).expect("");
-        episodes_loaded.iter().for_each(|e| {
-            let mut cleaned_url_parsed = Url::parse(&e.episode).unwrap();
-            cleaned_url_parsed.set_query(None);
-            diesel::update(episodes_dsl.filter(episodes::id.eq(e.id)))
-                .set(episodes::cleaned_url.eq(cleaned_url_parsed.to_string()))
-                .execute(conn)
-                .expect("");
-        });
-    }
-
     pub fn delete_watchtime(conn: &mut DbConnection, podcast_id: i32) -> Result<(), CustomError> {
         use crate::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::dbconfig::schema::episodes::table as ep_table;
@@ -368,8 +350,7 @@ impl Episode {
                     action: "play".to_string(),
                     started: None,
                     position: Some(pod_watch_model.time),
-                    total: Some(found_episode.total_time),
-                    cleaned_url: "".to_string(),
+                    total: Some(found_episode.total_time)
                 };
                 episode
                     .insert_episode(conn)
