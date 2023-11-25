@@ -12,6 +12,7 @@ import axios, {AxiosResponse} from "axios";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import useCommon from "../store/CommonSlice";
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
+import {Episode} from "../models/Episode";
 
 type PlayerTimeControlsProps = {
     refItem: RefObject<HTMLAudioElement>
@@ -70,7 +71,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
 
         const nextEpisode = episodes[index].podcastEpisode
         axios.get(apiURL + "/podcast/episode/" + nextEpisode.episode_id)
-            .then((response: AxiosResponse<PodcastWatchedModel>) => {
+            .then((response: AxiosResponse<Episode>) => {
                 setCurrentPodcastEpisode(nextEpisode)
                 nextEpisode.status === 'D'
                     ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data))
@@ -98,7 +99,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
                             ...e,
                            podcastHistoryItem:{
                                  ...e.podcastHistoryItem!,
-                               watchedTime: time
+                               position: time
                            }
                         } satisfies EpisodesWithOptionalTimeline
                     }

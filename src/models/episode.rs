@@ -10,6 +10,7 @@ use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::ExpressionMethods;
 use reqwest::Url;
 use utoipa::ToSchema;
+use crate::dbconfig::DBType;
 
 use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::DBType as DbConnection;
@@ -141,6 +142,9 @@ impl Episode {
         username1: String,
         conn: &mut DbConnection,
         since_date: Option<NaiveDateTime>,
+        opt_device: Option<String>,
+        opt_aggregate: Option<String>,
+        opt_podcast: Option<String>,
     ) -> Vec<Episode> {
         use crate::dbconfig::schema::episodes::dsl::episodes;
         use crate::dbconfig::schema::episodes::dsl::timestamp;
@@ -191,10 +195,10 @@ impl Episode {
         use crate::dbconfig::schema::episodes::username as e_username;
         use crate::dbconfig::schema::podcasts as podcast_table;
         use diesel::JoinOnDsl;
-        use diesel::NullableExpressionMethods;
 
         let (episodes1, episodes2) = diesel::alias!(episodes as p1, episodes as p2);
 
+        // Always get the latest available
         let subquery = episodes2
             .select(diesel::dsl::max(
                 episodes2.field(ep_dsl::timestamp),
@@ -204,6 +208,7 @@ impl Episode {
                     .field(ep_dsl::episode)
                     .eq(episodes2.field(ep_dsl::episode)),
             )
+            .filter(episodes2.field(ep_dsl::username).eq(username_to_find.clone()))
             .group_by(episodes2.field(ep_dsl::episode));
 
         let query = podcast_episodes

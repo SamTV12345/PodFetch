@@ -35,6 +35,8 @@ impl TimelineItem {
         use crate::dbconfig::schema::favorites::podcast_id as f_podcast_id;
         use crate::dbconfig::schema::favorites::username as f_username;
         use crate::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
+        use crate::dbconfig::schema::episodes::guid as eguid;
+        use crate::dbconfig::schema::podcast_episodes::guid as pguid;
 
         Filter::save_decision_for_timeline(
             username_to_search.clone(),
@@ -46,13 +48,12 @@ impl TimelineItem {
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(ehid).eq(episode_id))
             .filter(ph2.field(phi_username).eq(username_to_search.clone()))
             .group_by(ph2.field(ehid));
 
         let part_query = podcast_episodes
             .inner_join(podcasts.on(e_podcast_id.eq(pid)))
-            .left_join(ph1.on(ph1.field(ehid).eq(episode_id)))
+            .left_join(ph1.on(ph1.field(eguid).eq(pguid.nullable())))
             .filter(
                 ph1.field(phistory_date)
                     .nullable()

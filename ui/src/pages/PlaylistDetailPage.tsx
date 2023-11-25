@@ -11,6 +11,7 @@ import useAudioPlayer from "../store/AudioPlayerSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
+import {Episode} from "../models/Episode";
 
 export const PlaylistDetailPage = ()=>{
     const {t} = useTranslation()
@@ -33,7 +34,7 @@ export const PlaylistDetailPage = ()=>{
                         }
                         const nextEpisode = selectedPlaylist!.items[currentIndex+1]
                         axios.get(apiURL + "/podcast/episode/" + nextEpisode.podcastEpisode.episode_id)
-                            .then((response: AxiosResponse<PodcastWatchedModel>) => {
+                            .then((response: AxiosResponse<Episode>) => {
                                 nextEpisode.podcastEpisode.status === 'D'
                                     ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data))
                                     : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data))

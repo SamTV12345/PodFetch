@@ -8,6 +8,7 @@ import {useMemo} from "react";
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import {Episode} from "../models/Episode";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
     const infoModalOpen = useCommon(state => state.podcastAlreadyPlayed)
@@ -62,9 +63,9 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                             return
                         }
 
-                        const watchedModel:PodcastWatchedModel = {
+                        const watchedModel:Episode = {
                         ...selectedPodcastEpisode.podcastWatchModel,
-                            watchedTime: 0
+                            position: 0
                         }
 
                         selectedPodcastEpisode.podcastEpisode.podcastEpisode.status === 'D'

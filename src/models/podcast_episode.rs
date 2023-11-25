@@ -198,7 +198,7 @@ impl PodcastEpisode {
         user: User,
     ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
         use crate::dbconfig::schema::episodes as phistory;
-        use crate::dbconfig::schema::episodes::episode as eid;
+        use crate::dbconfig::schema::episodes::guid as eguid;
         use crate::dbconfig::schema::episodes::timestamp as phistory_date;
         use crate::dbconfig::schema::episodes::username as phistory_username;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
@@ -207,15 +207,14 @@ impl PodcastEpisode {
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(eid).eq(episode_id))
             .filter(ph2.field(phistory_username).eq(user.username))
-            .group_by(ph2.field(eid));
+            .group_by(ph2.field(eguid));
 
         match last_id {
             Some(last_id) => {
                 let podcasts_found = podcast_episodes
                     .filter(podcast_id.eq(podcast_id_to_be_searched))
-                    .left_join(ph1.on(ph1.field(eid).eq(episode_id)))
+                    .left_join(ph1.on(ph1.field(eguid).eq(guid.nullable())))
                     .filter(
                         ph1.field(phistory_date)
                             .nullable()
@@ -231,7 +230,7 @@ impl PodcastEpisode {
             }
             None => {
                 let podcasts_found = podcast_episodes
-                    .left_join(ph1.on(ph1.field(eid).eq(episode_id)))
+                    .left_join(ph1.on(ph1.field(eguid).eq(guid.nullable())))
                     .filter(
                         ph1.field(phistory_date)
                             .nullable()
