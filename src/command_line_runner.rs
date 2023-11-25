@@ -4,7 +4,6 @@ use crate::controllers::sys_info_controller::built_info;
 use crate::models::device::Device;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::subscription::Subscription;
@@ -135,12 +134,11 @@ pub fn start_command_line(mut args: Args) {
                         &mut username,
                     );
                     username = trim_string(username);
-                    println!("{}", username);
                     match available_users.iter().find(|u| u.username == username) {
                         Some(..) => {
-                            PodcastHistoryItem::delete_by_username(
-                                trim_string(username.clone()),
+                            Episode::delete_by_username(
                                 &mut establish_connection(),
+                                username.clone(),
                             )
                             .expect("Error deleting entries for podcast history item");
                             Device::delete_by_username(
@@ -149,7 +147,7 @@ pub fn start_command_line(mut args: Args) {
                             )
                             .expect("Error deleting devices");
                             Episode::delete_by_username_and_episode(
-                                trim_string(username.clone()),
+                                username.clone(),
                                 &mut establish_connection(),
                             )
                             .expect("Error deleting episodes");
@@ -221,10 +219,6 @@ pub fn start_command_line(mut args: Args) {
             "episodes" => {
                 Episode::migrate_episode_urls(&mut establish_connection());
                 println!("Successfully migrated episode urls.")
-            }
-            "watchlog" => {
-                PodcastHistoryItem::migrate_watchlog(&mut establish_connection());
-                println!("Successfully migrated history into episodes.")
             }
             _ => {
                 error!("Command not found")

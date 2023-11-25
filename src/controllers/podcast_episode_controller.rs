@@ -3,7 +3,6 @@ use crate::db::TimelineItem;
 use crate::models::favorites::Favorite;
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
@@ -20,6 +19,7 @@ use serde_json::from_str;
 use std::ops::DerefMut;
 use std::sync::Mutex;
 use std::thread;
+use crate::models::episode::Episode;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -32,7 +32,7 @@ impl OptionalId {}
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeWithHistory {
     pub podcast_episode: PodcastEpisode,
-    pub podcast_history_item: Option<PodcastHistoryItem>,
+    pub podcast_history_item: Option<Episode>,
 }
 
 #[utoipa::path(
@@ -77,7 +77,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
 pub struct TimeLinePodcastEpisode {
     podcast_episode: PodcastEpisode,
     podcast: Podcast,
-    history: Option<PodcastHistoryItem>,
+    history: Option<Episode>,
     favorite: Option<Favorite>,
 }
 

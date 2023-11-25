@@ -5,7 +5,6 @@ use actix_web::web::Data;
 use actix_web::{get, post};
 
 use crate::models::episode::{Episode, EpisodeAction, EpisodeDto};
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::session::Session;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::utils::time::get_current_timestamp;
@@ -50,29 +49,6 @@ pub async fn get_episode_actions(
                 since_date,
             )
             .await;
-            let watch_logs = PodcastHistoryItem::get_watch_logs_by_username(
-                username.clone(),
-                &mut pool.get().unwrap(),
-                since_date.unwrap(),
-            )?
-            .iter()
-            .map(|watch_log| Episode {
-                id: 0,
-                username: watch_log.clone().0.username,
-                device: "".to_string(),
-                podcast: watch_log.clone().2.rssfeed,
-                episode: watch_log.clone().1.url,
-                timestamp: watch_log.clone().0.date,
-                guid: None,
-                action: EpisodeAction::Play.to_string(),
-                started: Option::from(watch_log.clone().0.watched_time),
-                position: Option::from(watch_log.clone().0.watched_time),
-                total: Option::from(watch_log.clone().1.total_time),
-                cleaned_url: "".to_string(),
-            })
-            .collect::<Vec<Episode>>();
-
-            actions.append(&mut watch_logs.clone().to_vec());
             Ok(HttpResponse::Ok().json(EpisodeActionResponse {
                 actions,
                 timestamp: get_current_timestamp(),

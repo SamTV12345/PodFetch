@@ -21,9 +21,9 @@ use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 
 use crate::models::notification::Notification;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;
 use crate::DBType as DbConnection;
+use crate::models::episode::Episode;
 
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
@@ -504,7 +504,7 @@ impl PodcastEpisodeService {
         id_num: i32,
         last_id: Option<String>,
         user: User,
-    ) -> Result<Vec<(PodcastEpisode, Option<PodcastHistoryItem>)>, CustomError> {
+    ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
         PodcastEpisode::get_podcast_episodes_of_podcast(conn, id_num, last_id, user)
     }
 

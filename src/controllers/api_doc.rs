@@ -20,7 +20,6 @@ use crate::models::misc_models::{
 use crate::models::notification::Notification;
 use crate::models::opml_model::OpmlModel;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::settings::Setting;
 use crate::models::user::User;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
@@ -61,7 +60,7 @@ paths(
 delete_podcast,proxy_podcast
 ),
 components(
-schemas(Podcast, PodcastEpisode, ItunesModel, PodcastHistoryItem,PodcastFavorUpdateModel,
+schemas(Podcast, PodcastEpisode, ItunesModel,PodcastFavorUpdateModel,
 PodcastWatchedEpisodeModel, PodcastWatchedPostModel, PodcastAddModel,Notification, Setting,
 Invite,
 Filter,OpmlModel,DeletePodcast, UpdateNameSettings,SysExtraInfo,UserOnboardingModel,User,InvitePostModel)

@@ -105,17 +105,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    podcast_history_items (id) {
-        id -> Integer,
-        podcast_id -> Integer,
-        episode_id -> Text,
-        watched_time -> Integer,
-        date -> Timestamp,
-        username -> Text,
-    }
-}
-
-diesel::table! {
     podcasts (id) {
         id -> Integer,
         name -> Text,
@@ -185,7 +174,6 @@ diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(playlist_items -> playlists (playlist_id));
 diesel::joinable!(playlist_items -> podcast_episodes (episode));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
-diesel::joinable!(podcast_history_items -> podcasts (podcast_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     devices,
@@ -197,7 +185,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     playlist_items,
     playlists,
     podcast_episodes,
-    podcast_history_items,
     podcasts,
     sessions,
     settings,

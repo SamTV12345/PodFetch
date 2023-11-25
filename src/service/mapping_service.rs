@@ -1,8 +1,6 @@
 use crate::models::favorites::Favorite;
-use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 use crate::service::environment_service;
 
@@ -97,28 +95,6 @@ impl MappingService {
             deleted: podcast_episode.deleted,
             file_episode_path: None,
             file_image_path: None,
-        }
-    }
-
-    pub fn map_podcast_history_item_to_with_podcast_episode(
-        &self,
-        podcast_watched_model: &PodcastHistoryItem,
-        podcast_episode: PodcastEpisode,
-        podcast: Podcast,
-    ) -> PodcastWatchedEpisodeModelWithPodcastEpisode {
-        let cloned_podcast_watched_model = podcast_watched_model.clone();
-        PodcastWatchedEpisodeModelWithPodcastEpisode {
-            id: podcast_watched_model.clone().id,
-            watched_time: podcast_watched_model.clone().watched_time,
-            podcast_id: podcast_watched_model.clone().podcast_id,
-            episode_id: cloned_podcast_watched_model.episode_id,
-            date: cloned_podcast_watched_model.date,
-            url: podcast_episode.clone().local_url,
-            name: podcast_episode.clone().name,
-            image_url: podcast_episode.clone().local_image_url,
-            total_time: podcast_episode.clone().total_time,
-            podcast_episode,
-            podcast,
         }
     }
 }

@@ -3,12 +3,12 @@ use crate::dbconfig::DBType;
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
+use crate::models::episode::Episode;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -16,7 +16,7 @@ pub struct TimelineItem {
     pub data: Vec<(
         PodcastEpisode,
         Podcast,
-        Option<PodcastHistoryItem>,
+        Option<Episode>,
         Option<Favorite>,
     )>,
     pub total_elements: i64,
@@ -36,10 +36,10 @@ impl TimelineItem {
         use crate::dbconfig::schema::favorites::podcast_id as f_podcast_id;
         use crate::dbconfig::schema::favorites::username as f_username;
         use crate::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
-        use crate::dbconfig::schema::podcast_history_items as phi_struct;
-        use crate::dbconfig::schema::podcast_history_items::date as phistory_date;
-        use crate::dbconfig::schema::podcast_history_items::episode_id as ehid;
-        use crate::dbconfig::schema::podcast_history_items::username as phi_username;
+        use crate::dbconfig::schema::episodes as phi_struct;
+        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
+        use crate::dbconfig::schema::episodes::episode as ehid;
+        use crate::dbconfig::schema::episodes::username as phi_username;
 
         Filter::save_decision_for_timeline(
             username_to_search.clone(),
@@ -104,7 +104,7 @@ impl TimelineItem {
             .load::<(
                 PodcastEpisode,
                 Podcast,
-                Option<PodcastHistoryItem>,
+                Option<Episode>,
                 Option<Favorite>,
             )>(conn)
             .map_err(map_db_error)?;

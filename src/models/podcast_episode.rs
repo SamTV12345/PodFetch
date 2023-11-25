@@ -1,6 +1,5 @@
 use crate::dbconfig::schema::*;
 use crate::models::playlist_item::PlaylistItem;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::do_retry::do_retry;
@@ -21,6 +20,7 @@ use diesel::{
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
+use crate::models::episode::Episode;
 
 #[derive(
     Queryable,
@@ -196,13 +196,13 @@ impl PodcastEpisode {
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
         user: User,
-    ) -> Result<Vec<(PodcastEpisode, Option<PodcastHistoryItem>)>, CustomError> {
+    ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         use crate::dbconfig::schema::podcast_episodes::*;
-        use crate::dbconfig::schema::podcast_history_items as phistory;
-        use crate::dbconfig::schema::podcast_history_items::date as phistory_date;
-        use crate::dbconfig::schema::podcast_history_items::episode_id as eid;
-        use crate::dbconfig::schema::podcast_history_items::username as phistory_username;
+        use crate::dbconfig::schema::episodes as phistory;
+        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
+        use crate::dbconfig::schema::episodes::episode as eid;
+        use crate::dbconfig::schema::episodes::username as phistory_username;
         let (ph1, ph2) = diesel::alias!(phistory as ph1, phistory as ph2);
 
         let subquery = ph2
@@ -225,7 +225,7 @@ impl PodcastEpisode {
                     .filter(date_of_recording.lt(last_id))
                     .order(date_of_recording.desc())
                     .limit(75)
-                    .load::<(PodcastEpisode, Option<PodcastHistoryItem>)>(conn)
+                    .load::<(PodcastEpisode, Option<Episode>)>(conn)
                     .map_err(map_db_error)?;
                 Ok(podcasts_found)
             }
@@ -241,7 +241,7 @@ impl PodcastEpisode {
                     .filter(podcast_id.eq(podcast_id_to_be_searched))
                     .order(date_of_recording.desc())
                     .limit(75)
-                    .load::<(PodcastEpisode, Option<PodcastHistoryItem>)>(conn)
+                    .load::<(PodcastEpisode, Option<Episode>)>(conn)
                     .expect("Error loading podcasts");
 
                 Ok(podcasts_found)
