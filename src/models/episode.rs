@@ -3,6 +3,7 @@ use diesel::{BoolExpressionMethods, Insertable, OptionalExtension, QueryDsl, Que
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
+use actix::ActorFutureExt;
 
 use crate::constants::inner_constants::DEFAULT_DEVICE;
 use crate::dbconfig::schema::episodes;
@@ -140,20 +141,29 @@ impl Episode {
         opt_aggregate: Option<String>,
         opt_podcast: Option<String>,
     ) -> Vec<Episode> {
-        use crate::dbconfig::schema::episodes::dsl::episodes;
+        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::dbconfig::schema::episodes::table as ep_table;
         use crate::dbconfig::schema::episodes::dsl::timestamp;
         use crate::dbconfig::schema::episodes::username;
-        match since_date {
-            Some(e) => episodes
-                .filter(username.eq(username1))
-                .filter(timestamp.gt(e))
-                .load::<Episode>(conn)
-                .expect(""),
-            None => episodes
-                .filter(username.eq(username1))
-                .load::<Episode>(conn)
-                .expect(""),
+
+        let mut query = ep_table
+            .filter(username.eq(username1))
+            .into_boxed();
+
+        if let Some(since_date) = since_date {
+            query = query.filter(timestamp.gt(since_date));
         }
+
+        if let Some(device) = opt_device{
+            query = query.filter(ep_dsl::device.eq(device));
+        }
+
+        if let Some(podcast) = opt_podcast {
+            query = query.filter(ep_dsl::podcast.eq(podcast));
+        }
+
+
+        query.load::<Episode>(conn).expect("Error querying episodes")
     }
 
     pub fn get_watch_log_by_username_and_episode(
