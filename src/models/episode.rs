@@ -3,8 +3,6 @@ use diesel::{BoolExpressionMethods, Insertable, OptionalExtension, QueryDsl, Que
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
-use actix::ActorFutureExt;
-
 use crate::constants::inner_constants::DEFAULT_DEVICE;
 use crate::dbconfig::schema::episodes;
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
