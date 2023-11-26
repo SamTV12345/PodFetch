@@ -215,10 +215,8 @@ pub fn start_command_line(mut args: Args) {
                 }
             }
         }
-        "migration" => match args.next().unwrap().as_str() {
-            _ => {
-                error!("Command not found")
-            }
+        "migration" => {
+            error!("Command not found")
         },
         "debug" => {
             create_debug_message();

@@ -45,7 +45,7 @@ pub async fn get_episode_actions(
                 return Err(CustomError::Forbidden);
             }
 
-            let since_date = NaiveDateTime::from_timestamp_opt(since.since.clone(), 0);
+            let since_date = NaiveDateTime::from_timestamp_opt(since.since, 0);
             let actions = Episode::get_actions_by_username(
                 username.clone(),
                 &mut pool.get().unwrap(),
