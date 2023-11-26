@@ -138,7 +138,7 @@ impl Episode {
         conn: &mut DbConnection,
         since_date: Option<NaiveDateTime>,
         opt_device: Option<String>,
-        opt_aggregate: Option<String>,
+        _opt_aggregate: Option<String>,
         opt_podcast: Option<String>,
     ) -> Vec<Episode> {
         use crate::dbconfig::schema::episodes::dsl as ep_dsl;
