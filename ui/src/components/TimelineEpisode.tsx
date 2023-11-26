@@ -6,6 +6,7 @@ import { apiURL } from '../utils/Utilities'
 import { TimelineHATEOASModel, TimeLineModel } from '../models/TimeLineModel'
 import { EpisodeCard } from './EpisodeCard'
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import {Episode} from "../models/Episode";
 
 type TimelineEpisodeProps = {
     podcastEpisode: TimeLineModel,
@@ -14,7 +15,7 @@ type TimelineEpisodeProps = {
     totalLength: number,
     timeLineEpisodes: TimelineHATEOASModel,
     notListened: boolean,
-    podcastHistoryItem?: PodcastWatchedModel
+    podcastHistoryItem?: Episode
 }
 
 export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podcastHistoryItem, notListened, index, timeLineEpisodes }) => {
@@ -22,7 +23,7 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podca
 
     return (
         <>
-            <EpisodeCard watchedTime={podcastHistoryItem?.watchedTime} totalTime={podcastEpisode?.podcast_episode.total_time} podcast={podcastEpisode.podcast} podcastEpisode={podcastEpisode.podcast_episode} />
+            <EpisodeCard watchedTime={podcastHistoryItem?.position} totalTime={podcastEpisode?.podcast_episode.total_time} podcast={podcastEpisode.podcast} podcastEpisode={podcastEpisode.podcast_episode} />
 
             {/*Infinite scroll */
             timeLineEpisodes.data.length === index + 1 &&

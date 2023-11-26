@@ -1,9 +1,9 @@
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::dbconfig::DBType;
+use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcasts::Podcast;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
@@ -13,12 +13,7 @@ use diesel::RunQueryDsl;
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineItem {
-    pub data: Vec<(
-        PodcastEpisode,
-        Podcast,
-        Option<PodcastHistoryItem>,
-        Option<Favorite>,
-    )>,
+    pub data: Vec<(PodcastEpisode, Podcast, Option<Episode>, Option<Favorite>)>,
     pub total_elements: i64,
 }
 
@@ -32,14 +27,16 @@ impl TimelineItem {
         use crate::dbconfig::schema::podcasts::dsl::*;
         use crate::dbconfig::schema::podcasts::id as pid;
 
+        use crate::dbconfig::schema::episodes as phi_struct;
+        use crate::dbconfig::schema::episodes::episode as ehid;
+        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
+        use crate::dbconfig::schema::episodes::username as phi_username;
         use crate::dbconfig::schema::favorites::dsl::*;
         use crate::dbconfig::schema::favorites::podcast_id as f_podcast_id;
         use crate::dbconfig::schema::favorites::username as f_username;
         use crate::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
-        use crate::dbconfig::schema::podcast_history_items as phi_struct;
-        use crate::dbconfig::schema::podcast_history_items::date as phistory_date;
-        use crate::dbconfig::schema::podcast_history_items::episode_id as ehid;
-        use crate::dbconfig::schema::podcast_history_items::username as phi_username;
+        use crate::dbconfig::schema::episodes::guid as eguid;
+        use crate::dbconfig::schema::podcast_episodes::guid as pguid;
 
         Filter::save_decision_for_timeline(
             username_to_search.clone(),
@@ -51,13 +48,12 @@ impl TimelineItem {
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(ehid).eq(episode_id))
             .filter(ph2.field(phi_username).eq(username_to_search.clone()))
             .group_by(ph2.field(ehid));
 
         let part_query = podcast_episodes
             .inner_join(podcasts.on(e_podcast_id.eq(pid)))
-            .left_join(ph1.on(ph1.field(ehid).eq(episode_id)))
+            .left_join(ph1.on(ph1.field(eguid).eq(pguid.nullable())))
             .filter(
                 ph1.field(phistory_date)
                     .nullable()
@@ -101,12 +97,7 @@ impl TimelineItem {
         }
         let results = total_count.get_result::<i64>(conn).map_err(map_db_error)?;
         let result = query
-            .load::<(
-                PodcastEpisode,
-                Podcast,
-                Option<PodcastHistoryItem>,
-                Option<Favorite>,
-            )>(conn)
+            .load::<(PodcastEpisode, Podcast, Option<Episode>, Option<Favorite>)>(conn)
             .map_err(map_db_error)?;
 
         Ok(TimelineItem {

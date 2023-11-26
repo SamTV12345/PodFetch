@@ -33,7 +33,6 @@ use crate::models::filter::Filter;
 use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
@@ -699,6 +698,7 @@ async fn insert_outline(
         }),
     }
 }
+use crate::models::episode::Episode;
 use utoipa::ToSchema;
 
 use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
@@ -733,7 +733,7 @@ pub async fn delete_podcast(
     if data.delete_files {
         FileService::delete_podcast_files(&podcast.directory_name);
     }
-    PodcastHistoryItem::delete_watchtime(&mut db.get().unwrap(), *id)?;
+    Episode::delete_watchtime(&mut db.get().unwrap(), *id)?;
     PodcastEpisode::delete_episodes_of_podcast(&mut db.get().unwrap(), *id)?;
     Podcast::delete_podcast(&mut db.get().unwrap(), *id)?;
     Ok(HttpResponse::Ok().into())

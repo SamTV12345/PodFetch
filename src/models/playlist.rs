@@ -1,9 +1,9 @@
 use crate::controllers::playlist_controller::{PlaylistDto, PlaylistDtoPost};
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::dbconfig::schema::playlists;
+use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_history_item::PodcastHistoryItem;
 use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::{execute_with_conn, DBType as DbConnection};
@@ -144,7 +144,7 @@ impl Playlist {
 
     fn to_playlist_dto(
         &self,
-        item: Vec<(PlaylistItem, PodcastEpisode, Option<PodcastHistoryItem>)>,
+        item: Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>,
     ) -> PlaylistDto {
         let item = item
             .iter()

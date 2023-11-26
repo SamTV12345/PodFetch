@@ -10,6 +10,7 @@ import {Filter} from "../models/Filter";
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {create} from "zustand";
+import {Episode} from "../models/Episode";
 
 export type Podcast = {
     directory: string,
@@ -45,7 +46,7 @@ export type PodcastEpisode = {
 
 type PodcastEpisodeWithPodcastWatchModel = {
     podcastEpisode: EpisodesWithOptionalTimeline,
-    podcastWatchModel: PodcastWatchedModel
+    podcastWatchModel: Episode
 }
 
 // Define a type for the slice state

@@ -101,18 +101,6 @@ create index podcast_episode_url_index
 create index podcast_episodes_podcast_id_index
     on podcast_episodes (podcast_id);
 
-create table podcast_history_items
-(
-    id           INTEGER  not null AUTO_INCREMENT
-        primary key,
-    podcast_id   integer  not null
-        references podcasts,
-    episode_id   VARCHAR(255)     not null,
-    watched_time integer  not null,
-    date         TIMESTAMP not null,
-    username     VARCHAR(255)     not null
-);
-
 create table sessions
 (
     username   VARCHAR(255) not null,

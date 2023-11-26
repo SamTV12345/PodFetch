@@ -5,6 +5,7 @@ import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import useCommon, {Podcast, PodcastEpisode} from '../store/CommonSlice'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 import useAudioPlayer from "../store/AudioPlayerSlice";
+import {Episode} from "../models/Episode";
 
 type EpisodeCardProps = {
     podcast: Podcast,
@@ -48,9 +49,9 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
     return (
         <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
             axios.get(apiURL + '/podcast/episode/' + podcastEpisode.episode_id)
-                .then((response: AxiosResponse<PodcastWatchedModel>) => {
+                .then((response: AxiosResponse<Episode>) => {
 
-                    const playedPercentage = response.data.watchedTime * 100 / podcastEpisode.total_time
+                    const playedPercentage = response.data.position * 100 / podcastEpisode.total_time
                     if(playedPercentage < 95) {
                         podcastEpisode.status === 'D'
                             ? setCurrentPodcastEpisode(preparePodcastEpisode(podcastEpisode, response.data))

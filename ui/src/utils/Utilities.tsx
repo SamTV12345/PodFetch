@@ -11,6 +11,7 @@ import {PodcastEpisode} from "../store/CommonSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Filter} from "../models/Filter";
 import {OrderCriteria} from "../models/Order";
+import {Episode} from "../models/Episode";
 
 const defaultOptions: IOptions = {
     allowedTags: ['b', 'i', 'em', 'strong', 'a'],
@@ -88,24 +89,24 @@ export const preparePath = (path: string | undefined) => {
     return window.location.href.substring(0, window.location.href.indexOf('ui/')) + path.replaceAll(' ', '%20').replaceAll('#', '%23')
 }
 
-export const preparePodcastEpisode = (episode: PodcastEpisode, response: PodcastWatchedModel) => {
+export const preparePodcastEpisode = (episode: PodcastEpisode, response: Episode) => {
     return {
         ...episode,
         local_url: preparePath(episode.local_url),
         local_image_url: preparePath(episode.local_image_url),
-        time: response.watchedTime
+        time: response.position
     }
 }
 
 
-export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: PodcastWatchedModel) => {
+export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: Episode) => {
     const online_url_with_proxy = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?episodeId=' + episode.episode_id
 
     return {
         ...episode,
         local_url: online_url_with_proxy,
         local_image_url: episode.image_url,
-        time: response.watchedTime
+        time: response.position
     }
 }
 

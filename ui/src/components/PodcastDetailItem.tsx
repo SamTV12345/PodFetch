@@ -10,6 +10,7 @@ import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import useCommon from "../store/CommonSlice";
+import {Episode} from "../models/Episode";
 
 type PodcastDetailItemProps = {
     episode: EpisodesWithOptionalTimeline,
@@ -30,8 +31,8 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         if(!episode.podcastHistoryItem){
             return -1
         }
-        return Math.round(episode.podcastHistoryItem.watchedTime*100/episode.podcastEpisode.total_time)
-    }, [episode.podcastHistoryItem?.watchedTime])
+        return Math.round(episode.podcastHistoryItem.position*100/episode.podcastEpisode.total_time)
+    }, [episode.podcastHistoryItem?.position])
     const addPodcastEpisodes = useCommon(state => state.addPodcastEpisodes)
     const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
     const setInfoModalPodcast = useCommon(state => state.setInfoModalPodcast)
@@ -120,8 +121,8 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     e.stopPropagation()
 
                     axios.get(apiURL + '/podcast/episode/' + episode.podcastEpisode.episode_id)
-                        .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                            const playedPercentage = response.data.watchedTime * 100 / episode.podcastEpisode.total_time
+                        .then((response: AxiosResponse<Episode>) => {
+                            const playedPercentage = response.data.position * 100 / episode.podcastEpisode.total_time
                             if(playedPercentage < 95 || episode.podcastEpisode.total_time === 0){
                                 episode.podcastEpisode.status === 'D'
                                     ? setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data))
