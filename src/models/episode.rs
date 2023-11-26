@@ -155,7 +155,8 @@ impl Episode {
         }
 
         if let Some(device) = opt_device{
-            query = query.filter(ep_dsl::device.eq(device));
+            // Always sync the webview
+            query = query.filter(ep_dsl::device.eq(device).or(ep_dsl::device.eq(DEFAULT_DEVICE)));
         }
 
         if let Some(podcast) = opt_podcast {
