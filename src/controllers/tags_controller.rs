@@ -39,14 +39,8 @@ pub async fn insert_tag(tag_create: Json<TagCreate>, conn: Data<DbPool>, request
 pub async fn get_tags(conn: Data<DbPool>, requester: Option<web::ReqData<User>>, _mapping_service: Data<Mutex<MappingService>>) ->
                                                                                   Result<HttpResponse, CustomError> {
     let tags = Tag::get_tags(&mut conn.get().unwrap(), requester.unwrap().username.clone())?;
-    let mapping_service =  _mapping_service.lock().ignore_poison();
-    let mapped_tags = tags.iter().map(|p|{
-        TagWithPodcast{
-            tag: p.0.clone(),
-            podcast: mapping_service.map_podcast_to_podcast_dto_with_favorites(&(p.2.clone(),p.3.clone()))
-        }
-    }).collect::<Vec<TagWithPodcast>>();
-    Ok(HttpResponse::Ok().json(mapped_tags))
+
+    Ok(HttpResponse::Ok().json(tags))
 }
 
 

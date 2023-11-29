@@ -116,7 +116,7 @@ pub async fn login(
     Err(CustomError::Forbidden)
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
