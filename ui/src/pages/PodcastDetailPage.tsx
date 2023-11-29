@@ -33,8 +33,8 @@ export const PodcastDetailPage = () => {
             setCurrentDetailedPodcastId(Number(params.id))
         }
 
-        axios.get(apiURL + '/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
-            setCurrentPodcast(response.data)
+        axios.get(apiURL + '/podcast/' + params.id).then((response: AxiosResponse<[Podcast, Tags]>) => {
+            setCurrentPodcast(response.data[0])
         }).then(() => {
             axios.get(apiURL + '/podcast/' + params.id + '/episodes')
                 .then((response: AxiosResponse<EpisodesWithOptionalTimeline[]>) => {

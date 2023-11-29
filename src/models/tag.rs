@@ -7,9 +7,6 @@ use diesel::sql_types::{Text,Nullable, Timestamp };
 
 use crate::dbconfig::schema::tags;
 use crate::execute_with_conn;
-use crate::models::favorites::Favorite;
-use crate::models::podcasts::Podcast;
-use crate::models::tags_podcast::TagsPodcast;
 
 #[derive(
 Debug,
