@@ -5,11 +5,9 @@ use actix_web::web::{Data, Json};
 use crate::DbPool;
 use crate::models::color::Color;
 use crate::models::podcast_dto::PodcastDto;
-use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
-use crate::mutex::LockResultExt;
 use crate::service::mapping_service::MappingService;
 use crate::utils::error::{CustomError};
 
@@ -50,6 +48,7 @@ pub async fn delete_tag(tag_id: web::Path<String>, conn: Data<DbPool>, requester
     let opt_tag = Tag::get_tag_by_id_and_username(&mut conn.get().unwrap(), &tag_id.into_inner(), &requester.unwrap().username.clone())?;
     match opt_tag{
         Some(tag) => {
+            TagsPodcast::delete_tag_podcasts(&mut conn.get().unwrap(), &tag.id)?;
             Tag::delete_tag(&mut conn.get().unwrap(), &tag.id)?;
             Ok(HttpResponse::Ok().finish())
         },
@@ -61,9 +60,10 @@ pub async fn delete_tag(tag_id: web::Path<String>, conn: Data<DbPool>, requester
 pub async fn update_tag(tag_id: web::Path<String>, tag_create: Json<TagCreate>, conn: Data<DbPool>, requester: Option<web::ReqData<User>>) ->
                                                                               Result<HttpResponse, CustomError> {
     let opt_tag = Tag::get_tag_by_id_and_username(&mut conn.get().unwrap(), &tag_id.into_inner(), &requester.unwrap().username.clone())?;
-    match opt_tag{
+    match opt_tag {
         Some(tag) => {
-            let updated_tag = Tag::update_tag(&mut conn.get().unwrap(), &tag.id, tag_create.name.clone(), tag_create.description.clone(), tag_create.color.to_string())?;
+            let updated_tag = Tag::update_tag(&mut conn.get().unwrap(), &tag.id, tag_create.name.clone(),
+                                              tag_create.description.clone(), tag_create.color.to_string())?;
             Ok(HttpResponse::Ok().json(updated_tag))
         },
         None=>Err(CustomError::NotFound)
@@ -83,5 +83,21 @@ Data<DbPool>, requester: Option<web::ReqData<User>>) ->
             Ok(HttpResponse::Ok().json(podcast))
         },
        None=>Err(CustomError::NotFound)
+    }
+}
+
+#[delete("/tags/{tag_id}/{podcast_id}")]
+pub async fn delete_podcast_from_tag(tag_id: web::Path<String>, podcast_id: web::Path<i32>, conn:
+Data<DbPool>, requester: Option<web::ReqData<User>>) ->
+                                                                                      Result<HttpResponse, CustomError> {
+    let opt_tag = Tag::get_tag_by_id_and_username( &mut conn.get().unwrap(), &tag_id.into_inner(),
+                                                &requester.unwrap().username.clone())?;
+    match opt_tag{
+        Some(tag) => {
+            TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(&mut conn.get().unwrap(),  podcast_id.into_inner(),
+                                                                  &tag.id)?;
+            Ok(HttpResponse::Ok().finish())
+        },
+        None=>Err(CustomError::NotFound)
     }
 }
