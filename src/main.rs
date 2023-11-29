@@ -67,6 +67,7 @@ use crate::controllers::websocket_controller::{
 use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
 use crate::controllers::server::ChatServer;
+use crate::controllers::tags_controller::{add_podcast_to_tag, delete_tag, get_tags, insert_tag, update_tag};
 
 mod constants;
 mod db;
@@ -459,6 +460,11 @@ fn get_private_api() -> Scope<
         .service(get_playlist_by_id)
         .service(delete_playlist_by_id)
         .service(delete_podcast_episode_locally)
+        .service(insert_tag)
+        .service(delete_tag)
+        .service(update_tag)
+        .service(get_tags)
+        .service(add_podcast_to_tag)
         .service(retrieve_episode_sample_format)
         .service(retrieve_podcast_sample_format)
         .service(update_podcast_settings)
