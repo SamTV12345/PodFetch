@@ -27,6 +27,7 @@ use crate::utils::error::{map_reqwest_error, CustomError};
 use crate::DBType as DbConnection;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::utils::reqwest_client::get_async_sync_client;
+use crate::models::tag::Tag;
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -345,11 +346,13 @@ impl PodcastService {
         designated_username: String,
     ) -> Result<Vec<impl Serialize>, CustomError> {
         let podcasts =
-            Favorite::search_podcasts_favored(conn, order, title, latest_pub, designated_username)?;
+            Favorite::search_podcasts_favored(conn, order, title, latest_pub,
+                                              &designated_username)?;
         let mut podcast_dto_vec = Vec::new();
         for podcast in podcasts {
+            let tags_of_podcast = Tag::get_tags_of_podcast(conn, podcast.0.id, &designated_username)?;
             let podcast_dto =
-                MappingService::map_podcast_to_podcast_dto_with_favorites_option(&podcast);
+                MappingService::map_podcast_to_podcast_dto_with_favorites_option(&podcast, tags_of_podcast);
             podcast_dto_vec.push(podcast_dto);
         }
         Ok(podcast_dto_vec)
@@ -364,10 +367,13 @@ impl PodcastService {
         designated_username: String,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
-            Favorite::search_podcasts(conn, order, title, latest_pub, designated_username)?;
+            Favorite::search_podcasts(conn, order, title, latest_pub, &designated_username)?;
         let mapped_result = podcasts
             .iter()
-            .map(MappingService::map_podcast_to_podcast_dto_with_favorites)
+            .map(|podcast| {
+                let tags = Tag::get_tags_of_podcast(conn, podcast.0.id, &designated_username).unwrap();
+                MappingService::map_podcast_to_podcast_dto_with_favorites(podcast, tags)
+            })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }

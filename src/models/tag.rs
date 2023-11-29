@@ -1,5 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
-use diesel::{AsChangeset, Insertable, JoinOnDsl, OptionalExtension, Queryable, QueryableByName, QueryDsl, RunQueryDsl};
+use diesel::{AsChangeset, Insertable, JoinOnDsl, OptionalExtension, Queryable, QueryableByName, QueryDsl, RunQueryDsl, Table};
 use utoipa::ToSchema;
 use crate::dbconfig::DBType as DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
@@ -95,18 +95,33 @@ impl Tag {
             .map_err(map_db_error)
     }
 
-    pub fn get_tags(conn: &mut DbConnection, username_to_search: String) -> Result<Vec<(Tag,
-                                                                                        TagsPodcast, Podcast, Option<Favorite>)>, CustomError> {
+    pub fn get_tags(conn: &mut DbConnection, username_to_search: String) -> Result<Vec<Tag>, CustomError> {
         use crate::dbconfig::schema::tags::dsl::*;
         use diesel::QueryDsl;
         use diesel::ExpressionMethods;
 
         tags
-            .inner_join(crate::dbconfig::schema::tags_podcasts::table.on(crate::dbconfig::schema::tags_podcasts::tag_id.eq(crate::dbconfig::schema::tags::id)))
-            .inner_join(crate::dbconfig::schema::podcasts::table.on(crate::dbconfig::schema::podcasts::id.eq(crate::dbconfig::schema::tags_podcasts::podcast_id)))
-            .left_join(crate::dbconfig::schema::favorites::table.on(crate::dbconfig::schema::favorites::podcast_id.eq(crate::dbconfig::schema::podcasts::id)))
             .filter(username.eq(username_to_search))
-            .load::<(Tag, TagsPodcast, Podcast, Option<Favorite>)>(conn)
+            .load::<Tag>(conn)
+            .map_err(map_db_error)
+    }
+
+    pub fn get_tags_of_podcast(conn: &mut DbConnection, podcast_id_to_search: i32,
+                               username_to_search: &str) -> Result<Vec<Tag>, CustomError> {
+        use crate::dbconfig::schema::tags::dsl::*;
+        use crate::dbconfig::schema::tags_podcasts::dsl::*;
+        use crate::dbconfig::schema::tags_podcasts::table as t_podcasts;
+        use crate::dbconfig::schema::tags_podcasts::dsl as t_podcasts_dsl;
+        use diesel::QueryDsl;
+        use diesel::ExpressionMethods;
+        use diesel::RunQueryDsl;
+
+        tags
+            .inner_join(t_podcasts.on(id.eq(t_podcasts_dsl::tag_id)))
+            .select(tags::all_columns())
+            .filter(podcast_id.eq(podcast_id_to_search))
+            .filter(username.eq(username_to_search))
+            .load::<Tag>(conn)
             .map_err(map_db_error)
     }
 }

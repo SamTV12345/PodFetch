@@ -62,7 +62,7 @@ delete_podcast,proxy_podcast
 components(
 schemas(Podcast, PodcastEpisode, ItunesModel,PodcastFavorUpdateModel,
 PodcastWatchedEpisodeModel, PodcastWatchedPostModel, PodcastAddModel,Notification, Setting,
-Invite,
+Invite,LoginRequest,
 Filter,OpmlModel,DeletePodcast, UpdateNameSettings,SysExtraInfo,UserOnboardingModel,User,InvitePostModel)
 ),
 tags(

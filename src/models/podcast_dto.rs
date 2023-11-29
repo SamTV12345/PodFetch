@@ -1,3 +1,5 @@
+use crate::models::tag::Tag;
+
 #[derive(Serialize, Deserialize)]
 pub struct PodcastDto {
     pub(crate) id: i32,
@@ -14,4 +16,5 @@ pub struct PodcastDto {
     pub active: bool,
     pub original_image_url: String,
     pub favorites: bool,
+    pub tags: Vec<Tag>,
 }

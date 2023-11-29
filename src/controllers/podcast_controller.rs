@@ -142,10 +142,11 @@ pub async fn search_podcasts(
     }
 }
 
+
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Find a podcast by its collection id", body = [Podcast])
+(status = 200, description = "Find a podcast by its collection id", body = [(Podcast, Tags)])
 ),
 tag="podcasts"
 )]
@@ -153,12 +154,18 @@ tag="podcasts"
 pub async fn find_podcast_by_id(
     id: Path<String>,
     conn: Data<DbPool>,
+    user: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
     let podcast =
         PodcastService::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num)?;
     let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast);
-    Ok(HttpResponse::Ok().json(mapped_podcast))
+    let tags = Tag::get_tags_of_podcast(
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+        podcast.id,
+        &user.unwrap().username,
+    )?;
+    Ok(HttpResponse::Ok().json((mapped_podcast, tags)))
 }
 
 #[utoipa::path(
@@ -719,6 +726,7 @@ async fn insert_outline(
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
+use crate::models::tag::Tag;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
