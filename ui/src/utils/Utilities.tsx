@@ -94,7 +94,7 @@ export const preparePodcastEpisode = (episode: PodcastEpisode, response: Episode
         ...episode,
         local_url: preparePath(episode.local_url),
         local_image_url: preparePath(episode.local_image_url),
-        time: response.position
+        time: response&&response.position?response.position: 0
     }
 }
 
@@ -106,7 +106,7 @@ export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: E
         ...episode,
         local_url: online_url_with_proxy,
         local_image_url: episode.image_url,
-        time: response.position
+        time: response&&response.position?response.position: 0
     }
 }
 

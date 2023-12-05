@@ -6,7 +6,6 @@ import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML } from '../utils/Utilities'
-import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import useCommon from "../store/CommonSlice";
@@ -122,6 +121,14 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
 
                     axios.get(apiURL + '/podcast/episode/' + episode.podcastEpisode.episode_id)
                         .then((response: AxiosResponse<Episode>) => {
+                            if (response.data == null){
+                                episode.podcastEpisode.status === 'D'
+                                    ? setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data))
+                                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data))
+                                currentPodcast && setCurrentPodcast(currentPodcast)
+                                setPlaying(true)
+                                return
+                            }
                             const playedPercentage = response.data.position * 100 / episode.podcastEpisode.total_time
                             if(playedPercentage < 95 || episode.podcastEpisode.total_time === 0){
                                 episode.podcastEpisode.status === 'D'
