@@ -174,6 +174,8 @@ impl PodcastEpisode {
             None => podcast.original_image_url,
         };
 
+        let mut guid_to_insert = Guid::default();
+        guid_to_insert.value = uuid::Uuid::new_v4().to_string();
         let inserted_podcast = insert_into(podcast_episodes)
             .values((
                 total_time.eq(duration),
@@ -181,6 +183,7 @@ impl PodcastEpisode {
                 episode_id.eq(uuid_podcast.to_string()),
                 name.eq(item.title.as_ref().unwrap_or(&"No title given".to_string())),
                 url.eq(item.enclosure.unwrap().url),
+                guid.eq(item.guid.unwrap_or(guid_to_insert).value),
                 date_of_recording.eq(inserted_date),
                 image_url.eq(inserted_image_url),
                 description.eq(opt_or_empty_string(item.description)),
@@ -208,6 +211,7 @@ impl PodcastEpisode {
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
             .filter(ph2.field(phistory_username).eq(user.username))
+            .filter(ph2.field(eguid).eq(ph1.field(eguid)))
             .group_by(ph2.field(eguid));
 
         match last_id {

@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Utc};
 use diesel::{BoolExpressionMethods, Insertable, OptionalExtension, QueryDsl, QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable, NullableExpressionMethods};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -342,7 +342,11 @@ impl Episode {
             Ok(Some(mut episode)) => {
                 episode.position = Some(pod_watch_model.time);
                 diesel::update(episodes_dsl.filter(episodes::id.eq(episode.id)))
-                    .set(episodes::position.eq(pod_watch_model.time))
+                    .set((
+                        episodes::position.eq(pod_watch_model.time),
+                        episodes::timestamp.eq(Utc::now().naive_utc())
+                             )
+                        )
                     .execute(conn)
                     .map_err(map_db_error)?;
                 return Ok(());
@@ -363,7 +367,7 @@ impl Episode {
                 };
                 episode
                     .insert_episode(conn)
-                    .expect("Error inserting episode");
+                    .map_err(map_db_error)?;
             }
             Err(e) => {
                 return Err(e);

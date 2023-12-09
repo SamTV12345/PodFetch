@@ -198,13 +198,6 @@ impl PodcastEpisodeService {
                                     );
                                     podcast_inserted.push(inserted_episode);
                                 }
-                                if item.guid().is_some() && !item.guid().unwrap().permalink {
-                                    PodcastEpisode::update_guid(
-                                        conn,
-                                        item.guid.clone().unwrap(),
-                                        &result_unwrapped_non_opt.episode_id,
-                                    );
-                                }
                             }
 
                             if result_unwrapped.is_none() {
