@@ -10,7 +10,7 @@
     "build-github": "tsc && vite build --outDir ../static"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.0.15",
+    "@fontsource-variable/inter": "^5.0.16",
     "@fontsource/anton": "^5.0.17",
     "@fontsource/poppins": "^5.0.8",
     "@fontsource/roboto": "^5.0.8",
