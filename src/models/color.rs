@@ -1,7 +1,8 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub enum Color{
     Red,
     Green,
