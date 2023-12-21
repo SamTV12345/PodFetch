@@ -45,7 +45,7 @@ use crate::dbconfig::schema::tags_podcasts::dsl::*;
         use diesel::RunQueryDsl;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
-        insert_with_conn!(conn, |conn| diesel::delete(t_podcasts.filter(tag_id.eq(tag_id_to_delete)))
+        let _ = insert_with_conn!(conn, |conn| diesel::delete(t_podcasts.filter(tag_id.eq(tag_id_to_delete)))
             .execute(conn)
             .map_err(map_db_error));
         Ok(())
@@ -61,7 +61,7 @@ use crate::dbconfig::schema::tags_podcasts::dsl::*;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
         use diesel::BoolExpressionMethods;
-        insert_with_conn!(conn, |conn| diesel::delete(t_podcasts.filter(podcast_id.eq
+        let _  = insert_with_conn!(conn, |conn| diesel::delete(t_podcasts.filter(podcast_id.eq
             (podcast_id_to_delete).and(tag_id.eq(tag_id_key))))
             .execute(conn)
             .map_err(map_db_error));

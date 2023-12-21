@@ -1,5 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
-use diesel::{AsChangeset, Insertable, JoinOnDsl, OptionalExtension, Queryable, QueryableByName, QueryDsl, RunQueryDsl, Table};
+use diesel::{AsChangeset, Insertable, JoinOnDsl, OptionalExtension, Queryable, QueryableByName, RunQueryDsl, Table};
 use utoipa::ToSchema;
 use crate::dbconfig::DBType as DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
@@ -111,7 +111,6 @@ impl Tag {
         use crate::dbconfig::schema::tags_podcasts::dsl as t_podcasts_dsl;
         use diesel::QueryDsl;
         use diesel::ExpressionMethods;
-        use diesel::RunQueryDsl;
 
         tags
             .inner_join(t_podcasts.on(id.eq(t_podcasts_dsl::tag_id)))

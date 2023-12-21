@@ -33,7 +33,9 @@ use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
 };
-
+use crate::models::tag::Tag;
+use crate::controllers::tags_controller::*;
+use crate::controllers::playlist_controller::*;
 #[derive(OpenApi)]
 #[openapi(
 paths(
@@ -57,13 +59,14 @@ paths(
     dismiss_notifications,get_public_config,onboard_user,
     get_watchtime,get_timeline,download_podcast_episodes_of_podcast,update_name,get_sys_info,
     get_filter,search_podcasts,add_podcast_by_feed,refresh_all_podcasts,update_active_podcast,
-delete_podcast,proxy_podcast
+    add_playlist,update_playlist,get_all_playlists,get_playlist_by_id,delete_playlist_by_id,delete_playlist_item,
+delete_podcast,proxy_podcast,insert_tag, get_tags, delete_tag, update_tag, add_podcast_to_tag, delete_podcast_from_tag
 ),
 components(
 schemas(Podcast, PodcastEpisode, ItunesModel,PodcastFavorUpdateModel,
 PodcastWatchedEpisodeModel, PodcastWatchedPostModel, PodcastAddModel,Notification, Setting,
-Invite,LoginRequest,
-Filter,OpmlModel,DeletePodcast, UpdateNameSettings,SysExtraInfo,UserOnboardingModel,User,InvitePostModel)
+Invite,LoginRequest,PlaylistDtoPost,Tag,
+Filter,OpmlModel,DeletePodcast, UpdateNameSettings,SysExtraInfo,UserOnboardingModel,User,InvitePostModel, TagCreate,TagWithPodcast)
 ),
 tags(
 (name = "podcasts", description = "Podcast management endpoints."),
@@ -73,6 +76,7 @@ tags(
 (name = "settings", description = "Settings management endpoints. Settings are globally scoped."),
 (name = "info", description = "Gets multiple  information about your installation."),
 (name = "playlist", description = "Playlist management endpoints."),
+(name = "tags", description = "Tag management endpoints."),
 ),
 modifiers(&SecurityAddon)
 )]
