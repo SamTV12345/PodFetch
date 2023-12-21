@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
 import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
-import useAudioPlayer from '../store/AudioPlayerSlice'
-import { apiURL, formatTime, prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML } from '../utils/Utilities'
+import { apiURL, formatTime, removeHTML } from '../utils/Utilities'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import useCommon from "../store/CommonSlice";
 import {Episode} from "../models/Episode";
+import {handlePlayofEpisode} from "../utils/PlayHandler";
 
 type PodcastDetailItemProps = {
     episode: EpisodesWithOptionalTimeline,
@@ -18,14 +18,10 @@ type PodcastDetailItemProps = {
 }
 
 export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength }) => {
-    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
     const selectedEpisodes = useCommon(state => state.selectedEpisodes)
-    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
-    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
-    const setPlaying = useAudioPlayer(state => state.setPlaying)
     const percentagePlayed = useMemo(()=>{
         if(!episode.podcastHistoryItem){
             return -1
@@ -36,8 +32,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
     const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
     const setInfoModalPodcast = useCommon(state => state.setInfoModalPodcast)
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
-    const setPodcastAlreadyPlayed = useCommon(state => state.setPodcastAlreadyPlayed)
-    const setPodcastEpisodeAlreadyPlayed = useCommon(state => state.setPodcastEpisodeAlreadyPlayed)
 
     const playedTime = useMemo(()=>{
         if(percentagePlayed === -1){
@@ -121,30 +115,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
 
                     axios.get(apiURL + '/podcast/episode/' + episode.podcastEpisode.episode_id)
                         .then((response: AxiosResponse<Episode>) => {
-                            if (response.data == null){
-                                episode.podcastEpisode.status === 'D'
-                                    ? setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data))
-                                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data))
-                                currentPodcast && setCurrentPodcast(currentPodcast)
-                                setPlaying(true)
-                                return
-                            }
-                            const playedPercentage = response.data.position * 100 / episode.podcastEpisode.total_time
-                            if(playedPercentage < 95 || episode.podcastEpisode.total_time === 0){
-                                episode.podcastEpisode.status === 'D'
-                                    ? setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data))
-                                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data))
-
-                                currentPodcast && setCurrentPodcast(currentPodcast)
-                                setPlaying(true)
-                            }
-                            else{
-                                setPodcastEpisodeAlreadyPlayed({
-                                    podcastEpisode: episode,
-                                    podcastWatchModel: response.data
-                                })
-                                setPodcastAlreadyPlayed(true)
-                            }
+                            handlePlayofEpisode(response, episode)
                         })
                 }}>play_circle</span>
             </div>

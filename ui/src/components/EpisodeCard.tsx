@@ -1,11 +1,10 @@
 import { FC} from 'react'
 import axios, { AxiosResponse } from 'axios'
-import { apiURL, prepareOnlinePodcastEpisode, preparePath, preparePodcastEpisode } from '../utils/Utilities'
-import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
-import useCommon, {Podcast, PodcastEpisode} from '../store/CommonSlice'
+import { apiURL, preparePath } from '../utils/Utilities'
+import {Podcast, PodcastEpisode} from '../store/CommonSlice'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
-import useAudioPlayer from "../store/AudioPlayerSlice";
 import {Episode} from "../models/Episode";
+import {handlePlayofEpisode} from "../utils/PlayHandler";
 
 type EpisodeCardProps = {
     podcast: Podcast,
@@ -39,38 +38,16 @@ export const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|PodcastEp
 }
 
 export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, totalTime, watchedTime }) => {
-    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
-    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
-    const setPlaying = useAudioPlayer(state => state.setPlaying)
-    const setPodcastAlreadyPlayed = useCommon(state => state.setPodcastAlreadyPlayed)
-    const setPodcastEpisodeAlreadyPlayed = useCommon(state => state.setPodcastEpisodeAlreadyPlayed)
-
 
     return (
         <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
             axios.get(apiURL + '/podcast/episode/' + podcastEpisode.episode_id)
                 .then((response: AxiosResponse<Episode>) => {
-
-                    const playedPercentage = response.data.position * 100 / podcastEpisode.total_time
-                    if(playedPercentage < 95) {
-                        podcastEpisode.status === 'D'
-                            ? setCurrentPodcastEpisode(preparePodcastEpisode(podcastEpisode, response.data))
-                            : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(podcastEpisode, response.data))
-
-                        setCurrentPodcast(podcast)
-                        setPlaying(true)
-                    }
-                    else{
-                        setPodcastEpisodeAlreadyPlayed({
-                            podcastEpisode:{
-                                podcastEpisode: podcastEpisode
-                            },
-                            podcastWatchModel: response.data
-                        })
-                        setPodcastAlreadyPlayed(true)
-                    }
-                })
-        }}>
+                    handlePlayofEpisode(response, {
+                        podcastEpisode: podcastEpisode,
+                        podcastHistoryItem: response.data
+                    })
+        })}}>
 
             {/* Thumbnail */}
             <div className="relative aspect-square bg-center bg-cover mb-2 overflow-hidden rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)] w-full" key={podcastEpisode.episode_id} style={{backgroundImage: `url("${selectPodcastImage(podcastEpisode)}")`}}>
