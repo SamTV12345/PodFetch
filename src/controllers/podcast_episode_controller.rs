@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::PodcastType;
+use crate::constants::inner_constants::{PodcastType};
 use crate::db::TimelineItem;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -13,13 +13,15 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix::Addr;
-use actix_web::web::{Data, Query};
-use actix_web::{delete, get, put};
+use actix_web::web::{Data, Json, Query};
+use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::ops::DerefMut;
 use std::sync::Mutex;
 use std::thread;
+use crate::models::settings::Setting;
+use crate::service::file_service::{FileService, perform_episode_variable_replacement};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -222,4 +224,49 @@ pub async fn delete_podcast_episode_locally(
     });
 
     Ok(HttpResponse::NoContent().finish())
+}
+
+
+#[post("/episodes/formatting")]
+pub async fn retrieve_episode_sample_format(sample_string: Json<String>) -> Result<HttpResponse, CustomError> {
+    // Sample episode for formatting
+     let episode: PodcastEpisode = PodcastEpisode {
+         id: 0,
+        podcast_id: 0,
+        episode_id: "0218342".to_string(),
+        name: "My Homelab".to_string(),
+        url: "http://podigee.com/rss/123".to_string(),
+        date_of_recording: "2023-12-24".to_string(),
+        image_url: "http://podigee.com/rss/123/image".to_string(),
+        total_time: 1200,
+        local_url: "http://localhost:8912/podcasts/123".to_string(),
+        local_image_url: "http://localhost:8912/podcasts/123/image".to_string(),
+        description: "My description".to_string(),
+        status: "D".to_string(),
+        download_time: None,
+        guid: "081923123".to_string(),
+        deleted: false,
+        file_episode_path: None,
+        file_image_path: None,
+    };
+    let settings = Setting{
+        id: 0,
+        auto_download: false,
+        auto_update: false,
+        auto_cleanup: false,
+        auto_cleanup_days: 0,
+        podcast_prefill: 0,
+        replace_invalid_characters: false,
+        use_existing_filename: false,
+        replacement_strategy: "".to_string(),
+        episode_format: sample_string.0,
+        podcast_format: "test".to_string(),
+        direct_paths: true,
+    };
+    let result = perform_episode_variable_replacement(settings, episode);
+
+    match result {
+        Ok(v)=>Ok(HttpResponse::Ok().json(v)),
+        Err(e)=>Err(CustomError::BadRequest(e.to_string()))
+    }
 }

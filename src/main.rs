@@ -57,10 +57,7 @@ use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
-use crate::controllers::podcast_episode_controller::{
-    delete_podcast_episode_locally, download_podcast_episodes_of_podcast,
-    find_all_podcast_episodes_of_podcast, get_timeline,
-};
+use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_timeline, retrieve_episode_sample_format};
 use crate::controllers::settings_controller::{
     get_opml, get_settings, run_cleanup, update_name, update_settings,
 };
@@ -447,6 +444,7 @@ fn get_private_api() -> Scope<
         .service(get_playlist_by_id)
         .service(delete_playlist_by_id)
         .service(delete_podcast_episode_locally)
+        .service(retrieve_episode_sample_format)
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {
