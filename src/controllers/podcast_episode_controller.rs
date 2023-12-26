@@ -21,7 +21,7 @@ use std::ops::DerefMut;
 use std::sync::Mutex;
 use std::thread;
 use crate::models::settings::Setting;
-use crate::service::file_service::{FileService, perform_episode_variable_replacement};
+use crate::service::file_service::perform_episode_variable_replacement;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {

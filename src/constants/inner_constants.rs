@@ -1,7 +1,6 @@
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
-use crate::models::podcast_episode::PodcastEpisode;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search?term=";
 

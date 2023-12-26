@@ -18,6 +18,7 @@ use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
+use rss::Channel;
 
 use crate::config::dbconfig::establish_connection;
 use serde::Serialize;
@@ -124,6 +125,7 @@ impl PodcastService {
             },
             mapping_service,
             lobby,
+            None
         )
         .await
     }
@@ -134,6 +136,7 @@ impl PodcastService {
         podcast_insert: PodcastInsertModel,
         mapping_service: MappingService,
         lobby: Data<Addr<Lobby>>,
+        channel: Option<Channel>
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone());
         if opt_podcast.is_some() {
@@ -146,9 +149,9 @@ impl PodcastService {
         let fileservice = FileService::new();
 
         let podcast_directory_created = FileService::create_podcast_directory_exists(
-            &podcast_insert.title.clone(),
-            &podcast_insert.id.clone().to_string(),
+            &podcast_insert,
             conn,
+            channel
         )?;
 
         let inserted_podcast = Podcast::add_podcast_to_database(

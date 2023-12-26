@@ -6,3 +6,4 @@ pub mod file_extension_determination;
 pub mod podcast_builder;
 mod rss_extension;
 pub mod time;
+pub(crate) mod rss_feed_parser;

@@ -283,6 +283,7 @@ pub async fn add_podcast(
             },
             mapping_service,
             lobby,
+            None
         )
         .await?;
     Ok(HttpResponse::Ok().into())
@@ -317,7 +318,7 @@ pub async fn add_podcast_by_feed(
         .map_err(map_reqwest_error)?;
 
     let bytes = result.text().await.unwrap();
-    println!("{}", bytes);
+
     let channel = Channel::read_from(bytes.as_bytes()).unwrap();
     let num = rand::thread_rng().gen_range(100..10000000);
 
@@ -331,10 +332,11 @@ pub async fn add_podcast_by_feed(
                     feed_url: rss_feed.clone().rss_feed_url.clone(),
                     title: channel.title.clone(),
                     id: num,
-                    image_url: channel.image.map(|i| i.url).unwrap_or(get_default_image()),
-                },
+                    image_url: channel.image.clone().map(|i| i.url).unwrap_or(get_default_image()),
+                    },
                 MappingService::new(),
                 lobby,
+                Some(channel)
             )
             .await?;
     }
@@ -649,7 +651,7 @@ async fn insert_outline(
             let mapping_service = MappingService::new();
 
             let image_url = match channel.image {
-                Some(image) => image.url,
+                Some(ref image) => image.url.clone(),
                 None => {
                     log::info!(
                         "No image found for podcast. Downloading from {}",
@@ -664,12 +666,13 @@ async fn insert_outline(
                     conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                     PodcastInsertModel {
                         feed_url: podcast.clone().xml_url.expect("No feed url"),
-                        title: channel.title,
+                        title: channel.clone().title.to_string(),
                         id: rng.gen::<i32>(),
                         image_url,
                     },
                     mapping_service,
                     lobby.clone(),
+                    Some(channel)
                 )
                 .await;
             match inserted_podcast {
