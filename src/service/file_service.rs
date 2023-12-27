@@ -72,7 +72,7 @@ impl FileService {
         conn: &mut DbConnection,
         channel: Option<Channel>,
     ) -> Result<String, CustomError> {
-        let escaped_title = prepare_podcast_title_to_directory(&podcast_insert_model, conn, channel).await?;
+        let escaped_title = prepare_podcast_title_to_directory(podcast_insert_model, conn, channel).await?;
         let escaped_path = format!("podcasts/{}", escaped_title);
         if !Path::new(&escaped_path).exists() {
             std::fs::create_dir(escaped_path.clone())
