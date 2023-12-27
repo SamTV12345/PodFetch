@@ -152,7 +152,7 @@ impl PodcastService {
             &podcast_insert,
             conn,
             channel
-        )?;
+        ).await?;
 
         let inserted_podcast = Podcast::add_podcast_to_database(
             conn,

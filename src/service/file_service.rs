@@ -67,12 +67,12 @@ impl FileService {
         Ok(())
     }
 
-    pub fn create_podcast_directory_exists(
+    pub async fn create_podcast_directory_exists(
         podcast_insert_model: &PodcastInsertModel,
         conn: &mut DbConnection,
         channel: Option<Channel>,
     ) -> Result<String, CustomError> {
-        let escaped_title = prepare_podcast_title_to_directory(&podcast_insert_model, conn, channel)?;
+        let escaped_title = prepare_podcast_title_to_directory(&podcast_insert_model, conn, channel).await?;
         let escaped_path = format!("podcasts/{}", escaped_title);
         if !Path::new(&escaped_path).exists() {
             std::fs::create_dir(escaped_path.clone())
@@ -163,7 +163,7 @@ fn move_one_path_up(path: &str) -> String {
     split.join(SEPARATOR)
 }
 
-pub fn prepare_podcast_title_to_directory(
+pub async fn prepare_podcast_title_to_directory(
     podcast: &PodcastInsertModel,
     conn: &mut DbConnection,
     channel: Option<Channel>,
@@ -176,10 +176,10 @@ pub fn prepare_podcast_title_to_directory(
             RSSFeedParser::parse_rss_feed(channel)
         }
         None=>{
-            let client = reqwest::blocking::Client::new();
+            let client = reqwest::Client::new();
             let rss_feed = podcast.feed_url.clone();
-            let feed_response = client.get(rss_feed).send().unwrap();
-            let content = feed_response.bytes().unwrap();
+            let feed_response = client.get(rss_feed).send().await.unwrap();
+            let content = feed_response.bytes().await.unwrap();
 
             let channel = Channel::read_from(&content[..]);
             RSSFeedParser::parse_rss_feed(channel.unwrap())

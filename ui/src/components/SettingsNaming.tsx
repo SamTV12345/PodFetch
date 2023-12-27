@@ -53,7 +53,7 @@ export const SettingsNaming: FC = () => {
 const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     const { t } = useTranslation()
 
-    const { control, formState: {}, handleSubmit, register }
+    const { control, formState: {}, handleSubmit}
         = useForm<UpdateNameSettings>({
         defaultValues: {
             replacementStrategy: intialSettings.replacementStrategy,
@@ -103,7 +103,9 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                 </fieldset>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-[--fg-color] flex gap-1" htmlFor="colon-replacement">{t('colon-replacement')} <SettingsInfoIcon headerKey="colon-replacement" textKey="auto-download-explanation"/></label>
+                    <label className="text-[--fg-color] flex gap-1" htmlFor="colon-replacement">{t('colon-replacement')}
+                        <SettingsInfoIcon headerKey="colon-replacement" textKey="auto-download-explanation"/>
+                    </label>
 
                     <Controller
                     name="replacementStrategy"
@@ -114,7 +116,9 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
-                    <label className="text-[--fg-color] flex gap-1" htmlFor="episode-format">{t('standard-episode-format')} <SettingsInfoIcon headerKey="standard-episode-format" textKey="standard-episode-format-explanation"/></label>
+                    <label className="text-[--fg-color] flex gap-1" htmlFor="episode-format">{t('standard-episode-format')}
+                        <SettingsInfoIcon headerKey="standard-episode-format" textKey="standard-episode-format-explanation"/>
+                    </label>
 
                     <Controller
                     name="episodeFormat"
@@ -126,7 +130,8 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="text-[--fg-color] flex gap-1" htmlFor="podcast-format">{t('standard-podcast-format')}
-                        <SettingsInfoIcon headerKey="standard-podcast-format" textKey="standard-podcast-format-explanation"/></label>
+                        <SettingsInfoIcon headerKey="standard-podcast-format" textKey="standard-podcast-format-explanation"/>
+                    </label>
 
                     <Controller
                     name="podcastFormat"

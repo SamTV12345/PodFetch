@@ -47,12 +47,6 @@ impl SettingsService {
     fn validate_settings(
         update_setttings: UpdateNameSettings,
     ) -> Result<UpdateNameSettings, CustomError> {
-        if !update_setttings.podcast_format.contains("{}") {
-            return Err(CustomError::Conflict(ERR_SETTINGS_FORMAT.to_string()));
-        }
-        if !update_setttings.episode_format.contains("{}") {
-            return Err(CustomError::Conflict(ERR_SETTINGS_FORMAT.to_string()));
-        }
         Ok(update_setttings)
     }
 }
