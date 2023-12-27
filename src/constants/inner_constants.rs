@@ -1,6 +1,9 @@
+use std::cell::OnceCell;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::utils::rss_feed_parser::PodcastParsed;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search?term=";
 
@@ -98,9 +101,6 @@ pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 
 pub const STANDARD_USER: &str = "user123";
 
-pub const ERR_SETTINGS_FORMAT: &str = "A podcast/episode format needs to contain an opening and \
-closing bracket ({}).";
-
 pub const PODCAST_FILENAME: &str = "podcast";
 pub const PODCAST_IMAGENAME: &str = "image";
 
@@ -131,6 +131,3 @@ pub const OIDC_JWKS: &str = "OIDC_JWKS";
 
 // Default device when viewing via web interface
 pub const DEFAULT_DEVICE: &str = "webview";
-
-
-

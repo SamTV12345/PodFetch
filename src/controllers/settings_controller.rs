@@ -225,6 +225,25 @@ pub struct UpdateNameSettings {
     pub direct_paths: bool,
 }
 
+impl Into<Setting> for UpdateNameSettings {
+    fn into(self) -> Setting {
+        Setting {
+            id: 0,
+            auto_download: false,
+            auto_update: false,
+            use_existing_filename: self.use_existing_filename,
+            replace_invalid_characters: self.replace_invalid_characters,
+            replacement_strategy: self.replacement_strategy.to_string(),
+            episode_format: self.episode_format,
+            podcast_format: self.podcast_format,
+            direct_paths: self.direct_paths,
+            auto_cleanup_days: 0,
+            auto_cleanup: false,
+            podcast_prefill: 0,
+        }
+    }
+}
+
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub enum ReplacementStrategy {

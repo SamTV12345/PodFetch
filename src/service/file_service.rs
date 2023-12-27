@@ -224,10 +224,15 @@ pub fn perform_podcast_variable_replacement(retrieved_settings: Setting, podcast
         .filter(|&c| c as u32 != 44)
         .collect::<String>();
 
-    Ok(format!(
-        "'{}'",
-        strfmt::strfmt(fixed_string.trim(), &vars).unwrap()
-    ))
+    let result = strfmt::strfmt(fixed_string.trim(), &vars);
+
+    match result {
+        Ok(res) => Ok(format!("'{}'",res)),
+        Err(err) => {
+            log::error!("Error formatting podcast title: {}", err);
+            Err(CustomError::Conflict(err.to_string()))
+        }
+    }
 }
 
 pub fn prepare_podcast_episode_title_to_directory(
@@ -271,7 +276,6 @@ CustomError>{
     let fixed_string = retrieved_settings
         .episode_format
         .replace("{title}", "{episodeTitle}")
-        .replace("{podcast}", "{podcastTitle}")
         .replace("{date}", "{episodeDate}")
         .replace("{description}", "{episodeDescription}")
         .replace("{duration}", "{episodeDuration}")
@@ -281,11 +285,15 @@ CustomError>{
         .filter(|&c| c as u32 != 44)
         .collect::<String>();
 
-    Ok(format!(
-        "'{}'",
-        strfmt::strfmt(fixed_string.trim(), &vars).unwrap()
-    ))
+    let result = strfmt::strfmt(fixed_string.trim(), &vars);
 
+    match result {
+        Ok(res) => Ok(format!("'{}'",res)),
+        Err(err) => {
+            log::error!("Error formatting episode title: {}", err);
+            Err(CustomError::Conflict(err.to_string()))
+        }
+    }
 }
 
 

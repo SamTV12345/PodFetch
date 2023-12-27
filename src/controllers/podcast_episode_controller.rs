@@ -226,9 +226,13 @@ pub async fn delete_podcast_episode_locally(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct EpisodeFormatDto {
+    pub content: String
+}
 
 #[post("/episodes/formatting")]
-pub async fn retrieve_episode_sample_format(sample_string: Json<String>) -> Result<HttpResponse, CustomError> {
+pub async fn retrieve_episode_sample_format(sample_string: Json<EpisodeFormatDto>) -> Result<HttpResponse, CustomError> {
     // Sample episode for formatting
      let episode: PodcastEpisode = PodcastEpisode {
          id: 0,
@@ -258,8 +262,8 @@ pub async fn retrieve_episode_sample_format(sample_string: Json<String>) -> Resu
         podcast_prefill: 0,
         replace_invalid_characters: false,
         use_existing_filename: false,
-        replacement_strategy: "".to_string(),
-        episode_format: sample_string.0,
+        replacement_strategy: "remove".to_string(),
+        episode_format: sample_string.0.content,
         podcast_format: "test".to_string(),
         direct_paths: true,
     };
