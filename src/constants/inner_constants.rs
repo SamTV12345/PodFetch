@@ -1,6 +1,9 @@
+
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
+
+
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search?term=";
 
@@ -97,9 +100,6 @@ pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
 pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 
 pub const STANDARD_USER: &str = "user123";
-
-pub const ERR_SETTINGS_FORMAT: &str = "A podcast/episode format needs to contain an opening and \
-closing bracket ({}).";
 
 pub const PODCAST_FILENAME: &str = "podcast";
 pub const PODCAST_IMAGENAME: &str = "image";

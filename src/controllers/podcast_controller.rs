@@ -12,7 +12,7 @@ use crate::{get_default_image, unwrap_string, DbPool};
 use actix::Addr;
 use actix_web::dev::PeerAddr;
 use actix_web::http::Method;
-use actix_web::web::{Data, Path};
+use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, error, get, post, put, Error, HttpRequest};
 use actix_web::{web, HttpResponse};
 use async_recursion::async_recursion;
@@ -37,7 +37,7 @@ use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
-use crate::service::file_service::FileService;
+use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::DBType as DbConnection;
 use futures_util::StreamExt;
@@ -283,6 +283,7 @@ pub async fn add_podcast(
             },
             mapping_service,
             lobby,
+            None
         )
         .await?;
     Ok(HttpResponse::Ok().into())
@@ -317,7 +318,7 @@ pub async fn add_podcast_by_feed(
         .map_err(map_reqwest_error)?;
 
     let bytes = result.text().await.unwrap();
-    println!("{}", bytes);
+
     let channel = Channel::read_from(bytes.as_bytes()).unwrap();
     let num = rand::thread_rng().gen_range(100..10000000);
 
@@ -331,10 +332,11 @@ pub async fn add_podcast_by_feed(
                     feed_url: rss_feed.clone().rss_feed_url.clone(),
                     title: channel.title.clone(),
                     id: num,
-                    image_url: channel.image.map(|i| i.url).unwrap_or(get_default_image()),
-                },
+                    image_url: channel.image.clone().map(|i| i.url).unwrap_or(get_default_image()),
+                    },
                 MappingService::new(),
                 lobby,
+                Some(channel)
             )
             .await?;
     }
@@ -649,7 +651,7 @@ async fn insert_outline(
             let mapping_service = MappingService::new();
 
             let image_url = match channel.image {
-                Some(image) => image.url,
+                Some(ref image) => image.url.clone(),
                 None => {
                     log::info!(
                         "No image found for podcast. Downloading from {}",
@@ -664,12 +666,13 @@ async fn insert_outline(
                     conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                     PodcastInsertModel {
                         feed_url: podcast.clone().xml_url.expect("No feed url"),
-                        title: channel.title,
+                        title: channel.clone().title.to_string(),
                         id: rng.gen::<i32>(),
                         image_url,
                     },
                     mapping_service,
                     lobby.clone(),
+                    Some(channel)
                 )
                 .await;
             match inserted_podcast {
@@ -700,8 +703,11 @@ async fn insert_outline(
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
+use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
+use crate::models::settings::Setting;
 
 use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
+use crate::utils::rss_feed_parser::PodcastParsed;
 
 #[derive(Deserialize, ToSchema)]
 pub struct DeletePodcast {
@@ -811,4 +817,37 @@ pub(crate) async fn proxy_podcast(
     }
 
     Ok(client_resp.streaming(res.bytes_stream()))
+}
+
+#[post("/podcasts/formatting")]
+pub async fn retrieve_podcast_sample_format(sample_string: Json<EpisodeFormatDto>) -> Result<HttpResponse, CustomError> {
+    let podcast = PodcastParsed {
+        date: "2021-01-01".to_string(),
+        summary: "A podcast about homelabing".to_string(),
+        title: "The homelab podcast".to_string(),
+        description: "test".to_string(),
+        keywords: "computer, server, apps".to_string(),
+        language: "en".to_string(),
+        explicit: "false".to_string(),
+    };
+    let settings = Setting {
+        id: 0,
+        auto_download: false,
+        auto_update: false,
+        auto_cleanup: false,
+        auto_cleanup_days: 0,
+        podcast_prefill: 0,
+        replace_invalid_characters: false,
+        use_existing_filename: false,
+        replacement_strategy: "remove".to_string(),
+        episode_format: "".to_string(),
+        podcast_format: sample_string.0.content,
+        direct_paths: true,
+    };
+    let result = perform_podcast_variable_replacement(settings, podcast);
+
+    match result {
+        Ok(v)=>Ok(HttpResponse::Ok().json(v)),
+        Err(e)=>Err(CustomError::BadRequest(e.to_string()))
+    }
 }
