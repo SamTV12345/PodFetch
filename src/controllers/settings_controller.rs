@@ -12,7 +12,7 @@ use actix_web::{web, HttpResponse};
 use chrono::Local;
 use std::ops::DerefMut;
 use std::str::FromStr;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex};
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[utoipa::path(
@@ -213,7 +213,7 @@ pub async fn update_name(
 use crate::utils::error::{map_r2d2_error, CustomError};
 use utoipa::ToSchema;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::service::rust_service::PodcastService;
+
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

@@ -1,9 +1,9 @@
-use crate::mutex::LockResultExt;
-use crate::service::environment_service::EnvironmentService;
+
+
 use actix_web::get;
-use actix_web::web::Data;
+
 use actix_web::{HttpResponse, Responder};
-use std::sync::Mutex;
+
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[derive(Serialize, Deserialize)]

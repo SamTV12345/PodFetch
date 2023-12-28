@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use actix_web::{Error, HttpRequest};
+use actix_web::{Error};
 use actix_web::dev::{Service, ServiceRequest};
 use actix_web::error::ErrorUnauthorized;
 use futures_util::FutureExt;
@@ -22,12 +22,12 @@ pub fn check_podcast_request<S, B>(
         let mut hash = HashMap::new();
         let query = req.query_string();
 
-        if query.trim().len() == 0 {
+        if query.trim().is_empty() {
             return async {Err(ErrorUnauthorized("Unauthorized"))}.boxed_local()
         }
 
-        query.split("&").for_each(|v| {
-            let mut split = v.split("=");
+        query.split('&').for_each(|v| {
+            let mut split = v.split('=');
             hash.insert(split.next().unwrap(), split.next().unwrap());
         });
         let api_key = hash.get("apiKey");

@@ -160,7 +160,7 @@ impl EnvironmentService {
 #[cfg(test)]
 mod tests {
     use crate::constants::inner_constants::{BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
-    use crate::service::environment_service::EnvironmentService;
+    
     use serial_test::serial;
     use std::env::{remove_var, set_var};
 

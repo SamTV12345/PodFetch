@@ -1,12 +1,12 @@
 use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ITUNES_URL, ENVIRONMENT_SERVICE};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
-use std::sync::MutexGuard;
+
 
 use crate::models::messages::BroadcastMessage;
 use crate::models::misc_models::PodcastInsertModel;
 use crate::models::web_socket_message::Lobby;
-use crate::service::environment_service::EnvironmentService;
+
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -357,7 +357,7 @@ impl PodcastService {
             Favorite::search_podcasts(conn, order, title, latest_pub, designated_username)?;
         let mapped_result = podcasts
             .iter()
-            .map(|podcast| MappingService::map_podcast_to_podcast_dto_with_favorites(podcast))
+            .map(MappingService::map_podcast_to_podcast_dto_with_favorites)
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }

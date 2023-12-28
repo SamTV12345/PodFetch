@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+
 use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, BASIC_AUTH, OIDC_AUTH, ENVIRONMENT_SERVICE};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
@@ -683,9 +683,9 @@ async fn insert_outline(
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
-use crate::config::dbconfig::establish_connection;
+
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
-use crate::controllers::websocket_controller::{RSSAPiKey, RSSQuery};
+use crate::controllers::websocket_controller::{RSSAPiKey};
 use crate::models::settings::Setting;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 

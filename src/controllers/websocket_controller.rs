@@ -4,7 +4,7 @@ use std::ops::DerefMut;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::web_socket_message::Lobby;
-use crate::mutex::LockResultExt;
+
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
@@ -20,7 +20,7 @@ use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
-use std::sync::Mutex;
+
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 

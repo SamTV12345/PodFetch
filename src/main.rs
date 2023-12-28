@@ -5,9 +5,9 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix::{Actor, ActorFutureExt, ContextFutureSpawner};
+use actix::{Actor};
 use actix_files::{Files, NamedFile};
-use actix_web::dev::{fn_service, Service, ServiceFactory, ServiceRequest, ServiceResponse};
+use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
@@ -18,7 +18,7 @@ use std::io::Read;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, thread};
-use std::future::IntoFuture;
+
 
 use actix_web::body::{BoxBody, EitherBody};
 use diesel::r2d2::ConnectionManager;
@@ -29,7 +29,7 @@ use log::info;
 use r2d2::Pool;
 use regex::Regex;
 use std::process::exit;
-use futures_util::{FutureExt, TryFutureExt};
+
 use tokio::task::spawn_blocking;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -76,13 +76,13 @@ use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
-use crate::models::user::User;
+
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::jwkservice::JWKService;
 use crate::service::logging_service::init_logging;
-use crate::service::mapping_service::MappingService;
+
 use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
@@ -171,7 +171,7 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    ENVIRONMENT_SERVICE.get_or_init(|| EnvironmentService::new());
+    ENVIRONMENT_SERVICE.get_or_init(EnvironmentService::new);
 
     check_server_config(ENVIRONMENT_SERVICE.get().unwrap());
     let pool;

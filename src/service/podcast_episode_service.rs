@@ -360,7 +360,7 @@ impl PodcastEpisodeService {
         let podcasts = Podcast::query_for_podcast(query, conn)?;
         let podcast_dto = podcasts
             .iter()
-            .map(|podcast| MappingService::map_podcastepisode_to_dto(podcast))
+            .map(MappingService::map_podcastepisode_to_dto)
             .collect::<Vec<PodcastEpisode>>();
         Ok(podcast_dto)
     }

@@ -1,14 +1,14 @@
 use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, Role};
 use crate::models::user::User;
-use crate::mutex::LockResultExt;
-use crate::service::environment_service::EnvironmentService;
+
+
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use std::ops::DerefMut;
-use std::sync::Mutex;
+
 use utoipa::ToSchema;
 
 #[derive(Deserialize, ToSchema)]
@@ -167,8 +167,8 @@ Json<UserCoreUpdateModel>) -> Result<HttpResponse, CustomError>{
         user.password = Some(sha256::digest(password));
     }
 
-    if let Some(apiKey) = user_update.into_inner().api_key {
-        user.api_key = Some(apiKey);
+    if let Some(api_key) = user_update.into_inner().api_key {
+        user.api_key = Some(api_key);
     }
 
     let user = User::update_user(user, conn.get().map_err(map_r2d2_error)?.deref_mut())?;

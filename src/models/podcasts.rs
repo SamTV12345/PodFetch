@@ -1,4 +1,4 @@
-use std::sync::MutexGuard;
+
 
 use crate::dbconfig::schema::*;
 
@@ -90,7 +90,7 @@ impl Podcast {
 
         let mapped_result = result
             .iter()
-            .map(|podcast| MappingService::map_podcast_to_podcast_dto_with_favorites(podcast))
+            .map(MappingService::map_podcast_to_podcast_dto_with_favorites)
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }

@@ -1,8 +1,8 @@
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;
-use crate::mutex::LockResultExt;
-use crate::service::environment_service::EnvironmentService;
+
+
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix_web::post;
@@ -11,7 +11,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use awc::cookie::{Cookie, SameSite};
 use sha256::digest;
 use std::ops::DerefMut;
-use std::sync::Mutex;
+
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[post("/auth/{username}/login.json")]

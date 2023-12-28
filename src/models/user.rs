@@ -335,7 +335,7 @@ impl User {
 
         let result = Self::find_by_api_key(api_key_to_find, conn);
 
-        return match result {
+        match result {
             Ok(user) => {
                 if let Some(user) = user {
                     return user.api_key.is_some();

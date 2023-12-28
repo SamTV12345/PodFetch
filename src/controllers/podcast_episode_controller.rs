@@ -7,7 +7,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
-use crate::mutex::LockResultExt;
+
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
@@ -18,7 +18,7 @@ use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::ops::DerefMut;
-use std::sync::Mutex;
+
 use std::thread;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
