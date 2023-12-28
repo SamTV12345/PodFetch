@@ -179,5 +179,6 @@
   "podcast-not-found": "Podcast not found",
   "original-rss-feed": "Original RSS feed",
   "profile": "Profile",
-  "api-key": "API key"
+  "api-key": "API key",
+  "user-settings-updated": "User settings updated"
 }

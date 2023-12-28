@@ -178,5 +178,6 @@
   "podcast-not-found": "Nie znaleziono podcastu",
   "original-rss-feed": "Oryginalny kanał RSS",
   "profile": "Profil",
-  "api-key": "Klucz API"
+  "api-key": "Klucz API",
+  "user-settings-updated": "Ustawienia użytkownika zostały zaktualizowane"
 }

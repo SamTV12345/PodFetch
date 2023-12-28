@@ -161,10 +161,12 @@ Json<UserCoreUpdateModel>) -> Result<HttpResponse, CustomError>{
             return Err(CustomError::Conflict("Username already taken".to_string()));
         }
         user.username = user_update.username.to_string();
-
     }
     if let Some(password) = user_update.password.clone() {
-        user.password = Some(sha256::digest(password));
+        if password.trim().len() < 8 {
+            return Err(CustomError::BadRequest("Password must be at least 8 characters long".to_string()));
+        }
+        user.password = Some(sha256::digest(password.trim()));
     }
 
     if let Some(api_key) = user_update.into_inner().api_key {
