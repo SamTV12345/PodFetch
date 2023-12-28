@@ -177,5 +177,6 @@
   "restart-playing": "Erneut abspielen",
   "you-already-listened": "Die Episode <name/> wurde bereits abgespielt. Möchtest du sie nochmal anhören oder eine andere Episode auswählen?",
   "podcast-not-found": "Podcast nicht gefunden",
-  "original-rss-feed": "Original RSS Feed"
+  "original-rss-feed": "Original RSS Feed",
+  "profile": "Profil"
 }

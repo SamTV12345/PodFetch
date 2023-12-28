@@ -49,11 +49,8 @@ pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
     requester: Option<web::ReqData<User>>,
     last_podcast_episode: Query<OptionalId>,
-    mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
-    let mapping_service = mapping_service.lock().ignore_poison();
-
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
@@ -65,7 +62,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast| {
-            let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast.0);
+            let mapped_podcast_episode = MappingService::map_podcastepisode_to_dto(&podcast.0);
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast.1,
@@ -108,10 +105,8 @@ tag = "podcasts"
 pub async fn get_timeline(
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
-    mapping_service: Data<Mutex<MappingService>>,
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
-    let mapping_service = mapping_service.lock().ignore_poison().clone();
 
     let res = TimelineItem::get_timeline(
         requester.unwrap().username.clone(),
@@ -125,7 +120,7 @@ pub async fn get_timeline(
         .map(|podcast_episode| {
             let (podcast_episode, podcast, history, favorite) = podcast_episode.clone();
             let mapped_podcast_episode =
-                mapping_service.map_podcastepisode_to_dto(&podcast_episode);
+                MappingService::map_podcastepisode_to_dto(&podcast_episode);
 
             TimeLinePodcastEpisode {
                 podcast_episode: mapped_podcast_episode,

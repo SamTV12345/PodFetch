@@ -22,9 +22,11 @@ responses(
 tag="podcast_episodes"
 )]
 #[get("/settings")]
-pub async fn get_settings(conn: Data<DbPool>) -> Result<HttpResponse, CustomError> {
+pub async fn get_settings(conn: Data<DbPool>, requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
+    if !requester.unwrap().is_admin() {
+        return Err(CustomError::Forbidden);
+    }
     let settings = Setting::get_settings(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
-    println!("Settings: {:?}", settings);
     match settings {
         Some(settings) => Ok(HttpResponse::Ok().json(settings)),
         None => Err(CustomError::NotFound),
@@ -65,7 +67,6 @@ tag="settings"
 )]
 #[put("/settings/runcleanup")]
 pub async fn run_cleanup(
-    pdservice: Data<Mutex<PodcastEpisodeService>>,
     settings_service: Data<Mutex<SettingsService>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
@@ -79,7 +80,7 @@ pub async fn run_cleanup(
         .get_settings(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
     match settings {
         Some(settings) => {
-            pdservice.lock().ignore_poison().cleanup_old_episodes(
+            PodcastEpisodeService::cleanup_old_episodes(
                 settings.auto_cleanup_days,
                 conn.get().map_err(map_r2d2_error)?.deref_mut(),
             );
@@ -108,10 +109,8 @@ tag="podcasts"
 #[get("/settings/opml/{type_of}")]
 pub async fn get_opml(
     conn: Data<DbPool>,
-    type_of: Path<Mode>,
-    env_service: Data<Mutex<EnvironmentService>>,
+    type_of: Path<Mode>
 ) -> Result<HttpResponse, CustomError> {
-    let env_service = env_service.lock().ignore_poison();
     let podcasts_found =
         Podcast::get_all_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
@@ -124,7 +123,7 @@ pub async fn get_opml(
     opml.add_child(add_header()).expect("TODO: panic message");
     opml.add_child(add_podcasts(
         podcasts_found,
-        env_service,
+        ENVIRONMENT_SERVICE.get().unwrap(),
         type_of.into_inner(),
     ))
     .map_err(|e| {
@@ -161,7 +160,7 @@ fn add_body() -> XMLElement {
 
 fn add_podcasts(
     podcasts_found: Vec<Podcast>,
-    env_service: MutexGuard<EnvironmentService>,
+    env_service: &EnvironmentService,
     type_of: Mode,
 ) -> XMLElement {
     let mut body = add_body();
@@ -213,6 +212,8 @@ pub async fn update_name(
 
 use crate::utils::error::{map_r2d2_error, CustomError};
 use utoipa::ToSchema;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::service::rust_service::PodcastService;
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

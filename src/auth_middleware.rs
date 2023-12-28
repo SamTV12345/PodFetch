@@ -206,6 +206,7 @@ where
                                 password: None,
                                 explicit_consent: false,
                                 created_at: chrono::Utc::now().naive_utc(),
+                                api_key: None,
                             },
                             &mut pool.get().unwrap(),
                         )

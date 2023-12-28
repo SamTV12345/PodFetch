@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ITUNES_URL};
+use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ITUNES_URL, ENVIRONMENT_SERVICE};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 use std::sync::MutexGuard;
@@ -32,9 +32,7 @@ use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct PodcastService {
-    pub client: Client,
-    pub podcast_episode_service: PodcastEpisodeService,
-    pub environment_service: EnvironmentService,
+    pub client: Client
 }
 
 impl Default for PodcastService {
@@ -46,9 +44,7 @@ impl Default for PodcastService {
 impl PodcastService {
     pub fn new() -> PodcastService {
         PodcastService {
-            client: AsyncClientBuilder::new().build().unwrap(),
-            podcast_episode_service: PodcastEpisodeService::new(),
-            environment_service: EnvironmentService::new(),
+            client: AsyncClientBuilder::new().build().unwrap()
         }
     }
 
@@ -99,7 +95,6 @@ impl PodcastService {
         id: i32,
         lobby: Data<Addr<Lobby>>,
     ) -> Result<Podcast, CustomError> {
-        let mapping_service = MappingService::new();
         let resp = self
             .client
             .get(
@@ -123,7 +118,6 @@ impl PodcastService {
                 feed_url: unwrap_string(&podcast["feed"]["url"]),
                 image_url: unwrap_string(&podcast["feed"]["image"]),
             },
-            mapping_service,
             lobby,
             None
         )
@@ -134,7 +128,6 @@ impl PodcastService {
         &mut self,
         conn: &mut DbConnection,
         podcast_insert: PodcastInsertModel,
-        mapping_service: MappingService,
         lobby: Data<Addr<Lobby>>,
         channel: Option<Channel>
     ) -> Result<Podcast, CustomError> {
@@ -179,7 +172,7 @@ impl PodcastService {
                 type_of: PodcastType::AddPodcast,
                 message: format!("Added podcast: {}", inserted_podcast.name),
                 podcast: Option::from(
-                    mapping_service.map_podcast_to_podcast_dto(&podcast.clone().unwrap()),
+                    MappingService::map_podcast_to_podcast_dto(&podcast.clone().unwrap()),
                 ),
                 podcast_episodes: None,
             })
@@ -190,10 +183,9 @@ impl PodcastService {
                 spawn_blocking(move || {
                     let mut conn = establish_connection();
                     let mut podcast_service = PodcastService::new();
-                    let mut podcast_episode_service = PodcastEpisodeService::new();
+
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
-                    let inserted_podcasts = podcast_episode_service
-                        .insert_podcast_episodes(&mut conn, podcast.clone())
+                    let inserted_podcasts = PodcastEpisodeService::insert_podcast_episodes(&mut conn, podcast.clone())
                         .unwrap();
 
                     lobby.get_ref().do_send(BroadcastMessage {
@@ -231,8 +223,7 @@ impl PodcastService {
                         PodcastEpisodeService::get_last_n_podcast_episodes(conn, podcast.clone())?;
                     for podcast_episode in result {
                         if !podcast_episode.deleted {
-                            self.podcast_episode_service
-                                .download_podcast_episode_if_not_locally_available(
+                            PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
                                     podcast_episode,
                                     podcast.clone(),
                                     lobby.clone(),
@@ -257,8 +248,7 @@ impl PodcastService {
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
-        self.podcast_episode_service
-            .insert_podcast_episodes(conn, podcast.clone())?;
+        PodcastEpisodeService::insert_podcast_episodes(conn, podcast.clone())?;
         self.schedule_episode_download(podcast.clone(), Some(lobby.clone()), conn)
     }
 
@@ -279,10 +269,9 @@ impl PodcastService {
     pub fn get_favored_podcasts(
         &mut self,
         found_username: String,
-        mapping_service: MappingService,
         conn: &mut DbConnection,
     ) -> Result<Vec<PodcastDto>, CustomError> {
-        Favorite::get_favored_podcasts(found_username, conn, mapping_service)
+        Favorite::get_favored_podcasts(found_username, conn)
     }
 
     pub fn update_active_podcast(conn: &mut DbConnection, id: i32) -> Result<(), CustomError> {
@@ -295,8 +284,8 @@ impl PodcastService {
             .unwrap()
             .as_secs();
         let mut headers = HeaderMap::new();
-        let non_hashed_string = self.environment_service.podindex_api_key.clone().to_owned()
-            + &*self.environment_service.podindex_api_secret.clone()
+        let non_hashed_string = ENVIRONMENT_SERVICE.get().unwrap().podindex_api_key.clone().to_owned()
+            + &*ENVIRONMENT_SERVICE.get().unwrap().podindex_api_secret.clone()
             + &seconds.to_string();
         let mut hasher = Sha1::new();
 
@@ -310,7 +299,7 @@ impl PodcastService {
         );
         headers.insert(
             "X-Auth-Key",
-            HeaderValue::from_str(&self.environment_service.podindex_api_key).unwrap(),
+            HeaderValue::from_str(&ENVIRONMENT_SERVICE.get().unwrap().podindex_api_key).unwrap(),
         );
         headers.insert(
             "X-Auth-Date",
@@ -333,10 +322,8 @@ impl PodcastService {
 
     pub fn get_podcasts(
         conn: &mut DbConnection,
-        u: String,
-        mapping_service: MutexGuard<MappingService>,
-    ) -> Result<Vec<PodcastDto>, CustomError> {
-        Podcast::get_podcasts(conn, u, mapping_service)
+        u: String) -> Result<Vec<PodcastDto>, CustomError> {
+        Podcast::get_podcasts(conn, u)
     }
 
     pub fn search_podcasts_favored(
@@ -344,7 +331,6 @@ impl PodcastService {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        mapping_service: MutexGuard<MappingService>,
         conn: &mut DbConnection,
         designated_username: String,
     ) -> Result<Vec<impl Serialize>, CustomError> {
@@ -353,7 +339,7 @@ impl PodcastService {
         let mut podcast_dto_vec = Vec::new();
         for podcast in podcasts {
             let podcast_dto =
-                mapping_service.map_podcast_to_podcast_dto_with_favorites_option(&podcast);
+                MappingService::map_podcast_to_podcast_dto_with_favorites_option(&podcast);
             podcast_dto_vec.push(podcast_dto);
         }
         Ok(podcast_dto_vec)
@@ -362,7 +348,6 @@ impl PodcastService {
     pub fn search_podcasts(
         &mut self,
         order: OrderCriteria,
-        mapping_service: MutexGuard<MappingService>,
         title: Option<String>,
         latest_pub: OrderOption,
         conn: &mut DbConnection,
@@ -372,7 +357,7 @@ impl PodcastService {
             Favorite::search_podcasts(conn, order, title, latest_pub, designated_username)?;
         let mapped_result = podcasts
             .iter()
-            .map(|podcast| mapping_service.map_podcast_to_podcast_dto_with_favorites(podcast))
+            .map(|podcast| MappingService::map_podcast_to_podcast_dto_with_favorites(podcast))
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }

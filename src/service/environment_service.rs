@@ -129,7 +129,7 @@ impl EnvironmentService {
         println!("\n");
     }
 
-    pub fn get_config(&mut self) -> ConfigModel {
+    pub fn get_config(&self) -> ConfigModel {
         ConfigModel {
             podindex_configured: !self.podindex_api_key.is_empty()
                 && !self.podindex_api_secret.is_empty(),
@@ -159,10 +159,7 @@ impl EnvironmentService {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::inner_constants::{
-        BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE,
-        PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME,
-    };
+    use crate::constants::inner_constants::{BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
     use crate::service::environment_service::EnvironmentService;
     use serial_test::serial;
     use std::env::{remove_var, set_var};
@@ -197,7 +194,7 @@ mod tests {
         set_var(OIDC_AUTHORITY, "http://localhost:8000/oidc");
         set_var(OIDC_CLIENT_ID, "test");
         set_var(OIDC_SCOPE, "openid profile email");
-        let mut env_service = EnvironmentService::new();
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
         let config = env_service.get_config();
         assert!(!config.podindex_configured);
         assert_eq!(config.rss_feed, "http://localhost:8000/rss");
@@ -223,8 +220,8 @@ mod tests {
     fn test_getting_server_url() {
         do_env_cleanup();
         set_var(SERVER_URL, "http://localhost:8000");
-        let env_service = EnvironmentService::new();
-        assert_eq!(env_service.get_server_url(), "http://localhost:8000/");
+
+        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_server_url(), "http://localhost:8000/");
     }
 
     #[test]
@@ -238,8 +235,7 @@ mod tests {
         set_var(BASIC_AUTH, "true");
         set_var(USERNAME, "test");
         set_var(PASSWORD, "test");
-        let mut env_service = EnvironmentService::new();
-        let config = env_service.get_config();
+        let config = ENVIRONMENT_SERVICE.get().unwrap().get_config();
         assert!(config.podindex_configured);
         assert_eq!(config.rss_feed, "http://localhost:8000/rss");
         assert_eq!(config.server_url, "http://localhost:8000/");
@@ -253,10 +249,9 @@ mod tests {
         do_env_cleanup();
         set_var(PODINDEX_API_KEY, "test");
         set_var(PODINDEX_API_SECRET, "testsecret");
-        let env_service = EnvironmentService::new();
 
-        assert_eq!(env_service.get_podindex_api_key(), "test");
-        assert_eq!(env_service.get_podindex_api_secret(), "testsecret");
+        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_podindex_api_key(), "test");
+        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_podindex_api_secret(), "testsecret");
     }
 
     #[test]
@@ -264,7 +259,6 @@ mod tests {
     fn test_get_polling_interval() {
         do_env_cleanup();
         set_var(POLLING_INTERVAL, "20");
-        let env_service = EnvironmentService::new();
-        assert_eq!(env_service.get_polling_interval(), 20);
+        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval(), 20);
     }
 }

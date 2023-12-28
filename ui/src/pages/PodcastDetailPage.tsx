@@ -2,7 +2,7 @@ import {Fragment, useEffect, useState} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
 import axios, {AxiosResponse} from 'axios'
-import {apiURL, removeHTML} from '../utils/Utilities'
+import {apiURL, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import {Chip} from '../components/Chip'
@@ -112,7 +112,7 @@ export const PodcastDetailPage = () => {
                         xs:col-start-1 xs:col-end-2 row-start-3 row-end-4
                         lg:col-start-1 lg:col-end-2 lg:row-start-2 lg:row-end-4
                         w-full xs:w-24 md:w-32 lg:w-40 rounded-xl
-                    " src={currentPodcast.image_url} alt=""/>
+                    " src={prependAPIKeyOnAuthEnabled(currentPodcast.image_url)} alt=""/>
 
                     {/* Title and refresh icon */}
                     <div className="

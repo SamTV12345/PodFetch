@@ -12,15 +12,15 @@ use awc::cookie::{Cookie, SameSite};
 use sha256::digest;
 use std::ops::DerefMut;
 use std::sync::Mutex;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(
     username: web::Path<String>,
     rq: HttpRequest,
     conn: Data<DbPool>,
-    env_service: Data<Mutex<EnvironmentService>>,
 ) -> Result<HttpResponse, CustomError> {
-    let env = env_service.lock().ignore_poison();
+    let env = ENVIRONMENT_SERVICE.get().unwrap();
     if let Some(cookie) = rq.clone().cookie("sessionid") {
         let session = cookie.value();
         let opt_session =

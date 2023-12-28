@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{Role, BASIC_AUTH, OIDC_AUTH, STANDARD_USER, USERNAME};
+use crate::constants::inner_constants::{Role, BASIC_AUTH, OIDC_AUTH, STANDARD_USER, USERNAME, API_KEY};
 use crate::dbconfig::schema::users;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError};
@@ -13,6 +13,7 @@ use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use dotenv::var;
 use std::io::Error;
 use utoipa::ToSchema;
+use crate::dbconfig::DBType;
 
 #[derive(
     Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset,
@@ -25,6 +26,7 @@ pub struct User {
     pub password: Option<String>,
     pub explicit_consent: bool,
     pub created_at: NaiveDateTime,
+    pub api_key: Option<String>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -35,6 +37,17 @@ pub struct UserWithoutPassword {
     pub role: String,
     pub created_at: NaiveDateTime,
     pub explicit_consent: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserWithAPiKey {
+    pub id: i32,
+    pub username: String,
+    pub role: String,
+    pub created_at: NaiveDateTime,
+    pub explicit_consent: bool,
+    pub api_key: Option<String>
 }
 
 impl User {
@@ -53,6 +66,7 @@ impl User {
             password,
             created_at,
             explicit_consent,
+            api_key: None,
         }
     }
 
@@ -145,6 +159,7 @@ impl User {
             password,
             explicit_consent: true,
             created_at: Default::default(),
+            api_key: var(API_KEY).map(Some).unwrap_or(None),
         }
     }
 
@@ -158,6 +173,17 @@ impl User {
         }
     }
 
+    pub fn map_to_api_dto(user: Self) -> UserWithAPiKey {
+        UserWithAPiKey {
+            id: user.id,
+            explicit_consent: user.explicit_consent,
+            username: user.username.clone(),
+            role: user.role.clone(),
+            created_at: user.created_at,
+            api_key: user.api_key.clone()
+        }
+    }
+
     pub fn create_standard_admin_user() -> User {
         User {
             id: 9999,
@@ -166,6 +192,7 @@ impl User {
             password: None,
             explicit_consent: true,
             created_at: Default::default(),
+            api_key: var(API_KEY).map(Some).unwrap_or(None),
         }
     }
 
@@ -272,5 +299,54 @@ impl User {
 
     pub fn is_admin(&self) -> bool {
         self.role.eq(&Role::Admin.to_string())
+    }
+
+    pub fn find_by_api_key(api_key_to_find: String, conn: &mut DBType) -> Result<Option<User>, CustomError> {
+        use crate::dbconfig::schema::users::dsl::*;
+
+        users.filter(api_key.eq(api_key_to_find))
+            .first::<User>(conn)
+            .optional()
+            .map_err(map_db_error)
+    }
+
+    pub fn update_api_key_of_user(username_to_update: &str, api_key_to_update: String, conn: &mut DBType) ->
+                                                                                                            Result<(),
+        CustomError> {
+        use crate::dbconfig::schema::users::dsl::*;
+
+        diesel::update(users.filter(username.eq(username_to_update)))
+            .set(api_key.eq(api_key_to_update))
+            .execute(conn)
+            .map_err(map_db_error)?;
+
+        Ok(())
+    }
+
+    pub fn check_if_api_key_exists(api_key_to_find: String, conn: &mut DBType) -> bool {
+        if api_key_to_find.is_empty() {
+            return false;
+        }
+
+        if let Ok(res) = var(API_KEY) {
+            if res.is_empty() {
+                return false;
+            }
+            return res == api_key_to_find;
+        }
+
+        let result = Self::find_by_api_key(api_key_to_find, conn);
+
+        return match result {
+            Ok(user) => {
+                if let Some(user) = user {
+                    return user.api_key.is_some();
+                }
+                false
+            }
+            Err(_) => {
+                false
+            }
+        }
     }
 }

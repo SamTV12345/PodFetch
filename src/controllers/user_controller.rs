@@ -1,12 +1,12 @@
-use crate::constants::inner_constants::{Role, USERNAME};
+use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, Role};
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
-use actix_web::web::Data;
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
+use actix_web::web::{Data, Path};
+use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use std::ops::DerefMut;
 use std::sync::Mutex;
 use utoipa::ToSchema;
@@ -82,11 +82,20 @@ responses(
 (status = 200, description = "Gets a user by username", body = Option<User>)),
 tag="info"
 )]
-#[get("/users/{username}")]
-pub async fn get_user(req: HttpRequest, conn: Data<DbPool>) -> Result<HttpResponse, CustomError> {
-    let username = get_user_from_request(req);
-    let user = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
-    Ok(HttpResponse::Ok().json(User::map_to_dto(user)))
+#[get("/{username}")]
+pub async fn get_user(conn: Data<DbPool>, username: Path<String>,  requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
+    let user = requester.unwrap().into_inner();
+    let username = username.into_inner();
+    if user.username == username|| username == "me" {
+        return Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)));
+    }
+
+    if !user.is_admin()|| user.username != username {
+        return Err(CustomError::Forbidden);
+    }
+
+    let user = User::find_by_username(&username.clone(), conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
 }
 
 #[utoipa::path(
@@ -222,18 +231,16 @@ responses(
 #[get("/invites/{invite_id}/link")]
 pub async fn get_invite_link(
     conn: Data<DbPool>,
-    invite_id: web::Path<String>,
-    environment_service: Data<Mutex<EnvironmentService>>,
+    invite_id: Path<String>,
     requester: Option<web::ReqData<User>>,
 ) -> impl Responder {
     if !requester.unwrap().is_admin() {
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
     }
-    let environment_service = environment_service.lock().ignore_poison();
 
     match UserManagementService::get_invite_link(
         invite_id.into_inner(),
-        environment_service,
+        ENVIRONMENT_SERVICE.get().unwrap(),
         conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
     ) {
         Ok(invite) => HttpResponse::Ok().json(invite),
@@ -263,14 +270,4 @@ pub async fn delete_invite(
         Ok(_) => HttpResponse::Ok().into(),
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }
-}
-
-fn get_user_from_request(req: HttpRequest) -> String {
-    req.clone()
-        .headers()
-        .get(USERNAME)
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string()
 }

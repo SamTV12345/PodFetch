@@ -5,19 +5,20 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix::Actor;
+use actix::{Actor, ActorFutureExt, ContextFutureSpawner};
 use actix_files::{Files, NamedFile};
-use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
+use actix_web::dev::{fn_service, Service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::collections::HashSet;
+use std::collections::{HashSet};
 use std::env::{args, var};
 use std::io::Read;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, thread};
+use std::future::IntoFuture;
 
 use actix_web::body::{BoxBody, EitherBody};
 use diesel::r2d2::ConnectionManager;
@@ -28,6 +29,7 @@ use log::info;
 use r2d2::Pool;
 use regex::Regex;
 use std::process::exit;
+use futures_util::{FutureExt, TryFutureExt};
 use tokio::task::spawn_blocking;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -37,10 +39,7 @@ use crate::auth_middleware::AuthFilter;
 use crate::command_line_runner::start_command_line;
 use crate::config::dbconfig::ConnectionOptions;
 use crate::config::dbconfig::{establish_connection, get_database_url};
-use crate::constants::inner_constants::{
-    BASIC_AUTH, CSS, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED,
-    TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN,
-};
+use crate::constants::inner_constants::{BASIC_AUTH, CSS, ENVIRONMENT_SERVICE, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -59,10 +58,7 @@ use crate::controllers::settings_controller::{
     get_opml, get_settings, run_cleanup, update_name, update_settings,
 };
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
-use crate::controllers::user_controller::{
-    create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_users,
-    onboard_user, update_role,
-};
+use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_users, onboard_user, update_role};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
@@ -80,6 +76,7 @@ use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
+use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -92,6 +89,7 @@ use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::CustomError;
+use crate::utils::podcast_key_checker::check_podcast_request;
 
 mod config;
 
@@ -108,7 +106,6 @@ import_database_config!();
 
 pub fn run_poll(
     mut podcast_service: PodcastService,
-    mut podcast_episode_service: PodcastEpisodeService,
 ) -> Result<(), CustomError> {
     //check for new episodes
     let conn = &mut establish_connection();
@@ -116,7 +113,7 @@ pub fn run_poll(
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
-            podcast_episode_service.insert_podcast_episodes(conn, podcast)?;
+            PodcastEpisodeService::insert_podcast_episodes(conn, podcast)?;
             podcast_service.schedule_episode_download(
                 podcast_clone,
                 None,
@@ -174,9 +171,9 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    let environment_service = EnvironmentService::new();
+    ENVIRONMENT_SERVICE.get_or_init(|| EnvironmentService::new());
 
-    check_server_config(environment_service.clone());
+    check_server_config(ENVIRONMENT_SERVICE.get().unwrap());
     let pool;
     {
         let conn = establish_connection();
@@ -196,9 +193,7 @@ async fn main() -> std::io::Result<()> {
     let data_pool = Data::new(pool);
 
     //services
-    let podcast_episode_service = PodcastEpisodeService::new();
     let podcast_service = PodcastService::new();
-    let mapping_service = MappingService::new();
     let file_service = FileService::new_db();
     let notification_service = NotificationService::new();
     let settings_service = SettingsService::new();
@@ -219,9 +214,9 @@ async fn main() -> std::io::Result<()> {
 
     thread::spawn(|| {
         let mut scheduler = Scheduler::new();
-        let env = EnvironmentService::new();
-        env.get_environment();
-        let polling_interval = env.get_polling_interval();
+
+        ENVIRONMENT_SERVICE.get().unwrap().get_environment();
+        let polling_interval = ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
             let conn = &mut establish_connection();
             let settings = Setting::get_settings(conn).unwrap();
@@ -229,9 +224,8 @@ async fn main() -> std::io::Result<()> {
                 Some(settings) => {
                     if settings.auto_update {
                         let podcast_service = PodcastService::new();
-                        let podcast_episode_service = PodcastEpisodeService::new();
                         info!("Polling for new episodes");
-                        run_poll(podcast_service, podcast_episode_service).unwrap();
+                        run_poll(podcast_service).unwrap();
                     }
                 }
                 None => {
@@ -247,12 +241,11 @@ async fn main() -> std::io::Result<()> {
                 "Error clearing old \
             sessions",
             );
-            let mut podcast_episode_service = PodcastEpisodeService::new();
             let settings = Setting::get_settings(conn).unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
-                        podcast_episode_service.cleanup_old_episodes(
+                        PodcastEpisodeService::cleanup_old_episodes(
                             settings.auto_cleanup_days,
                             &mut establish_connection(),
                         )
@@ -338,14 +331,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(jwk.clone()))
             .app_data(Data::new(hash.clone()))
             .service(redirect("/", var("SUB_DIRECTORY").unwrap() + "/ui/"))
-            .service(get_gpodder_api(environment_service.clone()))
+            .service(get_gpodder_api())
             .service(get_global_scope())
             .app_data(Data::new(chat_server.clone()))
-            .app_data(Data::new(Mutex::new(podcast_episode_service.clone())))
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
-            .app_data(Data::new(Mutex::new(mapping_service.clone())))
             .app_data(Data::new(Mutex::new(file_service.clone())))
-            .app_data(Data::new(Mutex::new(environment_service.clone())))
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(data_pool.clone())
@@ -379,7 +369,7 @@ pub fn get_global_scope() -> Scope {
         .service(get_client_parametrization)
         .service(proxy_podcast)
         .service(get_ui_config())
-        .service(Files::new("/podcasts", "podcasts").disable_content_disposition())
+        .service(get_podcast_serving())
         .service(redirect("/swagger-ui", "/swagger-ui/"))
         .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
         .service(redirect("/", "./ui/"))
@@ -387,6 +377,12 @@ pub fn get_global_scope() -> Scope {
         .service(start_connection)
         .service(get_rss_feed)
         .service(get_rss_feed_for_podcast)
+}
+
+fn get_podcast_serving() -> actix_web::Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse, Error = actix_web::Error, InitError = ()>> {
+    web::scope("/podcasts")
+        .wrap_fn(check_podcast_request)
+        .service(Files::new("/", "podcasts").disable_content_disposition())
 }
 
 fn get_private_api() -> Scope<
@@ -484,6 +480,7 @@ pub fn get_secure_user_management() -> Scope {
     web::scope("/users")
         .service(create_invite)
         .service(get_invites)
+        .service(get_user)
         .service(get_users)
         .service(update_role)
         .service(delete_user)
@@ -507,7 +504,7 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     }
 }
 
-pub fn check_server_config(service1: EnvironmentService) {
+pub fn check_server_config(service1: &EnvironmentService) {
     if service1.http_basic && (service1.password.is_empty() || service1.username.is_empty()) {
         eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
         exit(1);

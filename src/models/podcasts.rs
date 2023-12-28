@@ -77,7 +77,6 @@ impl Podcast {
     pub fn get_podcasts(
         conn: &mut DbConnection,
         u: String,
-        mapping_service: MutexGuard<MappingService>,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::podcast_id as f_id;
@@ -91,7 +90,7 @@ impl Podcast {
 
         let mapped_result = result
             .iter()
-            .map(|podcast| mapping_service.map_podcast_to_podcast_dto_with_favorites(podcast))
+            .map(|podcast| MappingService::map_podcast_to_podcast_dto_with_favorites(podcast))
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }

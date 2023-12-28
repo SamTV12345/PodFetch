@@ -1,7 +1,7 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
-import { apiURL } from '../utils/Utilities'
+import {apiURL, prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import { DiskModel } from '../models/DiskModel'
 import { SysExtraInfo } from '../models/SysExtraInfo'
 import { CustomGaugeChart } from '../components/CustomGaugeChart'
@@ -138,7 +138,7 @@ export const SystemInfoPage: FC = () => {
 
 
                         <dt className="font-medium text-[--fg-color]">{t('rss-feed')}</dt>
-                        <dd className="text-[--fg-secondary-color]"><a className="text-[--accent-color] hover:text-[--accent-color-hover]" href={configModel?.rssFeed} target="_blank" rel="noopener noreferrer">{configModel?.rssFeed}</a></dd>
+                        <dd className="text-[--fg-secondary-color]"><a className="text-[--accent-color] hover:text-[--accent-color-hover]" href={prependAPIKeyOnAuthEnabled(configModel!.rssFeed)} target="_blank" rel="noopener noreferrer">{prependAPIKeyOnAuthEnabled(configModel!.rssFeed)}</a></dd>
 
                         {versionInfo && (
                             <>

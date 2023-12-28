@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import axios, { AxiosResponse } from 'axios'
 import { PodcastEpisode } from '../store/CommonSlice'
-import { apiURL, formatTime, removeHTML } from '../utils/Utilities'
+import {apiURL, formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
@@ -71,7 +71,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                             <img alt={episode.name} className="
                                 hidden xs:block
                                 rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]
-                            " src={episode.image_url} />
+                            " src={prependAPIKeyOnAuthEnabled(episode.image_url)} />
 
                             {/* Information */}
                             <div className="flex flex-col gap-2">

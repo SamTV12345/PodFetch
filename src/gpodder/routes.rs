@@ -7,9 +7,10 @@ use crate::service::environment_service::EnvironmentService;
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::{web, Error, Scope};
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
-pub fn get_gpodder_api(environment_service: EnvironmentService) -> Scope {
-    if environment_service.gpodder_integration_enabled {
+pub fn get_gpodder_api() -> Scope {
+    if ENVIRONMENT_SERVICE.get().unwrap().gpodder_integration_enabled {
         web::scope("/api/2")
             .service(login)
             .service(get_authenticated_api())

@@ -49,9 +49,20 @@ type PodcastEpisodeWithPodcastWatchModel = {
     podcastWatchModel: Episode
 }
 
+export type LoggedInUser = {
+    id: number,
+    explicitConsent: string,
+    username: string,
+    role: "admin"|"user",
+    createdAt: string,
+    apiKey?: string,
+}
+
 // Define a type for the slice state
 interface CommonProps {
-    selectedEpisodes: EpisodesWithOptionalTimeline[]
+    selectedEpisodes: EpisodesWithOptionalTimeline[],
+    loggedInUser: LoggedInUser|undefined,
+    setLoggedInUser: (loggedInUser: LoggedInUser) => void,
     sidebarCollapsed: boolean,
     podcasts:Podcast[],
     searchedPodcasts: AgnosticPodcastDataModel[]|undefined,
@@ -101,7 +112,8 @@ interface CommonProps {
     setInfoHeading: (infoHeading: string) => void,
     setInfoText: (infoText: string) => void,
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => void,
-    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => void
+    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => void,
+
 }
 
 const useCommon = create<CommonProps>((set, get) => ({
@@ -197,7 +209,9 @@ const useCommon = create<CommonProps>((set, get) => ({
     setInfoHeading: (infoHeading: string) => set({infoHeading}),
     setInfoText: (infoText: string) => set({infoText}),
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => set({podcastAlreadyPlayed}),
-    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => set({podcastEpisodeAlreadyPlayed})
+    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => set({podcastEpisodeAlreadyPlayed}),
+    setLoggedInUser: (loggedInUser: LoggedInUser) => set({loggedInUser}),
+    loggedInUser: undefined
 }))
 
 export default useCommon

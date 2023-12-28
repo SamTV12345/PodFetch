@@ -36,6 +36,7 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
 }
 use crate::utils::error::{map_io_extra_error, CustomError};
 use utoipa::ToSchema;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {
@@ -52,8 +53,7 @@ tag="sys"
 )]
 #[get("/sys/config")]
 pub async fn get_public_config() -> impl Responder {
-    let mut env = EnvironmentService::new();
-    let config = env.get_config();
+    let config = ENVIRONMENT_SERVICE.get().unwrap().get_config();
     HttpResponse::Ok().json(config)
 }
 
@@ -68,11 +68,10 @@ tag="sys"
 #[post("/login")]
 pub async fn login(
     auth: web::Json<LoginRequest>,
-    env: Data<Mutex<EnvironmentService>>,
     db: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
-    let env_service = env.lock().ignore_poison();
-
+    use crate::ENVIRONMENT_SERVICE;
+    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
     if auth.0.username == env_service.username && auth.0.password == env_service.password {
         return Ok(HttpResponse::Ok().json("Login successful"));
     }

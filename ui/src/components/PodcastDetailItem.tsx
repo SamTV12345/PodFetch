@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
 import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
-import { apiURL, formatTime, removeHTML } from '../utils/Utilities'
+import {apiURL, formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import useCommon from "../store/CommonSlice";
@@ -55,7 +55,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 setInfoModalPodcastOpen(true)
             }}>
                 {/* Thumbnail */}
-                <img src={episode.podcastEpisode.image_url} alt={episode.podcastEpisode.name} className="
+                <img src={prependAPIKeyOnAuthEnabled(episode.podcastEpisode.image_url)} alt={episode.podcastEpisode.name} className="
                     hidden xs:block
                     col-start-1 col-end-2 row-start-1 row-end-4
                     self-center rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]

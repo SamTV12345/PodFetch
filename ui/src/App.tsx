@@ -3,7 +3,7 @@ import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 're
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import useCommon from './store/CommonSlice'
+import useCommon, {LoggedInUser} from './store/CommonSlice'
 import useOpmlImport from './store/opmlImportSlice'
 import {apiURL, configWSUrl, decodeHTMLEntities, isJsonString} from './utils/Utilities'
 import {
@@ -38,6 +38,7 @@ import {SettingsNaming} from "./components/SettingsNaming";
 import {SettingsPodcastDelete} from "./components/SettingsPodcastDelete";
 import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
+import {UserManagementPage} from "./pages/UserManagement";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -76,6 +77,9 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route index element={<Navigate to="users"/>}/>
                 <Route path="users" element={<UserAdminUsers/>}/>
                 <Route path="invites" element={<UserAdminInvites/>}/>
+            </Route>
+            <Route path={"profile"}>
+                <Route index element={<UserManagementPage/>}/>
             </Route>
         </Route>
         <Route path="/login" element={<Login />} />
@@ -189,6 +193,14 @@ const App: FC<PropsWithChildren> = ({ children }) => {
             setSocket(new WebSocket(configWSUrl(config?.serverUrl!)))
         }
     }, [config])
+
+    useEffect(() => {
+        if (config?.basicAuth||config?.oidcConfigured){
+            axios.get(apiURL + '/users/me')
+                .then((c:AxiosResponse<LoggedInUser>)=>useCommon.getState().setLoggedInUser(c.data))
+                .catch(() => enqueueSnackbar(t('not-admin'), { variant: 'error' }))
+        }
+    }, []);
 
     const getNotifications = () => {
         axios.get(apiURL + '/notifications/unread')

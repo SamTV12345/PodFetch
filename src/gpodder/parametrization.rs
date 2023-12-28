@@ -4,6 +4,7 @@ use actix_web::get;
 use actix_web::web::Data;
 use actix_web::{HttpResponse, Responder};
 use std::sync::Mutex;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[derive(Serialize, Deserialize)]
 pub struct ClientParametrization {
@@ -20,16 +21,13 @@ pub struct BaseURL {
 }
 
 #[get("/clientconfig.json")]
-pub async fn get_client_parametrization(
-    environment_service: Data<Mutex<EnvironmentService>>,
-) -> impl Responder {
-    let env_service = environment_service.lock().ignore_poison().clone();
+pub async fn get_client_parametrization() -> impl Responder {
     let answer = ClientParametrization {
         mygpo_feedservice: BaseURL {
-            base_url: env_service.server_url.clone(),
+            base_url: ENVIRONMENT_SERVICE.get().unwrap().server_url.clone(),
         },
         mygpo: BaseURL {
-            base_url: env_service.server_url + "rss",
+            base_url: ENVIRONMENT_SERVICE.get().unwrap().server_url.to_string() + "rss",
         },
         update_timeout: 604800,
     };

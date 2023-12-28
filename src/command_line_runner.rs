@@ -49,9 +49,7 @@ pub fn start_command_line(mut args: Args) {
                             let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn)
                                 .expect("Error getting podcast");
 
-                            let mut podcast_episode_service = PodcastEpisodeService::new();
-                            podcast_episode_service
-                                .insert_podcast_episodes(conn, podcast.clone())
+                            PodcastEpisodeService::insert_podcast_episodes(conn, podcast.clone())
                                 .unwrap();
                             podcast_service
                                 .schedule_episode_download(podcast, None, conn)
@@ -70,9 +68,9 @@ pub fn start_command_line(mut args: Args) {
                     for podcast in podcasts.unwrap() {
                         println!("Refreshing podcast {}", podcast.name);
 
-                        let mut podcast_episode_service = PodcastEpisodeService::new();
-                        podcast_episode_service
-                            .insert_podcast_episodes(&mut establish_connection(), podcast.clone())
+
+                        PodcastEpisodeService::
+                            insert_podcast_episodes(&mut establish_connection(), podcast.clone())
                             .unwrap();
                         podcast_service
                             .schedule_episode_download(podcast, None, conn)
@@ -122,6 +120,21 @@ pub fn start_command_line(mut args: Args) {
                         user.password = Some(digest(user.password.unwrap()));
                         if User::insert_user(&mut user, &mut establish_connection()).is_ok() {
                             println!("User succesfully created")
+                        }
+                    }
+                }
+                "generate"=>{
+                    match args.next().unwrap().as_str() {
+                        "apiKey"=>{
+                            let conn = &mut establish_connection();
+                            User::find_all_users(conn).iter().for_each(|u|{
+                                log::info!("Updating api key of user {}", &u.username);
+                                User::update_api_key_of_user(&u.username, uuid::Uuid::new_v4().to_string(), conn).expect
+                                ("Error updating api key");
+                            })
+                        }
+                        _=>{
+                            error!("Command not found")
                         }
                     }
                 }
@@ -262,6 +275,7 @@ pub fn read_user_account() -> Result<User, CustomError> {
         password: Some(trim_string(password)),
         explicit_consent: false,
         created_at: get_current_timestamp_str(),
+        api_key: None,
     };
 
     Ok(user)
