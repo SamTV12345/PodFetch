@@ -58,7 +58,7 @@ use crate::controllers::settings_controller::{
     get_opml, get_settings, run_cleanup, update_name, update_settings,
 };
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
-use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_users, onboard_user, update_role};
+use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_users, onboard_user, update_role, update_user};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
@@ -486,6 +486,7 @@ pub fn get_secure_user_management() -> Scope {
         .service(delete_user)
         .service(delete_invite)
         .service(get_invite_link)
+        .service(update_user)
 }
 
 pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {

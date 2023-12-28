@@ -177,5 +177,6 @@
   "you-already-listened": "Już odtworzono <name/>",
   "podcast-not-found": "Nie znaleziono podcastu",
   "original-rss-feed": "Oryginalny kanał RSS",
-  "profile": "Profil"
+  "profile": "Profil",
+  "api-key": "Klucz API"
 }

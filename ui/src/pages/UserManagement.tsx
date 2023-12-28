@@ -47,22 +47,35 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
             <div className="mt-5">
                 <form onSubmit={handleSubmit(update_settings)}>
                     <div className="grid grid-cols-2 gap-5 mb-5">
-                            <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
-                                   htmlFor="username">{t('username')}</label>
-                            <Controller name="username" control={control}
-                                        render={({field: {name, onChange, value}}) => (
-                                            <CustomInput id="username" name={name}
-                                                         onChange={onChange}
-                                                         value={value}/>
-                                        )}/>
-                            <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
-                                   htmlFor="password">{t('password')}</label>
-                            <Controller name="password" control={control}
-                                        render={({field: {name, onChange, value}}) => (
-                                            <CustomInput id="password" name={name}
-                                                         onChange={onChange}
-                                                         value={value}/>
-                                        )}/>
+                        <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
+                               htmlFor="username">{t('username')}</label>
+                        <Controller name="username" control={control}
+                                    render={({field: {name, onChange, value}}) => (
+                                        <CustomInput id="username" name={name}
+                                                     onChange={onChange}
+                                                     value={value}/>
+                                    )}/>
+                        <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
+                               htmlFor="password">{t('password')}</label>
+                        <Controller name="password" control={control}
+                                    render={({field: {name, onChange, value}}) => (
+                                        <CustomInput id="password" name={name}
+                                                     onChange={onChange}
+                                                     value={value}/>
+                                    )}/>
+                        <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
+                               htmlFor="apiKey">{t('api-key')}</label>
+                        <Controller name="apiKey" control={control}
+                                    render={({field: {name, onChange, value}}) => (
+                                        <div className="block relative">
+                                            <CustomInput disabled={true} className="w-full" id="apiKey" name={name}
+                                                     onChange={onChange}
+                                                     value={value}/>
+                                            <span className="material-symbols-outlined absolute right-2 top-1.5 text-[--fg-color]" onClick={()=>{
+                                                setValue("apiKey", )
+                                            }}>cached</span>
+                                        </div>
+                                    )}/>
                     </div>
 
                     <CustomButtonPrimary className="float-right" onClick={() => {

@@ -80,8 +80,6 @@ pub async fn get_rss_feed(
         }
     }
 
-
-
     let downloaded_episodes = match query {
         Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(&mut db.get().unwrap(), q.top)?,
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes(&mut db.get().unwrap(), env)?,

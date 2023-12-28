@@ -5,7 +5,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
-use actix_web::web::{Data, Path};
+use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use std::ops::DerefMut;
 use std::sync::Mutex;
@@ -31,6 +31,14 @@ pub struct InvitePostModel {
 pub struct UserRoleUpdateModel {
     role: Role,
     explicit_consent: bool,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UserCoreUpdateModel {
+    pub username: String,
+    pub password: Option<String>,
+    pub api_key: Option<String>,
 }
 
 #[utoipa::path(
@@ -130,6 +138,45 @@ pub async fn update_role(
     Ok(HttpResponse::Ok().json(res))
 }
 
+
+
+#[put("/{username}")]
+pub async fn update_user(user: Option<web::ReqData<User>>, username: Path<String>, conn: Data<DbPool>, user_update:
+Json<UserCoreUpdateModel>) -> Result<HttpResponse, CustomError>{
+    let username = username.into_inner();
+    let old_username = &user.clone().unwrap().username;
+    if user.is_none() {
+        return Err(CustomError::Forbidden);
+    }
+    if old_username != &username {
+        return Err(CustomError::Forbidden);
+    }
+    let mut user = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+
+    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured {
+        // Check if this username is already taken
+        let new_username_res = User::find_by_username(&user_update.username, conn.get().map_err(map_r2d2_error)?
+            .deref_mut());
+        if new_username_res.is_ok() {
+            return Err(CustomError::Conflict("Username already taken".to_string()));
+        }
+        user.username = user_update.username.to_string();
+
+    }
+    if let Some(password) = user_update.password.clone() {
+        user.password = Some(sha256::digest(password));
+    }
+
+    if let Some(apiKey) = user_update.into_inner().api_key {
+        user.api_key = Some(apiKey);
+    }
+
+    let user = User::update_user(user, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+
+    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
+
+}
+
 #[utoipa::path(
 context_path="/api/v1",
 request_body=InvitePostModel,
@@ -205,7 +252,7 @@ tag="info"
 #[delete("/{username}")]
 pub async fn delete_user(
     conn: Data<DbPool>,
-    username: web::Path<String>,
+    username: Path<String>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {

@@ -176,5 +176,6 @@
   "you-already-listened": "Ya has escuchado el episodio <name/>. Quieres reiniciar la reproducción?",
   "podcast-not-found": "Podcast no encontrado",
   "original-rss-feed": "Fuente RSS original",
-  "profile": "Perfil"
+  "profile": "Perfil",
+  "api-key": "Clave API"
 }

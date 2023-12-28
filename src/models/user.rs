@@ -263,21 +263,20 @@ impl User {
     pub fn delete_by_username(
         username_to_search: String,
         conn: &mut DbConnection,
-    ) -> Result<(), Error> {
+    ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::users::dsl::*;
         diesel::delete(users.filter(username.eq(username_to_search)))
             .execute(conn)
-            .expect("Error deleting user");
+            .map_err(map_db_error)?;
         Ok(())
     }
 
-    pub fn update_user(user: User, conn: &mut DbConnection) -> Result<(), Error> {
+    pub fn update_user(user: User, conn: &mut DbConnection) -> Result<User, CustomError> {
         use crate::dbconfig::schema::users::dsl::*;
         diesel::update(users.filter(id.eq(user.clone().id)))
             .set(user)
-            .execute(conn)
-            .expect("Error updating user");
-        Ok(())
+            .get_result(conn)
+            .map_err(map_db_error)
     }
 
     pub fn is_privileged_user(&self) -> bool {
@@ -329,10 +328,9 @@ impl User {
         }
 
         if let Ok(res) = var(API_KEY) {
-            if res.is_empty() {
-                return false;
+            if !res.is_empty() && res == api_key_to_find {
+                return true;
             }
-            return res == api_key_to_find;
         }
 
         let result = Self::find_by_api_key(api_key_to_find, conn);
