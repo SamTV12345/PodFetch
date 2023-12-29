@@ -151,6 +151,7 @@ async fn main() -> std::io::Result<()> {
         concat!(env!("OUT_DIR"), "/built.rs")
     );
     init_logging();
+    ENVIRONMENT_SERVICE.get_or_init(EnvironmentService::new);
 
     if args().len() > 1 {
         spawn_blocking(move || start_command_line(args()))
@@ -158,7 +159,6 @@ async fn main() -> std::io::Result<()> {
             .expect("TODO: panic message");
         exit(0)
     }
-    ENVIRONMENT_SERVICE.get_or_init(EnvironmentService::new);
 
     let conn = establish_connection();
 
