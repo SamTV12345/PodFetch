@@ -1,16 +1,19 @@
+use crate::constants::inner_constants::DEFAULT_DEVICE;
+use crate::dbconfig::schema::episodes;
+use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
+use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
-use diesel::{BoolExpressionMethods, Insertable, OptionalExtension, QueryDsl, QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable, NullableExpressionMethods};
+use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
+use diesel::ExpressionMethods;
+use diesel::{
+    BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
+    QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
+};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
-use crate::constants::inner_constants::DEFAULT_DEVICE;
-use crate::dbconfig::schema::episodes;
-use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::ExpressionMethods;
-use reqwest::Url;
 use utoipa::ToSchema;
-use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
-use crate::DBType as DbConnection;
 
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
@@ -53,7 +56,7 @@ pub struct Episode {
     #[diesel(sql_type = Nullable<Integer>)]
     pub position: Option<i32>,
     #[diesel(sql_type = Nullable<Integer>)]
-    pub total: Option<i32>
+    pub total: Option<i32>,
 }
 
 impl Episode {
@@ -93,7 +96,7 @@ impl Episode {
                 action.eq(&self.action),
                 started.eq(&self.started),
                 position.eq(&self.position),
-                total.eq(&self.total)
+                total.eq(&self.total),
             ))
             .get_result(conn)
     }
@@ -128,7 +131,7 @@ impl Episode {
             action: episode_dto.action.clone().to_string(),
             started: episode_dto.started,
             position: episode_dto.position,
-            total: episode_dto.total
+            total: episode_dto.total,
         }
     }
     pub async fn get_actions_by_username(
@@ -140,29 +143,32 @@ impl Episode {
         opt_podcast: Option<String>,
     ) -> Vec<Episode> {
         use crate::dbconfig::schema::episodes::dsl as ep_dsl;
-        use crate::dbconfig::schema::episodes::table as ep_table;
         use crate::dbconfig::schema::episodes::dsl::timestamp;
+        use crate::dbconfig::schema::episodes::table as ep_table;
         use crate::dbconfig::schema::episodes::username;
 
-        let mut query = ep_table
-            .filter(username.eq(username1))
-            .into_boxed();
+        let mut query = ep_table.filter(username.eq(username1)).into_boxed();
 
         if let Some(since_date) = since_date {
             query = query.filter(timestamp.gt(since_date));
         }
 
-        if let Some(device) = opt_device{
+        if let Some(device) = opt_device {
             // Always sync the webview
-            query = query.filter(ep_dsl::device.eq(device).or(ep_dsl::device.eq(DEFAULT_DEVICE)));
+            query = query.filter(
+                ep_dsl::device
+                    .eq(device)
+                    .or(ep_dsl::device.eq(DEFAULT_DEVICE)),
+            );
         }
 
         if let Some(podcast) = opt_podcast {
             query = query.filter(ep_dsl::podcast.eq(podcast));
         }
 
-
-        query.load::<Episode>(conn).expect("Error querying episodes")
+        query
+            .load::<Episode>(conn)
+            .expect("Error querying episodes")
     }
 
     pub fn get_watch_log_by_username_and_episode(
@@ -191,11 +197,11 @@ impl Episode {
         username_to_find: String,
         conn: &mut DbConnection,
     ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
-        use crate::dbconfig::schema::episodes::dsl::guid as eguid;
         use crate::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::dbconfig::schema::episodes::dsl::guid as eguid;
+        use crate::dbconfig::schema::episodes::username as e_username;
         use crate::dbconfig::schema::podcast_episodes::dsl::guid as pguid;
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
-        use crate::dbconfig::schema::episodes::username as e_username;
         use crate::dbconfig::schema::podcasts as podcast_table;
         use diesel::JoinOnDsl;
 
@@ -203,22 +209,29 @@ impl Episode {
 
         // Always get the latest available
         let subquery = episodes2
-            .select(diesel::dsl::max(
-                episodes2.field(ep_dsl::timestamp),
-            ))
+            .select(diesel::dsl::max(episodes2.field(ep_dsl::timestamp)))
             .filter(
                 episodes2
                     .field(ep_dsl::episode)
                     .eq(episodes2.field(ep_dsl::episode)),
             )
-            .filter(episodes2.field(ep_dsl::username).eq(username_to_find.clone()))
+            .filter(
+                episodes2
+                    .field(ep_dsl::username)
+                    .eq(username_to_find.clone()),
+            )
             .group_by(episodes2.field(ep_dsl::episode));
 
         let query = podcast_episodes
             .inner_join(episodes1.on(pguid.nullable().eq(episodes1.field(eguid))))
             .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
             .filter(episodes1.field(e_username).eq(username_to_find.clone()))
-            .filter(episodes1.field(ep_dsl::timestamp).nullable().eq_any(subquery))
+            .filter(
+                episodes1
+                    .field(ep_dsl::timestamp)
+                    .nullable()
+                    .eq_any(subquery),
+            )
             .filter(episodes1.field(ep_dsl::action).eq("play"))
             .load::<(PodcastEpisode, Episode, Podcast)>(conn)
             .map_err(map_db_error)?;
@@ -344,9 +357,8 @@ impl Episode {
                 diesel::update(episodes_dsl.filter(episodes::id.eq(episode.id)))
                     .set((
                         episodes::position.eq(pod_watch_model.time),
-                        episodes::timestamp.eq(Utc::now().naive_utc())
-                             )
-                        )
+                        episodes::timestamp.eq(Utc::now().naive_utc()),
+                    ))
                     .execute(conn)
                     .map_err(map_db_error)?;
                 return Ok(());
@@ -363,11 +375,9 @@ impl Episode {
                     action: "play".to_string(),
                     started: None,
                     position: Some(pod_watch_model.time),
-                    total: Some(found_episode.total_time)
+                    total: Some(found_episode.total_time),
                 };
-                episode
-                    .insert_episode(conn)
-                    .map_err(map_db_error)?;
+                episode.insert_episode(conn).map_err(map_db_error)?;
             }
             Err(e) => {
                 return Err(e);

@@ -52,7 +52,7 @@ pub async fn get_episode_actions(
                 since_date,
                 since.device.clone(),
                 since.aggregate.clone(),
-                since.podcast.clone()
+                since.podcast.clone(),
             )
             .await;
             Ok(HttpResponse::Ok().json(EpisodeActionResponse {

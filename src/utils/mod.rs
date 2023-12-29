@@ -4,6 +4,7 @@ pub mod environment_variables;
 pub mod error;
 pub mod file_extension_determination;
 pub mod podcast_builder;
+pub mod podcast_key_checker;
 mod rss_extension;
-pub mod time;
 pub(crate) mod rss_feed_parser;
+pub mod time;

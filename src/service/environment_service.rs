@@ -1,8 +1,8 @@
-use crate::config::dbconfig::get_database_url;
 use crate::constants::inner_constants::{
-    BASIC_AUTH, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID,
-    OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET,
-    POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, USERNAME,
+    BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH,
+    OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD,
+    PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL,
+    SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME,
 };
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
@@ -13,10 +13,11 @@ use std::env::var;
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OidcConfig {
-    authority: String,
-    client_id: String,
-    redirect_uri: String,
-    scope: String,
+    pub authority: String,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub scope: String,
+    pub jwks_uri: String,
 }
 
 #[derive(Clone)]
@@ -26,11 +27,19 @@ pub struct EnvironmentService {
     pub podindex_api_key: String,
     pub podindex_api_secret: String,
     pub http_basic: bool,
-    pub username: String,
-    pub password: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
     pub oidc_config: Option<OidcConfig>,
     pub oidc_configured: bool,
     pub gpodder_integration_enabled: bool,
+    pub database_url: String,
+    pub telegram_api: Option<TelegramConfig>,
+}
+
+#[derive(Clone)]
+pub struct TelegramConfig {
+    pub telegram_bot_token: String,
+    pub telegram_chat_id: String,
 }
 
 impl Default for EnvironmentService {
@@ -49,6 +58,7 @@ impl EnvironmentService {
                 authority: var(OIDC_AUTHORITY).expect("OIDC authority not configured"),
                 client_id: var(OIDC_CLIENT_ID).expect("OIDC client id not configured"),
                 scope: var(OIDC_SCOPE).unwrap_or("openid profile email".to_string()),
+                jwks_uri: var(OIDC_JWKS).unwrap(),
             });
         }
         let mut server_url = var(SERVER_URL).unwrap_or("http://localhost:8000".to_string());
@@ -67,6 +77,45 @@ impl EnvironmentService {
             }
         }
 
+        let username_send: Option<String>;
+
+        if let Ok(username) = var(USERNAME) {
+            username_send = Some(username);
+        } else {
+            username_send = None;
+        }
+
+        let password: Option<String>;
+
+        if let Ok(password_present) = var(PASSWORD) {
+            let digested_password = sha256::digest(password_present);
+            password = Some(digested_password)
+        } else {
+            password = None;
+        }
+
+        let telegram_api: Option<TelegramConfig> =
+            if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
+                let telegram_bot_token = var(TELEGRAM_BOT_TOKEN);
+
+                if telegram_bot_token.is_err() {
+                    panic!("Telegram bot token not configured");
+                }
+
+                let telegram_bot_chat_id = var(TELEGRAM_BOT_CHAT_ID);
+
+                if telegram_bot_chat_id.is_err() {
+                    panic!("Telegram bot chat id not configured");
+                }
+
+                Some(TelegramConfig {
+                    telegram_bot_token: telegram_bot_token.unwrap(),
+                    telegram_chat_id: telegram_bot_chat_id.unwrap(),
+                })
+            } else {
+                None
+            };
+
         EnvironmentService {
             server_url: server_url.clone(),
             polling_interval: var(POLLING_INTERVAL)
@@ -76,24 +125,18 @@ impl EnvironmentService {
             podindex_api_key: var(PODINDEX_API_KEY).unwrap_or("".to_string()),
             podindex_api_secret: var(PODINDEX_API_SECRET).unwrap_or("".to_string()),
             http_basic: is_env_var_present_and_true(BASIC_AUTH),
-            username: var(USERNAME).unwrap_or("".to_string()),
-            password: var(PASSWORD).unwrap_or("".to_string()),
+            username: username_send,
+            password,
             oidc_configured,
             oidc_config: option_oidc_config,
             gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED),
+            database_url: var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string()),
+            telegram_api,
         }
     }
 
     pub fn get_server_url(&self) -> String {
         self.server_url.clone()
-    }
-
-    pub fn get_podindex_api_key(&self) -> String {
-        self.podindex_api_key.clone()
-    }
-
-    pub fn get_podindex_api_secret(&self) -> String {
-        self.podindex_api_secret.clone()
     }
 
     pub fn get_polling_interval(&self) -> u32 {
@@ -121,7 +164,7 @@ impl EnvironmentService {
             "GPodder integration enabled: {}",
             self.gpodder_integration_enabled
         );
-        log::debug!("Database url is set to: {}", &get_database_url());
+        log::debug!("Database url is set to: {}", &self.database_url);
         log::info!(
             "Podindex API key&secret configured: {}",
             !self.podindex_api_key.is_empty() && !self.podindex_api_secret.is_empty()
@@ -129,7 +172,7 @@ impl EnvironmentService {
         println!("\n");
     }
 
-    pub fn get_config(&mut self) -> ConfigModel {
+    pub fn get_config(&self) -> ConfigModel {
         ConfigModel {
             podindex_configured: !self.podindex_api_key.is_empty()
                 && !self.podindex_api_secret.is_empty(),
@@ -140,8 +183,6 @@ impl EnvironmentService {
             oidc_config: self.oidc_config.clone(),
         }
     }
-
-    pub fn get_api_key(&self) {}
 
     pub fn print_banner() {
         println!(
@@ -159,13 +200,12 @@ impl EnvironmentService {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::inner_constants::{
-        BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE,
-        PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME,
-    };
-    use crate::service::environment_service::EnvironmentService;
+    use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS,
+                                            OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
+
     use serial_test::serial;
     use std::env::{remove_var, set_var};
+    use crate::service::environment_service::EnvironmentService;
 
     fn do_env_cleanup() {
         remove_var(SERVER_URL);
@@ -197,7 +237,8 @@ mod tests {
         set_var(OIDC_AUTHORITY, "http://localhost:8000/oidc");
         set_var(OIDC_CLIENT_ID, "test");
         set_var(OIDC_SCOPE, "openid profile email");
-        let mut env_service = EnvironmentService::new();
+        set_var(OIDC_JWKS, "test");
+        let env_service = EnvironmentService::new();
         let config = env_service.get_config();
         assert!(!config.podindex_configured);
         assert_eq!(config.rss_feed, "http://localhost:8000/rss");
@@ -223,8 +264,12 @@ mod tests {
     fn test_getting_server_url() {
         do_env_cleanup();
         set_var(SERVER_URL, "http://localhost:8000");
+
         let env_service = EnvironmentService::new();
-        assert_eq!(env_service.get_server_url(), "http://localhost:8000/");
+        assert_eq!(
+            env_service.get_server_url(),
+            "http://localhost:8000/"
+        );
     }
 
     #[test]
@@ -238,8 +283,7 @@ mod tests {
         set_var(BASIC_AUTH, "true");
         set_var(USERNAME, "test");
         set_var(PASSWORD, "test");
-        let mut env_service = EnvironmentService::new();
-        let config = env_service.get_config();
+        let config = EnvironmentService::new().get_config();
         assert!(config.podindex_configured);
         assert_eq!(config.rss_feed, "http://localhost:8000/rss");
         assert_eq!(config.server_url, "http://localhost:8000/");
@@ -253,10 +297,13 @@ mod tests {
         do_env_cleanup();
         set_var(PODINDEX_API_KEY, "test");
         set_var(PODINDEX_API_SECRET, "testsecret");
-        let env_service = EnvironmentService::new();
 
-        assert_eq!(env_service.get_podindex_api_key(), "test");
-        assert_eq!(env_service.get_podindex_api_secret(), "testsecret");
+        let env_service = EnvironmentService::new();
+        assert_eq!(env_service.podindex_api_key, "test");
+        assert_eq!(
+            env_service.podindex_api_secret,
+            "testsecret"
+        );
     }
 
     #[test]
@@ -264,7 +311,9 @@ mod tests {
     fn test_get_polling_interval() {
         do_env_cleanup();
         set_var(POLLING_INTERVAL, "20");
-        let env_service = EnvironmentService::new();
-        assert_eq!(env_service.get_polling_interval(), 20);
+        assert_eq!(
+            EnvironmentService::new().polling_interval,
+            20
+        );
     }
 }

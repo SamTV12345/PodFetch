@@ -51,6 +51,8 @@ export const Root = () => {
 
     configWSUrl(configModel.serverUrl)
 
+
+
     return (
         <App>
             <div className="grid grid-cols-[1fr] md:grid-cols-[18rem_1fr] grid-rows-[1fr_auto]">

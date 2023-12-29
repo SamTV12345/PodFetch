@@ -7,7 +7,7 @@ import fr from 'javascript-time-ago/locale/fr'
 import pl from 'javascript-time-ago/locale/pl'
 import es from 'javascript-time-ago/locale/es'
 import i18n from "i18next";
-import {PodcastEpisode} from "../store/CommonSlice";
+import useCommon, {PodcastEpisode} from "../store/CommonSlice";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Filter} from "../models/Filter";
 import {OrderCriteria} from "../models/Order";
@@ -86,7 +86,19 @@ export const isJsonString = (str: string) => {
 export const preparePath = (path: string | undefined) => {
     if (path === undefined) return ""
 
-    return window.location.href.substring(0, window.location.href.indexOf('ui/')) + path.replaceAll(' ', '%20').replaceAll('#', '%23')
+    let pathToReturn = window.location.href.substring(0, window.location.href.indexOf('ui/')) + path.replaceAll(' ', '%20').replaceAll('#', '%23')
+
+    if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)){
+        if (pathToReturn.includes('?')) {
+            pathToReturn += '&'
+        }
+        else {
+            pathToReturn += '?'
+        }
+        pathToReturn += 'apiKey=' + useCommon.getState().loggedInUser?.apiKey
+    }
+
+    return pathToReturn
 }
 
 export const preparePodcastEpisode = (episode: PodcastEpisode, response: Episode) => {
@@ -99,8 +111,33 @@ export const preparePodcastEpisode = (episode: PodcastEpisode, response: Episode
 }
 
 
+export const prependAPIKeyOnAuthEnabled = (url: string)=>{
+    if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
+        if (url.includes('?')) {
+            url += '&'
+        }
+        else {
+            url += '?'
+        }
+        url += 'apiKey=' + useCommon.getState().loggedInUser?.apiKey
+    }
+    return url
+}
+
+
 export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: Episode) => {
-    const online_url_with_proxy = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?episodeId=' + episode.episode_id
+    let online_url_with_proxy = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?episodeId=' + episode.episode_id
+
+    console.log(useCommon.getState().loggedInUser?.apiKey)
+    if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
+        if (online_url_with_proxy.includes('?')) {
+            online_url_with_proxy += '&'
+        }
+        else {
+            online_url_with_proxy += '?'
+        }
+        online_url_with_proxy += 'apiKey=' + useCommon.getState().loggedInUser?.apiKey
+    }
 
     return {
         ...episode,

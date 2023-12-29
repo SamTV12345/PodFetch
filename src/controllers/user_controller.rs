@@ -1,14 +1,13 @@
-use crate::constants::inner_constants::{Role, USERNAME};
+use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::user::User;
-use crate::mutex::LockResultExt;
-use crate::service::environment_service::EnvironmentService;
+
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
-use actix_web::web::Data;
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
+use actix_web::web::{Data, Json, Path};
+use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use std::ops::DerefMut;
-use std::sync::Mutex;
+
 use utoipa::ToSchema;
 
 #[derive(Deserialize, ToSchema)]
@@ -31,6 +30,14 @@ pub struct InvitePostModel {
 pub struct UserRoleUpdateModel {
     role: Role,
     explicit_consent: bool,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UserCoreUpdateModel {
+    pub username: String,
+    pub password: Option<String>,
+    pub api_key: Option<String>,
 }
 
 #[utoipa::path(
@@ -82,11 +89,27 @@ responses(
 (status = 200, description = "Gets a user by username", body = Option<User>)),
 tag="info"
 )]
-#[get("/users/{username}")]
-pub async fn get_user(req: HttpRequest, conn: Data<DbPool>) -> Result<HttpResponse, CustomError> {
-    let username = get_user_from_request(req);
-    let user = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
-    Ok(HttpResponse::Ok().json(User::map_to_dto(user)))
+#[get("/{username}")]
+pub async fn get_user(
+    conn: Data<DbPool>,
+    username: Path<String>,
+    requester: Option<web::ReqData<User>>,
+) -> Result<HttpResponse, CustomError> {
+    let user = requester.unwrap().into_inner();
+    let username = username.into_inner();
+    if user.username == username || username == "me" {
+        return Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)));
+    }
+
+    if !user.is_admin() || user.username != username {
+        return Err(CustomError::Forbidden);
+    }
+
+    let user = User::find_by_username(
+        &username.clone(),
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    )?;
+    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
 }
 
 #[utoipa::path(
@@ -119,6 +142,54 @@ pub async fn update_role(
     )?;
 
     Ok(HttpResponse::Ok().json(res))
+}
+
+#[put("/{username}")]
+pub async fn update_user(
+    user: Option<web::ReqData<User>>,
+    username: Path<String>,
+    conn: Data<DbPool>,
+    user_update: Json<UserCoreUpdateModel>,
+) -> Result<HttpResponse, CustomError> {
+    let username = username.into_inner();
+    let old_username = &user.clone().unwrap().username;
+    if user.is_none() {
+        return Err(CustomError::Forbidden);
+    }
+    if old_username != &username {
+        return Err(CustomError::Forbidden);
+    }
+    let mut user =
+        User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+
+    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured
+    {
+        // Check if this username is already taken
+        let new_username_res = User::find_by_username(
+            &user_update.username,
+            conn.get().map_err(map_r2d2_error)?.deref_mut(),
+        );
+        if new_username_res.is_ok() {
+            return Err(CustomError::Conflict("Username already taken".to_string()));
+        }
+        user.username = user_update.username.to_string();
+    }
+    if let Some(password) = user_update.password.clone() {
+        if password.trim().len() < 8 {
+            return Err(CustomError::BadRequest(
+                "Password must be at least 8 characters long".to_string(),
+            ));
+        }
+        user.password = Some(sha256::digest(password.trim()));
+    }
+
+    if let Some(api_key) = user_update.into_inner().api_key {
+        user.api_key = Some(api_key);
+    }
+
+    let user = User::update_user(user, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+
+    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
 }
 
 #[utoipa::path(
@@ -196,7 +267,7 @@ tag="info"
 #[delete("/{username}")]
 pub async fn delete_user(
     conn: Data<DbPool>,
-    username: web::Path<String>,
+    username: Path<String>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
@@ -222,18 +293,16 @@ responses(
 #[get("/invites/{invite_id}/link")]
 pub async fn get_invite_link(
     conn: Data<DbPool>,
-    invite_id: web::Path<String>,
-    environment_service: Data<Mutex<EnvironmentService>>,
+    invite_id: Path<String>,
     requester: Option<web::ReqData<User>>,
 ) -> impl Responder {
     if !requester.unwrap().is_admin() {
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
     }
-    let environment_service = environment_service.lock().ignore_poison();
 
     match UserManagementService::get_invite_link(
         invite_id.into_inner(),
-        environment_service,
+        ENVIRONMENT_SERVICE.get().unwrap(),
         conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
     ) {
         Ok(invite) => HttpResponse::Ok().json(invite),
@@ -263,14 +332,4 @@ pub async fn delete_invite(
         Ok(_) => HttpResponse::Ok().into(),
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }
-}
-
-fn get_user_from_request(req: HttpRequest) -> String {
-    req.clone()
-        .headers()
-        .get(USERNAME)
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string()
 }

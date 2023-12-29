@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{PodcastType};
+use crate::constants::inner_constants::PodcastType;
 use crate::db::TimelineItem;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -7,7 +7,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::models::web_socket_message::Lobby;
-use crate::mutex::LockResultExt;
+
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
@@ -18,10 +18,10 @@ use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::ops::DerefMut;
-use std::sync::Mutex;
-use std::thread;
+
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
+use std::thread;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -49,11 +49,8 @@ pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
     requester: Option<web::ReqData<User>>,
     last_podcast_episode: Query<OptionalId>,
-    mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
-    let mapping_service = mapping_service.lock().ignore_poison();
-
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
@@ -65,7 +62,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast| {
-            let mapped_podcast_episode = mapping_service.map_podcastepisode_to_dto(&podcast.0);
+            let mapped_podcast_episode = MappingService::map_podcastepisode_to_dto(&podcast.0);
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast.1,
@@ -108,11 +105,8 @@ tag = "podcasts"
 pub async fn get_timeline(
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
-    mapping_service: Data<Mutex<MappingService>>,
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
-    let mapping_service = mapping_service.lock().ignore_poison().clone();
-
     let res = TimelineItem::get_timeline(
         requester.unwrap().username.clone(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
@@ -125,7 +119,7 @@ pub async fn get_timeline(
         .map(|podcast_episode| {
             let (podcast_episode, podcast, history, favorite) = podcast_episode.clone();
             let mapped_podcast_episode =
-                mapping_service.map_podcastepisode_to_dto(&podcast_episode);
+                MappingService::map_podcastepisode_to_dto(&podcast_episode);
 
             TimeLinePodcastEpisode {
                 podcast_episode: mapped_podcast_episode,
@@ -228,14 +222,16 @@ pub async fn delete_podcast_episode_locally(
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeFormatDto {
-    pub content: String
+    pub content: String,
 }
 
 #[post("/episodes/formatting")]
-pub async fn retrieve_episode_sample_format(sample_string: Json<EpisodeFormatDto>) -> Result<HttpResponse, CustomError> {
+pub async fn retrieve_episode_sample_format(
+    sample_string: Json<EpisodeFormatDto>,
+) -> Result<HttpResponse, CustomError> {
     // Sample episode for formatting
-     let episode: PodcastEpisode = PodcastEpisode {
-         id: 0,
+    let episode: PodcastEpisode = PodcastEpisode {
+        id: 0,
         podcast_id: 0,
         episode_id: "0218342".to_string(),
         name: "My Homelab".to_string(),
@@ -253,7 +249,7 @@ pub async fn retrieve_episode_sample_format(sample_string: Json<EpisodeFormatDto
         file_episode_path: None,
         file_image_path: None,
     };
-    let settings = Setting{
+    let settings = Setting {
         id: 0,
         auto_download: false,
         auto_update: false,
@@ -270,7 +266,7 @@ pub async fn retrieve_episode_sample_format(sample_string: Json<EpisodeFormatDto
     let result = perform_episode_variable_replacement(settings, episode);
 
     match result {
-        Ok(v)=>Ok(HttpResponse::Ok().json(v)),
-        Err(e)=>Err(CustomError::BadRequest(e.to_string()))
+        Ok(v) => Ok(HttpResponse::Ok().json(v)),
+        Err(e) => Err(CustomError::BadRequest(e.to_string())),
     }
 }

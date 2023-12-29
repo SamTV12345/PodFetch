@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::sync::MutexGuard;
 
 use crate::constants::inner_constants::Role;
 use crate::models::invite::Invite;
@@ -135,7 +134,7 @@ impl UserManagementService {
 
     pub fn get_invite_link(
         invite_id: String,
-        environment_service: MutexGuard<EnvironmentService>,
+        environment_service: &EnvironmentService,
         conn: &mut DbConnection,
     ) -> Result<String, CustomError> {
         let invite = Invite::find_invite(invite_id, conn)?;

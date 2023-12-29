@@ -176,5 +176,8 @@
   "restart-playing": "Restartuj odtwarzanie",
   "you-already-listened": "Już odtworzono <name/>",
   "podcast-not-found": "Nie znaleziono podcastu",
-  "original-rss-feed": "Oryginalny kanał RSS"
+  "original-rss-feed": "Oryginalny kanał RSS",
+  "profile": "Profil",
+  "api-key": "Klucz API",
+  "user-settings-updated": "Ustawienia użytkownika zostały zaktualizowane"
 }

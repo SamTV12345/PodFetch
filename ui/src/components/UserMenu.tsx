@@ -15,19 +15,30 @@ const AccountTrigger = ()=>{
 export const UserMenu: FC = () => {
     const config = useCommon(state => state.configModel)
     const configModel = useCommon(state => state.configModel)
+    const loggedInUser = useCommon(state => state.loggedInUser)
+
     const menuItems: Array<MenuItem> = useMemo(()=>{
         const menuItems: Array<MenuItem> = [
-            {
-                iconName: 'settings',
-                translationKey: 'settings',
-                path: 'settings'
-            },
             {
                 iconName: 'info',
                 translationKey: 'system-info',
                 path: 'info'
             }
         ]
+
+        menuItems.push({
+            iconName: 'account_circle',
+            translationKey: 'profile',
+            path: 'profile'
+        })
+
+        if (loggedInUser?.role === 'admin') {
+            menuItems.push({
+                iconName: 'settings',
+                translationKey: 'settings',
+                path: 'settings'
+            })
+        }
 
         if (config?.oidcConfig || config?.basicAuth) {
             menuItems.push({
@@ -58,9 +69,8 @@ export const UserMenu: FC = () => {
                 }
             })
         }
-
         return menuItems
-    }, [configModel,config])
+    }, [configModel,config, loggedInUser])
 
 
     return (

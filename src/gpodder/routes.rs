@@ -3,13 +3,18 @@ use crate::gpodder::device::device_controller::{get_devices_of_user, post_device
 use crate::gpodder::episodes::gpodder_episodes::{get_episode_actions, upload_episode_actions};
 use crate::gpodder::session_middleware::CookieFilter;
 use crate::gpodder::subscription::subscriptions::{get_subscriptions, upload_subscription_changes};
-use crate::service::environment_service::EnvironmentService;
+
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::{web, Error, Scope};
 
-pub fn get_gpodder_api(environment_service: EnvironmentService) -> Scope {
-    if environment_service.gpodder_integration_enabled {
+pub fn get_gpodder_api() -> Scope {
+    if ENVIRONMENT_SERVICE
+        .get()
+        .unwrap()
+        .gpodder_integration_enabled
+    {
         web::scope("/api/2")
             .service(login)
             .service(get_authenticated_api())

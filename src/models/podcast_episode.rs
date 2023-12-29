@@ -174,7 +174,10 @@ impl PodcastEpisode {
             None => podcast.original_image_url,
         };
 
-        let guid_to_insert = Guid { value: uuid::Uuid::new_v4().to_string(), ..Default::default() };
+        let guid_to_insert = Guid {
+            value: uuid::Uuid::new_v4().to_string(),
+            ..Default::default()
+        };
         let inserted_podcast = insert_into(podcast_episodes)
             .values((
                 total_time.eq(duration),

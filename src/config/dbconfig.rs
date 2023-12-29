@@ -1,8 +1,7 @@
-use crate::constants::inner_constants::{DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE};
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::dbconfig::DBType;
 use crate::DBType as DbConnection;
 use diesel::prelude::*;
-use std::env;
 use std::process::exit;
 use std::time::Duration;
 
@@ -33,15 +32,9 @@ impl r2d2::CustomizeConnection<DbConnection, diesel::r2d2::Error> for Connection
 }
 
 pub fn establish_connection() -> DBType {
-    let database_url = &get_database_url();
+    let database_url = &ENVIRONMENT_SERVICE.get().unwrap().database_url;
     DBType::establish(database_url).unwrap_or_else(|e| {
         log::error!("Error connecting to {} with reason {}", database_url, e);
         exit(1)
     })
-}
-
-pub fn get_database_url() -> String {
-    let url = env::var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string());
-    log::debug!("Database url is set to {}", url);
-    url
 }

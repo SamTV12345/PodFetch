@@ -93,7 +93,6 @@ impl Favorite {
     pub fn get_favored_podcasts(
         found_username: String,
         conn: &mut DbConnection,
-        mapping_service: MappingService,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
@@ -109,7 +108,7 @@ impl Favorite {
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                mapping_service.map_podcast_to_podcast_dto_with_favorites_option(podcast)
+                MappingService::map_podcast_to_podcast_dto_with_favorites_option(podcast)
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)

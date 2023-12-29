@@ -1,9 +1,8 @@
-
+use crate::service::environment_service::EnvironmentService;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
-
-
+use std::sync::OnceLock;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search?term=";
 
@@ -92,7 +91,7 @@ pub const BASIC_AUTH: &str = "BASIC_AUTH";
 
 pub const USERNAME: &str = "USERNAME";
 pub const PASSWORD: &str = "PASSWORD";
-
+pub const API_KEY: &str = "API_KEY";
 pub const SERVER_URL: &str = "SERVER_URL";
 
 pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
@@ -131,3 +130,7 @@ pub const OIDC_JWKS: &str = "OIDC_JWKS";
 
 // Default device when viewing via web interface
 pub const DEFAULT_DEVICE: &str = "webview";
+
+// static constants
+
+pub static ENVIRONMENT_SERVICE: OnceLock<EnvironmentService> = OnceLock::new();

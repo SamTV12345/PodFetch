@@ -2,6 +2,7 @@ import { LanguageDropdown } from './I18nDropdown'
 import { ThemeSelector } from './ThemeSelector'
 import { Notifications } from './Notifications'
 import { UserMenu } from './UserMenu'
+import useCommon from "../store/CommonSlice";
 
 export const Header = () => {
     return (

@@ -177,5 +177,8 @@
   "restart-playing": "Restart playing",
   "you-already-listened": "You already listened to the episode <name/>. Do you want to restart playing?",
   "podcast-not-found": "Podcast not found",
-  "original-rss-feed": "Original RSS feed"
+  "original-rss-feed": "Original RSS feed",
+  "profile": "Profile",
+  "api-key": "API key",
+  "user-settings-updated": "User settings updated"
 }

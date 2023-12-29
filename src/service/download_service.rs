@@ -1,7 +1,6 @@
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::FileService;
-use crate::service::mapping_service::MappingService;
 
 use reqwest::blocking::ClientBuilder;
 
@@ -21,7 +20,6 @@ use crate::utils::error::CustomError;
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 
 pub struct DownloadService {
-    pub mappingservice: MappingService,
     pub client_builder: ClientBuilder,
     pub file_service: FileService,
 }
@@ -29,7 +27,6 @@ pub struct DownloadService {
 impl DownloadService {
     pub fn new() -> Self {
         DownloadService {
-            mappingservice: MappingService::new(),
             client_builder: ClientBuilder::new(),
             file_service: FileService::new(),
         }

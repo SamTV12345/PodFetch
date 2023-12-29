@@ -29,14 +29,14 @@ impl TimelineItem {
 
         use crate::dbconfig::schema::episodes as phi_struct;
         use crate::dbconfig::schema::episodes::episode as ehid;
+        use crate::dbconfig::schema::episodes::guid as eguid;
         use crate::dbconfig::schema::episodes::timestamp as phistory_date;
         use crate::dbconfig::schema::episodes::username as phi_username;
         use crate::dbconfig::schema::favorites::dsl::*;
         use crate::dbconfig::schema::favorites::podcast_id as f_podcast_id;
         use crate::dbconfig::schema::favorites::username as f_username;
-        use crate::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
-        use crate::dbconfig::schema::episodes::guid as eguid;
         use crate::dbconfig::schema::podcast_episodes::guid as pguid;
+        use crate::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
 
         Filter::save_decision_for_timeline(
             username_to_search.clone(),

@@ -4,12 +4,13 @@ use std::ops::DerefMut;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::web_socket_message::Lobby;
-use crate::mutex::LockResultExt;
+
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix::Addr;
+use actix_web::web::Query;
 use actix_web::{get, web, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use rss::extension::itunes::{
@@ -20,7 +21,9 @@ use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
-use std::sync::Mutex;
+
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::models::user::User;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -43,6 +46,12 @@ pub struct RSSQuery {
     top: i32,
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RSSAPiKey {
+    pub api_key: String,
+}
+
 #[utoipa::path(
 context_path = "/api/v1",
 responses(
@@ -50,19 +59,36 @@ responses(
 , tag = "info")]
 #[get("/rss")]
 pub async fn get_rss_feed(
-    podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
     db: Data<DbPool>,
-    env: Data<Mutex<EnvironmentService>>,
     query: Option<web::Query<RSSQuery>>,
+    api_key: Option<web::Query<RSSAPiKey>>,
 ) -> Result<HttpResponse, CustomError> {
-    let env = env.lock().ignore_poison();
-    let mut podcast_service = podcast_episode_service.lock().ignore_poison();
+    use crate::ENVIRONMENT_SERVICE;
+
+    let env = ENVIRONMENT_SERVICE.get().unwrap();
+    // If http basic is enabled, we need to check if the api key is valid
+    if env.http_basic || env.oidc_configured {
+        if api_key.is_none() {
+            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+        }
+        let api_key = api_key.as_ref().unwrap().api_key.to_string();
+
+        let api_key_exists = User::check_if_api_key_exists(api_key, db.get().unwrap().deref_mut());
+
+        if !&api_key_exists {
+            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+        }
+    }
 
     let downloaded_episodes = match query {
-        Some(q) => podcast_service
-            .find_all_downloaded_podcast_episodes_with_top_k(&mut db.get().unwrap(), q.top)?,
-        None => podcast_service
-            .find_all_downloaded_podcast_episodes(&mut db.get().unwrap(), env.clone())?,
+        Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(
+            &mut db.get().unwrap(),
+            q.top,
+        )?,
+        None => PodcastEpisodeService::find_all_downloaded_podcast_episodes(
+            &mut db.get().unwrap(),
+            env,
+        )?,
     };
 
     let server_url = env.get_server_url();
@@ -79,7 +105,7 @@ pub async fn get_rss_feed(
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
-    let items = get_podcast_items_rss(downloaded_episodes.clone());
+    let items = get_podcast_items_rss(downloaded_episodes.clone(), &api_key);
 
     let channel_builder = ChannelBuilder::default()
         .language("en".to_string())
@@ -89,8 +115,7 @@ pub async fn get_rss_feed(
         .items(items.clone())
         .clone();
 
-    let channel =
-        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env.clone());
+    let channel = generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env);
 
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
@@ -99,12 +124,12 @@ fn generate_itunes_extension_conditionally(
     mut itunes_ext: ITunesChannelExtension,
     mut channel_builder: ChannelBuilder,
     podcast: Option<Podcast>,
-    env: EnvironmentService,
+    env: &EnvironmentService,
 ) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
-            true => itunes_ext.set_image(env.server_url + &*e.image_url),
-            false => itunes_ext.set_image(env.server_url + &*e.original_image_url),
+            true => itunes_ext.set_image(env.server_url.to_string() + &*e.image_url),
+            false => itunes_ext.set_image(env.server_url.to_string() + &*e.original_image_url),
         }
     }
 
@@ -118,19 +143,35 @@ responses(
 , tag = "info")]
 #[get("/rss/{id}")]
 pub async fn get_rss_feed_for_podcast(
-    podcast_episode_service: Data<Mutex<PodcastEpisodeService>>,
     id: web::Path<i32>,
     conn: Data<DbPool>,
+    api_key: Option<web::Query<RSSAPiKey>>,
 ) -> Result<HttpResponse, CustomError> {
-    let env = EnvironmentService::new();
+    let env = ENVIRONMENT_SERVICE.get().unwrap();
     let server_url = env.server_url.clone();
-    let mut podcast_service = podcast_episode_service.lock().ignore_poison();
+
+    // If http basic is enabled, we need to check if the api key is valid
+    if env.http_basic || env.oidc_configured {
+        if api_key.is_none() {
+            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+        }
+        let api_key = api_key.as_ref().unwrap().api_key.to_string();
+
+        let api_key_exists =
+            User::check_if_api_key_exists(api_key, conn.get().unwrap().deref_mut());
+
+        if !api_key_exists {
+            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+        }
+    }
+
     let podcast = Podcast::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), *id)?;
 
-    let downloaded_episodes = podcast_service.find_all_downloaded_podcast_episodes_by_podcast_id(
-        *id,
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
-    )?;
+    let downloaded_episodes =
+        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(
+            *id,
+            conn.get().map_err(map_r2d2_error)?.deref_mut(),
+        )?;
 
     let mut itunes_owner = get_itunes_owner("", "");
 
@@ -166,7 +207,7 @@ pub async fn get_rss_feed_for_podcast(
         .summary(podcast.summary.clone())
         .build();
 
-    let items = get_podcast_items_rss(downloaded_episodes.clone());
+    let items = get_podcast_items_rss(downloaded_episodes.clone(), &api_key);
     let channel_builder = ChannelBuilder::default()
         .language(podcast.clone().language)
         .categories(categories)
@@ -180,18 +221,28 @@ pub async fn get_rss_feed_for_podcast(
         itunes_ext,
         channel_builder,
         Some(podcast.clone()),
-        env,
+        ENVIRONMENT_SERVICE.get().unwrap(),
     );
 
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
-fn get_podcast_items_rss(downloaded_episodes: Vec<PodcastEpisode>) -> Vec<Item> {
+fn get_podcast_items_rss(
+    downloaded_episodes: Vec<PodcastEpisode>,
+    api_key: &Option<Query<RSSAPiKey>>,
+) -> Vec<Item> {
     downloaded_episodes
         .iter()
         .map(|episode| {
+            let mut episode = episode.clone();
+            if let Some(api_key) = api_key {
+                episode.local_url = format!("{}?apiKey={}", episode.local_url, api_key.api_key);
+                episode.local_image_url =
+                    format!("{}?apiKey={}", episode.local_image_url, api_key.api_key);
+            }
+
             let enclosure = EnclosureBuilder::default()
-                .url(&episode.clone().local_url)
+                .url(episode.local_url.clone())
                 .length(episode.clone().total_time.to_string())
                 .mime_type(format!(
                     "audio/{}",

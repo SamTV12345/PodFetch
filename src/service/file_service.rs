@@ -15,14 +15,14 @@ use rss::Channel;
 use tokio::task::spawn_blocking;
 
 use crate::controllers::settings_controller::ReplacementStrategy;
+use crate::models::misc_models::PodcastInsertModel;
 use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::{map_io_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
-use crate::DBType as DbConnection;
-use crate::models::misc_models::PodcastInsertModel;
 use crate::utils::rss_feed_parser::RSSFeedParser;
+use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct FileService {
@@ -72,7 +72,8 @@ impl FileService {
         conn: &mut DbConnection,
         channel: Option<Channel>,
     ) -> Result<String, CustomError> {
-        let escaped_title = prepare_podcast_title_to_directory(podcast_insert_model, conn, channel).await?;
+        let escaped_title =
+            prepare_podcast_title_to_directory(podcast_insert_model, conn, channel).await?;
         let escaped_path = format!("podcasts/{}", escaped_title);
         if !Path::new(&escaped_path).exists() {
             std::fs::create_dir(escaped_path.clone())
@@ -82,7 +83,8 @@ impl FileService {
             // Check if this is a new podcast with the same name as an old one
 
             let conn = &mut establish_connection();
-            let podcast = Podcast::get_podcast_by_directory_id(&podcast_insert_model.id.to_string(), conn)?;
+            let podcast =
+                Podcast::get_podcast_by_directory_id(&podcast_insert_model.id.to_string(), conn)?;
             match podcast {
                 Some(_) => {
                     // is the same podcast
@@ -172,10 +174,8 @@ pub async fn prepare_podcast_title_to_directory(
     let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
 
     let podcast = match channel {
-        Some(channel)=>{
-            RSSFeedParser::parse_rss_feed(channel)
-        }
-        None=>{
+        Some(channel) => RSSFeedParser::parse_rss_feed(channel),
+        None => {
             let client = reqwest::Client::new();
             let rss_feed = podcast.feed_url.clone();
             let feed_response = client.get(rss_feed).send().await.unwrap();
@@ -186,16 +186,19 @@ pub async fn prepare_podcast_title_to_directory(
         }
     };
 
-
     perform_podcast_variable_replacement(retrieved_settings, podcast.clone())
 }
 
-pub fn perform_podcast_variable_replacement(retrieved_settings: Setting, podcast: crate::utils::rss_feed_parser::PodcastParsed) -> Result<String,
-    CustomError>{
+pub fn perform_podcast_variable_replacement(
+    retrieved_settings: Setting,
+    podcast: crate::utils::rss_feed_parser::PodcastParsed,
+) -> Result<String, CustomError> {
     let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone())
         .replace(|c: char| !c.is_ascii(), "");
-    if retrieved_settings.podcast_format.is_empty()|| retrieved_settings.podcast_format.trim() == "{}" {
-        return Ok(format!("'{}'",podcast.title));
+    if retrieved_settings.podcast_format.is_empty()
+        || retrieved_settings.podcast_format.trim() == "{}"
+    {
+        return Ok(format!("'{}'", podcast.title));
     }
 
     let mut vars: HashMap<String, &str> = HashMap::new();
@@ -227,7 +230,7 @@ pub fn perform_podcast_variable_replacement(retrieved_settings: Setting, podcast
     let result = strfmt::strfmt(fixed_string.trim(), &vars);
 
     match result {
-        Ok(res) => Ok(format!("'{}'",res)),
+        Ok(res) => Ok(format!("'{}'", res)),
         Err(err) => {
             log::error!("Error formatting podcast title: {}", err);
             Err(CustomError::Conflict(err.to_string()))
@@ -251,26 +254,34 @@ pub fn prepare_podcast_episode_title_to_directory(
     perform_episode_variable_replacement(retrieved_settings, podcast_episode)
 }
 
-
-pub fn perform_episode_variable_replacement(retrieved_settings: Setting, podcast_episode: PodcastEpisode) ->
-Result<String,
-CustomError>{
-    let escaped_episode_title = perform_replacement(&podcast_episode.name, retrieved_settings.clone())
-        .replace(|c: char| !c.is_ascii(), "");
-    if retrieved_settings.episode_format.is_empty()|| retrieved_settings.episode_format.trim() == "{}" {
-        return Ok(format!("'{}'",escaped_episode_title));
+pub fn perform_episode_variable_replacement(
+    retrieved_settings: Setting,
+    podcast_episode: PodcastEpisode,
+) -> Result<String, CustomError> {
+    let escaped_episode_title =
+        perform_replacement(&podcast_episode.name, retrieved_settings.clone())
+            .replace(|c: char| !c.is_ascii(), "");
+    if retrieved_settings.episode_format.is_empty()
+        || retrieved_settings.episode_format.trim() == "{}"
+    {
+        return Ok(format!("'{}'", escaped_episode_title));
     }
-
 
     let mut vars: HashMap<String, &str> = HashMap::new();
 
     let total_time = podcast_episode.total_time.to_string();
     // Insert variables
     vars.insert("episodeTitle".to_string(), &escaped_episode_title);
-    vars.insert("episodeDate".to_string(), &podcast_episode.date_of_recording);
+    vars.insert(
+        "episodeDate".to_string(),
+        &podcast_episode.date_of_recording,
+    );
     vars.insert("episodeGuid".to_string(), &podcast_episode.guid);
     vars.insert("episodeUrl".to_string(), &podcast_episode.url);
-    vars.insert("episodeDescription".to_string(), &podcast_episode.description);
+    vars.insert(
+        "episodeDescription".to_string(),
+        &podcast_episode.description,
+    );
     vars.insert("episodeDuration".to_string(), &total_time);
 
     let fixed_string = retrieved_settings
@@ -288,14 +299,13 @@ CustomError>{
     let result = strfmt::strfmt(fixed_string.trim(), &vars);
 
     match result {
-        Ok(res) => Ok(format!("'{}'",res)),
+        Ok(res) => Ok(format!("'{}'", res)),
         Err(err) => {
             log::error!("Error formatting episode title: {}", err);
             Err(CustomError::Conflict(err.to_string()))
         }
     }
 }
-
 
 fn perform_replacement(title: &str, retrieved_settings: Setting) -> String {
     let mut final_string: String = title.to_string();
@@ -342,7 +352,10 @@ fn remove_extension(filename: &str) -> &str {
 mod tests {
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::settings::Setting;
-    use crate::service::file_service::{perform_episode_variable_replacement, perform_podcast_variable_replacement, perform_replacement};
+    use crate::service::file_service::{
+        perform_episode_variable_replacement, perform_podcast_variable_replacement,
+        perform_replacement,
+    };
     use crate::utils::rss_feed_parser::PodcastParsed;
 
     #[test]
@@ -445,7 +458,6 @@ mod tests {
         assert_eq!(result, "test- test");
     }
 
-
     #[test]
     fn test_podcast_episode_replacement_guid() {
         let settings = Setting {
@@ -463,7 +475,7 @@ mod tests {
             direct_paths: false,
         };
 
-        let podcast_episode = PodcastEpisode{
+        let podcast_episode = PodcastEpisode {
             id: 2,
             name: "test".to_string(),
             description: "test".to_string(),
@@ -504,7 +516,7 @@ mod tests {
             direct_paths: false,
         };
 
-        let podcast_episode = PodcastEpisode{
+        let podcast_episode = PodcastEpisode {
             id: 2,
             name: "MyPodcast".to_string(),
             description: "test".to_string(),
@@ -528,7 +540,6 @@ mod tests {
         assert_eq!(result.unwrap(), "'2022MyPodcasttest'");
     }
 
-
     #[test]
     fn test_podcast_episode_replacement_old_format() {
         let settings = Setting {
@@ -546,7 +557,7 @@ mod tests {
             direct_paths: false,
         };
 
-        let podcast_episode = PodcastEpisode{
+        let podcast_episode = PodcastEpisode {
             id: 2,
             name: "MyPodcast".to_string(),
             description: "test".to_string(),
@@ -569,7 +580,6 @@ mod tests {
         let result = perform_episode_variable_replacement(settings, podcast_episode);
         assert_eq!(result.unwrap(), "'MyPodcast'");
     }
-
 
     #[test]
     pub fn perform_podcast_variable_replacement_date_title() {
@@ -597,7 +607,7 @@ mod tests {
             summary: "test123".to_string(),
             date: "2022-12".to_string(),
         };
-        let result = perform_podcast_variable_replacement(settings, podcast_episode );
+        let result = perform_podcast_variable_replacement(settings, podcast_episode);
         assert_eq!(result.unwrap(), "'2022-12-Test'");
     }
 
@@ -627,7 +637,7 @@ mod tests {
             summary: "test123".to_string(),
             date: "2022-12".to_string(),
         };
-        let result = perform_podcast_variable_replacement(settings, podcast_episode );
+        let result = perform_podcast_variable_replacement(settings, podcast_episode);
         assert_eq!(result.unwrap(), "'Test'");
     }
 }

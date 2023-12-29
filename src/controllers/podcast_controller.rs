@@ -1,4 +1,6 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT};
+use crate::constants::inner_constants::{
+    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, OIDC_AUTH,
+};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -37,7 +39,7 @@ use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
-use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
+use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::DBType as DbConnection;
 use futures_util::StreamExt;
@@ -85,7 +87,6 @@ pub async fn search_podcasts(
     query: web::Query<PodcastSearchModel>,
     conn: Data<DbPool>,
     _podcast_service: Data<Mutex<PodcastService>>,
-    _mapping_service: Data<Mutex<MappingService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let query = query.into_inner();
@@ -124,7 +125,6 @@ pub async fn search_podcasts(
                         _order.clone(),
                         query.title,
                         _latest_pub.clone(),
-                        _mapping_service.lock().ignore_poison(),
                         conn.get().map_err(map_r2d2_error)?.deref_mut(),
                         username,
                     )?;
@@ -136,7 +136,6 @@ pub async fn search_podcasts(
             {
                 podcasts = _podcast_service.lock().ignore_poison().search_podcasts(
                     _order.clone(),
-                    _mapping_service.lock().ignore_poison(),
                     query.title,
                     _latest_pub.clone(),
                     &mut conn.get().unwrap(),
@@ -158,14 +157,12 @@ tag="podcasts"
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(
     id: Path<String>,
-    mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
     let podcast =
         PodcastService::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num)?;
-    let mapping_service = mapping_service.lock().ignore_poison();
-    let mapped_podcast = mapping_service.map_podcast_to_podcast_dto(&podcast);
+    let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast);
     Ok(HttpResponse::Ok().json(mapped_podcast))
 }
 
@@ -178,18 +175,13 @@ tag="podcasts"
 )]
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
-    mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
-    let mapping_service = mapping_service.lock().ignore_poison();
     let username = requester.unwrap().username.clone();
 
-    let podcasts = PodcastService::get_podcasts(
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
-        username,
-        mapping_service,
-    )?;
+    let podcasts =
+        PodcastService::get_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut(), username)?;
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -222,9 +214,12 @@ pub async fn find_podcast(
             Ok(HttpResponse::Ok().json(res))
         }
         Ok(Podindex) => {
-            let mut environment = EnvironmentService::new();
-
-            if !environment.get_config().podindex_configured {
+            if !ENVIRONMENT_SERVICE
+                .get()
+                .unwrap()
+                .get_config()
+                .podindex_configured
+            {
                 return Ok(HttpResponse::BadRequest().json("Podindex is not configured"));
             }
             let mut podcast_service = podcast_service.lock().ignore_poison().clone();
@@ -269,7 +264,6 @@ pub async fn add_podcast(
     let res = res.json::<Value>().await.unwrap();
 
     let mut podcast_service = PodcastService::new();
-    let mapping_service = MappingService::new();
     podcast_service
         .handle_insert_of_podcast(
             conn.get().map_err(map_r2d2_error)?.deref_mut(),
@@ -281,9 +275,8 @@ pub async fn add_podcast(
                     .unwrap(),
                 image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
             },
-            mapping_service,
             lobby,
-            None
+            None,
         )
         .await?;
     Ok(HttpResponse::Ok().into())
@@ -332,11 +325,14 @@ pub async fn add_podcast_by_feed(
                     feed_url: rss_feed.clone().rss_feed_url.clone(),
                     title: channel.title.clone(),
                     id: num,
-                    image_url: channel.image.clone().map(|i| i.url).unwrap_or(get_default_image()),
-                    },
-                MappingService::new(),
+                    image_url: channel
+                        .image
+                        .clone()
+                        .map(|i| i.url)
+                        .unwrap_or(get_default_image()),
+                },
                 lobby,
-                Some(channel)
+                Some(channel),
             )
             .await?;
     }
@@ -364,7 +360,7 @@ pub async fn import_podcasts_from_opml(
 
     spawn_blocking(move || {
         let rng = rand::thread_rng();
-        let environment = EnvironmentService::new();
+        let environment = ENVIRONMENT_SERVICE.get().unwrap();
         let document = OPML::from_str(&opml.content).unwrap();
 
         for outline in document.body.outlines {
@@ -397,12 +393,16 @@ pub async fn add_podcast_from_podindex(
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
-    let mut environment = EnvironmentService::new();
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
-    if !environment.get_config().podindex_configured {
+    if !ENVIRONMENT_SERVICE
+        .get()
+        .unwrap()
+        .get_config()
+        .podindex_configured
+    {
         return Err(CustomError::BadRequest(
             "Podindex is not configured".to_string(),
         ));
@@ -447,12 +447,12 @@ tag="podcasts",)]
 #[get("/podcasts/{podcast}/query")]
 pub async fn query_for_podcast(
     podcast: Path<String>,
-    podcast_service: Data<Mutex<PodcastEpisodeService>>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
-    let mut podcast_service = podcast_service.lock().ignore_poison();
-    let res = podcast_service
-        .query_for_podcast(&podcast, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let res = PodcastEpisodeService::query_for_podcast(
+        &podcast,
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    )?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -568,13 +568,11 @@ tag="podcasts"
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
-    mapping_service: Data<Mutex<MappingService>>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
     let podcasts = podcast_service.get_favored_podcasts(
         requester.unwrap().username.clone(),
-        mapping_service.lock().ignore_poison().clone(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
     Ok(HttpResponse::Ok().json(podcasts))
@@ -648,7 +646,6 @@ async fn insert_outline(
     match channel {
         Ok(channel) => {
             let mut podcast_service = PodcastService::new();
-            let mapping_service = MappingService::new();
 
             let image_url = match channel.image {
                 Some(ref image) => image.url.clone(),
@@ -670,9 +667,8 @@ async fn insert_outline(
                         id: rng.gen::<i32>(),
                         image_url,
                     },
-                    mapping_service,
                     lobby.clone(),
-                    Some(channel)
+                    Some(channel),
                 )
                 .await;
             match inserted_podcast {
@@ -703,8 +699,11 @@ async fn insert_outline(
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
+
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
+use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::settings::Setting;
+use crate::utils::environment_variables::is_env_var_present_and_true;
 
 use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
 use crate::utils::rss_feed_parser::PodcastParsed;
@@ -762,10 +761,28 @@ pub(crate) async fn proxy_podcast(
     mut payload: web::Payload,
     params: web::Query<Params>,
     peer_addr: Option<PeerAddr>,
+    query: Option<web::Query<RSSAPiKey>>,
     method: Method,
     rq: HttpRequest,
     pool: Data<DbPool>,
 ) -> Result<HttpResponse, Error> {
+    let is_auth_enabled =
+        is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
+
+    if is_auth_enabled {
+        if query.is_none() {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
+        let api_key = query.unwrap().0;
+
+        let api_key_exists =
+            User::check_if_api_key_exists(api_key.api_key.to_string(), &mut pool.get().unwrap());
+
+        if !api_key_exists {
+            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+        }
+    }
+
     let conn = &mut *pool.get().unwrap();
 
     let opt_res = PodcastEpisodeService::get_podcast_episode_by_id(conn, &params.episode_id)?;
@@ -820,7 +837,9 @@ pub(crate) async fn proxy_podcast(
 }
 
 #[post("/podcasts/formatting")]
-pub async fn retrieve_podcast_sample_format(sample_string: Json<EpisodeFormatDto>) -> Result<HttpResponse, CustomError> {
+pub async fn retrieve_podcast_sample_format(
+    sample_string: Json<EpisodeFormatDto>,
+) -> Result<HttpResponse, CustomError> {
     let podcast = PodcastParsed {
         date: "2021-01-01".to_string(),
         summary: "A podcast about homelabing".to_string(),
@@ -847,7 +866,7 @@ pub async fn retrieve_podcast_sample_format(sample_string: Json<EpisodeFormatDto
     let result = perform_podcast_variable_replacement(settings, podcast);
 
     match result {
-        Ok(v)=>Ok(HttpResponse::Ok().json(v)),
-        Err(e)=>Err(CustomError::BadRequest(e.to_string()))
+        Ok(v) => Ok(HttpResponse::Ok().json(v)),
+        Err(e) => Err(CustomError::BadRequest(e.to_string())),
     }
 }
