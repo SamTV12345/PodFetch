@@ -38,8 +38,8 @@ mod controllers;
 use crate::auth_middleware::AuthFilter;
 use crate::command_line_runner::start_command_line;
 use crate::config::dbconfig::ConnectionOptions;
-use crate::config::dbconfig::{establish_connection, get_database_url};
-use crate::constants::inner_constants::{BASIC_AUTH, CSS, ENVIRONMENT_SERVICE, JS, OIDC_AUTH, OIDC_CLIENT_ID, OIDC_JWKS, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::config::dbconfig::{establish_connection};
+use crate::constants::inner_constants::{BASIC_AUTH, CSS, ENVIRONMENT_SERVICE, JS, OIDC_AUTH};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -151,6 +151,7 @@ async fn main() -> std::io::Result<()> {
             .expect("TODO: panic message");
         exit(0)
     }
+    ENVIRONMENT_SERVICE.get_or_init(EnvironmentService::new);
 
     let conn = establish_connection();
 
@@ -171,20 +172,19 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    ENVIRONMENT_SERVICE.get_or_init(EnvironmentService::new);
 
-    check_server_config(ENVIRONMENT_SERVICE.get().unwrap());
+    check_server_config();
     let pool;
     {
         let conn = establish_connection();
         match conn {
             DBType::Postgresql(_) => {
-                pool = init_postgres_db_pool(&get_database_url())
+                pool = init_postgres_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
                     .await
                     .expect("Failed to connect to database");
             }
             DBType::Sqlite(_) => {
-                pool = init_sqlite_db_pool(&get_database_url())
+                pool = init_sqlite_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
                     .await
                     .expect("Failed to connect to database");
             }
@@ -267,9 +267,9 @@ async fn main() -> std::io::Result<()> {
     let mut hash = HashSet::new();
     let jwk: Option<Jwk>;
 
-    match var(OIDC_JWKS) {
-        Ok(jwk_uri) => {
-            let resp = reqwest::get(&jwk_uri)
+    match ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
+        Some(jwk_config) => {
+            let resp = reqwest::get(&jwk_config.jwks_uri)
                 .await
                 .unwrap()
                 .json::<CustomJwkSet>()
@@ -321,8 +321,8 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    if let Ok(client_id) = var(OIDC_CLIENT_ID) {
-        hash.insert(client_id);
+    if let Some(oidc_config) = ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
+        hash.insert(oidc_config.client_id);
     }
 
     HttpServer::new(move || {
@@ -505,26 +505,20 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     }
 }
 
-pub fn check_server_config(service1: &EnvironmentService) {
-    if service1.http_basic && (service1.password.is_empty() || service1.username.is_empty()) {
+pub fn check_server_config() {
+    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+    if env_service.http_basic && (env_service.password.is_none() || env_service.username.is_none()) {
         eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
         exit(1);
     }
 
-    if service1.gpodder_integration_enabled && !(service1.http_basic || service1.oidc_configured) {
+    if env_service.gpodder_integration_enabled && !(env_service.http_basic || env_service.oidc_configured) {
         eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
         exit(1);
     }
 
-    if service1.http_basic && service1.oidc_configured {
+    if env_service.http_basic && env_service.oidc_configured {
         eprintln!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
-        exit(1);
-    }
-
-    if var(TELEGRAM_API_ENABLED).is_ok()
-        && (var(TELEGRAM_BOT_TOKEN).is_err() || var(TELEGRAM_BOT_CHAT_ID).is_err())
-    {
-        eprintln!("TELEGRAM_API_ENABLED activated but no TELEGRAM_API_TOKEN or TELEGRAM_API_CHAT_ID set. Please set TELEGRAM_API_TOKEN and TELEGRAM_API_CHAT_ID in the .env file.");
         exit(1);
     }
 }

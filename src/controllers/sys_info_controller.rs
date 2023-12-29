@@ -72,8 +72,16 @@ pub async fn login(
 ) -> Result<HttpResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
     let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    if auth.0.username == env_service.username && auth.0.password == env_service.password {
-        return Ok(HttpResponse::Ok().json("Login successful"));
+
+    let digested_password = digest(auth.0.password);
+    if let Some(admin_username) = &env_service.username {
+        if admin_username == &auth.0.username {
+            if let Some(admin_password) = &env_service.password {
+                if admin_password == &digested_password {
+                    return Ok(HttpResponse::Ok().json("Login successful"));
+                }
+            }
+        }
     }
     let db_user = User::find_by_username(&auth.0.username, &mut db.get().unwrap())?;
 
@@ -82,7 +90,7 @@ pub async fn login(
         return Err(CustomError::Forbidden);
     }
 
-    if db_user.password.unwrap() == digest(auth.0.password) {
+    if db_user.password.unwrap() == digested_password {
         return Ok(HttpResponse::Ok().json("Login successful"));
     }
     log::warn!("Login failed for user {}", auth.0.username);

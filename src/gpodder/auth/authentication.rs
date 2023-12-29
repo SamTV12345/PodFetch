@@ -44,8 +44,15 @@ pub async fn login(
     if username_basic != unwrapped_username {
         return Err(CustomError::Forbidden);
     }
-    if unwrapped_username == env.username && password == env.password {
-        Ok(HttpResponse::Ok().finish())
+
+    if let Some(admin_username) = &env.username {
+        if admin_username == &unwrapped_username {
+            if let Some(admin_password) = &env.password {
+                if admin_password == &digest(password) {
+                    return Ok(HttpResponse::Ok().json("Login successful"));
+                }
+            }
+        }
     } else {
         let user = User::find_by_username(
             &unwrapped_username,
@@ -56,11 +63,13 @@ pub async fn login(
             Session::insert_session(&session, conn.get().map_err(map_r2d2_error)?.deref_mut())
                 .expect("Error inserting session");
             let user_cookie = create_session_cookie(session);
-            Ok(HttpResponse::Ok().cookie(user_cookie).finish())
-        } else {
-            Err(CustomError::Forbidden)
+            return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
+        }
+        else {
+            return Err(CustomError::Forbidden);
         }
     }
+    Err(CustomError::Forbidden)
 }
 
 fn create_session_cookie(session: Session) -> Cookie<'static> {

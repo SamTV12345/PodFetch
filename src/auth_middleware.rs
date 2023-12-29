@@ -4,7 +4,7 @@ use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
 
-use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, PASSWORD, USERNAME};
+use crate::constants::inner_constants::{BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH};
 use crate::models::user::User;
 use crate::DbPool;
 use actix::fut::ok;
@@ -93,6 +93,7 @@ where
     S::Future: 'static,
 {
     fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
         let opt_auth_header = req.headers().get("Authorization");
         if opt_auth_header.is_none() {
             return Box::pin(ok(req
@@ -112,23 +113,26 @@ where
                 }
                 let unwrapped_user = found_user.unwrap();
 
-                if unwrapped_user.username.clone() == var(USERNAME).unwrap() {
-                    return match password == var(PASSWORD).unwrap() {
-                        true => {
-                            req.extensions_mut().insert(unwrapped_user);
-                            let service = Rc::clone(&self.service);
-                            async move {
-                                service
-                                    .call(req)
-                                    .await
-                                    .map(|res| res.map_into_left_body())
+                if let Some(admin_username) = env_service.username.clone() {
+                    if unwrapped_user.username.clone() == admin_username {
+                        return match env_service.password.is_some() && digest(password) == env_service.password.clone()
+                            .unwrap()  {
+                            true => {
+                                req.extensions_mut().insert(unwrapped_user);
+                                let service = Rc::clone(&self.service);
+                                async move {
+                                    service
+                                        .call(req)
+                                        .await
+                                        .map(|res| res.map_into_left_body())
+                                }
+                                    .boxed_local()
                             }
-                                .boxed_local()
-                        }
-                        false => Box::pin(ok(req
-                            .error_response(ErrorUnauthorized("Unauthorized"))
-                            .map_into_right_body())),
-                    };
+                            false => Box::pin(ok(req
+                                .error_response(ErrorUnauthorized("Unauthorized"))
+                                .map_into_right_body())),
+                        };
+                    }
                 }
 
                 if unwrapped_user.password.clone().unwrap() == digest(password) {

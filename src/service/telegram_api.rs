@@ -1,11 +1,12 @@
-use crate::constants::inner_constants::{TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN};
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use frankenstein::{Api, ParseMode, SendMessageParams, TelegramApi};
 use std::env::var;
 
 pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: Podcast) {
-    let api = Api::new(&var(TELEGRAM_BOT_TOKEN).unwrap());
+    let telegram_config = ENVIRONMENT_SERVICE.get().unwrap().telegram_api.clone().unwrap();
+    let api = Api::new(&telegram_config.telegram_bot_token);
 
     let episode_text = format!(
         "Episode {} of podcast {} \
@@ -15,7 +16,7 @@ pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: P
     let message_to_send = format!(r"<strong>New episode available</strong>: {}", episode_text);
 
     let message = SendMessageParams::builder()
-        .chat_id(var(TELEGRAM_BOT_CHAT_ID).unwrap())
+        .chat_id(telegram_config.telegram_chat_id.to_string())
         .text(message_to_send)
         .disable_web_page_preview(true)
         .parse_mode(ParseMode::Html)
