@@ -46,6 +46,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      - uses: ikalnytskyi/action-setup-postgres@v4
       - name: Checkout 🛎️
         uses: actions/checkout@v3
       - name: Install and Build

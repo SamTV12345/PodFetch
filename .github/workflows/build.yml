@@ -18,6 +18,7 @@ jobs:
           - target: x86_64-apple-darwin
             archive: zip
     steps:
+      - uses: ikalnytskyi/action-setup-postgres@v4
       - uses: actions/checkout@master
       - name: Compile and release
         uses: rust-build/rust-build.action@v1.4.3
