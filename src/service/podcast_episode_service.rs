@@ -144,7 +144,7 @@ impl PodcastEpisodeService {
 
         Self::handle_podcast_image_insert(conn, &podcast, &channel)?;
 
-        for (_, item) in channel.items.iter().enumerate() {
+        for item in channel.items.iter() {
             let itunes_ext = item.clone().itunes_ext;
 
             match itunes_ext {
@@ -286,7 +286,7 @@ impl PodcastEpisodeService {
         conn: &mut DbConnection,
         items: &[Item],
     ) -> Result<(), CustomError> {
-        for (_, item) in items.iter().enumerate() {
+        for item in items.iter() {
             match &item.guid {
                 Some(guid) => {
                     let opt_found_podcast_episode =
