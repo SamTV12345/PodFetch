@@ -16,7 +16,7 @@ use actix_web::{
 };
 use base64::engine::general_purpose;
 use base64::Engine;
-use dotenv::var;
+
 use futures_util::future::{LocalBoxFuture, Ready};
 use futures_util::FutureExt;
 use jsonwebtoken::jwk::Jwk;
@@ -115,18 +115,16 @@ where
 
                 if let Some(admin_username) = env_service.username.clone() {
                     if unwrapped_user.username.clone() == admin_username {
-                        return match env_service.password.is_some() && digest(password) == env_service.password.clone()
-                            .unwrap()  {
+                        return match env_service.password.is_some()
+                            && digest(password) == env_service.password.clone().unwrap()
+                        {
                             true => {
                                 req.extensions_mut().insert(unwrapped_user);
                                 let service = Rc::clone(&self.service);
                                 async move {
-                                    service
-                                        .call(req)
-                                        .await
-                                        .map(|res| res.map_into_left_body())
+                                    service.call(req).await.map(|res| res.map_into_left_body())
                                 }
-                                    .boxed_local()
+                                .boxed_local()
                             }
                             false => Box::pin(ok(req
                                 .error_response(ErrorUnauthorized("Unauthorized"))

@@ -1,10 +1,8 @@
-
+use crate::service::environment_service::EnvironmentService;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
 use std::sync::OnceLock;
-use crate::service::environment_service::EnvironmentService;
-
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search?term=";
 
@@ -132,8 +130,6 @@ pub const OIDC_JWKS: &str = "OIDC_JWKS";
 
 // Default device when viewing via web interface
 pub const DEFAULT_DEVICE: &str = "webview";
-
-
 
 // static constants
 

@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-
 use crate::constants::inner_constants::Role;
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};

@@ -1,5 +1,3 @@
-
-
 use crate::dbconfig::schema::*;
 
 use crate::models::favorites::Favorite;

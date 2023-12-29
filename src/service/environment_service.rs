@@ -1,4 +1,9 @@
-use crate::constants::inner_constants::{BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
+use crate::constants::inner_constants::{
+    BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH,
+    OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD,
+    PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL,
+    SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME,
+};
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use regex::Regex;
@@ -12,7 +17,7 @@ pub struct OidcConfig {
     pub client_id: String,
     pub redirect_uri: String,
     pub scope: String,
-    pub jwks_uri: String
+    pub jwks_uri: String,
 }
 
 #[derive(Clone)]
@@ -72,7 +77,7 @@ impl EnvironmentService {
             }
         }
 
-        let username_send:Option<String>;
+        let username_send: Option<String>;
 
         if let Ok(username) = var(USERNAME) {
             username_send = Some(username);
@@ -80,7 +85,7 @@ impl EnvironmentService {
             username_send = None;
         }
 
-        let password:Option<String>;
+        let password: Option<String>;
 
         if let Ok(password_present) = var(PASSWORD) {
             let digested_password = sha256::digest(password_present);
@@ -89,28 +94,27 @@ impl EnvironmentService {
             password = None;
         }
 
-        let telegram_api: Option<TelegramConfig>;
+        let telegram_api: Option<TelegramConfig> =
+            if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
+                let telegram_bot_token = var(TELEGRAM_BOT_TOKEN);
 
-        if is_env_var_present_and_true(TELEGRAM_API_ENABLED){
-            let telegram_bot_token = var(TELEGRAM_BOT_TOKEN);
+                if telegram_bot_token.is_err() {
+                    panic!("Telegram bot token not configured");
+                }
 
-            if telegram_bot_token.is_err() {
-                panic!("Telegram bot token not configured");
-            }
+                let telegram_bot_chat_id = var(TELEGRAM_BOT_CHAT_ID);
 
-            let telegram_bot_chat_id = var(TELEGRAM_BOT_CHAT_ID);
+                if telegram_bot_chat_id.is_err() {
+                    panic!("Telegram bot chat id not configured");
+                }
 
-            if telegram_bot_chat_id.is_err() {
-                panic!("Telegram bot chat id not configured");
-            }
-
-            telegram_api = Some(TelegramConfig{
-                telegram_bot_token: telegram_bot_token.unwrap(),
-                telegram_chat_id: telegram_bot_chat_id.unwrap(),
-            });
-        } else {
-            telegram_api = None;
-        }
+                Some(TelegramConfig {
+                    telegram_bot_token: telegram_bot_token.unwrap(),
+                    telegram_chat_id: telegram_bot_chat_id.unwrap(),
+                })
+            } else {
+                None
+            };
 
         EnvironmentService {
             server_url: server_url.clone(),
@@ -127,20 +131,12 @@ impl EnvironmentService {
             oidc_config: option_oidc_config,
             gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED),
             database_url: var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string()),
-            telegram_api
+            telegram_api,
         }
     }
 
     pub fn get_server_url(&self) -> String {
         self.server_url.clone()
-    }
-
-    pub fn get_podindex_api_key(&self) -> String {
-        self.podindex_api_key.clone()
-    }
-
-    pub fn get_podindex_api_secret(&self) -> String {
-        self.podindex_api_secret.clone()
     }
 
     pub fn get_polling_interval(&self) -> u32 {
@@ -188,8 +184,6 @@ impl EnvironmentService {
         }
     }
 
-    pub fn get_api_key(&self) {}
-
     pub fn print_banner() {
         println!(
             r"
@@ -206,8 +200,12 @@ impl EnvironmentService {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::inner_constants::{BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
-    
+    use crate::constants::inner_constants::{
+        BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID,
+        OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET,
+        POLLING_INTERVAL, SERVER_URL, USERNAME,
+    };
+
     use serial_test::serial;
     use std::env::{remove_var, set_var};
 
@@ -268,7 +266,10 @@ mod tests {
         do_env_cleanup();
         set_var(SERVER_URL, "http://localhost:8000");
 
-        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_server_url(), "http://localhost:8000/");
+        assert_eq!(
+            ENVIRONMENT_SERVICE.get().unwrap().get_server_url(),
+            "http://localhost:8000/"
+        );
     }
 
     #[test]
@@ -297,8 +298,11 @@ mod tests {
         set_var(PODINDEX_API_KEY, "test");
         set_var(PODINDEX_API_SECRET, "testsecret");
 
-        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_podindex_api_key(), "test");
-        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_podindex_api_secret(), "testsecret");
+        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().podindex_api_key, "test");
+        assert_eq!(
+            ENVIRONMENT_SERVICE.get().unwrap().podindex_api_secret,
+            "testsecret"
+        );
     }
 
     #[test]
@@ -306,6 +310,9 @@ mod tests {
     fn test_get_polling_interval() {
         do_env_cleanup();
         set_var(POLLING_INTERVAL, "20");
-        assert_eq!(ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval(), 20);
+        assert_eq!(
+            ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval(),
+            20
+        );
     }
 }

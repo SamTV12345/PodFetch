@@ -1,6 +1,5 @@
 use crate::models::user::User;
 
-
 use crate::DbPool;
 use actix_web::web::Data;
 use actix_web::{get, post};
@@ -34,9 +33,9 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
         podcast_directory: podcast_byte_size,
     }))
 }
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{map_io_extra_error, CustomError};
 use utoipa::ToSchema;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {

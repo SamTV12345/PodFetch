@@ -1,5 +1,8 @@
-use crate::constants::inner_constants::{Role, BASIC_AUTH, OIDC_AUTH, STANDARD_USER, USERNAME, API_KEY};
+use crate::constants::inner_constants::{
+    Role, API_KEY, BASIC_AUTH, OIDC_AUTH, STANDARD_USER, USERNAME,
+};
 use crate::dbconfig::schema::users;
+use crate::dbconfig::DBType;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
@@ -13,7 +16,6 @@ use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use dotenv::var;
 use std::io::Error;
 use utoipa::ToSchema;
-use crate::dbconfig::DBType;
 
 #[derive(
     Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset,
@@ -26,7 +28,7 @@ pub struct User {
     pub password: Option<String>,
     pub explicit_consent: bool,
     pub created_at: NaiveDateTime,
-    pub api_key: Option<String>
+    pub api_key: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -47,7 +49,7 @@ pub struct UserWithAPiKey {
     pub role: String,
     pub created_at: NaiveDateTime,
     pub explicit_consent: bool,
-    pub api_key: Option<String>
+    pub api_key: Option<String>,
 }
 
 impl User {
@@ -180,7 +182,7 @@ impl User {
             username: user.username.clone(),
             role: user.role.clone(),
             created_at: user.created_at,
-            api_key: user.api_key.clone()
+            api_key: user.api_key.clone(),
         }
     }
 
@@ -300,18 +302,24 @@ impl User {
         self.role.eq(&Role::Admin.to_string())
     }
 
-    pub fn find_by_api_key(api_key_to_find: String, conn: &mut DBType) -> Result<Option<User>, CustomError> {
+    pub fn find_by_api_key(
+        api_key_to_find: String,
+        conn: &mut DBType,
+    ) -> Result<Option<User>, CustomError> {
         use crate::dbconfig::schema::users::dsl::*;
 
-        users.filter(api_key.eq(api_key_to_find))
+        users
+            .filter(api_key.eq(api_key_to_find))
             .first::<User>(conn)
             .optional()
             .map_err(map_db_error)
     }
 
-    pub fn update_api_key_of_user(username_to_update: &str, api_key_to_update: String, conn: &mut DBType) ->
-                                                                                                            Result<(),
-        CustomError> {
+    pub fn update_api_key_of_user(
+        username_to_update: &str,
+        api_key_to_update: String,
+        conn: &mut DBType,
+    ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::users::dsl::*;
 
         diesel::update(users.filter(username.eq(username_to_update)))
@@ -342,9 +350,7 @@ impl User {
                 }
                 false
             }
-            Err(_) => {
-                false
-            }
+            Err(_) => false,
         }
     }
 }

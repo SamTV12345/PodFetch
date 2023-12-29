@@ -1,5 +1,3 @@
-
-
 use actix_web::get;
 
 use actix_web::{HttpResponse, Responder};

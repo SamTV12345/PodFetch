@@ -1,10 +1,12 @@
 use crate::controllers::settings_controller::UpdateNameSettings;
-use crate::models::settings::Setting;
-use crate::utils::error::CustomError;
-use crate::DBType as DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::service::file_service::{perform_episode_variable_replacement, perform_podcast_variable_replacement};
+use crate::models::settings::Setting;
+use crate::service::file_service::{
+    perform_episode_variable_replacement, perform_podcast_variable_replacement,
+};
+use crate::utils::error::CustomError;
 use crate::utils::rss_feed_parser::PodcastParsed;
+use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct SettingsService {}
@@ -49,7 +51,6 @@ impl SettingsService {
     fn validate_settings(
         update_setttings: UpdateNameSettings,
     ) -> Result<UpdateNameSettings, CustomError> {
-
         let sample_podcast = PodcastParsed {
             date: "2022-01-01".to_string(),
             summary: "A podcast about homelabing".to_string(),
@@ -80,8 +81,14 @@ impl SettingsService {
             file_image_path: None,
         };
 
-        perform_podcast_variable_replacement(update_setttings.clone().into(), sample_podcast.clone())?;
-        perform_episode_variable_replacement(update_setttings.clone().into(), sample_episode.clone())?;
+        perform_podcast_variable_replacement(
+            update_setttings.clone().into(),
+            sample_podcast.clone(),
+        )?;
+        perform_episode_variable_replacement(
+            update_setttings.clone().into(),
+            sample_episode.clone(),
+        )?;
         Ok(update_setttings)
     }
 }

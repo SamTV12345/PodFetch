@@ -1,6 +1,5 @@
-use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, Role};
+use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::user::User;
-
 
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{map_r2d2_error, CustomError};
@@ -91,18 +90,25 @@ responses(
 tag="info"
 )]
 #[get("/{username}")]
-pub async fn get_user(conn: Data<DbPool>, username: Path<String>,  requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
+pub async fn get_user(
+    conn: Data<DbPool>,
+    username: Path<String>,
+    requester: Option<web::ReqData<User>>,
+) -> Result<HttpResponse, CustomError> {
     let user = requester.unwrap().into_inner();
     let username = username.into_inner();
-    if user.username == username|| username == "me" {
+    if user.username == username || username == "me" {
         return Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)));
     }
 
-    if !user.is_admin()|| user.username != username {
+    if !user.is_admin() || user.username != username {
         return Err(CustomError::Forbidden);
     }
 
-    let user = User::find_by_username(&username.clone(), conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let user = User::find_by_username(
+        &username.clone(),
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    )?;
     Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
 }
 
@@ -138,11 +144,13 @@ pub async fn update_role(
     Ok(HttpResponse::Ok().json(res))
 }
 
-
-
 #[put("/{username}")]
-pub async fn update_user(user: Option<web::ReqData<User>>, username: Path<String>, conn: Data<DbPool>, user_update:
-Json<UserCoreUpdateModel>) -> Result<HttpResponse, CustomError>{
+pub async fn update_user(
+    user: Option<web::ReqData<User>>,
+    username: Path<String>,
+    conn: Data<DbPool>,
+    user_update: Json<UserCoreUpdateModel>,
+) -> Result<HttpResponse, CustomError> {
     let username = username.into_inner();
     let old_username = &user.clone().unwrap().username;
     if user.is_none() {
@@ -151,12 +159,16 @@ Json<UserCoreUpdateModel>) -> Result<HttpResponse, CustomError>{
     if old_username != &username {
         return Err(CustomError::Forbidden);
     }
-    let mut user = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let mut user =
+        User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
-    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured {
+    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured
+    {
         // Check if this username is already taken
-        let new_username_res = User::find_by_username(&user_update.username, conn.get().map_err(map_r2d2_error)?
-            .deref_mut());
+        let new_username_res = User::find_by_username(
+            &user_update.username,
+            conn.get().map_err(map_r2d2_error)?.deref_mut(),
+        );
         if new_username_res.is_ok() {
             return Err(CustomError::Conflict("Username already taken".to_string()));
         }
@@ -164,7 +176,9 @@ Json<UserCoreUpdateModel>) -> Result<HttpResponse, CustomError>{
     }
     if let Some(password) = user_update.password.clone() {
         if password.trim().len() < 8 {
-            return Err(CustomError::BadRequest("Password must be at least 8 characters long".to_string()));
+            return Err(CustomError::BadRequest(
+                "Password must be at least 8 characters long".to_string(),
+            ));
         }
         user.password = Some(sha256::digest(password.trim()));
     }
@@ -176,7 +190,6 @@ Json<UserCoreUpdateModel>) -> Result<HttpResponse, CustomError>{
     let user = User::update_user(user, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
-
 }
 
 #[utoipa::path(

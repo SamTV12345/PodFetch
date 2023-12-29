@@ -1,10 +1,6 @@
-
 use crate::models::episode::Episode;
-use crate::models::misc_models::{
-    PodcastWatchedPostModel,
-};
+use crate::models::misc_models::PodcastWatchedPostModel;
 use crate::models::user::User;
-
 
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
@@ -12,7 +8,6 @@ use actix_web::web::Data;
 use actix_web::{get, post, web, HttpResponse};
 
 use std::ops::DerefMut;
-
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -54,8 +49,7 @@ pub async fn get_last_watched(
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
-    Ok(HttpResponse::Ok()
-        .json(episodes))
+    Ok(HttpResponse::Ok().json(episodes))
 }
 
 #[utoipa::path(

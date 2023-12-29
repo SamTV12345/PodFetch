@@ -1,7 +1,8 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ITUNES_URL, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::{
+    PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL,
+};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
-
 
 use crate::models::messages::BroadcastMessage;
 use crate::models::misc_models::PodcastInsertModel;
@@ -15,10 +16,10 @@ use actix::Addr;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
+use rss::Channel;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
-use rss::Channel;
 
 use crate::config::dbconfig::establish_connection;
 use serde::Serialize;
@@ -32,7 +33,7 @@ use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct PodcastService {
-    pub client: Client
+    pub client: Client,
 }
 
 impl Default for PodcastService {
@@ -44,7 +45,7 @@ impl Default for PodcastService {
 impl PodcastService {
     pub fn new() -> PodcastService {
         PodcastService {
-            client: AsyncClientBuilder::new().build().unwrap()
+            client: AsyncClientBuilder::new().build().unwrap(),
         }
     }
 
@@ -119,7 +120,7 @@ impl PodcastService {
                 image_url: unwrap_string(&podcast["feed"]["image"]),
             },
             lobby,
-            None
+            None,
         )
         .await
     }
@@ -129,7 +130,7 @@ impl PodcastService {
         conn: &mut DbConnection,
         podcast_insert: PodcastInsertModel,
         lobby: Data<Addr<Lobby>>,
-        channel: Option<Channel>
+        channel: Option<Channel>,
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone());
         if opt_podcast.is_some() {
@@ -141,11 +142,8 @@ impl PodcastService {
 
         let fileservice = FileService::new();
 
-        let podcast_directory_created = FileService::create_podcast_directory_exists(
-            &podcast_insert,
-            conn,
-            channel
-        ).await?;
+        let podcast_directory_created =
+            FileService::create_podcast_directory_exists(&podcast_insert, conn, channel).await?;
 
         let inserted_podcast = Podcast::add_podcast_to_database(
             conn,
@@ -171,9 +169,9 @@ impl PodcastService {
                 podcast_episode: None,
                 type_of: PodcastType::AddPodcast,
                 message: format!("Added podcast: {}", inserted_podcast.name),
-                podcast: Option::from(
-                    MappingService::map_podcast_to_podcast_dto(&podcast.clone().unwrap()),
-                ),
+                podcast: Option::from(MappingService::map_podcast_to_podcast_dto(
+                    &podcast.clone().unwrap(),
+                )),
                 podcast_episodes: None,
             })
             .await
@@ -185,8 +183,9 @@ impl PodcastService {
                     let mut podcast_service = PodcastService::new();
 
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
-                    let inserted_podcasts = PodcastEpisodeService::insert_podcast_episodes(&mut conn, podcast.clone())
-                        .unwrap();
+                    let inserted_podcasts =
+                        PodcastEpisodeService::insert_podcast_episodes(&mut conn, podcast.clone())
+                            .unwrap();
 
                     lobby.get_ref().do_send(BroadcastMessage {
                         podcast_episode: None,
@@ -284,8 +283,17 @@ impl PodcastService {
             .unwrap()
             .as_secs();
         let mut headers = HeaderMap::new();
-        let non_hashed_string = ENVIRONMENT_SERVICE.get().unwrap().podindex_api_key.clone().to_owned()
-            + &*ENVIRONMENT_SERVICE.get().unwrap().podindex_api_secret.clone()
+        let non_hashed_string = ENVIRONMENT_SERVICE
+            .get()
+            .unwrap()
+            .podindex_api_key
+            .clone()
+            .to_owned()
+            + &*ENVIRONMENT_SERVICE
+                .get()
+                .unwrap()
+                .podindex_api_secret
+                .clone()
             + &seconds.to_string();
         let mut hasher = Sha1::new();
 
@@ -322,7 +330,8 @@ impl PodcastService {
 
     pub fn get_podcasts(
         conn: &mut DbConnection,
-        u: String) -> Result<Vec<PodcastDto>, CustomError> {
+        u: String,
+    ) -> Result<Vec<PodcastDto>, CustomError> {
         Podcast::get_podcasts(conn, u)
     }
 

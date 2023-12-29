@@ -5,20 +5,19 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix::{Actor};
+use actix::Actor;
 use actix_files::{Files, NamedFile};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::collections::{HashSet};
+use std::collections::HashSet;
 use std::env::{args, var};
 use std::io::Read;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, thread};
-
 
 use actix_web::body::{BoxBody, EitherBody};
 use diesel::r2d2::ConnectionManager;
@@ -37,8 +36,8 @@ use utoipa_swagger_ui::SwaggerUi;
 mod controllers;
 use crate::auth_middleware::AuthFilter;
 use crate::command_line_runner::start_command_line;
+use crate::config::dbconfig::establish_connection;
 use crate::config::dbconfig::ConnectionOptions;
-use crate::config::dbconfig::{establish_connection};
 use crate::constants::inner_constants::{BASIC_AUTH, CSS, ENVIRONMENT_SERVICE, JS, OIDC_AUTH};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
@@ -48,17 +47,27 @@ use crate::controllers::playlist_controller::{
     add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
     get_playlist_by_id, update_playlist,
 };
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, proxy_podcast, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts};
+use crate::controllers::podcast_controller::{
+    add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast,
+    find_podcast_by_id, get_filter, proxy_podcast, refresh_all_podcasts,
+    retrieve_podcast_sample_format, search_podcasts,
+};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
-use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_timeline, retrieve_episode_sample_format};
+use crate::controllers::podcast_episode_controller::{
+    delete_podcast_episode_locally, download_podcast_episodes_of_podcast,
+    find_all_podcast_episodes_of_podcast, get_timeline, retrieve_episode_sample_format,
+};
 use crate::controllers::settings_controller::{
     get_opml, get_settings, run_cleanup, update_name, update_settings,
 };
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
-use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_users, onboard_user, update_role, update_user};
+use crate::controllers::user_controller::{
+    create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user,
+    get_users, onboard_user, update_role, update_user,
+};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
@@ -104,9 +113,7 @@ type DbPool = Pool<ConnectionManager<DBType>>;
 
 import_database_config!();
 
-pub fn run_poll(
-    mut podcast_service: PodcastService,
-) -> Result<(), CustomError> {
+pub fn run_poll(mut podcast_service: PodcastService) -> Result<(), CustomError> {
     //check for new episodes
     let conn = &mut establish_connection();
     let podcats_result = Podcast::get_all_podcasts(conn)?;
@@ -171,7 +178,6 @@ async fn main() -> std::io::Result<()> {
             }
         }
     }
-
 
     check_server_config();
     let pool;
@@ -379,7 +385,15 @@ pub fn get_global_scope() -> Scope {
         .service(get_rss_feed_for_podcast)
 }
 
-fn get_podcast_serving() -> actix_web::Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse, Error = actix_web::Error, InitError = ()>> {
+fn get_podcast_serving() -> actix_web::Scope<
+    impl ServiceFactory<
+        ServiceRequest,
+        Config = (),
+        Response = ServiceResponse,
+        Error = actix_web::Error,
+        InitError = (),
+    >,
+> {
     web::scope("/podcasts")
         .wrap_fn(check_podcast_request)
         .service(Files::new("/", "podcasts").disable_content_disposition())
@@ -507,12 +521,15 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
 
 pub fn check_server_config() {
     let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    if env_service.http_basic && (env_service.password.is_none() || env_service.username.is_none()) {
+    if env_service.http_basic && (env_service.password.is_none() || env_service.username.is_none())
+    {
         eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
         exit(1);
     }
 
-    if env_service.gpodder_integration_enabled && !(env_service.http_basic || env_service.oidc_configured) {
+    if env_service.gpodder_integration_enabled
+        && !(env_service.http_basic || env_service.oidc_configured)
+    {
         eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
         exit(1);
     }

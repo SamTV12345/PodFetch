@@ -11,8 +11,7 @@ pub struct PodcastParsed {
     pub date: String,
 }
 
-
-pub struct  RSSFeedParser;
+pub struct RSSFeedParser;
 
 impl RSSFeedParser {
     pub fn parse_rss_feed(rss_feed: Channel) -> PodcastParsed {
@@ -34,15 +33,14 @@ impl RSSFeedParser {
             None => "".to_string(),
         };
 
-
         PodcastParsed {
-           title,
-           description,
-           language,
-           explicit,
-           keywords,
+            title,
+            description,
+            language,
+            explicit,
+            keywords,
             summary,
-            date: build_date
+            date: build_date,
         }
     }
 }

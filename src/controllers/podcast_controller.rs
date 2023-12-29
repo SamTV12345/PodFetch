@@ -1,5 +1,6 @@
-
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, BASIC_AUTH, OIDC_AUTH, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::{
+    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, OIDC_AUTH,
+};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -38,7 +39,7 @@ use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
-use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
+use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::DBType as DbConnection;
 use futures_util::StreamExt;
@@ -179,10 +180,8 @@ pub async fn find_all_podcasts(
 ) -> Result<HttpResponse, CustomError> {
     let username = requester.unwrap().username.clone();
 
-    let podcasts = PodcastService::get_podcasts(
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
-        username,
-    )?;
+    let podcasts =
+        PodcastService::get_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut(), username)?;
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -215,7 +214,12 @@ pub async fn find_podcast(
             Ok(HttpResponse::Ok().json(res))
         }
         Ok(Podindex) => {
-            if !ENVIRONMENT_SERVICE.get().unwrap().get_config().podindex_configured {
+            if !ENVIRONMENT_SERVICE
+                .get()
+                .unwrap()
+                .get_config()
+                .podindex_configured
+            {
                 return Ok(HttpResponse::BadRequest().json("Podindex is not configured"));
             }
             let mut podcast_service = podcast_service.lock().ignore_poison().clone();
@@ -272,7 +276,7 @@ pub async fn add_podcast(
                 image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
             },
             lobby,
-            None
+            None,
         )
         .await?;
     Ok(HttpResponse::Ok().into())
@@ -321,10 +325,14 @@ pub async fn add_podcast_by_feed(
                     feed_url: rss_feed.clone().rss_feed_url.clone(),
                     title: channel.title.clone(),
                     id: num,
-                    image_url: channel.image.clone().map(|i| i.url).unwrap_or(get_default_image()),
-                    },
+                    image_url: channel
+                        .image
+                        .clone()
+                        .map(|i| i.url)
+                        .unwrap_or(get_default_image()),
+                },
                 lobby,
-                Some(channel)
+                Some(channel),
             )
             .await?;
     }
@@ -389,7 +397,12 @@ pub async fn add_podcast_from_podindex(
         return Err(CustomError::Forbidden);
     }
 
-    if !ENVIRONMENT_SERVICE.get().unwrap().get_config().podindex_configured {
+    if !ENVIRONMENT_SERVICE
+        .get()
+        .unwrap()
+        .get_config()
+        .podindex_configured
+    {
         return Err(CustomError::BadRequest(
             "Podindex is not configured".to_string(),
         ));
@@ -436,7 +449,10 @@ pub async fn query_for_podcast(
     podcast: Path<String>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
-    let res = PodcastEpisodeService::query_for_podcast(&podcast, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let res = PodcastEpisodeService::query_for_podcast(
+        &podcast,
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    )?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -652,7 +668,7 @@ async fn insert_outline(
                         image_url,
                     },
                     lobby.clone(),
-                    Some(channel)
+                    Some(channel),
                 )
                 .await;
             match inserted_podcast {
@@ -685,7 +701,7 @@ use crate::models::episode::Episode;
 use utoipa::ToSchema;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
-use crate::controllers::websocket_controller::{RSSAPiKey};
+use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::settings::Setting;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
@@ -733,8 +749,6 @@ pub struct Params {
     episode_id: String,
 }
 
-
-
 #[utoipa::path(
 context_path="/api/v1",
 responses(
@@ -752,8 +766,8 @@ pub(crate) async fn proxy_podcast(
     rq: HttpRequest,
     pool: Data<DbPool>,
 ) -> Result<HttpResponse, Error> {
-
-    let is_auth_enabled = is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
+    let is_auth_enabled =
+        is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
 
     if is_auth_enabled {
         if query.is_none() {
@@ -761,7 +775,8 @@ pub(crate) async fn proxy_podcast(
         }
         let api_key = query.unwrap().0;
 
-        let api_key_exists = User::check_if_api_key_exists(api_key.api_key.to_string(), &mut pool.get().unwrap());
+        let api_key_exists =
+            User::check_if_api_key_exists(api_key.api_key.to_string(), &mut pool.get().unwrap());
 
         if !api_key_exists {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
@@ -822,7 +837,9 @@ pub(crate) async fn proxy_podcast(
 }
 
 #[post("/podcasts/formatting")]
-pub async fn retrieve_podcast_sample_format(sample_string: Json<EpisodeFormatDto>) -> Result<HttpResponse, CustomError> {
+pub async fn retrieve_podcast_sample_format(
+    sample_string: Json<EpisodeFormatDto>,
+) -> Result<HttpResponse, CustomError> {
     let podcast = PodcastParsed {
         date: "2021-01-01".to_string(),
         summary: "A podcast about homelabing".to_string(),
@@ -849,7 +866,7 @@ pub async fn retrieve_podcast_sample_format(sample_string: Json<EpisodeFormatDto
     let result = perform_podcast_variable_replacement(settings, podcast);
 
     match result {
-        Ok(v)=>Ok(HttpResponse::Ok().json(v)),
-        Err(e)=>Err(CustomError::BadRequest(e.to_string()))
+        Ok(v) => Ok(HttpResponse::Ok().json(v)),
+        Err(e) => Err(CustomError::BadRequest(e.to_string())),
     }
 }

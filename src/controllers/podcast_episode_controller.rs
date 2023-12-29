@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{PodcastType};
+use crate::constants::inner_constants::PodcastType;
 use crate::db::TimelineItem;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -19,9 +19,9 @@ use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::ops::DerefMut;
 
-use std::thread;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
+use std::thread;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -107,7 +107,6 @@ pub async fn get_timeline(
     requester: Option<web::ReqData<User>>,
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
-
     let res = TimelineItem::get_timeline(
         requester.unwrap().username.clone(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
@@ -223,14 +222,16 @@ pub async fn delete_podcast_episode_locally(
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeFormatDto {
-    pub content: String
+    pub content: String,
 }
 
 #[post("/episodes/formatting")]
-pub async fn retrieve_episode_sample_format(sample_string: Json<EpisodeFormatDto>) -> Result<HttpResponse, CustomError> {
+pub async fn retrieve_episode_sample_format(
+    sample_string: Json<EpisodeFormatDto>,
+) -> Result<HttpResponse, CustomError> {
     // Sample episode for formatting
-     let episode: PodcastEpisode = PodcastEpisode {
-         id: 0,
+    let episode: PodcastEpisode = PodcastEpisode {
+        id: 0,
         podcast_id: 0,
         episode_id: "0218342".to_string(),
         name: "My Homelab".to_string(),
@@ -248,7 +249,7 @@ pub async fn retrieve_episode_sample_format(sample_string: Json<EpisodeFormatDto
         file_episode_path: None,
         file_image_path: None,
     };
-    let settings = Setting{
+    let settings = Setting {
         id: 0,
         auto_download: false,
         auto_update: false,
@@ -265,7 +266,7 @@ pub async fn retrieve_episode_sample_format(sample_string: Json<EpisodeFormatDto
     let result = perform_episode_variable_replacement(settings, episode);
 
     match result {
-        Ok(v)=>Ok(HttpResponse::Ok().json(v)),
-        Err(e)=>Err(CustomError::BadRequest(e.to_string()))
+        Ok(v) => Ok(HttpResponse::Ok().json(v)),
+        Err(e) => Err(CustomError::BadRequest(e.to_string())),
     }
 }

@@ -2,7 +2,6 @@ use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;
 
-
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix_web::post;
@@ -64,8 +63,7 @@ pub async fn login(
                 .expect("Error inserting session");
             let user_cookie = create_session_cookie(session);
             return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
-        }
-        else {
+        } else {
             return Err(CustomError::Forbidden);
         }
     }

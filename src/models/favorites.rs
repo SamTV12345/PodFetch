@@ -92,7 +92,7 @@ impl Favorite {
 
     pub fn get_favored_podcasts(
         found_username: String,
-        conn: &mut DbConnection
+        conn: &mut DbConnection,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;

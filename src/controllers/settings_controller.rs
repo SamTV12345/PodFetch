@@ -12,7 +12,7 @@ use actix_web::{web, HttpResponse};
 use chrono::Local;
 use std::ops::DerefMut;
 use std::str::FromStr;
-use std::sync::{Mutex};
+use std::sync::Mutex;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[utoipa::path(
@@ -22,7 +22,10 @@ responses(
 tag="podcast_episodes"
 )]
 #[get("/settings")]
-pub async fn get_settings(conn: Data<DbPool>, requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
+pub async fn get_settings(
+    conn: Data<DbPool>,
+    requester: Option<web::ReqData<User>>,
+) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
     }
@@ -109,7 +112,7 @@ tag="podcasts"
 #[get("/settings/opml/{type_of}")]
 pub async fn get_opml(
     conn: Data<DbPool>,
-    type_of: Path<Mode>
+    type_of: Path<Mode>,
 ) -> Result<HttpResponse, CustomError> {
     let podcasts_found =
         Podcast::get_all_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
@@ -210,10 +213,9 @@ pub async fn update_name(
     Ok(HttpResponse::Ok().json(settings))
 }
 
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use utoipa::ToSchema;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

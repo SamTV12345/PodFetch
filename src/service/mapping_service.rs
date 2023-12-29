@@ -6,19 +6,18 @@ use crate::models::podcasts::Podcast;
 use crate::service::environment_service;
 
 #[derive(Clone)]
-pub struct MappingService {
-}
+pub struct MappingService {}
 
 impl MappingService {
-
     pub fn map_podcast_to_podcast_dto(podcast: &Podcast) -> Podcast {
         Podcast {
             id: podcast.id,
             name: podcast.name.clone(),
             directory_id: podcast.directory_id.clone(),
             rssfeed: podcast.rssfeed.clone(),
-            image_url: environment_service::EnvironmentService::get_server_url(ENVIRONMENT_SERVICE.get().unwrap())
-                + &podcast.image_url.clone(),
+            image_url: environment_service::EnvironmentService::get_server_url(
+                ENVIRONMENT_SERVICE.get().unwrap(),
+            ) + &podcast.image_url.clone(),
             language: podcast.language.clone(),
             keywords: podcast.keywords.clone(),
             summary: podcast.summary.clone(),
@@ -31,7 +30,9 @@ impl MappingService {
         }
     }
 
-    pub fn map_podcast_to_podcast_dto_with_favorites(podcast_favorite_grouped: &(Podcast, Option<Favorite>), ) -> PodcastDto {
+    pub fn map_podcast_to_podcast_dto_with_favorites(
+        podcast_favorite_grouped: &(Podcast, Option<Favorite>),
+    ) -> PodcastDto {
         let favorite = podcast_favorite_grouped.1.is_some()
             && podcast_favorite_grouped.1.clone().unwrap().favored;
         PodcastDto {
@@ -39,8 +40,9 @@ impl MappingService {
             name: podcast_favorite_grouped.0.name.clone(),
             directory_id: podcast_favorite_grouped.0.directory_id.clone(),
             rssfeed: podcast_favorite_grouped.0.rssfeed.clone(),
-            image_url: environment_service::EnvironmentService::get_server_url(ENVIRONMENT_SERVICE.get().unwrap())
-                + &podcast_favorite_grouped.0.image_url.clone(),
+            image_url: environment_service::EnvironmentService::get_server_url(
+                ENVIRONMENT_SERVICE.get().unwrap(),
+            ) + &podcast_favorite_grouped.0.image_url.clone(),
             language: podcast_favorite_grouped.0.language.clone(),
             keywords: podcast_favorite_grouped.0.keywords.clone(),
             summary: podcast_favorite_grouped.0.summary.clone(),

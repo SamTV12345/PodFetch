@@ -1,4 +1,6 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, TELEGRAM_API_ENABLED, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::{
+    PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED,
+};
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -35,8 +37,6 @@ use crate::utils::error::{map_db_error, CustomError};
 pub struct PodcastEpisodeService;
 
 impl PodcastEpisodeService {
-
-
     pub fn download_podcast_episode_if_not_locally_available(
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
@@ -51,8 +51,7 @@ impl PodcastEpisodeService {
             Ok(false) => {
                 let podcast_inserted =
                     Self::perform_download(&podcast_episode_cloned, podcast_cloned, conn)?;
-                let mapped_dto = MappingService::
-                    map_podcastepisode_to_dto(&podcast_inserted);
+                let mapped_dto = MappingService::map_podcastepisode_to_dto(&podcast_inserted);
                 if let Some(lobby) = lobby {
                     lobby.do_send(BroadcastMessage {
                         message: format!(
@@ -387,8 +386,7 @@ impl PodcastEpisodeService {
         Ok(result
             .iter()
             .map(|podcast| {
-                let mut podcast_episode_dto =
-                    MappingService::map_podcastepisode_to_dto(podcast);
+                let mut podcast_episode_dto = MappingService::map_podcastepisode_to_dto(podcast);
                 if podcast_episode_dto.is_downloaded() {
                     let local_url = Self::map_to_local_url(&podcast_episode_dto.clone().local_url);
                     let local_image_url =
