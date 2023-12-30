@@ -32,7 +32,7 @@ export const UserMenu: FC = () => {
             path: 'profile'
         })
 
-        if (loggedInUser?.role === 'admin') {
+        if (loggedInUser?.role === 'admin' || !(config?.oidcConfigured && config.basicAuth)) {
             menuItems.push({
                 iconName: 'settings',
                 translationKey: 'settings',
