@@ -7,7 +7,7 @@ use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
 use sha256::digest;
 
-use sysinfo::{System};
+use sysinfo::System;
 pub mod built_info {
     // The file has been placed there by the build script.
     include!(concat!(env!("OUT_DIR"), "/built.rs"));

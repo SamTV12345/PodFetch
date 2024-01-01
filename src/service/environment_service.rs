@@ -200,12 +200,15 @@ impl EnvironmentService {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS,
-                                            OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL, USERNAME};
+    use crate::constants::inner_constants::{
+        BASIC_AUTH, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI,
+        OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, SERVER_URL,
+        USERNAME,
+    };
 
+    use crate::service::environment_service::EnvironmentService;
     use serial_test::serial;
     use std::env::{remove_var, set_var};
-    use crate::service::environment_service::EnvironmentService;
 
     fn do_env_cleanup() {
         remove_var(SERVER_URL);
@@ -266,10 +269,7 @@ mod tests {
         set_var(SERVER_URL, "http://localhost:8000");
 
         let env_service = EnvironmentService::new();
-        assert_eq!(
-            env_service.get_server_url(),
-            "http://localhost:8000/"
-        );
+        assert_eq!(env_service.get_server_url(), "http://localhost:8000/");
     }
 
     #[test]
@@ -300,10 +300,7 @@ mod tests {
 
         let env_service = EnvironmentService::new();
         assert_eq!(env_service.podindex_api_key, "test");
-        assert_eq!(
-            env_service.podindex_api_secret,
-            "testsecret"
-        );
+        assert_eq!(env_service.podindex_api_secret, "testsecret");
     }
 
     #[test]
@@ -311,9 +308,6 @@ mod tests {
     fn test_get_polling_interval() {
         do_env_cleanup();
         set_var(POLLING_INTERVAL, "20");
-        assert_eq!(
-            EnvironmentService::new().polling_interval,
-            20
-        );
+        assert_eq!(EnvironmentService::new().polling_interval, 20);
     }
 }
