@@ -6,7 +6,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::settings_service::SettingsService;
 use crate::DbPool;
-use actix_web::web::{Data, Path};
+use actix_web::web::{Data, Path, ReqData};
 use actix_web::{get, put};
 use actix_web::{web, HttpResponse};
 use chrono::Local;
@@ -112,6 +112,7 @@ tag="podcasts"
 #[get("/settings/opml/{type_of}")]
 pub async fn get_opml(
     conn: Data<DbPool>,
+    requester: Option<ReqData<User>>,
     type_of: Path<Mode>,
 ) -> Result<HttpResponse, CustomError> {
     let podcasts_found =
@@ -128,6 +129,7 @@ pub async fn get_opml(
         podcasts_found,
         ENVIRONMENT_SERVICE.get().unwrap(),
         type_of.into_inner(),
+        requester
     ))
     .map_err(|e| {
         log::error!("Error adding podcasts to opml: {}", e);
@@ -165,6 +167,7 @@ fn add_podcasts(
     podcasts_found: Vec<Podcast>,
     env_service: &EnvironmentService,
     type_of: Mode,
+    requester: Option<ReqData<User>>,
 ) -> XMLElement {
     let mut body = add_body();
     for podcast in podcasts_found {
@@ -175,10 +178,17 @@ fn add_podcasts(
         outline.add_attribute("title", &podcast.name);
         outline.add_attribute("type", "rss");
         match type_of {
-            Mode::Local => outline.add_attribute(
-                "xmlUrl",
-                &format!("{}rss/{}", &*env_service.get_server_url(), podcast.id),
-            ),
+            Mode::Local => {
+                let mut local_url = format!("{}rss/{}", &*env_service.get_server_url(), podcast.id);
+
+                if let Some(req) = requester.as_ref() {
+                    if let Some(api_key) = req.api_key.as_ref() {
+                        local_url = format!("{}?apiKey={}", local_url, api_key);
+                    }
+                }
+
+                outline.add_attribute("xmlUrl", &local_url)
+            },
             Mode::Online => outline.add_attribute("xmlUrl", &podcast.rssfeed),
         }
         body.add_child(outline).expect("TODO: panic message");
