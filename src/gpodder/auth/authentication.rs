@@ -47,27 +47,31 @@ pub async fn login(
     if let Some(admin_username) = &env.username {
         if admin_username == &unwrapped_username {
             if let Some(admin_password) = &env.password {
-                if admin_password == &digest(password) {
+                if admin_password == &digest(password.clone()) {
                     return Ok(HttpResponse::Ok().json("Login successful"));
                 }
             }
         }
-    } else {
-        let user = User::find_by_username(
-            &unwrapped_username,
-            conn.get().map_err(map_r2d2_error)?.deref_mut(),
-        )?;
-        if user.clone().password.unwrap() == digest(password) {
-            let session = Session::new(user.username);
-            Session::insert_session(&session, conn.get().map_err(map_r2d2_error)?.deref_mut())
-                .expect("Error inserting session");
-            let user_cookie = create_session_cookie(session);
-            return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
-        } else {
-            return Err(CustomError::Forbidden);
-        }
     }
-    Err(CustomError::Forbidden)
+
+    let user = User::find_by_username(
+        &unwrapped_username,
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    )?;
+    return match user.password {
+        Some(p) => {
+            if p == digest(password) {
+                let session = Session::new(user.username);
+                Session::insert_session(&session, conn.get().map_err(map_r2d2_error)?.deref_mut())
+                    .expect("Error inserting session");
+                let user_cookie = create_session_cookie(session);
+                Ok(HttpResponse::Ok().cookie(user_cookie).finish())
+            } else {
+                Err(CustomError::Forbidden)
+            }
+        }
+        None => Err(CustomError::Forbidden),
+    };
 }
 
 fn create_session_cookie(session: Session) -> Cookie<'static> {
