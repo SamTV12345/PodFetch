@@ -1,6 +1,4 @@
-use crate::constants::inner_constants::{
-    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, OIDC_AUTH,
-};
+use crate::constants::inner_constants::{PodcastType, BASIC_AUTH, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, OIDC_AUTH, DEFAULT_IMAGE_URL};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -652,7 +650,7 @@ async fn insert_outline(
                 None => {
                     log::info!(
                         "No image found for podcast. Downloading from {}",
-                        environment.server_url.clone().to_owned() + "ui/default.jpg"
+                        environment.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
                     );
                     environment.server_url.clone().to_owned() + "ui/default.jpg"
                 }

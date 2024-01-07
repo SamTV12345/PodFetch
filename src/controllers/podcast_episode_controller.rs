@@ -61,8 +61,8 @@ pub async fn find_all_podcast_episodes_of_podcast(
     )?;
     let mapped_podcasts = res
         .into_iter()
-        .map(|podcast| {
-            let mapped_podcast_episode = MappingService::map_podcastepisode_to_dto(&podcast.0);
+        .map(|mut podcast| {
+            let mapped_podcast_episode = MappingService::map_podcastepisode_to_dto(&mut podcast.0);
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast.1,
@@ -117,9 +117,9 @@ pub async fn get_timeline(
         .data
         .iter()
         .map(|podcast_episode| {
-            let (podcast_episode, podcast, history, favorite) = podcast_episode.clone();
+            let (mut podcast_episode, podcast, history, favorite) = podcast_episode.clone();
             let mapped_podcast_episode =
-                MappingService::map_podcastepisode_to_dto(&podcast_episode);
+                MappingService::map_podcastepisode_to_dto(&mut podcast_episode);
 
             TimeLinePodcastEpisode {
                 podcast_episode: mapped_podcast_episode,

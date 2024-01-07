@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use serde_json::Value;
 
 pub fn unwrap_string(value: &Value) -> String {
@@ -10,7 +10,7 @@ pub fn unwrap_string_audio(value: &Value) -> String {
         true => {
             let env = ENVIRONMENT_SERVICE.get().unwrap();
 
-            env.server_url.clone().to_owned() + "ui/default.jpg"
+            env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
         }
         false => value.to_string().replace('\"', ""),
     }
@@ -19,5 +19,5 @@ pub fn unwrap_string_audio(value: &Value) -> String {
 pub fn get_default_image() -> String {
     let env = ENVIRONMENT_SERVICE.get().unwrap();
 
-    env.server_url.clone().to_owned() + "ui/default.jpg"
+    env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
 }

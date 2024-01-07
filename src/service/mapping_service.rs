@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -65,6 +65,7 @@ impl MappingService {
     }
 
     pub fn map_podcastepisode_to_dto(podcast_episode: &PodcastEpisode) -> PodcastEpisode {
+
         PodcastEpisode {
             id: podcast_episode.id,
             podcast_id: podcast_episode.podcast_id,
@@ -73,16 +74,27 @@ impl MappingService {
             description: podcast_episode.description.clone(),
             url: podcast_episode.url.clone(),
             date_of_recording: podcast_episode.date_of_recording.clone(),
-            image_url: podcast_episode.image_url.clone(),
+            image_url: Self::map_image_url(&podcast_episode.image_url.clone()),
             total_time: podcast_episode.total_time,
             local_url: podcast_episode.local_url.clone(),
-            local_image_url: podcast_episode.local_image_url.clone(),
+            local_image_url: Self::map_image_url(&podcast_episode.local_image_url),
             status: podcast_episode.status.clone(),
             download_time: podcast_episode.download_time,
             guid: podcast_episode.guid.clone(),
             deleted: podcast_episode.deleted,
             file_episode_path: None,
             file_image_path: None,
+        }
+    }
+
+    fn map_image_url(image_url: &str) -> String{
+        match image_url == DEFAULT_IMAGE_URL {
+            true => {
+                let env = ENVIRONMENT_SERVICE.get().unwrap();
+
+                env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
+            }
+            false => image_url.to_string(),
         }
     }
 }

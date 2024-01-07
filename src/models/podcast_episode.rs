@@ -21,6 +21,7 @@ use diesel::{
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
+use crate::constants::inner_constants::DEFAULT_IMAGE_URL;
 
 #[derive(
     Queryable,
@@ -169,9 +170,18 @@ impl PodcastEpisode {
             None => {}
         }
 
-        let inserted_image_url = match optional_image {
-            Some(image_url_podcast_episode) => image_url_podcast_episode,
-            None => podcast.original_image_url,
+        let inserted_image_url: String = match optional_image {
+            Some(c)=>{
+                c
+            }
+            None=>match podcast.image_url.is_empty() {
+                    true=>{
+                        DEFAULT_IMAGE_URL.to_string()
+                    }
+                    false=>{
+                        podcast.image_url
+                    }
+                }
         };
 
         let guid_to_insert = Guid {
