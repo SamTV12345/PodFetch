@@ -47,9 +47,9 @@ impl PodcastEpisodeService {
         match PodcastEpisode::check_if_downloaded(&podcast_episode.url, conn) {
             Ok(true) => {}
             Ok(false) => {
-                let mut podcast_inserted =
+                let podcast_inserted =
                     Self::perform_download(&podcast_episode_cloned, podcast_cloned, conn)?;
-                let mapped_dto = MappingService::map_podcastepisode_to_dto(&mut podcast_inserted);
+                let mapped_dto = MappingService::map_podcastepisode_to_dto(&podcast_inserted);
                 if let Some(lobby) = lobby {
                     lobby.do_send(BroadcastMessage {
                         message: format!(

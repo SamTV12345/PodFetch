@@ -61,8 +61,8 @@ pub async fn find_all_podcast_episodes_of_podcast(
     )?;
     let mapped_podcasts = res
         .into_iter()
-        .map(|mut podcast| {
-            let mapped_podcast_episode = MappingService::map_podcastepisode_to_dto(&mut podcast.0);
+        .map(|podcast| {
+            let mapped_podcast_episode = MappingService::map_podcastepisode_to_dto(&podcast.0);
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast.1,
