@@ -10,8 +10,9 @@ use std::io;
 use std::io::Read;
 
 use crate::config::dbconfig::establish_connection;
-use crate::constants::inner_constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
+use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::dbconfig::DBType;
+use crate::get_default_image;
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -53,11 +54,23 @@ impl DownloadService {
             .send()
             .unwrap();
 
-        let mut image_response = client
-            .get(podcast_episode.image_url.clone())
-            .headers(header_map)
-            .send()
-            .unwrap();
+        let mut image_response;
+        match podcast_episode.image_url == DEFAULT_IMAGE_URL {
+            true=>{
+                image_response = client
+                    .get(get_default_image())
+                    .headers(header_map)
+                    .send()
+                    .unwrap();
+            }
+            false=>{
+                image_response = client
+                    .get(podcast_episode.image_url.clone())
+                    .headers(header_map)
+                    .send()
+                    .unwrap();
+            }
+        }
 
         let paths = match settings_in_db.use_existing_filename {
             true => FilenameBuilder::default()

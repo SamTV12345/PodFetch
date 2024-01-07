@@ -1,6 +1,4 @@
-use crate::constants::inner_constants::{
-    PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED,
-};
+use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED, DEFAULT_IMAGE_URL};
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -49,9 +47,9 @@ impl PodcastEpisodeService {
         match PodcastEpisode::check_if_downloaded(&podcast_episode.url, conn) {
             Ok(true) => {}
             Ok(false) => {
-                let podcast_inserted =
+                let mut podcast_inserted =
                     Self::perform_download(&podcast_episode_cloned, podcast_cloned, conn)?;
-                let mapped_dto = MappingService::map_podcastepisode_to_dto(&podcast_inserted);
+                let mapped_dto = MappingService::map_podcastepisode_to_dto(&mut podcast_inserted);
                 if let Some(lobby) = lobby {
                     lobby.do_send(BroadcastMessage {
                         message: format!(
@@ -230,7 +228,7 @@ impl PodcastEpisodeService {
                             conn,
                             podcast.clone(),
                             item.clone(),
-                            Some("ui/default.jpg".parse().unwrap()),
+                            Some(DEFAULT_IMAGE_URL.to_string()),
                             duration_episode,
                         );
                         podcast_inserted.push(inserted_episode);
@@ -252,7 +250,7 @@ impl PodcastEpisodeService {
             }
             None => {
                 let env = ENVIRONMENT_SERVICE.get().unwrap();
-                let url = env.server_url.clone().to_owned() + "ui/default.jpg";
+                let url = env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL;
                 Podcast::update_original_image_url(&url, podcast.id, conn)?;
             }
         }

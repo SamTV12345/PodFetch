@@ -134,3 +134,5 @@ pub const DEFAULT_DEVICE: &str = "webview";
 // static constants
 
 pub static ENVIRONMENT_SERVICE: OnceLock<EnvironmentService> = OnceLock::new();
+
+pub static DEFAULT_IMAGE_URL: &str = "ui/default.jpg";
