@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - 'src/**'
+name: Test rust
 
 jobs:
   build_and_test:

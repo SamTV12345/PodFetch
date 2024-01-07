@@ -46,12 +46,9 @@ pub async fn login(
 
     if let Some(admin_username) = &env.username {
         if admin_username == &unwrapped_username {
-            if let Some(admin_password) = &env.password {
-                if admin_password == &digest(password.clone()) {
-                    return Ok(HttpResponse::Ok().json("Login successful"));
-                }
+                return Err(CustomError::Conflict("The user you are trying to login is equal to the admin user. Please\
+                 use another user to login.".to_string()));
             }
-        }
     }
 
     let user = User::find_by_username(
