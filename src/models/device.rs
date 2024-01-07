@@ -65,7 +65,7 @@ impl Device {
         }
     }
     pub fn delete_by_username(
-        username1: String,
+        username1: &str,
         conn: &mut DbConnection,
     ) -> Result<usize, diesel::result::Error> {
         use crate::dbconfig::schema::devices::dsl::*;
