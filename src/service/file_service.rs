@@ -207,6 +207,15 @@ pub fn perform_podcast_variable_replacement(
     let podcast_language = podcast.language;
     let podcast_explicit = podcast.explicit;
     let podcast_keyword = podcast.keywords;
+    let podcast_date = match podcast.date.contains('T') {
+        true => {
+            let splitted_date = podcast.date.split('T').collect::<Vec<&str>>();
+            splitted_date[0].to_string()
+        }
+        false => {
+            podcast.date
+        }
+    };
 
     // Insert variables
     vars.insert("podcastTitle".to_string(), &escaped_podcast_title);
@@ -214,7 +223,7 @@ pub fn perform_podcast_variable_replacement(
     vars.insert("podcastLanguage".to_string(), &podcast_language);
     vars.insert("podcastExplicit".to_string(), &podcast_explicit);
     vars.insert("podcastKeywords".to_string(), &podcast_keyword);
-    vars.insert("date".to_string(), &podcast.date);
+    vars.insert("date".to_string(), &podcast_date);
 
     let fixed_string = retrieved_settings
         .podcast_format
