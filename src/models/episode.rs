@@ -256,7 +256,7 @@ impl Episode {
     }
 
     pub fn delete_by_username_and_episode(
-        username1: String,
+        username1: &str,
         conn: &mut DbConnection,
     ) -> Result<(), Error> {
         use crate::dbconfig::schema::episodes::dsl::episodes;
@@ -405,7 +405,7 @@ impl Episode {
 
     pub fn delete_by_username(
         conn: &mut DbConnection,
-        username: String,
+        username: &str,
     ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::dbconfig::schema::episodes::table as ep_table;

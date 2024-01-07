@@ -149,41 +149,41 @@ pub fn start_command_line(mut args: Args) {
                         "Please enter the username of the user you want to delete",
                         &mut username,
                     );
-                    username = trim_string(username);
+                    username = trim_string(&username);
                     match available_users.iter().find(|u| u.username == username) {
                         Some(..) => {
                             Episode::delete_by_username(
                                 &mut establish_connection(),
-                                username.clone(),
+                                &username,
                             )
                             .expect("Error deleting entries for podcast history item");
                             Device::delete_by_username(
-                                username.clone(),
+                                &username,
                                 &mut establish_connection(),
                             )
                             .expect("Error deleting devices");
                             Episode::delete_by_username_and_episode(
-                                username.clone(),
+                                &username,
                                 &mut establish_connection(),
                             )
                             .expect("Error deleting episodes");
                             Favorite::delete_by_username(
-                                trim_string(username.clone()),
+                                trim_string(&username),
                                 &mut establish_connection(),
                             )
                             .expect("Error deleting favorites");
                             Session::delete_by_username(
-                                &trim_string(username.clone()),
+                                &trim_string(&username),
                                 &mut establish_connection(),
                             )
                             .expect("Error deleting sessions");
                             Subscription::delete_by_username(
-                                &trim_string(username.clone()),
+                                &trim_string(&username),
                                 &mut establish_connection(),
                             )
                             .expect("TODO: panic message");
                             User::delete_by_username(
-                                trim_string(username.clone()),
+                                trim_string(&username),
                                 &mut establish_connection(),
                             )
                             .expect("Error deleting user");
@@ -203,7 +203,7 @@ pub fn start_command_line(mut args: Args) {
                         "Please enter the username of the user you want to update",
                         &mut username,
                     );
-                    username = trim_string(username);
+                    username = trim_string(&username);
                     println!(">{}<", username);
                     let user =
                         User::find_by_username(username.as_str(), &mut establish_connection())
@@ -270,15 +270,17 @@ pub fn read_user_account() -> Result<User, CustomError> {
 
     let password = retry_read_secret("Enter your password: ");
     let assigned_role = retry_read_role(&format!("Select your role {}", &role));
+    let mut api_key_generated = uuid::Uuid::new_v4().to_string();
+    api_key_generated = api_key_generated.replace("-", "");
 
     let user = User {
         id: 0,
-        username: trim_string(username.clone()),
+        username: trim_string(&username),
         role: assigned_role.to_string(),
-        password: Some(trim_string(password)),
+        password: Some(trim_string(&password)),
         explicit_consent: false,
         created_at: get_current_timestamp_str(),
-        api_key: None,
+        api_key: Some(api_key_generated),
     };
 
     Ok(user)
@@ -320,7 +322,7 @@ pub fn retry_read_role(prompt: &str) -> Role {
     let mut input = String::new();
     println!("{}", prompt);
     stdin().read_line(&mut input).unwrap();
-    let res = Role::from_str(&trim_string(input));
+    let res = Role::from_str(&trim_string(&input));
     match res {
         Err(..) => {
             println!("Error setting role. Please choose one of the possible roles.");
@@ -342,7 +344,7 @@ fn ask_for_confirmation() -> Result<(), Error> {
     }
 }
 
-fn trim_string(string_to_trim: String) -> String {
+fn trim_string(string_to_trim: &str) -> String {
     string_to_trim
         .trim_end_matches('\n')
         .trim()
@@ -363,7 +365,7 @@ fn do_user_update(mut user: User) {
     stdin()
         .read_line(&mut input)
         .expect("Error reading from terminal");
-    input = trim_string(input);
+    input = trim_string(&input);
     match input.as_str() {
         "role" => {
             user.role = Role::to_string(&retry_read_role(
