@@ -117,9 +117,9 @@ pub async fn get_timeline(
         .data
         .iter()
         .map(|podcast_episode| {
-            let (mut podcast_episode, podcast, history, favorite) = podcast_episode.clone();
+            let (podcast_episode, podcast, history, favorite) = podcast_episode.clone();
             let mapped_podcast_episode =
-                MappingService::map_podcastepisode_to_dto(&mut podcast_episode);
+                MappingService::map_podcastepisode_to_dto(&podcast_episode);
 
             TimeLinePodcastEpisode {
                 podcast_episode: mapped_podcast_episode,
