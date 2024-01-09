@@ -103,7 +103,7 @@ export const SystemInfoPage: FC = () => {
                         <Heading3>{t('disk-usage')}</Heading3>
                     </span>
 
-                    <CustomGaugeChart fill={['#fcd34d', '#d97706']} labels={[t('used-disk'), t('free-disk')]} labelUnit="capacity" max={calculateFreeDiskSpace(systemInfo.system.disks).total} value={calculateFreeDiskSpace(systemInfo.system.disks).used} />
+                    <CustomGaugeChart fill={['#fcd34d', '#d97706']} labels={[t('used-disk'), t('free-disk')]} labelUnit="capacity" max={calculateFreeDiskSpace(systemInfo.disks).total} value={calculateFreeDiskSpace(systemInfo.disks).used} />
                 </div>
 
                 {/* Hardware info */}

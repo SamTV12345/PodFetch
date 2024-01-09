@@ -26,7 +26,6 @@ export interface SysInfo {
     used_swap: number,
     components: [],
     users: SysUser[],
-    disks: DiskModel[]
     os_version: string,
     long_os_version: string,
     name: string,
