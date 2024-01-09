@@ -51,7 +51,7 @@
     "@types/sanitize-html": "^2.9.5",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
+    "postcss": "^8.4.33",
     "sass": "^1.69.6",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
