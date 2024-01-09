@@ -68,7 +68,7 @@ id3 = "1.12.0"
 openssl = "0.10.61"
 
 [dev-dependencies]
-serial_test = {version="2.0.0"}
+serial_test = {version="3.0.0"}
 
 
 [profile.release]
