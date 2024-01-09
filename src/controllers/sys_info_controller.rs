@@ -7,7 +7,7 @@ use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
 use sha256::digest;
 
-use sysinfo::System;
+use sysinfo::{Disks, System};
 pub mod built_info {
     // The file has been placed there by the build script.
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
@@ -22,7 +22,17 @@ tag="sys"
 )]
 #[get("/sys/info")]
 pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
-    let mut sys = System::new_all();
+    let mut sys = System::new();
+    let disks = Disks::new_with_refreshed_list();
+
+    let sim_disks = disks.iter().map(|disk| {
+        SimplifiedDisk {
+            name: disk.name().to_str().unwrap().to_string(),
+            total_space: disk.total_space(),
+            available_space: disk.available_space(),
+        }
+    }).collect::<Vec<SimplifiedDisk>>();
+
     sys.refresh_all();
 
     const PATH: &str = "podcasts";
@@ -30,6 +40,7 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
         get_size(PATH).map_err(|e| map_io_extra_error(e, Some(PATH.to_string())))?;
     Ok(HttpResponse::Ok().json(SysExtraInfo {
         system: sys,
+        disks: sim_disks,
         podcast_directory: podcast_byte_size,
     }))
 }
@@ -37,10 +48,19 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{map_io_extra_error, CustomError};
 use utoipa::ToSchema;
 
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {
     pub system: System,
+    pub disks: Vec<SimplifiedDisk>,
     pub podcast_directory: u64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SimplifiedDisk {
+    pub name: String,
+    pub total_space: u64,
+    pub available_space: u64,
 }
 
 #[utoipa::path(
