@@ -189,6 +189,20 @@ pub async fn prepare_podcast_title_to_directory(
     perform_podcast_variable_replacement(retrieved_settings, podcast.clone())
 }
 
+
+
+fn replace_date_of_str(date: &str) -> String {
+    match date.contains('T') {
+        true => {
+            let splitted_date = date.split('T').collect::<Vec<&str>>();
+            splitted_date[0].to_string()
+        }
+        false => {
+            date.to_string()
+        }
+    }
+}
+
 pub fn perform_podcast_variable_replacement(
     retrieved_settings: Setting,
     podcast: crate::utils::rss_feed_parser::PodcastParsed,
@@ -207,15 +221,7 @@ pub fn perform_podcast_variable_replacement(
     let podcast_language = podcast.language;
     let podcast_explicit = podcast.explicit;
     let podcast_keyword = podcast.keywords;
-    let podcast_date = match podcast.date.contains('T') {
-        true => {
-            let splitted_date = podcast.date.split('T').collect::<Vec<&str>>();
-            splitted_date[0].to_string()
-        }
-        false => {
-            podcast.date
-        }
-    };
+    let podcast_date = replace_date_of_str(&podcast.date);
 
     // Insert variables
     vars.insert("podcastTitle".to_string(), &escaped_podcast_title);
@@ -279,11 +285,12 @@ pub fn perform_episode_variable_replacement(
     let mut vars: HashMap<String, &str> = HashMap::new();
 
     let total_time = podcast_episode.total_time.to_string();
+    let episode_date = replace_date_of_str(&podcast_episode.date_of_recording);
     // Insert variables
     vars.insert("episodeTitle".to_string(), &escaped_episode_title);
     vars.insert(
         "episodeDate".to_string(),
-        &podcast_episode.date_of_recording,
+        &episode_date
     );
     vars.insert("episodeGuid".to_string(), &podcast_episode.guid);
     vars.insert("episodeUrl".to_string(), &podcast_episode.url);
