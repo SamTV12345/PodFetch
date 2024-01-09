@@ -22,7 +22,6 @@ pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: P
     let message = SendMessageParams::builder()
         .chat_id(telegram_config.telegram_chat_id.to_string())
         .text(message_to_send)
-        .disable_web_page_preview(true)
         .parse_mode(ParseMode::Html)
         .build();
     let telegram_res = api.send_message(&message);
