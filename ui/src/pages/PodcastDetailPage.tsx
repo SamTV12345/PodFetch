@@ -151,9 +151,9 @@ export const PodcastDetailPage = () => {
 
                         <span className="grid grid-cols-1 md:grid-cols-2">
                         <button className="flex gap-4" rel="noopener noreferrer"
-                                onClick={() => window.open(configModel?.rssFeed + '/' + params.id)}>
+                                onClick={() => window.open(prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id))}>
                             <a rel="noopener noreferrer" className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
-                               target="_blank" href={configModel?.rssFeed + '/' + params.id}>rss_feed</a>
+                               target="_blank" href={prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id)}>rss_feed</a>
                             <span className="text-[--fg-color]">PodFetch</span>
                         </button>
 
