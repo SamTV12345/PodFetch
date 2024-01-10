@@ -179,7 +179,7 @@ impl PodcastEpisode {
                         DEFAULT_IMAGE_URL.to_string()
                     }
                     false=>{
-                        podcast.image_url
+                        podcast.original_image_url
                     }
                 }
         };
