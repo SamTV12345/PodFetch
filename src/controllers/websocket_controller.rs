@@ -60,8 +60,8 @@ responses(
 #[get("/rss")]
 pub async fn get_rss_feed(
     db: Data<DbPool>,
-    query: Option<web::Query<RSSQuery>>,
-    api_key: Option<web::Query<RSSAPiKey>>,
+    query: Option<Query<RSSQuery>>,
+    api_key: Option<Query<RSSAPiKey>>,
 ) -> Result<HttpResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
 
@@ -92,6 +92,7 @@ pub async fn get_rss_feed(
     };
 
     let server_url = env.get_server_url();
+    let feed_url = add_api_key_to_url(format!("{}{}", &server_url, &"rss"), &api_key);
 
     let itunes_owner = get_itunes_owner("Podfetch", "dev@podfetch.com");
     let category = get_category("Technology".to_string());
@@ -101,7 +102,7 @@ pub async fn get_rss_feed(
         .explicit(Some("no".to_string()))
         .author(Some("Podfetch".to_string()))
         .keywords(Some("Podcast, RSS, Feed".to_string()))
-        .new_feed_url(format!("{}{}", &server_url, &"rss"))
+        .new_feed_url(feed_url.clone())
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
@@ -110,14 +111,25 @@ pub async fn get_rss_feed(
     let channel_builder = ChannelBuilder::default()
         .language("en".to_string())
         .title("Podfetch")
-        .link(format!("{}{}", &server_url, &"rss"))
+        .link(feed_url)
         .description("Your local rss feed for your podcasts")
         .items(items.clone())
         .clone();
 
-    let channel = generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env);
+    let channel = generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env, &api_key);
 
     Ok(HttpResponse::Ok().body(channel.to_string()))
+}
+
+
+fn add_api_key_to_url(url: String, api_key: &Option<Query<RSSAPiKey>>) -> String {
+    if let Some(ref api_key) = api_key {
+        if url.contains("?"){
+            return format!("{}&apiKey={}", url, api_key.api_key);
+        }
+        return format!("{}?apiKey={}", url, api_key.api_key);
+    }
+    url
 }
 
 fn generate_itunes_extension_conditionally(
@@ -125,11 +137,12 @@ fn generate_itunes_extension_conditionally(
     mut channel_builder: ChannelBuilder,
     podcast: Option<Podcast>,
     env: &EnvironmentService,
+    api_key: &Option<Query<RSSAPiKey>>,
 ) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
-            true => itunes_ext.set_image(env.server_url.to_string() + &*e.image_url),
-            false => itunes_ext.set_image(env.server_url.to_string() + &*e.original_image_url),
+            true => itunes_ext.set_image(add_api_key_to_url(env.server_url.to_string() + &*e.image_url, api_key)),
+            false => itunes_ext.set_image(add_api_key_to_url(env.server_url.to_string() + &*e.original_image_url, api_key)),
         }
     }
 
@@ -203,7 +216,7 @@ pub async fn get_rss_feed_for_podcast(
         .explicit(podcast.clone().explicit)
         .author(podcast.clone().author)
         .keywords(podcast.clone().keywords)
-        .new_feed_url(format!("{}{}/{}", &server_url, &"rss", &id))
+        .new_feed_url(add_api_key_to_url(format!("{}{}/{}", &server_url, &"rss", &id), &api_key))
         .summary(podcast.summary.clone())
         .build();
 
@@ -212,7 +225,7 @@ pub async fn get_rss_feed_for_podcast(
         .language(podcast.clone().language)
         .categories(categories)
         .title(podcast.name.clone())
-        .link(format!("{}{}/{}", &server_url, &"rss", &id))
+        .link(add_api_key_to_url(format!("{}{}/{}", &server_url, &"rss", &id), &api_key))
         .description(podcast.clone().summary.unwrap())
         .items(items.clone())
         .clone();
@@ -222,6 +235,7 @@ pub async fn get_rss_feed_for_podcast(
         channel_builder,
         Some(podcast.clone()),
         ENVIRONMENT_SERVICE.get().unwrap(),
+        &api_key,
     );
 
     Ok(HttpResponse::Ok().body(channel.to_string()))
@@ -235,11 +249,8 @@ fn get_podcast_items_rss(
         .iter()
         .map(|episode| {
             let mut episode = episode.clone();
-            if let Some(api_key) = api_key {
-                episode.local_url = format!("{}?apiKey={}", episode.local_url, api_key.api_key);
-                episode.local_image_url =
-                    format!("{}?apiKey={}", episode.local_image_url, api_key.api_key);
-            }
+            episode.local_url = add_api_key_to_url(episode.local_url.clone(), api_key);
+            episode.local_image_url = add_api_key_to_url(episode.local_image_url.clone(), api_key);
 
             let enclosure = EnclosureBuilder::default()
                 .url(episode.local_url.clone())
