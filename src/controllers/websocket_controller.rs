@@ -124,7 +124,7 @@ pub async fn get_rss_feed(
 
 fn add_api_key_to_url(url: String, api_key: &Option<Query<RSSAPiKey>>) -> String {
     if let Some(ref api_key) = api_key {
-        if url.contains("?"){
+        if url.contains('?'){
             return format!("{}&apiKey={}", url, api_key.api_key);
         }
         return format!("{}?apiKey={}", url, api_key.api_key);

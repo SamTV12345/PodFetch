@@ -64,11 +64,23 @@ impl DownloadService {
                     .unwrap();
             }
             false=>{
-                image_response = client
+                let err  = client
                     .get(podcast_episode.image_url.clone())
-                    .headers(header_map)
-                    .send()
-                    .unwrap();
+                    .headers(header_map.clone())
+                    .send();
+                match err {
+                    Ok(response) => {
+                        image_response = response;
+                    }
+                    Err(e) => {
+                        log::error!("Error downloading image: {}", e);
+                        image_response = client
+                            .get(get_default_image())
+                            .headers(header_map)
+                            .send()
+                            .unwrap();
+                    }
+                }
             }
         }
 
