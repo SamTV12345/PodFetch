@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED, DEFAULT_IMAGE_URL};
+use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED, DEFAULT_IMAGE_URL, ITUNES};
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -208,6 +208,13 @@ impl PodcastEpisodeService {
                 }
                 None => {
                     let opt_enclosure = &item.enclosure;
+                    let mut image_url = DEFAULT_IMAGE_URL.to_string();
+
+                    // Also check the itunes extension map
+                    if let Some(image_url_extracted) = Self::extract_itunes_url_if_present(item) {
+                        image_url = image_url_extracted;
+                    }
+
                     if opt_enclosure.is_none() {
                         log::info!(
                             "Skipping episode {} without enclosure.",
@@ -228,7 +235,7 @@ impl PodcastEpisodeService {
                             conn,
                             podcast.clone(),
                             item.clone(),
-                            Some(DEFAULT_IMAGE_URL.to_string()),
+                            Some(image_url),
                             duration_episode,
                         );
                         podcast_inserted.push(inserted_episode);
@@ -237,6 +244,20 @@ impl PodcastEpisodeService {
             }
         }
         Ok(podcast_inserted)
+    }
+
+
+    fn extract_itunes_url_if_present(item: &Item) -> Option<String> {
+        if let Some(itunes_data) = item.extensions.get(ITUNES){
+            if let Some(image_url_extracted) = itunes_data.get("image"){
+                if let Some(i_val) = image_url_extracted.first(){
+                    if let Some(image_attr) = i_val.attrs.get("href"){
+                        return Some(image_attr.clone());
+                    }
+                }
+            }
+        }
+        None
     }
 
     fn handle_podcast_image_insert(

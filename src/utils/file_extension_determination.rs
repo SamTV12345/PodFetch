@@ -29,7 +29,7 @@ pub fn determine_file_extension(
                     let f_ext = file_extension.split(';').next().unwrap().to_string();
                     return f_ext;
                 }
-                return file_extension.to_string();
+                file_extension.to_string()
             } else {
                 match file_type {
                     FileType::Audio => ".mp3".to_string(),
