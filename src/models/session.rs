@@ -6,6 +6,7 @@ use diesel::QueryDsl;
 use diesel::{Insertable, Queryable, RunQueryDsl};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
 pub struct Session {
@@ -25,10 +26,11 @@ impl Session {
     }
 
     #[allow(clippy::redundant_closure_call)]
-    pub fn insert_session(&self, conn: &mut DbConnection) -> Result<Self, diesel::result::Error> {
+    pub fn insert_session(&self, conn: &mut DbConnection) -> Result<Self, CustomError> {
         execute_with_conn!(conn, |conn| diesel::insert_into(sessions::table)
             .values(self)
-            .get_result(conn));
+            .get_result(conn)
+            .map_err(map_db_error))
     }
 
     pub fn cleanup_sessions(conn: &mut DbConnection) -> Result<usize, diesel::result::Error> {

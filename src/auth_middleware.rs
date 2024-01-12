@@ -4,7 +4,7 @@ use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
 
-use crate::constants::inner_constants::{BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH};
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use crate::DbPool;
 use actix::fut::ok;
@@ -24,8 +24,6 @@ use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
-
-use crate::utils::environment_variables::is_env_var_present_and_true;
 
 pub struct AuthFilter {}
 
@@ -72,10 +70,12 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        if is_env_var_present_and_true(BASIC_AUTH) {
+        if ENVIRONMENT_SERVICE.get().unwrap().http_basic {
             self.handle_basic_auth(req)
-        } else if is_env_var_present_and_true(OIDC_AUTH) {
+        } else if ENVIRONMENT_SERVICE.get().unwrap().oidc_configured {
             self.handle_oidc_auth(req)
+        } else if ENVIRONMENT_SERVICE.get().unwrap().reverse_proxy {
+            self.handle_proxy_auth(req)
         } else {
             // It can only be no auth
             self.handle_no_auth(req)
@@ -234,6 +234,64 @@ where
         let service = Rc::clone(&self.service);
         async move { service.call(req).await.map(|res| res.map_into_left_body()) }.boxed_local()
     }
+
+    fn handle_proxy_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
+        let config = ENVIRONMENT_SERVICE.get().unwrap().reverse_proxy_config.clone().unwrap();
+
+        let header_val = req.headers().get(config.header_name);
+
+        if let Some(header_val) = header_val {
+            let token_res = header_val.to_str();
+            return match token_res {
+                Ok(token) => {
+                    let pool = req.app_data::<web::Data<DbPool>>().cloned().unwrap();
+                    let found_user = User::find_by_username(token, &mut pool.get().unwrap());
+                    let service = Rc::clone(&self.service);
+
+                    return match found_user {
+                        Ok(user) => {
+                            req.extensions_mut().insert(user);
+                            return async move { service.call(req).await.map(|res| res.map_into_left_body()) }
+                                .boxed_local()
+                        }
+                        Err(_) => {
+                            if config.auto_sign_up {
+                                let user = User::insert_user(
+                                    &mut User {
+                                        id: 0,
+                                        username: token.to_string(),
+                                        role: "user".to_string(),
+                                        password: None,
+                                        explicit_consent: false,
+                                        created_at: chrono::Utc::now().naive_utc(),
+                                        api_key: None,
+                                    },
+                                    &mut pool.get().unwrap(),
+                                )
+                                    .expect("Error inserting user");
+                                req.extensions_mut().insert(user);
+                                return async move { service.call(req).await.map(|res| res.map_into_left_body()) }
+                                    .boxed_local()
+                            } else {
+                                Box::pin(ok(req
+                                    .error_response(ErrorForbidden("Forbidden"))
+                                    .map_into_right_body()))
+                            }
+                        }
+                    }
+                }
+                Err(_) => Box::pin(ok(req
+                    .error_response(ErrorUnauthorized("Unauthorized"))
+                    .map_into_right_body()))
+            }
+        }
+
+        Box::pin(ok(req
+            .error_response(ErrorUnauthorized("Unauthorized"))
+            .map_into_right_body()))
+    }
+
+
 }
 
 impl AuthFilter {

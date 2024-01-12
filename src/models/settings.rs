@@ -46,6 +46,7 @@ pub struct ConfigModel {
     pub basic_auth: bool,
     pub oidc_configured: bool,
     pub oidc_config: Option<OidcConfig>,
+    pub reverse_proxy: bool,
 }
 
 impl Setting {

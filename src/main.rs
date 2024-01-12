@@ -38,7 +38,7 @@ use crate::auth_middleware::AuthFilter;
 use crate::command_line_runner::start_command_line;
 use crate::config::dbconfig::establish_connection;
 use crate::config::dbconfig::ConnectionOptions;
-use crate::constants::inner_constants::{BASIC_AUTH, CSS, ENVIRONMENT_SERVICE, JS, OIDC_AUTH};
+use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -96,7 +96,6 @@ use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
-use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::CustomError;
 use crate::utils::podcast_key_checker::check_podcast_request;
 
@@ -456,7 +455,7 @@ fn get_private_api() -> Scope<
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {
-    if is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH) {
+    if ENVIRONMENT_SERVICE.get().unwrap().any_auth_enabled {
         cfg.service(get_secure_user_management());
     }
 }
@@ -528,16 +527,31 @@ pub fn check_server_config() {
     }
 
     if env_service.gpodder_integration_enabled
-        && !(env_service.http_basic || env_service.oidc_configured)
+        && !(env_service.http_basic || env_service.oidc_configured || env_service.reverse_proxy)
     {
         eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
         exit(1);
     }
 
-    if env_service.http_basic && env_service.oidc_configured {
+    if check_if_multiple_auth_is_configured(env_service) {
         eprintln!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
         exit(1);
     }
+}
+
+
+fn check_if_multiple_auth_is_configured(env: &EnvironmentService) -> bool {
+    let mut num_of_auth_count = 0;
+    if env.http_basic {
+        num_of_auth_count += 1;
+    }
+    if env.oidc_configured {
+        num_of_auth_count += 1;
+    }
+    if env.reverse_proxy {
+        num_of_auth_count += 1;
+    }
+    num_of_auth_count > 1
 }
 
 async fn init_postgres_db_pool(

@@ -1,9 +1,4 @@
-use crate::constants::inner_constants::{
-    BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH,
-    OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD,
-    PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, SERVER_URL,
-    SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME,
-};
+use crate::constants::inner_constants::{BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use regex::Regex;
@@ -31,9 +26,19 @@ pub struct EnvironmentService {
     pub password: Option<String>,
     pub oidc_config: Option<OidcConfig>,
     pub oidc_configured: bool,
+    pub reverse_proxy: bool,
+    pub reverse_proxy_config: Option<ReverseProxyConfig>,
     pub gpodder_integration_enabled: bool,
     pub database_url: String,
     pub telegram_api: Option<TelegramConfig>,
+    pub any_auth_enabled: bool,
+}
+
+
+#[derive(Clone)]
+pub struct ReverseProxyConfig {
+    pub header_name: String,
+    pub auto_sign_up: bool,
 }
 
 #[derive(Clone)]
@@ -94,27 +99,16 @@ impl EnvironmentService {
             password = None;
         }
 
-        let telegram_api: Option<TelegramConfig> =
-            if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
-                let telegram_bot_token = var(TELEGRAM_BOT_TOKEN);
+        let telegram_api = Self::handle_telegram_config();
 
-                if telegram_bot_token.is_err() {
-                    panic!("Telegram bot token not configured");
-                }
-
-                let telegram_bot_chat_id = var(TELEGRAM_BOT_CHAT_ID);
-
-                if telegram_bot_chat_id.is_err() {
-                    panic!("Telegram bot chat id not configured");
-                }
-
-                Some(TelegramConfig {
-                    telegram_bot_token: telegram_bot_token.unwrap(),
-                    telegram_chat_id: telegram_bot_chat_id.unwrap(),
-                })
-            } else {
-                None
-            };
+        let reverse_proxy_config = if is_env_var_present_and_true(REVERSE_PROXY) {
+            Some(ReverseProxyConfig {
+                header_name: var(REVERSE_PROXY_HEADER).unwrap_or("X-Forwarded-User".to_string()),
+                auto_sign_up: is_env_var_present_and_true(REVERSE_PROXY_AUTO_SIGN_UP),
+            })
+        } else {
+            None
+        };
 
         EnvironmentService {
             server_url: server_url.clone(),
@@ -129,9 +123,38 @@ impl EnvironmentService {
             password,
             oidc_configured,
             oidc_config: option_oidc_config,
+            reverse_proxy_config,
             gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED),
             database_url: var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string()),
             telegram_api,
+            reverse_proxy: is_env_var_present_and_true(REVERSE_PROXY),
+            any_auth_enabled: is_env_var_present_and_true(BASIC_AUTH)
+                || is_env_var_present_and_true(OIDC_AUTH)
+                || is_env_var_present_and_true(REVERSE_PROXY),
+        }
+    }
+
+
+    fn handle_telegram_config() -> Option<TelegramConfig> {
+        if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
+            let telegram_bot_token = var(TELEGRAM_BOT_TOKEN);
+
+            if telegram_bot_token.is_err() {
+                panic!("Telegram bot token not configured");
+            }
+
+            let telegram_bot_chat_id = var(TELEGRAM_BOT_CHAT_ID);
+
+            if telegram_bot_chat_id.is_err() {
+                panic!("Telegram bot chat id not configured");
+            }
+
+            Some(TelegramConfig {
+                telegram_bot_token: telegram_bot_token.unwrap(),
+                telegram_chat_id: telegram_bot_chat_id.unwrap(),
+            })
+        } else {
+            None
         }
     }
 
@@ -178,6 +201,7 @@ impl EnvironmentService {
                 && !self.podindex_api_secret.is_empty(),
             rss_feed: self.server_url.clone() + "rss",
             server_url: self.server_url.clone(),
+            reverse_proxy: self.reverse_proxy,
             basic_auth: self.http_basic,
             oidc_configured: self.oidc_configured,
             oidc_config: self.oidc_config.clone(),
