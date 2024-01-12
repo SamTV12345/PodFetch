@@ -47,5 +47,6 @@ export interface ConfigModel {
         clientId: string,
         redirectUri: string,
         scope: string,
-    }
+    },
+    reverseProxy: boolean
 }

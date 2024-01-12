@@ -137,3 +137,9 @@ pub static ENVIRONMENT_SERVICE: OnceLock<EnvironmentService> = OnceLock::new();
 
 pub static DEFAULT_IMAGE_URL: &str = "ui/default.jpg";
 pub static ITUNES: &str = "itunes";
+
+
+// Reverse proxy headers
+pub const REVERSE_PROXY:&str = "REVERSE_PROXY";
+pub const REVERSE_PROXY_HEADER:&str = "REVERSE_PROXY_HEADER";
+pub const REVERSE_PROXY_AUTO_SIGN_UP:&str = "REVERSE_PROXY_AUTO_SIGN_UP";

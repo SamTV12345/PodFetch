@@ -72,3 +72,15 @@ Configure the OIDC client in Authelia as below, you can change your `authorizati
           - https://podfetch.DOMAIN.COM/ui/login
         userinfo_signing_algorithm: none
 ```
+
+
+## Reverse Proxy
+
+You can also use a reverse proxy like nginx to do the authentication. PodFetch supports this mode by setting the 
+following variables:
+
+| Variable                   | Description                                         | Example           |
+|----------------------------|-----------------------------------------------------|-------------------|
+| REVERSE_PROXY              | Flag if reverse proxy should be enabled             | `true`            |
+| REVERSE_PROXY_HEADER       | The url of the reverse proxy.                       | `X-FORWARDED-FOR` |
+| REVERSE_PROXY_AUTO_SIGN_UP | Flag if PodFetch should automatically sign up users | `true`            |

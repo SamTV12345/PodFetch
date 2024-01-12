@@ -195,7 +195,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
     }, [config])
 
     useEffect(() => {
-        if (config?.basicAuth||config?.oidcConfigured){
+        if (config?.basicAuth||config?.oidcConfigured||config?.reverseProxy){
             axios.get(apiURL + '/users/me')
                 .then((c:AxiosResponse<LoggedInUser>)=>useCommon.getState().setLoggedInUser(c.data))
                 .catch(() => enqueueSnackbar(t('not-admin'), { variant: 'error' }))
