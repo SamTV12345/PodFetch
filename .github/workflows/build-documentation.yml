@@ -1,12 +1,16 @@
 name: Build mdBook
 on:
   push:
-#    branches:
-#    - main
+    branches:
+     - main
+    paths:
+      - 'docs/**'
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 jobs:
     build:
         runs-on: ubuntu-latest
