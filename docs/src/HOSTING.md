@@ -24,5 +24,5 @@ To enable it you need to set the following variables:
 
 You can acquire the Telegram Bot chat id with the following steps:
 1. Write a message to the bot
-2. Open the following url in your browser: https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates
+2. Open the following url in your browser: [Telegram API page](https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates)
 3. Search for the chat id in the response

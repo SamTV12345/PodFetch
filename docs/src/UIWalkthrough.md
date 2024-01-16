@@ -9,32 +9,32 @@ The podcast listening tool contains an advanced audio player that can be used to
 The tool will automatically save your progress in the current episode and will resume from where you left off even if you close the browser.
 You can continue listening on all devices by just hitting play on any episode on your home screen.
 
-![Continue listening to episodes](./continue_listening.png)
+![Continue listening to episodes](./images/continue_listening.png)
 
 ## Search for podcasts
 You can search for podcast episodes by hitting CTRL+F and typing any word that might appear in the description or title of the podcast episode you want to listen to.
-![Audio Player](./search.png)
+![Audio Player](./images/search.png)
 
 
 Below are some fullscreen images so you can get a better grasp of the UI.
 
 ## Home Screen
-![Home Screen](./home.png)
+![Home Screen](./images/home.png)
 
 
 ## Timeline View
 
-![Timeline](timeline.png)
+![Timeline](./images/timeline.png)
 
 ## Info View
 
-![Info page](Info_Page.png)
+![Info page](./images/Info_Page.png)
 
 
 ## Settings
 
-![Settings](settings.png)
+![Settings](./images/settings.png)
 
 ## Administration
 
-![Administration](administration.png)
+![Administration](./images/administration.png)
