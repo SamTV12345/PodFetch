@@ -1,6 +1,0 @@
-docker manifest create samuel19982/rust-builder:latest \
---amend rust@sha256:c909ad251c030eef20884364d03e66560376446360e83b97f1adb3230bceae7b \
---amend rust@sha256:9a6ae95489860aca26f3e4a7ccfcb7e765116568d5e25b03b5bcd94be037f9d8 \
---amend arm32v7/rust:slim-bookworm
-
-docker manifest push samuel19982/rust-builder:latest
