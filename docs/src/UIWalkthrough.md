@@ -2,7 +2,7 @@
 
 ## Audio Player
 The podcast listening tool contains an advanced audio player that can be used to listen to your podcasts,skip episodes, turn the volumes as high as 300% or skip around in the current episode.
-![Audio Player](./advanced_audio_player.png)
+![Audio Player](./images/advanced_audio_player.png)
 
 # Continue right where you stopped
 
