@@ -14,8 +14,11 @@ jobs:
         - name: Build mdBook
           run: mdbook build
           working-directory: docs
-        - name: Deploy to GitHub Pages
-          uses: peaceiris/actions-gh-pages@v3
+        - name: Upload artifact
+          uses: actions/upload-pages-artifact@v1
           with:
-              github_token: ${{ secrets.GITHUB_TOKEN }}
-              publish_dir: ./docs/book
+            # Upload entire repository
+            path: './docs/book
+        - name: Deploy to GitHub Pages
+          id: deployment
+          uses: actions/deploy-pages@v2
