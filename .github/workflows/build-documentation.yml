@@ -1,8 +1,8 @@
 name: Build mdBook
 on:
   push:
-    #branches:
-    #  - main
+#    branches:
+#    - main
 
 jobs:
     build:
@@ -18,7 +18,7 @@ jobs:
           uses: actions/upload-pages-artifact@v1
           with:
             # Upload entire repository
-            path: './docs/book
+            path: './docs/book'
         - name: Deploy to GitHub Pages
           id: deployment
           uses: actions/deploy-pages@v2
