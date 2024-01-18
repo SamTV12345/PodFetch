@@ -164,7 +164,7 @@ impl PodcastEpisode {
 
         match &item.pub_date {
             Some(date) => {
-                let date = DateTime::parse_from_rfc2822(date).expect("Error parsing date");
+                let date = DateTime::parse_from_rfc2822(date).unwrap_or(DateTime::from(Utc::now()));
                 inserted_date = date.to_rfc3339()
             }
             None => {}
