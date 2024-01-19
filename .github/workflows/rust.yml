@@ -12,13 +12,16 @@ jobs:
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+        with:
+            bun-version: latest
       - name: Install and Build
         env:
           NODE_OPTIONS: --max-old-space-size=32768
         run: |
             cd ui
-            npm install
-            npm run build-github
+            bun install
+            bun run build-github
             cd ..
       - name: Install latest rust toolchain
         uses: actions-rs/toolchain@v1
@@ -49,13 +52,16 @@ jobs:
       - uses: ikalnytskyi/action-setup-postgres@v4
       - name: Checkout 🛎️
         uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
       - name: Install and Build
         env:
           NODE_OPTIONS: --max-old-space-size=32768
         run: |
           cd ui
-          npm install
-          npm run build-github
+          bun install
+          bun run build-github
           cd ..
       - name: Install latest rust toolchain
         uses: actions-rs/toolchain@v1
@@ -85,13 +91,16 @@ jobs:
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
       - name: Install and Build
         env:
           NODE_OPTIONS: --max-old-space-size=32768
         run: |
           cd ui
-          npm install
-          npm run build-github
+          bun install
+          bun run build-github
           cd ..
       - name: Install latest rust toolchain
         uses: actions-rs/toolchain@v1
