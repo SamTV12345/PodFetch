@@ -1124,9 +1124,9 @@ dependencies = [
 
 [[package]]
 name = "hard-xml"
-version = "1.27.0"
+version = "1.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b74134bb74033894bf6b22cb9078c5e19bb750bd586f5cea24bc4acf23e9da9a"
+checksum = "fafc2bcb74049535eb6fab49eb20164a427867a9e809516ef95a98e961164432"
 dependencies = [
  "hard-xml-derive",
  "jetscii",
@@ -1137,9 +1137,9 @@ dependencies = [
 
 [[package]]
 name = "hard-xml-derive"
-version = "1.27.0"
+version = "1.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f50ce8d120d040bf18a4d8dd75ea96497cc75d285b09e2473e88df57bb20f3ab"
+checksum = "57a345b327da51b997c94f841d9db6b2d292c7632713bd8a1b8b191e8b819df7"
 dependencies = [
  "bitflags 1.3.2",
  "proc-macro2",
@@ -1695,9 +1695,9 @@ dependencies = [
 
 [[package]]
 name = "opml"
-version = "1.1.5"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "657e16a7677a52c9bcfca579d77c087bc4240644d7e5491b359bb76ed62c779d"
+checksum = "df2f96426c857a92676dc29a9e2a181eb39321047ac994491c69eae01619ddf2"
 dependencies = [
  "hard-xml",
  "serde",

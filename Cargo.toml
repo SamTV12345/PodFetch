@@ -34,7 +34,7 @@ jsonwebtoken = {version="9.2.0"}
 log = "0.4.20"
 futures-util = "0.3.29"
 substring = "1.4.5"
-opml = "1.1.5"
+opml = "1.1.6"
 rand = "0.8.5"
 env_logger = "0.10.1"
 chrono = {version  = "0.4.31", default-features=false, features = ["serde"]}
