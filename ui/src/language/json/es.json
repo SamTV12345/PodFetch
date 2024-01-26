@@ -178,5 +178,6 @@
   "original-rss-feed": "Fuente RSS original",
   "profile": "Perfil",
   "api-key": "Clave API",
-  "user-settings-updated": "Configuración de usuario actualizada"
+  "user-settings-updated": "Configuración de usuario actualizada",
+  "notification.episode-now-available": "Episodio {{episode}} ahora disponible"
 }

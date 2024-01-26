@@ -179,5 +179,6 @@
   "original-rss-feed": "Flux RSS original",
   "profile": "Profil",
   "api-key": "Clé API",
-  "user-settings-updated": "Paramètres utilisateur mis à jour"
+  "user-settings-updated": "Paramètres utilisateur mis à jour",
+  "notification.episode-now-available": "L'épisode {{episode}} maintenant disponible hors-ligne"
 }
