@@ -87,7 +87,7 @@ impl PodcastEpisodeService {
             PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn).unwrap();
         let notification = Notification {
             id: 0,
-            message: format!("Episode {} is now available offline", podcast_episode.name),
+            message: format!("{}", podcast_episode.name),
             created_at: chrono::Utc::now().naive_utc().to_string(),
             type_of_message: "Download".to_string(),
             status: "unread".to_string(),

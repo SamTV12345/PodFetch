@@ -8,6 +8,20 @@ import useCommon from '../store/CommonSlice'
 import { Notification } from '../models/Notification'
 import 'material-symbols/outlined.css'
 
+
+const NotificationFormatter = (notification: Notification) => {
+    const {t} = useTranslation()
+
+    const decideMessage = ()=>{
+        switch(notification.typeOfMessage) {
+            case "Download":
+                return t('notification.episode-now-available', {episode: notification.message})
+        }
+    }
+
+    return decideMessage()
+}
+
 export const Notifications: FC = () => {
     const notifications = useCommon(state => state.notifications)
     const { t }  = useTranslation()
@@ -52,7 +66,7 @@ export const Notifications: FC = () => {
                             paddingBottom: { delay: 0.15, ease: 'easeOut', duration: 0.1 },
                             paddingTop: { delay: 0.15, ease: 'easeOut', duration: 0.1 }
                         }}>
-                            {notification.message}
+                            <NotificationFormatter {...notification} />
 
                             <span className="material-symbols-outlined cursor-pointer text-[--modal-close-color] hover:text-[--modal-close-color-hover]" onClick={()=>{dismissNotification(notification)}}>close</span>
                         </motion.div>
