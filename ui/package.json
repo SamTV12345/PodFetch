@@ -29,7 +29,7 @@
     "i18next": "^23.7.18",
     "i18next-browser-languagedetector": "^7.2.0",
     "javascript-time-ago": "^2.5.9",
-    "material-symbols": "^0.14.5",
+    "material-symbols": "^0.14.6",
     "notistack": "^3.0.1",
     "oidc-client-ts": "^2.4.0",
     "react": "^18.2.0",
