@@ -25,6 +25,14 @@ volumes:
     podfetch-db:
 ```
 
+
+
+| Variable         | Description                                   | Default                  |
+|------------------|-----------------------------------------------|--------------------------|
+| POLLING_INTERVAL | Interval in minutes to check for new episodes | 300                      |
+| SERVER_URL       | URL of the server/the URL of the proxy        | http://localhost:8000    |
+| DATABASE_URL     | URL of the database                           | sqlite://./db/podcast.db |
+
 It is important to change `UID` and `GID` to your user id and group id so that the files are owned by you and not by root.
 Docker will create the volumes by default as root and podfetch will not be able to write to them.
 
@@ -44,3 +52,8 @@ To use postgres you need to set the following environment variables:
 - Create a shell script that sets the above environment variables and starts the podfetch binary
 - Make the shell script executable
 - Run the shell script
+
+### Terraform
+
+For terraform have a look at the setup directory.
+There you will find everything needed to start with your infrastructure as code.

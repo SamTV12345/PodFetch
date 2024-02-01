@@ -84,3 +84,9 @@ following variables:
 | REVERSE_PROXY              | Flag if reverse proxy should be enabled             | `true`            |
 | REVERSE_PROXY_HEADER       | The url of the reverse proxy.                       | `X-FORWARDED-FOR` |
 | REVERSE_PROXY_AUTO_SIGN_UP | Flag if PodFetch should automatically sign up users | `true`            |
+
+# User Creation
+
+You can create an admin, user, or uploader either through [CLI](docs/CLI.md) or via invites.
+
+To generate an invite, log into Podfetch → Top Right Icon → User Administration → Invites

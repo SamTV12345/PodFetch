@@ -5,6 +5,11 @@
 - [Authorization](./AUTH.md)
 - [UI Walkthrough](./UIWalkthrough.md)
 - [Hosting](./HOSTING.md)
+- [Translations](./I18n.md)
+- [RSS Feed](./rss_feed.md)
+- [Podindex Integration](./podindex.md)
+- [CLI usage](./CLI.md)
+- [Contributing](./Contributing.md)
 
 # Tutorials
 

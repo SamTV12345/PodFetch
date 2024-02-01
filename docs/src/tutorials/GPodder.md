@@ -1,5 +1,12 @@
 # GPodder API
 
+## 📖 Activating the GPodder API
+
+The following environment variable must be set to `true` to enable it:
+
+| Variable                          | Description                                             | Default             |
+|-----------------------------------|---------------------------------------------------------|---------------------|
+| GPODDER_INTEGRATION_ENABLED       | Activates the GPodder integration via your `SERVER_URL` | false               |
 
 ## ⚙️ Using the GPodder API
 
