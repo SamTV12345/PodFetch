@@ -159,8 +159,13 @@ pub async fn update_user(
     if old_username != &username {
         return Err(CustomError::Forbidden);
     }
-    let mut user =
-        User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let mut user = User::find_by_username(&username, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+
+    if let Some(admin_username) = ENVIRONMENT_SERVICE.get().unwrap().username.clone() {
+        if admin_username == user.username {
+            return Err(CustomError::Conflict("Cannot update admin user".to_string()));
+        }
+    }
 
     if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured
     {
