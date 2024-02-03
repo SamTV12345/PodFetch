@@ -23,3 +23,4 @@ dist-ssr
 *.sln
 *.sw?
 vite-local.ts
+dev-dist/
