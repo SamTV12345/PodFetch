@@ -2,6 +2,7 @@ target
 *.db
 .idea
 podcasts
+static/*
 .env
 *.iml
 
