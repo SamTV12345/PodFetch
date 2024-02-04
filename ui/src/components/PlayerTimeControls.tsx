@@ -25,6 +25,7 @@ const SPEED_STEPS = [0.5, 1,1.1,1.25, 1.5, 2, 2.5, 3]
 export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => {
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const episodes = useCommon(state => state.selectedEpisodes)
     const isPlaying  = useAudioPlayer(state => state.isPlaying)
     const speed = useAudioPlayer(state => state.playBackRate)
@@ -76,12 +77,13 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
                 nextEpisode.status === 'D'
                     ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data))
                     : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data))
+                refItem.current?.pause()
                 refItem.current!.src = episodes[index].podcastEpisode.local_url
                 refItem.current!.load()
                 refItem.current?.play()
+                loadMediaSessionForPWA()
                 setPlaying(true)
             })
-
     }
 
     const handleButton = () => {
@@ -113,6 +115,37 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         }
     }
 
+
+    function loadMediaSessionForPWA() {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: currentPodcastEpisode?.name,
+                artist: currentPodcast?.author,
+                album: currentPodcast?.name,
+                artwork: [
+                    {src: currentPodcastEpisode?.local_image_url!},
+                ]
+            })
+            navigator.mediaSession.setActionHandler('play', () => {
+                handleButton()
+            })
+
+            navigator.mediaSession.setActionHandler('pause', () => {
+                handleButton()
+            })
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                skipToPreviousEpisode()
+            })
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                skipToNextEpisode()
+            })
+        }
+    }
+
+    useEffect(() => {
+        loadMediaSessionForPWA();
+    }, []);
+
     const changeSpeed = () => {
         if (refItem.current === null) return
 
@@ -128,15 +161,25 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         setPlaybackRate(SPEED_STEPS[currentIndex + 1])
     }
 
+    function skipInPodcast(skipInterval: number = SKIPPED_TIME, isForward: boolean = true) {
+        if (refItem.current === undefined || refItem.current === null) return
+
+        if (!isForward) {
+            if (refItem.current.currentTime - skipInterval > 0) {
+                refItem.current.currentTime -= skipInterval
+            }
+        } else {
+            if (refItem.current.currentTime + skipInterval < refItem.current.duration) {
+                refItem.current.currentTime += skipInterval
+            }
+        }
+    }
+
     return (
         <div className="flex items-center justify-center gap-6">
             {/* Skip back */}
             <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => {
-                if (refItem.current === undefined || refItem.current === null) return
-
-                if (refItem.current.currentTime - SKIPPED_TIME > 0 ) {
-                    refItem.current.currentTime -= SKIPPED_TIME
-                }
+                skipInPodcast(SKIPPED_TIME,false)
             }}>replay_30</span>
 
             {/* Previous */}
@@ -155,11 +198,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
 
             {/* Skip forward */}
             <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => {
-                if (refItem.current === undefined || refItem.current === null) return
-
-                if (refItem.current.currentTime + SKIPPED_TIME < refItem.current.duration) {
-                    refItem.current.currentTime += SKIPPED_TIME
-                }
+                skipInPodcast(SKIPPED_TIME,true)
             }}>forward_30</span>
 
             {/* Speed fixed width to prevent layout shift when value changes */}
