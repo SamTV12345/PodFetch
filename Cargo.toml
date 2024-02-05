@@ -38,7 +38,7 @@ opml = "1.1.6"
 rand = "0.8.5"
 env_logger = "0.11.1"
 chrono = {version  = "0.4.33", default-features=false, features = ["serde"]}
-actix-web-actors = "4.2.0"
+actix-web-actors = "4.3.0"
 rss = "2.0.7"
 frankenstein = "0.30.2"
 regex = "1.10.3"
