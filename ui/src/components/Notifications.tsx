@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
-import { apiURL } from '../utils/Utilities'
+import {apiURL, removeHTML} from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Notification } from '../models/Notification'
 import 'material-symbols/outlined.css'
+import sanitizeHtml from "sanitize-html";
 
 
 const NotificationFormatter = (notification: Notification) => {
@@ -15,7 +16,7 @@ const NotificationFormatter = (notification: Notification) => {
     const decideMessage = ()=>{
         switch(notification.typeOfMessage) {
             case "Download":
-                return t('notification.episode-now-available', {episode: notification.message})
+                return <span dangerouslySetInnerHTML={removeHTML(t('notification.episode-now-available', {episode: notification.message}))}/>
         }
     }
 
