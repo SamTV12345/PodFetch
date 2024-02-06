@@ -17,7 +17,7 @@ sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel
     "openssl/vendored"]
 
 [dependencies]
-awc =  {version="3.3.0", features = ["rustls"]}
+awc =  {version="3.4.0", features = ["rustls"]}
 rpassword = "7.3.1"
 reqwest = { version = "0.11.23", features = ["stream", "json","blocking"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
