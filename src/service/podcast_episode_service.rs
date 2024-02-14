@@ -117,141 +117,150 @@ impl PodcastEpisodeService {
 
         let returned_data_from_podcast_insert = Self::do_request_to_podcast_server(podcast.clone());
 
-        let channel =
-            Channel::read_from(returned_data_from_podcast_insert.content.as_bytes()).unwrap();
+        let channel = Channel::read_from(returned_data_from_podcast_insert.content.as_bytes());
 
-        if *is_redirected.clone().lock().ignore_poison() {
-            log::info!(
+        match channel {
+            Ok(channel) => {
+                if *is_redirected.clone().lock().ignore_poison() {
+                    log::info!(
                 "The podcast {} has moved to {}",
                 podcast.name,
                 returned_data_from_podcast_insert.url
             );
-            Podcast::update_podcast_urls_on_redirect(
-                podcast.id,
-                returned_data_from_podcast_insert.url,
-                conn,
-            );
-            Self::update_episodes_on_redirect(conn, channel.items())?;
-        }
+                    Podcast::update_podcast_urls_on_redirect(
+                        podcast.id,
+                        returned_data_from_podcast_insert.url,
+                        conn,
+                    );
+                    Self::update_episodes_on_redirect(conn, channel.items())?;
+                }
 
-        Self::handle_itunes_extension(conn, &podcast, &channel)?;
+                Self::handle_itunes_extension(conn, &podcast, &channel)?;
 
-        Self::update_podcast_fields(channel.clone(), podcast.id, conn)?;
+                Self::update_podcast_fields(channel.clone(), podcast.id, conn)?;
 
-        let mut podcast_inserted = Vec::new();
+                let mut podcast_inserted = Vec::new();
 
-        Self::handle_podcast_image_insert(conn, &podcast, &channel)?;
+                Self::handle_podcast_image_insert(conn, &podcast, &channel)?;
 
-        for item in channel.items.iter() {
-            let itunes_ext = item.clone().itunes_ext;
+                for item in channel.items.iter() {
+                    let itunes_ext = item.clone().itunes_ext;
 
-            match itunes_ext {
-                Some(itunes_ext) => {
-                    let enclosure = item.enclosure();
-                    match enclosure {
-                        Some(enclosure) => {
-                            let result = PodcastEpisode::get_podcast_episode_by_url(
-                                conn,
-                                &enclosure.url.to_string(),
-                                Some(podcast.id),
-                            );
-                            let mut duration_episode = 0;
+                    match itunes_ext {
+                        Some(itunes_ext) => {
+                            let enclosure = item.enclosure();
+                            match enclosure {
+                                Some(enclosure) => {
+                                    let result = PodcastEpisode::get_podcast_episode_by_url(
+                                        conn,
+                                        &enclosure.url.to_string(),
+                                        Some(podcast.id),
+                                    );
+                                    let mut duration_episode = 0;
 
-                            if result.is_err() {
-                                log::info!(
+                                    if result.is_err() {
+                                        log::info!(
                                     "Skipping episode {} with error: {}",
                                     item.clone().title.unwrap_or("with no title".to_string()),
                                     result.err().unwrap()
                                 );
+                                        continue;
+                                    }
+
+                                    let result_unwrapped = result.unwrap();
+
+                                    if let Some(result_unwrapped_non_opt) = result_unwrapped.clone() {
+                                        if result_unwrapped_non_opt.clone().podcast_id != podcast.id {
+                                            let inserted_episode = PodcastEpisode::insert_podcast_episodes(
+                                                conn,
+                                                podcast.clone(),
+                                                item.clone(),
+                                                Some(result_unwrapped_non_opt.image_url),
+                                                duration_episode as i32,
+                                            );
+                                            podcast_inserted.push(inserted_episode);
+                                        }
+                                    }
+
+                                    if result_unwrapped.is_none() {
+                                        // Insert new podcast episode
+                                        if let Some(duration) = itunes_ext.clone().duration {
+                                            duration_episode = Self::parse_duration(&duration);
+                                        }
+
+                                        let inserted_episode = PodcastEpisode::insert_podcast_episodes(
+                                            conn,
+                                            podcast.clone(),
+                                            item.clone(),
+                                            itunes_ext.image,
+                                            duration_episode as i32,
+                                        );
+                                        podcast_inserted.push(inserted_episode);
+                                    }
+                                }
+                                None => {
+                                    log::info!(
+                                "Skipping episode {} without enclosure.",
+                                item.clone().title.unwrap_or("with no title".to_string())
+                            );
+                                    continue;
+                                }
+                            }
+                        }
+                        None => {
+                            let opt_enclosure = &item.enclosure;
+                            let mut image_url = DEFAULT_IMAGE_URL.to_string();
+
+                            // Also check the itunes extension map
+                            if let Some(image_url_extracted) = Self::extract_itunes_url_if_present(item) {
+                                image_url = image_url_extracted;
+                            }
+
+                            if opt_enclosure.is_none() {
+                                log::info!(
+                            "Skipping episode {} without enclosure.",
+                            item.clone().title.unwrap_or("with no title".to_string())
+                        );
                                 continue;
                             }
+                            let result = PodcastEpisode::get_podcast_episode_by_url(
+                                conn,
+                                &opt_enclosure.clone().unwrap().url,
+                                None,
+                            );
+                            // We can't retrieve the duration of the podcast episode, so we set it to 0
 
-                            let result_unwrapped = result.unwrap();
-
-                            if let Some(result_unwrapped_non_opt) = result_unwrapped.clone() {
-                                if result_unwrapped_non_opt.clone().podcast_id != podcast.id {
-                                    let inserted_episode = PodcastEpisode::insert_podcast_episodes(
-                                        conn,
-                                        podcast.clone(),
-                                        item.clone(),
-                                        Some(result_unwrapped_non_opt.image_url),
-                                        duration_episode as i32,
-                                    );
-                                    podcast_inserted.push(inserted_episode);
-                                }
-                            }
-
-                            if result_unwrapped.is_none() {
-                                // Insert new podcast episode
-                                if let Some(duration) = itunes_ext.clone().duration {
-                                    duration_episode = Self::parse_duration(&duration);
-                                }
-
+                            if result.unwrap().is_none() {
+                                let duration_episode = 0;
                                 let inserted_episode = PodcastEpisode::insert_podcast_episodes(
                                     conn,
                                     podcast.clone(),
                                     item.clone(),
-                                    itunes_ext.image,
-                                    duration_episode as i32,
+                                    Some(image_url),
+                                    duration_episode,
                                 );
                                 podcast_inserted.push(inserted_episode);
                             }
                         }
-                        None => {
-                            log::info!(
-                                "Skipping episode {} without enclosure.",
-                                item.clone().title.unwrap_or("with no title".to_string())
-                            );
-                            continue;
-                        }
                     }
                 }
-                None => {
-                    let opt_enclosure = &item.enclosure;
-                    let mut image_url = DEFAULT_IMAGE_URL.to_string();
-
-                    // Also check the itunes extension map
-                    if let Some(image_url_extracted) = Self::extract_itunes_url_if_present(item) {
-                        image_url = image_url_extracted;
-                    }
-
-                    if opt_enclosure.is_none() {
-                        log::info!(
-                            "Skipping episode {} without enclosure.",
-                            item.clone().title.unwrap_or("with no title".to_string())
-                        );
-                        continue;
-                    }
-                    let result = PodcastEpisode::get_podcast_episode_by_url(
-                        conn,
-                        &opt_enclosure.clone().unwrap().url,
-                        None,
-                    );
-                    // We can't retrieve the duration of the podcast episode, so we set it to 0
-
-                    if result.unwrap().is_none() {
-                        let duration_episode = 0;
-                        let inserted_episode = PodcastEpisode::insert_podcast_episodes(
-                            conn,
-                            podcast.clone(),
-                            item.clone(),
-                            Some(image_url),
-                            duration_episode,
-                        );
-                        podcast_inserted.push(inserted_episode);
-                    }
-                }
+                Ok(podcast_inserted)
+            }
+            Err(e) => {
+                log::info!(
+                "Error parsing podcast {:?} with cause {:?}",
+                returned_data_from_podcast_insert.content,e);
+                return Err(CustomError::BadRequest(format!("Error parsing podcast {:?}", e)));
             }
         }
-        Ok(podcast_inserted)
     }
 
 
     fn extract_itunes_url_if_present(item: &Item) -> Option<String> {
-        if let Some(itunes_data) = item.extensions.get(ITUNES){
-            if let Some(image_url_extracted) = itunes_data.get("image"){
-                if let Some(i_val) = image_url_extracted.first(){
-                    if let Some(image_attr) = i_val.attrs.get("href"){
+        if let Some(itunes_data) = item.extensions.get(ITUNES) {
+            if let Some(image_url_extracted) = itunes_data.get("image") {
+                if let Some(i_val) = image_url_extracted.first() {
+                    if let Some(image_attr) = i_val.attrs.get("href") {
                         return Some(image_attr.clone());
                     }
                 }
