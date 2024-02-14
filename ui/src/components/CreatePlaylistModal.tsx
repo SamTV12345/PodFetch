@@ -3,7 +3,6 @@ import {createPortal} from "react-dom"
 import {useTranslation} from "react-i18next"
 import axios, {AxiosResponse} from "axios"
 import {enqueueSnackbar} from "notistack"
-import {apiURL} from "../utils/Utilities"
 import {Heading2} from "./Heading2"
 import "material-symbols/outlined.css"
 import {PlaylistDto, PlaylistDtoPost, PlaylistDtoPut, PlaylistItem} from "../models/Playlist";
@@ -37,7 +36,7 @@ export const CreatePlaylistModal = () => {
 
 
         if (currentPlaylistToEdit && currentPlaylistToEdit.id !== -1){
-            axios.put(apiURL+"/playlist/"+currentPlaylistToEdit.id, {
+            axios.put("/playlist/"+currentPlaylistToEdit.id, {
                 id: currentPlaylistToEdit.id,
                 name: currentPlaylistToEdit.name,
                 items: itemsMappedToIDs
@@ -50,7 +49,7 @@ export const CreatePlaylistModal = () => {
         }
 
         if (currentPlaylistToEdit && currentPlaylistToEdit.id === -1) {
-            axios.post(apiURL + "/playlist", {
+            axios.post(  "/playlist", {
                 name: currentPlaylistToEdit.name,
                 items: itemsMappedToIDs
             } satisfies PlaylistDtoPost)

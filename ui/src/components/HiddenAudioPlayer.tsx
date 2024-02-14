@@ -2,7 +2,6 @@ import { FC, RefObject, useEffect } from 'react'
 import axios, { AxiosResponse } from 'axios'
 import useOnMount from '../hooks/useOnMount'
 import useAudioPlayer from '../store/AudioPlayerSlice'
-import { apiURL } from '../utils/Utilities'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 
@@ -23,7 +22,7 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
 
             if (podcastEpisode.time === undefined) {
                 // fetch time from server
-                axios.get(apiURL + '/podcast/episode/' + podcastEpisode.episode_id)
+                axios.get(  '/podcast/episode/' + podcastEpisode.episode_id)
                     .then((response: AxiosResponse<PodcastWatchedModel>) => {
                         setCurrentPodcastEpisode({
                             ...podcastEpisode,

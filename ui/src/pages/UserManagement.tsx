@@ -7,7 +7,6 @@ import {Controller, useForm} from "react-hook-form";
 import {CustomCheckbox} from "../components/CustomCheckbox";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import axios, {AxiosResponse} from "axios";
-import {apiURL} from "../utils/Utilities";
 import {v4} from "uuid";
 import {enqueueSnackbar} from "notistack";
 
@@ -41,7 +40,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
         if (data.password === '') {
             delete data.password
         }
-        axios.put(apiURL+'/users/'+loggedInUser?.username, data)
+        axios.put('/users/'+loggedInUser?.username, data)
             .then((c:AxiosResponse<LoggedInUser>)=>{
                 useCommon.getState().setLoggedInUser(c.data)
                 enqueueSnackbar(t('user-settings-updated'), {variant: 'success'})

@@ -34,31 +34,6 @@ TimeAgo.addLocale(fr)
 export const SKIPPED_TIME = 30
 let timeago = new TimeAgo('en-US')
 
-export let apiURL: string
-export let uiURL: string
-if (window.location.pathname.startsWith("/ui")) {
-    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/v1"
-} else {
-    //match everything before /ui
-    const regex = /\/([^/]+)\/ui\//
-    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/" + regex.exec(window.location.href)![1] + "/api/v1"
-}
-uiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/ui"
-
-const wsEndpoint = "ws"
-
-export const configWSUrl = (url: string) => {
-    if (url.startsWith("http")) {
-        return url.replace("http", "ws") + wsEndpoint
-    }
-    return url.replace("https", "wss") + wsEndpoint
-}
-export const logCurrentPlaybackTime = (episodeId: string, timeInSeconds: number) => {
-    axios.post(apiURL + "/podcast/episode", {
-        podcastEpisodeId: episodeId,
-        time: Number(timeInSeconds.toFixed(0))
-    })
-}
 
 export const formatTime = (isoDate: string) => {
     if(Number.isNaN(Date.parse(isoDate))) return ""
@@ -182,4 +157,8 @@ export const TITLE_DESCENDING:OrderCriteriaSortingType = {
     ascending: false
 }
 
-export const decodeHTMLEntities = (() => {   const textArea = document.createElement('textarea');    return (message: string): string => {     textArea.innerHTML = message;     return textArea.value;   }; })();
+export const decodeHTMLEntities = (() => {   const textArea = document.createElement('textarea');
+    return (message: string): string => {
+        textArea.innerHTML = message;
+        return textArea.value;
+    }; })();

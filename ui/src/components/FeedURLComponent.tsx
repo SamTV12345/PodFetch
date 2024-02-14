@@ -2,7 +2,6 @@ import { FC } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
-import { apiURL } from '../utils/Utilities'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
 import { Podcast } from '../store/CommonSlice'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
@@ -23,7 +22,7 @@ export const FeedURLComponent: FC = () => {
     const feedUrlWatched = watch('feedUrl')
 
     const onSubmit = (data: FeedURLFormData) => {
-        axios.post(apiURL + '/podcast/feed', {
+        axios.post(  '/podcast/feed', {
             rssFeedUrl: data.feedUrl
         }).then((v: AxiosResponse<Podcast>) => {
             handleAddPodcast(v.status, v.data.name, t)

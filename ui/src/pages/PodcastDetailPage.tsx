@@ -2,7 +2,7 @@ import {Fragment, useEffect, useState} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
 import axios, {AxiosResponse} from 'axios'
-import {apiURL, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
+import {prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import {Chip} from '../components/Chip'
@@ -33,10 +33,10 @@ export const PodcastDetailPage = () => {
             setCurrentDetailedPodcastId(Number(params.id))
         }
 
-        axios.get(apiURL + '/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
+        axios.get('/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
             setCurrentPodcast(response.data)
         }).then(() => {
-            axios.get(apiURL + '/podcast/' + params.id + '/episodes')
+            axios.get('/podcast/' + params.id + '/episodes')
                 .then((response: AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
                     setSelectedEpisodes(response.data)
 
@@ -127,7 +127,7 @@ export const PodcastDetailPage = () => {
                         <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
                             onClick={() => {
-                                axios.post(apiURL + '/podcast/' + params.id + '/refresh')
+                                axios.post('/podcast/' + params.id + '/refresh')
                                     .then(() => {
                                         console.log('Refreshed')
                                     })
@@ -176,7 +176,7 @@ export const PodcastDetailPage = () => {
                         <span className="text-xs text-[--fg-secondary-color]">{t('active')}</span>
 
                         <Switcher checked={currentPodcast.active} setChecked={() => {
-                            axios.put(apiURL + '/podcast/' + params.id + '/active')
+                            axios.put('/podcast/' + params.id + '/active')
                                 .then(() => {
                                     setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active})
                                 })

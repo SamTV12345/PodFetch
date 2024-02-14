@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
-import {apiURL, removeHTML} from '../utils/Utilities'
+import { removeHTML} from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Notification } from '../models/Notification'
 import 'material-symbols/outlined.css'
@@ -38,7 +38,7 @@ export const Notifications: FC = () => {
     )
 
     const dismissNotification = (notification: Notification) => {
-        axios.put(apiURL + '/notifications/dismiss', { id: notification.id })
+        axios.put(  '/notifications/dismiss', { id: notification.id })
             .then(() => {
                 removeNotification(notification.id)
             })

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { useSnackbar } from 'notistack'
 import useCommon from '../store/CommonSlice'
-import { apiURL, formatTime} from '../utils/Utilities'
+import { formatTime} from '../utils/Utilities'
 import { User } from '../models/User'
 import { ChangeRoleModal } from './ChangeRoleModal'
 import { Loading } from './Loading'
@@ -21,7 +21,7 @@ export const UserAdminUsers = () => {
     const setModalOpen = useModal(state => state.setOpenModal)
 
     useEffect(() => {
-        axios.get(apiURL + '/users')
+        axios.get( '/users')
             .then(c => {
                 setUsers(c.data)
                 setError(false)
@@ -30,7 +30,7 @@ export const UserAdminUsers = () => {
     }, [])
 
     const deleteUser = (user: User) => {
-        axios.delete(apiURL + '/users/' + user.username)
+        axios.delete(  '/users/' + user.username)
             .then(() => {
                 enqueueSnackbar(t('user-deleted'), { variant: 'success' })
                 setUsers(users.filter(u => u.username !== user.username))

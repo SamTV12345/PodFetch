@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
-import { apiURL} from '../utils/Utilities'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 import { TimeLineModel, TimelineHATEOASModel } from '../models/TimeLineModel'
 import { EpisodeCard } from '../components/EpisodeCard'
@@ -15,12 +14,12 @@ export const Homepage = () => {
     const { t } = useTranslation()
 
     useEffect(()=>{
-        axios.get<PodcastWatchedEpisodeModel[]>(apiURL + '/podcast/episode/lastwatched')
+        axios.get<PodcastWatchedEpisodeModel[]>('/podcast/episode/lastwatched')
             .then((response) => {
                 setPodcastWatched(response.data)
             })
 
-        axios.get<TimelineHATEOASModel>(apiURL + '/podcasts/timeline', {
+        axios.get<TimelineHATEOASModel>('/podcasts/timeline', {
             params: {
                 favoredOnly: false,
                 notListened: false

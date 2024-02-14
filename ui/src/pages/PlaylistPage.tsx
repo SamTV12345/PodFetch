@@ -1,6 +1,5 @@
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import axios, {AxiosResponse} from "axios";
-import {apiURL} from "../utils/Utilities";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
 import usePlaylist from "../store/PlaylistSlice";
@@ -19,7 +18,7 @@ export const PlaylistPage = ()=>{
 
     useEffect(()=>{
         if (playlist.length ===0){
-            axios.get(apiURL+"/playlist").then((response:AxiosResponse<PlaylistDto[]>)=>{
+            axios.get("/playlist").then((response:AxiosResponse<PlaylistDto[]>)=>{
                setPlaylist(response.data)
             })
         }
@@ -58,7 +57,7 @@ export const PlaylistPage = ()=>{
                                 <button className="flex ml-2" onClick={(e)=>{
                                     e.preventDefault()
 
-                                    axios.get(apiURL+"/playlist/"+i.id).then((response:AxiosResponse<PlaylistDto>)=> {
+                                    axios.get("/playlist/"+i.id).then((response:AxiosResponse<PlaylistDto>)=> {
                                         setCurrentPlaylistToEdit(response.data)
                                         setCreatePlaylistOpen(true)
                                     })
@@ -80,7 +79,7 @@ export const PlaylistPage = ()=>{
                                 </button>
                                 <button className="flex float-right text-red-700 hover:text-red-500" onClick={(e)=>{
                                     e.preventDefault()
-                                    axios.delete(apiURL+"/playlist/"+i.id).then(()=>{
+                                    axios.delete("/playlist/"+i.id).then(()=>{
                                         enqueueSnackbar(t('invite-deleted'), {variant: "success"})
                                         setPlaylist(playlist.filter(v=>v.id !== i.id))
                                     })

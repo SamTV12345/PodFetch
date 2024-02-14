@@ -1,3 +1,4 @@
+import "./utils/navigationUtils"
 import React, { FC, PropsWithChildren, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { I18nextProvider } from 'react-i18next'
@@ -8,7 +9,6 @@ import { SnackbarProvider } from 'notistack'
 import { router } from './App'
 import useCommon from './store/CommonSlice'
 import i18n from './language/i18n'
-import { apiURL } from './utils/Utilities'
 import { ConfigModel } from './models/SysInfo'
 import { Loading } from './components/Loading'
 import { OIDCRefresher } from './components/OIDCRefresher'
@@ -24,13 +24,24 @@ import '@fontsource/poppins/700.css'
 import '@fontsource/poppins/700-italic.css'
 import './index.css'
 import './assets/scss/style.scss'
+export let apiURL: string
+export let uiURL: string
+if (window.location.pathname.startsWith("/ui")) {
+    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/v1"
+} else {
+    //match everything before /ui
+    const regex = /\/([^/]+)\/ui\//
+    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/" + regex.exec(window.location.href)![1] + "/api/v1"
+}
+uiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/ui"
 
 const AuthWrapper: FC<PropsWithChildren> = ({ children }) => {
     const configModel = useCommon(state => state.configModel)
     const setConfigModel = useCommon(state => state.setConfigModel)
 
     useEffect(() => {
-        axios.get(apiURL + '/sys/config').then((v: AxiosResponse<ConfigModel>) => {
+        axios.defaults.baseURL = apiURL
+        axios.get('/sys/config').then((v: AxiosResponse<ConfigModel>) => {
             setConfigModel(v.data)
         })
     }, [])

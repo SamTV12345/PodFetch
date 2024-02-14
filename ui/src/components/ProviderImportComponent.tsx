@@ -1,7 +1,6 @@
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosError, AxiosResponse } from 'axios'
-import { apiURL } from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
 import useCommon from '../store/CommonSlice'
@@ -31,7 +30,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     const setModalOpen = useModal(state => state.setOpenModal)
 
     const addPodcast = (podcast: AddPostPostModel) => {
-        axios.post(apiURL + '/podcast/' + selectedSearchType, podcast)
+        axios.post(  '/podcast/' + selectedSearchType, podcast)
             .then((err: any) => {
                 setModalOpen(false)
                 err.response.status && handleAddPodcast(err.response.status,
@@ -46,7 +45,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     useDebounce(() => {
         setLoading(true)
         selectedSearchType === 'itunes' ?
-            axios.get(apiURL + '/podcasts/0/' + encodeURI(searchText) + '/search')
+            axios.get( '/podcasts/0/' + encodeURI(searchText) + '/search')
                 .then((v: AxiosResponse<GeneralModel>) => {
                     setLoading(false)
                     const agnosticModel: AgnosticPodcastDataModel[] = v.data.results.map((podcast) => {
@@ -60,7 +59,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
 
                     setSearchedPodcasts(agnosticModel)
                 })
-            : axios.get(apiURL + '/podcasts/1/' + searchText + '/search')
+            : axios.get(  '/podcasts/1/' + searchText + '/search')
                 .then((v: AxiosResponse<PodIndexModel>) => {
                     setLoading(false)
                     let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast) => {

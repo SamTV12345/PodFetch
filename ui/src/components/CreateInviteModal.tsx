@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import useCommon from '../store/CommonSlice'
-import { apiURL } from '../utils/Utilities'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'
 import { Heading2 } from './Heading2'
@@ -61,7 +60,7 @@ export const CreateInviteModal = () => {
                         role: invite.role.toLowerCase(),
                         explicitConsent: invite.explicitConsent
                     } satisfies Invite
-                    axios.post(apiURL + '/users/invites', modifiedInvite)
+                    axios.post(  '/users/invites', modifiedInvite)
                         .then((v) => {
                             enqueueSnackbar(t('invite-created'), { variant: 'success' })
                             setInvites([...invites,v.data])

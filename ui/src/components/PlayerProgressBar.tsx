@@ -1,6 +1,6 @@
 import React, { createRef, FC, useMemo, useState } from 'react'
 import useAudioPlayer from '../store/AudioPlayerSlice'
-import { logCurrentPlaybackTime } from '../utils/Utilities'
+import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 
 type PlayerProgressBarProps = {
     audioplayerRef: React.RefObject<HTMLAudioElement>,

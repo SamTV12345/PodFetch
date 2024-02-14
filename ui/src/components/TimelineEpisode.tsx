@@ -2,10 +2,8 @@ import { FC } from 'react'
 import { Waypoint } from 'react-waypoint'
 import axios, { AxiosResponse } from 'axios'
 import useCommon from '../store/CommonSlice'
-import { apiURL } from '../utils/Utilities'
 import { TimelineHATEOASModel, TimeLineModel } from '../models/TimeLineModel'
 import { EpisodeCard } from './EpisodeCard'
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Episode} from "../models/Episode";
 
 type TimelineEpisodeProps = {
@@ -28,7 +26,7 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podca
             {/*Infinite scroll */
             timeLineEpisodes.data.length === index + 1 &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    axios.get(apiURL + '/podcasts/timeline', {
+                    axios.get('/podcasts/timeline', {
                         params:{
                             lastTimestamp: podcastEpisode.podcast_episode.date_of_recording,
                             favoredOnly: useCommon.getState().filters?.onlyFavored,

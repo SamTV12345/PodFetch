@@ -1,7 +1,7 @@
 import { createRef, FC } from 'react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
-import {apiURL, prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
+import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import useCommon, { Podcast } from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 
@@ -14,7 +14,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({ podcast }) => {
     const updateLikePodcast = useCommon(state => state.updateLikePodcast)
 
     const likePodcast = () => {
-        axios.put(apiURL + '/podcast/favored', {
+        axios.put( '/podcast/favored', {
             id: podcast.id,
             favored: !podcast.favorites
         })

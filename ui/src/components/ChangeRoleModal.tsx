@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import useCommon from '../store/CommonSlice'
-import { apiURL } from '../utils/Utilities'
 import { User } from '../models/User'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'
@@ -26,7 +25,7 @@ export const ChangeRoleModal = () => {
 
     //setSelectedUser, setUsers
     const changeRole = () => {
-        axios.put(apiURL + '/users/' + selectedUser?.username + '/role', {
+        axios.put(  '/users/' + selectedUser?.username + '/role', {
             role: selectedUser?.role,
             explicitConsent: selectedUser?.explicitConsent
         })

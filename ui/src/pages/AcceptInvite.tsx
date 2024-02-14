@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import { apiURL, formatTime } from '../utils/Utilities'
+import { formatTime } from '../utils/Utilities'
 import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
 import { CustomInput } from '../components/CustomInput'
 import { Heading2 } from '../components/Heading2'
@@ -29,7 +29,7 @@ export const AcceptInvite = () => {
     }
 
     useEffect(() => {
-        axios.get(apiURL + '/users/invites/' + params.id)
+        axios.get(  '/users/invites/' + params.id)
             .then((res) => {
                 setInvite(res.data)
             })
@@ -43,7 +43,7 @@ export const AcceptInvite = () => {
     }
 
     const onSubmit: SubmitHandler<LoginData> = (data) => {
-        axios.post(apiURL + '/users/', {
+        axios.post(  '/users/', {
             username: data.username,
             password: data.password,
             inviteId: params.id

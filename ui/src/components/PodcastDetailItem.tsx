@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
 import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
-import {apiURL, formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
+import {formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import useCommon from "../store/CommonSlice";
@@ -81,7 +81,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             return
                         }
 
-                        axios.put(apiURL + "/podcast/" + episode.podcastEpisode.episode_id + "/episodes/download")
+                        axios.put(  "/podcast/" + episode.podcastEpisode.episode_id + "/episodes/download")
                             .then(()=>{
                                 enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
                                 setEpisodeDownloaded(episode.podcastEpisode.episode_id)
@@ -113,7 +113,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
 
-                    axios.get(apiURL + '/podcast/episode/' + episode.podcastEpisode.episode_id)
+                    axios.get(  '/podcast/episode/' + episode.podcastEpisode.episode_id)
                         .then((response: AxiosResponse<Episode>) => {
                             handlePlayofEpisode(response, episode)
                         })
@@ -123,7 +123,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
             {/* Infinite scroll */
             index === (episodesLength - 5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    axios.get(apiURL + '/podcast/' + params.id + '/episodes',{
+                    axios.get(  '/podcast/' + params.id + '/episodes',{
                         params: {
                             last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1].podcastEpisode.date_of_recording
                         }

@@ -2,7 +2,6 @@ import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
-import { apiURL } from '../utils/Utilities'
 import { Setting } from '../models/Setting'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
@@ -20,7 +19,7 @@ export const SettingsData: FC = () => {
 
     /* Fetch existing settings */
     useEffect(()=>{
-        axios.get(apiURL + '/settings').then((res: AxiosResponse<Setting>) => {
+        axios.get( '/settings').then((res: AxiosResponse<Setting>) => {
             setSettings(res.data)
         })
     }, [])
@@ -44,7 +43,7 @@ export const Settings: FC<SettingsProps> = ({ initialSettings }) => {
                     <div>
                         <label className="mr-6" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
                         <CustomButtonSecondary onClick={() => {
-                            axios.put(apiURL+"/settings/runcleanup")
+                            axios.put("/settings/runcleanup")
                         }}>{t('run-cleanup')}</CustomButtonSecondary>
                     </div>
                     <Switcher checked={settings.autoCleanup} className="xs:justify-self-end" id="auto-cleanup" setChecked={() => {
@@ -82,7 +81,7 @@ export const Settings: FC<SettingsProps> = ({ initialSettings }) => {
             </div>
 
             <CustomButtonPrimary className="float-right" onClick={() => {
-                axios.put(apiURL + '/settings', settings)
+                axios.put(  '/settings', settings)
                     .then(() => {
                         enqueueSnackbar(t('settings-saved'), { variant: 'success' })
                     })

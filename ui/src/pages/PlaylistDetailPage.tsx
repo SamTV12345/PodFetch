@@ -3,12 +3,11 @@ import {PodcastDetailItem} from "../components/PodcastDetailItem";
 import {useTranslation} from "react-i18next";
 import {useParams} from "react-router-dom";
 import axios, {AxiosResponse} from "axios";
-import {apiURL, prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities";
+import {prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities";
 import {PlaylistDto} from "../models/Playlist";
 import usePlaylist from "../store/PlaylistSlice";
 import {useEffect} from "react";
 import useAudioPlayer from "../store/AudioPlayerSlice";
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {Episode} from "../models/Episode";
@@ -26,14 +25,14 @@ export const PlaylistDetailPage = ()=>{
     useEffect(() => {
         if(metadata){
             if(metadata.percentage>99){
-                axios.delete(apiURL+"/playlist/"+params.id+"/episode/"+current_podcast_episode!.id)
+                axios.delete("/playlist/"+params.id+"/episode/"+current_podcast_episode!.id)
                     .then(()=>{
                         const currentIndex = selectedPlaylist!.items.findIndex(i=>i.podcastEpisode.id===current_podcast_episode!.id)
                         if(currentIndex === selectedPlaylist!.items.length-1){
                             return
                         }
                         const nextEpisode = selectedPlaylist!.items[currentIndex+1]
-                        axios.get(apiURL + "/podcast/episode/" + nextEpisode.podcastEpisode.episode_id)
+                        axios.get("/podcast/episode/" + nextEpisode.podcastEpisode.episode_id)
                             .then((response: AxiosResponse<Episode>) => {
                                 nextEpisode.podcastEpisode.status === 'D'
                                     ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data))
@@ -54,7 +53,7 @@ export const PlaylistDetailPage = ()=>{
 
 
     useEffect(()=>{
-            axios.get(apiURL+"/playlist/"+params.id)
+            axios.get("/playlist/"+params.id)
                 .then((response:AxiosResponse<PlaylistDto>)=>{
                 setSelectedPlaylist(response.data)
         })

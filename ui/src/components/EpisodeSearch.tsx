@@ -1,9 +1,8 @@
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import axios, { AxiosResponse } from 'axios'
 import { PodcastEpisode } from '../store/CommonSlice'
-import {apiURL, formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
+import {formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
@@ -28,7 +27,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
         if (searchName.trim().length > 0) {
             setSearching(true)
 
-            axios.get(apiURL + '/podcasts/' + searchName + '/query')
+            axios.get(  '/podcasts/' + searchName + '/query')
                 .then((v: AxiosResponse<PodcastEpisode[]>) => {
                     setSearchResults(v.data)
                     setSearching(false)

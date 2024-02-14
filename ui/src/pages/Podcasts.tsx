@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
 import { useDebounce } from '../utils/useDebounce'
 import {
-    apiURL,
     getFiltersDefault,
     OrderCriteriaSortingType, TIME_ASCENDING, TIME_DESCENDING,
     TITLE_ASCENDING,
@@ -47,7 +46,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     }, [filters])
 
     const refreshAllPodcasts = () => {
-        axios.post(apiURL + '/podcast/all')
+        axios.post( '/podcast/all')
     }
 
     const performFilter = () => {
@@ -55,7 +54,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
             return
         }
 
-        axios.get(apiURL + '/podcasts/search', {
+        axios.get('/podcasts/search', {
             params: {
                 title: filters?.title,
                 order: filters?.ascending?Order.ASC:Order.DESC,
@@ -73,7 +72,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     },500, [filters])
 
     useEffect(() => {
-        axios.get(apiURL + '/podcasts/filter')
+        axios.get('/podcasts/filter')
             .then((c: AxiosResponse<Filter>) => {
                 if (c.data === null) {
                     setFilters(getFiltersDefault())

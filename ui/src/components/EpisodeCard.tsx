@@ -1,6 +1,6 @@
 import { FC} from 'react'
 import axios, { AxiosResponse } from 'axios'
-import { apiURL, preparePath } from '../utils/Utilities'
+import {preparePath } from '../utils/Utilities'
 import {Podcast, PodcastEpisode} from '../store/CommonSlice'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 import {Episode} from "../models/Episode";
@@ -41,7 +41,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
 
     return (
         <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
-            axios.get(apiURL + '/podcast/episode/' + podcastEpisode.episode_id)
+            axios.get(  '/podcast/episode/' + podcastEpisode.episode_id)
                 .then((response: AxiosResponse<Episode>) => {
                     handlePlayofEpisode(response, {
                         podcastEpisode: podcastEpisode,

@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
-import { apiURL, preparePath, removeHTML } from '../utils/Utilities'
+import {  preparePath, removeHTML } from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
@@ -23,7 +23,7 @@ export const PodcastInfoModal = () => {
     }
 
     const deleteEpisodeDownloadOnServer = (episodeId: string) => {
-        axios.delete(apiURL + '/episodes/' + episodeId + '/download').then(() => {
+        axios.delete(  '/episodes/' + episodeId + '/download').then(() => {
             setInfoModalPodcastOpen(false)
         })
     }

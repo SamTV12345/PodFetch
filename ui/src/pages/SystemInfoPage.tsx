@@ -1,7 +1,7 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
-import {apiURL, prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
+import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import { DiskModel } from '../models/DiskModel'
 import { SysExtraInfo } from '../models/SysExtraInfo'
 import { CustomGaugeChart } from '../components/CustomGaugeChart'
@@ -30,13 +30,13 @@ export const SystemInfoPage: FC = () => {
     const megaByte = Math.pow(10,6)
 
     useEffect(() => {
-        axios.get(apiURL + '/sys/info')
+        axios.get('/sys/info')
             .then((response: AxiosResponse<SysExtraInfo>) => setSystemInfo(response.data))
-        axios.get(apiURL + '/info')
+        axios.get('/info')
             .then(c => setVersionInfo(c.data))
 
         const updateInterval = setInterval(() => {
-            axios.get(apiURL + '/sys/info')
+            axios.get('/sys/info')
                 .then((response: AxiosResponse<SysExtraInfo>) => setSystemInfo(response.data))
         }, 5000)
         return () => clearInterval(updateInterval)

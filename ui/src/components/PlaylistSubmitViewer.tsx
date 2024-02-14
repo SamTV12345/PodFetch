@@ -1,6 +1,5 @@
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import axios, {AxiosResponse} from "axios";
-import {apiURL} from "../utils/Utilities";
 import {PlaylistDto, PlaylistDtoPost, PlaylistItem} from "../models/Playlist";
 import usePlaylist from "../store/PlaylistSlice";
 import {useTranslation} from "react-i18next";
@@ -18,7 +17,7 @@ export const PlaylistSubmitViewer = ()=>{
                 episode: item.podcastEpisode.id
             }})
 
-        axios.post(apiURL+'/playlist', {
+        axios.post('/playlist', {
             name: currentPlaylistToEdit?.name!,
             items: idsToMap
         } satisfies PlaylistDtoPost)

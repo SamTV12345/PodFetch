@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import { apiURL } from '../utils/Utilities'
 import { Setting } from '../models/Setting'
 import { UpdateNameSettings } from '../models/UpdateNameSettings'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
@@ -39,7 +38,7 @@ export const SettingsNaming: FC = () => {
 
     /* Fetch existing settings */
     useEffect(() => {
-        axios.get(apiURL + '/settings')
+        axios.get('/settings')
             .then((res:AxiosResponse<Setting>) => {
                 setSettings(res.data)
             })
@@ -78,7 +77,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: episodeFormat
         }
-        axios.post(apiURL + '/episodes/formatting', content)
+        axios.post( '/episodes/formatting', content)
             .then((v: AxiosResponse<string>)=>setResultingEpisodeFormat(v.data))
             .catch(e=>setResultingEpisodeFormat(e.response.data.error))
 
@@ -88,13 +87,13 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: podcastFormat
         }
-        axios.post(apiURL + '/podcasts/formatting', content)
+        axios.post( '/podcasts/formatting', content)
             .then((v: AxiosResponse<string>)=>setResultingPodcastFormat(v.data))
             .catch(e=>setResultingPodcastFormat(e.response.data.error))
     },2000,[podcastFormat])
 
     const update_settings: SubmitHandler<UpdateNameSettings> = (data) => {
-        axios.put(apiURL + '/settings/name', data satisfies UpdateNameSettings)
+        axios.put(  '/settings/name', data satisfies UpdateNameSettings)
             .then(() => {
                 enqueueSnackbar(t('settings-saved'), { variant: 'success' })
             })

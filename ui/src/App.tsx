@@ -5,7 +5,7 @@ import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import useCommon, {LoggedInUser} from './store/CommonSlice'
 import useOpmlImport from './store/opmlImportSlice'
-import {apiURL, configWSUrl, decodeHTMLEntities, isJsonString} from './utils/Utilities'
+import {decodeHTMLEntities, isJsonString} from './utils/Utilities'
 import {
     UserAdminViewLazyLoad,
     EpisodeSearchViewLazyLoad,
@@ -39,6 +39,7 @@ import {SettingsPodcastDelete} from "./components/SettingsPodcastDelete";
 import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
+import {configWSUrl} from "./utils/navigationUtils";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -196,14 +197,14 @@ const App: FC<PropsWithChildren> = ({ children }) => {
 
     useEffect(() => {
         if (config?.basicAuth||config?.oidcConfigured||config?.reverseProxy){
-            axios.get(apiURL + '/users/me')
+            axios.get('/users/me')
                 .then((c:AxiosResponse<LoggedInUser>)=>useCommon.getState().setLoggedInUser(c.data))
                 .catch(() => enqueueSnackbar(t('not-admin'), { variant: 'error' }))
         }
     }, []);
 
     const getNotifications = () => {
-        axios.get(apiURL + '/notifications/unread')
+        axios.get(  '/notifications/unread')
             .then((response: AxiosResponse<Notification[]>) => {
                 setNotifications(response.data)
             })

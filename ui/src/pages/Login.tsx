@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import axios, { AxiosError } from 'axios'
 import useCommon from '../store/CommonSlice'
-import { apiURL } from '../utils/Utilities'
 import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
 import { CustomCheckbox } from '../components/CustomCheckbox'
 import { CustomInput } from '../components/CustomInput'
@@ -36,7 +35,7 @@ export const Login = () => {
     const onSubmit: SubmitHandler<LoginData> = (data, p) => {
         p?.preventDefault()
 
-        axios.post(apiURL + '/login', data)
+        axios.post('/login', data)
             .then(() => {
                 const basicAuthString = btoa(data.username + ':' + data.password)
 

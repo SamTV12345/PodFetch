@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import useCommon, { Podcast} from '../store/CommonSlice'
-import { apiURL } from '../utils/Utilities'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import useModal from "../store/ModalSlice";
 
@@ -18,7 +17,7 @@ export const SettingsPodcastDelete: FC = () => {
 
     useEffect(() => {
         if (podcasts.length === 0) {
-            axios.get(apiURL + '/podcasts')
+            axios.get('/podcasts')
                 .then((v) => {
                     setPodcasts(v.data)
                 })
@@ -26,7 +25,7 @@ export const SettingsPodcastDelete: FC = () => {
     }, [])
 
     const deletePodcast = (withFiles: boolean, podcast_id: number, p: Podcast) => {
-        axios.delete(apiURL + '/podcast/' + podcast_id, { data: { delete_files: withFiles }})
+        axios.delete( '/podcast/' + podcast_id, { data: { delete_files: withFiles }})
             .then(() => {
                 enqueueSnackbar(t('podcast-deleted', { name: p.name }), { variant: 'success' })
                 podcastDeleted(podcast_id)

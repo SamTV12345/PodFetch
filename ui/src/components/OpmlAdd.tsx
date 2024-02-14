@@ -1,7 +1,6 @@
 import { FC, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
-import { apiURL } from '../utils/Utilities'
 import { FileItem, readFile } from '../utils/FileUtils'
 import useOpmlImport from '../store/opmlImportSlice'
 import { AddTypes } from '../models/AddTypes'
@@ -53,7 +52,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 
         setPodcastsToUpload(count)
 
-        axios.post(apiURL + '/podcast/opml', {
+        axios.post(  '/podcast/opml', {
             content: files[0].content
         })
     }

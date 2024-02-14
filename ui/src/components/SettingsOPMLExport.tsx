@@ -1,7 +1,6 @@
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
-import { apiURL } from '../utils/Utilities'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import 'material-symbols/outlined.css'
 
@@ -10,7 +9,7 @@ export const SettingsOPMLExport: FC = () => {
 
     const downloadOPML = (exportType: string) => {
         axios({
-            url: apiURL + '/settings/opml/' + exportType,
+            url:  '/settings/opml/' + exportType,
             method: 'GET',
             responseType: 'blob'
         }).then((response) => {

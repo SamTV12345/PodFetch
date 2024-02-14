@@ -1,7 +1,5 @@
 import {FC, RefObject, useEffect} from 'react'
 import {
-    apiURL,
-    logCurrentPlaybackTime,
     prepareOnlinePodcastEpisode,
     preparePodcastEpisode,
     SKIPPED_TIME
@@ -13,6 +11,7 @@ import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import useCommon from "../store/CommonSlice";
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import {Episode} from "../models/Episode";
+import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 
 type PlayerTimeControlsProps = {
     refItem: RefObject<HTMLAudioElement>
@@ -70,7 +69,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         if (refItem === undefined || refItem.current === undefined|| refItem.current === null) return
 
         const nextEpisode = episodes[index].podcastEpisode
-        axios.get(apiURL + "/podcast/episode/" + nextEpisode.episode_id)
+        axios.get(  "/podcast/episode/" + nextEpisode.episode_id)
             .then((response: AxiosResponse<Episode>) => {
                 setCurrentPodcastEpisode(nextEpisode)
                 nextEpisode.status === 'D'

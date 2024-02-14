@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import useCommon from '../store/CommonSlice'
-import { configWSUrl } from '../utils/Utilities'
 import App from '../App'
 import { AudioComponents } from '../components/AudioComponents'
 import { EpisodeSearchModal } from '../components/EpisodeSearchModal'
@@ -10,6 +9,7 @@ import { Header } from '../components/Header'
 import { Loading } from '../components/Loading'
 import { MainContentPanel } from '../components/MainContentPanel'
 import { Sidebar } from '../components/Sidebar'
+import {configWSUrl} from "../utils/navigationUtils";
 
 export const Root = () => {
     const configModel = useCommon(state => state.configModel)

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import axios from 'axios'
 import { useSnackbar } from 'notistack'
 import useCommon from '../store/CommonSlice'
-import { apiURL, formatTime } from '../utils/Utilities'
+import {formatTime } from '../utils/Utilities'
 import { CreateInviteModal } from './CreateInviteModal'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect, Option } from './CustomSelect'
@@ -75,7 +75,7 @@ export const UserAdminInvites = () => {
     }, [invites, selectedInviteType])
 
     useEffect(() => {
-        axios.get(apiURL + '/users/invites')
+        axios.get(  '/users/invites')
             .then(v => {
                 setInvites(v.data)
                 setError(false)
@@ -139,7 +139,7 @@ export const UserAdminInvites = () => {
                             <tr className="border-b border-[--border-color]" key={i.id}>
                                 <td className="pr-2 py-4">
                                     <button className="text-left text-[--fg-color] hover:text-[--fg-color-hover]" onClick={() => {
-                                        axios.get(apiURL + '/users/invites/' + i.id + '/link')
+                                        axios.get(  '/users/invites/' + i.id + '/link')
                                             .then(v => {
                                                 navigator.clipboard.writeText(v.data)
                                                     .then(()=>enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000 }))
@@ -168,7 +168,7 @@ export const UserAdminInvites = () => {
                                 </td>
                                 <td className="pl-2 py-4">
                                     <button className="flex items-center float-right text-[--danger-fg-color] hover:text-[--danger-fg-color-hover]" onClick={() => {
-                                        axios.delete(apiURL + '/users/invites/' + i.id)
+                                        axios.delete(  '/users/invites/' + i.id)
                                             .then(() => {
                                                 enqueueSnackbar(t('invite-deleted'), { variant: 'success' })
                                                 setInvites(invites.filter(v => v.id !== i.id))

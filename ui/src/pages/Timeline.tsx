@@ -1,7 +1,7 @@
 import {Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
-import { apiURL, formatTime, getFiltersDefault } from '../utils/Utilities'
+import { formatTime, getFiltersDefault } from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Filter } from '../models/Filter'
 import { TimelineHATEOASModel } from '../models/TimeLineModel'
@@ -20,7 +20,7 @@ export const Timeline = () => {
 
 
     useEffect(() => {
-        !filter && axios.get(apiURL + '/podcasts/filter')
+        !filter && axios.get( '/podcasts/filter')
             .then((filterAxiosResponse: AxiosResponse<Filter>) => {
                 filterAxiosResponse.data == null && setFilters(getFiltersDefault())
 
@@ -32,7 +32,7 @@ export const Timeline = () => {
         if (filter) {
             let favoredOnly = filter?.onlyFavored
 
-            axios.get(apiURL + '/podcasts/timeline', {
+            axios.get('/podcasts/timeline', {
                 params: {
                     favoredOnly: favoredOnly === undefined ? false : favoredOnly,
                     notListened: notListened
