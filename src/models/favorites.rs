@@ -11,6 +11,7 @@ use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
+use crate::models::tag::Tag;
 
 #[derive(
     Queryable,
@@ -101,14 +102,15 @@ impl Favorite {
 
         let result: Vec<(Podcast, Favorite)> = dsl_podcast
             .inner_join(f_db)
-            .filter(favor_column.eq(true).and(user_favor.eq(found_username)))
+            .filter(favor_column.eq(true).and(user_favor.eq(&found_username)))
             .load::<(Podcast, Favorite)>(conn)
             .map_err(map_db_error)?;
 
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                MappingService::map_podcast_to_podcast_dto_with_favorites_option(podcast)
+                let tags = Tag::get_tags_of_podcast(conn, podcast.0.id, &found_username).unwrap();
+                MappingService::map_podcast_to_podcast_dto_with_favorites_option(podcast, tags)
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
@@ -119,7 +121,7 @@ impl Favorite {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: String,
+        designated_username: &str,
     ) -> Result<Vec<(Podcast, Favorite)>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;
@@ -184,7 +186,7 @@ impl Favorite {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: String,
+        designated_username: &str,
     ) -> Result<Vec<(Podcast, Option<Favorite>)>, CustomError> {
         use crate::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::dbconfig::schema::favorites::dsl::podcast_id as f_id;
