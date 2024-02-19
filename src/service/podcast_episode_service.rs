@@ -250,7 +250,7 @@ impl PodcastEpisodeService {
                 log::info!(
                 "Error parsing podcast {:?} with cause {:?}",
                 returned_data_from_podcast_insert.content,e);
-                return Err(CustomError::BadRequest(format!("Error parsing podcast {:?}", e)));
+                Err(CustomError::BadRequest(format!("Error parsing podcast {:?}", e)))
             }
         }
     }
