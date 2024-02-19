@@ -62,7 +62,7 @@ sha256 = "1.4.0"
 deunicode = "1.4.2"
 strfmt="0.2.4"
 urlencoding="2.1.3"
-id3 = "1.12.0"
+id3 = "1.13.0"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.63"
