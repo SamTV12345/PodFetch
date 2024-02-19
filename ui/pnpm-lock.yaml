@@ -134,8 +134,8 @@ devDependencies:
     specifier: ^8.4.35
     version: 8.4.35
   sass:
-    specifier: ^1.70.0
-    version: 1.70.0
+    specifier: ^1.71.0
+    version: 1.71.0
   tailwindcss:
     specifier: ^3.4.1
     version: 3.4.1
@@ -144,13 +144,13 @@ devDependencies:
     version: 5.3.3
   vite:
     specifier: ^5.1.1
-    version: 5.1.1(sass@1.70.0)
+    version: 5.1.1(sass@1.71.0)
   vite-plugin-pwa:
     specifier: ^0.18.1
     version: 0.18.1(vite@5.1.1)(workbox-build@7.0.0)(workbox-window@7.0.0)
   vitest:
     specifier: ^1.2.2
-    version: 1.2.2(jsdom@24.0.0)(sass@1.70.0)
+    version: 1.2.2(jsdom@24.0.0)(sass@1.71.0)
 
 packages:
 
@@ -2756,7 +2756,7 @@ packages:
       vite: ^4 || ^5
     dependencies:
       '@swc/core': 1.4.0
-      vite: 5.1.1(sass@1.70.0)
+      vite: 5.1.1(sass@1.71.0)
     transitivePeerDependencies:
       - '@swc/helpers'
     dev: true
@@ -5091,8 +5091,8 @@ packages:
       postcss: 8.4.35
     dev: false
 
-  /sass@1.70.0:
-    resolution: {integrity: sha512-uUxNQ3zAHeAx5nRFskBnrWzDUJrrvpCPD5FNAoRvTi0WwremlheES3tg+56PaVtCs5QDRX5CBLxxKMDJMEa1WQ==}
+  /sass@1.71.0:
+    resolution: {integrity: sha512-HKKIKf49Vkxlrav3F/w6qRuPcmImGVbIXJ2I3Kg0VMA+3Bav+8yE9G5XmP5lMj6nl4OlqbPftGAscNaNu28b8w==}
     engines: {node: '>=14.0.0'}
     hasBin: true
     dependencies:
@@ -5748,7 +5748,7 @@ packages:
     hasBin: true
     dev: false
 
-  /vite-node@1.2.2(sass@1.70.0):
+  /vite-node@1.2.2(sass@1.71.0):
     resolution: {integrity: sha512-1as4rDTgVWJO3n1uHmUYqq7nsFgINQ9u+mRcXpjeOMJUmviqNKjcZB7UfRZrlM7MjYXMKpuWp5oGkjaFLnjawg==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
@@ -5757,7 +5757,7 @@ packages:
       debug: 4.3.4
       pathe: 1.1.2
       picocolors: 1.0.0
-      vite: 5.1.1(sass@1.70.0)
+      vite: 5.1.1(sass@1.71.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -5780,14 +5780,14 @@ packages:
       debug: 4.3.4
       fast-glob: 3.3.2
       pretty-bytes: 6.1.1
-      vite: 5.1.1(sass@1.70.0)
+      vite: 5.1.1(sass@1.71.0)
       workbox-build: 7.0.0
       workbox-window: 7.0.0
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  /vite@5.1.1(sass@1.70.0):
+  /vite@5.1.1(sass@1.71.0):
     resolution: {integrity: sha512-wclpAgY3F1tR7t9LL5CcHC41YPkQIpKUGeIuT8MdNwNZr6OqOTLs7JX5vIHAtzqLWXts0T+GDrh9pN2arneKqg==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
@@ -5818,12 +5818,12 @@ packages:
       esbuild: 0.19.7
       postcss: 8.4.35
       rollup: 4.5.0
-      sass: 1.70.0
+      sass: 1.71.0
     optionalDependencies:
       fsevents: 2.3.3
     dev: true
 
-  /vitest@1.2.2(jsdom@24.0.0)(sass@1.70.0):
+  /vitest@1.2.2(jsdom@24.0.0)(sass@1.71.0):
     resolution: {integrity: sha512-d5Ouvrnms3GD9USIK36KG8OZ5bEvKEkITFtnGv56HFaSlbItJuYr7hv2Lkn903+AvRAgSixiamozUVfORUekjw==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
@@ -5867,8 +5867,8 @@ packages:
       strip-literal: 1.3.0
       tinybench: 2.6.0
       tinypool: 0.8.2
-      vite: 5.1.1(sass@1.70.0)
-      vite-node: 1.2.2(sass@1.70.0)
+      vite: 5.1.1(sass@1.71.0)
+      vite-node: 1.2.2(sass@1.71.0)
       why-is-node-running: 2.2.2
     transitivePeerDependencies:
       - less
