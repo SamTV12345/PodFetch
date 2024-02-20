@@ -152,16 +152,10 @@ pub fn start_command_line(mut args: Args) {
                     username = trim_string(&username);
                     match available_users.iter().find(|u| u.username == username) {
                         Some(..) => {
-                            Episode::delete_by_username(
-                                &mut establish_connection(),
-                                &username,
-                            )
-                            .expect("Error deleting entries for podcast history item");
-                            Device::delete_by_username(
-                                &username,
-                                &mut establish_connection(),
-                            )
-                            .expect("Error deleting devices");
+                            Episode::delete_by_username(&mut establish_connection(), &username)
+                                .expect("Error deleting entries for podcast history item");
+                            Device::delete_by_username(&username, &mut establish_connection())
+                                .expect("Error deleting devices");
                             Episode::delete_by_username_and_episode(
                                 &username,
                                 &mut establish_connection(),

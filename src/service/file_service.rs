@@ -189,17 +189,13 @@ pub async fn prepare_podcast_title_to_directory(
     perform_podcast_variable_replacement(retrieved_settings, podcast.clone())
 }
 
-
-
 fn replace_date_of_str(date: &str) -> String {
     match date.contains('T') {
         true => {
             let splitted_date = date.split('T').collect::<Vec<&str>>();
             splitted_date[0].to_string()
         }
-        false => {
-            date.to_string()
-        }
+        false => date.to_string(),
     }
 }
 
@@ -288,10 +284,7 @@ pub fn perform_episode_variable_replacement(
     let episode_date = replace_date_of_str(&podcast_episode.date_of_recording);
     // Insert variables
     vars.insert("episodeTitle".to_string(), &escaped_episode_title);
-    vars.insert(
-        "episodeDate".to_string(),
-        &episode_date
-    );
+    vars.insert("episodeDate".to_string(), &episode_date);
     vars.insert("episodeGuid".to_string(), &podcast_episode.guid);
     vars.insert("episodeUrl".to_string(), &podcast_episode.url);
     vars.insert(

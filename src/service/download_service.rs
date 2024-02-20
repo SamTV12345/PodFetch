@@ -56,15 +56,15 @@ impl DownloadService {
 
         let mut image_response;
         match podcast_episode.image_url == DEFAULT_IMAGE_URL {
-            true=>{
+            true => {
                 image_response = client
                     .get(get_default_image())
                     .headers(header_map)
                     .send()
                     .unwrap();
             }
-            false=>{
-                let err  = client
+            false => {
+                let err = client
                     .get(podcast_episode.image_url.clone())
                     .headers(header_map.clone())
                     .send();

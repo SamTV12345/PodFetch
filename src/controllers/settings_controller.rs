@@ -129,7 +129,7 @@ pub async fn get_opml(
         podcasts_found,
         ENVIRONMENT_SERVICE.get().unwrap(),
         type_of.into_inner(),
-        requester
+        requester,
     ))
     .map_err(|e| {
         log::error!("Error adding podcasts to opml: {}", e);
@@ -188,7 +188,7 @@ fn add_podcasts(
                 }
 
                 outline.add_attribute("xmlUrl", &local_url)
-            },
+            }
             Mode::Online => outline.add_attribute("xmlUrl", &podcast.rssfeed),
         }
         body.add_child(outline).expect("TODO: panic message");

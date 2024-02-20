@@ -230,7 +230,14 @@ async fn main() -> std::io::Result<()> {
                     if settings.auto_update {
                         let podcast_service = PodcastService::new();
                         info!("Polling for new episodes");
-                        run_poll(podcast_service).unwrap();
+                        match run_poll(podcast_service) {
+                            Ok(_) => {
+                                log::info!("Polling for new episodes successful");
+                            }
+                            Err(e) => {
+                                log::error!("Error polling for new episodes: {}", e);
+                            }
+                        }
                     }
                 }
                 None => {
@@ -538,7 +545,6 @@ pub fn check_server_config() {
         exit(1);
     }
 }
-
 
 fn check_if_multiple_auth_is_configured(env: &EnvironmentService) -> bool {
     let mut num_of_auth_count = 0;

@@ -1,4 +1,6 @@
-use crate::constants::inner_constants::{PodcastType, BASIC_AUTH, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, OIDC_AUTH, DEFAULT_IMAGE_URL};
+use crate::constants::inner_constants::{
+    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
+};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -520,13 +522,18 @@ pub async fn download_podcast(
         podcast_service.get_podcast_by_id(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num);
     thread::spawn(move || {
         let mut podcast_service = PodcastService::new();
-        podcast_service
-            .refresh_podcast(
-                podcast.clone(),
-                lobby,
-                conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
-            )
-            .unwrap();
+        match podcast_service.refresh_podcast(
+            podcast.clone(),
+            lobby,
+            conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
+        ) {
+            Ok(_) => {
+                log::info!("Succesfully refreshed podcast.");
+            }
+            Err(e) => {
+                log::error!("Error refreshing podcast: {}", e);
+            }
+        }
     });
     Ok(HttpResponse::Ok().json("Refreshing podcast"))
 }

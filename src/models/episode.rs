@@ -403,10 +403,7 @@ impl Episode {
             .map_err(map_db_error)
     }
 
-    pub fn delete_by_username(
-        conn: &mut DbConnection,
-        username: &str,
-    ) -> Result<(), CustomError> {
+    pub fn delete_by_username(conn: &mut DbConnection, username: &str) -> Result<(), CustomError> {
         use crate::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::dbconfig::schema::episodes::table as ep_table;
 

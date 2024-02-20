@@ -1,4 +1,7 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED, DEFAULT_IMAGE_URL, ITUNES};
+use crate::constants::inner_constants::{
+    PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES,
+    TELEGRAM_API_ENABLED,
+};
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -123,10 +126,10 @@ impl PodcastEpisodeService {
             Ok(channel) => {
                 if *is_redirected.clone().lock().ignore_poison() {
                     log::info!(
-                "The podcast {} has moved to {}",
-                podcast.name,
-                returned_data_from_podcast_insert.url
-            );
+                        "The podcast {} has moved to {}",
+                        podcast.name,
+                        returned_data_from_podcast_insert.url
+                    );
                     Podcast::update_podcast_urls_on_redirect(
                         podcast.id,
                         returned_data_from_podcast_insert.url,
@@ -160,24 +163,29 @@ impl PodcastEpisodeService {
 
                                     if result.is_err() {
                                         log::info!(
-                                    "Skipping episode {} with error: {}",
-                                    item.clone().title.unwrap_or("with no title".to_string()),
-                                    result.err().unwrap()
-                                );
+                                            "Skipping episode {} with error: {}",
+                                            item.clone()
+                                                .title
+                                                .unwrap_or("with no title".to_string()),
+                                            result.err().unwrap()
+                                        );
                                         continue;
                                     }
 
                                     let result_unwrapped = result.unwrap();
 
-                                    if let Some(result_unwrapped_non_opt) = result_unwrapped.clone() {
-                                        if result_unwrapped_non_opt.clone().podcast_id != podcast.id {
-                                            let inserted_episode = PodcastEpisode::insert_podcast_episodes(
-                                                conn,
-                                                podcast.clone(),
-                                                item.clone(),
-                                                Some(result_unwrapped_non_opt.image_url),
-                                                duration_episode as i32,
-                                            );
+                                    if let Some(result_unwrapped_non_opt) = result_unwrapped.clone()
+                                    {
+                                        if result_unwrapped_non_opt.clone().podcast_id != podcast.id
+                                        {
+                                            let inserted_episode =
+                                                PodcastEpisode::insert_podcast_episodes(
+                                                    conn,
+                                                    podcast.clone(),
+                                                    item.clone(),
+                                                    Some(result_unwrapped_non_opt.image_url),
+                                                    duration_episode as i32,
+                                                );
                                             podcast_inserted.push(inserted_episode);
                                         }
                                     }
@@ -188,21 +196,22 @@ impl PodcastEpisodeService {
                                             duration_episode = Self::parse_duration(&duration);
                                         }
 
-                                        let inserted_episode = PodcastEpisode::insert_podcast_episodes(
-                                            conn,
-                                            podcast.clone(),
-                                            item.clone(),
-                                            itunes_ext.image,
-                                            duration_episode as i32,
-                                        );
+                                        let inserted_episode =
+                                            PodcastEpisode::insert_podcast_episodes(
+                                                conn,
+                                                podcast.clone(),
+                                                item.clone(),
+                                                itunes_ext.image,
+                                                duration_episode as i32,
+                                            );
                                         podcast_inserted.push(inserted_episode);
                                     }
                                 }
                                 None => {
                                     log::info!(
-                                "Skipping episode {} without enclosure.",
-                                item.clone().title.unwrap_or("with no title".to_string())
-                            );
+                                        "Skipping episode {} without enclosure.",
+                                        item.clone().title.unwrap_or("with no title".to_string())
+                                    );
                                     continue;
                                 }
                             }
@@ -212,15 +221,17 @@ impl PodcastEpisodeService {
                             let mut image_url = DEFAULT_IMAGE_URL.to_string();
 
                             // Also check the itunes extension map
-                            if let Some(image_url_extracted) = Self::extract_itunes_url_if_present(item) {
+                            if let Some(image_url_extracted) =
+                                Self::extract_itunes_url_if_present(item)
+                            {
                                 image_url = image_url_extracted;
                             }
 
                             if opt_enclosure.is_none() {
                                 log::info!(
-                            "Skipping episode {} without enclosure.",
-                            item.clone().title.unwrap_or("with no title".to_string())
-                        );
+                                    "Skipping episode {} without enclosure.",
+                                    item.clone().title.unwrap_or("with no title".to_string())
+                                );
                                 continue;
                             }
                             let result = PodcastEpisode::get_podcast_episode_by_url(
@@ -248,13 +259,17 @@ impl PodcastEpisodeService {
             }
             Err(e) => {
                 log::info!(
-                "Error parsing podcast {:?} with cause {:?}",
-                returned_data_from_podcast_insert.content,e);
-                Err(CustomError::BadRequest(format!("Error parsing podcast {:?}", e)))
+                    "Error parsing podcast {:?} with cause {:?}",
+                    returned_data_from_podcast_insert.content,
+                    e
+                );
+                Err(CustomError::BadRequest(format!(
+                    "Error parsing podcast {:?}",
+                    e
+                )))
             }
         }
     }
-
 
     fn extract_itunes_url_if_present(item: &Item) -> Option<String> {
         if let Some(itunes_data) = item.extensions.get(ITUNES) {

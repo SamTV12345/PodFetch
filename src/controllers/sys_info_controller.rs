@@ -25,13 +25,14 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
     let mut sys = System::new();
     let disks = Disks::new_with_refreshed_list();
 
-    let sim_disks = disks.iter().map(|disk| {
-        SimplifiedDisk {
+    let sim_disks = disks
+        .iter()
+        .map(|disk| SimplifiedDisk {
             name: disk.name().to_str().unwrap().to_string(),
             total_space: disk.total_space(),
             available_space: disk.available_space(),
-        }
-    }).collect::<Vec<SimplifiedDisk>>();
+        })
+        .collect::<Vec<SimplifiedDisk>>();
 
     sys.refresh_all();
 
@@ -47,7 +48,6 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{map_io_extra_error, CustomError};
 use utoipa::ToSchema;
-
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {

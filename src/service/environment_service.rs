@@ -1,4 +1,10 @@
-use crate::constants::inner_constants::{BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
+use crate::constants::inner_constants::{
+    BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH,
+    OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD,
+    PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT,
+    REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY,
+    TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME,
+};
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use regex::Regex;
@@ -33,7 +39,6 @@ pub struct EnvironmentService {
     pub telegram_api: Option<TelegramConfig>,
     pub any_auth_enabled: bool,
 }
-
 
 #[derive(Clone)]
 pub struct ReverseProxyConfig {
@@ -133,7 +138,6 @@ impl EnvironmentService {
                 || is_env_var_present_and_true(REVERSE_PROXY),
         }
     }
-
 
     fn handle_telegram_config() -> Option<TelegramConfig> {
         if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {

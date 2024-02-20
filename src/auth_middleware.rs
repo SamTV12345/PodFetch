@@ -95,59 +95,61 @@ where
     fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let env_service = ENVIRONMENT_SERVICE.get().unwrap();
         let opt_auth_header = req.headers().get("Authorization");
-        if opt_auth_header.is_none() {
-            return Box::pin(ok(req
-                .error_response(ErrorUnauthorized("Unauthorized"))
-                .map_into_right_body()));
-        }
-        return match opt_auth_header.unwrap().to_str() {
-            Ok(auth) => {
-                let (username, password) = AuthFilter::extract_basic_auth(auth);
-                let res = req.app_data::<web::Data<DbPool>>().unwrap();
-                let found_user = User::find_by_username(username.as_str(), &mut res.get().unwrap());
 
-                if found_user.is_err() {
-                    return Box::pin(ok(req
-                        .error_response(ErrorUnauthorized("Unauthorized"))
-                        .map_into_right_body()));
-                }
-                let unwrapped_user = found_user.unwrap();
+        match opt_auth_header {
+            Some(header) => match header.to_str() {
+                Ok(auth) => {
+                    let (username, password) = AuthFilter::extract_basic_auth(auth);
+                    let res = req.app_data::<web::Data<DbPool>>().unwrap();
+                    let found_user =
+                        User::find_by_username(username.as_str(), &mut res.get().unwrap());
 
-                if let Some(admin_username) = env_service.username.clone() {
-                    if unwrapped_user.username.clone() == admin_username {
-                        return match env_service.password.is_some()
-                            && digest(password) == env_service.password.clone().unwrap()
-                        {
-                            true => {
-                                req.extensions_mut().insert(unwrapped_user);
-                                let service = Rc::clone(&self.service);
-                                async move {
-                                    service.call(req).await.map(|res| res.map_into_left_body())
+                    if found_user.is_err() {
+                        return Box::pin(ok(req
+                            .error_response(ErrorUnauthorized("Unauthorized"))
+                            .map_into_right_body()));
+                    }
+                    let unwrapped_user = found_user.unwrap();
+
+                    if let Some(admin_username) = env_service.username.clone() {
+                        if unwrapped_user.username.clone() == admin_username {
+                            return match env_service.password.is_some()
+                                && digest(password) == env_service.password.clone().unwrap()
+                            {
+                                true => {
+                                    req.extensions_mut().insert(unwrapped_user);
+                                    let service = Rc::clone(&self.service);
+                                    async move {
+                                        service.call(req).await.map(|res| res.map_into_left_body())
+                                    }
+                                    .boxed_local()
                                 }
-                                .boxed_local()
-                            }
-                            false => Box::pin(ok(req
-                                .error_response(ErrorUnauthorized("Unauthorized"))
-                                .map_into_right_body())),
-                        };
+                                false => Box::pin(ok(req
+                                    .error_response(ErrorUnauthorized("Unauthorized"))
+                                    .map_into_right_body())),
+                            };
+                        }
+                    }
+
+                    if unwrapped_user.password.clone().unwrap() == digest(password) {
+                        req.extensions_mut().insert(unwrapped_user);
+                        let service = Rc::clone(&self.service);
+                        async move { service.call(req).await.map(|res| res.map_into_left_body()) }
+                            .boxed_local()
+                    } else {
+                        Box::pin(ok(req
+                            .error_response(ErrorUnauthorized("Unauthorized"))
+                            .map_into_right_body()))
                     }
                 }
-
-                if unwrapped_user.password.clone().unwrap() == digest(password) {
-                    req.extensions_mut().insert(unwrapped_user);
-                    let service = Rc::clone(&self.service);
-                    async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                        .boxed_local()
-                } else {
-                    Box::pin(ok(req
-                        .error_response(ErrorUnauthorized("Unauthorized"))
-                        .map_into_right_body()))
-                }
-            }
-            Err(_) => Box::pin(ok(req
+                Err(_) => Box::pin(ok(req
+                    .error_response(ErrorUnauthorized("Unauthorized"))
+                    .map_into_right_body())),
+            },
+            None => Box::pin(ok(req
                 .error_response(ErrorUnauthorized("Unauthorized"))
                 .map_into_right_body())),
-        };
+        }
     }
 
     fn handle_oidc_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
@@ -236,7 +238,12 @@ where
     }
 
     fn handle_proxy_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let config = ENVIRONMENT_SERVICE.get().unwrap().reverse_proxy_config.clone().unwrap();
+        let config = ENVIRONMENT_SERVICE
+            .get()
+            .unwrap()
+            .reverse_proxy_config
+            .clone()
+            .unwrap();
 
         let header_val = req.headers().get(config.header_name);
 
@@ -251,8 +258,10 @@ where
                     return match found_user {
                         Ok(user) => {
                             req.extensions_mut().insert(user);
-                            return async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                                .boxed_local()
+                            return async move {
+                                service.call(req).await.map(|res| res.map_into_left_body())
+                            }
+                            .boxed_local();
                         }
                         Err(_) => {
                             if config.auto_sign_up {
@@ -268,30 +277,30 @@ where
                                     },
                                     &mut pool.get().unwrap(),
                                 )
-                                    .expect("Error inserting user");
+                                .expect("Error inserting user");
                                 req.extensions_mut().insert(user);
-                                return async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                                    .boxed_local()
+                                return async move {
+                                    service.call(req).await.map(|res| res.map_into_left_body())
+                                }
+                                .boxed_local();
                             } else {
                                 Box::pin(ok(req
                                     .error_response(ErrorForbidden("Forbidden"))
                                     .map_into_right_body()))
                             }
                         }
-                    }
+                    };
                 }
                 Err(_) => Box::pin(ok(req
                     .error_response(ErrorUnauthorized("Unauthorized"))
-                    .map_into_right_body()))
-            }
+                    .map_into_right_body())),
+            };
         }
 
         Box::pin(ok(req
             .error_response(ErrorUnauthorized("Unauthorized"))
             .map_into_right_body()))
     }
-
-
 }
 
 impl AuthFilter {

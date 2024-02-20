@@ -65,7 +65,6 @@ impl MappingService {
     }
 
     pub fn map_podcastepisode_to_dto(podcast_episode: &PodcastEpisode) -> PodcastEpisode {
-
         PodcastEpisode {
             id: podcast_episode.id,
             podcast_id: podcast_episode.podcast_id,
@@ -87,7 +86,7 @@ impl MappingService {
         }
     }
 
-    fn map_image_url(image_url: &str) -> String{
+    fn map_image_url(image_url: &str) -> String {
         match image_url == DEFAULT_IMAGE_URL {
             true => {
                 let env = ENVIRONMENT_SERVICE.get().unwrap();

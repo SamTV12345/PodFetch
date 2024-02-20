@@ -194,9 +194,11 @@ impl PodcastService {
                         podcast: Option::from(podcast.clone()),
                         podcast_episodes: Option::from(inserted_podcasts),
                     });
-                    podcast_service
-                        .schedule_episode_download(podcast, Some(lobby), &mut conn)
-                        .unwrap();
+                    if let Err(e) =
+                        podcast_service.schedule_episode_download(podcast, Some(lobby), &mut conn)
+                    {
+                        log::error!("Error scheduling episode download: {}", e);
+                    }
                 })
                 .await
                 .unwrap();
@@ -222,12 +224,15 @@ impl PodcastService {
                         PodcastEpisodeService::get_last_n_podcast_episodes(conn, podcast.clone())?;
                     for podcast_episode in result {
                         if !podcast_episode.deleted {
+                            if let Err(e) =
                             PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
                                     podcast_episode,
                                     podcast.clone(),
                                     lobby.clone(),
                                     conn,
-                                )?;
+                                ){
+                                log::error!("Error downloading podcast episode: {}", e);
+                            }
                         }
                     }
                 }

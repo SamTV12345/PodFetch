@@ -116,15 +116,15 @@ pub async fn get_rss_feed(
         .items(items.clone())
         .clone();
 
-    let channel = generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env, &api_key);
+    let channel =
+        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env, &api_key);
 
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
-
 fn add_api_key_to_url(url: String, api_key: &Option<Query<RSSAPiKey>>) -> String {
     if let Some(ref api_key) = api_key {
-        if url.contains('?'){
+        if url.contains('?') {
             return format!("{}&apiKey={}", url, api_key.api_key);
         }
         return format!("{}?apiKey={}", url, api_key.api_key);
@@ -141,8 +141,14 @@ fn generate_itunes_extension_conditionally(
 ) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
-            true => itunes_ext.set_image(add_api_key_to_url(env.server_url.to_string() + &*e.image_url, api_key)),
-            false => itunes_ext.set_image(add_api_key_to_url(env.server_url.to_string() + &*e.original_image_url, api_key)),
+            true => itunes_ext.set_image(add_api_key_to_url(
+                env.server_url.to_string() + &*e.image_url,
+                api_key,
+            )),
+            false => itunes_ext.set_image(add_api_key_to_url(
+                env.server_url.to_string() + &*e.original_image_url,
+                api_key,
+            )),
         }
     }
 
@@ -216,7 +222,10 @@ pub async fn get_rss_feed_for_podcast(
         .explicit(podcast.clone().explicit)
         .author(podcast.clone().author)
         .keywords(podcast.clone().keywords)
-        .new_feed_url(add_api_key_to_url(format!("{}{}/{}", &server_url, &"rss", &id), &api_key))
+        .new_feed_url(add_api_key_to_url(
+            format!("{}{}/{}", &server_url, &"rss", &id),
+            &api_key,
+        ))
         .summary(podcast.summary.clone())
         .build();
 
@@ -225,7 +234,10 @@ pub async fn get_rss_feed_for_podcast(
         .language(podcast.clone().language)
         .categories(categories)
         .title(podcast.name.clone())
-        .link(add_api_key_to_url(format!("{}{}/{}", &server_url, &"rss", &id), &api_key))
+        .link(add_api_key_to_url(
+            format!("{}{}/{}", &server_url, &"rss", &id),
+            &api_key,
+        ))
         .description(podcast.clone().summary.unwrap())
         .items(items.clone())
         .clone();

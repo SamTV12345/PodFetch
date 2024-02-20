@@ -1,4 +1,5 @@
 use crate::dbconfig::schema::sessions;
+use crate::utils::error::{map_db_error, CustomError};
 use crate::{execute_with_conn, DBType as DbConnection};
 use chrono::{NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
@@ -6,7 +7,6 @@ use diesel::QueryDsl;
 use diesel::{Insertable, Queryable, RunQueryDsl};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use crate::utils::error::{CustomError, map_db_error};
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
 pub struct Session {

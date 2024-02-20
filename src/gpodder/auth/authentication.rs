@@ -34,16 +34,17 @@ pub async fn login(
     }
 
     match env.reverse_proxy {
-        true=>{
-            handle_proxy_auth(rq, username, conn, env)
-        }
-        false=>{
-            handle_gpodder_basic_auth(rq, username, conn, env)
-        }
+        true => handle_proxy_auth(rq, username, conn, env),
+        false => handle_gpodder_basic_auth(rq, username, conn, env),
     }
 }
 
-fn handle_proxy_auth(rq: HttpRequest, username: web::Path<String>, conn: Data<DbPool>, env: &EnvironmentService)-> Result<HttpResponse, CustomError> {
+fn handle_proxy_auth(
+    rq: HttpRequest,
+    username: web::Path<String>,
+    conn: Data<DbPool>,
+    env: &EnvironmentService,
+) -> Result<HttpResponse, CustomError> {
     let config = env.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
     return match opt_authorization {
@@ -55,10 +56,16 @@ fn handle_proxy_auth(rq: HttpRequest, username: web::Path<String>, conn: Data<Db
                 return Err(CustomError::Forbidden);
             }
 
-            return match User::find_by_username(auth_val, conn.get().map_err(map_r2d2_error)?.deref_mut()) {
+            return match User::find_by_username(
+                auth_val,
+                conn.get().map_err(map_r2d2_error)?.deref_mut(),
+            ) {
                 Ok(user) => {
                     let session = Session::new(user.username);
-                    Session::insert_session(&session, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+                    Session::insert_session(
+                        &session,
+                        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+                    )?;
                     let user_cookie = create_session_cookie(session);
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
                 }
@@ -68,15 +75,16 @@ fn handle_proxy_auth(rq: HttpRequest, username: web::Path<String>, conn: Data<Db
                 }
             };
         }
-        None => {
-            Err(CustomError::Forbidden)
-        }
-    }
+        None => Err(CustomError::Forbidden),
+    };
 }
 
-
-fn handle_gpodder_basic_auth(rq: HttpRequest, username: web::Path<String>, conn: Data<DbPool>, env: &EnvironmentService) ->
-                                                                                                Result<HttpResponse, CustomError> {
+fn handle_gpodder_basic_auth(
+    rq: HttpRequest,
+    username: web::Path<String>,
+    conn: Data<DbPool>,
+    env: &EnvironmentService,
+) -> Result<HttpResponse, CustomError> {
     let opt_authorization = rq.headers().get("Authorization");
 
     if opt_authorization.is_none() {
@@ -93,8 +101,11 @@ fn handle_gpodder_basic_auth(rq: HttpRequest, username: web::Path<String>, conn:
 
     if let Some(admin_username) = &env.username {
         if admin_username == &unwrapped_username {
-            return Err(CustomError::Conflict("The user you are trying to login is equal to the admin user. Please\
-                 use another user to login.".to_string()));
+            return Err(CustomError::Conflict(
+                "The user you are trying to login is equal to the admin user. Please\
+                 use another user to login."
+                    .to_string(),
+            ));
         }
     }
 
@@ -117,8 +128,6 @@ fn handle_gpodder_basic_auth(rq: HttpRequest, username: web::Path<String>, conn:
         None => Err(CustomError::Forbidden),
     };
 }
-
-
 
 fn create_session_cookie(session: Session) -> Cookie<'static> {
     let user_cookie = Cookie::build("sessionid", session.session_id)

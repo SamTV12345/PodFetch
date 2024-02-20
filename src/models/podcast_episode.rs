@@ -1,3 +1,4 @@
+use crate::constants::inner_constants::DEFAULT_IMAGE_URL;
 use crate::dbconfig::schema::*;
 use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
@@ -21,7 +22,6 @@ use diesel::{
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
-use crate::constants::inner_constants::DEFAULT_IMAGE_URL;
 
 #[derive(
     Queryable,
@@ -171,17 +171,11 @@ impl PodcastEpisode {
         }
 
         let inserted_image_url: String = match optional_image {
-            Some(c)=>{
-                c
-            }
-            None=>match podcast.image_url.is_empty() {
-                    true=>{
-                        DEFAULT_IMAGE_URL.to_string()
-                    }
-                    false=>{
-                        podcast.original_image_url
-                    }
-                }
+            Some(c) => c,
+            None => match podcast.image_url.is_empty() {
+                true => DEFAULT_IMAGE_URL.to_string(),
+                false => podcast.original_image_url,
+            },
         };
 
         let guid_to_insert = Guid {
