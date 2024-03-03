@@ -265,7 +265,7 @@ impl PodcastEpisodeService {
                 );
                 Err(CustomError::BadRequest(format!(
                     "Error parsing podcast {:?}",
-                    e
+                    podcast
                 )))
             }
         }

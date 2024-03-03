@@ -34,14 +34,14 @@ pub async fn login(
     }
 
     match env.reverse_proxy {
-        true => handle_proxy_auth(rq, username, conn, env),
+        true => handle_proxy_auth(rq, username.into_inner(), conn, env),
         false => handle_gpodder_basic_auth(rq, username, conn, env),
     }
 }
 
 fn handle_proxy_auth(
     rq: HttpRequest,
-    username: web::Path<String>,
+    username: String,
     conn: Data<DbPool>,
     env: &EnvironmentService,
 ) -> Result<HttpResponse, CustomError> {
@@ -52,7 +52,8 @@ fn handle_proxy_auth(
             let auth_val = auth.to_str().unwrap();
 
             // Block if auth and user is different
-            if auth_val != username.into_inner() {
+            if auth_val != username {
+                log::error!("Error: Username and auth header are different");
                 return Err(CustomError::Forbidden);
             }
 
@@ -70,8 +71,24 @@ fn handle_proxy_auth(
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
                 }
                 Err(e) => {
-                    log::error!("Error finding user by username: {}", e);
-                    Err(CustomError::Forbidden)
+                    if config.auto_sign_up{
+                        User::insert_user(
+                            &mut User {
+                                id: 0,
+                                username: username.to_string(),
+                                role: "user".to_string(),
+                                password: None,
+                                explicit_consent: false,
+                                created_at: chrono::Utc::now().naive_utc(),
+                                api_key: None,
+                            },
+                            &mut conn.get().unwrap(),
+                        ).expect("Error inserting user on auto registering");
+                        handle_proxy_auth(rq, username.clone(), conn, env)
+                    } else {
+                        log::error!("Error finding user by username: {}", e);
+                        Err(CustomError::Forbidden)
+                    }
                 }
             };
         }
