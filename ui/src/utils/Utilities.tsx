@@ -157,8 +157,9 @@ export const TITLE_DESCENDING:OrderCriteriaSortingType = {
     ascending: false
 }
 
-export const decodeHTMLEntities = (() => {   const textArea = document.createElement('textarea');
-    return (message: string): string => {
-        textArea.innerHTML = message;
-        return textArea.value;
-    }; })();
+export const decodeHTMLEntities = (html: string): string => {
+    const textArea = document.createElement('textarea');
+    textArea.innerHTML = html;
+    textArea.remove()
+    return textArea.value;
+}
