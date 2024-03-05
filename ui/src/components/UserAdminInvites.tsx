@@ -10,6 +10,7 @@ import { CustomSelect, Option } from './CustomSelect'
 import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
+import copy from 'copy-text-to-clipboard'
 
 export type Invite = {
     id: string,
@@ -141,9 +142,8 @@ export const UserAdminInvites = () => {
                                     <button className="text-left text-[--fg-color] hover:text-[--fg-color-hover]" onClick={() => {
                                         axios.get(  '/users/invites/' + i.id + '/link')
                                             .then(v => {
-                                                navigator.clipboard.writeText(v.data)
-                                                    .then(()=>enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000 }))
-
+                                                copy(v.data)
+                                                enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000, variant: 'success'})
                                             })
                                     }} title={t('copy-link')}>
                                         {i.id}
