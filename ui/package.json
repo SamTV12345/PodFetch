@@ -11,7 +11,7 @@
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.0.16",
+    "@fontsource-variable/inter": "^5.0.17",
     "@fontsource/anton": "^5.0.18",
     "@fontsource/poppins": "^5.0.8",
     "@fontsource/roboto": "^5.0.12",
