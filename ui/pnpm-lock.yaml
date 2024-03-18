@@ -9,8 +9,8 @@ dependencies:
     specifier: ^5.0.17
     version: 5.0.17
   '@fontsource/anton':
-    specifier: ^5.0.18
-    version: 5.0.18
+    specifier: ^5.0.19
+    version: 5.0.19
   '@fontsource/poppins':
     specifier: ^5.0.8
     version: 5.0.8
@@ -1612,8 +1612,8 @@ packages:
     resolution: {integrity: sha512-sa80nNnqF8kzhBvqusWiL9vlPMVpdmOwMmDBup46Jggsr1VBqo+YuzwB36Ls+X6uHJtb8Yv3ALBHL/zGmT862A==}
     dev: false
 
-  /@fontsource/anton@5.0.18:
-    resolution: {integrity: sha512-VUb4DqLP1wgbKIpkJPkdP7Iry41nW1EofpkL9SVzP6oQ4h5l+PC70i5N3Ptq07NBhEGfx6PsUq7akV0/tKN7IQ==}
+  /@fontsource/anton@5.0.19:
+    resolution: {integrity: sha512-ecUp96pfLBofdMF0YqBrTPtPEiSyycUiGkERJyj55J7c7fU0qAHXBhgjjt3FGD1xW7Iiu4YkcDJD1sQIJ3hyhA==}
     dev: false
 
   /@fontsource/poppins@5.0.8:

@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.0.17",
-    "@fontsource/anton": "^5.0.18",
+    "@fontsource/anton": "^5.0.19",
     "@fontsource/poppins": "^5.0.8",
     "@fontsource/roboto": "^5.0.12",
     "@fortawesome/fontawesome-free": "^6.5.1",
