@@ -26,7 +26,7 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
                     .then((response: AxiosResponse<PodcastWatchedModel>) => {
                         setCurrentPodcastEpisode({
                             ...podcastEpisode,
-                            time: response.data.watchedTime
+                            time: response.data.position
                         })
                         refItem.current!.currentTime = podcastEpisode.time!
                     })
@@ -61,6 +61,21 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
                     duration: e.currentTarget.duration,
                     percentage: 0
                 })
+                
+                if (isNaN(e.currentTarget.duration)) {
+                    // Need alternative method of getting duration
+                    // Firefox doesn't load the entire file before playing
+                    // causing a changing duration, but the onLoadedMetadata event
+                    // is only called once rendering the progressbar useless
+                     axios.get('/podcast/episode/' + podcastEpisode.episode_id)
+                       .then((response: AxiosResponse<PodcastWatchedModel>) => {
+                           setMetadata({
+                               currentTime: e.currentTarget.currentTime,
+                               duration: response.data.total,
+                               percentage: 0
+                           })
+                       })
+                }
             }}
         />
     )
