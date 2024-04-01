@@ -19,7 +19,7 @@ sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel
 [dependencies]
 awc =  {version="3.4.0", features = ["rustls"]}
 rpassword = "7.3.1"
-reqwest = { version = "0.11.25", features = ["stream", "json","blocking"] }
+reqwest = { version = "0.12.2", features = ["stream", "json","blocking"] }
 tokio-stream = { version = "0.1.15", features = ["sync"] }
 actix = "0.13.3"
 async-recursion = "1.1.0"
