@@ -1,6 +1,6 @@
 use crate::gpodder::subscription::subscriptions::SubscriptionUpdateRequest;
 use actix_web::web;
-use chrono::{NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use std::io::Error;
@@ -75,7 +75,7 @@ impl SubscriptionChangesToClient {
         since: i32,
         conn: &mut DbConnection,
     ) -> Result<SubscriptionChangesToClient, Error> {
-        let since = NaiveDateTime::from_timestamp_opt(since as i64, 0).unwrap();
+        let since = DateTime::from_timestamp(since as i64, 0).map(|v|v.naive_utc()).unwrap();
         let res: Vec<Subscription> = subscriptions::table
             .filter(subscriptions::username.eq(username))
             .filter(
