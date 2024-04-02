@@ -202,10 +202,13 @@ impl DownloadService {
             }
         }
 
-        tag.write_to_path(paths.filename, Version::Id3v24)
+        let write_succesful = tag.write_to_path(paths.filename, Version::Id3v24)
             .map(|_| ())
-            .map_err(|e| CustomError::Conflict(e.to_string()))?;
+            .map_err(|e| CustomError::Conflict(e.to_string()));
 
+        if write_succesful.is_err() {
+           log::error!("Error writing metadata: {:?}", write_succesful.err().unwrap());
+        }
         Ok(())
     }
 }
