@@ -1,7 +1,7 @@
 use crate::dbconfig::schema::sessions;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::{execute_with_conn, DBType as DbConnection};
-use chrono::{NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{Insertable, Queryable, RunQueryDsl};
@@ -20,8 +20,8 @@ impl Session {
         Self {
             username,
             session_id: Uuid::new_v4().to_string(),
-            expires: NaiveDateTime::from_timestamp_opt(Utc::now().timestamp() + 60 * 60 * 24, 0)
-                .unwrap(),
+            expires: DateTime::from_timestamp(Utc::now().timestamp() + 60 * 60 * 24, 0)
+                .map(|v|v.naive_utc()).unwrap(),
         }
     }
 
