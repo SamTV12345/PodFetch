@@ -5,12 +5,12 @@ use crate::service::file_service::FileService;
 use reqwest::blocking::ClientBuilder;
 
 use id3::{ErrorKind, Tag, TagLike, Version};
-use reqwest::header::HeaderMap;
+use reqwest::header::{HeaderMap, HeaderValue};
 use std::io;
 use std::io::Read;
 
 use crate::config::dbconfig::establish_connection;
-use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
+use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::dbconfig::DBType;
 use crate::get_default_image;
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
@@ -47,6 +47,7 @@ impl DownloadService {
             determine_file_extension(&podcast_episode.image_url, &client, FileType::Image);
 
         let mut header_map = HeaderMap::new();
+        header_map.insert("User-Agent", HeaderValue::from_str(COMMON_USER_AGENT).unwrap());
         add_basic_auth_headers_conditionally(podcast_episode.url.clone(), &mut header_map);
         let mut resp = client
             .get(podcast_episode.url.clone())

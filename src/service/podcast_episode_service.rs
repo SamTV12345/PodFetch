@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::utils::podcast_builder::PodcastBuilder;
 use actix::Addr;
+use actix_web::http::header::HeaderValue;
 use actix_web::web;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
