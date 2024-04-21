@@ -36,7 +36,7 @@ mod tests {
     fn test_get_current_timestamp_str() {
         let timestamp = get_current_timestamp_str();
 
-        assert!(timestamp.timestamp() > 0);
+        assert!(timestamp.and_utc().timestamp() > 0);
     }
 
     #[test]
