@@ -71,7 +71,7 @@ pub async fn get_filter(
         requester.unwrap().username.clone(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
-        .await?;
+    .await?;
     Ok(HttpResponse::Ok().json(filter))
 }
 
@@ -97,7 +97,7 @@ pub async fn search_podcasts(
         requester.clone().unwrap().username.clone(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
-        .await?;
+    .await?;
 
     let only_favored = match opt_filter {
         Some(filter) => filter.only_favored,
@@ -624,7 +624,7 @@ async fn insert_outline(
                 environment.clone(),
                 conn.clone(),
             )
-                .await;
+            .await;
         }
         return;
     }
