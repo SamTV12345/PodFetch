@@ -12,8 +12,8 @@ dependencies:
     specifier: ^5.0.19
     version: 5.0.19
   '@fontsource/poppins':
-    specifier: ^5.0.13
-    version: 5.0.13
+    specifier: ^5.0.14
+    version: 5.0.14
   '@fontsource/roboto':
     specifier: ^5.0.12
     version: 5.0.12
@@ -1602,8 +1602,8 @@ packages:
     resolution: {integrity: sha512-ecUp96pfLBofdMF0YqBrTPtPEiSyycUiGkERJyj55J7c7fU0qAHXBhgjjt3FGD1xW7Iiu4YkcDJD1sQIJ3hyhA==}
     dev: false
 
-  /@fontsource/poppins@5.0.13:
-    resolution: {integrity: sha512-8G9odFoxH43oZpvq43fpGucm8iHm6iatu0M1LIshb+tx3/y6YBXenVED7CI4resvPz6hyDu8a2vHSh9vrpe+wQ==}
+  /@fontsource/poppins@5.0.14:
+    resolution: {integrity: sha512-nmM1zpPo3Uh4JcGAVSQuWaZNYh2FbbwWhZ5t6hRaynmJaNTBW85d3nEh9zMmzI0HX7X5xqQVdRHeDatKpOGsnA==}
     dev: false
 
   /@fontsource/roboto@5.0.12:
