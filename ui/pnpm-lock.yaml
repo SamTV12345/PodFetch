@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@fontsource-variable/inter':
-    specifier: ^5.0.17
-    version: 5.0.17
+    specifier: ^5.0.18
+    version: 5.0.18
   '@fontsource/anton':
     specifier: ^5.0.19
     version: 5.0.19
@@ -1594,8 +1594,8 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
-  /@fontsource-variable/inter@5.0.17:
-    resolution: {integrity: sha512-sa80nNnqF8kzhBvqusWiL9vlPMVpdmOwMmDBup46Jggsr1VBqo+YuzwB36Ls+X6uHJtb8Yv3ALBHL/zGmT862A==}
+  /@fontsource-variable/inter@5.0.18:
+    resolution: {integrity: sha512-rJzSrtJ3b7djiGFvRuTe6stDfbYJGhdQSfn2SI2WfXviee7Er0yKAHE5u7FU7OWVQQQ1x3+cxdmx9NdiAkcrcA==}
     dev: false
 
   /@fontsource/anton@5.0.19:
