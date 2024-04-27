@@ -23,7 +23,7 @@ use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use reqwest::blocking::{Client, ClientBuilder as SyncClientBuilder};
-use reqwest::ClientBuilder as AsyncClientBuilder;
+use reqwest::{ClientBuilder as AsyncClientBuilder};
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::ops::DerefMut;
@@ -804,21 +804,22 @@ pub(crate) async fn proxy_podcast(
     });
 
     let mut header_map = HeaderMap::new();
-
-    for x in rq.headers() {
-        if x.0 == "host" || x.0 == "referer" || x.0 == "sec-fetch-site" || x.0 == "sec-fetch-mode" {
+    let headers_from_request = rq.headers().clone();
+    for (header, header_value) in headers_from_request {
+        if header == "host" || header == "referer" || header == "sec-fetch-site" || header == "sec-fetch-mode" {
             continue;
         }
-        header_map.append(x.0.clone(), x.1.clone());
+        let header = reqwest::header::HeaderName::from_str(header.as_ref()).unwrap();
+        header_map.append(header, header_value.to_str().unwrap().parse().unwrap());
     }
 
     add_basic_auth_headers_conditionally(episode.clone().url, &mut header_map);
     // Required to not generate a 302 redirect
     header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
     header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
-
+    use std::str::FromStr;
     let forwarded_req = reqwest::Client::new()
-        .request(method, episode.url)
+        .request(reqwest::Method::from_str(method.as_str()).unwrap(), episode.url)
         .headers(header_map)
         .fetch_mode_no_cors()
         .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
@@ -833,9 +834,11 @@ pub(crate) async fn proxy_podcast(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    let mut client_resp = HttpResponse::build(res.status());
+    let mut client_resp = HttpResponse::build(actix_web::http::StatusCode::from_u16(res.status()
+        .as_u16()).unwrap
+    ());
     for (header_name, header_value) in res.headers().iter() {
-        client_resp.insert_header((header_name.clone(), header_value.clone()));
+        client_resp.insert_header((header_name.as_str(), header_value.to_str().unwrap()));
     }
 
     Ok(client_resp.streaming(res.bytes_stream()))
