@@ -809,7 +809,7 @@ pub(crate) async fn proxy_podcast(
         if header == "host" || header == "referer" || header == "sec-fetch-site" || header == "sec-fetch-mode" {
             continue;
         }
-        let header = reqwest::header::HeaderName::from_str(&header.to_string()).unwrap();
+        let header = reqwest::header::HeaderName::from_str(header.as_ref()).unwrap();
         header_map.append(header, header_value.to_str().unwrap().parse().unwrap());
     }
 
