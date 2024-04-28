@@ -1,3 +1,4 @@
+use std::fs::File;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::FileService;
@@ -130,10 +131,11 @@ impl DownloadService {
             conn,
         )?;
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
-        Self::update_meta_data(paths, podcast_episode, podcast, conn)?;
+        if paths.filename.ends_with(".mp3") {
+            Self::update_meta_data(paths, podcast_episode, podcast, conn)?;
+        }
         Ok(())
     }
-
     fn update_meta_data(
         paths: FilenameBuilderReturn,
         podcast_episode: PodcastEpisode,
