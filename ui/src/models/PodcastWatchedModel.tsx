@@ -4,4 +4,6 @@ export interface PodcastWatchedModel {
     episodeId: number,
     watchedTime: number,
     date: String
+    total: number
+    position: number
 }
