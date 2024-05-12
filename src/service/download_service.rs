@@ -151,6 +151,10 @@ impl DownloadService {
             Err(err) => return Err(CustomError::Conflict(err.to_string())),
         };
 
+        if let Version::Id3v22 = tag.version() {
+            tag = Tag::new();
+        }
+
         if let 0 = tag.pictures().count() {
             let mut image_file = std::fs::File::open(paths.image_filename).unwrap();
             let mut image_data = Vec::new();
