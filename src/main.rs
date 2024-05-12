@@ -28,7 +28,6 @@ use log::info;
 use r2d2::Pool;
 use regex::Regex;
 use std::process::exit;
-
 use tokio::task::spawn_blocking;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -145,6 +144,8 @@ async fn index() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+
+
     println!(
         "Debug file located at {}",
         concat!(env!("OUT_DIR"), "/built.rs")

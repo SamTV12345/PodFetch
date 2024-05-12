@@ -1,4 +1,4 @@
-
+use std::fs::File;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::FileService;
@@ -9,6 +9,7 @@ use id3::{ErrorKind, Tag, TagLike, Version};
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::io;
 use std::io::Read;
+use file_format::FileFormat;
 
 use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
@@ -109,8 +110,8 @@ impl DownloadService {
                 .build(conn)?,
         };
 
-        let mut podcast_out = std::fs::File::create(&paths.filename).unwrap();
-        let mut image_out = std::fs::File::create(&paths.image_filename).unwrap();
+        let mut podcast_out = File::create(&paths.filename).unwrap();
+        let mut image_out = File::create(&paths.image_filename).unwrap();
 
         if !self
             .file_service
@@ -131,12 +132,24 @@ impl DownloadService {
             conn,
         )?;
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
-        if paths.filename.ends_with(".mp3") {
-            Self::update_meta_data(paths, podcast_episode, podcast, conn)?;
+        let detected_file = FileFormat::from_file(&paths.filename).unwrap();
+
+        match detected_file {
+            FileFormat::Mpeg12AudioLayer3 => {
+                Self::update_meta_data_mp3(paths, podcast_episode, podcast, conn)?;
+            },
+            FileFormat::AppleItunesAudio =>{
+                Self::update_meta_data_mp4(paths, podcast_episode, podcast, conn)?;
+            },
+            _ => {
+                log::error!("File format not supported: {:?}", detected_file);
+            }
         }
+
+
         Ok(())
     }
-    fn update_meta_data(
+    fn update_meta_data_mp3(
         paths: FilenameBuilderReturn,
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
@@ -217,5 +230,52 @@ impl DownloadService {
            log::error!("Error writing metadata: {:?}", write_succesful.err().unwrap());
         }
         Ok(())
+    }
+
+
+
+    fn update_meta_data_mp4(
+        paths: FilenameBuilderReturn,
+        podcast_episode: PodcastEpisode,
+        podcast: Podcast,
+        conn: &mut DBType,
+    ) -> Result<(), CustomError> {
+        let tag = mp4ameta::Tag::read_from_path(&paths.filename);
+        match tag {
+            Ok(mut tag) => {
+
+
+                tag.set_title(podcast_episode.name);
+                tag.set_artist(podcast.author.unwrap_or("Unknown".to_string()));
+                tag.set_album(podcast.name);
+                tag.set_genre(podcast.keywords.unwrap_or("Unknown".to_string()));
+
+                tag.set_comment(podcast_episode.description);
+                let track_number = PodcastEpisodeService::get_track_number_for_episode(
+                    conn,
+                    podcast.id,
+                    &podcast_episode.date_of_recording,
+                );
+
+                match track_number {
+                    Ok(track_number) => {
+                        tag.set_track_number(track_number as u16);
+                    }
+                    Err(e) => {
+                        log::error!("Error getting track number: {:?}", e);
+                        CustomError::Conflict(e.to_string());
+                    }
+                }
+
+                tag.write_to_path(&paths.filename).unwrap();
+                Ok(())
+            },
+            Err(e) => {
+                log::error!("Error reading metadata: {:?}", e);
+                let err = CustomError::Conflict(e.to_string());
+                return Err(err);
+            }
+        }
+
     }
 }

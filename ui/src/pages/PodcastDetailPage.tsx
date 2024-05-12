@@ -145,7 +145,7 @@ export const PodcastDetailPage = () => {
 
                         {<div className="flex gap-2">
                             {currentPodcast.keywords && currentPodcast.keywords?.split(',').map((keyword, index) => (
-                                <Chip key={index} index={index}>{keyword}</Chip>
+                                <Chip key={"keyword"+index} index={index}>{keyword}</Chip>
                             ))}
                         </div>}
 
@@ -204,7 +204,7 @@ export const PodcastDetailPage = () => {
                     <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
 
                     {selectedEpisodes.map((episode, index) => (
-                        <PodcastDetailItem episode={episode} key={episode.podcastHistoryItem?.id} index={index}
+                        <PodcastDetailItem episode={episode} key={episode.podcastEpisode.id} index={index}
                                            episodesLength={selectedEpisodes.length}/>
                     ))}
                 </div>

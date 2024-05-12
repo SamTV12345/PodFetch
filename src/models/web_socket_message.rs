@@ -1,17 +1,9 @@
 use crate::models::messages::{BroadcastMessage, Connect, Disconnect, WsMessage};
-use actix::prelude::{Message, Recipient};
+use actix::prelude::{Recipient};
 use actix::{Actor, Context, Handler};
 use serde_json::json;
 use std::collections::HashMap;
 use uuid::Uuid;
-
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct SocketMessage {
-    pub message_type: String,
-    pub message: String,
-    pub timestamp: String,
-}
 
 type Socket = Recipient<WsMessage>;
 

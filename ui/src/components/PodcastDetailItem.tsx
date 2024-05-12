@@ -1,4 +1,4 @@
-import {FC, useMemo} from 'react'
+import {FC, Fragment, useMemo} from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
@@ -42,8 +42,9 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         })
     },[percentagePlayed])
 
+    console.log(episode)
     return (
-        <>
+        <Fragment key={'episode_' + episode.podcastEpisode.id}>
             <div id={'episode_' + episode.podcastEpisode.id} className="
                 grid
                 grid-cols-[1fr_auto] grid-rows-[auto_auto_auto]
@@ -133,6 +134,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         })
                 }} />
             }
-        </>
+        </Fragment>
     )
 }

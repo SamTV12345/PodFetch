@@ -30,11 +30,3 @@ pub struct BroadcastMessage {
 pub struct Disconnect {
     pub id: Uuid,
 }
-
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct ClientActorMessage {
-    pub id: Uuid,
-    pub msg: String,
-    pub room_id: Uuid,
-}
