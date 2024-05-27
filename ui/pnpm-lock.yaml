@@ -57,8 +57,8 @@ dependencies:
     specifier: ^11.2.4
     version: 11.2.4(react-dom@18.3.1)(react@18.3.1)
   i18next:
-    specifier: ^23.11.2
-    version: 23.11.4
+    specifier: ^23.11.5
+    version: 23.11.5
   i18next-browser-languagedetector:
     specifier: ^8.0.0
     version: 8.0.0
@@ -88,7 +88,7 @@ dependencies:
     version: 7.51.4(react@18.3.1)
   react-i18next:
     specifier: ^14.1.0
-    version: 14.1.1(i18next@23.11.4)(react-dom@18.3.1)(react@18.3.1)
+    version: 14.1.1(i18next@23.11.5)(react-dom@18.3.1)(react@18.3.1)
   react-icons:
     specifier: ^5.0.1
     version: 5.2.1(react@18.3.1)
@@ -3972,6 +3972,7 @@ packages:
 
   /glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
     dependencies:
       fs.realpath: 1.0.0
       inflight: 1.0.6
@@ -4108,8 +4109,8 @@ packages:
       '@babel/runtime': 7.24.5
     dev: false
 
-  /i18next@23.11.4:
-    resolution: {integrity: sha512-CCUjtd5TfaCl+mLUzAA0uPSN+AVn4fP/kWCYt/hocPUwusTpMVczdrRyOBUwk6N05iH40qiKx6q1DoNJtBIwdg==}
+  /i18next@23.11.5:
+    resolution: {integrity: sha512-41pvpVbW9rhZPk5xjCX2TPJi2861LEig/YRhUkY+1FQ2IQPS0bKUDYnEqY8XPPbB48h1uIwLnP9iiEfuSl20CA==}
     dependencies:
       '@babel/runtime': 7.24.5
     dev: false
@@ -4139,6 +4140,7 @@ packages:
 
   /inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
+    deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
     dependencies:
       once: 1.4.0
       wrappy: 1.0.2
@@ -5019,7 +5021,7 @@ packages:
       react: 18.3.1
     dev: false
 
-  /react-i18next@14.1.1(i18next@23.11.4)(react-dom@18.3.1)(react@18.3.1):
+  /react-i18next@14.1.1(i18next@23.11.5)(react-dom@18.3.1)(react@18.3.1):
     resolution: {integrity: sha512-QSiKw+ihzJ/CIeIYWrarCmXJUySHDwQr5y8uaNIkbxoGRm/5DukkxZs+RPla79IKyyDPzC/DRlgQCABHtrQuQQ==}
     peerDependencies:
       i18next: '>= 23.2.3'
@@ -5034,7 +5036,7 @@ packages:
     dependencies:
       '@babel/runtime': 7.24.5
       html-parse-stringify: 3.0.1
-      i18next: 23.11.4
+      i18next: 23.11.5
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
     dev: false
