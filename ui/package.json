@@ -23,7 +23,7 @@
     "@radix-ui/react-slider": "^1.1.2",
     "@radix-ui/react-toggle-group": "^1.0.4",
     "@types/uuid": "^9.0.8",
-    "axios": "^1.6.8",
+    "axios": "^1.7.2",
     "chart.js": "^4.4.3",
     "copy-text-to-clipboard": "^3.2.0",
     "csstype": "^3.1.3",
