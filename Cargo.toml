@@ -29,7 +29,7 @@ libsqlite3-sys = {version = "0.28.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.1", optional = true}
 diesel_migrations = "2.1.0"
 actix-files = "0.6.6"
-actix-web = {version="4.6.0", features=["rustls"]}
+actix-web = {version="4.7.0", features=["rustls"]}
 jsonwebtoken = {version="9.3.0"}
 log = "0.4.21"
 futures-util = "0.3.29"
