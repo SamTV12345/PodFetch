@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::models::user::User;
@@ -265,15 +266,16 @@ pub enum ReplacementStrategy {
     ReplaceWithDash,
 }
 
-impl ToString for ReplacementStrategy {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for ReplacementStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             ReplacementStrategy::ReplaceWithDashAndUnderscore => {
                 "replace-with-dash-and-underscore".to_string()
             }
             ReplacementStrategy::Remove => "remove".to_string(),
             ReplacementStrategy::ReplaceWithDash => "replace-with-dash".to_string(),
-        }
+        };
+        write!(f, "{}", str)
     }
 }
 

@@ -220,7 +220,7 @@ impl Favorite {
             },
         }
 
-        sql_function!(fn lower(x: Text) -> Text);
+        define_sql_function!(fn lower(x: Text) -> Text);
 
         if let Some(title) = title {
             use crate::dbconfig::schema::podcasts::dsl::name as podcasttitle;

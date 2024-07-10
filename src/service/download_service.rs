@@ -263,7 +263,7 @@ impl DownloadService {
                     }
                     Err(e) => {
                         log::error!("Error getting track number: {:?}", e);
-                        CustomError::Conflict(e.to_string());
+                        e.to_string();
                     }
                 }
 
@@ -273,7 +273,7 @@ impl DownloadService {
             Err(e) => {
                 log::error!("Error reading metadata: {:?}", e);
                 let err = CustomError::Conflict(e.to_string());
-                return Err(err);
+                Err(err)
             }
         }
 

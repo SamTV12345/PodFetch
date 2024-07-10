@@ -1,5 +1,6 @@
 #[path = "schemas/sqlite/schema.rs"]
 pub mod schema;
+use diesel::QueryResult;
 
 #[derive(diesel::MultiConnection)]
 pub enum DBType {
