@@ -609,7 +609,6 @@ mod tests {
 
         let podcast_episode = PodcastParsed {
             title: "Test".to_string(),
-            description: "Test".to_string(),
             language: "".to_string(),
             explicit: "false".to_string(),
             keywords: "test,test2".to_string(),
@@ -639,7 +638,6 @@ mod tests {
 
         let podcast_episode = PodcastParsed {
             title: "Test".to_string(),
-            description: "Test".to_string(),
             language: "en".to_string(),
             explicit: "false".to_string(),
             keywords: "test,test2".to_string(),

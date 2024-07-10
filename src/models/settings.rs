@@ -81,7 +81,8 @@ impl Setting {
         do_retry(|| {
             insert_into(settings)
                 .values((
-                    id.eq(1),
+                    id.eq(DEFAULT_SETTINGS.id),
+                    auto_update.eq(DEFAULT_SETTINGS.auto_update),
                     auto_download.eq(DEFAULT_SETTINGS.auto_download),
                     auto_cleanup.eq(DEFAULT_SETTINGS.auto_cleanup),
                     auto_cleanup_days.eq(DEFAULT_SETTINGS.auto_cleanup_days),
