@@ -4,11 +4,6 @@ use crate::models::podcasts::Podcast;
 use chrono::NaiveDateTime;
 use utoipa::ToSchema;
 
-// decode request data
-#[derive(Deserialize)]
-pub struct UserData {
-    pub username: String,
-}
 // this is to insert users to database
 #[derive(Serialize, Deserialize)]
 pub struct NewUser {

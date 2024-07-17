@@ -23,14 +23,12 @@ use crate::utils::error::CustomError;
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 
 pub struct DownloadService {
-    pub client_builder: ClientBuilder,
     pub file_service: FileService,
 }
 
 impl DownloadService {
     pub fn new() -> Self {
         DownloadService {
-            client_builder: ClientBuilder::new(),
             file_service: FileService::new(),
         }
     }
@@ -263,7 +261,7 @@ impl DownloadService {
                     }
                     Err(e) => {
                         log::error!("Error getting track number: {:?}", e);
-                        CustomError::Conflict(e.to_string());
+                        e.to_string();
                     }
                 }
 
@@ -273,7 +271,7 @@ impl DownloadService {
             Err(e) => {
                 log::error!("Error reading metadata: {:?}", e);
                 let err = CustomError::Conflict(e.to_string());
-                return Err(err);
+                Err(err)
             }
         }
 

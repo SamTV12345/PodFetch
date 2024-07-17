@@ -852,7 +852,6 @@ pub async fn retrieve_podcast_sample_format(
         date: "2021-01-01".to_string(),
         summary: "A podcast about homelabing".to_string(),
         title: "The homelab podcast".to_string(),
-        description: "test".to_string(),
         keywords: "computer, server, apps".to_string(),
         language: "en".to_string(),
         explicit: "false".to_string(),

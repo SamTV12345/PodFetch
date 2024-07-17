@@ -88,7 +88,6 @@ use crate::models::settings::Setting;
 use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
-use crate::service::jwkservice::JWKService;
 use crate::service::logging_service::init_logging;
 
 use crate::service::notification_service::NotificationService;
@@ -352,7 +351,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .app_data(data_pool.clone())
-            .app_data(Data::new(Mutex::new(JWKService::new())))
             .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
     .workers(4)

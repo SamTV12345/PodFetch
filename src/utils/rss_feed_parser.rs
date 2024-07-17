@@ -3,7 +3,6 @@ use rss::Channel;
 #[derive(Clone)]
 pub struct PodcastParsed {
     pub title: String,
-    pub description: String,
     pub language: String,
     pub explicit: String,
     pub keywords: String,
@@ -16,7 +15,6 @@ pub struct RSSFeedParser;
 impl RSSFeedParser {
     pub fn parse_rss_feed(rss_feed: Channel) -> PodcastParsed {
         let title = rss_feed.title;
-        let description = rss_feed.description;
         let language = rss_feed.language.unwrap_or("en".to_string());
         let build_date = rss_feed.last_build_date.unwrap_or("".to_string());
         let keywords = match rss_feed.itunes_ext.clone() {
@@ -35,7 +33,6 @@ impl RSSFeedParser {
 
         PodcastParsed {
             title,
-            description,
             language,
             explicit,
             keywords,
