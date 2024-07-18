@@ -24,7 +24,7 @@ tokio-stream = { version = "0.1.15", features = ["sync"] }
 actix = "0.13.5"
 async-recursion = "1.1.1"
 base64 = "0.22.1"
-uuid = {version="1.9.1", features = ["v4", "serde"]}
+uuid = {version="1.10.0", features = ["v4", "serde"]}
 libsqlite3-sys = {version = "0.28.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.1", optional = true}
 diesel_migrations = "2.2.0"
