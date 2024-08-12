@@ -69,8 +69,8 @@ importers:
         specifier: ^2.5.9
         version: 2.5.10
       material-symbols:
-        specifier: ^0.21.2
-        version: 0.21.2
+        specifier: ^0.22.0
+        version: 0.22.0
       notistack:
         specifier: ^3.0.1
         version: 3.0.1(csstype@3.1.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2525,8 +2525,8 @@ packages:
   magic-string@0.30.10:
     resolution: {integrity: sha512-iIRwTIf0QKV3UAnYK4PU8uiEc4SRh5jX0mwpIwETPpHdhVM4f53RSwS/vXvN1JhGX+Cs7B8qIq3d6AH49O5fAQ==}
 
-  material-symbols@0.21.2:
-    resolution: {integrity: sha512-uhLUGnoxbSxNiWJE2H3nNqHYtrU3RMa7T/PIKYHmh4GZisFSXnrZinsPppB2m5vNoV0FOAM2raKBMd9SPyslcg==}
+  material-symbols@0.22.0:
+    resolution: {integrity: sha512-SrfUYKNdOFhfpQ84slrcLSFIbFZQ24IuF17jaM6uS2pIyVOd1rnzyWqjK8vGzpuzFO/1gYDH2aJb8b1TPC0Ggw==}
 
   merge-stream@2.0.0:
     resolution: {integrity: sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w==}
@@ -6005,7 +6005,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  material-symbols@0.21.2: {}
+  material-symbols@0.22.0: {}
 
   merge-stream@2.0.0: {}
 
