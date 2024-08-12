@@ -45,7 +45,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     useDebounce(() => {
         setLoading(true)
         selectedSearchType === 'itunes' ?
-            axios.get( '/podcasts/0/' + encodeURI(searchText) + '/search')
+            axios.get( '/podcasts/0/' +  encodeURIComponent(searchText) + '/search')
                 .then((v: AxiosResponse<GeneralModel>) => {
                     setLoading(false)
                     const agnosticModel: AgnosticPodcastDataModel[] = v.data.results.map((podcast) => {
