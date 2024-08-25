@@ -43,7 +43,7 @@ rss = "2.0.8"
 frankenstein = "0.32.4"
 regex = "1.10.6"
 xml-builder = "0.5.2"
-diesel = { version = "2.2.2", features = ["chrono", "r2d2"] }
+diesel = { version = "2.2.3", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
 utoipa = { version = "4.2.3", features = ["actix_extras"] }
 futures = "0.3.30"
