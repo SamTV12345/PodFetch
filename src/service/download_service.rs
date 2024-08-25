@@ -14,10 +14,14 @@ use file_format::FileFormat;
 use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::dbconfig::DBType;
+use crate::dbconfig::schema::settings::dsl::settings;
 use crate::get_default_image;
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
+use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::service::rust_service::PodcastService;
+use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::error::CustomError;
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
@@ -36,10 +40,9 @@ impl DownloadService {
     pub fn download_podcast_episode(
         &mut self,
         podcast_episode: PodcastEpisode,
-        podcast: Podcast,
+        podcast: Podcast
     ) -> Result<(), CustomError> {
         let client = ClientBuilder::new().build().unwrap();
-
         let conn = &mut establish_connection();
         let suffix = determine_file_extension(&podcast_episode.url, &client, FileType::Audio);
         let settings_in_db = Setting::get_settings(conn)?.unwrap();
@@ -167,7 +170,7 @@ impl DownloadService {
         }
 
         if let 0 = tag.pictures().count() {
-            let mut image_file = std::fs::File::open(paths.image_filename).unwrap();
+            let mut image_file = File::open(paths.image_filename).unwrap();
             let mut image_data = Vec::new();
             let _ = image_file.read_to_end(&mut image_data);
             tag.add_frame(id3::frame::Picture {
@@ -178,9 +181,24 @@ impl DownloadService {
             });
         }
 
+        let index = PodcastEpisode::get_position_of_episode(podcast_episode.episode_id,
+                                                          podcast_episode.podcast_id,
+                                      conn)?;
+
         if tag.title().is_none() {
-            tag.set_title(podcast_episode.name);
+            tag.set_title(&podcast_episode.name);
         }
+
+        let settings_for_podcast = PodcastSetting::get_settings(conn, podcast.id)?;
+
+        if let Some(settings_for_podcast) = settings_for_podcast{
+            if settings_for_podcast.episode_numbering {
+                tag.set_title(format!("{} - {}", index, &podcast_episode.name));
+                // TODO continue here
+            }
+        }
+
+
 
         if tag.artist().is_none() {
             if let Some(author) = podcast.author {

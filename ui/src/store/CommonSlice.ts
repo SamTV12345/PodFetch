@@ -25,7 +25,8 @@ export type Podcast = {
     keywords?: string,
     author?: string,
     last_build_date?: string,
-    active:boolean
+    active:boolean,
+    episode_numbering: boolean
 }
 
 export type PodcastEpisode = {
@@ -113,6 +114,7 @@ interface CommonProps {
     setInfoText: (infoText: string) => void,
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => void,
     setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => void,
+    updatePodcast: (podcast: Podcast) => void
 
 }
 
@@ -141,6 +143,17 @@ const useCommon = create<CommonProps>((set, get) => ({
     podcastEpisodeAlreadyPlayed: undefined,
     setSidebarCollapsed: (sidebarCollapsed: boolean) => set({sidebarCollapsed}),
     setPodcasts: (podcasts: Podcast[]) => set({podcasts}),
+    updatePodcast: (podcast: Podcast) => {
+        const podcasts = get().podcasts
+        if(podcasts){
+            set({podcasts: podcasts.map((p) => {
+                    if(p.id === podcast.id) {
+                        return podcast
+                    }
+                    return p
+                })})
+        }
+    },
     updateLikePodcast: (id: number) => {
         const podcasts = get().podcasts
         if(podcasts){

@@ -26,3 +26,4 @@ pub mod subscription;
 pub mod subscription_changes_from_client;
 pub mod user;
 pub mod web_socket_message;
+pub mod podcast_settings;

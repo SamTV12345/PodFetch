@@ -27,6 +27,7 @@ impl MappingService {
             active: podcast.active,
             original_image_url: podcast.original_image_url.clone(),
             directory_name: podcast.directory_name.clone(),
+            episode_numbering: podcast.episode_numbering,
         }
     }
 
@@ -83,6 +84,7 @@ impl MappingService {
             deleted: podcast_episode.deleted,
             file_episode_path: None,
             file_image_path: None,
+            episode_numbering_processed: podcast_episode.episode_numbering_processed,
         }
     }
 

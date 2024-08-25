@@ -28,7 +28,7 @@ use crate::models::episode::Episode;
 use crate::models::notification::Notification;
 use crate::models::user::User;
 use crate::DBType as DbConnection;
-
+use crate::models::settings::Setting;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
@@ -79,6 +79,8 @@ impl PodcastEpisodeService {
         Ok(())
     }
 
+
+
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
         podcast_cloned: Podcast,
@@ -88,7 +90,7 @@ impl PodcastEpisodeService {
         let mut download_service = DownloadService::new();
         download_service.download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
         let podcast =
-            PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn).unwrap();
+            PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)?;
         let notification = Notification {
             id: 0,
             message: podcast_episode.name.to_string(),
@@ -96,7 +98,7 @@ impl PodcastEpisodeService {
             type_of_message: "Download".to_string(),
             status: "unread".to_string(),
         };
-        Notification::insert_notification(notification, conn).unwrap();
+        Notification::insert_notification(notification, conn)?;
         Ok(podcast)
     }
 

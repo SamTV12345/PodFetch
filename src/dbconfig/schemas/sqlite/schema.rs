@@ -100,6 +100,24 @@ diesel::table! {
         deleted -> Bool,
         file_episode_path -> Nullable<Text>,
         file_image_path -> Nullable<Text>,
+        episode_numbering_processed -> Bool,
+    }
+}
+
+diesel::table! {
+    podcast_settings (podcast_id) {
+        podcast_id -> Integer,
+        episode_numbering -> Bool,
+        auto_download -> Bool,
+        auto_update -> Bool,
+        auto_cleanup -> Bool,
+        auto_cleanup_days -> Integer,
+        replace_invalid_characters -> Bool,
+        use_existing_filename -> Bool,
+        replacement_strategy -> Text,
+        episode_format -> Text,
+        podcast_format -> Text,
+        direct_paths -> Bool,
     }
 }
 
@@ -159,24 +177,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    tags (id) {
-        id -> Text,
-        name -> Text,
-        username -> Text,
-        description -> Nullable<Text>,
-        created_at -> Timestamp,
-        color -> Text,
-    }
-}
-
-diesel::table! {
-    tags_podcasts (tag_id, podcast_id) {
-        tag_id -> Text,
-        podcast_id -> Integer,
-    }
-}
-
-diesel::table! {
     users (id) {
         id -> Integer,
         username -> Text,
@@ -192,8 +192,6 @@ diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(playlist_items -> playlists (playlist_id));
 diesel::joinable!(playlist_items -> podcast_episodes (episode));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
-diesel::joinable!(tags_podcasts -> podcasts (podcast_id));
-diesel::joinable!(tags_podcasts -> tags (tag_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     devices,
@@ -205,11 +203,10 @@ diesel::allow_tables_to_appear_in_same_query!(
     playlist_items,
     playlists,
     podcast_episodes,
+    podcast_settings,
     podcasts,
     sessions,
     settings,
     subscriptions,
-    tags,
-    tags_podcasts,
     users,
 );

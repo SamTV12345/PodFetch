@@ -707,6 +707,7 @@ use utoipa::ToSchema;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
@@ -842,6 +843,27 @@ pub(crate) async fn proxy_podcast(
     }
 
     Ok(client_resp.streaming(res.bytes_stream()))
+}
+
+
+#[put("/podcasts/{id}/settings")]
+pub async fn update_podcast_settings(
+    id: Path<i32>,
+    settings: Json<PodcastSetting>,
+    conn: Data<DbPool>,
+    requester: Option<web::ReqData<User>>,
+) -> Result<HttpResponse, CustomError> {
+    if !requester.unwrap().is_privileged_user() {
+        return Err(CustomError::Forbidden);
+    }
+
+    let id_num = id.into_inner();
+    let mut conn = conn.get().map_err(map_r2d2_error)?;
+    let mut settings = settings.into_inner();
+    settings.podcast_id = id_num;
+    let updated_podcast = PodcastSetting::update_settings(&settings, &mut conn)?;
+
+    Ok(HttpResponse::Ok().json(updated_podcast))
 }
 
 #[post("/podcasts/formatting")]
