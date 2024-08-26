@@ -1,4 +1,3 @@
-use crate::dbconfig::schema::podcast_settings::dsl::podcast_settings;
 use crate::dbconfig::schema::*;
 
 use crate::models::favorites::Favorite;
@@ -16,7 +15,6 @@ use diesel::{
     delete, insert_into, BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl,
 };
 use utoipa::ToSchema;
-use crate::dbconfig::DBType;
 use crate::utils::error::{map_db_error, CustomError};
 #[derive(
     Queryable,

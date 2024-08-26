@@ -206,7 +206,7 @@ pub fn perform_podcast_variable_replacement(
     podcast: crate::utils::rss_feed_parser::PodcastParsed,
     podcast_setting: Option<PodcastSetting>
 ) -> Result<String, CustomError> {
-    let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone(), podcast_setting)
+    let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone(), podcast_setting.clone())
         .replace(|c: char| !c.is_ascii(), "");
     let podcast_format;
 
@@ -218,6 +218,8 @@ pub fn perform_podcast_variable_replacement(
         } else {
             podcast_format = retrieved_settings.podcast_format.clone();
         }
+    } else {
+        podcast_format = retrieved_settings.podcast_format.clone();
     }
 
     if podcast_format.is_empty()
@@ -285,7 +287,7 @@ pub fn perform_episode_variable_replacement(
     podcast_settings: Option<PodcastSetting>,
 ) -> Result<String, CustomError> {
     let escaped_episode_title =
-        perform_replacement(&podcast_episode.name, retrieved_settings.clone(), podcast_settings)
+        perform_replacement(&podcast_episode.name, retrieved_settings.clone(), podcast_settings.clone())
             .replace(|c: char| !c.is_ascii(), "");
     let episode_format;
 
@@ -297,6 +299,8 @@ pub fn perform_episode_variable_replacement(
         } else {
             episode_format = retrieved_settings.episode_format.clone();
         }
+    } else {
+        episode_format = retrieved_settings.episode_format.clone();
     }
 
 
@@ -358,6 +362,9 @@ fn perform_replacement(title: &str, retrieved_settings: Setting, podcast_setting
             replace_invalid_characters = retrieved_settings.replace_invalid_characters;
             replacement_strategy = retrieved_settings.replacement_strategy.clone();
         }
+    } else {
+        replace_invalid_characters = retrieved_settings.replace_invalid_characters;
+        replacement_strategy = retrieved_settings.replacement_strategy.clone();
     }
 
 

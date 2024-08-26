@@ -29,7 +29,6 @@ use crate::models::notification::Notification;
 use crate::models::user::User;
 use crate::DBType as DbConnection;
 use crate::models::podcast_settings::PodcastSetting;
-use crate::models::settings::Setting;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;

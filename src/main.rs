@@ -77,7 +77,6 @@ mod service;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
-use crate::models::podcast_settings::PodcastSetting;
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
