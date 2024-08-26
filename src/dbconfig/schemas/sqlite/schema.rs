@@ -118,6 +118,8 @@ diesel::table! {
         episode_format -> Text,
         podcast_format -> Text,
         direct_paths -> Bool,
+        activated -> Bool,
+        podcast_prefill -> Integer,
     }
 }
 

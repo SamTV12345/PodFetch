@@ -15,5 +15,7 @@ CREATE TABLE podcast_settings (
                 'replace-with-dash-and-underscore',
     episode_format TEXT NOT NULL DEFAULT '{}',
     podcast_format TEXT NOT NULL DEFAULT '{}',
-    direct_paths BOOLEAN NOT NULL DEFAULT FALSE
+    direct_paths BOOLEAN NOT NULL DEFAULT FALSE,
+    activated BOOLEAN NOT NULL DEFAULT FALSE,
+    podcast_prefill INTEGER NOT NULL DEFAULT 0
 );

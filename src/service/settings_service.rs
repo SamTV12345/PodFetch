@@ -84,10 +84,12 @@ impl SettingsService {
         perform_podcast_variable_replacement(
             update_setttings.clone().into(),
             sample_podcast.clone(),
+            None
         )?;
         perform_episode_variable_replacement(
             update_setttings.clone().into(),
             sample_episode.clone(),
+            None,
         )?;
         Ok(update_setttings)
     }

@@ -264,7 +264,7 @@ pub async fn retrieve_episode_sample_format(
         podcast_format: "test".to_string(),
         direct_paths: true,
     };
-    let result = perform_episode_variable_replacement(settings, episode);
+    let result = perform_episode_variable_replacement(settings, episode, None);
 
     match result {
         Ok(v) => Ok(HttpResponse::Ok().json(v)),

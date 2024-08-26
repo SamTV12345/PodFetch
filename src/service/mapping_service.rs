@@ -26,8 +26,7 @@ impl MappingService {
             author: podcast.author.clone(),
             active: podcast.active,
             original_image_url: podcast.original_image_url.clone(),
-            directory_name: podcast.directory_name.clone(),
-            episode_numbering: podcast.episode_numbering,
+            directory_name: podcast.directory_name.clone()
         }
     }
 

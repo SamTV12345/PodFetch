@@ -133,6 +133,12 @@ impl DownloadService {
             conn,
         )?;
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
+        Self::handle_metadata_insertion(&paths, &podcast_episode, &podcast, conn)?;
+        Ok(())
+    }
+
+    pub fn handle_metadata_insertion(paths: &FilenameBuilderReturn, podcast_episode:
+    &PodcastEpisode, podcast: &Podcast, conn: &mut DBType) -> Result<(), CustomError> {
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
 
         match detected_file {
@@ -144,16 +150,17 @@ impl DownloadService {
             },
             _ => {
                 log::error!("File format not supported: {:?}", detected_file);
+                return Err(CustomError::Conflict("File format not supported".to_string()))
             }
         }
-
-
         Ok(())
     }
+
+
     fn update_meta_data_mp3(
-        paths: FilenameBuilderReturn,
-        podcast_episode: PodcastEpisode,
-        podcast: Podcast,
+        paths: &FilenameBuilderReturn,
+        podcast_episode: &PodcastEpisode,
+        podcast: &Podcast,
         conn: &mut DBType,
     ) -> Result<(), CustomError> {
         let mut tag = match Tag::read_from_path(&paths.filename) {
@@ -170,7 +177,7 @@ impl DownloadService {
         }
 
         if let 0 = tag.pictures().count() {
-            let mut image_file = File::open(paths.image_filename).unwrap();
+            let mut image_file = File::open(&paths.image_filename).unwrap();
             let mut image_data = Vec::new();
             let _ = image_file.read_to_end(&mut image_data);
             tag.add_frame(id3::frame::Picture {
@@ -181,48 +188,53 @@ impl DownloadService {
             });
         }
 
-        let index = PodcastEpisode::get_position_of_episode(podcast_episode.episode_id,
+        let index = PodcastEpisode::get_position_of_episode(&podcast_episode.date_of_recording,
                                                           podcast_episode.podcast_id,
                                       conn)?;
 
-        if tag.title().is_none() {
-            tag.set_title(&podcast_episode.name);
-        }
-
         let settings_for_podcast = PodcastSetting::get_settings(conn, podcast.id)?;
 
-        if let Some(settings_for_podcast) = settings_for_podcast{
+        if let Some(settings_for_podcast) = settings_for_podcast {
             if settings_for_podcast.episode_numbering {
                 tag.set_title(format!("{} - {}", index, &podcast_episode.name));
-                // TODO continue here
+                PodcastEpisode::update_episode_numbering_processed(conn, true,
+                                                                   &podcast_episode.episode_id);
+            } else {
+                tag.set_title(&podcast_episode.name);
+                PodcastEpisode::update_episode_numbering_processed(conn, false, &podcast_episode
+                    .episode_id)
             }
+        } else {
+            tag.set_title(&podcast_episode.name);
+            PodcastEpisode::update_episode_numbering_processed(conn, false, &podcast_episode
+                .episode_id)
         }
 
 
 
         if tag.artist().is_none() {
-            if let Some(author) = podcast.author {
+            if let Some(author) = &podcast.author {
                 tag.set_artist(author);
             }
         }
 
         if tag.album().is_none() {
-            tag.set_album(podcast.name);
+            tag.set_album(&podcast.name);
         }
 
         tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
 
         if tag.genres().is_none() {
-            if let Some(keywords) = podcast.keywords {
+            if let Some(keywords) = &podcast.keywords {
                 tag.set_genre(keywords);
             }
         }
 
         if tag.clone().comments().next().is_none() {
             tag.add_frame(id3::frame::Comment {
-                lang: podcast.language.unwrap_or("eng".to_string()),
+                lang: podcast.clone().language.unwrap_or("eng".to_string()),
                 description: "Comment".to_string(),
-                text: podcast_episode.description,
+                text: podcast_episode.clone().description,
             });
         }
 
@@ -238,7 +250,7 @@ impl DownloadService {
             }
         }
 
-        let write_succesful = tag.write_to_path(paths.filename, Version::Id3v24)
+        let write_succesful = tag.write_to_path(&paths.filename, Version::Id3v24)
             .map(|_| ())
             .map_err(|e| CustomError::Conflict(e.to_string()));
 
@@ -251,9 +263,9 @@ impl DownloadService {
 
 
     fn update_meta_data_mp4(
-        paths: FilenameBuilderReturn,
-        podcast_episode: PodcastEpisode,
-        podcast: Podcast,
+        paths: &FilenameBuilderReturn,
+        podcast_episode: &PodcastEpisode,
+        podcast: &Podcast,
         conn: &mut DBType,
     ) -> Result<(), CustomError> {
         let tag = mp4ameta::Tag::read_from_path(&paths.filename);
@@ -261,12 +273,12 @@ impl DownloadService {
             Ok(mut tag) => {
 
 
-                tag.set_title(podcast_episode.name);
-                tag.set_artist(podcast.author.unwrap_or("Unknown".to_string()));
-                tag.set_album(podcast.name);
-                tag.set_genre(podcast.keywords.unwrap_or("Unknown".to_string()));
+                tag.set_title(&podcast_episode.name);
+                tag.set_artist(&podcast.clone().author.unwrap_or("Unknown".to_string()));
+                tag.set_album(&podcast.name);
+                tag.set_genre(&podcast.clone().keywords.unwrap_or("Unknown".to_string()));
 
-                tag.set_comment(podcast_episode.description);
+                tag.set_comment(&podcast_episode.description);
                 let track_number = PodcastEpisodeService::get_track_number_for_episode(
                     conn,
                     podcast.id,

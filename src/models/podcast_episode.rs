@@ -98,7 +98,7 @@ impl PodcastEpisode {
     }
 
     pub fn get_position_of_episode(
-        timestamp: String,
+        timestamp: &str,
         pid: i32,
         conn: &mut DBType,
     ) -> Result<usize, CustomError> {
@@ -456,11 +456,13 @@ impl PodcastEpisode {
     pub fn get_podcast_episodes_older_than_days(
         days: i32,
         conn: &mut DbConnection,
+        podcast_id_to_search: i32,
     ) -> Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         podcast_episodes
             .filter(download_time.lt(Utc::now().naive_utc() - Duration::days(days as i64)))
+            .filter(podcast_id.eq(podcast_id_to_search))
             .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
     }
@@ -563,5 +565,17 @@ impl PodcastEpisode {
             )
             .load::<PodcastEpisode>(conn)
             .map_err(map_db_error)
+    }
+
+    pub fn update_episode_numbering_processed(conn: &mut DBType, processed: bool,
+                                              episode_id_to_update: &str) {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_numbering_processed as episode_numbering_processed_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        diesel::update(dsl_podcast_episodes)
+            .set(episode_numbering_processed_column.eq(processed))
+            .filter(episode_id.eq(episode_id_to_update))
+            .execute(conn)
+            .expect("Error updating episode numbering processed");
     }
 }

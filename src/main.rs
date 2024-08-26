@@ -46,11 +46,7 @@ use crate::controllers::playlist_controller::{
     add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
     get_playlist_by_id, update_playlist,
 };
-use crate::controllers::podcast_controller::{
-    add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast,
-    find_podcast_by_id, get_filter, proxy_podcast, refresh_all_podcasts,
-    retrieve_podcast_sample_format, search_podcasts,
-};
+use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_settings, proxy_podcast, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
@@ -81,6 +77,7 @@ mod service;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
+use crate::models::podcast_settings::PodcastSetting;
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
@@ -458,6 +455,8 @@ fn get_private_api() -> Scope<
         .service(delete_podcast_episode_locally)
         .service(retrieve_episode_sample_format)
         .service(retrieve_podcast_sample_format)
+        .service(update_podcast_settings)
+        .service(get_podcast_settings)
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {

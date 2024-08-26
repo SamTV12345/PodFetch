@@ -19,14 +19,15 @@ type CustomSelectProps = {
     onChange?: (v: string) => void,
     options: Array<Option>,
     placeholder?: string | TFunction,
-    value: string
+    value: string,
+    disabled?: boolean
 }
 
-export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultValue, iconName, id, name, onChange, options, placeholder, value }) => {
+export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultValue, iconName, id, name, onChange, options, placeholder, value, disabled }) => {
     const {t} = useTranslation()
 
     return (
-        <Select.Root defaultValue={defaultValue} name={name} onValueChange={onChange} value={value}>
+        <Select.Root disabled={disabled} defaultValue={defaultValue} name={name} onValueChange={onChange} value={value}>
             <Select.Trigger className={`flex items-center border border-[--border-color] pl-6 pr-2 py-2 rounded-full text-sm text-[--select-text-color] ${className}`} id={id}>
                 {iconName &&
                     <span className="icon material-symbols-outlined align-middle !leading-[1.25rem] -ml-2 mr-1 text-[--select-icon-color]">{iconName}</span>
@@ -42,7 +43,7 @@ export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultVal
             </Select.Trigger>
 
             <Select.Portal>
-                <Select.Content className="overflow-hidden bg-[--bg-color] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
+                <Select.Content className="overflow-hidden bg-[--bg-color] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-50">
                     <Select.ScrollUpButton />
 
                     <Select.Viewport className="p-2">

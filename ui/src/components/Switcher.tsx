@@ -4,15 +4,17 @@ type SwitcherProps = {
     checked: boolean,
     className?: string,
     id?: string,
-    setChecked: (checked: boolean) => void
+    setChecked: (checked: boolean) => void,
+    disabled?: boolean
 }
 
-export const Switcher: FC<SwitcherProps> = ({ checked, className = '', id, setChecked }) => {
+export const Switcher: FC<SwitcherProps> = ({ checked, className = '', id, setChecked, disabled }) => {
     return (
         <div className={`relative inline-flex items-center cursor-pointer ${className}`} onClick={() => {
+            if (disabled) return
             setChecked(!checked)
         }}>
-            <input checked={checked} className="sr-only peer" id={id} onChange={() => {
+            <input disabled={disabled} checked={checked} className="sr-only peer" id={id} onChange={() => {
             setChecked(!checked)
         }} type="checkbox" value="" />
 
