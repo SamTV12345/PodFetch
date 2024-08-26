@@ -59,7 +59,7 @@
     "sass": "^1.77.8",
     "tailwindcss": "^3.4.9",
     "typescript": "^5.5.4",
-    "vite": "^5.4.1",
+    "vite": "^5.4.2",
     "vite-plugin-pwa": "^0.20.1",
     "vitest": "^2.0.5"
   }
