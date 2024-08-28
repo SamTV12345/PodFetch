@@ -193,9 +193,11 @@ impl DownloadService {
 
         if let Some(settings_for_podcast) = settings_for_podcast {
             if settings_for_podcast.episode_numbering {
-                tag.set_title(format!("{} - {}", index, &podcast_episode.name));
-                PodcastEpisode::update_episode_numbering_processed(conn, true,
-                                                                   &podcast_episode.episode_id);
+                if  !podcast_episode.episode_numbering_processed {
+                    tag.set_title(format!("{} - {}", index, &podcast_episode.name));
+                    PodcastEpisode::update_episode_numbering_processed(conn, true,
+                                                                       &podcast_episode.episode_id);
+                }
             } else {
                 tag.set_title(&podcast_episode.name);
                 PodcastEpisode::update_episode_numbering_processed(conn, false, &podcast_episode
