@@ -49,7 +49,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
+    "@types/react": "^18.3.4",
     "@types/react-dom": "^18.2.22",
     "@types/sanitize-html": "^2.11.0",
     "@vite-pwa/assets-generator": "^0.2.4",
