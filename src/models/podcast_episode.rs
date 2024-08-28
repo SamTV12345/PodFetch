@@ -1,5 +1,6 @@
 use crate::constants::inner_constants::DEFAULT_IMAGE_URL;
 use crate::dbconfig::schema::*;
+use crate::dbconfig::DBType;
 use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcasts::Podcast;
@@ -72,6 +73,8 @@ pub struct PodcastEpisode {
     pub(crate) file_episode_path: Option<String>,
     #[diesel(sql_type = Nullable<Text>)]
     pub(crate) file_image_path: Option<String>,
+    #[diesel(sql_type = Bool)]
+    pub (crate) episode_numbering_processed : bool,
 }
 
 impl PodcastEpisode {
@@ -92,6 +95,24 @@ impl PodcastEpisode {
             .map_err(map_db_error)?;
 
         Ok(found_podcast_episode)
+    }
+
+    pub fn get_position_of_episode(
+        timestamp: &str,
+        pid: i32,
+        conn: &mut DBType,
+    ) -> Result<usize, CustomError> {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+
+        let result = diesel::QueryDsl::order(
+            podcast_episodes
+                .filter(podcast_id.eq(pid))
+                .filter(date_of_recording.le(timestamp)),
+            date_of_recording.desc(),
+        )
+        .execute(conn)
+        .map_err(map_db_error)?;
+        Ok(result)
     }
 
     pub fn get_podcast_episode_by_id(
@@ -175,13 +196,16 @@ impl PodcastEpisode {
                         // Sometimes it occurs that day of the week and date are wrong. This just
                         // takes the date and parses it
                         let date_without_weekday = date[5..].to_string();
-                        DateTime::parse_from_str(&date_without_weekday, "%d %b %Y \
-                        %H:%M:%S %z")
-                            .map(|date| {
-                                let conv_date = date.with_timezone(&Utc);
-                                inserted_date = conv_date.to_rfc3339()
-                            })
-                            .expect("Error parsing date");
+                        DateTime::parse_from_str(
+                            &date_without_weekday,
+                            "%d %b %Y \
+                        %H:%M:%S %z",
+                        )
+                        .map(|date| {
+                            let conv_date = date.with_timezone(&Utc);
+                            inserted_date = conv_date.to_rfc3339()
+                        })
+                        .expect("Error parsing date");
                     }
                 }
             }
@@ -432,11 +456,13 @@ impl PodcastEpisode {
     pub fn get_podcast_episodes_older_than_days(
         days: i32,
         conn: &mut DbConnection,
+        podcast_id_to_search: i32,
     ) -> Vec<PodcastEpisode> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
 
         podcast_episodes
             .filter(download_time.lt(Utc::now().naive_utc() - Duration::days(days as i64)))
+            .filter(podcast_id.eq(podcast_id_to_search))
             .load::<PodcastEpisode>(conn)
             .expect("Error loading podcast episode by id")
     }
@@ -539,5 +565,17 @@ impl PodcastEpisode {
             )
             .load::<PodcastEpisode>(conn)
             .map_err(map_db_error)
+    }
+
+    pub fn update_episode_numbering_processed(conn: &mut DBType, processed: bool,
+                                              episode_id_to_update: &str) {
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::dbconfig::schema::podcast_episodes::dsl::episode_numbering_processed as episode_numbering_processed_column;
+        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        diesel::update(dsl_podcast_episodes)
+            .set(episode_numbering_processed_column.eq(processed))
+            .filter(episode_id.eq(episode_id_to_update))
+            .execute(conn)
+            .expect("Error updating episode numbering processed");
     }
 }

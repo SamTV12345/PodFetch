@@ -1,0 +1,16 @@
+export type PodcastSetting = {
+    podcastId: number,
+    episodeNumbering: boolean,
+    autoDownload: boolean,
+    autoUpdate: boolean,
+    autoCleanup: boolean,
+    autoCleanupDays: number,
+    replaceInvalidCharacters: boolean,
+    useExistingFilename: boolean,
+    replacementStrategy: string,
+    episodeFormat: string,
+    podcastFormat: string,
+    directPaths: boolean,
+    activated: boolean,
+    podcastPrefill: number,
+}

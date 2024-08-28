@@ -23,6 +23,7 @@ use crate::utils::error::{map_io_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 use crate::utils::rss_feed_parser::RSSFeedParser;
 use crate::DBType as DbConnection;
+use crate::models::podcast_settings::PodcastSetting;
 
 #[derive(Clone)]
 pub struct FileService {
@@ -172,6 +173,7 @@ pub async fn prepare_podcast_title_to_directory(
 ) -> Result<String, CustomError> {
     let mut settings_service = SettingsService::new();
     let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
+    let opt_podcast_settings = PodcastSetting::get_settings(conn, podcast.id)?;
 
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
@@ -186,7 +188,7 @@ pub async fn prepare_podcast_title_to_directory(
         }
     };
 
-    perform_podcast_variable_replacement(retrieved_settings, podcast.clone())
+    perform_podcast_variable_replacement(retrieved_settings, podcast.clone(),opt_podcast_settings)
 }
 
 fn replace_date_of_str(date: &str) -> String {
@@ -202,11 +204,26 @@ fn replace_date_of_str(date: &str) -> String {
 pub fn perform_podcast_variable_replacement(
     retrieved_settings: Setting,
     podcast: crate::utils::rss_feed_parser::PodcastParsed,
+    podcast_setting: Option<PodcastSetting>
 ) -> Result<String, CustomError> {
-    let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone())
+    let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone(), podcast_setting.clone())
         .replace(|c: char| !c.is_ascii(), "");
-    if retrieved_settings.podcast_format.is_empty()
-        || retrieved_settings.podcast_format.trim() == "{}"
+    let podcast_format;
+
+    if podcast_setting.is_none() {
+        podcast_format = retrieved_settings.podcast_format.clone();
+    } else if let Some(e) = &podcast_setting {
+        if e.activated {
+            podcast_format = e.podcast_format.clone();
+        } else {
+            podcast_format = retrieved_settings.podcast_format.clone();
+        }
+    } else {
+        podcast_format = retrieved_settings.podcast_format.clone();
+    }
+
+    if podcast_format.is_empty()
+        || podcast_format.trim() == "{}"
     {
         return Ok(format!("'{}'", podcast.title));
     }
@@ -227,8 +244,7 @@ pub fn perform_podcast_variable_replacement(
     vars.insert("podcastKeywords".to_string(), &podcast_keyword);
     vars.insert("date".to_string(), &podcast_date);
 
-    let fixed_string = retrieved_settings
-        .podcast_format
+    let fixed_string = podcast_format
         .replace("{title}", "{podcastTitle}")
         .replace("{description}", "{podcastDescription}")
         .replace("{language}", "{podcastLanguage}")
@@ -261,19 +277,34 @@ pub fn prepare_podcast_episode_title_to_directory(
             return Ok(res_unwrapped);
         }
     }
-
-    perform_episode_variable_replacement(retrieved_settings, podcast_episode)
+    let podcast_settings = PodcastSetting::get_settings(conn, podcast_episode.podcast_id)?;
+    perform_episode_variable_replacement(retrieved_settings, podcast_episode, podcast_settings)
 }
 
 pub fn perform_episode_variable_replacement(
     retrieved_settings: Setting,
     podcast_episode: PodcastEpisode,
+    podcast_settings: Option<PodcastSetting>,
 ) -> Result<String, CustomError> {
     let escaped_episode_title =
-        perform_replacement(&podcast_episode.name, retrieved_settings.clone())
+        perform_replacement(&podcast_episode.name, retrieved_settings.clone(), podcast_settings.clone())
             .replace(|c: char| !c.is_ascii(), "");
-    if retrieved_settings.episode_format.is_empty()
-        || retrieved_settings.episode_format.trim() == "{}"
+    let episode_format;
+
+    if podcast_settings.is_none() {
+        episode_format = retrieved_settings.episode_format.clone();
+    } else if let Some(e) = &podcast_settings {
+        if e.activated {
+            episode_format = e.episode_format.clone();
+        } else {
+            episode_format = retrieved_settings.episode_format.clone();
+        }
+    } else {
+        episode_format = retrieved_settings.episode_format.clone();
+    }
+
+
+    if episode_format.is_empty() || episode_format.trim() == "{}"
     {
         return Ok(format!("'{}'", escaped_episode_title));
     }
@@ -293,8 +324,7 @@ pub fn perform_episode_variable_replacement(
     );
     vars.insert("episodeDuration".to_string(), &total_time);
 
-    let fixed_string = retrieved_settings
-        .episode_format
+    let fixed_string = episode_format
         .replace("{title}", "{episodeTitle}")
         .replace("{date}", "{episodeDate}")
         .replace("{description}", "{episodeDescription}")
@@ -316,11 +346,30 @@ pub fn perform_episode_variable_replacement(
     }
 }
 
-fn perform_replacement(title: &str, retrieved_settings: Setting) -> String {
+fn perform_replacement(title: &str, retrieved_settings: Setting, podcast_settings: Option<PodcastSetting>) ->
+                                                                                          String {
     let mut final_string: String = title.to_string();
+    let replace_invalid_characters;
+    let replacement_strategy;
+    if podcast_settings.is_none() {
+        replace_invalid_characters = retrieved_settings.replace_invalid_characters;
+        replacement_strategy = retrieved_settings.replacement_strategy.clone();
+    } else if let Some(e) = &podcast_settings {
+        if e.activated {
+            replace_invalid_characters = e.replace_invalid_characters;
+            replacement_strategy = e.replacement_strategy.clone();
+        } else {
+            replace_invalid_characters = retrieved_settings.replace_invalid_characters;
+            replacement_strategy = retrieved_settings.replacement_strategy.clone();
+        }
+    } else {
+        replace_invalid_characters = retrieved_settings.replace_invalid_characters;
+        replacement_strategy = retrieved_settings.replacement_strategy.clone();
+    }
+
 
     // If checked replace all illegal characters
-    if retrieved_settings.replace_invalid_characters {
+    if replace_invalid_characters {
         let illegal_chars_regex = Regex::new(r#"[<>"/\\|?*”“„]"#).unwrap();
         final_string = illegal_chars_regex
             .replace_all(&final_string.clone(), "")
@@ -328,7 +377,7 @@ fn perform_replacement(title: &str, retrieved_settings: Setting) -> String {
     }
 
     // Colon replacement strategy
-    match ReplacementStrategy::from_str(&retrieved_settings.replacement_strategy).unwrap() {
+    match ReplacementStrategy::from_str(&replacement_strategy).unwrap() {
         ReplacementStrategy::ReplaceWithDashAndUnderscore => {
             final_string = final_string.replace(':', " - ")
         }
@@ -414,7 +463,7 @@ mod tests {
             direct_paths: false,
         };
 
-        let result = perform_replacement(title, settings);
+        let result = perform_replacement(title, settings, None);
 
         assert_eq!(result, "test -  test");
     }
@@ -422,7 +471,7 @@ mod tests {
     #[test]
     fn test_perform_replacement_remove() {
         let title = "test: test";
-        let settings = crate::models::settings::Setting {
+        let settings = Setting {
             id: 1,
             auto_download: false,
             auto_update: false,
@@ -438,7 +487,7 @@ mod tests {
             direct_paths: false,
         };
 
-        let result = perform_replacement(title, settings);
+        let result = perform_replacement(title, settings, None);
 
         assert_eq!(result, "test test");
     }
@@ -462,7 +511,7 @@ mod tests {
             direct_paths: false,
         };
 
-        let result = perform_replacement(title, settings);
+        let result = perform_replacement(title, settings, None);
 
         assert_eq!(result, "test- test");
     }
@@ -502,9 +551,10 @@ mod tests {
             local_image_url: "".to_string(),
             download_time: None,
             deleted: false,
+            episode_numbering_processed: false,
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None);
         assert_eq!(result.unwrap(), "'test123test'");
     }
 
@@ -543,9 +593,10 @@ mod tests {
             local_image_url: "".to_string(),
             download_time: None,
             deleted: false,
+            episode_numbering_processed: false
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None);
         assert_eq!(result.unwrap(), "'2022MyPodcasttest'");
     }
 
@@ -584,9 +635,10 @@ mod tests {
             local_image_url: "".to_string(),
             download_time: None,
             deleted: false,
+            episode_numbering_processed:false
         };
 
-        let result = perform_episode_variable_replacement(settings, podcast_episode);
+        let result = perform_episode_variable_replacement(settings, podcast_episode, None);
         assert_eq!(result.unwrap(), "'MyPodcast'");
     }
 
@@ -615,7 +667,7 @@ mod tests {
             summary: "test123".to_string(),
             date: "2022-12".to_string(),
         };
-        let result = perform_podcast_variable_replacement(settings, podcast_episode);
+        let result = perform_podcast_variable_replacement(settings, podcast_episode, None);
         assert_eq!(result.unwrap(), "'2022-12-Test'");
     }
 
@@ -644,7 +696,7 @@ mod tests {
             summary: "test123".to_string(),
             date: "2022-12".to_string(),
         };
-        let result = perform_podcast_variable_replacement(settings, podcast_episode);
+        let result = perform_podcast_variable_replacement(settings, podcast_episode, None);
         assert_eq!(result.unwrap(), "'Test'");
     }
 }

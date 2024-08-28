@@ -34,8 +34,9 @@ pub struct Setting {
     pub replacement_strategy: String,
     pub episode_format: String,
     pub podcast_format: String,
-    pub direct_paths: bool,
+    pub direct_paths: bool
 }
+
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

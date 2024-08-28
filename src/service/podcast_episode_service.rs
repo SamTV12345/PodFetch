@@ -28,7 +28,7 @@ use crate::models::episode::Episode;
 use crate::models::notification::Notification;
 use crate::models::user::User;
 use crate::DBType as DbConnection;
-
+use crate::models::podcast_settings::PodcastSetting;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
@@ -79,6 +79,8 @@ impl PodcastEpisodeService {
         Ok(())
     }
 
+
+
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
         podcast_cloned: Podcast,
@@ -88,7 +90,7 @@ impl PodcastEpisodeService {
         let mut download_service = DownloadService::new();
         download_service.download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
         let podcast =
-            PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn).unwrap();
+            PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)?;
         let notification = Notification {
             id: 0,
             message: podcast_episode.name.to_string(),
@@ -96,7 +98,7 @@ impl PodcastEpisodeService {
             type_of_message: "Download".to_string(),
             status: "unread".to_string(),
         };
-        Notification::insert_notification(notification, conn).unwrap();
+        Notification::insert_notification(notification, conn)?;
         Ok(podcast)
     }
 
@@ -105,11 +107,21 @@ impl PodcastEpisodeService {
         podcast: Podcast,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         let mut settings_service = SettingsService::new();
+        let podcast_settings = PodcastSetting::get_settings(conn, podcast.id)?;
         let settings = settings_service.get_settings(conn)?.unwrap();
-        Ok(
-            PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id, settings.podcast_prefill)
-                .unwrap(),
-        )
+        let n_episodes;
+
+        if let Some(podcast_settings) = podcast_settings {
+            if podcast_settings.activated {
+                n_episodes = podcast_settings.podcast_prefill;
+            } else {
+                n_episodes = settings.podcast_prefill;
+            }
+        } else {
+            n_episodes = settings.podcast_prefill;
+        }
+
+        PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id, n_episodes)
     }
 
     // Used for creating/updating podcasts
@@ -242,7 +254,7 @@ impl PodcastEpisodeService {
                             );
                             // We can't retrieve the duration of the podcast episode, so we set it to 0
 
-                            if result.unwrap().is_none() {
+                            if result?.is_none() {
                                 let duration_episode = 0;
                                 let inserted_episode = PodcastEpisode::insert_podcast_episodes(
                                     conn,
@@ -489,22 +501,48 @@ impl PodcastEpisodeService {
         Ok(())
     }
 
-    pub fn cleanup_old_episodes(days: i32, conn: &mut DbConnection) {
-        let old_podcast_episodes = PodcastEpisode::get_podcast_episodes_older_than_days(days, conn);
+    pub fn cleanup_old_episodes(days_from_settings: i32, conn: &mut DbConnection) {
+        let podcasts = Podcast::get_all_podcasts(conn);
 
-        log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
-        for old_podcast_episode in old_podcast_episodes {
-            let res = FileService::cleanup_old_episode(old_podcast_episode.clone());
+        if podcasts.is_err() {
+            return;
+        }
 
-            match res {
-                Ok(_) => {
-                    PodcastEpisode::update_download_status_of_episode(
-                        old_podcast_episode.clone().id,
-                        conn,
-                    );
+        for p in podcasts.unwrap() {
+            let podcast_settings = PodcastSetting::get_settings(conn, p.id);
+            if podcast_settings.is_err() {
+                continue;
+            }
+            let days;
+
+            if let Some(podcast_settings) = podcast_settings.unwrap() {
+                if podcast_settings.auto_cleanup {
+                    days = podcast_settings.auto_cleanup_days;
+                } else {
+                    days = days_from_settings;
                 }
-                Err(e) => {
-                    println!("Error deleting podcast episode.{}", e);
+            } else {
+                days = days_from_settings;
+            }
+
+            let old_podcast_episodes = PodcastEpisode::get_podcast_episodes_older_than_days(days,
+                                                                                            conn,
+                                                                                            p.id);
+
+            log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
+            for old_podcast_episode in old_podcast_episodes {
+                let res = FileService::cleanup_old_episode(old_podcast_episode.clone());
+
+                match res {
+                    Ok(_) => {
+                        PodcastEpisode::update_download_status_of_episode(
+                            old_podcast_episode.clone().id,
+                            conn,
+                        );
+                    }
+                    Err(e) => {
+                        println!("Error deleting podcast episode.{}", e);
+                    }
                 }
             }
         }

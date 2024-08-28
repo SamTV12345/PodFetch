@@ -181,5 +181,7 @@
   "profile": "Profile",
   "api-key": "API key",
   "user-settings-updated": "User settings updated",
-  "notification.episode-now-available": "Episode {{episode}} now available"
+  "notification.episode-now-available": "Episode {{episode}} now available",
+  "episode-numbering": "Episode numbering",
+  "activated": "Activated"
 }

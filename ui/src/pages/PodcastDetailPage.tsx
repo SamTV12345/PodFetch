@@ -15,6 +15,7 @@ import 'material-symbols/outlined.css'
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {ErrorIcon} from "../icons/ErrorIcon";
+import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
 
 export const PodcastDetailPage = () => {
     const configModel = useCommon(state => state.configModel)
@@ -27,6 +28,7 @@ export const PodcastDetailPage = () => {
     const setCurrentDetailedPodcastId = useCommon(state => state.setCurrentDetailedPodcastId)
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
+    const [openSettingsMenu, setOpenSettingsMenu] = useState<boolean>(false)
 
     useEffect(() => {
         if (params && !isNaN(parseFloat(params.id as string))) {
@@ -98,6 +100,7 @@ export const PodcastDetailPage = () => {
             <div className="max-w-4xl">
                 <PodcastInfoModal/>
                 <PodcastEpisodeAlreadyPlayed/>
+                <PodcastSettingsModal open={openSettingsMenu} setOpen={setOpenSettingsMenu} podcast={currentPodcast}/>
 
                 {/* Header */}
                 <div className="
@@ -132,6 +135,12 @@ export const PodcastDetailPage = () => {
                                         console.log('Refreshed')
                                     })
                             }}>refresh</span>
+                        <span>
+                            <button className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                                    onClick={() => {
+                                        setOpenSettingsMenu(true)
+                                    }}>settings</button>
+                        </span>
                     </div>
 
                     {/* Metadata */}

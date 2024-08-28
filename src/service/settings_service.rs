@@ -78,15 +78,18 @@ impl SettingsService {
             deleted: false,
             file_episode_path: None,
             file_image_path: None,
+            episode_numbering_processed: false,
         };
 
         perform_podcast_variable_replacement(
             update_setttings.clone().into(),
             sample_podcast.clone(),
+            None
         )?;
         perform_episode_variable_replacement(
             update_setttings.clone().into(),
             sample_episode.clone(),
+            None,
         )?;
         Ok(update_setttings)
     }

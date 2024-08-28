@@ -30,6 +30,7 @@ use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
 use crate::utils::error::{map_reqwest_error, CustomError};
 use crate::DBType as DbConnection;
+use crate::models::podcast_settings::PodcastSetting;
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -217,9 +218,10 @@ impl PodcastService {
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         let settings = Setting::get_settings(conn)?;
+        let podcast_settings = PodcastSetting::get_settings(conn, podcast.id)?;
         match settings {
             Some(settings) => {
-                if settings.auto_download {
+                if (podcast_settings.is_some() && podcast_settings.unwrap().auto_download) || settings.auto_download {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(conn, podcast.clone())?;
                     for podcast_episode in result {

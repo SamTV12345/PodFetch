@@ -42,7 +42,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         })
     },[percentagePlayed])
 
-    console.log(episode)
     return (
         <Fragment key={'episode_' + episode.podcastEpisode.id}>
             <div id={'episode_' + episode.podcastEpisode.id} className="

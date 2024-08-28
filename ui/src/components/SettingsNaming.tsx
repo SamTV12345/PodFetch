@@ -18,7 +18,7 @@ type SettingsProps = {
     intialSettings: Setting
 }
 
-const options = [
+export const options = [
     {
         translationKey: 'dash-separated',
         value: 'replace-with-dash'
