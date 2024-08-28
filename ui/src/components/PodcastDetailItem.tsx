@@ -10,6 +10,7 @@ import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeli
 import useCommon from "../store/CommonSlice";
 import {Episode} from "../models/Episode";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
+import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 
 type PodcastDetailItemProps = {
     episode: EpisodesWithOptionalTimeline,
@@ -32,6 +33,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
     const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
     const setInfoModalPodcast = useCommon(state => state.setInfoModalPodcast)
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
 
     const playedTime = useMemo(()=>{
         if(percentagePlayed === -1){
@@ -50,10 +52,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 xs:grid-cols-[auto_1fr_auto]
                 gap-x-4 gap-y-0 xs:gap-y-2
                 items-center group cursor-pointer mb-12
-            " onClick={() => {
-                setInfoModalPodcast(episode.podcastEpisode)
-                setInfoModalPodcastOpen(true)
-            }}>
+            ">
                 {/* Thumbnail */}
                 <img src={prependAPIKeyOnAuthEnabled(episode.podcastEpisode.image_url)} alt={episode.podcastEpisode.name} className="
                     hidden xs:block
@@ -71,6 +70,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     <span className="text-sm text-[--fg-secondary-color]">{formatTime(episode.podcastEpisode.date_of_recording)}</span>
                     <span className="text-sm text-[--fg-secondary-color]">{playedTime}</span>
 
+                    <span className="flex gap-5">
                     <span title={t('download-to-server') as string} className={`material-symbols-outlined text-[--fg-icon-color]
                      ${episode.podcastEpisode.status === 'D' ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
                         // Prevent icon click from triggering info modal
@@ -87,6 +87,39 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                                 setEpisodeDownloaded(episode.podcastEpisode.episode_id)
                             })
                     }}>cloud_download</span>
+                        {/* Check icon */}
+                        <span className="material-symbols-outlined text-[--fg-icon-color] active:scale-95" onClick={(e)=>{
+                            // Prevent icon click from triggering info modal
+                            e.stopPropagation()
+                            logCurrentPlaybackTime(episode.podcastEpisode.episode_id, episode.podcastHistoryItem?.total || 0)
+                            console.log(episode)
+                            const mappedEpisodes = selectedEpisodes.map(s=>{
+                                if (s.podcastEpisode.episode_id === episode.podcastEpisode.episode_id){
+                                    if (s.podcastHistoryItem) {
+                                        s.podcastHistoryItem.position = episode.podcastEpisode.total_time
+                                    } else {
+                                        s.podcastHistoryItem = {
+                                            action: "",
+                                            clean_url: "",
+                                            device: "",
+                                            episode: "",
+                                            guid: "",
+                                            id: 0,
+                                            podcast: "",
+                                            started: 0,
+                                            timestamp: "",
+                                            username: "",
+                                            total: episode.podcastEpisode.total_time,
+                                            position: episode.podcastEpisode.total_time
+                                        }
+                                    }
+
+                                }
+                                return s
+                            })
+                            setSelectedEpisodes(mappedEpisodes)
+                        }}>check</span>
+                    </span>
                 </div>
 
                 {/* Title */}
@@ -94,7 +127,10 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     col-start-1 col-end-2 row-start-2 row-end-3
                     xs:col-start-2 xs:col-end-3
                     font-bold leading-tight  text-[--fg-color] transition-color group-hover:text-[--fg-color-hover]
-                ">{episode.podcastEpisode.name}</span>
+                "  onClick={() => {
+                    setInfoModalPodcast(episode.podcastEpisode)
+                    setInfoModalPodcastOpen(true)
+                }}>{episode.podcastEpisode.name}</span>
 
                 {/* Description */}
                 <div className="
@@ -102,7 +138,10 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     col-start-1 col-end-3 row-start-3 row-end-4
                     xs:col-start-2 xs:col-end-3
                     leading-[1.75] text-sm text-[--fg-color] transition-color group-hover:text-[--fg-color-hover]
-                " dangerouslySetInnerHTML={removeHTML(episode.podcastEpisode.description)}></div>
+                "  onClick={() => {
+                    setInfoModalPodcast(episode.podcastEpisode)
+                    setInfoModalPodcastOpen(true)
+                }} dangerouslySetInnerHTML={removeHTML(episode.podcastEpisode.description)}></div>
 
                 {/* Play button */}
                 <span className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'text-gray-500'}
