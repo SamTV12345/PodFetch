@@ -51,8 +51,8 @@ importers:
         specifier: ^1.7.3
         version: 1.7.3
       chart.js:
-        specifier: ^4.4.3
-        version: 4.4.3
+        specifier: ^4.4.4
+        version: 4.4.4
       copy-text-to-clipboard:
         specifier: ^3.2.0
         version: 3.2.0
@@ -85,7 +85,7 @@ importers:
         version: 18.3.1
       react-chartjs-2:
         specifier: ^5.2.0
-        version: 5.2.0(chart.js@4.4.3)(react@18.3.1)
+        version: 5.2.0(chart.js@4.4.4)(react@18.3.1)
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
@@ -1794,8 +1794,8 @@ packages:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
 
-  chart.js@4.4.3:
-    resolution: {integrity: sha512-qK1gkGSRYcJzqrrzdR6a+I0vQ4/R+SoODXyAjscQ/4mzuNzySaMCd+hyVxitSY1+L2fjPD1Gbn+ibNqRmwQeLw==}
+  chart.js@4.4.4:
+    resolution: {integrity: sha512-emICKGBABnxhMjUjlYRR12PmOXhJ2eJjEHL2/dZlWjxRAZT1D8xplLFq5M0tMQK8ja+wBS/tuVEJB5C6r7VxJA==}
     engines: {pnpm: '>=8'}
 
   check-error@2.1.1:
@@ -5288,7 +5288,7 @@ snapshots:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
 
-  chart.js@4.4.3:
+  chart.js@4.4.4:
     dependencies:
       '@kurkle/color': 0.3.2
 
@@ -6289,9 +6289,9 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  react-chartjs-2@5.2.0(chart.js@4.4.3)(react@18.3.1):
+  react-chartjs-2@5.2.0(chart.js@4.4.4)(react@18.3.1):
     dependencies:
-      chart.js: 4.4.3
+      chart.js: 4.4.4
       react: 18.3.1
 
   react-dom@18.3.1(react@18.3.1):
