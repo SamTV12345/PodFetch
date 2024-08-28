@@ -273,9 +273,9 @@ impl DownloadService {
 
 
                 tag.set_title(&podcast_episode.name);
-                tag.set_artist(&podcast.clone().author.unwrap_or("Unknown".to_string()));
+                tag.set_artist(podcast.clone().author.unwrap_or("Unknown".to_string()));
                 tag.set_album(&podcast.name);
-                tag.set_genre(&podcast.clone().keywords.unwrap_or("Unknown".to_string()));
+                tag.set_genre(podcast.clone().keywords.unwrap_or("Unknown".to_string()));
 
                 tag.set_comment(&podcast_episode.description);
                 let track_number = PodcastEpisodeService::get_track_number_for_episode(

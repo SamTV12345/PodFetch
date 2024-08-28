@@ -121,9 +121,7 @@ impl PodcastEpisodeService {
             n_episodes = settings.podcast_prefill;
         }
 
-        Ok(
-            PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id, n_episodes)?,
-        )
+        PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id, n_episodes)
     }
 
     // Used for creating/updating podcasts
