@@ -181,7 +181,8 @@ impl PodcastService {
                         PodcastEpisodeService::insert_podcast_episodes(&mut conn, podcast.clone())
                             .unwrap();
 
-                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
+                    lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string
+                        (&BroadcastMessage {
                         podcast_episode: None,
                         type_of: PodcastType::AddPodcastEpisodes,
                         message: format!("Added podcast episodes: {}", podcast.name),

@@ -10,7 +10,6 @@ use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix_web::web::Query;
 use actix_web::{get, web, web::Data, Error, HttpRequest, HttpResponse};
-use futures_util::StreamExt;
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,

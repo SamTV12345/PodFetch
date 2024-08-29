@@ -1,9 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::io;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use rand::{random};
 use tokio::sync::{mpsc, oneshot};
+use crate::constants::inner_constants::MAIN_ROOM;
 
 type RoomId = String;
 pub type ConnId = usize;
@@ -60,7 +59,7 @@ pub struct ChatServer {
     rooms: HashMap<RoomId, HashSet<ConnId>>,
 
     /// Tracks total number of historical connections established.
-    visitor_count: Arc<AtomicUsize>,
+    //visitor_count: Arc<AtomicUsize>,
 
     /// Command receiver.
     cmd_rx: mpsc::UnboundedReceiver<Command>,
@@ -73,7 +72,7 @@ impl ChatServer {
         let mut rooms = HashMap::with_capacity(4);
 
         // create default room
-        rooms.insert("main".to_owned(), HashSet::new());
+        rooms.insert(MAIN_ROOM.parse().unwrap(), HashSet::new());
 
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
@@ -81,7 +80,7 @@ impl ChatServer {
             Self {
                 sessions: HashMap::new(),
                 rooms,
-                visitor_count: Arc::new(AtomicUsize::new(0)),
+                //visitor_count: Arc::new(AtomicUsize::new(0)),
                 cmd_rx,
             },
             ChatServerHandle { cmd_tx },
@@ -148,9 +147,10 @@ impl ChatServer {
         self.sessions.insert(id, tx);
 
         // auto join session to main room
-        self.rooms.entry("main".to_owned()).or_default().insert(id);
+        self.rooms.entry(MAIN_ROOM.parse().unwrap()).or_default().insert(id);
+        log::info!("Joined main room");
 
-        let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
+        //let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
         /*self.send_system_message("main", 0, format!("Total visitors {count}"))
             .await;*/
 

@@ -713,7 +713,7 @@ async fn insert_outline(
                 podcast: None,
                 podcast_episodes: None,
                 podcast_episode: None,
-            }).unwrap());
+            }).unwrap()).await;
         },
     }
 }

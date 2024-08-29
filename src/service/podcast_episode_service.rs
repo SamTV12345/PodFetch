@@ -49,7 +49,7 @@ impl PodcastEpisodeService {
                     Self::perform_download(&podcast_episode_cloned, podcast_cloned, conn)?;
                 let mapped_dto = MappingService::map_podcastepisode_to_dto(&podcast_inserted);
                 if let Some(lobby) = lobby {
-                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
+                    lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
                         message: format!(
                             "Episode {} is now available offline",
                             podcast_episode.name
