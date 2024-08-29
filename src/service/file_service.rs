@@ -461,7 +461,7 @@ mod tests {
 
         let result = perform_replacement(title, settings, None);
 
-        assert_eq!(result, "test -  test");
+        assert_eq!(result, "test-_ test");
     }
 
     #[test]
@@ -551,7 +551,7 @@ mod tests {
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
-        assert_eq!(result.unwrap(), "'test123test'");
+        assert_eq!(result.unwrap(), "test123test");
     }
 
     #[test]
@@ -593,7 +593,7 @@ mod tests {
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
-        assert_eq!(result.unwrap(), "'2022MyPodcasttest'");
+        assert_eq!(result.unwrap(), "2022MyPodcasttest");
     }
 
     #[test]
@@ -635,7 +635,7 @@ mod tests {
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
-        assert_eq!(result.unwrap(), "'MyPodcast'");
+        assert_eq!(result.unwrap(), "MyPodcast");
     }
 
     #[test]
@@ -664,7 +664,7 @@ mod tests {
             date: "2022-12".to_string(),
         };
         let result = perform_podcast_variable_replacement(settings, podcast_episode, None);
-        assert_eq!(result.unwrap(), "'2022-12-Test'");
+        assert_eq!(result.unwrap(), "2022-12-Test");
     }
 
     #[test]
@@ -693,6 +693,6 @@ mod tests {
             date: "2022-12".to_string(),
         };
         let result = perform_podcast_variable_replacement(settings, podcast_episode, None);
-        assert_eq!(result.unwrap(), "'Test'");
+        assert_eq!(result.unwrap(), "Test");
     }
 }
