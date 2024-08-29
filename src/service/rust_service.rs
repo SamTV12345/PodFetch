@@ -15,12 +15,11 @@ use crate::unwrap_string;
 use actix::Addr;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::{Client, ClientBuilder as AsyncClientBuilder};
 use rss::Channel;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
-
+use reqwest::Client;
 use crate::config::dbconfig::establish_connection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
@@ -31,6 +30,7 @@ use crate::models::settings::Setting;
 use crate::utils::error::{map_reqwest_error, CustomError};
 use crate::DBType as DbConnection;
 use crate::models::podcast_settings::PodcastSetting;
+use crate::utils::reqwest_client::get_async_sync_client;
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -46,7 +46,7 @@ impl Default for PodcastService {
 impl PodcastService {
     pub fn new() -> PodcastService {
         PodcastService {
-            client: AsyncClientBuilder::new().build().unwrap(),
+            client: get_async_sync_client().build().unwrap(),
         }
     }
 
