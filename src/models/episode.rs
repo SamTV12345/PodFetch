@@ -285,7 +285,7 @@ impl Episode {
                let sql = debug_query::<Sqlite, _>(&binding);
 
 
-        println!("SQL ist {}", sql.to_string());
+        println!("SQL ist {}", sql);
         let result = DistinctDsl::distinct(episodes
             .left_join(podcasts.on(podcast.eq(rssfeed)))
             .select((device, podcast))
