@@ -24,6 +24,8 @@ use crate::utils::file_extension_determination::{determine_file_extension, FileT
 use crate::utils::rss_feed_parser::RSSFeedParser;
 use crate::DBType as DbConnection;
 use crate::models::podcast_settings::PodcastSetting;
+use crate::utils::file_name_replacement::{Options, Sanitizer};
+
 
 #[derive(Clone)]
 pub struct FileService {
@@ -206,6 +208,7 @@ pub fn perform_podcast_variable_replacement(
     podcast: crate::utils::rss_feed_parser::PodcastParsed,
     podcast_setting: Option<PodcastSetting>
 ) -> Result<String, CustomError> {
+    let sanitizer = Sanitizer::new(None);
     let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone(), podcast_setting.clone())
         .replace(|c: char| !c.is_ascii(), "");
     let podcast_format;
@@ -225,7 +228,7 @@ pub fn perform_podcast_variable_replacement(
     if podcast_format.is_empty()
         || podcast_format.trim() == "{}"
     {
-        return Ok(format!("'{}'", podcast.title));
+        return Ok(sanitizer.sanitize(podcast.title));
     }
 
     let mut vars: HashMap<String, &str> = HashMap::new();
@@ -257,7 +260,7 @@ pub fn perform_podcast_variable_replacement(
     let result = strfmt::strfmt(fixed_string.trim(), &vars);
 
     match result {
-        Ok(res) => Ok(format!("'{}'", res)),
+        Ok(res) => Ok(sanitizer.sanitize(res)),
         Err(err) => {
             log::error!("Error formatting podcast title: {}", err);
             Err(CustomError::Conflict(err.to_string()))
@@ -306,7 +309,7 @@ pub fn perform_episode_variable_replacement(
 
     if episode_format.is_empty() || episode_format.trim() == "{}"
     {
-        return Ok(format!("'{}'", escaped_episode_title));
+        return Ok(escaped_episode_title);
     }
 
     let mut vars: HashMap<String, &str> = HashMap::new();
@@ -338,7 +341,7 @@ pub fn perform_episode_variable_replacement(
     let result = strfmt::strfmt(fixed_string.trim(), &vars);
 
     match result {
-        Ok(res) => Ok(format!("'{}'", res)),
+        Ok(res) => Ok(res.to_string()),
         Err(err) => {
             log::error!("Error formatting episode title: {}", err);
             Err(CustomError::Conflict(err.to_string()))
@@ -349,42 +352,35 @@ pub fn perform_episode_variable_replacement(
 fn perform_replacement(title: &str, retrieved_settings: Setting, podcast_settings: Option<PodcastSetting>) ->
                                                                                           String {
     let mut final_string: String = title.to_string();
-    let replace_invalid_characters;
     let replacement_strategy;
     if podcast_settings.is_none() {
-        replace_invalid_characters = retrieved_settings.replace_invalid_characters;
         replacement_strategy = retrieved_settings.replacement_strategy.clone();
     } else if let Some(e) = &podcast_settings {
         if e.activated {
-            replace_invalid_characters = e.replace_invalid_characters;
             replacement_strategy = e.replacement_strategy.clone();
         } else {
-            replace_invalid_characters = retrieved_settings.replace_invalid_characters;
             replacement_strategy = retrieved_settings.replacement_strategy.clone();
         }
     } else {
-        replace_invalid_characters = retrieved_settings.replace_invalid_characters;
         replacement_strategy = retrieved_settings.replacement_strategy.clone();
-    }
-
-
-    // If checked replace all illegal characters
-    if replace_invalid_characters {
-        let illegal_chars_regex = Regex::new(r#"[<>"/\\|?*”“„]"#).unwrap();
-        final_string = illegal_chars_regex
-            .replace_all(&final_string.clone(), "")
-            .to_string();
     }
 
     // Colon replacement strategy
     match ReplacementStrategy::from_str(&replacement_strategy).unwrap() {
         ReplacementStrategy::ReplaceWithDashAndUnderscore => {
-            final_string = final_string.replace(':', " - ")
+            let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-_")));
+            final_string = sanitizer.sanitize(&final_string);
         }
-        ReplacementStrategy::Remove => final_string = final_string.replace(':', ""),
-        ReplacementStrategy::ReplaceWithDash => final_string = final_string.replace(':', "-"),
+        ReplacementStrategy::Remove => {
+            let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("")));
+            final_string = sanitizer.sanitize(&final_string);
+        },
+        ReplacementStrategy::ReplaceWithDash => {
+            let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-")));
+            final_string = sanitizer.sanitize(&final_string);
+        },
     }
-    deunicode::deunicode(&final_string).trim().to_string()
+    final_string
 }
 
 fn get_filename_of_url(url: &str) -> Result<String, String> {

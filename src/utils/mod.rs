@@ -8,3 +8,4 @@ pub mod podcast_key_checker;
 pub(crate) mod rss_feed_parser;
 pub mod time;
 pub mod reqwest_client;
+pub mod file_name_replacement;

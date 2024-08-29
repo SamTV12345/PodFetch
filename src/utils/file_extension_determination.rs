@@ -18,7 +18,7 @@ pub fn determine_file_extension(
     client: &reqwest::blocking::Client,
     file_type: FileType,
 ) -> String {
-    return get_suffix_by_url(url).unwrap_or_else(|_| {
+    get_suffix_by_url(url).unwrap_or_else(|_| {
         let response = client.head(url).send().unwrap();
         let mime_type = response.headers().get("content-type").unwrap();
         let complete_extension = mime_type.to_str().unwrap();
@@ -42,7 +42,7 @@ pub fn determine_file_extension(
                 FileType::Image => ".jpg".to_string(),
             }
         }
-    });
+    })
 }
 
 fn get_suffix_by_url(url: &str) -> Result<String, Error> {
