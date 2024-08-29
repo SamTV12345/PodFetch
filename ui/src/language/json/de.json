@@ -183,5 +183,8 @@
   "user-settings-updated": "Benutzereinstellungen aktualisiert",
   "notification.episode-now-available": "Episode {{episode}} ist jetzt verfügbar",
   "episode-numbering": "Episodennummerierung",
-  "activated": "Aktiviert"
+  "activated": "Aktiviert",
+  "manage-gpodder-podcasts": "GPodder Podcasts verwalten",
+  "device": "Gerät",
+  "add": "Hinzufügen"
 }

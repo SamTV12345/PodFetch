@@ -33,12 +33,17 @@ export const SettingsPage = () => {
                     </li>
                     <li className={`cursor-pointer inline-block px-2 py-4`}>
                         <NavLink to="naming">
-                         {t('podcast-naming')}
+                            {t('podcast-naming')}
                         </NavLink>
                     </li>
                     <li className={`cursor-pointer inline-block px-2 py-4`}>
                         <NavLink to="podcasts">
                             {t('manage-podcasts')}
+                        </NavLink>
+                    </li>
+                    <li className={`cursor-pointer inline-block px-2 py-4`}>
+                        <NavLink to="gpodder">
+                            {t('manage-gpodder-podcasts')}
                         </NavLink>
                     </li>
                 </ul>
@@ -48,7 +53,7 @@ export const SettingsPage = () => {
                 <Outlet/>
             </div>
 
-            <InfoModal />
+            <InfoModal/>
         </div>
     )
 }

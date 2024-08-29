@@ -80,6 +80,21 @@ pub struct TimeLinePodcastEpisode {
     favorite: Option<Favorite>,
 }
 
+#[get("/podcast/available/gpodder")]
+pub async fn get_available_podcasts_not_in_webview(
+    requester: Option<web::ReqData<User>>,
+    conn: Data<DbPool>,
+) -> Result<HttpResponse, CustomError>  {
+    if !requester.unwrap().is_privileged_user() {
+        return Err(CustomError::Forbidden)
+    }
+    let mut retrieved_conn = conn.get().map_err(map_r2d2_error)?;
+    let found_episodes  = Episode::
+    find_episodes_not_in_webview(&mut retrieved_conn)?;
+
+    Ok(HttpResponse::Ok().json(found_episodes))
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeLinePodcastItem {

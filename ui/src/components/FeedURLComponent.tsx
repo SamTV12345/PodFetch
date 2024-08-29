@@ -36,7 +36,7 @@ export const FeedURLComponent: FC = () => {
             })} placeholder={t('rss-feed-url')!}
             className={"bg-[--input-bg-color] w-full px-4 py-2 rounded-lg text-sm text-[--input-fg-color] placeholder:text-[--input-fg-color-disabled]"} />
 
-            <CustomButtonPrimary disabled={feedUrlWatched.trim().length === 0} type="submit">Add</CustomButtonPrimary>
+            <CustomButtonPrimary disabled={feedUrlWatched.trim().length === 0} type="submit">{t('add')}</CustomButtonPrimary>
         </form>
     )
 }
