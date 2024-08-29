@@ -27,3 +27,4 @@ pub mod subscription_changes_from_client;
 pub mod user;
 pub mod web_socket_message;
 pub mod podcast_settings;
+pub mod gpodder_available_podcasts;

@@ -4,7 +4,7 @@ use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::ExpressionMethods;
+use diesel::{debug_query, ExpressionMethods, JoinOnDsl};
 use diesel::{
     BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
@@ -13,8 +13,10 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
+use diesel::query_dsl::methods::DistinctDsl;
+use diesel::sqlite::Sqlite;
 use utoipa::ToSchema;
-
+use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
 };
@@ -265,6 +267,35 @@ impl Episode {
             .execute(conn)
             .expect("");
         Ok(())
+    }
+
+
+    pub fn find_episodes_not_in_webview(conn: &mut DbConnection) -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
+        use crate::dbconfig::schema::episodes::dsl::episodes;
+        use crate::dbconfig::schema::episodes::device;
+        use crate::dbconfig::schema::episodes::podcast;
+        use crate::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::dbconfig::schema::podcasts::dsl::rssfeed;
+
+             let binding = DistinctDsl::distinct(episodes
+                                                                  .left_join(podcasts.on(podcast.eq(rssfeed)))
+                                                                    .select((device, podcast))
+                                                                   .filter(rssfeed.is_null()))
+                  .filter(device.ne("webview"));
+               let sql = debug_query::<Sqlite, _>(&binding);
+
+
+        println!("SQL ist {}", sql.to_string());
+        let result = DistinctDsl::distinct(episodes
+            .left_join(podcasts.on(podcast.eq(rssfeed)))
+            .select((device, podcast))
+            .filter(rssfeed.is_null()))
+             .filter(device.ne("webview"))
+            .load::<GPodderAvailablePodcasts>(conn)
+            .map_err(map_db_error)?;
+
+
+        Ok(result)
     }
 
     pub fn delete_watchtime(conn: &mut DbConnection, podcast_id: i32) -> Result<(), CustomError> {

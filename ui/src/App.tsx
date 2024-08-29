@@ -40,6 +40,7 @@ import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
 import {configWSUrl} from "./utils/navigationUtils";
+import {GPodderIntegration} from "./pages/GPodderIntegration";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -73,6 +74,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="opml" element={<SettingsOPMLExport/>}/>
                 <Route path="naming" element={<SettingsNaming/>}/>
                 <Route path="podcasts" element={<SettingsPodcastDelete/>}/>
+                <Route path="gpodder" element={<GPodderIntegration/>}/>
             </Route>
             <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad /></Suspense>}>
                 <Route index element={<Navigate to="users"/>}/>
