@@ -19,7 +19,6 @@ use actix_web::web;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
 use regex::Regex;
-use reqwest::blocking::ClientBuilder;
 use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
@@ -35,6 +34,7 @@ use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::reqwest_client::get_sync_client;
 
 pub struct PodcastEpisodeService;
 
@@ -566,7 +566,7 @@ impl PodcastEpisodeService {
 
     fn do_request_to_podcast_server(podcast: Podcast) -> RequestReturnType {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
-        let client = ClientBuilder::new()
+        let client = get_sync_client()
             .redirect(Policy::custom({
                 let is_redirected = Arc::clone(&is_redirected);
 

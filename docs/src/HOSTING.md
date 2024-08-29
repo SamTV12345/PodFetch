@@ -26,3 +26,8 @@ You can acquire the Telegram Bot chat id with the following steps:
 1. Write a message to the bot
 2. Open the following url in your browser: [Telegram API page](https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates)
 3. Search for the chat id in the response
+
+
+# Proxying requests to the podcast servers
+
+In some cases you also need to proxy the traffic from the PodFetch server via a proxy. For that exists the `PODFETCH_PROXY` variable. You set it to the address of your proxy.

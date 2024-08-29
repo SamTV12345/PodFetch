@@ -22,8 +22,6 @@ use futures::executor;
 use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
 use rand::Rng;
-use reqwest::blocking::{Client, ClientBuilder as SyncClientBuilder};
-use reqwest::{ClientBuilder as AsyncClientBuilder};
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::ops::DerefMut;
@@ -43,6 +41,7 @@ use crate::service::file_service::{perform_podcast_variable_replacement, FileSer
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::DBType as DbConnection;
 use futures_util::StreamExt;
+use reqwest::Client;
 use reqwest::header::HeaderMap;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -247,7 +246,7 @@ pub async fn add_podcast(
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
-    let client = AsyncClientBuilder::new().build().unwrap();
+    let client = get_async_sync_client().build().unwrap();
 
     let query: Vec<(&str, String)> = vec![
         ("id", track_id.track_id.to_string()),
@@ -299,7 +298,7 @@ pub async fn add_podcast_by_feed(
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
-    let client = AsyncClientBuilder::new().build().unwrap();
+    let client = get_async_sync_client().build().unwrap();
     let mut header_map = HeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
@@ -364,7 +363,7 @@ pub async fn import_podcasts_from_opml(
         let document = OPML::from_str(&opml.content).unwrap();
 
         for outline in document.body.outlines {
-            let client = SyncClientBuilder::new().build().unwrap();
+            let client = get_async_sync_client().build().unwrap();
             executor::block_on(insert_outline(
                 outline.clone(),
                 client.clone(),
@@ -646,7 +645,7 @@ async fn insert_outline(
         return;
     }
 
-    let feed_response = client.get(feed_url.unwrap()).send();
+    let feed_response = client.get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
         lobby.do_send(BroadcastMessage {
             type_of: PodcastType::OpmlErrored,
@@ -657,7 +656,7 @@ async fn insert_outline(
         });
         return;
     }
-    let content = feed_response.unwrap().bytes().unwrap();
+    let content = feed_response.unwrap().bytes().await.unwrap();
 
     let channel = Channel::read_from(&content[..]);
 
@@ -725,6 +724,7 @@ use crate::models::settings::Setting;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
 use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
+use crate::utils::reqwest_client::get_async_sync_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
 
 #[derive(Deserialize, ToSchema)]
@@ -832,7 +832,7 @@ pub(crate) async fn proxy_podcast(
     header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
     header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
     use std::str::FromStr;
-    let forwarded_req = reqwest::Client::new()
+    let forwarded_req = get_async_sync_client().build().unwrap()
         .request(reqwest::Method::from_str(method.as_str()).unwrap(), episode.url)
         .headers(header_map)
         .fetch_mode_no_cors()
