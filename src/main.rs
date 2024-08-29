@@ -5,7 +5,6 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix::Actor;
 use actix_files::{Files, NamedFile};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
@@ -29,6 +28,7 @@ use r2d2::Pool;
 use regex::Regex;
 use std::process::exit;
 use tokio::task::spawn_blocking;
+use tokio::{spawn, try_join};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -66,6 +66,7 @@ use crate::controllers::websocket_controller::{
 };
 use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
+use crate::controllers::server::ChatServer;
 
 mod constants;
 mod db;
@@ -78,7 +79,6 @@ use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
 
-use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
@@ -196,9 +196,10 @@ async fn main() -> std::io::Result<()> {
     let file_service = FileService::new_db();
     let notification_service = NotificationService::new();
     let settings_service = SettingsService::new();
-    let lobby = Lobby::default();
 
-    let chat_server = lobby.start();
+    let (chat_server, server_tx) = ChatServer::new();
+
+    let chat_server = spawn(chat_server.run());
 
     EnvironmentService::print_banner();
     match FileService::create_podcast_root_directory_exists() {
@@ -336,15 +337,16 @@ async fn main() -> std::io::Result<()> {
         hash.insert(oidc_config.client_id);
     }
 
-    HttpServer::new(move || {
+
+    let http_server = HttpServer::new(move || {
         App::new()
+            .app_data(Data::new(server_tx.clone()))
             .app_data(Data::new(key_param.clone()))
             .app_data(Data::new(jwk.clone()))
             .app_data(Data::new(hash.clone()))
             .service(redirect("/", var("SUB_DIRECTORY").unwrap() + "/ui/"))
             .service(get_gpodder_api())
             .service(get_global_scope())
-            .app_data(Data::new(chat_server.clone()))
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
             .app_data(Data::new(Mutex::new(file_service.clone())))
             .app_data(Data::new(Mutex::new(notification_service.clone())))
@@ -354,8 +356,9 @@ async fn main() -> std::io::Result<()> {
     })
     .workers(4)
     .bind(("0.0.0.0", 8000))?
-    .run()
-    .await
+    .run();
+    try_join!(http_server, async move { chat_server.await.unwrap() })?;
+    Ok(())
 }
 
 pub fn get_api_config() -> Scope {

@@ -1,111 +1,152 @@
-use crate::models::messages::{Connect, Disconnect, WsMessage};
-use crate::models::web_socket_message::Lobby;
-use actix::{
-    fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
-    Running, StreamHandler, WrapFuture,
-};
-use actix_web_actors::ws;
-use actix_web_actors::ws::Message;
-use actix_web_actors::ws::Message::Text;
+use std::pin::pin;
 use std::time::{Duration, Instant};
-use uuid::Uuid;
+use actix_ws::AggregatedMessage;
+use futures_util::future::{select, Either};
+use futures_util::StreamExt;
+use tokio::sync::mpsc;
+use tokio::time::interval;
+use crate::controllers::server::{ChatServerHandle, ConnId};
 
+/// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+
+/// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
-#[derive(Clone)]
-pub struct WsConn {
-    hb: Instant,
-    id: Uuid,
-    addr: Addr<Lobby>,
-}
+/// Echo text & binary messages received from the client, respond to ping messages, and monitor
+/// connection health to detect network issues and free up resources.
+pub async fn chat_ws(
+    chat_server: ChatServerHandle,
+    mut session: actix_ws::Session,
+    msg_stream: actix_ws::MessageStream,
+) {
+    log::info!("connected");
 
-impl WsConn {
-    pub fn new(addr: Addr<Lobby>) -> Self {
-        Self {
-            hb: Instant::now(),
-            id: Uuid::new_v4(),
-            addr,
-        }
-    }
+    let mut name = None;
+    let mut last_heartbeat = Instant::now();
+    let mut interval = interval(HEARTBEAT_INTERVAL);
 
-    // This function will run on an interval, every 5 seconds to check
-    // that the connection is still alive. If it's been more than
-    // 10 seconds since the last ping, we'll close the connection.
-    fn hb(&self, ctx: &mut <Self as Actor>::Context) {
-        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
-            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                ctx.stop();
-                return;
-            }
+    let (conn_tx, mut conn_rx) = mpsc::unbounded_channel();
 
-            ctx.ping(b"");
-        });
-    }
-}
+    // unwrap: chat server is not dropped before the HTTP server
+    let conn_id = chat_server.connect(conn_tx).await;
 
-impl Actor for WsConn {
-    type Context = ws::WebsocketContext<Self>;
+    let msg_stream = msg_stream
+        .max_frame_size(128 * 1024)
+        .aggregate_continuations()
+        .max_continuation_size(2 * 1024 * 1024);
 
-    // Start the heartbeat process for this connection
-    fn started(&mut self, ctx: &mut Self::Context) {
-        self.hb(ctx);
+    let mut msg_stream = pin!(msg_stream);
 
-        let addr = ctx.address();
-        self.addr
-            .send(Connect {
-                addr: addr.recipient(),
-                self_id: self.id,
-            })
-            .into_actor(self)
-            .then(|res, _, ctx| {
-                match res {
-                    Ok(_res) => (),
-                    _ => ctx.stop(),
+    let close_reason = loop {
+        // most of the futures we process need to be stack-pinned to work with select()
+
+        let tick = pin!(interval.tick());
+        let msg_rx = pin!(conn_rx.recv());
+
+        // TODO: nested select is pretty gross for readability on the match
+        let messages = pin!(select(msg_stream.next(), msg_rx));
+
+        match select(messages, tick).await {
+            // commands & messages received from client
+            Either::Left((Either::Left((Some(Ok(msg)), _)), _)) => {
+                log::debug!("msg: {msg:?}");
+
+                match msg {
+                    AggregatedMessage::Ping(bytes) => {
+                        last_heartbeat = Instant::now();
+                        // unwrap:
+                        session.pong(&bytes).await.unwrap();
+                    }
+
+                    AggregatedMessage::Pong(_) => {
+                        last_heartbeat = Instant::now();
+                    }
+
+                    AggregatedMessage::Text(text) => {
+                        process_text_msg(&chat_server, &mut session, &text, conn_id, &mut name)
+                            .await;
+                    }
+
+                    AggregatedMessage::Binary(_bin) => {
+                        log::warn!("unexpected binary message");
+                    }
+
+                    AggregatedMessage::Close(reason) => break reason,
                 }
-                fut::ready(())
-            })
-            .wait(ctx);
-    }
+            }
 
-    fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        self.addr.do_send(Disconnect { id: self.id });
-        Running::Stop
-    }
+            // client WebSocket stream error
+            Either::Left((Either::Left((Some(Err(err)), _)), _)) => {
+                log::error!("{}", err);
+                break None;
+            }
+
+            // client WebSocket stream ended
+            Either::Left((Either::Left((None, _)), _)) => break None,
+
+            // chat messages received from other room participants
+            Either::Left((Either::Right((Some(chat_msg), _)), _)) => {
+                session.text(chat_msg).await.unwrap();
+            }
+
+            // all connection's message senders were dropped
+            Either::Left((Either::Right((None, _)), _)) => unreachable!(
+                "all connection message senders were dropped; chat server may have panicked"
+            ),
+
+            // heartbeat internal tick
+            Either::Right((_inst, _)) => {
+                // if no heartbeat ping/pong received recently, close the connection
+                if Instant::now().duration_since(last_heartbeat) > CLIENT_TIMEOUT {
+                    log::info!(
+                        "client has not sent heartbeat in over {CLIENT_TIMEOUT:?}; disconnecting"
+                    );
+                    break None;
+                }
+
+                // send heartbeat ping
+                let _ = session.ping(b"").await;
+            }
+        };
+    };
+
+    chat_server.disconnect(conn_id);
+
+    // attempt to close connection gracefully
+    let _ = session.close(close_reason).await;
 }
 
-// The `StreamHandler` trait is used to handle the messages that are sent over the socket.
-impl StreamHandler<Result<Message, ws::ProtocolError>> for WsConn {
-    // The `handle()` function is where we'll determine the response
-    // to the client's messages. So, for example, if we ping the client,
-    // it should respond with a pong. These two messages are necessary
-    // for the `hb()` function to maintain the connection status.
-    fn handle(&mut self, msg: Result<Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        match msg {
-            // Ping/Pong will be used to make sure the connection is still alive
-            Ok(Message::Ping(msg)) => {
-                self.hb = Instant::now();
-                ctx.pong(&msg);
-            }
-            Ok(Message::Pong(_)) => {
-                self.hb = Instant::now();
-            }
-            // Text will echo any text received back to the client (for now)
-            Ok(Text(text)) => ctx.text(text),
-            // Close will close the socket
-            Ok(Message::Close(reason)) => {
-                ctx.close(reason);
-                ctx.stop();
-            }
-            _ => ctx.stop(),
-        }
-    }
-}
+async fn process_text_msg(
+    chat_server: &ChatServerHandle,
+    session: &mut actix_ws::Session,
+    text: &str,
+    conn: ConnId,
+    name: &mut Option<String>,
+) {
+    // strip leading and trailing whitespace (spaces, newlines, etc.)
+    let msg = text.trim();
 
-impl Handler<WsMessage> for WsConn {
-    type Result = ();
+    // we check for /<cmd> type of messages
+    if msg.starts_with('/') {
+        let mut cmd_args = msg.splitn(2, ' ');
 
-    fn handle(&mut self, msg: WsMessage, ctx: &mut Self::Context) {
-        ctx.text(msg.0);
+        // unwrap: we have guaranteed non-zero string length already
+             cmd_args.next().unwrap();
+               {
+                         session
+                           .text(format!("!!! unknown command: {msg}"))
+                           .await
+                           .unwrap();
+               }
+
+    } else {
+        // prefix message with our name, if assigned
+        let msg = match name {
+            Some(ref name) => format!("{name}: {msg}"),
+            None => msg.to_owned(),
+        };
+
+        chat_server.send_message(conn, msg).await
     }
 }

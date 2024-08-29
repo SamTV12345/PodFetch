@@ -1,11 +1,7 @@
-use crate::constants::inner_constants::{
-    PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES,
-    TELEGRAM_API_ENABLED,
-};
+use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, MAIN_ROOM, TELEGRAM_API_ENABLED};
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-use crate::models::web_socket_message::Lobby;
 use crate::service::download_service::DownloadService;
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
@@ -13,8 +9,6 @@ use std::io::Error;
 use std::sync::{Arc, Mutex};
 
 use crate::utils::podcast_builder::PodcastBuilder;
-use actix::Addr;
-
 use actix_web::web;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
@@ -22,7 +16,7 @@ use regex::Regex;
 use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
-
+use crate::controllers::server::ChatServerHandle;
 use crate::models::episode::Episode;
 use crate::models::notification::Notification;
 use crate::models::user::User;
@@ -42,7 +36,7 @@ impl PodcastEpisodeService {
     pub fn download_podcast_episode_if_not_locally_available(
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
-        lobby: Option<web::Data<Addr<Lobby>>>,
+        lobby: Option<web::Data<ChatServerHandle>>,
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
@@ -55,7 +49,7 @@ impl PodcastEpisodeService {
                     Self::perform_download(&podcast_episode_cloned, podcast_cloned, conn)?;
                 let mapped_dto = MappingService::map_podcastepisode_to_dto(&podcast_inserted);
                 if let Some(lobby) = lobby {
-                    lobby.do_send(BroadcastMessage {
+                    lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
                         message: format!(
                             "Episode {} is now available offline",
                             podcast_episode.name
@@ -64,7 +58,7 @@ impl PodcastEpisodeService {
                         type_of: PodcastType::AddPodcastEpisode,
                         podcast_episode: Some(mapped_dto),
                         podcast_episodes: None,
-                    })
+                    }).unwrap());
                 }
 
                 if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {

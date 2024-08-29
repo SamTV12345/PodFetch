@@ -142,3 +142,6 @@ pub static ITUNES: &str = "itunes";
 pub const REVERSE_PROXY: &str = "REVERSE_PROXY";
 pub const REVERSE_PROXY_HEADER: &str = "REVERSE_PROXY_HEADER";
 pub const REVERSE_PROXY_AUTO_SIGN_UP: &str = "REVERSE_PROXY_AUTO_SIGN_UP";
+
+
+pub const MAIN_ROOM: &str = "main";
