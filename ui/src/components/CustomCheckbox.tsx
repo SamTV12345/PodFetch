@@ -6,7 +6,7 @@ type CustomCheckboxProps = {
     className?: string,
     id?: string,
     name?: string,
-    onChange?: any,
+    onChange?: (checked: Checkbox.CheckedState)=>void,
     value?: Checkbox.CheckedState
 }
 
