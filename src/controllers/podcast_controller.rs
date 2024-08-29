@@ -1,17 +1,13 @@
-use crate::constants::inner_constants::{
-    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
-};
+use crate::constants::inner_constants::{PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM, OIDC_AUTH};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
 use crate::models::search_type::SearchType::{ITunes, Podindex};
-use crate::models::web_socket_message::Lobby;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string, DbPool};
-use actix::Addr;
 use actix_web::dev::PeerAddr;
 use actix_web::http::Method;
 use actix_web::web::{Data, Json, Path};
@@ -239,7 +235,7 @@ tag="podcasts"
 #[post("/podcast/itunes")]
 pub async fn add_podcast(
     track_id: web::Json<PodcastAddModel>,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -290,7 +286,7 @@ tag="podcasts"
 #[post("/podcast/feed")]
 pub async fn add_podcast_by_feed(
     rss_feed: web::Json<PodcastRSSAddModel>,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     podcast_service: Data<Mutex<PodcastService>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
@@ -349,7 +345,7 @@ tag="podcasts"
 #[post("/podcast/opml")]
 pub async fn import_podcasts_from_opml(
     opml: web::Json<OpmlModel>,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -388,7 +384,7 @@ tag="podcasts"
 #[post("/podcast/podindex")]
 pub async fn add_podcast_from_podindex(
     id: web::Json<PodcastAddModel>,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -424,7 +420,7 @@ pub async fn add_podcast_from_podindex(
 
 fn start_download_podindex(
     id: i32,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     conn: &mut DbConnection,
 ) -> Result<Podcast, CustomError> {
     let rt = tokio::runtime::Runtime::new().unwrap();
@@ -464,7 +460,7 @@ tag="podcasts"
 )]
 #[post("/podcast/all")]
 pub async fn refresh_all_podcasts(
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     podcast_service: Data<Mutex<PodcastService>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
@@ -485,13 +481,13 @@ pub async fn refresh_all_podcasts(
                     conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                 )
                 .unwrap();
-            lobby.clone().do_send(BroadcastMessage {
+            lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
                 podcast_episode: None,
                 type_of: PodcastType::RefreshPodcast,
                 message: format!("Refreshed podcast: {}", podcast.name),
                 podcast: Option::from(podcast.clone()),
                 podcast_episodes: None,
-            });
+            }).unwrap());
         }
     });
     Ok(HttpResponse::Ok().into())
@@ -506,7 +502,7 @@ tag="podcasts"
 #[post("/podcast/{id}/refresh")]
 pub async fn download_podcast(
     id: Path<String>,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     podcast_service: Data<Mutex<PodcastService>>,
     conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
@@ -621,7 +617,7 @@ pub async fn update_active_podcast(
 async fn insert_outline(
     podcast: Outline,
     client: Client,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
     mut rng: ThreadRng,
     environment: EnvironmentService,
     conn: Data<DbPool>,
@@ -647,13 +643,13 @@ async fn insert_outline(
 
     let feed_response = client.get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
-        lobby.do_send(BroadcastMessage {
+        lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
             type_of: PodcastType::OpmlErrored,
             message: feed_response.err().unwrap().to_string(),
             podcast: None,
             podcast_episodes: None,
             podcast_episode: None,
-        });
+        }).unwrap()).await;
         return;
     }
     let content = feed_response.unwrap().bytes().await.unwrap();
@@ -689,35 +685,43 @@ async fn insert_outline(
                 )
                 .await;
             match inserted_podcast {
-                Ok(podcast) => lobby.do_send(BroadcastMessage {
-                    type_of: PodcastType::OpmlAdded,
-                    message: "Refreshed podcasts".to_string(),
-                    podcast: Option::from(podcast),
-                    podcast_episodes: None,
-                    podcast_episode: None,
-                }),
-                Err(e) => lobby.do_send(BroadcastMessage {
-                    type_of: PodcastType::OpmlErrored,
-                    message: e.to_string(),
-                    podcast: None,
-                    podcast_episodes: None,
-                    podcast_episode: None,
-                }),
+                Ok(podcast) => {
+
+                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
+                        type_of: PodcastType::OpmlAdded,
+                        message: "Refreshed podcasts".to_string(),
+                        podcast: Option::from(podcast),
+                        podcast_episodes: None,
+                        podcast_episode: None,
+                    }).unwrap()).await;
+                },
+                Err(e) => {
+                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
+                        type_of: PodcastType::OpmlErrored,
+                        message: e.to_string(),
+                        podcast: None,
+                        podcast_episodes: None,
+                        podcast_episode: None,
+                    }).unwrap()).await;
+                },
             }
         }
-        Err(e) => lobby.do_send(BroadcastMessage {
-            type_of: PodcastType::OpmlErrored,
-            message: e.to_string(),
-            podcast: None,
-            podcast_episodes: None,
-            podcast_episode: None,
-        }),
+        Err(e) => {
+            let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
+                type_of: PodcastType::OpmlErrored,
+                message: e.to_string(),
+                podcast: None,
+                podcast_episodes: None,
+                podcast_episode: None,
+            }).unwrap());
+        },
     }
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
+use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;

@@ -1,18 +1,16 @@
-use crate::controllers::web_socket::WsConn;
+use crate::controllers::web_socket::{chat_ws};
 use std::ops::DerefMut;
 
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-use crate::models::web_socket_message::Lobby;
 
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
-use actix::Addr;
 use actix_web::web::Query;
-use actix_web::{get, web, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
-use actix_web_actors::ws;
+use actix_web::{get, web, web::Data, Error, HttpRequest, HttpResponse};
+use futures_util::StreamExt;
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
@@ -21,8 +19,9 @@ use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
-
+use tokio::task::spawn_local;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::controllers::server::ChatServerHandle;
 use crate::models::user::User;
 
 #[utoipa::path(
@@ -33,12 +32,19 @@ responses(
 #[get("/ws")]
 pub async fn start_connection(
     req: HttpRequest,
-    stream: Payload,
-    lobby: Data<Addr<Lobby>>,
+    body: web::Payload,
+    chat_server: web::Data<ChatServerHandle>,
 ) -> Result<HttpResponse, Error> {
-    let ws = WsConn::new(lobby.get_ref().clone());
-    let resp = ws::start(ws, &req, stream)?;
-    Ok(resp)
+    let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
+
+    // spawn websocket handler (and don't await it) so that the response is returned immediately
+    spawn_local(chat_ws(
+        (**chat_server).clone(),
+        session,
+        msg_stream,
+    ));
+
+    Ok(res)
 }
 
 #[derive(Deserialize, Serialize)]

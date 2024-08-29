@@ -245,24 +245,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-web-actors"
-version = "4.3.1+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f98c5300b38fd004fe7d2a964f9a90813fdbe8a81fed500587e78b1b71c6f980"
-dependencies = [
- "actix",
- "actix-codec",
- "actix-http",
- "actix-web",
- "bytes",
- "bytestring",
- "futures-core",
- "pin-project-lite",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "actix-web-codegen"
 version = "4.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -272,6 +254,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.48",
+]
+
+[[package]]
+name = "actix-ws"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3a1fb4f9f2794b0aadaf2ba5f14a6f034c7e86957b458c506a8cb75953f2d99"
+dependencies = [
+ "actix-codec",
+ "actix-http",
+ "actix-web",
+ "bytestring",
+ "futures-core",
+ "tokio",
 ]
 
 [[package]]
@@ -2097,7 +2093,7 @@ dependencies = [
  "actix",
  "actix-files",
  "actix-web",
- "actix-web-actors",
+ "actix-ws",
  "async-recursion",
  "awc",
  "base64 0.22.1",

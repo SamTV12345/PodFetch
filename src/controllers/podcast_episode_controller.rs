@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::PodcastType;
+use crate::constants::inner_constants::{PodcastType, MAIN_ROOM};
 use crate::db::TimelineItem;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -6,13 +6,11 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use crate::models::web_socket_message::Lobby;
 
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
-use actix::Addr;
 use actix_web::web::{Data, Json, Query};
 use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
@@ -22,6 +20,7 @@ use std::ops::DerefMut;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
+use crate::controllers::server::ChatServerHandle;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -199,7 +198,7 @@ pub async fn delete_podcast_episode_locally(
     id: web::Path<String>,
     requester: Option<web::ReqData<User>>,
     db: Data<DbPool>,
-    lobby: Data<Addr<Lobby>>,
+    lobby: Data<ChatServerHandle>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
@@ -209,13 +208,13 @@ pub async fn delete_podcast_episode_locally(
         &id.into_inner(),
         &mut db.get().unwrap(),
     )?;
-    lobby.do_send(BroadcastMessage {
+    lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
         podcast_episode: Some(delted_podcast_episode),
         podcast_episodes: None,
         type_of: PodcastType::DeletePodcastEpisode,
         podcast: None,
         message: "Deleted podcast episode locally".to_string(),
-    });
+    }).unwrap()).await;
 
     Ok(HttpResponse::NoContent().finish())
 }

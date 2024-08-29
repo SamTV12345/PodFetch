@@ -1,18 +1,14 @@
-use crate::constants::inner_constants::{
-    PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL,
-};
+use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL, MAIN_ROOM};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 
 use crate::models::messages::BroadcastMessage;
 use crate::models::misc_models::PodcastInsertModel;
-use crate::models::web_socket_message::Lobby;
 
 use crate::service::file_service::FileService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
-use actix::Addr;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
@@ -23,7 +19,7 @@ use reqwest::Client;
 use crate::config::dbconfig::establish_connection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
-
+use crate::controllers::server::ChatServerHandle;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
@@ -95,7 +91,7 @@ impl PodcastService {
         &mut self,
         conn: &mut DbConnection,
         id: i32,
-        lobby: Data<Addr<Lobby>>,
+        lobby: Data<ChatServerHandle>,
     ) -> Result<Podcast, CustomError> {
         let resp = self
             .client
@@ -130,7 +126,7 @@ impl PodcastService {
         &mut self,
         conn: &mut DbConnection,
         podcast_insert: PodcastInsertModel,
-        lobby: Data<Addr<Lobby>>,
+        lobby: Data<ChatServerHandle>,
         channel: Option<Channel>,
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(conn, &podcast_insert.feed_url.clone());
@@ -165,8 +161,7 @@ impl PodcastService {
             .await;
         let podcast = Podcast::get_podcast_by_track_id(conn, podcast_insert.id).unwrap();
         lobby
-            .get_ref()
-            .send(BroadcastMessage {
+            .send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
                 podcast_episode: None,
                 type_of: PodcastType::AddPodcast,
                 message: format!("Added podcast: {}", inserted_podcast.name),
@@ -174,9 +169,7 @@ impl PodcastService {
                     &podcast.clone().unwrap(),
                 )),
                 podcast_episodes: None,
-            })
-            .await
-            .unwrap();
+            }).unwrap()).await;
         match podcast {
             Some(podcast) => {
                 spawn_blocking(move || {
@@ -188,13 +181,13 @@ impl PodcastService {
                         PodcastEpisodeService::insert_podcast_episodes(&mut conn, podcast.clone())
                             .unwrap();
 
-                    lobby.get_ref().do_send(BroadcastMessage {
+                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
                         podcast_episode: None,
                         type_of: PodcastType::AddPodcastEpisodes,
                         message: format!("Added podcast episodes: {}", podcast.name),
                         podcast: Option::from(podcast.clone()),
                         podcast_episodes: Option::from(inserted_podcasts),
-                    });
+                    }).unwrap());
                     if let Err(e) =
                         podcast_service.schedule_episode_download(podcast, Some(lobby), &mut conn)
                     {
@@ -214,7 +207,7 @@ impl PodcastService {
     pub fn schedule_episode_download(
         &mut self,
         podcast: Podcast,
-        lobby: Option<Data<Addr<Lobby>>>,
+        lobby: Option<Data<ChatServerHandle>>,
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         let settings = Setting::get_settings(conn)?;
@@ -250,7 +243,7 @@ impl PodcastService {
     pub fn refresh_podcast(
         &mut self,
         podcast: Podcast,
-        lobby: Data<Addr<Lobby>>,
+        lobby: Data<ChatServerHandle>,
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
