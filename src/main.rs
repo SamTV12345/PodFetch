@@ -92,6 +92,7 @@ use crate::service::rust_service::PodcastService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::CustomError;
 use crate::utils::podcast_key_checker::check_podcast_request;
+use crate::utils::reqwest_client::get_async_sync_client;
 
 mod config;
 
@@ -277,7 +278,12 @@ async fn main() -> std::io::Result<()> {
 
     match ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
         Some(jwk_config) => {
-            let resp = reqwest::get(&jwk_config.jwks_uri)
+            let client = get_async_sync_client()
+                .build()
+                .unwrap();
+            let resp = client
+                .get(&jwk_config.jwks_uri)
+                .send()
                 .await
                 .unwrap()
                 .json::<CustomJwkSet>()
