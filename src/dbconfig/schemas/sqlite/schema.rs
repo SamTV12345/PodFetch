@@ -179,6 +179,24 @@ diesel::table! {
 }
 
 diesel::table! {
+    tags (id) {
+        id -> Text,
+        name -> Text,
+        username -> Text,
+        description -> Nullable<Text>,
+        created_at -> Timestamp,
+        color -> Text,
+    }
+}
+
+diesel::table! {
+    tags_podcasts (tag_id, podcast_id) {
+        tag_id -> Text,
+        podcast_id -> Integer,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Integer,
         username -> Text,
@@ -194,6 +212,8 @@ diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(playlist_items -> playlists (playlist_id));
 diesel::joinable!(playlist_items -> podcast_episodes (episode));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
+diesel::joinable!(tags_podcasts -> podcasts (podcast_id));
+diesel::joinable!(tags_podcasts -> tags (tag_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     devices,
@@ -210,5 +230,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     sessions,
     settings,
     subscriptions,
+    tags,
+    tags_podcasts,
     users,
 );

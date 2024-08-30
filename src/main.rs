@@ -66,6 +66,7 @@ use crate::controllers::websocket_controller::{
 };
 use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
+use crate::controllers::manifest_controller::get_manifest;
 use crate::controllers::server::ChatServer;
 use crate::controllers::tags_controller::{add_podcast_to_tag, delete_tag, get_tags, insert_tag, update_tag};
 
@@ -390,6 +391,7 @@ pub fn get_global_scope() -> Scope {
         .service(service)
         .service(start_connection)
         .service(get_rss_feed)
+        .service(get_manifest)
         .service(get_rss_feed_for_podcast)
 }
 
