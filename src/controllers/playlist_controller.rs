@@ -6,19 +6,20 @@ use crate::DbPool;
 use actix_web::web::Data;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use std::ops::DerefMut;
+use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct PlaylistDtoPost {
     pub name: String,
     pub items: Vec<PlaylistItem>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone,ToSchema)]
 pub struct PlaylistItem {
     pub episode: i32,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct PlaylistDto {
     pub id: String,
     pub name: String,
@@ -28,7 +29,7 @@ pub struct PlaylistDto {
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Adds a new playlist for the user",body= Vec<PlaylistDto>)),
+(status = 200, description = "Adds a new playlist for the user",body= PlaylistDtoPost)),
 tag="playlist"
 )]
 #[post("/playlist")]
@@ -52,7 +53,7 @@ pub async fn add_playlist(
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Updates a playlist of the user",body= Vec<PlaylistDto>)),
+(status = 200, description = "Updates a playlist of the user",body= PlaylistDtoPost)),
 tag="playlist"
 )]
 #[put("/playlist/{playlist_id}")]
@@ -75,6 +76,12 @@ pub async fn update_playlist(
     Ok(HttpResponse::Ok().json(res))
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets all playlists of the user")),
+tag="playlist"
+)]
 #[get("/playlist")]
 pub async fn get_all_playlists(
     requester: Option<web::ReqData<User>>,
@@ -87,6 +94,12 @@ pub async fn get_all_playlists(
     .map(|playlists| HttpResponse::Ok().json(playlists))
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Gets a specific playlist of a user")),
+tag="playlist"
+)]
 #[get("/playlist/{playlist_id}")]
 pub async fn get_playlist_by_id(
     requester: Option<web::ReqData<User>>,
@@ -108,6 +121,12 @@ pub async fn get_playlist_by_id(
     Ok(HttpResponse::Ok().json(playlist))
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Deletes a specific playlist of a user")),
+tag="playlist"
+)]
 #[delete("/playlist/{playlist_id}")]
 pub async fn delete_playlist_by_id(
     requester: Option<web::ReqData<User>>,
@@ -123,6 +142,12 @@ pub async fn delete_playlist_by_id(
     Ok(HttpResponse::Ok().json(()))
 }
 
+#[utoipa::path(
+context_path="/api/v1",
+responses(
+(status = 200, description = "Deletes a specific playlist item of a user")),
+tag="playlist"
+)]
 #[delete("/playlist/{playlist_id}/episode/{episode_id}")]
 pub async fn delete_playlist_item(
     requester: Option<web::ReqData<User>>,

@@ -11,6 +11,7 @@ import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeli
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {create} from "zustand";
 import {Episode} from "../models/Episode";
+import {PodcastTags} from "../models/PodcastTags";
 
 export type Podcast = {
     directory: string,
@@ -26,7 +27,8 @@ export type Podcast = {
     author?: string,
     last_build_date?: string,
     active:boolean,
-    episode_numbering: boolean
+    episode_numbering: boolean,
+    tags: PodcastTags[]
 }
 
 export type PodcastEpisode = {
@@ -87,6 +89,8 @@ interface CommonProps {
     podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel|undefined,
     setSidebarCollapsed: (sidebarCollapsed: boolean) => void,
     setPodcasts: (podcasts: Podcast[]) => void,
+    tags: PodcastTags[],
+    setPodcastTags: (t: PodcastTags[])=>void,
     updateLikePodcast: (id: number) => void,
     setSelectedEpisodes: (selectedEpisodes: EpisodesWithOptionalTimeline[]) => void,
     setSearchedPodcasts: (searchedPodcasts: AgnosticPodcastDataModel[]) => void,
@@ -224,7 +228,9 @@ const useCommon = create<CommonProps>((set, get) => ({
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => set({podcastAlreadyPlayed}),
     setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => set({podcastEpisodeAlreadyPlayed}),
     setLoggedInUser: (loggedInUser: LoggedInUser) => set({loggedInUser}),
-    loggedInUser: undefined
+    loggedInUser: undefined,
+    tags: [],
+    setPodcastTags: (t)=>set({tags: t})
 }))
 
 export default useCommon

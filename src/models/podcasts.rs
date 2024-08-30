@@ -15,6 +15,8 @@ use diesel::{
     delete, insert_into, BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl,
 };
 use utoipa::ToSchema;
+use crate::models::tag::Tag;
+
 use crate::utils::error::{map_db_error, CustomError};
 #[derive(
     Queryable,
@@ -80,13 +82,16 @@ impl Podcast {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::podcasts::id as p_id;
         let result = podcasts
-            .left_join(f_db.on(username.eq(u).and(f_id.eq(p_id))))
+            .left_join(f_db.on(username.eq(&u).and(f_id.eq(p_id))))
             .load::<(Podcast, Option<Favorite>)>(conn)
             .map_err(map_db_error)?;
 
         let mapped_result = result
             .iter()
-            .map(MappingService::map_podcast_to_podcast_dto_with_favorites)
+            .map(|podcast| {
+                let tags = Tag::get_tags_of_podcast(conn, podcast.0.id, &u).unwrap();
+                MappingService::map_podcast_to_podcast_dto_with_favorites(podcast, tags)
+            })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
     }

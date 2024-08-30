@@ -25,5 +25,8 @@ pub mod settings;
 pub mod subscription;
 pub mod subscription_changes_from_client;
 pub mod user;
+pub mod tag;
+pub mod tags_podcast;
+pub mod color;
 pub mod podcast_settings;
 pub mod gpodder_available_podcasts;

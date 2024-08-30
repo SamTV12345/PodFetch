@@ -186,5 +186,7 @@
   "activated": "Aktiviert",
   "manage-gpodder-podcasts": "GPodder Podcasts verwalten",
   "device": "Gerät",
-  "add": "Hinzufügen"
+  "add": "Hinzufügen",
+  "tag_one": "Tag",
+  "tag_other": "Tags"
 }

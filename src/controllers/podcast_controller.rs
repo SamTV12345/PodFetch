@@ -49,6 +49,7 @@ pub struct PodcastSearchModel {
     title: Option<String>,
     order_option: Option<OrderOption>,
     favored_only: bool,
+    tag: Option<String>
 }
 
 #[utoipa::path(
@@ -87,6 +88,7 @@ pub async fn search_podcasts(
     let query = query.into_inner();
     let _order = query.order.unwrap_or(OrderCriteria::Asc);
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    let tag = query.tag;
 
     let opt_filter = Filter::get_filter_by_username(
         requester.clone().unwrap().username.clone(),
@@ -122,6 +124,7 @@ pub async fn search_podcasts(
                         _latest_pub.clone(),
                         conn.get().map_err(map_r2d2_error)?.deref_mut(),
                         username,
+                        tag
                     )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
@@ -135,6 +138,7 @@ pub async fn search_podcasts(
                     _latest_pub.clone(),
                     &mut conn.get().unwrap(),
                     username,
+                    tag
                 )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
@@ -142,10 +146,11 @@ pub async fn search_podcasts(
     }
 }
 
+
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Find a podcast by its collection id", body = [Podcast])
+(status = 200, description = "Find a podcast by its collection id", body = [(Podcast, Tags)])
 ),
 tag="podcasts"
 )]
@@ -153,11 +158,15 @@ tag="podcasts"
 pub async fn find_podcast_by_id(
     id: Path<String>,
     conn: Data<DbPool>,
+    user: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
+    let username = user.unwrap().username.clone();
+
     let podcast =
         PodcastService::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num)?;
-    let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast);
+    let tags = Tag::get_tags_of_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num, &username)?;
+    let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast, tags);
     Ok(HttpResponse::Ok().json(mapped_podcast))
 }
 
@@ -177,6 +186,7 @@ pub async fn find_all_podcasts(
 
     let podcasts =
         PodcastService::get_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut(), username)?;
+
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -485,7 +495,7 @@ pub async fn refresh_all_podcasts(
                 podcast_episode: None,
                 type_of: PodcastType::RefreshPodcast,
                 message: format!("Refreshed podcast: {}", podcast.name),
-                podcast: Option::from(podcast.clone()),
+                podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
                 podcast_episodes: None,
             }).unwrap());
         }
@@ -690,7 +700,7 @@ async fn insert_outline(
                     let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
                         type_of: PodcastType::OpmlAdded,
                         message: "Refreshed podcasts".to_string(),
-                        podcast: Option::from(podcast),
+                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
                         podcast_episodes: None,
                         podcast_episode: None,
                     }).unwrap()).await;
@@ -719,12 +729,14 @@ async fn insert_outline(
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
+use crate::models::tag::Tag;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
+use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
 use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
@@ -763,6 +775,8 @@ pub async fn delete_podcast(
     }
     Episode::delete_watchtime(&mut db.get().unwrap(), *id)?;
     PodcastEpisode::delete_episodes_of_podcast(&mut db.get().unwrap(), *id)?;
+    TagsPodcast::delete_tags_by_podcast_id(&mut db.get().unwrap(), *id)?;
+
     Podcast::delete_podcast(&mut db.get().unwrap(), *id)?;
     Ok(HttpResponse::Ok().into())
 }

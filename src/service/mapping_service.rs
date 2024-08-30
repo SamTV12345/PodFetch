@@ -3,14 +3,17 @@ use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::models::tag::Tag;
 use crate::service::environment_service;
 
 #[derive(Clone)]
 pub struct MappingService {}
 
+
+
 impl MappingService {
-    pub fn map_podcast_to_podcast_dto(podcast: &Podcast) -> Podcast {
-        Podcast {
+    pub fn map_podcast_to_podcast_dto(podcast: &Podcast, tags: Vec<Tag>) -> PodcastDto {
+        PodcastDto {
             id: podcast.id,
             name: podcast.name.clone(),
             directory_id: podcast.directory_id.clone(),
@@ -26,12 +29,15 @@ impl MappingService {
             author: podcast.author.clone(),
             active: podcast.active,
             original_image_url: podcast.original_image_url.clone(),
-            directory_name: podcast.directory_name.clone()
+            directory_name: podcast.directory_name.clone(),
+            tags,
+            favorites: false
         }
     }
 
     pub fn map_podcast_to_podcast_dto_with_favorites(
         podcast_favorite_grouped: &(Podcast, Option<Favorite>),
+        tags: Vec<Tag>
     ) -> PodcastDto {
         let favorite = podcast_favorite_grouped.1.is_some()
             && podcast_favorite_grouped.1.clone().unwrap().favored;
@@ -52,16 +58,19 @@ impl MappingService {
             active: podcast_favorite_grouped.0.active,
             original_image_url: podcast_favorite_grouped.0.original_image_url.clone(),
             favorites: favorite,
+            directory_name: podcast_favorite_grouped.0.directory_name.clone(),
+            tags,
         }
     }
 
     pub fn map_podcast_to_podcast_dto_with_favorites_option(
         podcast_favorite_grouped: &(Podcast, Favorite),
+        tags: Vec<Tag>
     ) -> PodcastDto {
         Self::map_podcast_to_podcast_dto_with_favorites(&(
             podcast_favorite_grouped.0.clone(),
             Some(podcast_favorite_grouped.1.clone()),
-        ))
+        ),tags)
     }
 
     pub fn map_podcastepisode_to_dto(podcast_episode: &PodcastEpisode) -> PodcastEpisode {

@@ -10,4 +10,6 @@ pub mod user_controller;
 pub mod watch_time_controller;
 pub mod web_socket;
 pub mod websocket_controller;
+pub mod tags_controller;
 pub mod server;
+pub mod manifest_controller;

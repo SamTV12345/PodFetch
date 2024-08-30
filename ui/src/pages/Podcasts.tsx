@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo } from 'react'
+import {FC, useEffect, useMemo, useState} from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import axios, { AxiosResponse } from 'axios'
@@ -15,11 +15,13 @@ import { Filter } from '../models/Filter'
 import { AddPodcastModal } from '../components/AddPodcastModal'
 import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
 import { CustomInput } from '../components/CustomInput'
-import { CustomSelect } from '../components/CustomSelect'
+import {CustomSelect, Option} from '../components/CustomSelect'
 import { Heading1 } from '../components/Heading1'
 import { PodcastCard } from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
+import {PodcastTags} from "../models/PodcastTags";
+import {CustomDropdownMenu} from "../components/CustomDropdownMenu";
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -32,6 +34,11 @@ const orderOptions = [
     { value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A' }
 ]
 
+const allTags: Option = {
+   label: 'All',
+    value: 'all'
+}
+
 export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     const filters = useCommon(state => state.filters)
     const podcasts = useCommon(state => state.podcasts)
@@ -40,26 +47,54 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     const setModalOpen = useModal(state => state.setOpenModal)
     const setFilters = useCommon(state => state.setFilters)
     const setPodcasts = useCommon(state => state.setPodcasts)
+    const tags = useCommon(state=>state.tags)
+    const mappedTagsOptions = useMemo(() => {
+        const mappedTags = tags.map(tag => {
+            return {
+                value: tag.id,
+                label: tag.name
+            } satisfies Option
+        })
+        return [...mappedTags, allTags]
+    }, [tags])
+    const [tagsVal, setTagVal] = useState<Option>(()=>allTags)
+
+    const setTags = useCommon(state=>state.setPodcastTags)
 
     const memorizedSelection = useMemo(() => {
         return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
     }, [filters])
 
     const refreshAllPodcasts = () => {
-        axios.post( '/podcast/all')
+        axios.post('/podcast/all')
     }
+
+
+    useEffect(() => {
+        axios.get('/tags')
+            .then((c: AxiosResponse<PodcastTags[]>)=>{
+                setTags(c.data)
+            })
+    }, []);
 
     const performFilter = () => {
         if (filters === undefined) {
             return
         }
+        let tag = undefined
+
+        if (tagsVal.value !== 'all') {
+            tag = tagsVal.value
+        }
+
 
         axios.get('/podcasts/search', {
             params: {
                 title: filters?.title,
                 order: filters?.ascending?Order.ASC:Order.DESC,
                 orderOption: filters?.filter?.toUpperCase(),
-                favoredOnly: !!onlyFavorites
+                favoredOnly: !!onlyFavorites,
+                tag: tag
             }
         })
             .then((v: AxiosResponse<Podcast[]>) => {
@@ -69,7 +104,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
 
     useDebounce(() => {
         performFilter()
-    },500, [filters])
+    },500, [filters, tagsVal])
 
     useEffect(() => {
         axios.get('/podcasts/filter')
@@ -97,13 +132,21 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                 <div className="flex gap-2 items-center">
                     <Heading1>{t('all-subscriptions')}</Heading1>
 
-                    <span className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]" onClick={()=>{
-                        refreshAllPodcasts()
-                    }}>refresh</span>
+                    <span
+                        className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                        onClick={() => {
+                            refreshAllPodcasts()
+                        }}>refresh</span>
+                    <div>
+                        <CustomSelect className="bg-mustard-600 text-black" options={mappedTagsOptions} value={tagsVal.value} onChange={(v)=>{
+                            setTagVal(mappedTagsOptions.filter(e=>e.value === v)[0])
+                        }}/>
+                    </div>
                 </div>
 
+
                 <CustomButtonPrimary className="flex items-center" onClick={() => {
-                   setModalOpen(true)
+                    setModalOpen(true)
                 }}>
                     <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
                 </CustomButtonPrimary>
