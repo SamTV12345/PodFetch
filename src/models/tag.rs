@@ -24,15 +24,15 @@ pub struct Tag {
     #[diesel(sql_type = Text)]
     pub(crate) id: String,
     #[diesel(sql_type = Text)]
-    name: String,
+    pub name: String,
     #[diesel(sql_type = Text)]
-    username: String,
+    pub username: String,
     #[diesel(sql_type = Nullable<Text>)]
-    description: Option<String>,
+    pub description: Option<String>,
     #[diesel(sql_type = Timestamp)]
-    created_at: NaiveDateTime,
+    pub created_at: NaiveDateTime,
     #[diesel(sql_type = Text)]
-    color: String,
+    pub color: String,
 }
 
 impl Tag {

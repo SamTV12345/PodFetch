@@ -168,6 +168,7 @@ impl PodcastService {
                 message: format!("Added podcast: {}", inserted_podcast.name),
                 podcast: Option::from(MappingService::map_podcast_to_podcast_dto(
                     &podcast.clone().unwrap(),
+                    vec![]
                 )),
                 podcast_episodes: None,
             }).unwrap()).await;
@@ -187,7 +188,7 @@ impl PodcastService {
                         podcast_episode: None,
                         type_of: PodcastType::AddPodcastEpisodes,
                         message: format!("Added podcast episodes: {}", podcast.name),
-                        podcast: Option::from(podcast.clone()),
+                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
                         podcast_episodes: Option::from(inserted_podcasts),
                     }).unwrap());
                     if let Err(e) =

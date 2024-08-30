@@ -54,7 +54,7 @@ impl PodcastEpisodeService {
                             "Episode {} is now available offline",
                             podcast_episode.name
                         ),
-                        podcast: Option::from(podcast.clone()),
+                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
                         type_of: PodcastType::AddPodcastEpisode,
                         podcast_episode: Some(mapped_dto),
                         podcast_episodes: None,

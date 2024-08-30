@@ -5,6 +5,7 @@ pub struct PodcastDto {
     pub(crate) id: i32,
     pub(crate) name: String,
     pub directory_id: String,
+    pub directory_name: String,
     pub(crate) rssfeed: String,
     pub image_url: String,
     pub summary: Option<String>,

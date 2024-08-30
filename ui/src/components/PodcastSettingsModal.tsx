@@ -30,6 +30,8 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
     }, [podcastSettings, loaded])
 
 
+    console.log(podcast)
+
     useEffect(() => {
         axios.get<PodcastSetting>("/podcasts/"+podcast.id+"/settings").then((res) => {
             if (res != null) {

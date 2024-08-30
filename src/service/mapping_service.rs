@@ -9,9 +9,11 @@ use crate::service::environment_service;
 #[derive(Clone)]
 pub struct MappingService {}
 
+
+
 impl MappingService {
-    pub fn map_podcast_to_podcast_dto(podcast: &Podcast) -> Podcast {
-        Podcast {
+    pub fn map_podcast_to_podcast_dto(podcast: &Podcast, tags: Vec<Tag>) -> PodcastDto {
+        PodcastDto {
             id: podcast.id,
             name: podcast.name.clone(),
             directory_id: podcast.directory_id.clone(),
@@ -27,7 +29,9 @@ impl MappingService {
             author: podcast.author.clone(),
             active: podcast.active,
             original_image_url: podcast.original_image_url.clone(),
-            directory_name: podcast.directory_name.clone()
+            directory_name: podcast.directory_name.clone(),
+            tags,
+            favorites: false
         }
     }
 
@@ -54,6 +58,7 @@ impl MappingService {
             active: podcast_favorite_grouped.0.active,
             original_image_url: podcast_favorite_grouped.0.original_image_url.clone(),
             favorites: favorite,
+            directory_name: podcast_favorite_grouped.0.directory_name.clone(),
             tags,
         }
     }

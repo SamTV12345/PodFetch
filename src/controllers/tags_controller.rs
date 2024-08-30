@@ -47,10 +47,9 @@ responses(
 tag="tags"
 )]
 #[get("/tags")]
-pub async fn get_tags(conn: Data<DbPool>, requester: Option<web::ReqData<User>>, _mapping_service: Data<Mutex<MappingService>>) ->
+pub async fn get_tags(conn: Data<DbPool>, requester: Option<web::ReqData<User>>) ->
                                                                                   Result<HttpResponse, CustomError> {
     let tags = Tag::get_tags(&mut conn.get().unwrap(), requester.unwrap().username.clone())?;
-
     Ok(HttpResponse::Ok().json(tags))
 }
 

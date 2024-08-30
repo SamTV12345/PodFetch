@@ -20,6 +20,7 @@ import { Heading1 } from '../components/Heading1'
 import { PodcastCard } from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
+import {PodcastTags} from "../models/PodcastTags";
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -40,14 +41,24 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     const setModalOpen = useModal(state => state.setOpenModal)
     const setFilters = useCommon(state => state.setFilters)
     const setPodcasts = useCommon(state => state.setPodcasts)
+    const tags = useCommon(state=>state.tags)
+    const setTags = useCommon(state=>state.setPodcastTags)
 
     const memorizedSelection = useMemo(() => {
         return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
     }, [filters])
 
     const refreshAllPodcasts = () => {
-        axios.post( '/podcast/all')
+        axios.post('/podcast/all')
     }
+
+
+    useEffect(() => {
+        axios.get('/tags')
+            .then((c: AxiosResponse<PodcastTags[]>)=>{
+                setTags(c.data)
+            })
+    }, []);
 
     const performFilter = () => {
         if (filters === undefined) {

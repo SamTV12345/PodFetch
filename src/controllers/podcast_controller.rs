@@ -157,15 +157,13 @@ pub async fn find_podcast_by_id(
     user: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
+    let username = user.unwrap().username.clone();
+
     let podcast =
         PodcastService::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num)?;
-    let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast);
-    let tags = Tag::get_tags_of_podcast(
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
-        podcast.id,
-        &user.unwrap().username,
-    )?;
-    Ok(HttpResponse::Ok().json((mapped_podcast, tags)))
+    let tags = Tag::get_tags_of_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num, &username)?;
+    let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast, tags);
+    Ok(HttpResponse::Ok().json(mapped_podcast))
 }
 
 #[utoipa::path(
@@ -184,6 +182,7 @@ pub async fn find_all_podcasts(
 
     let podcasts =
         PodcastService::get_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut(), username)?;
+
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -492,7 +491,7 @@ pub async fn refresh_all_podcasts(
                 podcast_episode: None,
                 type_of: PodcastType::RefreshPodcast,
                 message: format!("Refreshed podcast: {}", podcast.name),
-                podcast: Option::from(podcast.clone()),
+                podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
                 podcast_episodes: None,
             }).unwrap());
         }
@@ -697,7 +696,7 @@ async fn insert_outline(
                     let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
                         type_of: PodcastType::OpmlAdded,
                         message: "Refreshed podcasts".to_string(),
-                        podcast: Option::from(podcast),
+                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
                         podcast_episodes: None,
                         podcast_episode: None,
                     }).unwrap()).await;
