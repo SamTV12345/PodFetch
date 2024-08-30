@@ -100,7 +100,12 @@ jobs:
           target: x86_64-apple-darwin
           default: true
           override: true
-
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Install dependencies
+        run: |
+          brew install postgresql
       - name: Build for mac
         run: cargo build --all --release && strip target/release/podfetch && mv target/release/podfetch target/release/podfetch_darwin
       - name: Copy to root

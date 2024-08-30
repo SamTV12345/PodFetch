@@ -20,6 +20,14 @@ jobs:
     steps:
       - uses: ikalnytskyi/action-setup-postgres@v4
       - uses: actions/checkout@master
+      - if: matrix.target == 'x86_64-apple-darwin'
+        name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+      - if: matrix.target == 'x86_64-apple-darwin'
+        name: Install dependencies
+        run: |
+          brew install postgresql
       - name: Compile and release
         uses: rust-build/rust-build.action@v1.4.3
         env:
