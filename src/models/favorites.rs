@@ -11,6 +11,7 @@ use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
+use crate::dbconfig::DBType;
 use crate::models::tag::Tag;
 
 #[derive(
@@ -121,7 +122,7 @@ impl Favorite {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: &str,
+        designated_username: &str
     ) -> Result<Vec<(Podcast, Favorite)>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;

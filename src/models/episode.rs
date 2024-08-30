@@ -277,15 +277,6 @@ impl Episode {
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::podcasts::dsl::rssfeed;
 
-             let binding = DistinctDsl::distinct(episodes
-                                                                  .left_join(podcasts.on(podcast.eq(rssfeed)))
-                                                                    .select((device, podcast))
-                                                                   .filter(rssfeed.is_null()))
-                  .filter(device.ne("webview"));
-               let sql = debug_query::<Sqlite, _>(&binding);
-
-
-        println!("SQL ist {}", sql);
         let result = DistinctDsl::distinct(episodes
             .left_join(podcasts.on(podcast.eq(rssfeed)))
             .select((device, podcast))

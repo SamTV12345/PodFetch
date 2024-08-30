@@ -49,6 +49,7 @@ pub struct PodcastSearchModel {
     title: Option<String>,
     order_option: Option<OrderOption>,
     favored_only: bool,
+    tag: Option<String>
 }
 
 #[utoipa::path(
@@ -87,6 +88,7 @@ pub async fn search_podcasts(
     let query = query.into_inner();
     let _order = query.order.unwrap_or(OrderCriteria::Asc);
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    let tag = query.tag;
 
     let opt_filter = Filter::get_filter_by_username(
         requester.clone().unwrap().username.clone(),
@@ -122,6 +124,7 @@ pub async fn search_podcasts(
                         _latest_pub.clone(),
                         conn.get().map_err(map_r2d2_error)?.deref_mut(),
                         username,
+                        tag
                     )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
@@ -135,6 +138,7 @@ pub async fn search_podcasts(
                     _latest_pub.clone(),
                     &mut conn.get().unwrap(),
                     username,
+                    tag
                 )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
@@ -732,6 +736,7 @@ use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
+use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
 use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
@@ -770,6 +775,8 @@ pub async fn delete_podcast(
     }
     Episode::delete_watchtime(&mut db.get().unwrap(), *id)?;
     PodcastEpisode::delete_episodes_of_podcast(&mut db.get().unwrap(), *id)?;
+    TagsPodcast::delete_tags_by_podcast_id(&mut db.get().unwrap(), *id)?;
+
     Podcast::delete_podcast(&mut db.get().unwrap(), *id)?;
     Ok(HttpResponse::Ok().into())
 }

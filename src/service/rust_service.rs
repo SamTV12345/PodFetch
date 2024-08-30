@@ -20,6 +20,7 @@ use crate::config::dbconfig::establish_connection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
 use crate::controllers::server::ChatServerHandle;
+use crate::dbconfig::DBType;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
@@ -345,6 +346,7 @@ impl PodcastService {
         latest_pub: OrderOption,
         conn: &mut DbConnection,
         designated_username: String,
+        tag: Option<String>,
     ) -> Result<Vec<impl Serialize>, CustomError> {
         let podcasts =
             Favorite::search_podcasts_favored(conn, order, title, latest_pub,
@@ -356,6 +358,17 @@ impl PodcastService {
                 MappingService::map_podcast_to_podcast_dto_with_favorites_option(&podcast, tags_of_podcast);
             podcast_dto_vec.push(podcast_dto);
         }
+
+        if let Some(tag) = tag {
+            let found_tag =  Tag::get_tag_by_id_and_username(conn, &tag, &designated_username)?;
+
+            if let Some(foud_tag) = found_tag {
+                podcast_dto_vec = podcast_dto_vec.into_iter().filter(|p|{
+                    p.tags.iter().any(|t| t.id == foud_tag.id)
+                }).collect::<Vec<PodcastDto>>()
+            }
+        }
+
         Ok(podcast_dto_vec)
     }
 
@@ -366,16 +379,28 @@ impl PodcastService {
         latest_pub: OrderOption,
         conn: &mut DbConnection,
         designated_username: String,
+        tag: Option<String>,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
             Favorite::search_podcasts(conn, order, title, latest_pub, &designated_username)?;
-        let mapped_result = podcasts
+        let mut mapped_result = podcasts
             .iter()
             .map(|podcast| {
                 let tags = Tag::get_tags_of_podcast(conn, podcast.0.id, &designated_username).unwrap();
                 MappingService::map_podcast_to_podcast_dto_with_favorites(podcast, tags)
             })
             .collect::<Vec<PodcastDto>>();
+
+
+        if let Some(tag) = tag {
+            let found_tag =  Tag::get_tag_by_id_and_username(conn, &tag, &designated_username)?;
+
+            if let Some(foud_tag) = found_tag {
+                mapped_result = mapped_result.into_iter().filter(|p|{
+                    p.tags.iter().any(|t| t.id == foud_tag.id)
+                }).collect::<Vec<PodcastDto>>()
+            }
+        }
         Ok(mapped_result)
     }
 }

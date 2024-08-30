@@ -41,6 +41,7 @@ import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
 import {configWSUrl} from "./utils/navigationUtils";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
+import {TagsPage} from "./pages/TagsPage";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -83,6 +84,9 @@ export const router = createBrowserRouter(createRoutesFromElements(
             </Route>
             <Route path={"profile"}>
                 <Route index element={<UserManagementPage/>}/>
+            </Route>
+            <Route path="tags">
+                <Route index element={<TagsPage/>}/>
             </Route>
         </Route>
         <Route path="/login" element={<Login />} />

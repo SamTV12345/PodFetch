@@ -12,6 +12,8 @@ import {PodcastTags} from "../models/PodcastTags";
 import {TagCreate} from "../models/Tags";
 import {CustomCheckbox} from "./CustomCheckbox";
 import {Tag} from "sanitize-html";
+import {LuMinus, LuTags} from "react-icons/lu";
+import {useTranslation} from "react-i18next";
 
 type PodcastCardProps = {
     podcast: Podcast
@@ -30,11 +32,12 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
             favored: !podcast.favorites
         })
     }
+    const {t} = useTranslation()
     const [newTag, setNewTag] = useState<string>('')
 
     return (
         <Context.Root modal={true} onOpenChange={()=>{
-
+            setNewTag('')
         }}>
             <Context.Trigger>
                 <Link className="group" to={podcast.id + '/episodes'}>
@@ -60,6 +63,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                             className="block font-bold leading-[1.2] mb-2 text-[--fg-color] transition-colors group-hover:text-[--fg-color-hover]">{podcast.name}</span>
                         <span
                             className="block leading-[1.2] text-sm text-[--fg-secondary-color]">{podcast.author}</span>
+                        <span className="flex gap-2 mb-2 text-[--fg-color]"><LuTags className="text-[--fg-secondary-color] text-2xl"/> <span className="self-center mb-2 text-[--fg-color]">{podcast.tags.length}</span> {t('tag', {count: tags.length})}</span>
                     </div>
                 </Link>
             </Context.Trigger>
@@ -71,10 +75,10 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                     <hr className="mt-1 border-[1px] border-[--border-color] mb-2"/>
                     {
                      tags.map(t=>{
-                         return <Context.Item onClick={(e)=>{
+                         return <Context.Item key={t.id} onClick={(e)=>{
                              e.preventDefault()
-                         }} className="group text-[13px] leading-none text-violet11 rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none data-[disabled]:text-mauve8 data-[disabled]:pointer-events-none data-[highlighted]:bg-violet9 data-[highlighted]:text-violet1 text-white">
-                             <span className="grid grid-cols-2 gap-5">
+                         }} className="group mt-2 mb-2 text-[13px] leading-none text-violet11 rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none data-[disabled]:text-mauve8 data-[disabled]:pointer-events-none data-[highlighted]:bg-violet9 data-[highlighted]:text-violet1 text-white">
+                             <span className="grid grid-cols-3 gap-5">
                                  <CustomCheckbox value={podcast.tags.filter(e=>e.name=== t.name).length>0} onChange={(v)=>{
                                      if (v.valueOf() === true) {
 
@@ -99,7 +103,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                              .then(()=>{
                                                  setPodcasts(podcasts.map(p=>{
                                                      if (p.id === podcast.id) {
-                                                         const tags = podcast.tags.filter(tag=>tag.id === t.id)
+                                                         const tags = podcast.tags.filter(tag=>tag.id !== t.id)
                                                          return {
                                                              ...p,
                                                              tags
@@ -117,19 +121,10 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                     }
 
                     <span className="relative">
-                        <PlusIcon className="absolute right-5 fill-white h-5 top-2  -translate-y-1/2 cursor-pointer" onClick={()=>{
+                        <PlusIcon className="absolute right-5 fill-white h-[19px] top-2  -translate-y-1/2 cursor-pointer" onClick={()=>{
                             if(tags.map(t=>t.name).includes(newTag)||!newTag.trim()) {
                                 return
                             }
-                            const newTags:  PodcastTags[] = [...tags, {
-                                name: newTag,
-                                color: "ffff",
-                                id: "test123",
-                                username: 'test',
-                                created_at: "123123",
-                                description: "§123123"
-                            }]
-
 
                             axios.post('/tags', {
                                 color: 'Green',
