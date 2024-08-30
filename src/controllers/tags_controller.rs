@@ -101,14 +101,15 @@ responses(
 tag="tags"
 )]
 #[post("/tags/{tag_id}/{podcast_id}")]
-pub async fn add_podcast_to_tag(tag_id: web::Path<String>, podcast_id: web::Path<i32>, conn:
+pub async fn add_podcast_to_tag(tag_id: web::Path<(String, i32)>, conn:
 Data<DbPool>, requester: Option<web::ReqData<User>>) ->
                                                                                       Result<HttpResponse, CustomError> {
-    let opt_tag = Tag::get_tag_by_id_and_username( &mut conn.get().unwrap(), &tag_id.into_inner(),
+    let (tag_id, podcast_id) = tag_id.into_inner();
+    let opt_tag = Tag::get_tag_by_id_and_username( &mut conn.get().unwrap(), &tag_id,
                                                 &requester.unwrap().username.clone())?;
     match opt_tag{
         Some(tag) => {
-            let podcast = TagsPodcast::add_podcast_to_tag(tag.id.clone(), podcast_id.into_inner(),
+            let podcast = TagsPodcast::add_podcast_to_tag(tag.id.clone(), podcast_id,
                                                        &mut conn.get().unwrap())?;
             Ok(HttpResponse::Ok().json(podcast))
         },
@@ -123,13 +124,15 @@ responses(
 tag="tags"
 )]
 #[delete("/tags/{tag_id}/{podcast_id}")]
-pub async fn delete_podcast_from_tag(tag_id: web::Path<String>, podcast_id: web::Path<i32>, conn:
+pub async fn delete_podcast_from_tag(tag_id:  web::Path<(String, i32)>, conn:
 Data<DbPool>, requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
-    let opt_tag = Tag::get_tag_by_id_and_username( &mut conn.get().unwrap(), &tag_id.into_inner(),
+    let (tag_id, podcast_id) = tag_id.into_inner();
+
+    let opt_tag = Tag::get_tag_by_id_and_username( &mut conn.get().unwrap(), &tag_id,
                                                 &requester.unwrap().username.clone())?;
     match opt_tag{
         Some(tag) => {
-            TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(&mut conn.get().unwrap(),  podcast_id.into_inner(),
+            TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(&mut conn.get().unwrap(),  podcast_id,
                                                                   &tag.id)?;
             Ok(HttpResponse::Ok().finish())
         },

@@ -1,6 +1,6 @@
 import {createRef, FC, useState} from 'react'
 import {Link} from 'react-router-dom'
-import axios from 'axios'
+import axios, {AxiosResponse} from 'axios'
 import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
@@ -9,6 +9,9 @@ import {ContextMenu} from "@radix-ui/react-context-menu";
 import {CustomInput} from "./CustomInput";
 import {PlusIcon} from "../icons/PlusIcon";
 import {PodcastTags} from "../models/PodcastTags";
+import {TagCreate} from "../models/Tags";
+import {CustomCheckbox} from "./CustomCheckbox";
+import {Tag} from "sanitize-html";
 
 type PodcastCardProps = {
     podcast: Podcast
@@ -19,6 +22,8 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
     const updateLikePodcast = useCommon(state => state.updateLikePodcast)
     const tags = useCommon(state=>state.tags)
     const setTags = useCommon(state=>state.setPodcastTags)
+    const setPodcasts = useCommon(state=>state.setPodcasts)
+    const podcasts = useCommon(state=>state.podcasts)
     const likePodcast = () => {
         axios.put('/podcast/favored', {
             id: podcast.id,
@@ -69,7 +74,44 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                          return <Context.Item onClick={(e)=>{
                              e.preventDefault()
                          }} className="group text-[13px] leading-none text-violet11 rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none data-[disabled]:text-mauve8 data-[disabled]:pointer-events-none data-[highlighted]:bg-violet9 data-[highlighted]:text-violet1 text-white">
-                             {t.name}
+                             <span className="grid grid-cols-2 gap-5">
+                                 <CustomCheckbox value={podcast.tags.filter(e=>e.name=== t.name).length>0} onChange={(v)=>{
+                                     if (v.valueOf() === true) {
+
+                                         axios.post(`/tags/${t.id}/${podcast.id}`)
+                                             .then(()=>{
+                                                 const addedTag = tags.filter(tag=>tag.id === t.id)[0]
+
+                                                 setPodcasts(podcasts.map(p=>{
+                                                     if (p.id === podcast.id) {
+                                                         const tags = podcast.tags
+                                                         tags.push(addedTag)
+                                                         return {
+                                                             ...p,
+                                                             tags
+                                                         }
+                                                     }
+                                                     return p
+                                                 }))
+                                             })
+                                     } else {
+                                         axios.delete(`/tags/${t.id}/${podcast.id}`)
+                                             .then(()=>{
+                                                 setPodcasts(podcasts.map(p=>{
+                                                     if (p.id === podcast.id) {
+                                                         const tags = podcast.tags.filter(tag=>tag.id === t.id)
+                                                         return {
+                                                             ...p,
+                                                             tags
+                                                         }
+                                                     }
+                                                     return p
+                                                 }))
+                                             })
+                                     }
+                                 }}/>
+                                 <span className="self-center">{t.name}</span>
+                             </span>
                          </Context.Item>
                      })
                     }
@@ -88,9 +130,16 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                 description: "§123123"
                             }]
 
-                            setTags(newTags)
+
+                            axios.post('/tags', {
+                                color: 'Green',
+                                name: newTag
+                            } satisfies TagCreate)
+                                .then((c: AxiosResponse<PodcastTags>)=>{
+                                    setTags([...tags,c.data])
+                                })
                         }}/>
-                        <CustomInput placeholder="Add new tag" value={newTag} onChange={(event)=>{
+                        <CustomInput className="mt-5" placeholder="Add new tag" value={newTag} onChange={(event)=>{
                             setNewTag(event.target.value)
                         }}/>
                     </span>
