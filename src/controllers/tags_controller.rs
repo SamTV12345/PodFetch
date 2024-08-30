@@ -1,4 +1,3 @@
-use std::sync::Mutex;
 use actix_web::{delete, get, HttpResponse, post, put, web};
 use actix_web::web::{Data, Json};
 use utoipa::ToSchema;
@@ -8,7 +7,6 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
-use crate::service::mapping_service::MappingService;
 use crate::utils::error::{CustomError};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

@@ -1,7 +1,6 @@
 use crate::constants::inner_constants::PodcastType;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
 
 
 #[derive(Serialize, Deserialize)]

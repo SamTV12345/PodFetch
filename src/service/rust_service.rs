@@ -20,7 +20,6 @@ use crate::config::dbconfig::establish_connection;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
 use crate::controllers::server::ChatServerHandle;
-use crate::dbconfig::DBType;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;

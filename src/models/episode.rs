@@ -4,7 +4,7 @@ use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::{debug_query, ExpressionMethods, JoinOnDsl};
+use diesel::{ExpressionMethods, JoinOnDsl};
 use diesel::{
     BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
@@ -14,7 +14,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
 use diesel::query_dsl::methods::DistinctDsl;
-use diesel::sqlite::Sqlite;
 use utoipa::ToSchema;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::misc_models::{

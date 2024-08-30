@@ -11,7 +11,6 @@ use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
-use crate::dbconfig::DBType;
 use crate::models::tag::Tag;
 
 #[derive(
