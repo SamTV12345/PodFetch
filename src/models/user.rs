@@ -1,6 +1,4 @@
-use crate::constants::inner_constants::{
-    Role, API_KEY, BASIC_AUTH, OIDC_AUTH, STANDARD_USER, USERNAME,
-};
+use crate::constants::inner_constants::{Role, API_KEY, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME};
 use crate::dbconfig::schema::users;
 use crate::dbconfig::DBType;
 use crate::utils::environment_variables::is_env_var_present_and_true;
@@ -77,7 +75,8 @@ impl User {
         conn: &mut DbConnection,
     ) -> Result<User, CustomError> {
         use crate::dbconfig::schema::users::dsl::*;
-        if let Ok(res) = var(USERNAME) {
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+        if let Some(res) = env_service.username.clone() {
             if res == username_to_find {
                 return Ok(User::create_admin_user());
             }
@@ -97,8 +96,8 @@ impl User {
 
     pub fn insert_user(&mut self, conn: &mut DbConnection) -> Result<User, Error> {
         use crate::dbconfig::schema::users::dsl::*;
-
-        if let Ok(res) = var(USERNAME) {
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+        if let Some(res) = env_service.username.clone() {
             if res == self.username {
                 return Err(Error::new(
                     std::io::ErrorKind::Other,
@@ -144,24 +143,21 @@ impl User {
             .set(users::explicit_consent.eq(self.explicit_consent))
             .get_result::<User>(conn);
 
-        Ok(User::map_to_dto(user.unwrap()))
+        Ok(User::map_to_dto(user?))
     }
 
     pub(crate) fn create_admin_user() -> User {
-        use crate::constants::inner_constants::PASSWORD;
-
-        let password: Option<String> = std::env::var(PASSWORD)
-            .map(Some)
-            .map_err(|_| None::<String>)
-            .unwrap();
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+        let password: Option<String> = env_service.password.clone();
+        let username = env_service.username.clone();
         User {
             id: 9999,
-            username: var(USERNAME).unwrap().to_string(),
+            username: username.unwrap_or(STANDARD_USER.to_string()),
             role: Role::Admin.to_string(),
             password,
             explicit_consent: true,
             created_at: Default::default(),
-            api_key: var(API_KEY).map(Some).unwrap_or(None),
+            api_key: env_service.api_key_admin.clone(),
         }
     }
 
@@ -187,6 +183,8 @@ impl User {
     }
 
     pub fn create_standard_admin_user() -> User {
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+        let api_admin: Option<String> = env_service.api_key_admin.clone();
         User {
             id: 9999,
             username: STANDARD_USER.to_string(),
@@ -194,7 +192,7 @@ impl User {
             password: None,
             explicit_consent: true,
             created_at: Default::default(),
-            api_key: var(API_KEY).map(Some).unwrap_or(None),
+            api_key: api_admin,
         }
     }
 
@@ -335,7 +333,10 @@ impl User {
             return false;
         }
 
-        if let Ok(res) = var(API_KEY) {
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+
+
+        if let Some(res) = env_service.api_key_admin.clone() {
             if !res.is_empty() && res == api_key_to_find {
                 return true;
             }

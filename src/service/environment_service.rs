@@ -1,10 +1,4 @@
-use crate::constants::inner_constants::{
-    BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH,
-    OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD,
-    PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT,
-    REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY,
-    TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME,
-};
+use crate::constants::inner_constants::{API_KEY, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use regex::Regex;
@@ -38,6 +32,10 @@ pub struct EnvironmentService {
     pub database_url: String,
     pub telegram_api: Option<TelegramConfig>,
     pub any_auth_enabled: bool,
+    pub sub_directory: Option<String>,
+    pub proxy_url: Option<String>,
+    pub conn_number: i16,
+    pub api_key_admin: Option<String>,
 }
 
 #[derive(Clone)]
@@ -76,14 +74,14 @@ impl EnvironmentService {
         if !server_url.ends_with('/') {
             server_url += "/"
         }
-
-        if var(SUB_DIRECTORY).is_err() {
+        let mut opt_sub_dir = var(SUB_DIRECTORY).map_err(|_|None::<String>).map(|v|Some(v)).unwrap_or(None);
+        if opt_sub_dir.is_none() {
             let re = Regex::new(r"^http[s]?://[^/]+(/.*)?$").unwrap();
             let directory = re.captures(&server_url).unwrap().get(1).unwrap().as_str();
             if directory.ends_with('/') {
-                env::set_var(SUB_DIRECTORY, &directory[0..directory.len() - 1]);
+                opt_sub_dir = Some(directory[0..directory.len() - 1].to_string());
             } else {
-                env::set_var(SUB_DIRECTORY, directory);
+                opt_sub_dir = Some(directory.to_string());
             }
         }
 
@@ -132,10 +130,14 @@ impl EnvironmentService {
             gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED),
             database_url: var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string()),
             telegram_api,
+            sub_directory: opt_sub_dir,
+            proxy_url: var(PODFETCH_PROXY_FOR_REQUESTS).map(|v| Some(v)).unwrap_or(None),
             reverse_proxy: is_env_var_present_and_true(REVERSE_PROXY),
             any_auth_enabled: is_env_var_present_and_true(BASIC_AUTH)
                 || is_env_var_present_and_true(OIDC_AUTH)
                 || is_env_var_present_and_true(REVERSE_PROXY),
+            conn_number: var(CONNECTION_NUMBERS).unwrap_or("10".to_string()).parse::<i16>().unwrap_or(10),
+            api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None)
         }
     }
 

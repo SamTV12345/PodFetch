@@ -125,7 +125,8 @@ pub fn run_poll(mut podcast_service: PodcastService) -> Result<(), CustomError> 
 }
 
 fn fix_links(content: &str) -> String {
-    let dir = var("SUB_DIRECTORY").unwrap() + "/ui/";
+    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+    let dir = env_service.sub_directory.clone().unwrap() + "/ui/";
     content.replace("/ui/", &dir)
 }
 
@@ -139,14 +140,18 @@ async fn index() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let env_service = EnvironmentService::new();
 
+    start_server(env_service).await
+}
 
-    println!(
+async fn start_server(env_service: EnvironmentService) -> std::io::Result<()> {
+println!(
         "Debug file located at {}",
         concat!(env!("OUT_DIR"), "/built.rs")
     );
     init_logging();
-    ENVIRONMENT_SERVICE.get_or_init(EnvironmentService::new);
+    ENVIRONMENT_SERVICE.get_or_init(|| env_service);
 
     if args().len() > 1 {
         spawn_blocking(move || start_command_line(args()))
@@ -341,12 +346,16 @@ async fn main() -> std::io::Result<()> {
 
 
     let http_server = HttpServer::new(move || {
+
+        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+        let sub_dir = env_service.sub_directory.clone().unwrap_or("/".to_string());
+
         App::new()
             .app_data(Data::new(server_tx.clone()))
             .app_data(Data::new(key_param.clone()))
             .app_data(Data::new(jwk.clone()))
             .app_data(Data::new(hash.clone()))
-            .service(redirect("/", var("SUB_DIRECTORY").unwrap() + "/ui/"))
+            .service(redirect("/", sub_dir + "/ui/"))
             .service(get_gpodder_api())
             .service(get_global_scope())
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
@@ -376,7 +385,8 @@ fn config(cfg: &mut web::ServiceConfig) {
 }
 
 pub fn get_global_scope() -> Scope {
-    let base_path = var("SUB_DIRECTORY").unwrap_or("/".to_string());
+    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+    let base_path = env_service.sub_directory.clone().unwrap_or("/".to_string());
     let openapi = ApiDoc::openapi();
     let service = get_api_config();
 
@@ -576,13 +586,11 @@ fn check_if_multiple_auth_is_configured(env: &EnvironmentService) -> bool {
 async fn init_postgres_db_pool(
     database_url: &str,
 ) -> Result<Pool<ConnectionManager<DBType>>, String> {
-    let db_connections = var("DB_CONNECTIONS")
-        .unwrap_or("10".to_string())
-        .parse()
-        .unwrap_or(10);
+    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+    let db_connections = env_service.conn_number;
     let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder()
-        .max_size(db_connections)
+        .max_size(db_connections as u32)
         .build(manager)
         .expect("Failed to create pool.");
     Ok(pool)
