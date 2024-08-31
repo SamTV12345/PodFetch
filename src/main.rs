@@ -9,7 +9,7 @@ use actix_files::{Files, NamedFile};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
-use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder, Scope};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
 use std::collections::HashSet;
 use std::env::args;
@@ -27,7 +27,7 @@ use log::info;
 use r2d2::Pool;
 use regex::Regex;
 use std::process::exit;
-use tokio::task::{spawn_blocking, JoinHandle};
+use tokio::task::spawn_blocking;
 use tokio::{spawn, try_join};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -342,10 +342,6 @@ async fn main() -> std::io::Result<()> {
 
     let env_service = ENVIRONMENT_SERVICE.get().unwrap();
     let sub_dir = env_service.sub_directory.clone().unwrap_or("/".to_string());
-
-;
-
-
 
     let http_server = HttpServer::new(move || {
         App::new()
