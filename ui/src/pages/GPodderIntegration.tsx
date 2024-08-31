@@ -1,6 +1,6 @@
 import axios, {AxiosResponse} from "axios";
 import {Setting} from "../models/Setting";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {Podcast} from "../store/CommonSlice";
 import {handleAddPodcast} from "../utils/ErrorSnackBarResponses";
@@ -16,11 +16,14 @@ export const GPodderIntegration = ()=> {
     const [gpodderOnlyPodcasts, setGPodderOnlyPodcasts] = useState<GPodderIntegrationItem[]>([])
     const {t} = useTranslation()
 
-    axios.get('/podcast/available/gpodder')
-        .then((res: AxiosResponse<GPodderIntegrationItem[]>) => {
-            console.log("Res is",res)
-            setGPodderOnlyPodcasts(res.data)
-        })
+
+    useEffect(() => {
+        axios.get('/podcast/available/gpodder')
+            .then((res: AxiosResponse<GPodderIntegrationItem[]>) => {
+                setGPodderOnlyPodcasts(res.data)
+            })
+    }, []);
+
 
     const addPodcast = (feedUrl: string)=>{
         setGPodderOnlyPodcasts(gpodderOnlyPodcasts.filter(p=>p.podcast!=feedUrl))
