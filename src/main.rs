@@ -12,7 +12,7 @@ use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
 use std::collections::HashSet;
-use std::env::{args, var};
+use std::env::args;
 use std::io::Read;
 use std::sync::Mutex;
 use std::time::Duration;

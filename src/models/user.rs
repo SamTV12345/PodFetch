@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{Role, API_KEY, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME};
+use crate::constants::inner_constants::{Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME};
 use crate::dbconfig::schema::users;
 use crate::dbconfig::DBType;
 use crate::utils::environment_variables::is_env_var_present_and_true;
@@ -11,7 +11,6 @@ use diesel::prelude::{Insertable, Queryable};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
-use dotenv::var;
 use std::io::Error;
 use utoipa::ToSchema;
 

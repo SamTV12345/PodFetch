@@ -74,7 +74,7 @@ impl EnvironmentService {
         if !server_url.ends_with('/') {
             server_url += "/"
         }
-        let mut opt_sub_dir = var(SUB_DIRECTORY).map_err(|_|None::<String>).map(|v|Some(v)).unwrap_or(None);
+        let mut opt_sub_dir = var(SUB_DIRECTORY).map_err(|_|None::<String>).map(Some).unwrap_or(None);
         if opt_sub_dir.is_none() {
             let re = Regex::new(r"^http[s]?://[^/]+(/.*)?$").unwrap();
             let directory = re.captures(&server_url).unwrap().get(1).unwrap().as_str();
@@ -131,7 +131,7 @@ impl EnvironmentService {
             database_url: var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string()),
             telegram_api,
             sub_directory: opt_sub_dir,
-            proxy_url: var(PODFETCH_PROXY_FOR_REQUESTS).map(|v| Some(v)).unwrap_or(None),
+            proxy_url: var(PODFETCH_PROXY_FOR_REQUESTS).map(Some).unwrap_or(None),
             reverse_proxy: is_env_var_present_and_true(REVERSE_PROXY),
             any_auth_enabled: is_env_var_present_and_true(BASIC_AUTH)
                 || is_env_var_present_and_true(OIDC_AUTH)
