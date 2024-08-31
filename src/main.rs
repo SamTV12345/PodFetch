@@ -9,7 +9,7 @@ use actix_files::{Files, NamedFile};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
-use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
+use actix_web::{web, App, Error, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
 use std::collections::HashSet;
 use std::env::args;
@@ -27,7 +27,7 @@ use log::info;
 use r2d2::Pool;
 use regex::Regex;
 use std::process::exit;
-use tokio::task::spawn_blocking;
+use tokio::task::{spawn_blocking, JoinHandle};
 use tokio::{spawn, try_join};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -142,11 +142,7 @@ async fn index() -> impl Responder {
 async fn main() -> std::io::Result<()> {
     let env_service = EnvironmentService::new();
 
-    start_server(env_service).await
-}
-
-async fn start_server(env_service: EnvironmentService) -> std::io::Result<()> {
-println!(
+    println!(
         "Debug file located at {}",
         concat!(env!("OUT_DIR"), "/built.rs")
     );
@@ -344,18 +340,20 @@ println!(
         hash.insert(oidc_config.client_id);
     }
 
+    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
+    let sub_dir = env_service.sub_directory.clone().unwrap_or("/".to_string());
+
+;
+
+
 
     let http_server = HttpServer::new(move || {
-
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        let sub_dir = env_service.sub_directory.clone().unwrap_or("/".to_string());
-
         App::new()
             .app_data(Data::new(server_tx.clone()))
             .app_data(Data::new(key_param.clone()))
             .app_data(Data::new(jwk.clone()))
             .app_data(Data::new(hash.clone()))
-            .service(redirect("/", sub_dir + "/ui/"))
+            .service(redirect("/", sub_dir.clone() + "/ui/"))
             .service(get_gpodder_api())
             .service(get_global_scope())
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
@@ -365,12 +363,13 @@ println!(
             .app_data(data_pool.clone())
             .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
-    .workers(4)
-    .bind(("0.0.0.0", 8000))?
-    .run();
+        .workers(4)
+        .bind(("0.0.0.0", 8000))?
+        .run();
     try_join!(http_server, async move { chat_server.await.unwrap() })?;
     Ok(())
 }
+
 
 pub fn get_api_config() -> Scope {
     web::scope("/api/v1").configure(config)
