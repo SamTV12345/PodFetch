@@ -47,7 +47,7 @@ pub async fn get_episode_actions(
 
             let since_date = DateTime::from_timestamp(since.since, 0)
                 .map(|v| v.naive_utc());
-            let actions = Episode::get_actions_by_username(
+            let mut actions = Episode::get_actions_by_username(
                 username.clone(),
                 &mut pool.get().unwrap(),
                 since_date,
@@ -56,6 +56,15 @@ pub async fn get_episode_actions(
                 since.podcast.clone(),
             )
             .await;
+
+
+            if let Some(device) = since.device.clone() {
+                actions.iter_mut().for_each(|a| {
+                    a.device = device.clone();
+                });
+            }
+
+
             Ok(HttpResponse::Ok().json(EpisodeActionResponse {
                 actions,
                 timestamp: get_current_timestamp(),

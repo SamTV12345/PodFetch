@@ -48,8 +48,12 @@ pub async fn get_subscriptions(
             )
             .await;
 
+
             match res {
-                Ok(res) => Ok(HttpResponse::Ok().json(res)),
+                Ok(res) => {
+
+                    Ok(HttpResponse::Ok().json(res))
+                },
                 Err(_) => Ok(HttpResponse::InternalServerError().finish()),
             }
         }
