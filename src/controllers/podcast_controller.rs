@@ -362,22 +362,25 @@ pub async fn import_podcasts_from_opml(
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
+    let document = OPML::from_str(&opml.content).unwrap();
 
     spawn_blocking(move || {
-        let rng = rand::thread_rng();
-        let environment = ENVIRONMENT_SERVICE.get().unwrap();
-        let document = OPML::from_str(&opml.content).unwrap();
-
         for outline in document.body.outlines {
-            let client = get_async_sync_client().build().unwrap();
-            executor::block_on(insert_outline(
-                outline.clone(),
-                client.clone(),
-                lobby.clone(),
-                rng.clone(),
-                environment.clone(),
-                conn.clone(),
-            ));
+            let moved_lobby = lobby.clone();
+            let conn = conn.clone();
+            thread::spawn(move || {
+                let rng = rand::thread_rng();
+                let environment = ENVIRONMENT_SERVICE.get().unwrap();
+                let client = get_async_sync_client().build().unwrap();
+                executor::block_on(insert_outline(
+                    outline.clone(),
+                    client.clone(),
+                    moved_lobby,
+                    rng.clone(),
+                    environment.clone(),
+                    conn,
+                ));
+            });
         }
     });
 
