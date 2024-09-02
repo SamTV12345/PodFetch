@@ -1,16 +1,19 @@
 import i18n from 'i18next'
 import {initReactI18next} from "react-i18next";
 import LanguageDetector from 'i18next-browser-languagedetector'
+import da_translation from './json/da.json'
 import de_translation from './json/de.json'
 import en_translation from './json/en.json'
 import fr_translation from './json/fr.json'
 import pl_translation from './json/pl.json'
 import es_translation from './json/es.json'
-import da_translation from './json/da.json'
 
 const resources = {
+    da:{
+        translation: da_translation
+    },
     de: {
-        translation:de_translation
+        translation: de_translation
     },
     en:{
         translation: en_translation
@@ -23,9 +26,6 @@ const resources = {
     },
     es:{
         translation: es_translation
-    },
-    da:{
-        translation: da_translation
     }
 }
 
