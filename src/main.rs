@@ -80,7 +80,7 @@ use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
-
+use crate::service::audiobook::audio_book_service::AudioBookService;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
@@ -141,7 +141,7 @@ async fn index() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let env_service = EnvironmentService::new();
-
+    let cloned_env = env_service.clone();
     println!(
         "Debug file located at {}",
         concat!(env!("OUT_DIR"), "/built.rs")
@@ -155,6 +155,11 @@ async fn main() -> std::io::Result<()> {
             .expect("TODO: panic message");
         exit(0)
     }
+
+    if cloned_env.audio_book_enabled {
+        AudioBookService::new();
+    }
+
 
     let conn = establish_connection();
 

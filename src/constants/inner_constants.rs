@@ -93,6 +93,7 @@ pub const USERNAME: &str = "USERNAME";
 pub const PASSWORD: &str = "PASSWORD";
 pub const API_KEY: &str = "API_KEY";
 pub const SERVER_URL: &str = "SERVER_URL";
+pub const AUDIOBOOK_SUPPORT: &str = "AUDIOBOOK_ENALBED";
 
 pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
 

@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{API_KEY, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
+use crate::constants::inner_constants::{API_KEY, AUDIOBOOK_SUPPORT, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use regex::Regex;
@@ -36,6 +36,7 @@ pub struct EnvironmentService {
     pub proxy_url: Option<String>,
     pub conn_number: i16,
     pub api_key_admin: Option<String>,
+    pub audio_book_enabled: bool
 }
 
 #[derive(Clone)]
@@ -137,7 +138,8 @@ impl EnvironmentService {
                 || is_env_var_present_and_true(OIDC_AUTH)
                 || is_env_var_present_and_true(REVERSE_PROXY),
             conn_number: var(CONNECTION_NUMBERS).unwrap_or("10".to_string()).parse::<i16>().unwrap_or(10),
-            api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None)
+            api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None),
+            audio_book_enabled: is_env_var_present_and_true(AUDIOBOOK_SUPPORT),
         }
     }
 
