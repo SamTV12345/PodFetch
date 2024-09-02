@@ -4,7 +4,7 @@ use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::{ExpressionMethods, JoinOnDsl};
+use diesel::{debug_query, ExpressionMethods, JoinOnDsl};
 use diesel::{
     BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
@@ -14,7 +14,9 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
 use diesel::query_dsl::methods::DistinctDsl;
+use diesel::sqlite::Sqlite;
 use utoipa::ToSchema;
+use crate::dbconfig::{DBType, MultiBackend};
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
@@ -150,8 +152,9 @@ impl Episode {
 
         let mut query = ep_table.filter(username.eq(username1)).into_boxed();
 
+        println!("Since {}", since_date.unwrap());
         if let Some(since_date) = since_date {
-            query = query.filter(timestamp.gt(since_date));
+            query = query.filter(timestamp.ge(since_date));
         }
 
         if let Some(device) = opt_device {
@@ -161,11 +164,14 @@ impl Episode {
                     .eq(device)
                     .or(ep_dsl::device.eq(DEFAULT_DEVICE)),
             );
+        } else {
+            query = query.filter(ep_dsl::device.eq(DEFAULT_DEVICE))
         }
 
         if let Some(podcast) = opt_podcast {
             query = query.filter(ep_dsl::podcast.eq(podcast));
         }
+
 
         query
             .load::<Episode>(conn)
@@ -385,13 +391,14 @@ impl Episode {
                 return Ok(());
             }
             Ok(None) => {
+                let naive_date = Utc::now().naive_utc();
                 let episode = Episode {
                     id,
                     username,
                     device: DEFAULT_DEVICE.to_string(),
                     podcast: podcast.unwrap().rssfeed,
                     episode: found_episode.url.clone(),
-                    timestamp: Default::default(),
+                    timestamp: naive_date,
                     guid: Some(found_episode.guid.clone()),
                     action: "play".to_string(),
                     started: None,
