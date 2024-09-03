@@ -4,6 +4,7 @@ import { CustomSelect } from './CustomSelect'
 import 'material-symbols/outlined.css'
 
 const languageOptions = [
+    { value: 'da', label: 'Dansk' },
     { value: 'de-DE', label: 'Deutsch' },
     { value: 'en', label: 'English' },
     { value: 'fr', label: 'Français' },
