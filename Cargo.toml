@@ -40,7 +40,7 @@ env_logger = "0.11.5"
 chrono = {version  = "0.4.38", default-features=false, features = ["serde"]}
 rss = "2.0.9"
 actix-ws = "0.3.0"
-frankenstein = "0.32.5"
+frankenstein = "0.33.0"
 regex = "1.10.6"
 xml-builder = "0.5.2"
 diesel = { version = "2.2.4", features = ["chrono", "r2d2"] }
