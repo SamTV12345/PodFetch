@@ -83,7 +83,7 @@ export const SystemInfoPage: FC = () => {
                         <Heading3>{t('cpu-usage')}</Heading3>
                     </span>
 
-                    <CustomGaugeChart fill={['#10b981', '#064e3b']} labels={[t('used-cpu'), t('free-cpu')]} labelUnit="percent" max={100} value={systemInfo.system.global_cpu_info.cpu_usage} />
+                    <CustomGaugeChart fill={['#10b981', '#064e3b']} labels={[t('used-cpu'), t('free-cpu')]} labelUnit="percent" max={100} value={systemInfo.system.global_cpu_usage} />
                 </div>
 
                 {/* Memory */}
@@ -112,7 +112,7 @@ export const SystemInfoPage: FC = () => {
 
                     <dl className="grid lg:grid-cols-2 gap-2 lg:gap-6 text-sm">
                         <dt className="font-medium text-[--fg-color]">{t('cpu-brand')}</dt>
-                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.global_cpu_info.brand}</dd>
+                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus[0].brand}</dd>
 
                         <dt className="font-medium text-[--fg-color]">{t('cpu-cores')}</dt>
                         <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.length}</dd>
