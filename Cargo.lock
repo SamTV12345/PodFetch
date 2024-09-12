@@ -542,6 +542,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bon"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee4f37d875011af3196e4828024742a84dcff6b0d027d272f2944f9a99f2c8af"
+dependencies = [
+ "bon-macros",
+ "rustversion",
+]
+
+[[package]]
+name = "bon-macros"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99b4b686e7ebf76cfa591052482d8c3c8242722518560798631974bf899d5565"
+dependencies = [
+ "darling",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.76",
+]
+
+[[package]]
 name = "brotli"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1069,16 +1092,16 @@ dependencies = [
 
 [[package]]
 name = "frankenstein"
-version = "0.32.5"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5bd4679ea85999e2b642cc0b909cf84b279f8bc679aea5c570323d8858b80b0"
+checksum = "6de5354bf75fd5d5c323ef72777803ce4e29c3cfbdf108e6f0791b0292a6d908"
 dependencies = [
+ "bon",
  "mime_guess",
  "multipart",
  "serde",
  "serde_json",
  "thiserror",
- "typed-builder",
  "ureq",
 ]
 
@@ -2621,6 +2644,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustversion"
+version = "1.0.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "955d28af4278de8121b7ebeb796b6a45735dc01436d898801014aced2773a3d6"
+
+[[package]]
 name = "ryu"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3306,26 +3335,6 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
-
-[[package]]
-name = "typed-builder"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a06fbd5b8de54c5f7c91f6fe4cebb949be2125d7758e630bb58b1d831dbce600"
-dependencies = [
- "typed-builder-macro",
-]
-
-[[package]]
-name = "typed-builder-macro"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9534daa9fd3ed0bd911d462a37f172228077e7abf18c18a5f67199d959205f8"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.76",
-]
 
 [[package]]
 name = "typenum"
