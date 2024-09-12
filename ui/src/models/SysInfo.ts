@@ -9,13 +9,7 @@ export interface SysInfo {
         secs: number,
         nanos: number
     },
-    global_cpu_info: {
-        cpu_usage: number,
-        name: string,
-        vendor_id: string,
-        brand: string,
-        frequency: number,
-    },
+    global_cpu_usage: number
     cpus: CPUModel[],
     physical_core_count: number,
     total_memory: number,
