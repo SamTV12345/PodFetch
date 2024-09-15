@@ -14,7 +14,6 @@ use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, error, get, post, put, Error, HttpRequest};
 use actix_web::{web, HttpResponse};
 use async_recursion::async_recursion;
-use futures::executor;
 use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
 use rand::Rng;
@@ -39,6 +38,7 @@ use crate::DBType as DbConnection;
 use futures_util::StreamExt;
 use reqwest::Client;
 use reqwest::header::HeaderMap;
+use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
@@ -369,10 +369,11 @@ pub async fn import_podcasts_from_opml(
             let moved_lobby = lobby.clone();
             let conn = conn.clone();
             thread::spawn(move || {
+                let rt = Runtime::new().unwrap();
                 let rng = rand::thread_rng();
                 let environment = ENVIRONMENT_SERVICE.get().unwrap();
                 let client = get_async_sync_client().build().unwrap();
-                executor::block_on(insert_outline(
+                rt.block_on(insert_outline(
                     outline.clone(),
                     client.clone(),
                     moved_lobby,
