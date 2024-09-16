@@ -46,7 +46,7 @@
     "react-waypoint": "^10.3.0",
     "sanitize-html": "^2.13.0",
     "uuid": "^10.0.0",
-    "zustand": "^4.5.4"
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",
