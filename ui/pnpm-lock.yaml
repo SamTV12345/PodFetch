@@ -15,8 +15,8 @@ importers:
         specifier: ^5.0.19
         version: 5.0.20
       '@fontsource/poppins':
-        specifier: ^5.0.14
-        version: 5.0.14
+        specifier: ^5.1.0
+        version: 5.1.0
       '@fontsource/roboto':
         specifier: ^5.0.14
         version: 5.0.14
@@ -330,8 +330,8 @@ packages:
   '@fontsource/anton@5.0.20':
     resolution: {integrity: sha512-4bZdLjz8ho4ALDHZ8MWrd76QMYJU8lfdH3D6OHctu4YIO1R/t+Od9Gg9Wufp1ofhAlhN1zl1Ks9LKtXmUIQUxQ==}
 
-  '@fontsource/poppins@5.0.14':
-    resolution: {integrity: sha512-nmM1zpPo3Uh4JcGAVSQuWaZNYh2FbbwWhZ5t6hRaynmJaNTBW85d3nEh9zMmzI0HX7X5xqQVdRHeDatKpOGsnA==}
+  '@fontsource/poppins@5.1.0':
+    resolution: {integrity: sha512-tpLXlnNi2fwQjiipvuj4uNFHCdoLA8izRsKdoexZuEzjx0r/g1aKLf4ta6lFgF7L+/+AFdmaXFlUwwvmDzYH+g==}
 
   '@fontsource/roboto@5.0.14':
     resolution: {integrity: sha512-zHAxlTTm9RuRn9/StwclFJChf3z9+fBrOxC3fw71htjHP1BgXNISwRjdJtAKAmMe5S2BzgpnjkQR93P9EZYI/Q==}
@@ -2172,7 +2172,7 @@ snapshots:
 
   '@fontsource/anton@5.0.20': {}
 
-  '@fontsource/poppins@5.0.14': {}
+  '@fontsource/poppins@5.1.0': {}
 
   '@fontsource/roboto@5.0.14': {}
 
