@@ -78,6 +78,7 @@ use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
+use crate::models::routes;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
 
@@ -477,6 +478,7 @@ fn get_private_api() -> Scope<
         .service(retrieve_podcast_sample_format)
         .service(update_podcast_settings)
         .service(get_podcast_settings)
+        .service(routes())
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {

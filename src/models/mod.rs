@@ -30,3 +30,6 @@ pub mod tags_podcast;
 pub mod color;
 pub mod podcast_settings;
 pub mod gpodder_available_podcasts;
+mod watch_together;
+
+pub use watch_together::routes;

@@ -42,6 +42,7 @@ import {UserManagementPage} from "./pages/UserManagement";
 import {configWSUrl} from "./utils/navigationUtils";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
+import {ListenTogether} from "./pages/Listentogether";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -91,6 +92,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/invite/:id" element={<AcceptInvite />}></Route>
+        <Route path="/listentogether" element={<ListenTogether/>} />
     </>
 ), {
     basename: import.meta.env.BASE_URL

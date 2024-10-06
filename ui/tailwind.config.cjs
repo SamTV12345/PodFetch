@@ -26,6 +26,9 @@ module.exports = {
           900: '#271901',
         },
       },
+      backgroundImage: {
+        'radial-mustard': 'radial-gradient(circle, #e69a13, #c07c03)',
+      },
     },
   },
   plugins: [],

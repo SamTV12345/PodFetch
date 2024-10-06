@@ -208,6 +208,24 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    watch_together (id) {
+        id -> Nullable<Integer>,
+        room_id -> Text,
+        admin -> Text,
+        room_name -> Text,
+    }
+}
+
+diesel::table! {
+    watch_together_users (id) {
+        id -> Nullable<Integer>,
+        room_id -> Text,
+        user -> Text,
+        status -> Text,
+    }
+}
+
 diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(playlist_items -> playlists (playlist_id));
 diesel::joinable!(playlist_items -> podcast_episodes (episode));
@@ -233,4 +251,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     tags,
     tags_podcasts,
     users,
+    watch_together,
+    watch_together_users,
 );
