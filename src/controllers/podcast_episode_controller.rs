@@ -277,6 +277,7 @@ pub async fn retrieve_episode_sample_format(
         episode_format: sample_string.0.content,
         podcast_format: "test".to_string(),
         direct_paths: true,
+        jwt_key: None,
     };
     let result = perform_episode_variable_replacement(settings, episode, None);
 

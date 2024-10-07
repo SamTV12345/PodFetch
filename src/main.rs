@@ -67,6 +67,7 @@ use crate::controllers::websocket_controller::{
 use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
 use crate::controllers::manifest_controller::get_manifest;
+use crate::controllers::watch_together_routes;
 use crate::controllers::server::ChatServer;
 use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag};
 
@@ -78,7 +79,6 @@ use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
-use crate::models::routes;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
 
@@ -478,7 +478,7 @@ fn get_private_api() -> Scope<
         .service(retrieve_podcast_sample_format)
         .service(update_podcast_settings)
         .service(get_podcast_settings)
-        .service(routes())
+        .service(watch_together_routes())
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {

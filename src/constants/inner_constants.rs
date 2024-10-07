@@ -146,3 +146,8 @@ pub const PODFETCH_PROXY_FOR_REQUESTS: &str = "PODFETCH_PROXY";
 
 pub const MAIN_ROOM: &str = "main";
 pub const CONNECTION_NUMBERS: &str = "DB_CONNECTIONS";
+
+
+
+// Watch together
+pub const WATCH_TOGETHER_ID: &str = "WATCH_TOGETHER_ID";

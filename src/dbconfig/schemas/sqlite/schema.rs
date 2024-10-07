@@ -164,6 +164,7 @@ diesel::table! {
         episode_format -> Text,
         podcast_format -> Text,
         direct_paths -> Bool,
+        jwt_key -> Nullable<Binary>,
     }
 }
 
@@ -209,20 +210,21 @@ diesel::table! {
 }
 
 diesel::table! {
-    watch_together (id) {
-        id -> Nullable<Integer>,
+    watch_together_users (id) {
+        id -> Integer,
         room_id -> Text,
-        admin -> Text,
-        room_name -> Text,
+        user -> Text,
+        username -> Nullable<Text>,
+        status -> Text,
     }
 }
 
 diesel::table! {
-    watch_together_users (id) {
-        id -> Nullable<Integer>,
+    watch_togethers (id) {
+        id -> Integer,
         room_id -> Text,
-        user -> Text,
-        status -> Text,
+        admin -> Text,
+        room_name -> Text,
     }
 }
 
@@ -251,6 +253,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     tags,
     tags_podcasts,
     users,
-    watch_together,
     watch_together_users,
+    watch_togethers,
 );

@@ -13,3 +13,7 @@ pub mod websocket_controller;
 pub mod tags_controller;
 pub mod server;
 pub mod manifest_controller;
+mod watch_together;
+pub mod watch_together_dto;
+
+pub use watch_together::watch_together_routes;
