@@ -72,8 +72,8 @@ importers:
         specifier: ^8.0.0
         version: 8.0.0
       javascript-time-ago:
-        specifier: ^2.5.9
-        version: 2.5.10
+        specifier: ^2.5.11
+        version: 2.5.11
       material-symbols:
         specifier: ^0.22.2
         version: 0.22.2
@@ -1377,8 +1377,8 @@ packages:
     resolution: {integrity: sha512-N3yCS/NegsOBokc8GAdM8UcmfsKiSS8cipheD/nivzr700H+nsMOxJjQnvwOcRYVuFkdH0wGUvW2WbXGmrZGbQ==}
     engines: {node: '>=14'}
 
-  javascript-time-ago@2.5.10:
-    resolution: {integrity: sha512-EUxp4BP74QH8xiYHyeSHopx1XhMMJ9qEX4rcBdFtpVWmKRdzpxbNzz2GSbuekZr5wt0rmLehuyp0PE34EAJT9g==}
+  javascript-time-ago@2.5.11:
+    resolution: {integrity: sha512-Zeyf5R7oM1fSMW9zsU3YgAYwE0bimEeF54Udn2ixGd8PUwu+z1Yc5t4Y8YScJDMHD6uCx6giLt3VJR5K4CMwbg==}
 
   jiti@1.21.0:
     resolution: {integrity: sha512-gFqAIbuKyyso/3G2qhiO2OM6shY6EPP/R0+mkDbyspxKazh8BXDC5FiFsUjlczgdNz/vfra0da2y+aHrusLG/Q==}
@@ -3157,7 +3157,7 @@ snapshots:
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
 
-  javascript-time-ago@2.5.10:
+  javascript-time-ago@2.5.11:
     dependencies:
       relative-time-format: 1.1.6
 
