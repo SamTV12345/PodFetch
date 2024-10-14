@@ -71,6 +71,7 @@ impl PodcastService {
     }
 
     pub async fn find_podcast_on_podindex(&mut self, podcast: &str) -> Result<Value, CustomError> {
+
         let headers = self.compute_podindex_header();
 
         let query = vec![("q", podcast)];
@@ -85,7 +86,26 @@ impl PodcastService {
             .map_err(map_reqwest_error)?;
 
         log::info!("Found podcast: {}", result.url());
-        result.json().await.map_err(map_reqwest_error)
+
+        let status = result.status();
+        let possible_json = result.text().await.map_err(map_reqwest_error)?;
+
+        if status.is_client_error() || status.is_server_error() {
+            log::error!("Error searching for podcast: {}", possible_json);
+            Err(CustomError::BadRequest(possible_json))
+        } else {
+            let res_of_search = serde_json::from_str(&possible_json);
+
+            if let Ok(res) = res_of_search {
+                Ok(res)
+            } else {
+                log::error!(
+                    "Error searching for podcast: {}",
+                    res_of_search.err().unwrap()
+                );
+                Ok(serde_json::from_str("{}").unwrap())
+            }
+        }
     }
 
     pub async fn insert_podcast_from_podindex(
