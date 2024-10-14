@@ -533,7 +533,11 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     let conn = &mut establish_connection();
     let settings = Setting::get_settings(conn)?;
     match settings {
-        Some(_) => {
+        Some(setting) => {
+            if setting.jwt_key.is_none() {
+                info!("No JWT key found, inserting new key");
+                Setting::update_jwt_key(conn)?;
+            }
             info!("Settings already present");
             Ok(())
         }

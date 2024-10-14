@@ -30,6 +30,7 @@ export const Sidebar = () => {
                 <SidebarItem iconName="favorite" path="favorites" translationKey="favorites"/>
                 <SidebarItem iconName="magic_button" path="timeline" translationKey="timeline"/>
                 <SidebarItem path="tags" translationKey="tag_other" iconName="sell"/>
+                <SidebarItem path="watch2gether" translationKey="podflix" iconName="tv"/>
 
                 <span className="display-only-mobile">
                     <SidebarItem iconName="search" path="/podcasts/search" translationKey="search-episodes"/>

@@ -180,5 +180,6 @@
   "profile": "Profil",
   "api-key": "Klucz API",
   "user-settings-updated": "Ustawienia użytkownika zostały zaktualizowane",
-  "notification.episode-now-available": "Odcinek {{episode}} jest już dostępny"
+  "notification.episode-now-available": "Odcinek {{episode}} jest już dostępny",
+  "podflix": "Podflix"
 }

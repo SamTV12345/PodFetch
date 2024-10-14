@@ -39,6 +39,17 @@ impl WatchTogether {
         }
     }
 
+    pub(crate) fn get_watch_together_by_admin(admin_to_search: String, conn: &mut DBType) -> Result<Vec<WatchTogether>, CustomError> {
+        use crate::dbconfig::schema::watch_togethers::dsl::*;
+        use diesel::ExpressionMethods;
+        use diesel::QueryDsl;
+
+        watch_togethers
+            .filter(admin.eq(admin_to_search))
+            .load::<WatchTogether>(conn)
+            .map_err(map_db_error)
+    }
+
     pub fn save_watch_together(&self, connection: &mut DBType) -> Result<(), CustomError> {
         use crate::dbconfig::schema::watch_togethers;
 

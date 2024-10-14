@@ -254,6 +254,7 @@ impl From<UpdateNameSettings> for Setting {
             auto_cleanup_days: 0,
             auto_cleanup: false,
             podcast_prefill: 0,
+            jwt_key: None
         }
     }
 }

@@ -43,6 +43,7 @@ import {configWSUrl} from "./utils/navigationUtils";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
 import {ListenTogether} from "./pages/Listentogether";
+import {Watch2Gether} from "./pages/Watch2Gether";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -89,6 +90,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
             <Route path="tags">
                 <Route index element={<TagsPage/>}/>
             </Route>
+            <Route path="watch2gether" element={<Watch2Gether/>} />
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/invite/:id" element={<AcceptInvite />}></Route>

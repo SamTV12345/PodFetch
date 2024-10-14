@@ -87,9 +87,10 @@ impl Setting {
 
 
         if setting_to_update.jwt_key.is_none() {
-            let jwt_key = HS256Key::generate().to_bytes();
+            use diesel::ExpressionMethods;
+            let new_jwt_key = HS256Key::generate().to_bytes();
                 diesel::update(&setting_to_update)
-                    .set(jwt_key.eq(jwt_key))
+                    .set(jwt_key.eq(new_jwt_key))
                     .get_result::<Setting>(conn)
             .map_err(map_db_error)?;
         }

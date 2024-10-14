@@ -180,5 +180,6 @@
   "profile": "Profil",
   "api-key": "Clé API",
   "user-settings-updated": "Paramètres utilisateur mis à jour",
-  "notification.episode-now-available": "L'épisode {{episode}} maintenant disponible hors-ligne"
+  "notification.episode-now-available": "L'épisode {{episode}} maintenant disponible hors-ligne",
+  "podflix": "Podflix"
 }
