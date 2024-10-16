@@ -2,7 +2,6 @@ use crate::constants::inner_constants::PodcastType;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 
-
 #[derive(Serialize, Deserialize)]
 pub struct BroadcastMessage {
     pub type_of: PodcastType,

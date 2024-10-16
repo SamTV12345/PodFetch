@@ -212,7 +212,7 @@ diesel::table! {
 diesel::table! {
     watch_together_users (id) {
         id -> Integer,
-        room_id -> Text,
+        room_id -> Integer,
         user -> Text,
         username -> Nullable<Text>,
         status -> Text,
@@ -234,6 +234,7 @@ diesel::joinable!(playlist_items -> podcast_episodes (episode));
 diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(tags_podcasts -> podcasts (podcast_id));
 diesel::joinable!(tags_podcasts -> tags (tag_id));
+diesel::joinable!(watch_together_users -> watch_togethers (room_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     devices,

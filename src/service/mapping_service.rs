@@ -9,8 +9,6 @@ use crate::service::environment_service;
 #[derive(Clone)]
 pub struct MappingService {}
 
-
-
 impl MappingService {
     pub fn map_podcast_to_podcast_dto(podcast: &Podcast, tags: Vec<Tag>) -> PodcastDto {
         PodcastDto {
@@ -31,13 +29,13 @@ impl MappingService {
             original_image_url: podcast.original_image_url.clone(),
             directory_name: podcast.directory_name.clone(),
             tags,
-            favorites: false
+            favorites: false,
         }
     }
 
     pub fn map_podcast_to_podcast_dto_with_favorites(
         podcast_favorite_grouped: &(Podcast, Option<Favorite>),
-        tags: Vec<Tag>
+        tags: Vec<Tag>,
     ) -> PodcastDto {
         let favorite = podcast_favorite_grouped.1.is_some()
             && podcast_favorite_grouped.1.clone().unwrap().favored;
@@ -65,12 +63,15 @@ impl MappingService {
 
     pub fn map_podcast_to_podcast_dto_with_favorites_option(
         podcast_favorite_grouped: &(Podcast, Favorite),
-        tags: Vec<Tag>
+        tags: Vec<Tag>,
     ) -> PodcastDto {
-        Self::map_podcast_to_podcast_dto_with_favorites(&(
-            podcast_favorite_grouped.0.clone(),
-            Some(podcast_favorite_grouped.1.clone()),
-        ),tags)
+        Self::map_podcast_to_podcast_dto_with_favorites(
+            &(
+                podcast_favorite_grouped.0.clone(),
+                Some(podcast_favorite_grouped.1.clone()),
+            ),
+            tags,
+        )
     }
 
     pub fn map_podcastepisode_to_dto(podcast_episode: &PodcastEpisode) -> PodcastEpisode {

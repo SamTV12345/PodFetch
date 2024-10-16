@@ -7,5 +7,5 @@ pub struct GPodderAvailablePodcasts {
     #[diesel(sql_type = Text)]
     pub device: String,
     #[diesel(sql_type = Text)]
-    pub podcast: String
+    pub podcast: String,
 }

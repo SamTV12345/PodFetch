@@ -1,9 +1,12 @@
-use crate::controllers::web_socket::{chat_ws};
+use crate::controllers::web_socket::chat_ws;
 use std::ops::DerefMut;
 
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::controllers::server::ChatServerHandle;
+use crate::models::user::User;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
@@ -19,9 +22,6 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::server::ChatServerHandle;
-use crate::models::user::User;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -37,11 +37,7 @@ pub async fn start_connection(
     let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
 
     // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws(
-        (**chat_server).clone(),
-        session,
-        msg_stream,
-    ));
+    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream));
 
     Ok(res)
 }

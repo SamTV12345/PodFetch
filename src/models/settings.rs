@@ -36,9 +36,8 @@ pub struct Setting {
     pub episode_format: String,
     pub podcast_format: String,
     pub direct_paths: bool,
-    pub jwt_key: Option<Vec<u8>>
+    pub jwt_key: Option<Vec<u8>>,
 }
-
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -78,21 +77,19 @@ impl Setting {
         .map_err(map_db_error)
     }
 
-
     pub fn update_jwt_key(conn: &mut DbConnection) -> Result<(), CustomError> {
         use crate::dbconfig::schema::settings::dsl::*;
         let setting_to_update = settings
             .first::<Setting>(conn)
             .expect("Error loading settings");
 
-
         if setting_to_update.jwt_key.is_none() {
             use diesel::ExpressionMethods;
             let new_jwt_key = HS256Key::generate().to_bytes();
-                diesel::update(&setting_to_update)
-                    .set(jwt_key.eq(new_jwt_key))
-                    .get_result::<Setting>(conn)
-            .map_err(map_db_error)?;
+            diesel::update(&setting_to_update)
+                .set(jwt_key.eq(new_jwt_key))
+                .get_result::<Setting>(conn)
+                .map_err(map_db_error)?;
         }
         Ok(())
     }

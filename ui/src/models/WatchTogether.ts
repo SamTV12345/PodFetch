@@ -1,0 +1,3 @@
+type WatchTogetherCreate = {
+    roomName: string
+}

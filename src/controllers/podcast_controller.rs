@@ -1,4 +1,7 @@
-use crate::constants::inner_constants::{PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM, OIDC_AUTH};
+use crate::constants::inner_constants::{
+    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM,
+    OIDC_AUTH,
+};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -36,8 +39,8 @@ use crate::service::file_service::{perform_podcast_variable_replacement, FileSer
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::DBType as DbConnection;
 use futures_util::StreamExt;
-use reqwest::Client;
 use reqwest::header::HeaderMap;
+use reqwest::Client;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -49,7 +52,7 @@ pub struct PodcastSearchModel {
     title: Option<String>,
     order_option: Option<OrderOption>,
     favored_only: bool,
-    tag: Option<String>
+    tag: Option<String>,
 }
 
 #[utoipa::path(
@@ -124,7 +127,7 @@ pub async fn search_podcasts(
                         _latest_pub.clone(),
                         conn.get().map_err(map_r2d2_error)?.deref_mut(),
                         username,
-                        tag
+                        tag,
                     )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
@@ -138,14 +141,13 @@ pub async fn search_podcasts(
                     _latest_pub.clone(),
                     &mut conn.get().unwrap(),
                     username,
-                    tag
+                    tag,
                 )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
         }
     }
 }
-
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -165,7 +167,11 @@ pub async fn find_podcast_by_id(
 
     let podcast =
         PodcastService::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num)?;
-    let tags = Tag::get_tags_of_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num, &username)?;
+    let tags = Tag::get_tags_of_podcast(
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+        id_num,
+        &username,
+    )?;
     let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast, tags);
     Ok(HttpResponse::Ok().json(mapped_podcast))
 }
@@ -495,13 +501,20 @@ pub async fn refresh_all_podcasts(
                     conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                 )
                 .unwrap();
-            lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
-                podcast_episode: None,
-                type_of: PodcastType::RefreshPodcast,
-                message: format!("Refreshed podcast: {}", podcast.name),
-                podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
-                podcast_episodes: None,
-            }).unwrap());
+            lobby.send_broadcast_sync(
+                MAIN_ROOM.parse().unwrap(),
+                serde_json::to_string(&BroadcastMessage {
+                    podcast_episode: None,
+                    type_of: PodcastType::RefreshPodcast,
+                    message: format!("Refreshed podcast: {}", podcast.name),
+                    podcast: Option::from(MappingService::map_podcast_to_podcast_dto(
+                        &podcast,
+                        vec![],
+                    )),
+                    podcast_episodes: None,
+                })
+                .unwrap(),
+            );
         }
     });
     Ok(HttpResponse::Ok().into())
@@ -554,8 +567,6 @@ pub async fn download_podcast(
             log::error!("Error downloading podcast: {}", download.err().unwrap());
         }
     });
-
-
 
     Ok(HttpResponse::Ok().json("Refreshing podcast"))
 }
@@ -657,13 +668,19 @@ async fn insert_outline(
 
     let feed_response = client.get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
-        lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
-            type_of: PodcastType::OpmlErrored,
-            message: feed_response.err().unwrap().to_string(),
-            podcast: None,
-            podcast_episodes: None,
-            podcast_episode: None,
-        }).unwrap()).await;
+        lobby
+            .send_broadcast(
+                MAIN_ROOM.parse().unwrap(),
+                serde_json::to_string(&BroadcastMessage {
+                    type_of: PodcastType::OpmlErrored,
+                    message: feed_response.err().unwrap().to_string(),
+                    podcast: None,
+                    podcast_episodes: None,
+                    podcast_episode: None,
+                })
+                .unwrap(),
+            )
+            .await;
         return;
     }
     let content = feed_response.unwrap().bytes().await.unwrap();
@@ -700,40 +717,60 @@ async fn insert_outline(
                 .await;
             match inserted_podcast {
                 Ok(podcast) => {
-
-                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
-                        type_of: PodcastType::OpmlAdded,
-                        message: "Refreshed podcasts".to_string(),
-                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
-                        podcast_episodes: None,
-                        podcast_episode: None,
-                    }).unwrap()).await;
-                },
+                    let _ = lobby
+                        .send_broadcast(
+                            MAIN_ROOM.parse().unwrap(),
+                            serde_json::to_string(&BroadcastMessage {
+                                type_of: PodcastType::OpmlAdded,
+                                message: "Refreshed podcasts".to_string(),
+                                podcast: Option::from(MappingService::map_podcast_to_podcast_dto(
+                                    &podcast,
+                                    vec![],
+                                )),
+                                podcast_episodes: None,
+                                podcast_episode: None,
+                            })
+                            .unwrap(),
+                        )
+                        .await;
+                }
                 Err(e) => {
-                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
+                    let _ = lobby
+                        .send_broadcast(
+                            MAIN_ROOM.parse().unwrap(),
+                            serde_json::to_string(&BroadcastMessage {
+                                type_of: PodcastType::OpmlErrored,
+                                message: e.to_string(),
+                                podcast: None,
+                                podcast_episodes: None,
+                                podcast_episode: None,
+                            })
+                            .unwrap(),
+                        )
+                        .await;
+                }
+            }
+        }
+        Err(e) => {
+            let _ = lobby
+                .send_broadcast(
+                    MAIN_ROOM.parse().unwrap(),
+                    serde_json::to_string(&BroadcastMessage {
                         type_of: PodcastType::OpmlErrored,
                         message: e.to_string(),
                         podcast: None,
                         podcast_episodes: None,
                         podcast_episode: None,
-                    }).unwrap()).await;
-                },
-            }
+                    })
+                    .unwrap(),
+                )
+                .await;
         }
-        Err(e) => {
-            let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
-                type_of: PodcastType::OpmlErrored,
-                message: e.to_string(),
-                podcast: None,
-                podcast_episodes: None,
-                podcast_episode: None,
-            }).unwrap()).await;
-        },
     }
 }
 use crate::models::episode::Episode;
-use utoipa::ToSchema;
 use crate::models::tag::Tag;
+use utoipa::ToSchema;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
@@ -842,7 +879,11 @@ pub(crate) async fn proxy_podcast(
     let mut header_map = HeaderMap::new();
     let headers_from_request = rq.headers().clone();
     for (header, header_value) in headers_from_request {
-        if header == "host" || header == "referer" || header == "sec-fetch-site" || header == "sec-fetch-mode" {
+        if header == "host"
+            || header == "referer"
+            || header == "sec-fetch-site"
+            || header == "sec-fetch-mode"
+        {
             continue;
         }
         let header = reqwest::header::HeaderName::from_str(header.as_ref()).unwrap();
@@ -854,8 +895,13 @@ pub(crate) async fn proxy_podcast(
     header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
     header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
     use std::str::FromStr;
-    let forwarded_req = get_async_sync_client().build().unwrap()
-        .request(reqwest::Method::from_str(method.as_str()).unwrap(), episode.url)
+    let forwarded_req = get_async_sync_client()
+        .build()
+        .unwrap()
+        .request(
+            reqwest::Method::from_str(method.as_str()).unwrap(),
+            episode.url,
+        )
         .headers(header_map)
         .fetch_mode_no_cors()
         .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
@@ -870,16 +916,14 @@ pub(crate) async fn proxy_podcast(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    let mut client_resp = HttpResponse::build(actix_web::http::StatusCode::from_u16(res.status()
-        .as_u16()).unwrap
-    ());
+    let mut client_resp =
+        HttpResponse::build(actix_web::http::StatusCode::from_u16(res.status().as_u16()).unwrap());
     for (header_name, header_value) in res.headers().iter() {
         client_resp.insert_header((header_name.as_str(), header_value.to_str().unwrap()));
     }
 
     Ok(client_resp.streaming(res.bytes_stream()))
 }
-
 
 #[put("/podcasts/{id}/settings")]
 pub async fn update_podcast_settings(
@@ -900,7 +944,6 @@ pub async fn update_podcast_settings(
 
     Ok(HttpResponse::Ok().json(updated_podcast))
 }
-
 
 #[get("/podcasts/{id}/settings")]
 pub async fn get_podcast_settings(

@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::models::user::User;
@@ -11,6 +10,7 @@ use actix_web::web::{Data, Path, ReqData};
 use actix_web::{get, put};
 use actix_web::{web, HttpResponse};
 use chrono::Local;
+use std::fmt::Display;
 use std::ops::DerefMut;
 use std::str::FromStr;
 use std::sync::Mutex;
@@ -254,7 +254,7 @@ impl From<UpdateNameSettings> for Setting {
             auto_cleanup_days: 0,
             auto_cleanup: false,
             podcast_prefill: 0,
-            jwt_key: None
+            jwt_key: None,
         }
     }
 }

@@ -189,5 +189,7 @@
   "tag_other": "Tags",
   "device": "Device",
   "add": "Add",
-  "podflix": "Podflix"
+  "podflix": "Podflix",
+  "create-podflix": "Create Podflix",
+  "room-name": "Room name"
 }

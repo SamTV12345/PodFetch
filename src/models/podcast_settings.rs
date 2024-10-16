@@ -1,12 +1,14 @@
-use diesel::{AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl};
-use utoipa::ToSchema;
-use crate::DBType;
-use crate::utils::error::{map_db_error, CustomError};
 use crate::dbconfig::schema::podcast_settings;
 use crate::models::file_path::FilenameBuilderReturn;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
+use crate::utils::error::{map_db_error, CustomError};
+use crate::DBType;
+use diesel::{
+    AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl,
+};
+use utoipa::ToSchema;
 
 #[derive(
     Serialize,
@@ -53,10 +55,8 @@ pub struct PodcastSetting {
     pub podcast_prefill: i32,
 }
 
-
 impl PodcastSetting {
-    pub fn get_settings(conn: &mut DBType, id: i32) -> Result<Option<PodcastSetting>,
-        CustomError> {
+    pub fn get_settings(conn: &mut DBType, id: i32) -> Result<Option<PodcastSetting>, CustomError> {
         use crate::dbconfig::schema::podcast_settings::dsl::*;
         use diesel::ExpressionMethods;
 
@@ -67,10 +67,7 @@ impl PodcastSetting {
             .map_err(map_db_error)
     }
 
-
-    pub fn handle_episode_numbering() {
-
-    }
+    pub fn handle_episode_numbering() {}
 
     pub fn update_settings(
         setting_to_insert: &PodcastSetting,
@@ -93,8 +90,8 @@ impl PodcastSetting {
                     .map_err(map_db_error)?;
             }
         }
-        let available_episodes = PodcastEpisode::get_episodes_by_podcast_id(setting_to_insert.podcast_id,
-                                                                           conn);
+        let available_episodes =
+            PodcastEpisode::get_episodes_by_podcast_id(setting_to_insert.podcast_id, conn);
         let podcast = Podcast::get_podcast(conn, setting_to_insert.podcast_id);
         if podcast.is_err() {
             return Err(CustomError::Conflict("Podcast not found".to_string()));
@@ -103,14 +100,18 @@ impl PodcastSetting {
         for e in available_episodes {
             if e.download_time.is_some() {
                 let f_e = e.clone();
-                let file_name_builder = FilenameBuilderReturn::new(f_e.file_episode_path.unwrap(),
-                                                                   f_e.file_image_path.unwrap(), f_e
-                                                                       .local_url, f_e
-                                                                       .local_image_url);
-                let result = DownloadService::handle_metadata_insertion(&file_name_builder, &e
-                    .clone(),
-                                                           &podcast,
-                                                           conn);
+                let file_name_builder = FilenameBuilderReturn::new(
+                    f_e.file_episode_path.unwrap(),
+                    f_e.file_image_path.unwrap(),
+                    f_e.local_url,
+                    f_e.local_image_url,
+                );
+                let result = DownloadService::handle_metadata_insertion(
+                    &file_name_builder,
+                    &e.clone(),
+                    &podcast,
+                    conn,
+                );
                 if result.is_err() {
                     log::error!("Error while updating metadata for episode: {}", e.id);
                 }

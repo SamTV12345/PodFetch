@@ -1,4 +1,6 @@
-use crate::constants::inner_constants::{Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME};
+use crate::constants::inner_constants::{
+    Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME,
+};
 use crate::dbconfig::schema::users;
 use crate::dbconfig::DBType;
 use crate::utils::environment_variables::is_env_var_present_and_true;
@@ -333,7 +335,6 @@ impl User {
         }
 
         let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-
 
         if let Some(res) = env_service.api_key_admin.clone() {
             if !res.is_empty() && res == api_key_to_find {

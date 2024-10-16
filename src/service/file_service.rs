@@ -16,16 +16,15 @@ use tokio::task::spawn_blocking;
 
 use crate::controllers::settings_controller::ReplacementStrategy;
 use crate::models::misc_models::PodcastInsertModel;
+use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::{map_io_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
+use crate::utils::file_name_replacement::{Options, Sanitizer};
 use crate::utils::rss_feed_parser::RSSFeedParser;
 use crate::DBType as DbConnection;
-use crate::models::podcast_settings::PodcastSetting;
-use crate::utils::file_name_replacement::{Options, Sanitizer};
-
 
 #[derive(Clone)]
 pub struct FileService {
@@ -190,7 +189,7 @@ pub async fn prepare_podcast_title_to_directory(
         }
     };
 
-    perform_podcast_variable_replacement(retrieved_settings, podcast.clone(),opt_podcast_settings)
+    perform_podcast_variable_replacement(retrieved_settings, podcast.clone(), opt_podcast_settings)
 }
 
 fn replace_date_of_str(date: &str) -> String {
@@ -206,11 +205,15 @@ fn replace_date_of_str(date: &str) -> String {
 pub fn perform_podcast_variable_replacement(
     retrieved_settings: Setting,
     podcast: crate::utils::rss_feed_parser::PodcastParsed,
-    podcast_setting: Option<PodcastSetting>
+    podcast_setting: Option<PodcastSetting>,
 ) -> Result<String, CustomError> {
     let sanitizer = Sanitizer::new(None);
-    let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone(), podcast_setting.clone())
-        .replace(|c: char| !c.is_ascii(), "");
+    let escaped_podcast_title = perform_replacement(
+        &podcast.title,
+        retrieved_settings.clone(),
+        podcast_setting.clone(),
+    )
+    .replace(|c: char| !c.is_ascii(), "");
     let podcast_format;
 
     if podcast_setting.is_none() {
@@ -225,9 +228,7 @@ pub fn perform_podcast_variable_replacement(
         podcast_format = retrieved_settings.podcast_format.clone();
     }
 
-    if podcast_format.is_empty()
-        || podcast_format.trim() == "{}"
-    {
+    if podcast_format.is_empty() || podcast_format.trim() == "{}" {
         return Ok(sanitizer.sanitize(podcast.title));
     }
 
@@ -289,9 +290,12 @@ pub fn perform_episode_variable_replacement(
     podcast_episode: PodcastEpisode,
     podcast_settings: Option<PodcastSetting>,
 ) -> Result<String, CustomError> {
-    let escaped_episode_title =
-        perform_replacement(&podcast_episode.name, retrieved_settings.clone(), podcast_settings.clone())
-            .replace(|c: char| !c.is_ascii(), "");
+    let escaped_episode_title = perform_replacement(
+        &podcast_episode.name,
+        retrieved_settings.clone(),
+        podcast_settings.clone(),
+    )
+    .replace(|c: char| !c.is_ascii(), "");
     let episode_format;
 
     if podcast_settings.is_none() {
@@ -306,9 +310,7 @@ pub fn perform_episode_variable_replacement(
         episode_format = retrieved_settings.episode_format.clone();
     }
 
-
-    if episode_format.is_empty() || episode_format.trim() == "{}"
-    {
+    if episode_format.is_empty() || episode_format.trim() == "{}" {
         return Ok(escaped_episode_title);
     }
 
@@ -349,8 +351,11 @@ pub fn perform_episode_variable_replacement(
     }
 }
 
-fn perform_replacement(title: &str, retrieved_settings: Setting, podcast_settings: Option<PodcastSetting>) ->
-                                                                                          String {
+fn perform_replacement(
+    title: &str,
+    retrieved_settings: Setting,
+    podcast_settings: Option<PodcastSetting>,
+) -> String {
     let mut final_string: String = title.to_string();
     let replacement_strategy;
     if podcast_settings.is_none() {
@@ -374,11 +379,11 @@ fn perform_replacement(title: &str, retrieved_settings: Setting, podcast_setting
         ReplacementStrategy::Remove => {
             let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("")));
             final_string = sanitizer.sanitize(&final_string);
-        },
+        }
         ReplacementStrategy::ReplaceWithDash => {
             let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-")));
             final_string = sanitizer.sanitize(&final_string);
-        },
+        }
     }
     final_string
 }
@@ -589,7 +594,7 @@ mod tests {
             local_image_url: "".to_string(),
             download_time: None,
             deleted: false,
-            episode_numbering_processed: false
+            episode_numbering_processed: false,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -631,7 +636,7 @@ mod tests {
             local_image_url: "".to_string(),
             download_time: None,
             deleted: false,
-            episode_numbering_processed:false
+            episode_numbering_processed: false,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);

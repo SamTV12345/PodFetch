@@ -14,7 +14,7 @@ pub struct PlaylistDtoPost {
     pub items: Vec<PlaylistItem>,
 }
 
-#[derive(Serialize, Deserialize, Clone,ToSchema)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct PlaylistItem {
     pub episode: i32,
 }

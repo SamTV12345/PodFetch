@@ -9,7 +9,7 @@ use crate::models::session::Session;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::utils::time::get_current_timestamp;
 use crate::DbPool;
-use chrono::{DateTime};
+use chrono::DateTime;
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeActionResponse {
@@ -45,8 +45,7 @@ pub async fn get_episode_actions(
                 return Err(CustomError::Forbidden);
             }
 
-            let since_date = DateTime::from_timestamp(since.since, 0)
-                .map(|v| v.naive_utc());
+            let since_date = DateTime::from_timestamp(since.since, 0).map(|v| v.naive_utc());
             let mut actions = Episode::get_actions_by_username(
                 username.clone(),
                 &mut pool.get().unwrap(),
@@ -57,13 +56,11 @@ pub async fn get_episode_actions(
             )
             .await;
 
-
             if let Some(device) = since.device.clone() {
                 actions.iter_mut().for_each(|a| {
                     a.device = device.clone();
                 });
             }
-
 
             Ok(HttpResponse::Ok().json(EpisodeActionResponse {
                 actions,

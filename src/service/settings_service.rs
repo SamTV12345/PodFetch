@@ -84,7 +84,7 @@ impl SettingsService {
         perform_podcast_variable_replacement(
             update_setttings.clone().into(),
             sample_podcast.clone(),
-            None
+            None,
         )?;
         perform_episode_variable_replacement(
             update_setttings.clone().into(),

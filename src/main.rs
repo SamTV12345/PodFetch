@@ -39,6 +39,7 @@ use crate::config::dbconfig::establish_connection;
 use crate::config::dbconfig::ConnectionOptions;
 use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
 use crate::controllers::api_doc::ApiDoc;
+use crate::controllers::manifest_controller::get_manifest;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
@@ -46,30 +47,39 @@ use crate::controllers::playlist_controller::{
     add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
     get_playlist_by_id, update_playlist,
 };
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_settings, proxy_podcast, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
+use crate::controllers::podcast_controller::{
+    add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast,
+    find_podcast_by_id, get_filter, get_podcast_settings, proxy_podcast, refresh_all_podcasts,
+    retrieve_podcast_sample_format, search_podcasts, update_podcast_settings,
+};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
-use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_timeline, retrieve_episode_sample_format};
+use crate::controllers::podcast_episode_controller::{
+    delete_podcast_episode_locally, download_podcast_episodes_of_podcast,
+    find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_timeline,
+    retrieve_episode_sample_format,
+};
+use crate::controllers::server::ChatServer;
 use crate::controllers::settings_controller::{
     get_opml, get_settings, run_cleanup, update_name, update_settings,
 };
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
+use crate::controllers::tags_controller::{
+    add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag,
+};
 use crate::controllers::user_controller::{
     create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user,
     get_users, onboard_user, update_role, update_user,
 };
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
+use crate::controllers::watch_together_routes;
 use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
-use crate::controllers::manifest_controller::get_manifest;
-use crate::controllers::watch_together_routes;
-use crate::controllers::server::ChatServer;
-use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag};
 
 mod constants;
 mod db;
@@ -280,9 +290,7 @@ async fn main() -> std::io::Result<()> {
 
     match ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
         Some(jwk_config) => {
-            let client = get_async_sync_client()
-                .build()
-                .unwrap();
+            let client = get_async_sync_client().build().unwrap();
             let resp = client
                 .get(&jwk_config.jwks_uri)
                 .send()
@@ -360,13 +368,12 @@ async fn main() -> std::io::Result<()> {
             .app_data(data_pool.clone())
             .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
-        .workers(4)
-        .bind(("0.0.0.0", 8000))?
-        .run();
+    .workers(4)
+    .bind(("0.0.0.0", 8000))?
+    .run();
     try_join!(http_server, async move { chat_server.await.unwrap() })?;
     Ok(())
 }
-
 
 pub fn get_api_config() -> Scope {
     web::scope("/api/v1").configure(config)

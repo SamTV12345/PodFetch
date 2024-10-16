@@ -3,6 +3,7 @@ use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::models::tag::Tag;
 use crate::models::user::User;
 use crate::service::mapping_service::MappingService;
 use crate::utils::error::{map_db_error, CustomError};
@@ -11,7 +12,6 @@ use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
-use crate::models::tag::Tag;
 
 #[derive(
     Queryable,
@@ -121,7 +121,7 @@ impl Favorite {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: &str
+        designated_username: &str,
     ) -> Result<Vec<(Podcast, Favorite)>, CustomError> {
         use crate::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::dbconfig::schema::podcasts::dsl::id as podcastsid;

@@ -189,5 +189,7 @@
   "add": "Hinzufügen",
   "tag_one": "Tag",
   "tag_other": "Tags",
-  "podflix": "Podflix"
+  "podflix": "Podflix",
+  "create-podflix": "Podflix erstellen",
+  "room-name":"Raumname"
 }

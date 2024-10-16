@@ -1,4 +1,7 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, MAIN_ROOM, TELEGRAM_API_ENABLED};
+use crate::constants::inner_constants::{
+    PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, MAIN_ROOM,
+    TELEGRAM_API_ENABLED,
+};
 use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -8,7 +11,20 @@ use crate::service::mapping_service::MappingService;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
 
+use crate::controllers::server::ChatServerHandle;
+use crate::models::episode::Episode;
+use crate::models::notification::Notification;
+use crate::models::podcast_settings::PodcastSetting;
+use crate::models::user::User;
+use crate::mutex::LockResultExt;
+use crate::service::environment_service::EnvironmentService;
+use crate::service::settings_service::SettingsService;
+use crate::service::telegram_api::send_new_episode_notification;
+use crate::utils::environment_variables::is_env_var_present_and_true;
+use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::podcast_builder::PodcastBuilder;
+use crate::utils::reqwest_client::get_sync_client;
+use crate::DBType as DbConnection;
 use actix_web::web;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
@@ -16,19 +32,6 @@ use regex::Regex;
 use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
-use crate::controllers::server::ChatServerHandle;
-use crate::models::episode::Episode;
-use crate::models::notification::Notification;
-use crate::models::user::User;
-use crate::DBType as DbConnection;
-use crate::models::podcast_settings::PodcastSetting;
-use crate::mutex::LockResultExt;
-use crate::service::environment_service::EnvironmentService;
-use crate::service::settings_service::SettingsService;
-use crate::service::telegram_api::send_new_episode_notification;
-use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::utils::reqwest_client::get_sync_client;
 
 pub struct PodcastEpisodeService;
 
@@ -49,16 +52,23 @@ impl PodcastEpisodeService {
                     Self::perform_download(&podcast_episode_cloned, podcast_cloned, conn)?;
                 let mapped_dto = MappingService::map_podcastepisode_to_dto(&podcast_inserted);
                 if let Some(lobby) = lobby {
-                    lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
-                        message: format!(
-                            "Episode {} is now available offline",
-                            podcast_episode.name
-                        ),
-                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
-                        type_of: PodcastType::AddPodcastEpisode,
-                        podcast_episode: Some(mapped_dto),
-                        podcast_episodes: None,
-                    }).unwrap());
+                    lobby.send_broadcast_sync(
+                        MAIN_ROOM.parse().unwrap(),
+                        serde_json::to_string(&BroadcastMessage {
+                            message: format!(
+                                "Episode {} is now available offline",
+                                podcast_episode.name
+                            ),
+                            podcast: Option::from(MappingService::map_podcast_to_podcast_dto(
+                                &podcast,
+                                vec![],
+                            )),
+                            type_of: PodcastType::AddPodcastEpisode,
+                            podcast_episode: Some(mapped_dto),
+                            podcast_episodes: None,
+                        })
+                        .unwrap(),
+                    );
                 }
 
                 if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
@@ -72,8 +82,6 @@ impl PodcastEpisodeService {
         }
         Ok(())
     }
-
-
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
@@ -273,7 +281,7 @@ impl PodcastEpisodeService {
                 );
                 Err(CustomError::BadRequest(format!(
                     "Error parsing podcast {} with cause {:?}",
-                    podcast.name,e
+                    podcast.name, e
                 )))
             }
         }
@@ -439,10 +447,10 @@ impl PodcastEpisodeService {
             .map(|podcast| {
                 let mut podcast_episode_dto = MappingService::map_podcastepisode_to_dto(podcast);
                 if podcast_episode_dto.is_downloaded() {
-                    podcast_episode_dto.local_image_url = env.server_url.clone() +
-                        &podcast_episode_dto.clone().local_image_url;
-                    podcast_episode_dto.local_url = env.server_url.clone() + &podcast_episode_dto
-                        .clone().local_url;
+                    podcast_episode_dto.local_image_url =
+                        env.server_url.clone() + &podcast_episode_dto.clone().local_image_url;
+                    podcast_episode_dto.local_url =
+                        env.server_url.clone() + &podcast_episode_dto.clone().local_url;
 
                     podcast_episode_dto
                 } else {
@@ -519,9 +527,8 @@ impl PodcastEpisodeService {
                 days = days_from_settings;
             }
 
-            let old_podcast_episodes = PodcastEpisode::get_podcast_episodes_older_than_days(days,
-                                                                                            conn,
-                                                                                            p.id);
+            let old_podcast_episodes =
+                PodcastEpisode::get_podcast_episodes_older_than_days(days, conn, p.id);
 
             log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {

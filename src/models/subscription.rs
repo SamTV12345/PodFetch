@@ -75,7 +75,9 @@ impl SubscriptionChangesToClient {
         since: i32,
         conn: &mut DbConnection,
     ) -> Result<SubscriptionChangesToClient, Error> {
-        let since = DateTime::from_timestamp(since as i64, 0).map(|v|v.naive_utc()).unwrap();
+        let since = DateTime::from_timestamp(since as i64, 0)
+            .map(|v| v.naive_utc())
+            .unwrap();
         let res: Vec<Subscription> = subscriptions::table
             .filter(subscriptions::username.eq(username))
             .filter(

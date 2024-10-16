@@ -17,10 +17,10 @@ use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 use std::ops::DerefMut;
 
+use crate::controllers::server::ChatServerHandle;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use crate::controllers::server::ChatServerHandle;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -83,13 +83,12 @@ pub struct TimeLinePodcastEpisode {
 pub async fn get_available_podcasts_not_in_webview(
     requester: Option<web::ReqData<User>>,
     conn: Data<DbPool>,
-) -> Result<HttpResponse, CustomError>  {
+) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
-        return Err(CustomError::Forbidden)
+        return Err(CustomError::Forbidden);
     }
     let mut retrieved_conn = conn.get().map_err(map_r2d2_error)?;
-    let found_episodes  = Episode::
-    find_episodes_not_in_webview(&mut retrieved_conn)?;
+    let found_episodes = Episode::find_episodes_not_in_webview(&mut retrieved_conn)?;
 
     Ok(HttpResponse::Ok().json(found_episodes))
 }
@@ -223,13 +222,19 @@ pub async fn delete_podcast_episode_locally(
         &id.into_inner(),
         &mut db.get().unwrap(),
     )?;
-    lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
-        podcast_episode: Some(delted_podcast_episode),
-        podcast_episodes: None,
-        type_of: PodcastType::DeletePodcastEpisode,
-        podcast: None,
-        message: "Deleted podcast episode locally".to_string(),
-    }).unwrap()).await;
+    lobby
+        .send_broadcast(
+            MAIN_ROOM.parse().unwrap(),
+            serde_json::to_string(&BroadcastMessage {
+                podcast_episode: Some(delted_podcast_episode),
+                podcast_episodes: None,
+                type_of: PodcastType::DeletePodcastEpisode,
+                podcast: None,
+                message: "Deleted podcast episode locally".to_string(),
+            })
+            .unwrap(),
+        )
+        .await;
 
     Ok(HttpResponse::NoContent().finish())
 }

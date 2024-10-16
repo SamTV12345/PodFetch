@@ -11,4 +11,7 @@ pub mod settings_service;
 pub mod subscription;
 pub mod telegram_api;
 pub mod user_management_service;
+mod watch_together_service;
 pub mod websocket_service;
+
+pub use watch_together_service::WatchTogetherService;

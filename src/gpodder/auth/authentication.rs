@@ -71,7 +71,7 @@ fn handle_proxy_auth(
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
                 }
                 Err(e) => {
-                    if config.auto_sign_up{
+                    if config.auto_sign_up {
                         User::insert_user(
                             &mut User {
                                 id: 0,
@@ -83,7 +83,8 @@ fn handle_proxy_auth(
                                 api_key: None,
                             },
                             &mut conn.get().unwrap(),
-                        ).expect("Error inserting user on auto registering");
+                        )
+                        .expect("Error inserting user on auto registering");
                         handle_proxy_auth(rq, username.clone(), conn, env)
                     } else {
                         log::error!("Error finding user by username: {}", e);

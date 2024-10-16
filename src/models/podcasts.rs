@@ -3,6 +3,7 @@ use crate::dbconfig::schema::*;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::tag::Tag;
 use crate::service::mapping_service::MappingService;
 use crate::utils::do_retry::do_retry;
 use crate::utils::podcast_builder::PodcastExtra;
@@ -15,7 +16,6 @@ use diesel::{
     delete, insert_into, BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl,
 };
 use utoipa::ToSchema;
-use crate::models::tag::Tag;
 
 use crate::utils::error::{map_db_error, CustomError};
 #[derive(

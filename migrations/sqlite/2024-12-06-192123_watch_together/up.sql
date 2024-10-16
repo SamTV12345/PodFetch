@@ -10,12 +10,12 @@ CREATE TABLE watch_togethers (
 
 CREATE TABLE watch_together_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    room_id TEXT NOT NULL,
+    room_id INTEGER NOT NULL,
     user TEXT NOT NULL, --- token of the user who joined the room
     username TEXT,
     status TEXT NOT NULL,
     UNIQUE(room_id, user),
-    FOREIGN KEY (room_id) REFERENCES watch_togethers(room_id)
+    FOREIGN KEY (room_id) REFERENCES watch_togethers(id)
 );
 
 ALTER TABLE settings ADD COLUMN jwt_key BLOB NULL;

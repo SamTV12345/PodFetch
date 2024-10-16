@@ -74,7 +74,7 @@ pub struct PodcastEpisode {
     #[diesel(sql_type = Nullable<Text>)]
     pub(crate) file_image_path: Option<String>,
     #[diesel(sql_type = Bool)]
-    pub (crate) episode_numbering_processed : bool,
+    pub(crate) episode_numbering_processed: bool,
 }
 
 impl PodcastEpisode {
@@ -567,11 +567,14 @@ impl PodcastEpisode {
             .map_err(map_db_error)
     }
 
-    pub fn update_episode_numbering_processed(conn: &mut DBType, processed: bool,
-                                              episode_id_to_update: &str) {
-        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+    pub fn update_episode_numbering_processed(
+        conn: &mut DBType,
+        processed: bool,
+        episode_id_to_update: &str,
+    ) {
         use crate::dbconfig::schema::podcast_episodes::dsl::episode_numbering_processed as episode_numbering_processed_column;
         use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        use crate::dbconfig::schema::podcast_episodes::dsl::*;
         diesel::update(dsl_podcast_episodes)
             .set(episode_numbering_processed_column.eq(processed))
             .filter(episode_id.eq(episode_id_to_update))

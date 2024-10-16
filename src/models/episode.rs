@@ -1,20 +1,6 @@
 use crate::constants::inner_constants::DEFAULT_DEVICE;
 use crate::dbconfig::schema::episodes;
 use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
-use crate::DBType as DbConnection;
-use chrono::{NaiveDateTime, Utc};
-use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::{ExpressionMethods, JoinOnDsl};
-use diesel::{
-    BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
-    QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
-};
-use reqwest::Url;
-use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::io::Error;
-use diesel::query_dsl::methods::DistinctDsl;
-use utoipa::ToSchema;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
@@ -22,6 +8,20 @@ use crate::models::misc_models::{
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::utils::error::{map_db_error, CustomError};
+use crate::DBType as DbConnection;
+use chrono::{NaiveDateTime, Utc};
+use diesel::query_dsl::methods::DistinctDsl;
+use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
+use diesel::{
+    BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
+    QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
+};
+use diesel::{ExpressionMethods, JoinOnDsl};
+use reqwest::Url;
+use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::io::Error;
+use utoipa::ToSchema;
 
 #[derive(
     Serialize,
@@ -170,7 +170,6 @@ impl Episode {
             query = query.filter(ep_dsl::podcast.eq(podcast));
         }
 
-
         query
             .load::<Episode>(conn)
             .expect("Error querying episodes")
@@ -272,22 +271,24 @@ impl Episode {
         Ok(())
     }
 
-
-    pub fn find_episodes_not_in_webview(conn: &mut DbConnection) -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
-        use crate::dbconfig::schema::episodes::dsl::episodes;
+    pub fn find_episodes_not_in_webview(
+        conn: &mut DbConnection,
+    ) -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
         use crate::dbconfig::schema::episodes::device;
+        use crate::dbconfig::schema::episodes::dsl::episodes;
         use crate::dbconfig::schema::episodes::podcast;
         use crate::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::dbconfig::schema::podcasts::dsl::rssfeed;
 
-        let result = DistinctDsl::distinct(episodes
-            .left_join(podcasts.on(podcast.eq(rssfeed)))
-            .select((device, podcast))
-            .filter(rssfeed.is_null()))
-             .filter(device.ne("webview"))
-            .load::<GPodderAvailablePodcasts>(conn)
-            .map_err(map_db_error)?;
-
+        let result = DistinctDsl::distinct(
+            episodes
+                .left_join(podcasts.on(podcast.eq(rssfeed)))
+                .select((device, podcast))
+                .filter(rssfeed.is_null()),
+        )
+        .filter(device.ne("webview"))
+        .load::<GPodderAvailablePodcasts>(conn)
+        .map_err(map_db_error)?;
 
         Ok(result)
     }
