@@ -5,16 +5,17 @@ import {CustomInput} from "./CustomInput";
 import {CustomButtonSecondary} from "./CustomButtonSecondary";
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import axios from "axios";
-import {useForm} from "react-hook-form";
+import {Controller, useForm} from "react-hook-form";
 
 export const Watch2GetherEditModal = ()=>{
     const {t} = useTranslation()
     const currentWatchTogether = useWatchTogether(state => state.currentWatchTogetherCreate)
-    const {handleSubmit, register } = useForm<WatchTogetherCreate>({
+    const {handleSubmit, register, control } = useForm<WatchTogetherCreate>({
         defaultValues: currentWatchTogether
     })
 
     const handleSendForm = (data: WatchTogetherCreate)=>{
+        console.log("Sent", data)
         axios.post('/watch-together', data)
     }
 
@@ -30,9 +31,13 @@ export const Watch2GetherEditModal = ()=>{
                 <label className="font-medium text-[--fg-color] flex gap-1 self-center">
                     {t('room-name')}
                 </label>
-                <CustomInput type="text" {...register('roomName', {
-                    required: true
-                })}  placeholder={t('room-name')}/>
+
+                <Controller
+                    name="roomName"
+                    control={control}
+                    render={({ field: { name, onChange, value }}) => (
+                        <CustomInput autoComplete="roomName" className="w-full" id="username" name={name} onChange={onChange} placeholder={t('room-name')!} value={value} required />
+                    )} />
 
             </div>
             <div className="text-right mt-5">
@@ -42,21 +47,8 @@ export const Watch2GetherEditModal = ()=>{
 
                     }}>{t('cancel')!}</CustomButtonSecondary>
                 <CustomButtonPrimary
-                    className="bg-mustard-600 hover:bg-[--danger-fg-color-hover] hover:shadow-[--danger-fg-color-hover] text-[--fg-color]"
-                    onClick={() => {
-                        axios.post(
-                            "/watch-together",
-                            currentWatchTogether,
-                            {
-                                headers: {
-                                    "Content-Type": "application/json"
-                                }
-                            }
-                        ).then((r) => {
-                            console.log(r)
-                        }
-                        )
-                    }}>{t('create')}</CustomButtonPrimary>
+                    className="bg-mustard-600  text-[--fg-color]"
+                    type="submit">{t('create')}</CustomButtonPrimary>
             </div>
         </form>
     </Modal>

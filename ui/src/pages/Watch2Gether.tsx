@@ -47,7 +47,7 @@ export const Watch2Gether = ()=>{
                     {t('podflix')}
                 </th>
                 <th scope="col" className="px-2 py-3 text-[--fg-color]">
-                    {t('admin')}
+                    {t('room-name')}
                 </th>
                 <th scope="col" className="px-2 py-3 text-[--fg-color]">
                     {t('actions')}
@@ -63,11 +63,17 @@ export const Watch2Gether = ()=>{
                     <td className="text-[--fg-color]">
                         {item.roomId}
                     </td>
-                    <td  className="text-[--fg-color]">
-                        {item.admin}
-                    </td>
-                    <td  className="text-[--fg-color]">
+                    <td className="text-[--fg-color]">
                         {item.roomName}
+                    </td>
+                    <td className="text-[--fg-color]">
+                        <button className="material-symbols-outlined text-[--danger-fg-color]" onClick={()=>{
+                            console.log(encodeURIComponent(item.roomId))
+                            axios.delete(`/watch-together/${encodeURIComponent(item.roomId)}`)
+                                .then(()=>{
+                                    setPodflixes(podflixes.filter(p=>p.roomId !== item.roomId))
+                                })
+                        }}>Delete</button>
                     </td>
                 </tr>
             })}

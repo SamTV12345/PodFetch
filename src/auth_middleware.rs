@@ -231,7 +231,7 @@ where
     }
 
     fn handle_no_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let user = User::create_standard_admin_user();
+        let user = User::create_admin_user();
         req.extensions_mut().insert(user);
         let service = Rc::clone(&self.service);
         async move { service.call(req).await.map(|res| res.map_into_left_body()) }.boxed_local()

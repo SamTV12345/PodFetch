@@ -20,7 +20,7 @@ pub async fn get_watch_together(
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let watch_together: Option<WatchTogetherDto> = WatchTogether::get_watch_together_by_id(
-        watch_id.into_inner(),
+        &watch_id.into_inner(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
     .map(|watch_together| watch_together.map(|watch_together| watch_together.into()))
@@ -73,13 +73,13 @@ pub async fn create_watch_together(
                     &unwrapped_requester,
                 )?;
 
-                return Ok(HttpResponse::Ok()
+                Ok(HttpResponse::Ok()
                     .cookie(
                         Cookie::build(WATCH_TOGETHER_ID, w.user)
                             .http_only(true)
                             .finish(),
                     )
-                    .json(watch_together));
+                    .json(watch_together))
             }
             None => {
                 let watch_together = WatchTogetherService::create_watch_together(
@@ -110,13 +110,13 @@ pub async fn create_watch_together(
     }
 }
 
-#[delete("")]
+#[delete("/{room_id}")]
 pub async fn delete_watch_together(
-    data: Json<WatchTogetherDtoDelete>,
+    data: Path<String>,
     requester: Option<web::ReqData<User>>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
-    if data.room_id.is_empty() {
+    if data.is_empty() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
@@ -137,7 +137,7 @@ pub async fn delete_watch_together(
 
     WatchTogether::delete_watch_together(
         unwrapped_requester.id,
-        data.room_id.clone(),
+        data.clone(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
 

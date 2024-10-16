@@ -183,20 +183,6 @@ impl User {
         }
     }
 
-    pub fn create_standard_admin_user() -> User {
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        let api_admin: Option<String> = env_service.api_key_admin.clone();
-        User {
-            id: 9999,
-            username: STANDARD_USER.to_string(),
-            role: Role::Admin.to_string(),
-            password: None,
-            explicit_consent: true,
-            created_at: Default::default(),
-            api_key: api_admin,
-        }
-    }
-
     pub fn find_all_users(conn: &mut DbConnection) -> Vec<UserWithoutPassword> {
         use crate::dbconfig::schema::users::dsl::*;
 
@@ -285,6 +271,11 @@ impl User {
     }
 
     pub fn get_user_by_userid(user_id: i32, conn: &mut DbConnection) -> Result<User, CustomError> {
+        if user_id == 9999 {
+            return Ok(User::create_admin_user());
+        }
+
+
         use crate::dbconfig::schema::users::dsl::*;
         let user = users
             .filter(id.eq(user_id))

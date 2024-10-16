@@ -15,7 +15,7 @@ impl WatchTogetherService {
     ) -> Result<WatchTogetherDto, CustomError> {
         let mut random_room_id = WatchTogether::random_room_id();
         // Check if the room id is already in use
-        while WatchTogether::get_watch_together_by_id(random_room_id.clone(), conn)?.is_some() {
+        while WatchTogether::get_watch_together_by_id(&random_room_id.clone(), conn)?.is_some() {
             random_room_id = WatchTogether::random_room_id();
         }
 

@@ -9,6 +9,7 @@ use diesel::{
     Queryable, RunQueryDsl,
 };
 use utoipa::ToSchema;
+use crate::models::watch_together_users::WatchTogetherUser;
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 pub struct WatchTogether {
@@ -89,6 +90,13 @@ impl WatchTogether {
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
         let user_found = User::get_user_by_userid(watch_together_user_id, connection)?;
+        let watch_together = Self::get_watch_together_by_id(&watch_together_room_id_to_search,
+                                                     connection)?;
+        if watch_together.is_none() {
+            return Ok(());
+        }
+
+        WatchTogetherUser::delete_by_room_id(watch_together.unwrap().id.unwrap(), connection)?;
 
         diesel::delete(
             watch_togethers.filter(
@@ -103,7 +111,7 @@ impl WatchTogether {
     }
 
     pub fn get_watch_together_by_id(
-        room_code_to_search: String,
+        room_code_to_search: &str,
         connection: &mut DBType,
     ) -> Result<Option<WatchTogether>, CustomError> {
         use crate::dbconfig::schema::watch_togethers::dsl::*;

@@ -36,6 +36,18 @@ impl WatchTogetherUser {
         }
     }
 
+    pub fn delete_by_room_id(room_id_to_search: i32, connection: &mut DBType) -> Result<(),
+        CustomError> {
+        use crate::dbconfig::schema::watch_together_users::dsl::*;
+        use diesel::ExpressionMethods;
+        use diesel::QueryDsl;
+
+        diesel::delete(watch_together_users.filter(room_id.eq(room_id_to_search)))
+            .execute(connection)
+            .map_err(map_db_error)
+            .map(|_| ())
+    }
+
     pub fn save_watch_together_users(&self, connection: &mut DBType) -> Result<(), CustomError> {
         use crate::dbconfig::schema::watch_together_users;
 
@@ -55,7 +67,7 @@ impl WatchTogetherUser {
         use diesel::QueryDsl;
 
         let watch_together_opt =
-            WatchTogether::get_watch_together_by_id(room_code_to_search, connection)?;
+            WatchTogether::get_watch_together_by_id(&room_code_to_search, connection)?;
 
         if watch_together_opt.is_none() {
             return Ok(None);
