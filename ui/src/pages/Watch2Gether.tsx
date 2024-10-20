@@ -3,13 +3,13 @@ import {PodFlix} from "../models/PodFlix";
 import axios, {AxiosResponse} from "axios";
 import {useTranslation} from "react-i18next";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
-import {PlaylistDto} from "../models/Playlist";
 import useModal from "../store/ModalSlice";
 import {Watch2GetherEditModal} from "../components/Watch2GetherEditModal";
 import {useWatchTogether} from "../store/Watch2Gether";
 
 export const Watch2Gether = ()=>{
-    const [podflixes, setPodflixes] = useState<PodFlix[]>([]);
+    const podflixes = useWatchTogether(state=>state.watchTogethers)
+    const setPodflixes = useWatchTogether(state => state.setWatchTogethers)
     const {t} = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
     const setCurrentWatchTogether = useWatchTogether(state => state.setWatchTogetherCreate)
@@ -56,7 +56,7 @@ export const Watch2Gether = ()=>{
             </thead>
             <tbody className="">
             {podflixes?.map((item, index) => {
-                return <tr className="">
+                return <tr className="" key={item.roomId}>
                     <td className="text-[--fg-color] p-2">
                         {index}
                     </td>
@@ -67,13 +67,17 @@ export const Watch2Gether = ()=>{
                         {item.roomName}
                     </td>
                     <td className="text-[--fg-color]">
-                        <button className="material-symbols-outlined text-[--danger-fg-color]" onClick={()=>{
-                            console.log(encodeURIComponent(item.roomId))
+                        <button className="material-symbols-outlined text-[--danger-fg-color]" onClick={() => {
                             axios.delete(`/watch-together/${encodeURIComponent(item.roomId)}`)
-                                .then(()=>{
-                                    setPodflixes(podflixes.filter(p=>p.roomId !== item.roomId))
+                                .then(() => {
+                                    setPodflixes(podflixes.filter(p => p.roomId !== item.roomId))
                                 })
-                        }}>Delete</button>
+                        }}>Delete
+                        </button>
+                        <button className="material-symbols-outlined text-[--danger-fg-color]" onClick={() => {
+
+                        }}>open_in_new
+                        </button>
                     </td>
                 </tr>
             })}

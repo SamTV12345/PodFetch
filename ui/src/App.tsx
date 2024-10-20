@@ -95,6 +95,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
         <Route path="/login" element={<Login />} />
         <Route path="/invite/:id" element={<AcceptInvite />}></Route>
         <Route path="/listentogether" element={<ListenTogether/>} />
+        <Route path="/listentogether/:id" element={<ListenTogether/>} />
     </>
 ), {
     basename: import.meta.env.BASE_URL
