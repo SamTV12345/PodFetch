@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::io;
 use tokio::sync::{mpsc, oneshot};
 
-type RoomId = String;
+pub type RoomId = String;
 pub type ConnId = usize;
 
 pub type Msg = String;
@@ -20,6 +20,7 @@ enum Command {
     Connect {
         conn_tx: mpsc::UnboundedSender<Msg>,
         res_tx: oneshot::Sender<ConnId>,
+        room_id: RoomId
     },
 
     Disconnect {
@@ -131,7 +132,7 @@ impl ChatServer {
     }
 
     /// Register new session and assign unique ID to this session
-    async fn connect(&mut self, tx: mpsc::UnboundedSender<Msg>) -> ConnId {
+    async fn connect(&mut self, tx: mpsc::UnboundedSender<Msg>, room_id: RoomId) -> ConnId {
         log::info!("Someone joined");
 
         // notify all users in same room
@@ -142,11 +143,18 @@ impl ChatServer {
         self.sessions.insert(id, tx);
 
         // auto join session to main room
-        self.rooms
-            .entry(MAIN_ROOM.parse().unwrap())
-            .or_default()
-            .insert(id);
-        log::info!("Joined main room");
+
+        if room_id.eq(MAIN_ROOM) {
+            log::info!("Joining main room");
+            self.rooms
+                .entry(room_id)
+                .or_default()
+                .insert(id);
+            log::info!("Joined main room");
+        } else {
+            // join room for real so we also notify the others
+            self.join_room(id, room_id).await;
+        }
 
         //let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
         /*self.send_system_message("main", 0, format!("Total visitors {count}"))
@@ -216,8 +224,9 @@ impl ChatServer {
                         let _ = res_tx.send(res);
                     }
                 }
-                Command::Connect { conn_tx, res_tx } => {
-                    let conn_id = self.connect(conn_tx).await;
+                Command::Connect { conn_tx, res_tx, room_id } => {
+                    // TODO hand over room id
+                    let conn_id = self.connect(conn_tx, room_id).await;
                     let _ = res_tx.send(conn_id);
                 }
                 Command::Disconnect { conn } => {
@@ -253,12 +262,12 @@ pub struct ChatServerHandle {
 
 impl ChatServerHandle {
     /// Register client message sender and obtain connection ID.
-    pub async fn connect(&self, conn_tx: mpsc::UnboundedSender<Msg>) -> ConnId {
+    pub async fn connect(&self, conn_tx: mpsc::UnboundedSender<Msg>, room_id: RoomId) -> ConnId {
         let (res_tx, res_rx) = oneshot::channel();
 
         // unwrap: chat server should not have been dropped
         self.cmd_tx
-            .send(Command::Connect { conn_tx, res_tx })
+            .send(Command::Connect { conn_tx, res_tx,  room_id })
             .unwrap();
 
         // unwrap: chat server does not drop out response channel

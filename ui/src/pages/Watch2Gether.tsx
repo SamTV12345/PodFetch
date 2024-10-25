@@ -6,6 +6,7 @@ import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import useModal from "../store/ModalSlice";
 import {Watch2GetherEditModal} from "../components/Watch2GetherEditModal";
 import {useWatchTogether} from "../store/Watch2Gether";
+import {useNavigate} from "react-router-dom";
 
 export const Watch2Gether = ()=>{
     const podflixes = useWatchTogether(state=>state.watchTogethers)
@@ -13,6 +14,7 @@ export const Watch2Gether = ()=>{
     const {t} = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
     const setCurrentWatchTogether = useWatchTogether(state => state.setWatchTogetherCreate)
+    const navigate = useNavigate()
 
     useEffect(() => {
         axios.get(
@@ -74,8 +76,8 @@ export const Watch2Gether = ()=>{
                                 })
                         }}>Delete
                         </button>
-                        <button className="material-symbols-outlined text-[--danger-fg-color]" onClick={() => {
-
+                        <button className="material-symbols-outlined text-[--accent-color]]" onClick={() => {
+                            navigate(`/listentogether/${encodeURIComponent(item.roomId)}`)
                         }}>open_in_new
                         </button>
                     </td>

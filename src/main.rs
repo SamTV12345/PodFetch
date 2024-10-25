@@ -75,9 +75,7 @@ use crate::controllers::user_controller::{
 };
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 use crate::controllers::watch_together_routes;
-use crate::controllers::websocket_controller::{
-    get_rss_feed, get_rss_feed_for_podcast, start_connection,
-};
+use crate::controllers::websocket_controller::{get_rss_feed, get_rss_feed_for_podcast, start_connection, start_public_connection};
 use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
 
@@ -383,6 +381,7 @@ fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(get_invite)
         .service(onboard_user)
         .service(login)
+        .service(start_public_connection)
         .service(get_public_config)
         .service(get_private_api());
 }

@@ -1,4 +1,4 @@
-use crate::controllers::server::{ChatServerHandle, ConnId};
+use crate::controllers::server::{ChatServerHandle, ConnId, RoomId};
 use actix_ws::AggregatedMessage;
 use futures_util::future::{select, Either};
 use futures_util::StreamExt;
@@ -6,6 +6,7 @@ use std::pin::pin;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::interval;
+use crate::constants::inner_constants::MAIN_ROOM;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -19,6 +20,7 @@ pub async fn chat_ws(
     chat_server: ChatServerHandle,
     mut session: actix_ws::Session,
     msg_stream: actix_ws::MessageStream,
+    room_id: Option<RoomId>
 ) {
     log::info!("connected");
 
@@ -29,7 +31,7 @@ pub async fn chat_ws(
     let (conn_tx, mut conn_rx) = mpsc::unbounded_channel();
 
     // unwrap: chat server is not dropped before the HTTP server
-    let conn_id = chat_server.connect(conn_tx).await;
+    let conn_id = chat_server.connect(conn_tx, room_id.unwrap_or(MAIN_ROOM.into())).await;
 
     let msg_stream = msg_stream
         .max_frame_size(128 * 1024)

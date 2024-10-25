@@ -21,6 +21,7 @@ use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
+use sha1::digest::typenum::private::Trim;
 use tokio::task::spawn_local;
 
 #[utoipa::path(
@@ -37,10 +38,39 @@ pub async fn start_connection(
     let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
 
     // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream));
+    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, None));
 
     Ok(res)
 }
+
+
+#[get("/publicWs/{room_id}")]
+pub async fn start_public_connection(
+    req: HttpRequest,
+    body: web::Payload,
+    chat_server: Data<ChatServerHandle>,
+    room_id: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
+
+    let room_id: String = room_id.into_inner();
+
+    if room_id.trim().is_empty() {
+        return Ok(HttpResponse::BadRequest().body("Room id cannot be empty"));
+    }
+
+    if room_id.trim() == "main" {
+        return Ok(HttpResponse::BadRequest().body("Room id cannot be main"));
+    }
+
+
+
+    // spawn websocket handler (and don't await it) so that the response is returned immediately
+    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, Some(room_id)));
+
+    Ok(res)
+}
+
 
 #[derive(Deserialize, Serialize)]
 pub struct RSSQuery {
