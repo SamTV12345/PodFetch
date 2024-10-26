@@ -1,10 +1,11 @@
 use crate::controllers::web_socket::chat_ws;
 use std::ops::DerefMut;
-
+use std::time::Duration;
+use actix::ActorStreamExt;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, WATCH_TOGETHER_ID};
 use crate::controllers::server::ChatServerHandle;
 use crate::models::user::User;
 use crate::service::environment_service::EnvironmentService;
@@ -12,7 +13,8 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::DbPool;
 use actix_web::web::Query;
-use actix_web::{get, web, web::Data, Error, HttpRequest, HttpResponse};
+use actix_web::{get, post, web, web::Data, Error, HttpRequest, HttpResponse};
+use actix_web::cookie::Cookie;
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
@@ -53,22 +55,52 @@ pub async fn start_public_connection(
 ) -> Result<HttpResponse, Error> {
     let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
 
-    let room_id: String = room_id.into_inner();
+    let room_id = room_id.into_inner();
+    let trimmed_room_id: &str = room_id.trim();
 
-    if room_id.trim().is_empty() {
+    if trimmed_room_id.is_empty() {
         return Ok(HttpResponse::BadRequest().body("Room id cannot be empty"));
     }
 
-    if room_id.trim() == "main" {
+    if trimmed_room_id == "main" {
         return Ok(HttpResponse::BadRequest().body("Room id cannot be main"));
     }
 
+    if req.cookie(WATCH_TOGETHER_ID).is_none() {
+        return Ok(HttpResponse::BadRequest().body("No watch together id found"));
+    }
 
 
     // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, Some(room_id)));
+    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, Some(trimmed_room_id.into())));
 
     Ok(res)
+}
+
+#[post("/publicWs/{room_id}")]
+pub async fn create_watch_together_id(req: HttpRequest) -> Result<HttpResponse, CustomError> {
+    use crate::constants::inner_constants::WATCH_TOGETHER_ID;
+    use rand::distributions::Alphanumeric;
+    use rand::{thread_rng, Rng};
+
+
+    if req.cookie(WATCH_TOGETHER_ID).is_some() {
+        return Ok(HttpResponse::Ok().body("Watch together id already exists"));
+    }
+
+    let watch_together_id: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(30)
+        .map(char::from)
+        .collect();
+
+    Ok(HttpResponse::Ok()
+        .cookie(Cookie::build(WATCH_TOGETHER_ID, watch_together_id)
+            .path("/")
+            .secure(true)
+            .http_only(true)
+            .max_age(actix_web::cookie::time::Duration::days(365))
+            .finish()).finish())
 }
 
 

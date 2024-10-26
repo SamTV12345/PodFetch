@@ -13,6 +13,7 @@ use actix_web::cookie::Cookie;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Responder, Scope};
 use std::ops::DerefMut;
+use crate::utils::jwt_watch_together::generate_watch_together_id;
 
 #[get("/{watch_id}")]
 pub async fn get_watch_together(
@@ -73,9 +74,13 @@ pub async fn create_watch_together(
                     &unwrapped_requester,
                 )?;
 
+
+                let id = generate_watch_together_id(Some(w.user.clone()), None, conn.get().map_err
+                (map_r2d2_error)?.deref_mut());
+
                 Ok(HttpResponse::Ok()
                     .cookie(
-                        Cookie::build(WATCH_TOGETHER_ID, w.user)
+                        Cookie::build(WATCH_TOGETHER_ID, id)
                             .http_only(true)
                             .finish(),
                     )

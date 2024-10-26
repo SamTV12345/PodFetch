@@ -8,6 +8,7 @@ use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};
 use jwt_simple::algorithms::HS256Key;
+use jwt_simple::prelude::RS256KeyPair;
 use utoipa::ToSchema;
 
 #[derive(
@@ -85,13 +86,25 @@ impl Setting {
 
         if setting_to_update.jwt_key.is_none() {
             use diesel::ExpressionMethods;
-            let new_jwt_key = HS256Key::generate().to_bytes();
+            // Safe because moduluis 2^8 is 256
+            let new_jwt_key = RS256KeyPair::generate(2048).unwrap();
+            let der_to_safe = new_jwt_key.to_der().unwrap();
             diesel::update(&setting_to_update)
-                .set(jwt_key.eq(new_jwt_key))
+                .set(jwt_key.eq(der_to_safe))
                 .get_result::<Setting>(conn)
                 .map_err(map_db_error)?;
         }
         Ok(())
+    }
+
+    pub fn get_jwt_key(conn: &mut DbConnection) -> Result<RS256KeyPair, CustomError> {
+        use crate::dbconfig::schema::settings::dsl::*;
+        let jwt_bytes = settings
+            .first::<Setting>(conn)
+            .map(|setting| setting.jwt_key.unwrap())
+            .map_err(map_db_error)?;
+        // unwrap: Safe as the key is generated at startup and can't be altered later on
+        Ok(RS256KeyPair::from_der(&jwt_bytes).unwrap())
     }
 
     pub fn insert_default_settings(conn: &mut DbConnection) -> Result<(), CustomError> {
