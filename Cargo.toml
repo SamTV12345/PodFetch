@@ -66,7 +66,7 @@ mp4ameta = "0.11.0"
 file-format = "0.25.0"
 
 [target.'cfg(not(windows))'.dependencies]
-openssl = "0.10.66"
+openssl = "0.10.68"
 
 [dev-dependencies]
 serial_test = {version="3.1.1"}
