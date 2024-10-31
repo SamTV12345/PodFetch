@@ -32,3 +32,4 @@ pub mod tags_podcast;
 pub mod user;
 pub mod watch_together_users;
 pub mod watch_togethers;
+mod watch_together_users_to_room_mappings;

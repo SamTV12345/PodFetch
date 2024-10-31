@@ -13,7 +13,7 @@ CREATE TABLE watch_together_users (
 );
 
 
-CREATE TABLE watch_together_users_to_room_mapping (
+CREATE TABLE watch_together_users_to_room_mappings (
     room_id INTEGER NOT NULL,
     subject TEXT NOT NULL,
     status TEXT NOT NULL,

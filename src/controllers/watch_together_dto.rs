@@ -2,7 +2,6 @@
 #[serde(rename_all = "camelCase")]
 pub struct WatchTogetherDto {
     pub room_id: String,
-    pub admin: String,
     pub room_name: String,
 }
 
