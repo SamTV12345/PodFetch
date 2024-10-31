@@ -27,7 +27,7 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
 
     let sim_disks = disks
         .iter()
-        .map(|disk| return disk.into())
+        .map(|disk| disk.into())
         .collect::<Vec<SimplifiedDisk>>();
 
     sys.refresh_all();
@@ -66,7 +66,7 @@ impl From<System> for SystemDto {
                 cpus: sys
                     .cpus()
                     .iter()
-                    .map(|cpu| CPU {
+                    .map(|cpu| Cpu {
                         name: cpu.name().to_string(),
                         vendor_id: cpu.vendor_id().to_string(),
                         usage: CpuUsageDto {
@@ -93,11 +93,11 @@ pub struct SystemDto {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct CpusWrapperDto {
     global: f32,
-    cpus: Vec<CPU>
+    cpus: Vec<Cpu>
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct CPU {
+pub struct Cpu {
     name: String,
     vendor_id: String,
     usage: CpuUsageDto,
