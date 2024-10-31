@@ -150,7 +150,7 @@ pub async fn search_podcasts(
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Find a podcast by its collection id", body = [(Podcast, Tags)])
+(status = 200, description = "Find a podcast by its collection id", body = [PodcastDto])
 ),
 tag="podcasts"
 )]
@@ -189,7 +189,7 @@ pub async fn find_all_podcasts(
 
     Ok(HttpResponse::Ok().json(podcasts))
 }
-
+use crate::models::itunes_models::ItunesModel;
 #[utoipa::path(
 context_path="/api/v1",
 responses(
@@ -738,6 +738,7 @@ use crate::models::tag::Tag;
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::models::tags_podcast::TagsPodcast;

@@ -6,7 +6,7 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-
+use utoipa::ToSchema;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_r2d2_error, CustomError};
@@ -29,7 +29,7 @@ pub struct OptionalId {
 
 impl OptionalId {}
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeWithHistory {
     pub podcast_episode: PodcastEpisode,

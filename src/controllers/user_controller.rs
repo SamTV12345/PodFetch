@@ -200,6 +200,7 @@ pub async fn update_user(
     Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
 }
 
+use crate::models::invite::Invite;
 #[utoipa::path(
 context_path="/api/v1",
 request_body=InvitePostModel,
