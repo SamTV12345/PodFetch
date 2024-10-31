@@ -7,7 +7,7 @@ use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
 use sha256::digest;
 
-use sysinfo::{Disks, System};
+use sysinfo::{Disk, Disks, System};
 pub mod built_info {
     // The file has been placed there by the build script.
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
@@ -27,20 +27,17 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
 
     let sim_disks = disks
         .iter()
-        .map(|disk| SimplifiedDisk {
-            name: disk.name().to_str().unwrap().to_string(),
-            total_space: disk.total_space(),
-            available_space: disk.available_space(),
-        })
+        .map(|disk| return disk.into())
         .collect::<Vec<SimplifiedDisk>>();
 
     sys.refresh_all();
+    sys.refresh_cpu_all();
 
     const PATH: &str = "podcasts";
     let podcast_byte_size =
         get_size(PATH).map_err(|e| map_io_extra_error(e, Some(PATH.to_string())))?;
     Ok(HttpResponse::Ok().json(SysExtraInfo {
-        system: sys,
+        system: sys.into(),
         disks: sim_disks,
         podcast_directory: podcast_byte_size,
     }))
@@ -51,9 +48,66 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {
-    pub system: System,
+    pub system: SystemDto,
     pub disks: Vec<SimplifiedDisk>,
     pub podcast_directory: u64,
+}
+
+
+impl From<System> for SystemDto {
+    fn from(sys: System) -> Self {
+        SystemDto {
+            mem_total: sys.total_memory(),
+            mem_available: sys.available_memory(),
+            swap_total: sys.total_swap(),
+            swap_used: sys.used_swap(),
+            cpus: CpusWrapperDto {
+                global: sys.global_cpu_usage(),
+                cpus: sys
+                    .cpus()
+                    .iter()
+                    .map(|cpu| CPU {
+                        name: cpu.name().to_string(),
+                        vendor_id: cpu.vendor_id().to_string(),
+                        usage: CpuUsageDto {
+                            percent: cpu.cpu_usage(),
+                        },
+                        brand: cpu.brand().to_string(),
+                        frequency: cpu.frequency(),
+                    })
+                    .collect(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SystemDto {
+    mem_total: u64,
+    mem_available: u64,
+    swap_total: u64,
+    swap_used: u64,
+    cpus: CpusWrapperDto,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CpusWrapperDto {
+    global: f32,
+    cpus: Vec<CPU>
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CPU {
+    name: String,
+    vendor_id: String,
+    usage: CpuUsageDto,
+    brand: String,
+    frequency: u64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CpuUsageDto {
+    percent: f32
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -61,6 +115,17 @@ pub struct SimplifiedDisk {
     pub name: String,
     pub total_space: u64,
     pub available_space: u64,
+}
+
+
+impl From<&Disk> for SimplifiedDisk {
+    fn from(disk: &Disk) -> Self {
+        SimplifiedDisk {
+            name: disk.name().to_str().unwrap_or("").to_string(),
+            total_space: disk.total_space(),
+            available_space: disk.available_space(),
+        }
+    }
 }
 
 #[utoipa::path(

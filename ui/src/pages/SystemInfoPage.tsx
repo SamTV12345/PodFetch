@@ -71,6 +71,7 @@ export const SystemInfoPage: FC = () => {
         }
     }
 
+
     return (
         <>
             <Heading1 className="mb-10">{t('system-info')}</Heading1>
@@ -83,7 +84,7 @@ export const SystemInfoPage: FC = () => {
                         <Heading3>{t('cpu-usage')}</Heading3>
                     </span>
 
-                    <CustomGaugeChart fill={['#10b981', '#064e3b']} labels={[t('used-cpu'), t('free-cpu')]} labelUnit="percent" max={100} value={systemInfo.system.global_cpu_usage} />
+                    <CustomGaugeChart fill={['#10b981', '#064e3b']} labels={[t('used-cpu'), t('free-cpu')]} labelUnit="percent" max={100} value={systemInfo.system.cpus.global} />
                 </div>
 
                 {/* Memory */}
@@ -93,7 +94,7 @@ export const SystemInfoPage: FC = () => {
                         <Heading3>{t('memory-usage')}</Heading3>
                     </span>
 
-                    <CustomGaugeChart fill={['#c4b5fd', '#6d28d9']} labels={[t('used-memory'), t('free-memory')]} labelUnit="capacity" max={systemInfo.system.total_memory} value={systemInfo.system.total_memory - systemInfo.system.free_memory} />
+                    <CustomGaugeChart fill={['#c4b5fd', '#6d28d9']} labels={[t('used-memory'), t('free-memory')]} labelUnit="capacity" max={systemInfo.system.mem_total} value={systemInfo.system.mem_total - systemInfo.system.mem_available} />
                 </div>
 
                 {/* Disk */}
@@ -112,10 +113,10 @@ export const SystemInfoPage: FC = () => {
 
                     <dl className="grid lg:grid-cols-2 gap-2 lg:gap-6 text-sm">
                         <dt className="font-medium text-[--fg-color]">{t('cpu-brand')}</dt>
-                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus[0].brand}</dd>
+                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.cpus[0].brand}</dd>
 
                         <dt className="font-medium text-[--fg-color]">{t('cpu-cores')}</dt>
-                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.length}</dd>
+                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.cpus.length}</dd>
 
                         <dt className="font-medium text-[--fg-color]">{t('podcast-size')}</dt>
                         <dd className="text-[--fg-secondary-color]">{calcPodcastSize()}</dd>

@@ -10,10 +10,10 @@ export interface SysInfo {
         nanos: number
     },
     global_cpu_usage: number
-    cpus: CPUModel[],
+    cpus: CPUModelAggregate,
     physical_core_count: number,
-    total_memory: number,
-    free_memory: number,
+    mem_total: number,
+    mem_available: number,
     used_memory: number,
     total_swap: number,
     free_swap: number,
@@ -27,6 +27,11 @@ export interface SysInfo {
     distribution_id: string,
     host_name: string,
 
+}
+
+type CPUModelAggregate = {
+    cpus: CPUModel[],
+    global: number
 }
 
 

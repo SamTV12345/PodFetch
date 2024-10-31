@@ -258,7 +258,7 @@ impl From<UpdateNameSettings> for Setting {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum ReplacementStrategy {
     ReplaceWithDashAndUnderscore,

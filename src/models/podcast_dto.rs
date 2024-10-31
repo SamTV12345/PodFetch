@@ -1,6 +1,7 @@
+use utoipa::ToSchema;
 use crate::models::tag::Tag;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct PodcastDto {
     pub(crate) id: i32,
     pub(crate) name: String,
