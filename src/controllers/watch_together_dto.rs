@@ -17,6 +17,15 @@ pub struct WatchTogetherDtoDelete {
     pub room_id: String,
 }
 
+impl WatchTogetherDtoDelete {
+    pub fn new(room_id: String) -> Self {
+        WatchTogetherDtoDelete {
+            room_id,
+        }
+    }
+}
+
+
 pub struct WatchTogetherDtoUpdate {
     pub room_id: String,
     pub room_name: String,

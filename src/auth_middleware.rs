@@ -213,6 +213,7 @@ where
                                 api_key: None,
                             },
                             &mut pool.get().unwrap(),
+                            None
                         )
                         .expect("Error inserting user");
                         req.extensions_mut().insert(user);
@@ -276,6 +277,7 @@ where
                                         api_key: None,
                                     },
                                     &mut pool.get().unwrap(),
+                                    None
                                 )
                                 .expect("Error inserting user");
                                 req.extensions_mut().insert(user);

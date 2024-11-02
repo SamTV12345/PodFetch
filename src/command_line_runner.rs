@@ -119,7 +119,7 @@ pub fn start_command_line(mut args: Args) {
 
                     if ask_for_confirmation().is_ok() {
                         user.password = Some(digest(user.password.unwrap()));
-                        if User::insert_user(&mut user, &mut establish_connection()).is_ok() {
+                        if User::insert_user(&mut user, &mut establish_connection(), None).is_ok() {
                             println!("User succesfully created")
                         }
                     }

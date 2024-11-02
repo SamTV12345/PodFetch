@@ -1,7 +1,5 @@
 use crate::constants::inner_constants::WATCH_TOGETHER_ID;
-use crate::controllers::watch_together_dto::{
-    WatchTogetherDto, WatchTogetherDtoCreate,
-};
+use crate::controllers::watch_together_dto::{WatchTogetherDto, WatchTogetherDtoCreate, WatchTogetherDtoDelete};
 use crate::models::user::User;
 use crate::models::watch_together_users::WatchTogetherUser;
 use crate::models::watch_togethers::WatchTogether;
@@ -9,7 +7,6 @@ use crate::service::WatchTogetherService;
 use crate::utils::error::{map_r2d2_error, CustomError};
 use crate::utils::jwt_watch_together::generate_watch_together_id;
 use crate::DbPool;
-use actix::ActorStreamExt;
 use actix_web::cookie::Cookie;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Scope};
@@ -26,7 +23,7 @@ pub async fn get_watch_together(
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
     .map(|watch_together| watch_together.map(|watch_together| watch_together.into()))
-    .map_err(|e| CustomError::Unknown)?;
+    .map_err(|_| CustomError::Unknown)?;
     Ok(HttpResponse::Ok().json(watch_together))
 }
 
@@ -45,7 +42,7 @@ pub async fn get_available_watch_togethers(
             .map(Into::<WatchTogetherDto>::into)
             .collect()
     })
-    .map_err(|e| CustomError::Unknown)
+    .map_err(|_| CustomError::Unknown)
     .map(|watch_together: Vec<WatchTogetherDto>| HttpResponse::Ok().json(watch_together))
 }
 
@@ -140,7 +137,7 @@ pub async fn delete_watch_together(
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(WatchTogetherDtoDelete::new(room_id_to_delete)))
 }
 
 pub fn watch_together_routes() -> Scope {

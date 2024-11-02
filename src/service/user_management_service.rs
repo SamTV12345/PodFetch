@@ -62,7 +62,7 @@ impl UserManagementService {
 
                         // This is safe as only when basic auth is enabled, the password is set
                         if Self::is_valid_password(password.clone()) {
-                            match User::insert_user(&mut actual_user, conn) {
+                            match User::insert_user(&mut actual_user, conn, None) {
                                 Ok(user) => {
                                     Invite::invalidate_invite(invite_id.clone(), conn)
                                         .expect("Error invalidating invite");

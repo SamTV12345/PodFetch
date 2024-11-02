@@ -1,10 +1,10 @@
 use crate::controllers::watch_together_dto::WatchTogetherDto;
 use crate::dbconfig::schema::watch_togethers;
 use crate::dbconfig::DBType;
-use crate::utils::error::{map_db_error, CustomError};
-use diesel::{AsChangeset, ExpressionMethods, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl};
-use utoipa::ToSchema;
 use crate::models::watch_together_users_to_room_mappings::WatchTogetherUsersToRoomMapping;
+use crate::utils::error::{map_db_error, CustomError};
+use diesel::{AsChangeset, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl};
+use utoipa::ToSchema;
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 pub struct WatchTogether {

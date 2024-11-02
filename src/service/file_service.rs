@@ -459,7 +459,7 @@ mod tests {
             replacement_strategy: "replace-with-dash-and-underscore".to_string(),
             replace_invalid_characters: true,
             use_existing_filename: false,
-
+            jwt_key: None,
             podcast_prefill: 0,
             direct_paths: false,
         };
@@ -483,7 +483,7 @@ mod tests {
             replacement_strategy: "remove".to_string(),
             replace_invalid_characters: true,
             use_existing_filename: false,
-
+            jwt_key: None,
             podcast_prefill: 0,
             direct_paths: false,
         };
@@ -507,7 +507,7 @@ mod tests {
             replacement_strategy: "replace-with-dash".to_string(),
             replace_invalid_characters: true,
             use_existing_filename: false,
-
+            jwt_key: None,
             podcast_prefill: 0,
             direct_paths: false,
         };
@@ -532,6 +532,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            jwt_key: None,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -574,6 +575,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            jwt_key: None,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -615,6 +617,7 @@ mod tests {
             replace_invalid_characters: true,
             use_existing_filename: false,
             podcast_prefill: 0,
+            jwt_key: None,
             direct_paths: false,
         };
 
@@ -658,6 +661,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            jwt_key: None,
         };
 
         let podcast_episode = PodcastParsed {
@@ -687,6 +691,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            jwt_key: None,
         };
 
         let podcast_episode = PodcastParsed {

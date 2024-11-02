@@ -1,6 +1,5 @@
 use crate::controllers::web_socket::chat_ws;
 use std::ops::DerefMut;
-use actix::ActorStreamExt;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
@@ -22,7 +21,6 @@ use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
-use sha1::digest::typenum::private::Trim;
 use tokio::task::spawn_local;
 
 #[utoipa::path(

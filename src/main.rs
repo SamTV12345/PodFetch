@@ -89,7 +89,7 @@ use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
-
+use crate::models::user::User;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
@@ -228,6 +228,7 @@ async fn main() -> std::io::Result<()> {
         let mut scheduler = Scheduler::new();
 
         ENVIRONMENT_SERVICE.get().unwrap().get_environment();
+        User::check_if_admin_is_saved().expect("Could not check if admin is saved");
         let polling_interval = ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
             let conn = &mut establish_connection();

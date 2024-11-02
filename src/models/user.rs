@@ -4,7 +4,7 @@ use crate::constants::inner_constants::{
 use crate::dbconfig::schema::users;
 use crate::dbconfig::DBType;
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{map_db_error, map_io_error, CustomError};
 use crate::DBType as DbConnection;
 use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
@@ -15,6 +15,7 @@ use diesel::QueryDsl;
 use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use std::io::Error;
 use utoipa::ToSchema;
+use crate::config::dbconfig::establish_connection;
 
 #[derive(
     Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset,
@@ -95,27 +96,38 @@ impl User {
         }
     }
 
-    pub fn insert_user(&mut self, conn: &mut DbConnection) -> Result<User, Error> {
+    pub fn insert_user(&mut self, conn: &mut DbConnection, opt_id_to_set: Option<i32>) ->
+                                                                                     Result<User,
+        Error> {
         use crate::dbconfig::schema::users::dsl::*;
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        if let Some(res) = env_service.username.clone() {
-            if res == self.username {
-                return Err(Error::new(
-                    std::io::ErrorKind::Other,
-                    "Username already exists",
-                ));
+        let res;
+        match opt_id_to_set {
+            Some(found_id)=>{
+                res = diesel::insert_into(users::table())
+                    .values((
+                        username.eq(self.username.clone()),
+                        role.eq(self.role.clone()),
+                        password.eq(self.password.clone()),
+                        created_at.eq(chrono::Utc::now().naive_utc()),
+                        id.eq(found_id),
+                    ))
+                    .get_result::<User>(conn)
+                    .unwrap();
+            }
+            None=>{
+                res = diesel::insert_into(users::table())
+                    .values((
+                        username.eq(self.username.clone()),
+                        role.eq(self.role.clone()),
+                        password.eq(self.password.clone()),
+                        created_at.eq(chrono::Utc::now().naive_utc()),
+                    ))
+                    .get_result::<User>(conn)
+                    .unwrap();
             }
         }
 
-        let res = diesel::insert_into(users::table())
-            .values((
-                username.eq(self.username.clone()),
-                role.eq(self.role.clone()),
-                password.eq(self.password.clone()),
-                created_at.eq(chrono::Utc::now().naive_utc()),
-            ))
-            .get_result::<User>(conn)
-            .unwrap();
+
         Ok(res)
     }
 
@@ -152,7 +164,7 @@ impl User {
         let password: Option<String> = env_service.password.clone();
         let username = env_service.username.clone();
         User {
-            id: 9999,
+            id: 999999,
             username: username.unwrap_or(STANDARD_USER.to_string()),
             role: Role::Admin.to_string(),
             password,
@@ -214,7 +226,7 @@ impl User {
         if auth_header.is_none() {
             return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
         }
-        return Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap());
+        Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap())
     }
 
     pub fn check_if_admin_or_uploader(
@@ -230,6 +242,30 @@ impl User {
             }
         }
         Ok(None)
+    }
+
+    pub fn check_if_admin_is_saved() -> Result<(), CustomError> {
+        let mut admin_user = Self::create_admin_user();
+        let mut conn = establish_connection();
+
+        let found_user = User::find_user_by_id(admin_user.id, &mut conn)?;
+
+        if found_user.is_none() {
+            admin_user.insert_user(&mut conn, Some(admin_user.id)).map_err(|e|map_io_error(e, None))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn find_user_by_id(user_id: i32, conn: &mut DbConnection) -> Result<Option<User>,
+        CustomError> {
+        use crate::dbconfig::schema::users::dsl::*;
+        let user = users
+            .filter(id.eq(user_id))
+            .first::<User>(conn)
+            .optional()
+            .map_err(map_db_error)?;
+        Ok(user)
     }
 
     pub fn check_if_admin(

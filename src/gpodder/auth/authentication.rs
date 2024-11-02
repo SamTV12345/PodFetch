@@ -83,6 +83,7 @@ fn handle_proxy_auth(
                                 api_key: None,
                             },
                             &mut conn.get().unwrap(),
+                            None
                         )
                         .expect("Error inserting user on auto registering");
                         handle_proxy_auth(rq, username.clone(), conn, env)
