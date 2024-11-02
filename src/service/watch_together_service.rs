@@ -22,12 +22,10 @@ impl WatchTogetherService {
         let watch_together = WatchTogether::new(
             None,
             &random_room_id,
-            unwrapped_requester.username.clone(),
             watch_together_create.room_name.clone(),
         );
         let saved_watch_together = watch_together.save_watch_together(conn)?;
         let watch_together_user = WatchTogetherUser::new(
-            None,
             saved_watch_together.id.unwrap(),
             unwrapped_requester.username.clone(),
             "admin".to_string(),

@@ -1,10 +1,10 @@
+use crate::dbconfig::schema::watch_together_users_to_room_mappings::dsl::watch_together_users_to_room_mappings;
 use std::fmt::{Display, Formatter};
 use diesel::{AsChangeset, Insertable, OptionalExtension, Queryable, RunQueryDsl};
 use diesel::associations::HasTable;
 use utoipa::ToSchema;
 use crate::dbconfig::DBType;
 use crate::utils::error::{map_db_error, CustomError};
-
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 pub struct WatchTogetherUsersToRoomMapping {
@@ -14,19 +14,25 @@ pub struct WatchTogetherUsersToRoomMapping {
     pub subject: String,
     #[diesel(sql_type=String)]
     pub status: String,
+    #[diesel(sql_type=String)]
+    pub role: String
 }
 
 
 impl WatchTogetherUsersToRoomMapping {
 
-    fn get_by_user_and_room_id(user: &str, room_id: i32, conn: &mut DBType) -> Result<Option<WatchTogetherUsersToRoomMapping>, CustomError> {
+    pub(crate) fn get_by_user_and_room_id(subject_to_find: &str, room_id_to_search: &str, conn:
+    &mut DBType)
+        ->
+                                                                             Result<Option<WatchTogetherUsersToRoomMapping>, CustomError> {
         use crate::dbconfig::schema::watch_together_users_to_room_mappings::dsl::*;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
 
+
         watch_together_users_to_room_mappings
-            .filter(subject.eq(user))
-            .filter(room_id.eq(room_id))
+            .filter(subject.eq(subject_to_find))
+            .filter(room_id.eq(room_id_to_search))
             .first::<WatchTogetherUsersToRoomMapping>(conn)
             .optional()
             .map_err(map_db_error)

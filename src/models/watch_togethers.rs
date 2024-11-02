@@ -1,15 +1,12 @@
 use crate::controllers::watch_together_dto::WatchTogetherDto;
-use crate::dbconfig::schema::watch_together_users::name;
 use crate::dbconfig::schema::watch_togethers;
 use crate::dbconfig::DBType;
 use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
-use diesel::{
-    AsChangeset, BoolExpressionMethods, ExpressionMethods, Insertable, OptionalExtension, QueryDsl,
-    Queryable, RunQueryDsl,
-};
+use diesel::{AsChangeset, ExpressionMethods, Insertable, JoinOnDsl, OptionalExtension, QueryDsl, Queryable, RunQueryDsl, Table};
 use utoipa::ToSchema;
-use crate::models::watch_together_users_to_room_mappings::WatchTogetherUsersToRoomMapping;
+use crate::dbconfig::schema::watch_together_users_to_room_mappings::dsl::watch_together_users_to_room_mappings;
+use crate::models::watch_together_users_to_room_mappings::{WatchTogetherStatus, WatchTogetherUsersToRoomMapping};
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 pub struct WatchTogether {
@@ -64,14 +61,12 @@ impl WatchTogether {
     }
 
     pub fn delete_watch_together(
-        watch_together_user_id: i32,
-        watch_together_room_id_to_search: String,
+        watch_together_room_id_to_search: &str,
         connection: &mut DBType,
     ) -> Result<(), CustomError> {
         use crate::dbconfig::schema::watch_togethers::dsl::*;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
-        let user_found = User::get_user_by_userid(watch_together_user_id, connection)?;
         let watch_together = Self::get_watch_together_by_id(&watch_together_room_id_to_search,
                                                      connection)?;
         if watch_together.is_none() {
@@ -104,6 +99,29 @@ impl WatchTogether {
             .filter(room_id.eq(room_code_to_search))
             .first(connection)
             .optional()
+            .map_err(map_db_error)
+    }
+
+
+    pub fn get_watch_together_by_admin(
+        admin: i32,
+        connection: &mut DBType,
+    ) -> Result<Vec<WatchTogether>, CustomError> {
+        use crate::dbconfig::schema::watch_togethers::dsl::*;
+        use diesel::ExpressionMethods;
+        use diesel::QueryDsl;
+        use crate::dbconfig::schema::watch_togethers::room_id as w_t_room_id;
+        use crate::dbconfig::schema::watch_together_users_to_room_mappings::room_id as
+        w_t_m_room_id;
+        use crate::dbconfig::schema::watch_together_users_to_room_mappings::status as w_t_u_mapping_status;
+
+
+        watch_togethers
+            .inner_join(watch_together_users_to_room_mappings.on(w_t_room_id.eq(w_t_m_room_id)))
+            .filter(room_name.eq(admin))
+            .filter(w_t_u_mapping_status.eq(WatchTogetherStatus::Admin.to_string()))
+            .select(watch_togethers::all_columns())
+            .load(connection)
             .map_err(map_db_error)
     }
 }

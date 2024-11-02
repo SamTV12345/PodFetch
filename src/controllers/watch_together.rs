@@ -7,13 +7,14 @@ use crate::models::watch_together_users::WatchTogetherUser;
 use crate::models::watch_togethers::WatchTogether;
 use crate::service::WatchTogetherService;
 use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::utils::jwt_watch_together::generate_watch_together_id;
 use crate::DbPool;
 use actix::ActorStreamExt;
 use actix_web::cookie::Cookie;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Responder, Scope};
 use std::ops::DerefMut;
-use crate::utils::jwt_watch_together::generate_watch_together_id;
+use crate::models::watch_together_users_to_room_mappings::{WatchTogetherStatus, WatchTogetherUsersToRoomMapping};
 
 #[get("/{watch_id}")]
 pub async fn get_watch_together(
@@ -35,7 +36,7 @@ pub async fn get_available_watch_togethers(
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     WatchTogether::get_watch_together_by_admin(
-        requester.unwrap().username.clone(),
+        requester.unwrap().id,
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
     .map(|watch_together| {
@@ -61,48 +62,26 @@ pub async fn create_watch_together(
 
     // If the user has never created a watch together room
     if cookie.is_none() {
-        let watch_together = WatchTogetherUser::get_watch_together_by_username(
-            &unwrapped_requester.username,
-            conn.get().map_err(map_r2d2_error)?.deref_mut(),
-        )?;
         // Check if this user uses a new device which does not have the cookie
-        match watch_together {
-            Some(w) => {
-                let watch_together = WatchTogetherService::create_watch_together(
-                    &data.into_inner(),
-                    conn.get().map_err(map_r2d2_error)?.deref_mut(),
-                    &unwrapped_requester,
-                )?;
+        let watch_together = WatchTogetherService::create_watch_together(
+            &data.into_inner(),
+            conn.get().map_err(map_r2d2_error)?.deref_mut(),
+            &unwrapped_requester,
+        )?;
 
-
-                let id = generate_watch_together_id(Some(w.user.clone()), None, conn.get().map_err
-                (map_r2d2_error)?.deref_mut());
-
-                Ok(HttpResponse::Ok()
-                    .cookie(
-                        Cookie::build(WATCH_TOGETHER_ID, id)
-                            .http_only(true)
-                            .finish(),
-                    )
-                    .json(watch_together))
-            }
-            None => {
-                let watch_together = WatchTogetherService::create_watch_together(
-                    &data.into_inner(),
-                    conn.get().map_err(map_r2d2_error)?.deref_mut(),
-                    &unwrapped_requester,
-                )?;
-
-                cookie_to_send = Some(
-                    Cookie::build(WATCH_TOGETHER_ID, unwrapped_requester.username.clone())
-                        .http_only(true)
-                        .finish(),
-                );
-                Ok(HttpResponse::Ok()
-                    .cookie(cookie_to_send.unwrap())
-                    .json(watch_together))
-            }
-        }
+        let id = generate_watch_together_id(
+            Some(unwrapped_requester.username.clone()),
+            None,
+            conn.get().map_err(map_r2d2_error)?.deref_mut(),
+        );
+        cookie_to_send = Some(
+            Cookie::build(WATCH_TOGETHER_ID, id)
+                .http_only(true)
+                .finish(),
+        );
+        Ok(HttpResponse::Ok()
+            .cookie(cookie_to_send.unwrap())
+            .json(watch_together))
     } else {
         // Cookie is already present for this user
         let watch_together = WatchTogetherService::create_watch_together(
@@ -115,7 +94,7 @@ pub async fn create_watch_together(
     }
 }
 
-#[delete("/{room_id}")]
+//#[delete("/{room_id}")]
 pub async fn delete_watch_together(
     data: Path<String>,
     requester: Option<web::ReqData<User>>,
@@ -126,8 +105,23 @@ pub async fn delete_watch_together(
     }
 
     let unwrapped_requester = requester.unwrap();
-    let watch_together = WatchTogetherUser::get_watch_together_by_username(
-        &unwrapped_requester.username,
+
+    let opt_watch_together_user = WatchTogetherUser::get_watch_together_users_by_user_id(
+        unwrapped_requester.id,
+        conn.get().map_err(map_r2d2_error)?.deref_mut(),
+    )?;
+
+    if opt_watch_together_user.is_none() {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+
+    let watch_together_users = opt_watch_together_user.unwrap();
+
+    let room_id_to_delete = data.into_inner();
+
+    let watch_together = WatchTogetherUsersToRoomMapping::get_by_user_and_room_id(
+        &watch_together_users.subject,
+        &room_id_to_delete,
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
 
@@ -135,14 +129,14 @@ pub async fn delete_watch_together(
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    let watch_together = watch_together.unwrap();
-    if watch_together.user != unwrapped_requester.username {
+
+    let watch_together_room_mapping = watch_together.unwrap();
+    if watch_together_room_mapping.role == WatchTogetherStatus::Admin.to_string() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
     WatchTogether::delete_watch_together(
-        unwrapped_requester.id,
-        data.clone(),
+        &room_id_to_delete,
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
 
