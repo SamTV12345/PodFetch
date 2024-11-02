@@ -5,6 +5,7 @@ use diesel::associations::HasTable;
 use utoipa::ToSchema;
 use crate::dbconfig::DBType;
 use crate::utils::error::{map_db_error, CustomError};
+use crate::dbconfig::schema::watch_together_users_to_room_mappings;
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset)]
 pub struct WatchTogetherUsersToRoomMapping {
@@ -53,7 +54,7 @@ impl WatchTogetherUsersToRoomMapping {
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
 
-        diesel::update(watch_together_users_to_room_mappings::table)
+        diesel::update(watch_together_users_to_room_mappings)
             .filter(subject.eq(&self.subject))
             .filter(room_id.eq(&self.room_id))
             .set(status.eq(&self.status))
@@ -68,7 +69,7 @@ impl WatchTogetherUsersToRoomMapping {
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
 
-        diesel::delete(watch_together_users_to_room_mappings::table)
+        diesel::delete(watch_together_users_to_room_mappings)
             .filter(room_id.eq(room_id_to_search))
             .execute(conn)
             .map_err(map_db_error)

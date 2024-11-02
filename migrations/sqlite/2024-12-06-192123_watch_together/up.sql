@@ -8,11 +8,13 @@ CREATE TABLE watch_togethers (
 
 
 CREATE TABLE watch_together_users (
+    --- uuid
     subject TEXT PRIMARY KEY NOT NULL,
     name TEXT NULL,
     user_id INTEGER NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
 
 
 CREATE TABLE watch_together_users_to_room_mappings (

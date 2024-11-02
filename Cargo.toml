@@ -10,7 +10,6 @@ built = {version="0.7.4", features=["chrono", "semver","cargo-lock"]}
 
 [features]
 default = ["sqlite", "postgresql"]
-mysql = ["diesel/mysql", "diesel_migrations/mysql", "diesel/mysql_backend"]
 postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", "r2d2_postgres",
     "diesel/postgres_backend"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35",

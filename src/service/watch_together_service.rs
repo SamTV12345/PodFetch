@@ -28,7 +28,6 @@ impl WatchTogetherService {
         let watch_together_user = WatchTogetherUser::new(
             saved_watch_together.id.unwrap(),
             unwrapped_requester.username.clone(),
-            "admin".to_string(),
             Some(unwrapped_requester.username.clone()),
         );
         watch_together_user.save_watch_together_users(conn)?;

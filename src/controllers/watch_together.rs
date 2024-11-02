@@ -35,8 +35,8 @@ pub async fn get_available_watch_togethers(
     requester: Option<web::ReqData<User>>,
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
-    WatchTogether::get_watch_together_by_admin(
-        requester.unwrap().id,
+    WatchTogetherUsersToRoomMapping::get_watch_together_by_admin(
+        requester.unwrap().username.clone(),
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
     .map(|watch_together| {
