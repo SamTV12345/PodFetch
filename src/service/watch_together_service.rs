@@ -25,12 +25,21 @@ impl WatchTogetherService {
             watch_together_create.room_name.clone(),
         );
         let saved_watch_together = watch_together.save_watch_together(conn)?;
-        let watch_together_user = WatchTogetherUser::new(
-            saved_watch_together.id.unwrap(),
-            unwrapped_requester.username.clone(),
-            Some(unwrapped_requester.username.clone()),
-        );
-        watch_together_user.save_watch_together_users(conn)?;
+
+        let possible_found_user = WatchTogetherUser::get_watch_together_users_by_user_id
+        (unwrapped_requester.id, conn)?;
+
+
+        if possible_found_user.is_none() {
+            let watch_together_user = WatchTogetherUser::new(
+                uuid::Uuid::new_v4().to_string(),
+                Some(unwrapped_requester.username.clone()),
+                Some(unwrapped_requester.id),
+            );
+            watch_together_user.save_watch_together_users(conn)?;
+        }
+
+
         Ok(saved_watch_together.into())
     }
 }

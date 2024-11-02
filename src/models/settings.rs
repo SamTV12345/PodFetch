@@ -7,7 +7,6 @@ use crate::DBType as DbConnection;
 use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};
-use jwt_simple::algorithms::HS256Key;
 use jwt_simple::prelude::RS256KeyPair;
 use utoipa::ToSchema;
 

@@ -183,33 +183,30 @@ impl PodcastEpisode {
 
         let mut inserted_date = "".to_string();
 
-        match &item.pub_date {
-            Some(date) => {
-                let parsed_date = DateTime::parse_from_rfc2822(date);
+        if let Some(date) = &item.pub_date {
+            let parsed_date = DateTime::parse_from_rfc2822(date);
 
-                match parsed_date {
-                    Ok(date) => {
+            match parsed_date {
+                Ok(date) => {
+                    let conv_date = date.with_timezone(&Utc);
+                    inserted_date = conv_date.to_rfc3339()
+                }
+                Err(_) => {
+                    // Sometimes it occurs that day of the week and date are wrong. This just
+                    // takes the date and parses it
+                    let date_without_weekday = date[5..].to_string();
+                    DateTime::parse_from_str(
+                        &date_without_weekday,
+                        "%d %b %Y \
+                    %H:%M:%S %z",
+                    )
+                    .map(|date| {
                         let conv_date = date.with_timezone(&Utc);
                         inserted_date = conv_date.to_rfc3339()
-                    }
-                    Err(_) => {
-                        // Sometimes it occurs that day of the week and date are wrong. This just
-                        // takes the date and parses it
-                        let date_without_weekday = date[5..].to_string();
-                        DateTime::parse_from_str(
-                            &date_without_weekday,
-                            "%d %b %Y \
-                        %H:%M:%S %z",
-                        )
-                        .map(|date| {
-                            let conv_date = date.with_timezone(&Utc);
-                            inserted_date = conv_date.to_rfc3339()
-                        })
-                        .expect("Error parsing date");
-                    }
+                    })
+                    .expect("Error parsing date");
                 }
             }
-            None => {}
         }
 
         let inserted_image_url: String = match optional_image {

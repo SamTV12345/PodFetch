@@ -1,6 +1,6 @@
 use crate::constants::inner_constants::WATCH_TOGETHER_ID;
 use crate::controllers::watch_together_dto::{
-    WatchTogetherDto, WatchTogetherDtoCreate, WatchTogetherDtoDelete,
+    WatchTogetherDto, WatchTogetherDtoCreate,
 };
 use crate::models::user::User;
 use crate::models::watch_together_users::WatchTogetherUser;
@@ -12,7 +12,7 @@ use crate::DbPool;
 use actix::ActorStreamExt;
 use actix_web::cookie::Cookie;
 use actix_web::web::{Data, Json, Path};
-use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Responder, Scope};
+use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Scope};
 use std::ops::DerefMut;
 use crate::models::watch_together_users_to_room_mappings::{WatchTogetherStatus, WatchTogetherUsersToRoomMapping};
 
@@ -36,13 +36,13 @@ pub async fn get_available_watch_togethers(
     conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     WatchTogetherUsersToRoomMapping::get_watch_together_by_admin(
-        requester.unwrap().username.clone(),
+        requester.unwrap().id,
         conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
     .map(|watch_together| {
         watch_together
             .into_iter()
-            .map(|watch_together| Into::<WatchTogetherDto>::into(watch_together))
+            .map(Into::<WatchTogetherDto>::into)
             .collect()
     })
     .map_err(|e| CustomError::Unknown)
@@ -94,7 +94,7 @@ pub async fn create_watch_together(
     }
 }
 
-//#[delete("/{room_id}")]
+#[delete("/{room_id}")]
 pub async fn delete_watch_together(
     data: Path<String>,
     requester: Option<web::ReqData<User>>,
