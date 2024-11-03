@@ -68,7 +68,7 @@ pub async fn create_watch_together(
 
         let id = generate_watch_together_id(
             Some(unwrapped_requester.username.clone()),
-            None,
+            Some(watch_together.1.clone().subject),
             conn.get().map_err(map_r2d2_error)?.deref_mut(),
         );
         cookie_to_send = Some(
@@ -78,7 +78,7 @@ pub async fn create_watch_together(
         );
         Ok(HttpResponse::Ok()
             .cookie(cookie_to_send.unwrap())
-            .json(watch_together))
+            .json(watch_together.0))
     } else {
         // Cookie is already present for this user
         let watch_together = WatchTogetherService::create_watch_together(
@@ -87,7 +87,7 @@ pub async fn create_watch_together(
             &unwrapped_requester,
         )?;
 
-        Ok(HttpResponse::Ok().json(watch_together))
+        Ok(HttpResponse::Ok().json(watch_together.0))
     }
 }
 

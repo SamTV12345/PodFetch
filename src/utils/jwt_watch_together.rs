@@ -5,7 +5,7 @@ use crate::dbconfig::DBType;
 use crate::models::settings::Setting;
 use crate::utils::error::CustomError;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WatchTogetherUser {
     pub preferred_username: String,
 }
@@ -36,11 +36,5 @@ pub fn decode_watch_together_id(token: &str, conn: &mut DBType) -> Result<JWTCla
 }
 
 fn generate_subject() -> String {
-    use rand::distributions::Alphanumeric;
-    use rand::{thread_rng, Rng};
-    thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(30)
-        .map(char::from)
-        .collect()
+    uuid::Uuid::new_v4().to_string()
 }

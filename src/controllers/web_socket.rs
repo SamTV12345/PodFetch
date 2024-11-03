@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::interval;
 use crate::constants::inner_constants::MAIN_ROOM;
+use crate::models::watch_together_users::WatchTogetherUser;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -20,7 +21,8 @@ pub async fn chat_ws(
     chat_server: ChatServerHandle,
     mut session: actix_ws::Session,
     msg_stream: actix_ws::MessageStream,
-    room_id: Option<RoomId>
+    room_id: Option<RoomId>,
+    watch_together_user: Option<WatchTogetherUser>
 ) {
     log::info!("connected");
 
@@ -66,10 +68,12 @@ pub async fn chat_ws(
                     }
 
                     AggregatedMessage::Text(text) => {
-                        process_text_msg(&chat_server, &mut session, &text, conn_id, &mut name)
-                            .await;
+                        if let Some(watch_together_user) = watch_together_user.clone() {
+                            process_text_msg(&chat_server, &mut session, &text, conn_id, &mut
+                                name, watch_together_user)
+                                .await;
+                        }
                     }
-
                     AggregatedMessage::Binary(_bin) => {
                         log::warn!("unexpected binary message");
                     }
@@ -125,6 +129,7 @@ async fn process_text_msg(
     text: &str,
     conn: ConnId,
     name: &mut Option<String>,
+    watch_together_user: WatchTogetherUser
 ) {
     // strip leading and trailing whitespace (spaces, newlines, etc.)
     let msg = text.trim();
@@ -134,12 +139,25 @@ async fn process_text_msg(
         let mut cmd_args = msg.splitn(2, ' ');
 
         // unwrap: we have guaranteed non-zero string length already
-        cmd_args.next().unwrap();
-        {
-            session
-                .text(format!("!!! unknown command: {msg}"))
-                .await
-                .unwrap();
+        match cmd_args.next().unwrap() {
+            "/join"=>  match cmd_args.next(){
+                Some(room) => {
+                    log::info!("conn {conn}: joining room {room}");
+
+                    chat_server.join_room(conn, room, watch_together_user).await;
+
+                    session.text(format!("joined {room}")).await.unwrap();
+                },
+                None => {
+                    session.text("!!! room name is required").await.unwrap();
+                }
+            }
+            _=> {
+                session
+                    .text(format!("!!! unknown command: {msg}"))
+                    .await
+                    .unwrap();
+            }
         }
     } else {
         // prefix message with our name, if assigned

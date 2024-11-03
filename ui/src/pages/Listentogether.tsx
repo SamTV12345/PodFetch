@@ -1,6 +1,7 @@
 import {CustomInput} from "../components/CustomInput";
 import {useForm} from "react-hook-form";
 import { SlArrowRight } from "react-icons/sl";
+import axios from "axios";
 
 
 type FormListenProps = {
@@ -12,7 +13,7 @@ export const ListenTogether = ()=>{
 
 
     const onSubmit = (data: FormListenProps) => {
-
+        axios.get("/listen-together/")
     }
 
     return <form className="grid place-items-center bg-radial-mustard h-full" onSubmit={handleSubmit(onSubmit)}>

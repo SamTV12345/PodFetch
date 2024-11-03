@@ -3,6 +3,7 @@ use rand::random;
 use std::collections::{HashMap, HashSet};
 use std::io;
 use tokio::sync::{mpsc, oneshot};
+use crate::models::watch_together_users::WatchTogetherUser;
 
 pub type RoomId = String;
 pub type ConnId = usize;
@@ -35,6 +36,7 @@ enum Command {
         conn: ConnId,
         room: RoomId,
         res_tx: oneshot::Sender<()>,
+        watch_together_user: WatchTogetherUser
     },
 
     Message {
@@ -55,7 +57,8 @@ pub struct ChatServer {
     sessions: HashMap<ConnId, mpsc::UnboundedSender<Msg>>,
 
     /// Map of room name to participant IDs in that room.
-    rooms: HashMap<RoomId, HashSet<ConnId>>,
+    /// It is empty for the main room
+    rooms: HashMap<RoomId, HashMap<ConnId, Option<WatchTogetherUser>>>,
 
     /// Tracks total number of historical connections established.
     //visitor_count: Arc<AtomicUsize>,
@@ -70,7 +73,7 @@ impl ChatServer {
         let mut rooms = HashMap::with_capacity(4);
 
         // create default room
-        rooms.insert(MAIN_ROOM.parse().unwrap(), HashSet::new());
+        rooms.insert(MAIN_ROOM.parse().unwrap(), HashMap::new());
 
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
@@ -91,7 +94,7 @@ impl ChatServer {
             let msg = msg.into();
 
             for conn_id in sessions {
-                if let Some(tx) = self.sessions.get(conn_id) {
+                if let Some(tx) = self.sessions.get(conn_id.0) {
                     // errors if client disconnected abruptly and hasn't been timed-out yet
                     let _ = tx.send(msg.clone());
                 }
@@ -107,8 +110,8 @@ impl ChatServer {
             let msg = msg.into();
 
             for conn_id in sessions {
-                if *conn_id != skip {
-                    if let Some(tx) = self.sessions.get(conn_id) {
+                if *conn_id.0 != skip {
+                    if let Some(tx) = self.sessions.get(conn_id.0) {
                         // errors if client disconnected abruptly and hasn't been timed-out yet
                         let _ = tx.send(msg.clone());
                     }
@@ -125,7 +128,7 @@ impl ChatServer {
         if let Some(room) = self
             .rooms
             .iter()
-            .find_map(|(room, participants)| participants.contains(&conn).then_some(room))
+            .find_map(|(room, participants)| participants.contains_key(&conn).then_some(room))
         {
             self.send_system_message(room, conn, msg).await;
         };
@@ -149,12 +152,12 @@ impl ChatServer {
             self.rooms
                 .entry(room_id)
                 .or_default()
-                .insert(id);
+                .insert(id, None);
             log::info!("Joined main room");
-        } else {
+        } /*else {
             // join room for real so we also notify the others
             self.join_room(id, room_id).await;
-        }
+        }*/
 
         //let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
         /*self.send_system_message("main", 0, format!("Total visitors {count}"))
@@ -174,7 +177,7 @@ impl ChatServer {
         if self.sessions.remove(&conn_id).is_some() {
             // remove session from all rooms
             for (name, sessions) in &mut self.rooms {
-                if sessions.remove(&conn_id) {
+                if sessions.remove(&conn_id).is_some() {
                     rooms.push(name.to_owned());
                 }
             }
@@ -193,12 +196,13 @@ impl ChatServer {
     }
 
     /// Join room, send disconnect message to old room send join message to new room.
-    async fn join_room(&mut self, conn_id: ConnId, room: RoomId) {
+    async fn join_room(&mut self, conn_id: ConnId, room: RoomId,
+                       opt_watch_together_user: Option<WatchTogetherUser>) {
         let mut rooms = Vec::new();
 
         // remove session from all rooms
         for (n, sessions) in &mut self.rooms {
-            if sessions.remove(&conn_id) {
+            if sessions.remove(&conn_id).is_some() {
                 rooms.push(n.to_owned());
             }
         }
@@ -208,7 +212,7 @@ impl ChatServer {
                 .await;
         }
 
-        self.rooms.entry(room.clone()).or_default().insert(conn_id);
+        self.rooms.entry(room.clone()).or_default().insert(conn_id, opt_watch_together_user);
 
         self.send_system_message(&room, conn_id, "Someone connected")
             .await;
@@ -237,8 +241,8 @@ impl ChatServer {
                     let _ = res_tx.send(self.list_rooms());
                 }
 
-                Command::Join { conn, room, res_tx } => {
-                    self.join_room(conn, room).await;
+                Command::Join { conn, room, res_tx, watch_together_user } => {
+                    self.join_room(conn, room, Some(watch_together_user)).await;
                     let _ = res_tx.send(());
                 }
                 Command::Message { conn, msg, res_tx } => {
@@ -286,7 +290,7 @@ impl ChatServerHandle {
     }
 
     /// Join `room`, creating it if it does not exist.
-    pub async fn join_room(&self, conn: ConnId, room: impl Into<RoomId>) {
+    pub async fn join_room(&self, conn: ConnId, room: impl Into<RoomId>, watch_together_user: WatchTogetherUser) {
         let (res_tx, res_rx) = oneshot::channel();
 
         // unwrap: chat server should not have been dropped
@@ -295,6 +299,7 @@ impl ChatServerHandle {
                 conn,
                 room: room.into(),
                 res_tx,
+                watch_together_user,
             })
             .unwrap();
 

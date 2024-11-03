@@ -13,7 +13,7 @@ impl WatchTogetherService {
         watch_together_create: &WatchTogetherDtoCreate,
         conn: &mut DBType,
         unwrapped_requester: &User,
-    ) -> Result<WatchTogetherDto, CustomError> {
+    ) -> Result<(WatchTogetherDto, WatchTogetherUser), CustomError> {
         let mut random_room_id = WatchTogether::random_room_id();
         // Check if the room id is already in use
         while WatchTogether::get_watch_together_by_id(&random_room_id.clone(), conn)?.is_some() {
@@ -42,15 +42,18 @@ impl WatchTogetherService {
             possible_found_user = Some(watch_together_user);
         }
 
+        // unwrap: Safe as we have just checked if the user exists and create it if it does not
+        let unwrapped_user = possible_found_user.clone().unwrap();
+
         let watch_together_mapping = WatchTogetherUsersToRoomMapping::new(
             saved_watch_together.id.unwrap(),
-            &possible_found_user.unwrap().subject,
+            &unwrapped_user.subject,
             WatchTogetherStatus::Accepted,
             WatchTogetherRole::Admin,
         );
 
         watch_together_mapping.insert_watch_together_user_to_room_mapping(conn)?;
 
-        Ok(saved_watch_together.into())
+        Ok((saved_watch_together.into(), unwrapped_user))
     }
 }

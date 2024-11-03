@@ -44,6 +44,7 @@ import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
 import {ListenTogether} from "./pages/Listentogether";
 import {Watch2Gether} from "./pages/Watch2Gether";
+import {ListenTogetherDetail} from "./pages/ListenTogetherDetail";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -95,7 +96,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
         <Route path="/login" element={<Login />} />
         <Route path="/invite/:id" element={<AcceptInvite />}></Route>
         <Route path="/listentogether" element={<ListenTogether/>} />
-        <Route path="/listentogether/:id" element={<ListenTogether/>} />
+        <Route path="/listentogether/:id" element={<ListenTogetherDetail/>} />
     </>
 ), {
     basename: import.meta.env.BASE_URL

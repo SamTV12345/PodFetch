@@ -22,6 +22,8 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
+use crate::models::watch_together_users::WatchTogetherUser;
+use crate::utils::jwt_watch_together::{decode_watch_together_id};
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -37,7 +39,7 @@ pub async fn start_connection(
     let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
 
     // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, None));
+    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, None, None));
 
     Ok(res)
 }
@@ -49,6 +51,7 @@ pub async fn start_public_connection(
     body: web::Payload,
     chat_server: Data<ChatServerHandle>,
     room_id: web::Path<String>,
+    conn: Data<DbPool>,
 ) -> Result<HttpResponse, Error> {
     let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
 
@@ -67,9 +70,20 @@ pub async fn start_public_connection(
         return Ok(HttpResponse::BadRequest().body("No watch together id found"));
     }
 
+    let cookie = req.cookie(WATCH_TOGETHER_ID).unwrap();
+
+    let unwrapped_user_session = cookie.value();
+    let watch_together_user = decode_watch_together_id(&unwrapped_user_session, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+
+    if watch_together_user.subject.is_none() {
+        return Ok(HttpResponse::BadRequest().body("No subject found in watch together id"));
+    }
+
+    let loaded_watch_together_user = WatchTogetherUser::get_watch_together_users_by_id(watch_together_user.subject.unwrap(), conn.get().map_err(map_r2d2_error)?.deref_mut())?;
 
     // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, Some(trimmed_room_id.into())));
+    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream, Some(trimmed_room_id.into()
+    ), loaded_watch_together_user));
 
     Ok(res)
 }
