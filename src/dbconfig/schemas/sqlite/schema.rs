@@ -241,6 +241,7 @@ diesel::joinable!(podcast_episodes -> podcasts (podcast_id));
 diesel::joinable!(tags_podcasts -> podcasts (podcast_id));
 diesel::joinable!(tags_podcasts -> tags (tag_id));
 diesel::joinable!(watch_together_users -> users (user_id));
+diesel::joinable!(watch_together_users_to_room_mappings -> watch_together_users (subject));
 diesel::joinable!(watch_together_users_to_room_mappings -> watch_togethers (room_id));
 
 diesel::allow_tables_to_appear_in_same_query!(

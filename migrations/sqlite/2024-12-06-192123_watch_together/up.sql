@@ -23,7 +23,7 @@ CREATE TABLE watch_together_users_to_room_mappings (
     status TEXT NOT NULL,
     role TEXT NOT NULL,
     FOREIGN KEY (room_id) REFERENCES watch_togethers(id),
-    FOREIGN KEY (subject) REFERENCES watch_together_users(name),
+    FOREIGN KEY (subject) REFERENCES watch_together_users(subject),
     PRIMARY KEY (room_id, subject)
 );
 

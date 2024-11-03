@@ -24,6 +24,16 @@ pub struct WatchTogetherUsersToRoomMapping {
 
 impl WatchTogetherUsersToRoomMapping {
 
+    pub fn new(room_id: i32, subject: &str, status: WatchTogetherStatus, role: WatchTogetherRole) ->
+                                                                                            Self {
+        WatchTogetherUsersToRoomMapping {
+            room_id,
+            subject: subject.to_string(),
+            status: status.to_string(),
+            role: role.to_string()
+        }
+    }
+
     pub(crate) fn get_by_user_and_room_id(subject_to_find: &str, room_id_to_search: &str, conn:
     &mut DBType)
         ->
@@ -59,15 +69,15 @@ impl WatchTogetherUsersToRoomMapping {
         watch_together_users_to_room_mappings
             .inner_join(watch_togethers.on(room_id.eq(watch_together_room_id)))
             .inner_join(watch_together_users.on(subject.eq(wtu_subject)))
-            .filter(role.eq(WatchTogetherStatus::Admin.to_string()))
+            .filter(role.eq(WatchTogetherRole::Admin.to_string()))
             .filter(user_id.eq(admin_user_id))
             .select(watch_togethers::all_columns())
             .load::<WatchTogether>(conn)
             .map_err(map_db_error)
     }
 
-
-    fn insert_watch_together_user_to_room_mapping(&self, conn: &mut DBType) -> Result<(), CustomError> {
+    pub fn insert_watch_together_user_to_room_mapping(&self, conn: &mut DBType) -> Result<(),
+    CustomError> {
         use crate::dbconfig::schema::watch_together_users_to_room_mappings;
 
         diesel::insert_into(watch_together_users_to_room_mappings::table)
@@ -110,8 +120,20 @@ pub enum WatchTogetherStatus {
     Pending,
     Accepted,
     Rejected,
-    User,
-    Admin
+}
+
+pub enum WatchTogetherRole {
+    Admin,
+    User
+}
+
+impl Display for WatchTogetherRole {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WatchTogetherRole::Admin => write!(f, "Admin"),
+            WatchTogetherRole::User => write!(f, "User"),
+        }
+    }
 }
 
 
@@ -121,8 +143,6 @@ impl Display for WatchTogetherStatus {
             WatchTogetherStatus::Pending => write!(f, "Pending"),
             WatchTogetherStatus::Accepted => write!(f, "Accepted"),
             WatchTogetherStatus::Rejected => write!(f, "Rejected"),
-            WatchTogetherStatus::User => write!(f, "User"),
-            WatchTogetherStatus::Admin => write!(f, "Admin"),
         }
     }
 }
@@ -134,8 +154,6 @@ impl WatchTogetherStatus {
             "Pending" => WatchTogetherStatus::Pending,
             "Accepted" => WatchTogetherStatus::Accepted,
             "Rejected" => WatchTogetherStatus::Rejected,
-            "User" => WatchTogetherStatus::User,
-            "Admin" => WatchTogetherStatus::Admin,
             _ => WatchTogetherStatus::Pending
         }
     }

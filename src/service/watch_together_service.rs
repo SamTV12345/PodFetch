@@ -2,6 +2,7 @@ use crate::controllers::watch_together_dto::{WatchTogetherDto, WatchTogetherDtoC
 use crate::dbconfig::DBType;
 use crate::models::user::User;
 use crate::models::watch_together_users::WatchTogetherUser;
+use crate::models::watch_together_users_to_room_mappings::{WatchTogetherRole, WatchTogetherStatus, WatchTogetherUsersToRoomMapping};
 use crate::models::watch_togethers::WatchTogether;
 use crate::utils::error::CustomError;
 
@@ -26,7 +27,7 @@ impl WatchTogetherService {
         );
         let saved_watch_together = watch_together.save_watch_together(conn)?;
 
-        let possible_found_user = WatchTogetherUser::get_watch_together_users_by_user_id
+        let mut possible_found_user = WatchTogetherUser::get_watch_together_users_by_user_id
         (unwrapped_requester.id, conn)?;
 
 
@@ -37,8 +38,18 @@ impl WatchTogetherService {
                 Some(unwrapped_requester.id),
             );
             watch_together_user.save_watch_together_users(conn)?;
+
+            possible_found_user = Some(watch_together_user);
         }
 
+        let watch_together_mapping = WatchTogetherUsersToRoomMapping::new(
+            saved_watch_together.id.unwrap(),
+            &possible_found_user.unwrap().subject,
+            WatchTogetherStatus::Accepted,
+            WatchTogetherRole::Admin,
+        );
+
+        watch_together_mapping.insert_watch_together_user_to_room_mapping(conn)?;
 
         Ok(saved_watch_together.into())
     }

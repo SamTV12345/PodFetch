@@ -47,7 +47,7 @@ fn handle_proxy_auth(
 ) -> Result<HttpResponse, CustomError> {
     let config = env.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
-    return match opt_authorization {
+    match opt_authorization {
         Some(auth) => {
             let auth_val = auth.to_str().unwrap();
 
@@ -57,7 +57,7 @@ fn handle_proxy_auth(
                 return Err(CustomError::Forbidden);
             }
 
-            return match User::find_by_username(
+            match User::find_by_username(
                 auth_val,
                 conn.get().map_err(map_r2d2_error)?.deref_mut(),
             ) {
@@ -92,10 +92,10 @@ fn handle_proxy_auth(
                         Err(CustomError::Forbidden)
                     }
                 }
-            };
+            }
         }
         None => Err(CustomError::Forbidden),
-    };
+    }
 }
 
 fn handle_gpodder_basic_auth(

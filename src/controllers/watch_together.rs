@@ -11,7 +11,7 @@ use actix_web::cookie::Cookie;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Scope};
 use std::ops::DerefMut;
-use crate::models::watch_together_users_to_room_mappings::{WatchTogetherStatus, WatchTogetherUsersToRoomMapping};
+use crate::models::watch_together_users_to_room_mappings::{WatchTogetherRole, WatchTogetherStatus, WatchTogetherUsersToRoomMapping};
 
 #[get("/{watch_id}")]
 pub async fn get_watch_together(
@@ -128,7 +128,7 @@ pub async fn delete_watch_together(
 
 
     let watch_together_room_mapping = watch_together.unwrap();
-    if watch_together_room_mapping.role == WatchTogetherStatus::Admin.to_string() {
+    if watch_together_room_mapping.role != WatchTogetherRole::Admin.to_string() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
