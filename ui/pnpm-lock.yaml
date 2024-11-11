@@ -54,8 +54,8 @@ importers:
         specifier: ^1.7.7
         version: 1.7.7
       chart.js:
-        specifier: ^4.4.4
-        version: 4.4.4
+        specifier: ^4.4.6
+        version: 4.4.6
       copy-text-to-clipboard:
         specifier: ^3.2.0
         version: 3.2.0
@@ -88,7 +88,7 @@ importers:
         version: 18.3.1
       react-chartjs-2:
         specifier: ^5.2.0
-        version: 5.2.0(chart.js@4.4.4)(react@18.3.1)
+        version: 5.2.0(chart.js@4.4.6)(react@18.3.1)
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
@@ -1145,8 +1145,8 @@ packages:
     resolution: {integrity: sha512-pT1ZgP8rPNqUgieVaEY+ryQr6Q4HXNg8Ei9UnLUrjN4IA7dvQC5JB+/kxVcPNDHyBcc/26CXPkbNzq3qwrOEKA==}
     engines: {node: '>=12'}
 
-  chart.js@4.4.4:
-    resolution: {integrity: sha512-emICKGBABnxhMjUjlYRR12PmOXhJ2eJjEHL2/dZlWjxRAZT1D8xplLFq5M0tMQK8ja+wBS/tuVEJB5C6r7VxJA==}
+  chart.js@4.4.6:
+    resolution: {integrity: sha512-8Y406zevUPbbIBA/HRk33khEmQPk5+cxeflWE/2rx1NJsjVWMPw/9mSP9rxHP5eqi6LNoPBVMfZHxbwLSgldYA==}
     engines: {pnpm: '>=8'}
 
   check-error@2.1.1:
@@ -3011,7 +3011,7 @@ snapshots:
       loupe: 3.1.1
       pathval: 2.0.0
 
-  chart.js@4.4.4:
+  chart.js@4.4.6:
     dependencies:
       '@kurkle/color': 0.3.2
 
@@ -3496,9 +3496,9 @@ snapshots:
 
   queue-microtask@1.2.3: {}
 
-  react-chartjs-2@5.2.0(chart.js@4.4.4)(react@18.3.1):
+  react-chartjs-2@5.2.0(chart.js@4.4.6)(react@18.3.1):
     dependencies:
-      chart.js: 4.4.4
+      chart.js: 4.4.6
       react: 18.3.1
 
   react-dom@18.3.1(react@18.3.1):
