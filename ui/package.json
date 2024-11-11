@@ -45,7 +45,7 @@
     "react-router-dom": "^6.27.0",
     "react-waypoint": "^10.3.0",
     "sanitize-html": "^2.13.1",
-    "uuid": "^10.0.0",
+    "uuid": "^11.0.3",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
