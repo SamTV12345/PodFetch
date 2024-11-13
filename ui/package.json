@@ -34,7 +34,7 @@
     "javascript-time-ago": "^2.5.11",
     "material-symbols": "^0.25.0",
     "notistack": "^3.0.1",
-    "oidc-client-ts": "^2.4.0",
+    "oidc-client-ts": "^2.4.1",
     "react": "18.3.1",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
