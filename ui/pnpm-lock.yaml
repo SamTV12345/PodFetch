@@ -102,8 +102,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0(react@18.3.1)
       react-oidc-context:
-        specifier: ^2.3.1
-        version: 2.3.1(oidc-client-ts@2.4.1)(react@18.3.1)
+        specifier: ^2.4.0
+        version: 2.4.0(oidc-client-ts@2.4.1)(react@18.3.1)
       react-router-dom:
         specifier: ^6.27.0
         version: 6.27.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1702,11 +1702,11 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
-  react-oidc-context@2.3.1:
-    resolution: {integrity: sha512-WdhmEU6odNzMk9pvOScxUkf6/1aduiI/nQryr7+iCl2VDnYLASDTIV/zy58KuK4VXG3fBaRKukc/mRpMjF9a3Q==}
+  react-oidc-context@2.4.0:
+    resolution: {integrity: sha512-7xbEXlBBlWBQfdSibjeA7jC5w1oKTvZVAodd9A+fmqDRt4bD+gGODWgGT8dX+a0S96Vfo7lzIrEBP7eZCFkwWw==}
     engines: {node: '>=12.13.0'}
     peerDependencies:
-      oidc-client-ts: ^2.2.1
+      oidc-client-ts: ^2.4.1
       react: '>=16.8.0'
 
   react-remove-scroll-bar@2.3.6:
@@ -3533,7 +3533,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-oidc-context@2.3.1(oidc-client-ts@2.4.1)(react@18.3.1):
+  react-oidc-context@2.4.0(oidc-client-ts@2.4.1)(react@18.3.1):
     dependencies:
       oidc-client-ts: 2.4.1
       react: 18.3.1
