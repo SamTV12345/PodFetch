@@ -38,7 +38,7 @@ opml = "1.1.6"
 rand = "0.8.5"
 env_logger = "0.11.5"
 chrono = {version  = "0.4.38", default-features=false, features = ["serde"]}
-rss = "2.0.10"
+rss = "2.0.11"
 actix-ws = "0.3.0"
 frankenstein = "0.34.1"
 regex = "1.11.0"
