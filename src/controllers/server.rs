@@ -58,9 +58,6 @@ pub struct ChatServer {
     /// Map of room name to participant IDs in that room.
     rooms: HashMap<RoomId, HashSet<ConnId>>,
 
-    /// Tracks total number of historical connections established.
-    //visitor_count: Arc<AtomicUsize>,
-
     /// Command receiver.
     cmd_rx: mpsc::UnboundedReceiver<Command>,
 }

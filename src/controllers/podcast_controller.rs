@@ -208,7 +208,7 @@ pub async fn find_podcast(
     }
 
     let (type_of, podcast) = podcast_col.into_inner();
-    return match type_of.try_into() {
+    match type_of.try_into() {
         Ok(ITunes) => {
             let res;
             {
@@ -232,7 +232,7 @@ pub async fn find_podcast(
             Ok(HttpResponse::Ok().json(podcast_service.find_podcast_on_podindex(&podcast).await?))
         }
         Err(_) => Err(CustomError::BadRequest("Invalid search type".to_string())),
-    };
+    }
 }
 
 #[utoipa::path(

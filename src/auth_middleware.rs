@@ -176,7 +176,7 @@ where
                 .clone(),
         );
 
-        return match decode::<Value>(&token, &key, &validation) {
+        match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => {
                 let username = decoded
                     .claims
@@ -227,7 +227,7 @@ where
                     .error_response(ErrorForbidden("Forbidden"))
                     .map_into_right_body()))
             }
-        };
+        }
     }
 
     fn handle_no_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {

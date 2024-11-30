@@ -140,10 +140,18 @@ impl DownloadService {
 
         match detected_file {
             FileFormat::Mpeg12AudioLayer3 => {
-                Self::update_meta_data_mp3(paths, podcast_episode, podcast, conn)?;
+                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast,
+                                                              conn);
+                if let Some(err) = result_of_update.err() {
+                    log::error!("Error updating metadata: {:?}", err);
+                }
             },
             FileFormat::AppleItunesAudio =>{
-                Self::update_meta_data_mp4(paths, podcast_episode, podcast, conn)?;
+                let result_of_itunes = Self::update_meta_data_mp4(paths, podcast_episode, podcast,
+                                                              conn);
+                if let Some(err) = result_of_itunes.err() {
+                    log::error!("Error updating metadata: {:?}", err);
+                }
             },
             _ => {
                 log::error!("File format not supported: {:?}", detected_file);
