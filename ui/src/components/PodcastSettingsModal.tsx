@@ -126,7 +126,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                         <label className="text-[--fg-color] flex gap-1 col-span-2"
                                htmlFor="colon-replacement">{t('colon-replacement')}
                             <SettingsInfoIcon className="mb-auto" headerKey="colon-replacement"
-                                              textKey="auto-download-explanation"/>
+                                              textKey="colon-replacement-explanation"/>
                         </label>
                         <CustomSelect disabled={!isSettingsEnabled} id="colon-replacement" options={options}
                                       onChange={(v) => {
