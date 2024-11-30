@@ -159,7 +159,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     <div className="flex flex-col gap-2 xs:contents mb-4">
                         <label className="text-[--fg-color] flex gap-1"
                                htmlFor="colon-replacement">{t('colon-replacement')}
-                            <SettingsInfoIcon headerKey="colon-replacement" textKey="auto-download-explanation"/>
+                            <SettingsInfoIcon headerKey="colon-replacement" textKey="colon-replacement-explanation"/>
                         </label>
 
                         <Controller
