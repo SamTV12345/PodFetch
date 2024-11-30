@@ -411,7 +411,7 @@ impl PodcastEpisode {
             .expect("Error loading podcast episode by id");
         match result {
             Some(podcast_episode) => {
-                return match podcast_episode.status.as_str() {
+                match podcast_episode.status.as_str() {
                     "N" => Ok(false),
                     "D" => Ok(true),
                     "P" => Ok(false),

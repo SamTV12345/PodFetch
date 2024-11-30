@@ -226,7 +226,7 @@ impl User {
         if auth_header.is_none() {
             return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
         }
-        return Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap());
+        Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap())
     }
 
     pub fn check_if_admin_or_uploader(

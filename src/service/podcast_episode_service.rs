@@ -400,7 +400,7 @@ impl PodcastEpisodeService {
         if capture.is_none() {
             return Err(Error::new(std::io::ErrorKind::Other, "No"));
         }
-        return Ok(capture.unwrap().get(1).unwrap().as_str().to_string());
+        Ok(capture.unwrap().get(1).unwrap().as_str().to_string())
     }
 
     pub fn query_for_podcast(
