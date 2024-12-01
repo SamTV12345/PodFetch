@@ -21,7 +21,7 @@ export const Modal: FC<ModalProps>  = ({ headerText,children }) => {
         <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={() => setModalOpen(false)}
         className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur h-screen overflow-x-hidden overflow-y-auto z-20">
 
-            <div className="relative bg-[--bg-color] max-w-lg p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative bg-[--bg-color] max-w-xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full" onClick={(e) => e.stopPropagation()}>
                 <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal" onClick={() => setModalOpen(false)}>
                     <span className="material-symbols-outlined text-[--modal-close-color] hover:text-[--modal-close-color-hover]">close</span>
                     <span className="sr-only">Close modal</span>

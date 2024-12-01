@@ -26,6 +26,10 @@ export const AddPodcastModal: FC = () => {
             {selectedSearchType === AddTypes.FEED &&
                 <FeedURLComponent />
             }
+            {
+                selectedSearchType == AddTypes.MANUAL &&
+
+            }
         </Modal>
     )
 }

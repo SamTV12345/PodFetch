@@ -53,7 +53,7 @@ impl DownloadService {
             .get(podcast_episode.url.clone())
             .headers(header_map.clone())
             .send()
-            .unwrap();
+            .map_err(|e| CustomError::Conflict(e.to_string()))?;
 
         let mut image_response;
         match podcast_episode.image_url == DEFAULT_IMAGE_URL {

@@ -48,6 +48,7 @@ utoipa = { version = "5.2.0", features = ["actix_extras", "chrono"] }
 futures = "0.3.31"
 utoipa-swagger-ui = {version = "8.0.3", features = ["actix-web"] }
 clokwerk= "0.4.0"
+actix-multipart = "0.7.2"
 tokio = {version = "1.41.1", features = ["full"]}
 serde = "1.0.215"
 serde_derive = "1.0.189"

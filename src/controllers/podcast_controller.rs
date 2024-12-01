@@ -22,6 +22,8 @@ use serde_json::{from_str, Value};
 use std::ops::DerefMut;
 use std::sync::Mutex;
 use std::thread;
+use actix_multipart::form::{FieldGroupReader, MultipartForm};
+use actix_multipart::form::tempfile::TempFile;
 use tokio::task::spawn_blocking;
 
 use crate::models::filter::Filter;
@@ -41,6 +43,7 @@ use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use actix_multipart::form::json::Json as MpJson;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -387,6 +390,53 @@ pub async fn import_podcasts_from_opml(
 
     Ok(HttpResponse::Ok().into())
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ManualUploadPodcastJSON {
+    pub podcast_title: String,
+    pub podcast_description: String,
+    pub items: Vec<ManualPodcastEpisodeItem>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ManualPodcastEpisodeItem {
+    pub podcast_episode_title: String,
+    pub podcast_episode_description: String,
+
+}
+
+#[derive(Debug, MultipartForm)]
+pub struct ManualUploadPodcast {
+    pub image: Option<TempFile>,
+    json: MpJson<ManualUploadPodcastJSON>,
+    pub episode_data: Vec<ManualUploadDataPerEpisode>
+}
+
+#[derive(Debug, MultipartForm)]
+pub struct ManualUploadDataPerEpisode {
+    pub file: TempFile,
+    pub image: TempFile
+}
+
+
+
+#[post("/podcast/manual")]
+pub async fn add_podcast_manually()  -> Result<HttpResponse, CustomError> {
+    unimplemented!()
+}
+
+
+#[post("/podcast/manual/upload")]
+pub async fn upload_templ_file(
+    requester: Option<web::ReqData<User>>,
+) -> Result<HttpResponse, CustomError> {
+    if !requester.unwrap().is_privileged_user() {
+        return Err(CustomError::Forbidden);
+    }
+
+
+}
+
 
 #[utoipa::path(
 context_path="/api/v1",
