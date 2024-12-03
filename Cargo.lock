@@ -531,9 +531,9 @@ dependencies = [
 
 [[package]]
 name = "bon"
-version = "2.3.0"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97493a391b4b18ee918675fb8663e53646fd09321c58b46afa04e8ce2499c869"
+checksum = "9276fe602371cd8a7f70fe68c4db55b2d3e92c570627d6ed0427646edfa5cf47"
 dependencies = [
  "bon-macros",
  "rustversion",
@@ -541,14 +541,16 @@ dependencies = [
 
 [[package]]
 name = "bon-macros"
-version = "2.3.0"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a2af3eac944c12cdf4423eab70d310da0a8e5851a18ffb192c0a5e3f7ae1663"
+checksum = "94828b84b32b4f3ac3865f692fcdbc46c7d0dd87b29658a391d58a244e1ce45a"
 dependencies = [
  "darling",
  "ident_case",
+ "prettyplease",
  "proc-macro2",
  "quote",
+ "rustversion",
  "syn 2.0.87",
 ]
 
@@ -1081,9 +1083,9 @@ dependencies = [
 
 [[package]]
 name = "frankenstein"
-version = "0.34.1"
+version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66f5e0e35cd8a8458c32f224ee98369774381bde8558a402e0ee2b350ee5736e"
+checksum = "e25099af98a3c9fc81a754761987db1574687c31f24fb258a34f49a26a679efd"
 dependencies = [
  "bon",
  "macro_rules_attribute",
@@ -1093,7 +1095,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "thiserror 1.0.69",
+ "thiserror 2.0.3",
  "ureq",
 ]
 
@@ -2141,6 +2143,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6cc05d7ea95200187117196eee9edd0644424911821aeb28a18ce60ea0b8793"
 dependencies = [
  "vcpkg",
+]
+
+[[package]]
+name = "prettyplease"
+version = "0.2.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64d1ec885c64d0457d564db4ec299b2dae3f9c02808b8ad9c3a089c591b18033"
+dependencies = [
+ "proc-macro2",
+ "syn 2.0.87",
 ]
 
 [[package]]
