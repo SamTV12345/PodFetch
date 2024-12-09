@@ -1,7 +1,6 @@
 use diesel::{AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl};
 use utoipa::ToSchema;
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::DBType;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::adapters::persistence::dbconfig::schema::podcast_settings;
 use crate::models::file_path::FilenameBuilderReturn;

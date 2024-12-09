@@ -11,7 +11,6 @@ use diesel::QueryDsl;
 use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
 use diesel::ExpressionMethods;
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::adapters::persistence::dbconfig::DBType;
 
 impl DeviceRepository for DeviceRepositoryImpl {
     fn create(device: Device) -> Result<Device, CustomError> {

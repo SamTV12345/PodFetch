@@ -1,7 +1,5 @@
 use crate::models::user::User;
 
-use crate::DbPool;
-use actix_web::web::Data;
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;

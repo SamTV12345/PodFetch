@@ -1,11 +1,8 @@
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::models::playlist::Playlist;
 use crate::models::user::User;
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
-use actix_web::web::Data;
+use crate::utils::error::CustomError;
 use actix_web::{delete, get, post, put, web, HttpResponse};
-use std::ops::DerefMut;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, Clone, ToSchema)]

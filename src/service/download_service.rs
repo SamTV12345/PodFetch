@@ -11,7 +11,6 @@ use std::io;
 use std::io::Read;
 use file_format::FileFormat;
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::adapters::persistence::dbconfig::DBType;
 use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::get_default_image;
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
@@ -93,7 +92,7 @@ impl DownloadService {
                 .with_filename(PODCAST_FILENAME)
                 .with_image_filename(PODCAST_IMAGENAME)
                 .with_image_suffix(&image_suffix)
-                .with_raw_directory(conn)?
+                .with_raw_directory()?
                 .build(conn)?,
             false => FilenameBuilder::default()
                 .with_suffix(&suffix)
@@ -145,7 +144,7 @@ impl DownloadService {
             },
             FileFormat::AppleItunesAudio =>{
                 let result_of_itunes = Self::update_meta_data_mp4(paths, podcast_episode,
-                                                                  podcast, &mut get_connection());
+                                                                  podcast);
                 if let Some(err) = result_of_itunes.err() {
                     log::error!("Error updating metadata: {:?}", err);
                 }
@@ -269,7 +268,6 @@ impl DownloadService {
         paths: &FilenameBuilderReturn,
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
-        conn: &mut DBType,
     ) -> Result<(), CustomError> {
         let tag = mp4ameta::Tag::read_from_path(&paths.filename);
         match tag {

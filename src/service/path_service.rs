@@ -14,8 +14,7 @@ impl PathService {
         directory: &str,
         episode: Option<PodcastEpisode>,
         _suffix: &str,
-        filename: &str,
-        conn: &mut DbConnection,
+        filename: &str
     ) -> Result<String, CustomError> {
         match episode {
             Some(episode) => Ok(format!(

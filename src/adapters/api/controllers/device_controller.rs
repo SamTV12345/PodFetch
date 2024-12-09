@@ -1,8 +1,6 @@
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
 use crate::utils::error::CustomError;
-use crate::DbPool;
-use actix_web::web::Data;
 use actix_web::{get, post, Scope};
 use actix_web::{web, HttpResponse};
 use crate::adapters::api::models::device::device_response::DeviceResponse;

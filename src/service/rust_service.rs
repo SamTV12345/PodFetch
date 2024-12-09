@@ -18,13 +18,11 @@ use std::time::SystemTime;
 use reqwest::Client;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
 use crate::utils::error::{map_reqwest_error, CustomError};
-use crate::DBType as DbConnection;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::utils::reqwest_client::get_async_sync_client;
 use crate::models::tag::Tag;
@@ -190,7 +188,6 @@ impl PodcastService {
         match podcast {
             Some(podcast) => {
                 spawn_blocking(move || {
-                    let mut conn = &mut get_connection();
                     let mut podcast_service = PodcastService::new();
 
                     log::debug!("Inserting podcast episodes of {}", podcast.name);

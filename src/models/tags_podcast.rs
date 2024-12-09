@@ -1,6 +1,5 @@
 use diesel::{AsChangeset, Insertable, Queryable, QueryableByName};
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::schema::tags_podcasts;
 use crate::{execute_with_conn, insert_with_conn};
 use crate::utils::error::{CustomError, map_db_error};
@@ -31,7 +30,7 @@ use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::*;
             tag_id: tag_id_to_insert,
             podcast_id: podcast_id_to_insert
         };
-        use crate::get_connection;
+        
         execute_with_conn!(|conn|        diesel::insert_into(tags_podcasts)
             .values(&new_tag_podcast)
             .get_result(conn)
@@ -59,7 +58,7 @@ use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::*;
         use diesel::RunQueryDsl;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
-        let _ = insert_with_conn!(|conn| diesel::delete(t_podcasts.filter(tag_id.eq(tag_id_to_delete)))
+        insert_with_conn!(|conn| diesel::delete(t_podcasts.filter(tag_id.eq(tag_id_to_delete)))
             .execute(conn)
             .map_err(map_db_error));
         Ok(())
@@ -74,7 +73,7 @@ use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::*;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
         use diesel::BoolExpressionMethods;
-        let _  = insert_with_conn!(|conn| diesel::delete(t_podcasts.filter(podcast_id.eq
+        insert_with_conn!(|conn| diesel::delete(t_podcasts.filter(podcast_id.eq
             (podcast_id_to_delete).and(tag_id.eq(tag_id_key))))
             .execute(conn)
             .map_err(map_db_error));

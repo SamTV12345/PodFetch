@@ -1,14 +1,11 @@
 use actix_web::{web, HttpResponse};
-use std::ops::DerefMut;
 
-use actix_web::web::Data;
 use actix_web::{get, post};
 
 use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::session::Session;
-use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::utils::error::CustomError;
 use crate::utils::time::get_current_timestamp;
-use crate::DbPool;
 use chrono::{DateTime};
 
 #[derive(Serialize, Deserialize)]

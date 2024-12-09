@@ -3,7 +3,6 @@ use crate::adapters::persistence::dbconfig::schema::*;
 use crate::service::environment_service::OidcConfig;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
 use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};

@@ -1,10 +1,8 @@
-use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
 use crate::application::repositories::device_repository::DeviceRepository;
 use crate::application::usecases::devices::create_use_case::CreateUseCase;
 use crate::application::usecases::devices::edit_use_case::EditUseCase;
 use crate::application::usecases::devices::query_use_case::QueryUseCase;
-use crate::DbPool;
 use crate::domain::models::device::model::Device;
 use crate::utils::error::CustomError;
 

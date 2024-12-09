@@ -6,7 +6,6 @@ use crate::service::file_service::{
 };
 use crate::utils::error::CustomError;
 use crate::utils::rss_feed_parser::PodcastParsed;
-use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct SettingsService {}

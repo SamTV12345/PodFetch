@@ -2,11 +2,9 @@ use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::user::User;
 
 use crate::service::user_management_service::UserManagementService;
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
-use actix_web::web::{Data, Json, Path};
+use crate::utils::error::CustomError;
+use actix_web::web::{Json, Path};
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
-use std::ops::DerefMut;
 
 use utoipa::ToSchema;
 

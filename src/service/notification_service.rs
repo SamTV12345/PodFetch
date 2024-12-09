@@ -1,6 +1,5 @@
 use crate::models::notification::Notification;
 use crate::utils::error::CustomError;
-use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct NotificationService {}

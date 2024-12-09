@@ -1,5 +1,5 @@
 use crate::utils::error::{map_db_error, CustomError};
-use crate::{execute_with_conn, DBType as DbConnection};
+use crate::execute_with_conn;
 use diesel::AsChangeset;
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;

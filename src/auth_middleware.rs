@@ -6,7 +6,6 @@ use std::rc::Rc;
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
-use crate::DbPool;
 use actix::fut::ok;
 use actix_web::body::{EitherBody, MessageBody};
 use actix_web::error::{ErrorForbidden, ErrorUnauthorized};

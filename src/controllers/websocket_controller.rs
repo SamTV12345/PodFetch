@@ -1,15 +1,13 @@
 use crate::controllers::web_socket::{chat_ws};
-use std::ops::DerefMut;
 
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
+use crate::utils::error::CustomError;
 use actix_web::web::Query;
-use actix_web::{get, web, web::Data, Error, HttpRequest, HttpResponse};
+use actix_web::{get, web, Error, HttpRequest, HttpResponse};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,

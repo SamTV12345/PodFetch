@@ -101,7 +101,6 @@ import_database_config!();
 
 pub fn run_poll(mut podcast_service: PodcastService) -> Result<(), CustomError> {
     //check for new episodes
-    let conn = &mut get_connection();
     let podcats_result = Podcast::get_all_podcasts()?;
     for podcast in podcats_result {
         if podcast.active {
@@ -196,7 +195,6 @@ async fn main() -> std::io::Result<()> {
         ENVIRONMENT_SERVICE.get().unwrap().get_environment();
         let polling_interval = ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
-            let conn = &mut get_connection();
             let settings = Setting::get_settings().unwrap();
             match settings {
                 Some(settings) => {

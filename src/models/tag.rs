@@ -1,7 +1,6 @@
 use chrono::{NaiveDateTime, Utc};
 use diesel::{AsChangeset, Insertable, JoinOnDsl, OptionalExtension, Queryable, QueryableByName, RunQueryDsl, Table};
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::DBType as DbConnection;
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::sql_types::{Text,Nullable, Timestamp };
 use crate::adapters::persistence::dbconfig::db::get_connection;
@@ -49,12 +48,12 @@ impl Tag {
 
     pub fn insert_tag(&self) -> Result<Tag, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::tags::dsl::*;
-        use crate::adapters::persistence::dbconfig::DBType;
-        use crate::get_connection;
+        
+        
         execute_with_conn!(
                     |conn|diesel::insert_into(tags)
             .values(self)
-            .get_result(&mut get_connection())
+            .get_result(conn)
             .map_err(map_db_error)
         )
     }

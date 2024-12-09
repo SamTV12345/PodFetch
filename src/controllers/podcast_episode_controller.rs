@@ -9,13 +9,11 @@ use crate::models::user::User;
 use utoipa::ToSchema;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
+use crate::utils::error::CustomError;
 use actix_web::web::{Data, Json, Query};
 use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
-use std::ops::DerefMut;
 
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;

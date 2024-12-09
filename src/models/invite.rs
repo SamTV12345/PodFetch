@@ -1,7 +1,6 @@
 use crate::constants::inner_constants::Role;
 use crate::adapters::persistence::dbconfig::schema::invites;
 use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
 use chrono::NaiveDateTime;
 use diesel::associations::HasTable;
 use diesel::ExpressionMethods;

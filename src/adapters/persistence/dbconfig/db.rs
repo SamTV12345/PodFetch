@@ -1,8 +1,7 @@
-use std::cell::OnceCell;
-use std::ops::DerefMut;
 use std::process::exit;
+use std::sync::OnceLock;
 use std::time::Duration;
-use diesel::{Connection, RunQueryDsl};
+use diesel::Connection;
 use diesel::r2d2::ConnectionManager;
 use r2d2::Pool;
 use crate::adapters::persistence::dbconfig::DBType;
@@ -43,11 +42,11 @@ pub fn establish_connection() -> DBType {
     })
 }
 
-const POOL: OnceCell<DbPool> = OnceCell::new();
+static POOL: OnceLock<DbPool> = OnceLock::new();
 
 
 pub fn get_connection() -> r2d2::PooledConnection<ConnectionManager<DBType>> {
-    POOL.get_or_init(||init_pool()).get().unwrap()
+    POOL.get_or_init(init_pool).get().unwrap()
 }
 
 fn init_pool() -> DbPool {
@@ -62,10 +61,6 @@ fn init_pool() -> DbPool {
                 .expect("Failed to connect to database")
         }
     }
-}
-
-pub fn test() {
-    let conn: &mut DBType = get_connection().deref_mut();
 }
 
 

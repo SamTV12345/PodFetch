@@ -2,12 +2,9 @@ use crate::models::episode::Episode;
 use crate::models::misc_models::PodcastWatchedPostModel;
 use crate::models::user::User;
 
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
-use actix_web::web::Data;
+use crate::utils::error::CustomError;
 use actix_web::{get, post, web, HttpResponse};
 
-use std::ops::DerefMut;
 
 #[utoipa::path(
 context_path="/api/v1",

@@ -40,8 +40,8 @@ impl Playlist {
         if let Some(unwrapped_res) = res {
             return Ok(unwrapped_res);
         }
-        use crate::adapters::persistence::dbconfig::DBType;
-        use crate::get_connection;
+        
+        
         execute_with_conn!(|conn| diesel::insert_into(playlists)
             .values(self)
             .get_result::<Playlist>(conn)

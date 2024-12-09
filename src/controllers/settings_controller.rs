@@ -6,12 +6,10 @@ use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::settings_service::SettingsService;
-use crate::DbPool;
 use actix_web::web::{Data, Path, ReqData};
 use actix_web::{get, put};
 use actix_web::{web, HttpResponse};
 use chrono::Local;
-use std::ops::DerefMut;
 use std::str::FromStr;
 use std::sync::Mutex;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
@@ -217,7 +215,7 @@ pub async fn update_name(
 }
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::utils::error::CustomError;
 use utoipa::ToSchema;
 
 #[derive(Deserialize, Clone, ToSchema)]

@@ -1,12 +1,9 @@
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
-use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::utils::error::CustomError;
 use crate::utils::time::get_current_timestamp;
-use crate::DbPool;
-use actix_web::web::Data;
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse};
-use std::ops::DerefMut;
 
 #[derive(Deserialize, Serialize)]
 pub struct SubscriptionRetrieveRequest {

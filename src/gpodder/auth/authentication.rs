@@ -2,15 +2,11 @@ use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;
 
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
+use crate::utils::error::CustomError;
 use actix_web::post;
-use actix_web::web::Data;
 use actix_web::{web, HttpRequest, HttpResponse};
 use awc::cookie::{Cookie, SameSite};
 use sha256::digest;
-use std::ops::DerefMut;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::service::environment_service::EnvironmentService;
 
@@ -67,7 +63,6 @@ fn handle_proxy_auth(
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
                 }
                 Err(e) => {
-                    let mut conn = get_connection();
                     if config.auto_sign_up{
                         User::insert_user(
                             &mut User {

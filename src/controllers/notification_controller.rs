@@ -1,12 +1,10 @@
-use crate::DbPool;
 use actix_web::web::Data;
 use actix_web::{get, put, web, HttpResponse};
-use std::ops::DerefMut;
 use std::sync::Mutex;
 use utoipa::ToSchema;
 use crate::mutex::LockResultExt;
 use crate::service::notification_service::NotificationService;
-use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::utils::error::CustomError;
 use crate::models::notification::Notification;
 #[utoipa::path(
 context_path="/api/v1",

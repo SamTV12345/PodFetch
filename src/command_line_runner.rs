@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::Role;
 use crate::controllers::sys_info_controller::built_info;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;

@@ -6,7 +6,6 @@ use diesel::{Insertable, Queryable, QueryableByName, RunQueryDsl};
 use utoipa::ToSchema;
 use diesel::ExpressionMethods;
 use crate::domain::models::device::model::Device;
-use crate::adapters::persistence::dbconfig::DBType;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 #[diesel(table_name=devices)]
@@ -56,9 +55,9 @@ impl DeviceEntity {
     }
 
     #[allow(clippy::redundant_closure_call)]
-    pub fn save(&self, conn: &mut DbConnection) -> Result<DeviceEntity, diesel::result::Error> {
+    pub fn save(&self) -> Result<DeviceEntity, diesel::result::Error> {
         use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
-        use crate::get_connection;
+        
         execute_with_conn!(|conn| diesel::insert_into(devices)
             .values(self)
             .get_result(conn));

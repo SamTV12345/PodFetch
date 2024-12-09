@@ -87,14 +87,12 @@ impl FilenameBuilder {
 
     pub fn with_raw_directory(
         mut self,
-        conn: &mut DbConnection,
     ) -> Result<FilenameBuilder, CustomError> {
         self.directory = PathService::get_image_path(
             &self.podcast.clone().directory_name,
             Some(self.raw_episode.clone()),
             &self.suffix,
             &self.raw_episode.name,
-            conn,
         )?;
         self.raw_filename = true;
         Ok(self)

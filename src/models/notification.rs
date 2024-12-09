@@ -1,6 +1,5 @@
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
 use diesel::insert_into;
 use diesel::Queryable;
 use utoipa::ToSchema;
