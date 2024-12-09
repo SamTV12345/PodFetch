@@ -54,9 +54,8 @@ impl FilenameBuilder {
     pub fn with_episode(
         mut self,
         podcast_episode: PodcastEpisode,
-        conn: &mut DbConnection,
     ) -> Result<FilenameBuilder, CustomError> {
-        self.episode = prepare_podcast_episode_title_to_directory(podcast_episode.clone(), conn)?;
+        self.episode = prepare_podcast_episode_title_to_directory(podcast_episode.clone())?;
         self.raw_episode = podcast_episode;
         Ok(self)
     }

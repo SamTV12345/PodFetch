@@ -24,13 +24,12 @@ tag="podcast_episodes"
 )]
 #[get("/settings")]
 pub async fn get_settings(
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
     }
-    let settings = Setting::get_settings(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    let settings = Setting::get_settings()?;
     match settings {
         Some(settings) => Ok(HttpResponse::Ok().json(settings)),
         None => Err(CustomError::NotFound),
@@ -49,7 +48,6 @@ pub async fn update_settings(
     settings_service: Data<Mutex<SettingsService>>,
     settings: web::Json<Setting>,
     requester: Option<web::ReqData<User>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
@@ -58,7 +56,6 @@ pub async fn update_settings(
     let mut settings_service = settings_service.lock().ignore_poison();
     let settings = settings_service.update_settings(
         settings.into_inner(),
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
     Ok(HttpResponse::Ok().json(settings))
 }
@@ -72,7 +69,6 @@ tag="settings"
 #[put("/settings/runcleanup")]
 pub async fn run_cleanup(
     settings_service: Data<Mutex<SettingsService>>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
@@ -81,12 +77,11 @@ pub async fn run_cleanup(
     let settings = settings_service
         .lock()
         .ignore_poison()
-        .get_settings(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+        .get_settings()?;
     match settings {
         Some(settings) => {
             PodcastEpisodeService::cleanup_old_episodes(
                 settings.auto_cleanup_days,
-                conn.get().map_err(map_r2d2_error)?.deref_mut(),
             );
             Ok(HttpResponse::Ok().finish())
         }
@@ -112,12 +107,11 @@ tag="podcasts"
 )]
 #[get("/settings/opml/{type_of}")]
 pub async fn get_opml(
-    conn: Data<DbPool>,
     requester: Option<ReqData<User>>,
     type_of: Path<Mode>,
 ) -> Result<HttpResponse, CustomError> {
     let podcasts_found =
-        Podcast::get_all_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+        Podcast::get_all_podcasts()?;
 
     let mut xml = XMLBuilder::new()
         .version(XMLVersion::XML1_1)
@@ -209,7 +203,6 @@ pub async fn update_name(
     settings_service: Data<Mutex<SettingsService>>,
     update_information: web::Json<UpdateNameSettings>,
     requester: Option<web::ReqData<User>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
@@ -219,7 +212,6 @@ pub async fn update_name(
 
     let settings = settings_service.update_name(
         update_information.into_inner(),
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
     Ok(HttpResponse::Ok().json(settings))
 }

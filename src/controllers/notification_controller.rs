@@ -17,12 +17,11 @@ tag="notifications"
 #[get("/notifications/unread")]
 pub async fn get_unread_notifications(
     notification_service: Data<Mutex<NotificationService>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let notifications = notification_service
         .lock()
         .ignore_poison()
-        .get_unread_notifications(conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+        .get_unread_notifications()?;
     Ok(HttpResponse::Ok().json(notifications))
 }
 
@@ -41,7 +40,6 @@ tag="notifications"
 pub async fn dismiss_notifications(
     id: web::Json<NotificationId>,
     notification_service: Data<Mutex<NotificationService>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     notification_service
         .lock()
@@ -49,7 +47,6 @@ pub async fn dismiss_notifications(
         .update_status_of_notification(
             id.id,
             "dismissed",
-            conn.get().map_err(map_r2d2_error)?.deref_mut(),
         )?;
     Ok(HttpResponse::Ok().body(""))
 }

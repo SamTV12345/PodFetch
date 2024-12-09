@@ -1,3 +1,4 @@
+use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
 use crate::application::repositories::device_repository::DeviceRepository;
 use crate::application::usecases::devices::create_use_case::CreateUseCase;
@@ -11,19 +12,19 @@ pub struct DeviceService;
 
 
 impl CreateUseCase for DeviceService {
-    fn create(device_to_safe: Device, pool: &DbPool) -> Result<Device, CustomError> {
-        DeviceRepositoryImpl::create(device_to_safe, &mut pool.get().unwrap())
+    fn create(device_to_safe: Device) -> Result<Device, CustomError> {
+        DeviceRepositoryImpl::create(device_to_safe)
     }
 }
 
 impl QueryUseCase for DeviceService {
-    fn query_by_username(username: String, pool: &DbPool) -> Result<Vec<Device>, CustomError> {
-        DeviceRepositoryImpl::get_devices_of_user(username, &mut pool.get().unwrap())
+    fn query_by_username(username: String) -> Result<Vec<Device>, CustomError> {
+        DeviceRepositoryImpl::get_devices_of_user(username)
     }
 }
 
 impl EditUseCase for DeviceService {
-    fn delete_by_username(username: &str, conn: &DbPool) -> Result<(), CustomError> {
-        DeviceRepositoryImpl::delete_by_username(username, &mut conn.get().unwrap())
+    fn delete_by_username(username: &str) -> Result<(), CustomError> {
+        DeviceRepositoryImpl::delete_by_username(username)
     }
 }

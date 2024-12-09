@@ -1,4 +1,4 @@
-use crate::dbconfig::schema::sessions;
+use crate::adapters::persistence::dbconfig::schema::sessions;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::{execute_with_conn, DBType as DbConnection};
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -7,6 +7,7 @@ use diesel::QueryDsl;
 use diesel::{Insertable, Queryable, RunQueryDsl};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(Queryable, Insertable, Clone, ToSchema, PartialEq, Debug)]
 pub struct Session {
@@ -26,8 +27,8 @@ impl Session {
     }
 
     #[allow(clippy::redundant_closure_call)]
-    pub fn insert_session(&self, conn: &mut DbConnection) -> Result<Self, CustomError> {
-        execute_with_conn!(conn, |conn| diesel::insert_into(sessions::table)
+    pub fn insert_session(&self) -> Result<Self, CustomError> {
+        execute_with_conn!(|conn| diesel::insert_into(sessions::table)
             .values(self)
             .get_result(conn)
             .map_err(map_db_error))
@@ -39,18 +40,16 @@ impl Session {
     }
 
     pub fn find_by_session_id(
-        session_id: &str,
-        conn: &mut DbConnection,
+        session_id: &str
     ) -> Result<Self, diesel::result::Error> {
         sessions::table
             .filter(sessions::session_id.eq(session_id))
-            .get_result(conn)
+            .get_result(&mut get_connection())
     }
 
     pub fn delete_by_username(
-        username1: &str,
-        conn: &mut DbConnection,
+        username1: &str
     ) -> Result<usize, diesel::result::Error> {
-        diesel::delete(sessions::table.filter(sessions::username.eq(username1))).execute(conn)
+        diesel::delete(sessions::table.filter(sessions::username.eq(username1))).execute(&mut get_connection())
     }
 }

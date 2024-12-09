@@ -1,6 +1,6 @@
 use crate::constants::inner_constants::DEFAULT_DEVICE;
-use crate::dbconfig::schema::episodes;
-use crate::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
+use crate::adapters::persistence::dbconfig::schema::episodes;
+use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
@@ -15,6 +15,7 @@ use std::fmt;
 use std::io::Error;
 use diesel::query_dsl::methods::DistinctDsl;
 use utoipa::ToSchema;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
@@ -63,9 +64,8 @@ pub struct Episode {
 impl Episode {
     pub fn insert_episode(
         &self,
-        conn: &mut DbConnection,
     ) -> Result<Episode, diesel::result::Error> {
-        use crate::dbconfig::schema::episodes::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::*;
 
         let res = episodes
             .filter(
@@ -76,7 +76,7 @@ impl Episode {
                     .and(episode.eq(&self.clone().episode))
                     .and(timestamp.eq(self.clone().timestamp)),
             )
-            .first::<Episode>(conn)
+            .first::<Episode>(&mut get_connection())
             .optional()
             .expect("");
 
@@ -99,7 +99,7 @@ impl Episode {
                 position.eq(&self.position),
                 total.eq(&self.total),
             ))
-            .get_result(conn)
+            .get_result(&mut get_connection())
     }
 
     pub fn convert_to_episode_dto(&self) -> EpisodeDto {
@@ -137,16 +137,15 @@ impl Episode {
     }
     pub async fn get_actions_by_username(
         username1: String,
-        conn: &mut DbConnection,
         since_date: Option<NaiveDateTime>,
         opt_device: Option<String>,
         _opt_aggregate: Option<String>,
         opt_podcast: Option<String>,
     ) -> Vec<Episode> {
-        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
-        use crate::dbconfig::schema::episodes::dsl::timestamp;
-        use crate::dbconfig::schema::episodes::table as ep_table;
-        use crate::dbconfig::schema::episodes::username;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::timestamp;
+        use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
+        use crate::adapters::persistence::dbconfig::schema::episodes::username;
 
         let mut query = ep_table.filter(username.eq(username1)).into_boxed();
 
@@ -172,7 +171,7 @@ impl Episode {
 
 
         query
-            .load::<Episode>(conn)
+            .load::<Episode>(&mut get_connection())
             .expect("Error querying episodes")
     }
 
@@ -181,9 +180,9 @@ impl Episode {
         conn: &mut DbConnection,
         episode_1: String,
     ) -> Result<Option<Episode>, CustomError> {
-        use crate::dbconfig::schema::episodes::dsl::*;
-        use crate::dbconfig::schema::podcasts::dsl::*;
-        use crate::dbconfig::schema::podcasts::table as podcast_episode_table;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::table as podcast_episode_table;
         use diesel::JoinOnDsl;
         use diesel::Table;
 
@@ -200,14 +199,13 @@ impl Episode {
 
     pub fn get_last_watched_episodes(
         username_to_find: String,
-        conn: &mut DbConnection,
     ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
-        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
-        use crate::dbconfig::schema::episodes::dsl::guid as eguid;
-        use crate::dbconfig::schema::episodes::username as e_username;
-        use crate::dbconfig::schema::podcast_episodes::dsl::guid as pguid;
-        use crate::dbconfig::schema::podcast_episodes::dsl::*;
-        use crate::dbconfig::schema::podcasts as podcast_table;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::guid as eguid;
+        use crate::adapters::persistence::dbconfig::schema::episodes::username as e_username;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::guid as pguid;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::podcasts as podcast_table;
         use diesel::JoinOnDsl;
 
         let (episodes1, episodes2) = diesel::alias!(episodes as p1, episodes as p2);
@@ -238,7 +236,7 @@ impl Episode {
                     .eq_any(subquery),
             )
             .filter(episodes1.field(ep_dsl::action).eq("play"))
-            .load::<(PodcastEpisode, Episode, Podcast)>(conn)
+            .load::<(PodcastEpisode, Episode, Podcast)>(&mut get_connection())
             .map_err(map_db_error)?;
 
         let mapped_watched_episodes = query
@@ -264,8 +262,8 @@ impl Episode {
         username1: &str,
         conn: &mut DbConnection,
     ) -> Result<(), Error> {
-        use crate::dbconfig::schema::episodes::dsl::episodes;
-        use crate::dbconfig::schema::episodes::username;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
+        use crate::adapters::persistence::dbconfig::schema::episodes::username;
         diesel::delete(episodes.filter(username.eq(username1)))
             .execute(conn)
             .expect("");
@@ -273,63 +271,62 @@ impl Episode {
     }
 
 
-    pub fn find_episodes_not_in_webview(conn: &mut DbConnection) -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
-        use crate::dbconfig::schema::episodes::dsl::episodes;
-        use crate::dbconfig::schema::episodes::device;
-        use crate::dbconfig::schema::episodes::podcast;
-        use crate::dbconfig::schema::podcasts::dsl::podcasts;
-        use crate::dbconfig::schema::podcasts::dsl::rssfeed;
+    pub fn find_episodes_not_in_webview() -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
+        use crate::adapters::persistence::dbconfig::schema::episodes::device;
+        use crate::adapters::persistence::dbconfig::schema::episodes::podcast;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::rssfeed;
 
         let result = DistinctDsl::distinct(episodes
             .left_join(podcasts.on(podcast.eq(rssfeed)))
             .select((device, podcast))
             .filter(rssfeed.is_null()))
              .filter(device.ne("webview"))
-            .load::<GPodderAvailablePodcasts>(conn)
+            .load::<GPodderAvailablePodcasts>(&mut get_connection())
             .map_err(map_db_error)?;
 
 
         Ok(result)
     }
 
-    pub fn delete_watchtime(conn: &mut DbConnection, podcast_id: i32) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
-        use crate::dbconfig::schema::episodes::table as ep_table;
-        use crate::dbconfig::schema::podcasts::dsl as podcast_dsl;
-        use crate::dbconfig::schema::podcasts::table as podcast_table;
+    pub fn delete_watchtime(podcast_id: i32) -> Result<(), CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl as podcast_dsl;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::table as podcast_table;
 
         let found_podcast: Option<Podcast> = podcast_table
             .filter(podcast_dsl::id.eq(podcast_id))
-            .first(conn)
+            .first(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
         diesel::delete(ep_table.filter(ep_dsl::podcast.eq(found_podcast.unwrap().rssfeed)))
-            .execute(conn)
+            .execute(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(())
     }
 
     pub fn get_watchtime(
-        conn: &mut DbConnection,
         episode_id: String,
         username: String,
     ) -> Result<Option<Episode>, CustomError> {
-        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
-        use crate::dbconfig::schema::episodes::table as ep_table;
-        use crate::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
-        use crate::dbconfig::schema::podcast_episodes::table as pe_table;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::table as pe_table;
 
         let podcast_episode = pe_table
             .filter(pe_dsl::episode_id.eq(episode_id))
-            .first::<PodcastEpisode>(conn)
+            .first::<PodcastEpisode>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
         let episode = ep_table
             .filter(ep_dsl::username.eq(username))
             .filter(ep_dsl::guid.eq(podcast_episode.unwrap().guid))
-            .first::<Episode>(conn)
+            .first::<Episode>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
@@ -337,18 +334,17 @@ impl Episode {
     }
 
     pub fn log_watchtime(
-        conn: &mut DbConnection,
         pod_watch_model: PodcastWatchedPostModel,
         username: String,
     ) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
-        use crate::dbconfig::schema::podcast_episodes::table as pe_table;
-        use crate::dbconfig::schema::podcasts::dsl as p_dsl;
-        use crate::dbconfig::schema::podcasts::table as p_table;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::table as pe_table;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl as p_dsl;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::table as p_table;
 
         let found_episode = pe_table
             .filter(pe_dsl::episode_id.eq(pod_watch_model.podcast_episode_id.clone()))
-            .first::<PodcastEpisode>(conn)
+            .first::<PodcastEpisode>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
@@ -359,7 +355,7 @@ impl Episode {
 
         let podcast = p_table
             .filter(p_dsl::id.eq(found_episode.podcast_id))
-            .first::<Podcast>(conn)
+            .first::<Podcast>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
@@ -375,7 +371,6 @@ impl Episode {
         match Self::get_watchlog_by_device_and_episode(
             found_episode.guid.clone(),
             DEFAULT_DEVICE.to_string(),
-            conn,
         ) {
             Ok(Some(mut episode)) => {
                 episode.position = Some(pod_watch_model.time);
@@ -384,7 +379,7 @@ impl Episode {
                         episodes::position.eq(pod_watch_model.time),
                         episodes::timestamp.eq(Utc::now().naive_utc()),
                     ))
-                    .execute(conn)
+                    .execute(&mut get_connection())
                     .map_err(map_db_error)?;
                 return Ok(());
             }
@@ -403,7 +398,7 @@ impl Episode {
                     position: Some(pod_watch_model.time),
                     total: Some(found_episode.total_time),
                 };
-                episode.insert_episode(conn).map_err(map_db_error)?;
+                episode.insert_episode().map_err(map_db_error)?;
             }
             Err(e) => {
                 return Err(e);
@@ -416,25 +411,24 @@ impl Episode {
     pub fn get_watchlog_by_device_and_episode(
         episode_guid: String,
         device_id: String,
-        conn: &mut DbConnection,
     ) -> Result<Option<Episode>, CustomError> {
-        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
-        use crate::dbconfig::schema::episodes::table as ep_table;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
 
         ep_table
             .filter(ep_dsl::device.eq(device_id))
             .filter(ep_dsl::guid.eq(episode_guid))
-            .first::<Episode>(conn)
+            .first::<Episode>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
     }
 
-    pub fn delete_by_username(conn: &mut DbConnection, username: &str) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::episodes::dsl as ep_dsl;
-        use crate::dbconfig::schema::episodes::table as ep_table;
+    pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
+        use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
 
         diesel::delete(ep_table.filter(ep_dsl::username.eq(username)))
-            .execute(conn)
+            .execute(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(())
     }

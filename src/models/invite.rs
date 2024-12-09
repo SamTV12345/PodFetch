@@ -1,5 +1,5 @@
 use crate::constants::inner_constants::Role;
-use crate::dbconfig::schema::invites;
+use crate::adapters::persistence::dbconfig::schema::invites;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
 use chrono::NaiveDateTime;
@@ -9,6 +9,7 @@ use diesel::{Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, R
 use std::io::Error;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -43,9 +44,8 @@ impl Invite {
     pub fn insert_invite(
         role_to_insert: &Role,
         explicit_consent_to_insert: bool,
-        conn: &mut DbConnection,
     ) -> Result<Invite, Error> {
-        use crate::dbconfig::schema::invites::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::invites::dsl::*;
 
         let now = chrono::Utc::now().naive_utc();
 
@@ -57,42 +57,41 @@ impl Invite {
                 created_at.eq(now),
                 expires_at.eq(now + chrono::Duration::days(7)),
             ))
-            .get_result::<Invite>(conn)
+            .get_result::<Invite>(&mut get_connection())
             .unwrap();
 
         Ok(created_invite)
     }
 
-    pub fn find_invite(id: String, conn: &mut DbConnection) -> Result<Option<Invite>, CustomError> {
+    pub fn find_invite(id: String) -> Result<Option<Invite>, CustomError> {
         invites::table
             .filter(invites::id.eq(id))
-            .first::<Invite>(conn)
+            .first::<Invite>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
     }
 
-    pub fn find_all_invites(conn: &mut DbConnection) -> Result<Vec<Invite>, diesel::result::Error> {
-        invites::table.load::<Invite>(conn)
+    pub fn find_all_invites() -> Result<Vec<Invite>, diesel::result::Error> {
+        invites::table.load::<Invite>(&mut get_connection())
     }
 
     pub fn invalidate_invite(
         invite_id: String,
-        conn: &mut DbConnection,
     ) -> Result<(), diesel::result::Error> {
-        use crate::dbconfig::schema::invites::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::invites::dsl::*;
 
         diesel::update(invites.filter(id.eq(invite_id)))
             .set(accepted_at.eq(chrono::Utc::now().naive_utc()))
-            .execute(conn)?;
+            .execute(&mut get_connection())?;
 
         Ok(())
     }
 
-    pub fn delete_invite(invite_id: String, conn: &mut DbConnection) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::invites::dsl::*;
+    pub fn delete_invite(invite_id: String) -> Result<(), CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::invites::dsl::*;
 
         diesel::delete(invites.filter(id.eq(invite_id)))
-            .execute(conn)
+            .execute(&mut get_connection())
             .map_err(map_db_error)?;
 
         Ok(())

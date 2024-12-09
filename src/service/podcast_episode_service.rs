@@ -16,6 +16,7 @@ use regex::Regex;
 use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::episode::Episode;
 use crate::models::notification::Notification;
@@ -37,16 +38,15 @@ impl PodcastEpisodeService {
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
         lobby: Option<web::Data<ChatServerHandle>>,
-        conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
 
-        match PodcastEpisode::check_if_downloaded(&podcast_episode.url, conn) {
+        match PodcastEpisode::check_if_downloaded(&podcast_episode.url) {
             Ok(true) => {}
             Ok(false) => {
                 let podcast_inserted =
-                    Self::perform_download(&podcast_episode_cloned, podcast_cloned, conn)?;
+                    Self::perform_download(&podcast_episode_cloned, podcast_cloned)?;
                 let mapped_dto = MappingService::map_podcastepisode_to_dto(&podcast_inserted);
                 if let Some(lobby) = lobby {
                     lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
@@ -78,13 +78,12 @@ impl PodcastEpisodeService {
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
         podcast_cloned: Podcast,
-        conn: &mut DbConnection,
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();
         download_service.download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
         let podcast =
-            PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D", conn)?;
+            PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D")?;
         let notification = Notification {
             id: 0,
             message: podcast_episode.name.to_string(),
@@ -92,17 +91,16 @@ impl PodcastEpisodeService {
             type_of_message: "Download".to_string(),
             status: "unread".to_string(),
         };
-        Notification::insert_notification(notification, conn)?;
+        Notification::insert_notification(notification)?;
         Ok(podcast)
     }
 
     pub fn get_last_n_podcast_episodes(
-        conn: &mut DbConnection,
         podcast: Podcast,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         let mut settings_service = SettingsService::new();
-        let podcast_settings = PodcastSetting::get_settings(conn, podcast.id)?;
-        let settings = settings_service.get_settings(conn)?.unwrap();
+        let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
+        let settings = settings_service.get_settings()?.unwrap();
         let n_episodes;
 
         if let Some(podcast_settings) = podcast_settings {
@@ -115,12 +113,11 @@ impl PodcastEpisodeService {
             n_episodes = settings.podcast_prefill;
         }
 
-        PodcastEpisode::get_last_n_podcast_episodes(conn, podcast.id, n_episodes)
+        PodcastEpisode::get_last_n_podcast_episodes(podcast.id, n_episodes)
     }
 
     // Used for creating/updating podcasts
     pub fn insert_podcast_episodes(
-        conn: &mut DbConnection,
         podcast: Podcast,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
@@ -140,18 +137,17 @@ impl PodcastEpisodeService {
                     Podcast::update_podcast_urls_on_redirect(
                         podcast.id,
                         returned_data_from_podcast_insert.url,
-                        conn,
                     );
-                    Self::update_episodes_on_redirect(conn, channel.items())?;
+                    Self::update_episodes_on_redirect(channel.items())?;
                 }
 
-                Self::handle_itunes_extension(conn, &podcast, &channel)?;
+                Self::handle_itunes_extension(&podcast, &channel)?;
 
-                Self::update_podcast_fields(channel.clone(), podcast.id, conn)?;
+                Self::update_podcast_fields(channel.clone(), podcast.id)?;
 
                 let mut podcast_inserted = Vec::new();
 
-                Self::handle_podcast_image_insert(conn, &podcast, &channel)?;
+                Self::handle_podcast_image_insert(&podcast, &channel)?;
 
                 for item in channel.items.iter() {
                     let itunes_ext = item.clone().itunes_ext;
@@ -162,7 +158,6 @@ impl PodcastEpisodeService {
                             match enclosure {
                                 Some(enclosure) => {
                                     let result = PodcastEpisode::get_podcast_episode_by_url(
-                                        conn,
                                         &enclosure.url.to_string(),
                                         Some(podcast.id),
                                     );
@@ -187,7 +182,6 @@ impl PodcastEpisodeService {
                                         {
                                             let inserted_episode =
                                                 PodcastEpisode::insert_podcast_episodes(
-                                                    conn,
                                                     podcast.clone(),
                                                     item.clone(),
                                                     Some(result_unwrapped_non_opt.image_url),
@@ -205,7 +199,6 @@ impl PodcastEpisodeService {
 
                                         let inserted_episode =
                                             PodcastEpisode::insert_podcast_episodes(
-                                                conn,
                                                 podcast.clone(),
                                                 item.clone(),
                                                 itunes_ext.image,
@@ -242,7 +235,6 @@ impl PodcastEpisodeService {
                                 continue;
                             }
                             let result = PodcastEpisode::get_podcast_episode_by_url(
-                                conn,
                                 &opt_enclosure.clone().unwrap().url,
                                 None,
                             );
@@ -251,7 +243,6 @@ impl PodcastEpisodeService {
                             if result?.is_none() {
                                 let duration_episode = 0;
                                 let inserted_episode = PodcastEpisode::insert_podcast_episodes(
-                                    conn,
                                     podcast.clone(),
                                     item.clone(),
                                     Some(image_url),
@@ -293,25 +284,23 @@ impl PodcastEpisodeService {
     }
 
     fn handle_podcast_image_insert(
-        conn: &mut DbConnection,
         podcast: &Podcast,
         channel: &Channel,
     ) -> Result<(), CustomError> {
         match channel.image() {
             Some(image) => {
-                Podcast::update_original_image_url(&image.url.to_string(), podcast.id, conn)?;
+                Podcast::update_original_image_url(&image.url.to_string(), podcast.id)?;
             }
             None => {
                 let env = ENVIRONMENT_SERVICE.get().unwrap();
                 let url = env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL;
-                Podcast::update_original_image_url(&url, podcast.id, conn)?;
+                Podcast::update_original_image_url(&url, podcast.id)?;
             }
         }
         Ok(())
     }
 
     fn handle_itunes_extension(
-        conn: &mut DbConnection,
         podcast: &Podcast,
         channel: &Channel,
     ) -> Result<(), CustomError> {
@@ -320,32 +309,31 @@ impl PodcastEpisodeService {
 
             if extension.new_feed_url.is_some() {
                 let new_url = extension.new_feed_url.unwrap();
-                Podcast::update_podcast_urls_on_redirect(podcast.id, new_url, conn);
+                Podcast::update_podcast_urls_on_redirect(podcast.id, new_url);
 
                 let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone());
 
                 let channel =
                     Channel::read_from(returned_data_from_server.content.as_bytes()).unwrap();
                 let items = channel.items();
-                Self::update_episodes_on_redirect(conn, items)?;
+                Self::update_episodes_on_redirect(items)?;
             }
         }
         Ok(())
     }
 
     fn update_episodes_on_redirect(
-        conn: &mut DbConnection,
         items: &[Item],
     ) -> Result<(), CustomError> {
         for item in items.iter() {
             match &item.guid {
                 Some(guid) => {
                     let opt_found_podcast_episode =
-                        Self::get_podcast_episode_by_guid(conn, &guid.value)?;
+                        Self::get_podcast_episode_by_guid(&guid.value)?;
                     if let Some(found_podcast_episode) = opt_found_podcast_episode {
                         let mut podcast_episode = found_podcast_episode.clone();
                         podcast_episode.url = item.enclosure.as_ref().unwrap().url.to_string();
-                        PodcastEpisode::update_podcast_episode(conn, podcast_episode);
+                        PodcastEpisode::update_podcast_episode(podcast_episode);
                     }
                 }
                 None => {
@@ -356,14 +344,11 @@ impl PodcastEpisodeService {
         Ok(())
     }
 
-    fn get_podcast_episode_by_guid(
-        conn: &mut DbConnection,
-        guid_to_search: &str,
-    ) -> Result<Option<PodcastEpisode>, CustomError> {
-        use crate::dbconfig::schema::podcast_episodes::dsl::*;
+    fn get_podcast_episode_by_guid(guid_to_search: &str) -> Result<Option<PodcastEpisode>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
         podcast_episodes
             .filter(guid.eq(guid_to_search))
-            .first::<PodcastEpisode>(conn)
+            .first::<PodcastEpisode>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
     }
@@ -405,9 +390,8 @@ impl PodcastEpisodeService {
 
     pub fn query_for_podcast(
         query: &str,
-        conn: &mut DbConnection,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
-        let podcasts = Podcast::query_for_podcast(query, conn)?;
+        let podcasts = Podcast::query_for_podcast(query)?;
         let podcast_dto = podcasts
             .iter()
             .map(MappingService::map_podcastepisode_to_dto)
@@ -416,18 +400,16 @@ impl PodcastEpisodeService {
     }
 
     pub fn find_all_downloaded_podcast_episodes(
-        conn: &mut DbConnection,
         env: &EnvironmentService,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
-        let result = PodcastEpisode::get_episodes(conn);
+        let result = PodcastEpisode::get_episodes();
         Self::map_rss_podcast_episodes(env, result)
     }
 
     pub fn find_all_downloaded_podcast_episodes_with_top_k(
-        conn: &mut DbConnection,
         top_k: i32,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
-        PodcastEpisode::get_podcast_episodes_by_podcast_to_k(conn, top_k)
+        PodcastEpisode::get_podcast_episodes_by_podcast_to_k(top_k)
     }
 
     fn map_rss_podcast_episodes(
@@ -467,16 +449,14 @@ impl PodcastEpisodeService {
 
     pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
         podcast_id: i32,
-        conn: &mut DbConnection,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
-        let result = PodcastEpisode::get_episodes_by_podcast_id(podcast_id, conn);
+        let result = PodcastEpisode::get_episodes_by_podcast_id(podcast_id);
         Self::map_rss_podcast_episodes(ENVIRONMENT_SERVICE.get().unwrap(), result)
     }
 
     fn update_podcast_fields(
         feed: Channel,
         podcast_id: i32,
-        conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         let itunes = feed.clone().itunes_ext;
 
@@ -489,21 +469,21 @@ impl PodcastEpisodeService {
                 .keywords(itunes.categories)
                 .build();
 
-            Podcast::update_podcast_fields(constructed_extra_fields, conn)?;
+            Podcast::update_podcast_fields(constructed_extra_fields)?;
         }
 
         Ok(())
     }
 
-    pub fn cleanup_old_episodes(days_from_settings: i32, conn: &mut DbConnection) {
-        let podcasts = Podcast::get_all_podcasts(conn);
+    pub fn cleanup_old_episodes(days_from_settings: i32) {
+        let podcasts = Podcast::get_all_podcasts();
 
         if podcasts.is_err() {
             return;
         }
 
         for p in podcasts.unwrap() {
-            let podcast_settings = PodcastSetting::get_settings(conn, p.id);
+            let podcast_settings = PodcastSetting::get_settings(p.id);
             if podcast_settings.is_err() {
                 continue;
             }
@@ -520,7 +500,6 @@ impl PodcastEpisodeService {
             }
 
             let old_podcast_episodes = PodcastEpisode::get_podcast_episodes_older_than_days(days,
-                                                                                            conn,
                                                                                             p.id);
 
             log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
@@ -531,7 +510,6 @@ impl PodcastEpisodeService {
                     Ok(_) => {
                         PodcastEpisode::update_download_status_of_episode(
                             old_podcast_episode.clone().id,
-                            conn,
                         );
                     }
                     Err(e) => {
@@ -543,19 +521,17 @@ impl PodcastEpisodeService {
     }
 
     pub fn get_podcast_episodes_of_podcast(
-        conn: &mut DbConnection,
         id_num: i32,
         last_id: Option<String>,
         user: User,
     ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
-        PodcastEpisode::get_podcast_episodes_of_podcast(conn, id_num, last_id, user)
+        PodcastEpisode::get_podcast_episodes_of_podcast(id_num, last_id, user)
     }
 
     pub fn get_podcast_episode_by_id(
-        conn: &mut DbConnection,
         id_num: &str,
     ) -> Result<Option<PodcastEpisode>, CustomError> {
-        PodcastEpisode::get_podcast_episode_by_id(conn, id_num)
+        PodcastEpisode::get_podcast_episode_by_id(id_num)
     }
 
     fn do_request_to_podcast_server(podcast: Podcast) -> RequestReturnType {
@@ -592,33 +568,32 @@ impl PodcastEpisodeService {
 
     pub(crate) fn delete_podcast_episode_locally(
         episode_id: &str,
-        conn: &mut DbConnection,
     ) -> Result<PodcastEpisode, CustomError> {
-        let episode = PodcastEpisode::get_podcast_episode_by_id(conn, episode_id)?;
+        let episode = PodcastEpisode::get_podcast_episode_by_id(episode_id)?;
         if episode.is_none() {
             return Err(CustomError::NotFound);
         }
         FileService::cleanup_old_episode(episode.clone().unwrap())?;
-        PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id, conn);
-        PodcastEpisode::update_deleted(conn, episode_id, true)?;
+        PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id);
+        PodcastEpisode::update_deleted(episode_id, true)?;
         Ok(episode.unwrap())
     }
 
     pub fn get_track_number_for_episode(
-        conn: &mut DbConnection,
         podcast_id: i32,
         date_of_recording_to_search: &str,
     ) -> Result<i64, CustomError> {
-        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 
         podcast_episodes
-            .filter(crate::dbconfig::schema::podcast_episodes::podcast_id.eq(podcast_id))
+            .filter(crate::adapters::persistence::dbconfig::schema::podcast_episodes::podcast_id.eq
+            (podcast_id))
             .filter(
-                crate::dbconfig::schema::podcast_episodes::date_of_recording
+                crate::adapters::persistence::dbconfig::schema::podcast_episodes::date_of_recording
                     .le(date_of_recording_to_search),
             )
             .count()
-            .get_result::<i64>(conn)
+            .get_result::<i64>(&mut get_connection())
             .map_err(map_db_error)
     }
 }

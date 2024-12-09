@@ -1,5 +1,5 @@
 use crate::constants::inner_constants::DEFAULT_SETTINGS;
-use crate::dbconfig::schema::*;
+use crate::adapters::persistence::dbconfig::schema::*;
 use crate::service::environment_service::OidcConfig;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
@@ -8,6 +8,7 @@ use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};
 use utoipa::ToSchema;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Serialize,
@@ -51,33 +52,32 @@ pub struct ConfigModel {
 }
 
 impl Setting {
-    pub fn get_settings(conn: &mut DbConnection) -> Result<Option<Setting>, CustomError> {
-        use crate::dbconfig::schema::settings::dsl::*;
+    pub fn get_settings() -> Result<Option<Setting>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::settings::dsl::*;
 
         settings
-            .first::<Setting>(conn)
+            .first::<Setting>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
     }
 
     pub fn update_settings(
         setting: Setting,
-        conn: &mut DbConnection,
     ) -> Result<Setting, CustomError> {
-        use crate::dbconfig::schema::settings::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::settings::dsl::*;
         let setting_to_update = settings
-            .first::<Setting>(conn)
+            .first::<Setting>(&mut get_connection())
             .expect("Error loading settings");
         do_retry(|| {
             diesel::update(&setting_to_update)
                 .set(setting.clone())
-                .get_result::<Setting>(conn)
+                .get_result::<Setting>(&mut get_connection())
         })
         .map_err(map_db_error)
     }
 
-    pub fn insert_default_settings(conn: &mut DbConnection) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::settings::dsl::*;
+    pub fn insert_default_settings() -> Result<(), CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::settings::dsl::*;
         use diesel::ExpressionMethods;
         do_retry(|| {
             insert_into(settings)
@@ -89,7 +89,7 @@ impl Setting {
                     auto_cleanup_days.eq(DEFAULT_SETTINGS.auto_cleanup_days),
                     podcast_prefill.eq(DEFAULT_SETTINGS.podcast_prefill),
                 ))
-                .execute(conn)
+                .execute(&mut get_connection())
         })
         .map_err(map_db_error)?;
         Ok(())

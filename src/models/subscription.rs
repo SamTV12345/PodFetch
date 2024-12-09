@@ -5,7 +5,7 @@ use diesel::ExpressionMethods;
 use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use std::io::Error;
 
-use crate::dbconfig::schema::subscriptions;
+use crate::adapters::persistence::dbconfig::schema::subscriptions;
 use crate::utils::time::get_current_timestamp;
 use crate::DBType as DbConnection;
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
@@ -13,6 +13,7 @@ use diesel::OptionalExtension;
 use diesel::{AsChangeset, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Debug,
@@ -53,7 +54,7 @@ impl Subscription {
         }
     }
     pub fn delete_by_username(username1: &str, conn: &mut DbConnection) -> Result<(), Error> {
-        use crate::dbconfig::schema::subscriptions::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::*;
         diesel::delete(subscriptions.filter(username.eq(username1)))
             .execute(conn)
             .expect("Error deleting subscriptions of user");
@@ -73,7 +74,6 @@ impl SubscriptionChangesToClient {
         device_id: &str,
         username: &str,
         since: i32,
-        conn: &mut DbConnection,
     ) -> Result<SubscriptionChangesToClient, Error> {
         let since = DateTime::from_timestamp(since as i64, 0).map(|v|v.naive_utc()).unwrap();
         let res: Vec<Subscription> = subscriptions::table
@@ -83,7 +83,7 @@ impl SubscriptionChangesToClient {
                     .eq(device_id)
                     .and(subscriptions::created.gt(since)),
             )
-            .load::<Subscription>(conn)
+            .load::<Subscription>(&mut get_connection())
             .expect("Error retrieving changed subscriptions");
 
         let (deleted_subscriptions, created_subscriptions): (Vec<Subscription>, Vec<Subscription>) =
@@ -106,10 +106,9 @@ impl SubscriptionChangesToClient {
         device_id: &str,
         username: &str,
         upload_request: web::Json<SubscriptionUpdateRequest>,
-        conn: &mut DbConnection,
     ) -> Result<Vec<Vec<String>>, Error> {
-        use crate::dbconfig::schema::subscriptions::dsl as dsl_types;
-        use crate::dbconfig::schema::subscriptions::dsl::subscriptions;
+        use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl as dsl_types;
+        use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::subscriptions;
         let mut rewritten_urls: Vec<Vec<String>> = vec![vec![]];
         // Add subscriptions
         upload_request.clone().add.iter().for_each(|c| {
@@ -122,7 +121,6 @@ impl SubscriptionChangesToClient {
                 username.to_string(),
                 device_id.to_string(),
                 c.to_string(),
-                conn,
             )
             .expect(
                 "Error retrieving \
@@ -132,7 +130,7 @@ impl SubscriptionChangesToClient {
                 Some(s) => {
                     diesel::update(subscriptions.filter(dsl_types::id.eq(s.id)))
                         .set(dsl_types::deleted.eq(None::<NaiveDateTime>))
-                        .execute(conn)
+                        .execute(&mut get_connection())
                         .unwrap();
                 }
                 None => {
@@ -148,7 +146,7 @@ impl SubscriptionChangesToClient {
                             dsl_types::podcast.eq(subscription.podcast),
                             dsl_types::created.eq(subscription.created),
                         ))
-                        .execute(conn)
+                        .execute(&mut get_connection())
                         .unwrap();
                 }
             }
@@ -162,7 +160,6 @@ impl SubscriptionChangesToClient {
                 username.to_string(),
                 device_id.to_string(),
                 c.to_string(),
-                conn,
             )
             .expect(
                 "Error retrieving \
@@ -171,7 +168,7 @@ impl SubscriptionChangesToClient {
             if let Some(s) = opt_sub {
                 diesel::update(subscriptions.filter(dsl_types::id.eq(s.id)))
                     .set(dsl_types::deleted.eq(Some(Utc::now().naive_utc())))
-                    .execute(conn)
+                    .execute(&mut get_connection())
                     .unwrap();
             }
         });
@@ -183,9 +180,8 @@ impl SubscriptionChangesToClient {
         username_1: String,
         deviceid_1: String,
         podcast_1: String,
-        conn: &mut DbConnection,
     ) -> Result<Option<Subscription>, Error> {
-        use crate::dbconfig::schema::subscriptions::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::*;
 
         let res = subscriptions
             .filter(
@@ -194,7 +190,7 @@ impl SubscriptionChangesToClient {
                     .and(device.eq(deviceid_1))
                     .and(podcast.eq(podcast_1)),
             )
-            .first::<Subscription>(conn)
+            .first::<Subscription>(&mut get_connection())
             .optional()
             .expect("Error retrieving subscription");
 

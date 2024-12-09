@@ -152,7 +152,6 @@ tag="sys"
 #[post("/login")]
 pub async fn login(
     auth: web::Json<LoginRequest>,
-    db: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
     let env_service = ENVIRONMENT_SERVICE.get().unwrap();
@@ -167,7 +166,7 @@ pub async fn login(
             }
         }
     }
-    let db_user = User::find_by_username(&auth.0.username, &mut db.get().unwrap())?;
+    let db_user = User::find_by_username(&auth.0.username)?;
 
     if db_user.password.is_none() {
         log::warn!("Login failed for user {}", auth.0.username);

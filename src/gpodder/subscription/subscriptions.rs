@@ -30,7 +30,6 @@ pub async fn get_subscriptions(
     paths: web::Path<(String, String)>,
     opt_flag: Option<web::ReqData<Session>>,
     query: web::Query<SubscriptionRetrieveRequest>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -44,7 +43,6 @@ pub async fn get_subscriptions(
                 &deviceid,
                 &username,
                 query.since,
-                conn.get().map_err(map_r2d2_error)?.deref_mut(),
             )
             .await;
 
@@ -66,7 +64,6 @@ pub async fn upload_subscription_changes(
     upload_request: web::Json<SubscriptionUpdateRequest>,
     opt_flag: Option<web::ReqData<Session>>,
     paths: web::Path<(String, String)>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -79,7 +76,6 @@ pub async fn upload_subscription_changes(
                 &deviceid,
                 &username,
                 upload_request,
-                conn.get().map_err(map_r2d2_error)?.deref_mut(),
             )
             .await
             .unwrap();

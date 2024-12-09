@@ -34,7 +34,6 @@ pub struct EpisodeSinceRequest {
 #[get("/episodes/{username}.json")]
 pub async fn get_episode_actions(
     username: web::Path<String>,
-    pool: Data<DbPool>,
     opt_flag: Option<web::ReqData<Session>>,
     since: web::Query<EpisodeSinceRequest>,
 ) -> Result<HttpResponse, CustomError> {
@@ -49,7 +48,6 @@ pub async fn get_episode_actions(
                 .map(|v| v.naive_utc());
             let mut actions = Episode::get_actions_by_username(
                 username.clone(),
-                &mut pool.get().unwrap(),
                 since_date,
                 since.device.clone(),
                 since.aggregate.clone(),
@@ -79,7 +77,6 @@ pub async fn upload_episode_actions(
     username: web::Path<String>,
     podcast_episode: web::Json<Vec<EpisodeDto>>,
     opt_flag: Option<web::ReqData<Session>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -92,7 +89,6 @@ pub async fn upload_episode_actions(
                 inserted_episodes.push(
                     Episode::insert_episode(
                         &episode.clone(),
-                        conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                     )
                     .unwrap(),
                 );

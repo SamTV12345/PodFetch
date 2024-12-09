@@ -17,7 +17,7 @@ use std::io::Read;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, thread};
-
+use std::ops::DerefMut;
 use actix_web::body::{BoxBody, EitherBody};
 use diesel::r2d2::ConnectionManager;
 use jsonwebtoken::jwk::{
@@ -32,8 +32,6 @@ use tokio::{spawn, try_join};
 mod controllers;
 use crate::auth_middleware::AuthFilter;
 use crate::command_line_runner::start_command_line;
-use crate::config::dbconfig::establish_connection;
-use crate::config::dbconfig::ConnectionOptions;
 use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
@@ -57,9 +55,10 @@ use crate::controllers::user_controller::{
     get_users, onboard_user, update_role, update_user,
 };
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
-use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
 use crate::adapters::api::controllers::routes::{get_gpodder_api, global_routes};
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::DBType;
 use crate::controllers::server::ChatServer;
 use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag};
 
@@ -88,7 +87,6 @@ mod config;
 
 mod auth_middleware;
 mod command_line_runner;
-mod dbconfig;
 mod exception;
 mod gpodder;
 pub mod mutex;
@@ -103,16 +101,15 @@ import_database_config!();
 
 pub fn run_poll(mut podcast_service: PodcastService) -> Result<(), CustomError> {
     //check for new episodes
-    let conn = &mut establish_connection();
-    let podcats_result = Podcast::get_all_podcasts(conn)?;
+    let conn = &mut get_connection();
+    let podcats_result = Podcast::get_all_podcasts()?;
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
-            PodcastEpisodeService::insert_podcast_episodes(conn, podcast)?;
+            PodcastEpisodeService::insert_podcast_episodes(podcast)?;
             podcast_service.schedule_episode_download(
                 podcast_clone,
                 None,
-                &mut establish_connection(),
             )?;
         }
     }
@@ -133,6 +130,7 @@ async fn index() -> impl Responder {
         .body(fix_links(index_html))
 }
 
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let env_service = EnvironmentService::new();
@@ -149,17 +147,18 @@ async fn main() -> std::io::Result<()> {
         exit(0)
     }
 
-    let conn = establish_connection();
+    let mut conn = get_connection();
+    let conn = conn.deref_mut();
 
     match conn {
-        DBType::Postgresql(mut conn) => {
+        DBType::Postgresql(ref mut conn) => {
             let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
 
             if res_migration.is_err() {
                 panic!("Could not run migrations: {}", res_migration.err().unwrap());
             }
         }
-        DBType::Sqlite(mut conn) => {
+        DBType::Sqlite(ref mut conn) => {
             let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
 
             if res_migration.is_err() {
@@ -169,23 +168,6 @@ async fn main() -> std::io::Result<()> {
     }
 
     check_server_config();
-    let pool;
-    {
-        let conn = establish_connection();
-        match conn {
-            DBType::Postgresql(_) => {
-                pool = init_postgres_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
-                    .await
-                    .expect("Failed to connect to database");
-            }
-            DBType::Sqlite(_) => {
-                pool = init_sqlite_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
-                    .await
-                    .expect("Failed to connect to database");
-            }
-        }
-    }
-    let data_pool = Data::new(pool);
 
     //services
     let podcast_service = PodcastService::new();
@@ -214,8 +196,8 @@ async fn main() -> std::io::Result<()> {
         ENVIRONMENT_SERVICE.get().unwrap().get_environment();
         let polling_interval = ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
-            let conn = &mut establish_connection();
-            let settings = Setting::get_settings(conn).unwrap();
+            let conn = &mut get_connection();
+            let settings = Setting::get_settings().unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_update {
@@ -239,18 +221,17 @@ async fn main() -> std::io::Result<()> {
 
         scheduler.every(1.day()).run(move || {
             // Clears the session ids once per day
-            let conn = &mut establish_connection();
+            let conn = &mut get_connection();
             Session::cleanup_sessions(conn).expect(
                 "Error clearing old \
             sessions",
             );
-            let settings = Setting::get_settings(conn).unwrap();
+            let settings = Setting::get_settings().unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
                         PodcastEpisodeService::cleanup_old_episodes(
                             settings.auto_cleanup_days,
-                            &mut establish_connection(),
                         )
                     }
                 }
@@ -349,7 +330,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(file_service.clone())))
             .app_data(Data::new(Mutex::new(notification_service.clone())))
             .app_data(Data::new(Mutex::new(settings_service.clone())))
-            .app_data(data_pool.clone())
             .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
         .workers(4)
@@ -500,8 +480,7 @@ pub fn get_secure_user_management() -> Scope {
 }
 
 pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
-    let conn = &mut establish_connection();
-    let settings = Setting::get_settings(conn)?;
+    let settings = Setting::get_settings()?;
     match settings {
         Some(_) => {
             info!("Settings already present");
@@ -509,7 +488,7 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
         }
         None => {
             info!("No settings found, inserting default settings");
-            Setting::insert_default_settings(conn)?;
+            Setting::insert_default_settings()?;
             Ok(())
         }
     }
@@ -550,31 +529,4 @@ fn check_if_multiple_auth_is_configured(env: &EnvironmentService) -> bool {
     num_of_auth_count > 1
 }
 
-async fn init_postgres_db_pool(
-    database_url: &str,
-) -> Result<Pool<ConnectionManager<DBType>>, String> {
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    let db_connections = env_service.conn_number;
-    let manager = ConnectionManager::<DBType>::new(database_url);
-    let pool = Pool::builder()
-        .max_size(db_connections as u32)
-        .build(manager)
-        .expect("Failed to create pool.");
-    Ok(pool)
-}
 
-async fn init_sqlite_db_pool(
-    database_url: &str,
-) -> Result<Pool<ConnectionManager<DBType>>, String> {
-    let manager = ConnectionManager::<DBType>::new(database_url);
-    let pool = Pool::builder()
-        .max_size(16)
-        .connection_customizer(Box::new(ConnectionOptions {
-            enable_wal: true,
-            enable_foreign_keys: true,
-            busy_timeout: Some(Duration::from_secs(120)),
-        }))
-        .build(manager)
-        .unwrap();
-    Ok(pool)
-}

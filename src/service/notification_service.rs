@@ -12,17 +12,15 @@ impl NotificationService {
 
     pub fn get_unread_notifications(
         &mut self,
-        conn: &mut DbConnection,
     ) -> Result<Vec<Notification>, CustomError> {
-        Notification::get_unread_notifications(conn)
+        Notification::get_unread_notifications()
     }
 
     pub fn update_status_of_notification(
         &mut self,
         id: i32,
         status: &str,
-        conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
-        Notification::update_status_of_notification(id, status, conn)
+        Notification::update_status_of_notification(id, status)
     }
 }

@@ -21,7 +21,7 @@ impl PathService {
             Some(episode) => Ok(format!(
                 "{}/{}",
                 directory,
-                prepare_podcast_episode_title_to_directory(episode, conn)?
+                prepare_podcast_episode_title_to_directory(episode)?
             )),
             None => Ok(format!("{}/{}", directory, filename)),
         }

@@ -100,9 +100,8 @@ where
             Some(header) => match header.to_str() {
                 Ok(auth) => {
                     let (username, password) = AuthFilter::extract_basic_auth(auth);
-                    let res = req.app_data::<web::Data<DbPool>>().unwrap();
                     let found_user =
-                        User::find_by_username(username.as_str(), &mut res.get().unwrap());
+                        User::find_by_username(username.as_str());
 
                     if found_user.is_err() {
                         return Box::pin(ok(req
@@ -184,8 +183,7 @@ where
                     .unwrap()
                     .as_str()
                     .unwrap();
-                let pool = req.app_data::<web::Data<DbPool>>().cloned().unwrap();
-                let found_user = User::find_by_username(username, &mut pool.get().unwrap());
+                let found_user = User::find_by_username(username);
                 let service = Rc::clone(&self.service);
 
                 match found_user {
@@ -211,8 +209,7 @@ where
                                 explicit_consent: false,
                                 created_at: chrono::Utc::now().naive_utc(),
                                 api_key: None,
-                            },
-                            &mut pool.get().unwrap(),
+                            }
                         )
                         .expect("Error inserting user");
                         req.extensions_mut().insert(user);
@@ -251,8 +248,7 @@ where
             let token_res = header_val.to_str();
             return match token_res {
                 Ok(token) => {
-                    let pool = req.app_data::<web::Data<DbPool>>().cloned().unwrap();
-                    let found_user = User::find_by_username(token, &mut pool.get().unwrap());
+                    let found_user = User::find_by_username(token);
                     let service = Rc::clone(&self.service);
 
                     return match found_user {
@@ -275,7 +271,6 @@ where
                                         created_at: chrono::Utc::now().naive_utc(),
                                         api_key: None,
                                     },
-                                    &mut pool.get().unwrap(),
                                 )
                                 .expect("Error inserting user");
                                 req.extensions_mut().insert(user);
