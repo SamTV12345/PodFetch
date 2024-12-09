@@ -27,10 +27,7 @@ use log::info;
 use r2d2::Pool;
 use regex::Regex;
 use std::process::exit;
-use tokio::task::spawn_blocking;
 use tokio::{spawn, try_join};
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 mod controllers;
 use crate::auth_middleware::AuthFilter;
@@ -38,7 +35,6 @@ use crate::command_line_runner::start_command_line;
 use crate::config::dbconfig::establish_connection;
 use crate::config::dbconfig::ConnectionOptions;
 use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
-use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
@@ -46,7 +42,7 @@ use crate::controllers::playlist_controller::{
     add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
     get_playlist_by_id, update_playlist,
 };
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_settings, proxy_podcast, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
+use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_settings, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
@@ -61,12 +57,9 @@ use crate::controllers::user_controller::{
     get_users, onboard_user, update_role, update_user,
 };
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
-use crate::controllers::websocket_controller::{
-    get_rss_feed, get_rss_feed_for_podcast, start_connection,
-};
 use crate::dbconfig::DBType;
 pub use controllers::controller_utils::*;
-use crate::controllers::manifest_controller::get_manifest;
+use crate::adapters::api::controllers::routes::{get_gpodder_api, global_routes};
 use crate::controllers::server::ChatServer;
 use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag};
 
@@ -74,8 +67,6 @@ mod constants;
 mod db;
 mod models;
 mod service;
-use crate::gpodder::parametrization::get_client_parametrization;
-use crate::gpodder::routes::get_gpodder_api;
 use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
@@ -102,6 +93,10 @@ mod exception;
 mod gpodder;
 pub mod mutex;
 pub mod utils;
+mod adapters;
+mod domain;
+mod application;
+
 type DbPool = Pool<ConnectionManager<DBType>>;
 
 import_database_config!();
@@ -150,9 +145,7 @@ async fn main() -> std::io::Result<()> {
     ENVIRONMENT_SERVICE.get_or_init(|| env_service);
 
     if args().len() > 1 {
-        spawn_blocking(move || start_command_line(args()))
-            .await
-            .expect("TODO: panic message");
+        start_command_line(args()).await;
         exit(0)
     }
 
@@ -351,7 +344,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(hash.clone()))
             .service(redirect("/", sub_dir.clone() + "/ui/"))
             .service(get_gpodder_api())
-            .service(get_global_scope())
+            .service(global_routes())
             .app_data(Data::new(Mutex::new(podcast_service.clone())))
             .app_data(Data::new(Mutex::new(file_service.clone())))
             .app_data(Data::new(Mutex::new(notification_service.clone())))
@@ -379,28 +372,7 @@ fn config(cfg: &mut web::ServiceConfig) {
         .service(get_private_api());
 }
 
-pub fn get_global_scope() -> Scope {
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    let base_path = env_service.sub_directory.clone().unwrap_or("/".to_string());
-    let openapi = ApiDoc::openapi();
-    let service = get_api_config();
-
-    web::scope(&base_path)
-        .service(get_client_parametrization)
-        .service(proxy_podcast)
-        .service(get_ui_config())
-        .service(get_podcast_serving())
-        .service(redirect("/swagger-ui", "/swagger-ui/"))
-        .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
-        .service(redirect("/", "./ui/"))
-        .service(service)
-        .service(start_connection)
-        .service(get_rss_feed)
-        .service(get_manifest)
-        .service(get_rss_feed_for_podcast)
-}
-
-fn get_podcast_serving() -> actix_web::Scope<
+fn get_podcast_serving() -> Scope<
     impl ServiceFactory<
         ServiceRequest,
         Config = (),

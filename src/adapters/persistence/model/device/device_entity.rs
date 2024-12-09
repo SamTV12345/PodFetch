@@ -1,14 +1,15 @@
 use crate::dbconfig::schema::devices;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::{execute_with_conn, DBType as DbConnection};
-use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{Insertable, Queryable, QueryableByName, RunQueryDsl};
 use utoipa::ToSchema;
+use diesel::ExpressionMethods;
+use crate::domain::models::device::model::Device;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 #[diesel(table_name=devices)]
-pub struct Device {
+pub struct DeviceEntity {
     #[diesel(deserialize_as = i32)]
     pub id: Option<i32>,
     pub deviceid: String,
@@ -17,18 +18,34 @@ pub struct Device {
     pub username: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct DeviceResponse {
-    id: String,
-    caption: String,
-    #[serde(rename = "type")]
-    type_: String,
-    subscriptions: u32,
+
+impl From<Device> for DeviceEntity{
+    fn from(value: Device) -> Self {
+        DeviceEntity{
+            id: value.id,
+            deviceid: value.deviceid,
+            kind: value.kind,
+            name: value.name,
+            username: value.username,
+        }
+    }
 }
 
-impl Device {
-    pub fn new(device_post: DevicePost, device_id: String, username: String) -> Device {
+impl From<DeviceEntity> for Device {
+    fn from(val: DeviceEntity) -> Self {
         Device {
+            id: val.id,
+            kind: val.kind,
+            name: val.name,
+            deviceid: val.deviceid,
+            username: val.username
+        }
+    }
+}
+
+impl DeviceEntity {
+    pub fn new(device_post: DevicePost, device_id: String, username: String) -> DeviceEntity {
+        DeviceEntity {
             id: None,
             deviceid: device_id,
             kind: device_post.kind,
@@ -38,7 +55,7 @@ impl Device {
     }
 
     #[allow(clippy::redundant_closure_call)]
-    pub fn save(&self, conn: &mut DbConnection) -> Result<Device, diesel::result::Error> {
+    pub fn save(&self, conn: &mut DbConnection) -> Result<DeviceEntity, diesel::result::Error> {
         use crate::dbconfig::schema::devices::dsl::*;
 
         execute_with_conn!(conn, |conn| diesel::insert_into(devices)
@@ -49,21 +66,14 @@ impl Device {
     pub fn get_devices_of_user(
         conn: &mut DbConnection,
         username_to_insert: String,
-    ) -> Result<Vec<Device>, diesel::result::Error> {
+    ) -> Result<Vec<DeviceEntity>, diesel::result::Error> {
         use crate::dbconfig::schema::devices::dsl::*;
         devices
             .filter(username.eq(username_to_insert))
-            .load::<Device>(conn)
+            .load::<DeviceEntity>(conn)
     }
 
-    pub fn to_dto(&self) -> DeviceResponse {
-        DeviceResponse {
-            id: self.deviceid.clone(),
-            caption: self.name.clone(),
-            type_: self.kind.clone(),
-            subscriptions: 0,
-        }
-    }
+
     pub fn delete_by_username(
         username1: &str,
         conn: &mut DbConnection,

@@ -1,7 +1,6 @@
 use crate::config::dbconfig::establish_connection;
-use crate::constants::inner_constants::Role;
+use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::controllers::sys_info_controller::built_info;
-use crate::models::device::Device;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
@@ -19,8 +18,29 @@ use std::env::Args;
 use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use std::process::exit;
 use std::str::FromStr;
+use crate::application::services::device::service::DeviceService;
+use crate::application::usecases::devices::edit_use_case::EditUseCase;
+use crate::dbconfig::DBType;
+use crate::{init_postgres_db_pool, init_sqlite_db_pool};
 
-pub fn start_command_line(mut args: Args) {
+pub async fn start_command_line(mut args: Args) {
+
+    let pool;
+    {
+        let conn = establish_connection();
+        match conn {
+            DBType::Postgresql(_) => {
+                pool = init_postgres_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
+                    .await
+                    .expect("Failed to connect to database");
+            }
+            DBType::Sqlite(_) => {
+                pool = init_sqlite_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
+                    .await
+                    .expect("Failed to connect to database");
+            }
+        }
+    }
     println!("Starting from command line");
     // This needs to be nth(1) because the first argument is the binary name
     match args.nth(1).unwrap().as_str() {
@@ -154,7 +174,7 @@ pub fn start_command_line(mut args: Args) {
                         Some(..) => {
                             Episode::delete_by_username(&mut establish_connection(), &username)
                                 .expect("Error deleting entries for podcast history item");
-                            Device::delete_by_username(&username, &mut establish_connection())
+                            DeviceService::delete_by_username(&username, &pool)
                                 .expect("Error deleting devices");
                             Episode::delete_by_username_and_episode(
                                 &username,

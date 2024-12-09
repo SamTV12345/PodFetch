@@ -1,4 +1,3 @@
-pub mod device;
 pub mod device_subscription;
 pub mod dto_models;
 pub mod episode;

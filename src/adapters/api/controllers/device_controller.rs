@@ -1,12 +1,15 @@
 use crate::gpodder::device::dto::device_post::DevicePost;
-use crate::models::device::{Device, DeviceResponse};
 use crate::models::session::Session;
-use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::utils::error::CustomError;
 use crate::DbPool;
 use actix_web::web::Data;
-use actix_web::{get, post};
+use actix_web::{get, post, Scope};
 use actix_web::{web, HttpResponse};
-use std::ops::DerefMut;
+use crate::adapters::api::models::device::device_response::DeviceResponse;
+use crate::adapters::api::models::device::device_create::DeviceCreate;
+use crate::application::services::device::service::DeviceService;
+use crate::application::usecases::devices::create_use_case::CreateUseCase;
+use crate::application::usecases::devices::query_use_case::QueryUseCase;
 
 #[post("/devices/{username}/{deviceid}.json")]
 pub async fn post_device(
@@ -23,11 +26,16 @@ pub async fn post_device(
                 return Err(CustomError::Forbidden);
             }
 
-            let device = Device::new(device_post.into_inner(), deviceid, username);
+            let device_create = DeviceCreate{
+                id: deviceid.clone(),
+                username: username.clone(),
+                type_: device_post.kind.clone(),
+                caption: device_post.caption.clone(),
+            };
 
-            let result = device
-                .save(conn.get().map_err(map_r2d2_error)?.deref_mut())
-                .unwrap();
+            let pool = conn.get_ref();
+            let device = DeviceService::create(device_create.into(), pool)?;
+            let result = DeviceResponse::from(&device);
 
             Ok(HttpResponse::Ok().json(result))
         }
@@ -39,25 +47,30 @@ pub async fn post_device(
 pub async fn get_devices_of_user(
     query: web::Path<String>,
     opt_flag: Option<web::ReqData<Session>>,
-    conn: Data<DbPool>,
+    pool: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
             if flag.username != query.clone() {
                 return Err(CustomError::Forbidden);
             }
-            let devices = Device::get_devices_of_user(
-                conn.get().map_err(map_r2d2_error)?.deref_mut(),
+            let devices = DeviceService::query_by_username(
                 query.clone(),
-            )
-            .unwrap();
+                pool.get_ref(),
+            )?;
 
             let dtos = devices
                 .iter()
-                .map(|d| d.to_dto())
+                .map(DeviceResponse::from)
                 .collect::<Vec<DeviceResponse>>();
             Ok(HttpResponse::Ok().json(dtos))
         }
         None => Err(CustomError::Forbidden),
     }
+}
+
+pub fn device_routes() -> Scope {
+    Scope::new("")
+        .service(post_device)
+        .service(get_devices_of_user)
 }

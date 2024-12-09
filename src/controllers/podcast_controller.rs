@@ -437,7 +437,7 @@ fn start_download_podindex(
     lobby: Data<ChatServerHandle>,
     conn: &mut DbConnection,
 ) -> Result<Podcast, CustomError> {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = Runtime::new().unwrap();
 
     rt.block_on(async {
         let mut podcast_service = PodcastService::new();
