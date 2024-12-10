@@ -1,5 +1,4 @@
-use crate::config::dbconfig::establish_connection;
-use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::Role;
 use crate::controllers::sys_info_controller::built_info;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -18,31 +17,14 @@ use std::env::Args;
 use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use std::process::exit;
 use std::str::FromStr;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::application::services::device::service::DeviceService;
 use crate::application::usecases::devices::edit_use_case::EditUseCase;
-use crate::dbconfig::DBType;
-use crate::{init_postgres_db_pool, init_sqlite_db_pool};
 
 pub async fn start_command_line(mut args: Args) {
-
-    let pool;
-    {
-        let conn = establish_connection();
-        match conn {
-            DBType::Postgresql(_) => {
-                pool = init_postgres_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
-                    .await
-                    .expect("Failed to connect to database");
-            }
-            DBType::Sqlite(_) => {
-                pool = init_sqlite_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
-                    .await
-                    .expect("Failed to connect to database");
-            }
-        }
-    }
     println!("Starting from command line");
     // This needs to be nth(1) because the first argument is the binary name
+    let conn = &mut get_connection();
     match args.nth(1).unwrap().as_str() {
         "help" | "--help" => {
             println!(
@@ -61,7 +43,7 @@ pub async fn start_command_line(mut args: Args) {
                     match podcast_rss_feed {
                         Some(feed) => {
                             let mut podcast_service = PodcastService::new();
-                            let conn = &mut establish_connection();
+                            let conn = &mut get_connection();
 
                             let replaced_feed = feed.replace(['\'', ' '], "");
                             println!("Refreshing podcast {}", replaced_feed);
@@ -69,10 +51,10 @@ pub async fn start_command_line(mut args: Args) {
                             let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn)
                                 .expect("Error getting podcast");
 
-                            PodcastEpisodeService::insert_podcast_episodes(conn, podcast.clone())
+                            PodcastEpisodeService::insert_podcast_episodes(podcast.clone())
                                 .unwrap();
                             podcast_service
-                                .schedule_episode_download(podcast, None, conn)
+                                .schedule_episode_download(podcast, None)
                                 .unwrap();
                         }
                         None => {
@@ -82,24 +64,22 @@ pub async fn start_command_line(mut args: Args) {
                     }
                 }
                 "refresh-all" => {
-                    let conn = &mut establish_connection();
-                    let podcasts = Podcast::get_all_podcasts(&mut establish_connection());
+                    let podcasts = Podcast::get_all_podcasts();
                     let mut podcast_service = PodcastService::new();
                     for podcast in podcasts.unwrap() {
                         println!("Refreshing podcast {}", podcast.name);
 
                         PodcastEpisodeService::insert_podcast_episodes(
-                            &mut establish_connection(),
                             podcast.clone(),
                         )
                         .unwrap();
                         podcast_service
-                            .schedule_episode_download(podcast, None, conn)
+                            .schedule_episode_download(podcast, None)
                             .unwrap();
                     }
                 }
                 "list" => {
-                    let podcasts = Podcast::get_all_podcasts(&mut establish_connection());
+                    let podcasts = Podcast::get_all_podcasts();
                     match podcasts {
                         Ok(podcasts) => {
                             println!("Id - Name - RSS Feed");
@@ -139,20 +119,18 @@ pub async fn start_command_line(mut args: Args) {
 
                     if ask_for_confirmation().is_ok() {
                         user.password = Some(digest(user.password.unwrap()));
-                        if User::insert_user(&mut user, &mut establish_connection()).is_ok() {
+                        if User::insert_user(&mut user).is_ok() {
                             println!("User succesfully created")
                         }
                     }
                 }
                 "generate" => match args.next().unwrap().as_str() {
                     "apiKey" => {
-                        let conn = &mut establish_connection();
                         User::find_all_users(conn).iter().for_each(|u| {
                             log::info!("Updating api key of user {}", &u.username);
                             User::update_api_key_of_user(
                                 &u.username,
                                 uuid::Uuid::new_v4().to_string(),
-                                conn,
                             )
                             .expect("Error updating api key");
                         })
@@ -172,34 +150,31 @@ pub async fn start_command_line(mut args: Args) {
                     username = trim_string(&username);
                     match available_users.iter().find(|u| u.username == username) {
                         Some(..) => {
-                            Episode::delete_by_username(&mut establish_connection(), &username)
+                            Episode::delete_by_username(&username)
                                 .expect("Error deleting entries for podcast history item");
-                            DeviceService::delete_by_username(&username, &pool)
+                            DeviceService::delete_by_username(&username)
                                 .expect("Error deleting devices");
                             Episode::delete_by_username_and_episode(
                                 &username,
-                                &mut establish_connection(),
+                                conn,
                             )
                             .expect("Error deleting episodes");
                             Favorite::delete_by_username(
                                 trim_string(&username),
-                                &mut establish_connection(),
+                                conn,
                             )
                             .expect("Error deleting favorites");
                             Session::delete_by_username(
-                                &trim_string(&username),
-                                &mut establish_connection(),
+                                &trim_string(&username)
                             )
                             .expect("Error deleting sessions");
                             Subscription::delete_by_username(
                                 &trim_string(&username),
-                                &mut establish_connection(),
+                                &mut get_connection()
                             )
                             .expect("TODO: panic message");
                             User::delete_by_username(
-                                trim_string(&username),
-                                &mut establish_connection(),
-                            )
+                                trim_string(&username), &mut get_connection())
                             .expect("Error deleting user");
                             println!("User deleted")
                         }
@@ -220,7 +195,7 @@ pub async fn start_command_line(mut args: Args) {
                     username = trim_string(&username);
                     println!(">{}<", username);
                     let user =
-                        User::find_by_username(username.as_str(), &mut establish_connection())
+                        User::find_by_username(username.as_str())
                             .unwrap();
 
                     do_user_update(user)
@@ -258,7 +233,7 @@ pub async fn start_command_line(mut args: Args) {
 }
 
 fn list_users() -> Vec<UserWithoutPassword> {
-    let users = User::find_all_users(&mut establish_connection());
+    let users = User::find_all_users(&mut get_connection());
 
     users.iter().for_each(|u| {
         println!("|Username|Role|Explicit Consent|Created at|",);
@@ -276,7 +251,7 @@ pub fn read_user_account() -> Result<User, CustomError> {
     let role = Role::VALUES.map(|v| v.to_string()).join(", ");
     retry_read("Enter your username: ", &mut username);
 
-    let user = User::find_by_username(&username, &mut establish_connection());
+    let user = User::find_by_username(&username);
 
     if user.is_err() {
         println!("User does not exist");
@@ -386,19 +361,19 @@ fn do_user_update(mut user: User) {
                 "Enter the new role [user,\
             uploader or admin]",
             ));
-            User::update_user(user, &mut establish_connection()).expect("Error updating role");
+            User::update_user(user).expect("Error updating role");
             println!("Role updated");
         }
         "password" => {
             let mut password = retry_read_secret("Enter the new password");
             password = digest(password);
             user.password = Some(password);
-            User::update_user(user, &mut establish_connection()).expect("Error updating password");
+            User::update_user(user).expect("Error updating password");
             println!("Password updated");
         }
         "consent" => {
             user.explicit_consent = !user.explicit_consent;
-            User::update_user(user, &mut establish_connection()).expect("Error switching consent");
+            User::update_user(user).expect("Error switching consent");
             println!("Consent preference switched");
         }
         _ => {
@@ -425,7 +400,7 @@ pub fn create_debug_message() {
     println!("Rustc Version: {}", built_info::RUSTC_VERSION);
     println!("Rustc: {}", built_info::RUSTC_VERSION);
 
-    let podcasts = Podcast::get_all_podcasts(&mut establish_connection());
+    let podcasts = Podcast::get_all_podcasts();
 
     match podcasts {
         Ok(podcasts) => {

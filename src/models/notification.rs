@@ -1,9 +1,9 @@
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
 use diesel::insert_into;
 use diesel::Queryable;
 use utoipa::ToSchema;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(Serialize, Deserialize, Queryable, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -16,10 +16,8 @@ pub struct Notification {
 }
 
 impl Notification {
-    pub fn get_unread_notifications(
-        conn: &mut DbConnection,
-    ) -> Result<Vec<Notification>, CustomError> {
-        use crate::dbconfig::schema::notifications::dsl::*;
+    pub fn get_unread_notifications() -> Result<Vec<Notification>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::notifications::dsl::*;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
         use diesel::RunQueryDsl;
@@ -27,17 +25,16 @@ impl Notification {
         let result = notifications
             .filter(status.eq("unread"))
             .order(created_at.desc())
-            .load::<Notification>(conn)
+            .load::<Notification>(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(result)
     }
 
     pub fn insert_notification(
         notification: Notification,
-        conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::notifications::dsl::notifications;
-        use crate::dbconfig::schema::notifications::*;
+        use crate::adapters::persistence::dbconfig::schema::notifications::dsl::notifications;
+        use crate::adapters::persistence::dbconfig::schema::notifications::*;
         use diesel::ExpressionMethods;
         use diesel::RunQueryDsl;
 
@@ -48,7 +45,7 @@ impl Notification {
                 status.eq(notification.clone().status),
                 created_at.eq(notification.clone().created_at),
             ))
-            .execute(conn)
+            .execute(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(())
     }
@@ -56,16 +53,15 @@ impl Notification {
     pub fn update_status_of_notification(
         id_to_search: i32,
         status_update: &str,
-        conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::notifications::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::notifications::dsl::*;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
         use diesel::RunQueryDsl;
         do_retry(|| {
             diesel::update(notifications.filter(id.eq(id_to_search)))
                 .set(status.eq(status_update))
-                .execute(conn)
+                .execute(&mut get_connection())
         })
         .map_err(map_db_error)?;
         Ok(())

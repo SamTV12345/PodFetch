@@ -1,6 +1,5 @@
 use crate::constants::inner_constants::{Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME};
-use crate::dbconfig::schema::users;
-use crate::dbconfig::DBType;
+use crate::adapters::persistence::dbconfig::schema::users;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
@@ -13,6 +12,7 @@ use diesel::QueryDsl;
 use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use std::io::Error;
 use utoipa::ToSchema;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset,
@@ -71,9 +71,8 @@ impl User {
 
     pub fn find_by_username(
         username_to_find: &str,
-        conn: &mut DbConnection,
     ) -> Result<User, CustomError> {
-        use crate::dbconfig::schema::users::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         let env_service = ENVIRONMENT_SERVICE.get().unwrap();
         if let Some(res) = env_service.username.clone() {
             if res == username_to_find {
@@ -83,7 +82,7 @@ impl User {
 
         let opt_user = users
             .filter(username.eq(username_to_find))
-            .first::<User>(conn)
+            .first::<User>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
         if let Some(user) = opt_user {
@@ -93,8 +92,8 @@ impl User {
         }
     }
 
-    pub fn insert_user(&mut self, conn: &mut DbConnection) -> Result<User, Error> {
-        use crate::dbconfig::schema::users::dsl::*;
+    pub fn insert_user(&mut self) -> Result<User, Error> {
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         let env_service = ENVIRONMENT_SERVICE.get().unwrap();
         if let Some(res) = env_service.username.clone() {
             if res == self.username {
@@ -112,35 +111,33 @@ impl User {
                 password.eq(self.password.clone()),
                 created_at.eq(chrono::Utc::now().naive_utc()),
             ))
-            .get_result::<User>(conn)
+            .get_result::<User>(&mut get_connection())
             .unwrap();
         Ok(res)
     }
 
-    pub fn delete_user(&self, conn: &mut DbConnection) -> Result<usize, CustomError> {
+    pub fn delete_user(&self) -> Result<usize, CustomError> {
         diesel::delete(users::table.filter(users::id.eq(self.id)))
-            .execute(conn)
+            .execute(&mut get_connection())
             .map_err(map_db_error)
     }
 
     pub fn update_role(
         &self,
-        conn: &mut DbConnection,
     ) -> Result<UserWithoutPassword, diesel::result::Error> {
         let user = diesel::update(users::table.filter(users::id.eq(self.id)))
             .set(users::role.eq(self.role.clone()))
-            .get_result::<User>(conn);
+            .get_result::<User>(&mut get_connection());
 
         Ok(User::map_to_dto(user.unwrap()))
     }
 
     pub fn update_explicit_consent(
         &self,
-        conn: &mut DbConnection,
     ) -> Result<UserWithoutPassword, diesel::result::Error> {
         let user = diesel::update(users::table.filter(users::id.eq(self.id)))
             .set(users::explicit_consent.eq(self.explicit_consent))
-            .get_result::<User>(conn);
+            .get_result::<User>(&mut get_connection());
 
         Ok(User::map_to_dto(user?))
     }
@@ -196,7 +193,7 @@ impl User {
     }
 
     pub fn find_all_users(conn: &mut DbConnection) -> Vec<UserWithoutPassword> {
-        use crate::dbconfig::schema::users::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
 
         let loaded_users = users.load::<User>(conn).unwrap();
         loaded_users.into_iter().map(User::map_to_dto).collect()
@@ -231,10 +228,9 @@ impl User {
 
     pub fn check_if_admin_or_uploader(
         username: &Option<String>,
-        conn: &mut DbConnection,
     ) -> Result<Option<HttpResponse>, CustomError> {
         if let Some(username) = username {
-            let found_user = User::find_by_username(username, conn)?;
+            let found_user = User::find_by_username(username)?;
             if found_user.role.ne(&Role::Admin.to_string())
                 && found_user.role.ne(&Role::Uploader.to_string())
             {
@@ -246,10 +242,9 @@ impl User {
 
     pub fn check_if_admin(
         username: &Option<String>,
-        conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
         if let Some(username_unwrapped) = username {
-            let found_user = User::find_by_username(username_unwrapped, conn)?;
+            let found_user = User::find_by_username(username_unwrapped)?;
 
             if found_user.role != Role::Admin.to_string() {
                 return Err(CustomError::Forbidden);
@@ -263,18 +258,18 @@ impl User {
         username_to_search: String,
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::users::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         diesel::delete(users.filter(username.eq(username_to_search)))
             .execute(conn)
             .map_err(map_db_error)?;
         Ok(())
     }
 
-    pub fn update_user(user: User, conn: &mut DbConnection) -> Result<User, CustomError> {
-        use crate::dbconfig::schema::users::dsl::*;
+    pub fn update_user(user: User) -> Result<User, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         diesel::update(users.filter(id.eq(user.clone().id)))
             .set(user)
-            .get_result(conn)
+            .get_result(&mut get_connection())
             .map_err(map_db_error)
     }
 
@@ -282,11 +277,11 @@ impl User {
         self.role.eq(&Role::Admin.to_string()) || self.role.eq(&Role::Uploader.to_string())
     }
 
-    pub fn get_user_by_userid(user_id: i32, conn: &mut DbConnection) -> Result<User, CustomError> {
-        use crate::dbconfig::schema::users::dsl::*;
+    pub fn get_user_by_userid(user_id: i32) -> Result<User, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         let user = users
             .filter(id.eq(user_id))
-            .first::<User>(conn)
+            .first::<User>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
         if user.is_none() {
@@ -301,13 +296,12 @@ impl User {
 
     pub fn find_by_api_key(
         api_key_to_find: String,
-        conn: &mut DBType,
     ) -> Result<Option<User>, CustomError> {
-        use crate::dbconfig::schema::users::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
 
         users
             .filter(api_key.eq(api_key_to_find))
-            .first::<User>(conn)
+            .first::<User>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
     }
@@ -315,19 +309,18 @@ impl User {
     pub fn update_api_key_of_user(
         username_to_update: &str,
         api_key_to_update: String,
-        conn: &mut DBType,
     ) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::users::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
 
         diesel::update(users.filter(username.eq(username_to_update)))
             .set(api_key.eq(api_key_to_update))
-            .execute(conn)
+            .execute(&mut get_connection())
             .map_err(map_db_error)?;
 
         Ok(())
     }
 
-    pub fn check_if_api_key_exists(api_key_to_find: String, conn: &mut DBType) -> bool {
+    pub fn check_if_api_key_exists(api_key_to_find: String) -> bool {
         if api_key_to_find.is_empty() {
             return false;
         }
@@ -341,7 +334,7 @@ impl User {
             }
         }
 
-        let result = Self::find_by_api_key(api_key_to_find, conn);
+        let result = Self::find_by_api_key(api_key_to_find);
 
         match result {
             Ok(user) => {

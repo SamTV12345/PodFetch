@@ -9,13 +9,11 @@ use crate::models::user::User;
 use utoipa::ToSchema;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
+use crate::utils::error::CustomError;
 use actix_web::web::{Data, Json, Query};
 use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
-use std::ops::DerefMut;
 
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
@@ -48,12 +46,10 @@ pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
     requester: Option<web::ReqData<User>>,
     last_podcast_episode: Query<OptionalId>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
         id_num,
         last_podcast_episode.last_podcast_episode,
         requester.unwrap().into_inner(),
@@ -82,14 +78,12 @@ pub struct TimeLinePodcastEpisode {
 #[get("/podcast/available/gpodder")]
 pub async fn get_available_podcasts_not_in_webview(
     requester: Option<web::ReqData<User>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError>  {
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden)
     }
-    let mut retrieved_conn = conn.get().map_err(map_r2d2_error)?;
     let found_episodes  = Episode::
-    find_episodes_not_in_webview(&mut retrieved_conn)?;
+    find_episodes_not_in_webview()?;
 
     Ok(HttpResponse::Ok().json(found_episodes))
 }
@@ -117,13 +111,11 @@ tag = "podcasts"
 )]
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
     let res = TimelineItem::get_timeline(
         requester.unwrap().username.clone(),
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
         favored_only.into_inner(),
     )?;
 
@@ -161,7 +153,6 @@ tag = "podcast_episodes"
 #[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(
     id: web::Path<String>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -170,24 +161,20 @@ pub async fn download_podcast_episodes_of_podcast(
 
     thread::spawn(move || {
         let res = PodcastEpisode::get_podcast_episode_by_id(
-            conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
             &id.into_inner(),
         )
         .unwrap();
         if let Some(podcast_episode) = res {
             let podcast = Podcast::get_podcast(
-                conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                 podcast_episode.podcast_id,
             )
             .unwrap();
             PodcastEpisodeService::perform_download(
                 &podcast_episode.clone(),
                 podcast,
-                conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
             )
             .unwrap();
             PodcastEpisode::update_deleted(
-                conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                 &podcast_episode.clone().episode_id,
                 false,
             )
@@ -212,7 +199,6 @@ tag = "podcast_episodes"
 pub async fn delete_podcast_episode_locally(
     id: web::Path<String>,
     requester: Option<web::ReqData<User>>,
-    db: Data<DbPool>,
     lobby: Data<ChatServerHandle>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -221,7 +207,6 @@ pub async fn delete_podcast_episode_locally(
 
     let delted_podcast_episode = PodcastEpisodeService::delete_podcast_episode_locally(
         &id.into_inner(),
-        &mut db.get().unwrap(),
     )?;
     lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
         podcast_episode: Some(delted_podcast_episode),

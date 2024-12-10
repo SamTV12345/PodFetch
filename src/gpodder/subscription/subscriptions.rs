@@ -1,12 +1,9 @@
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
-use crate::utils::error::{map_r2d2_error, CustomError};
+use crate::utils::error::CustomError;
 use crate::utils::time::get_current_timestamp;
-use crate::DbPool;
-use actix_web::web::Data;
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse};
-use std::ops::DerefMut;
 
 #[derive(Deserialize, Serialize)]
 pub struct SubscriptionRetrieveRequest {
@@ -30,7 +27,6 @@ pub async fn get_subscriptions(
     paths: web::Path<(String, String)>,
     opt_flag: Option<web::ReqData<Session>>,
     query: web::Query<SubscriptionRetrieveRequest>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -44,7 +40,6 @@ pub async fn get_subscriptions(
                 &deviceid,
                 &username,
                 query.since,
-                conn.get().map_err(map_r2d2_error)?.deref_mut(),
             )
             .await;
 
@@ -66,7 +61,6 @@ pub async fn upload_subscription_changes(
     upload_request: web::Json<SubscriptionUpdateRequest>,
     opt_flag: Option<web::ReqData<Session>>,
     paths: web::Path<(String, String)>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -79,7 +73,6 @@ pub async fn upload_subscription_changes(
                 &deviceid,
                 &username,
                 upload_request,
-                conn.get().map_err(map_r2d2_error)?.deref_mut(),
             )
             .await
             .unwrap();

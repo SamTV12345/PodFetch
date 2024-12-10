@@ -1,4 +1,3 @@
-use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH};
 use crate::models::user::User;
 use crate::utils::environment_variables::is_env_var_present_and_true;
@@ -37,8 +36,7 @@ where
             return async { Err(ErrorUnauthorized("Unauthorized")) }.boxed_local();
         }
 
-        let conn = &mut establish_connection();
-        let api_key_exists = User::check_if_api_key_exists(api_key.unwrap().to_string(), conn);
+        let api_key_exists = User::check_if_api_key_exists(api_key.unwrap().to_string());
         if !api_key_exists {
             return async { Err(ErrorUnauthorized("Unauthorized")) }.boxed_local();
         }

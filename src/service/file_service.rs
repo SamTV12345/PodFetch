@@ -7,13 +7,12 @@ use std::io::{Error, Write};
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::config::dbconfig::establish_connection;
 use crate::constants::inner_constants::MAX_FILE_TREE_DEPTH;
 use crate::models::podcast_episode::PodcastEpisode;
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
-
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::settings_controller::ReplacementStrategy;
 use crate::models::misc_models::PodcastInsertModel;
 use crate::models::settings::Setting;
@@ -72,11 +71,10 @@ impl FileService {
 
     pub async fn create_podcast_directory_exists(
         podcast_insert_model: &PodcastInsertModel,
-        conn: &mut DbConnection,
         channel: Option<Channel>,
     ) -> Result<String, CustomError> {
         let escaped_title =
-            prepare_podcast_title_to_directory(podcast_insert_model, conn, channel).await?;
+            prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
         let escaped_path = format!("podcasts/{}", escaped_title);
         if !Path::new(&escaped_path).exists() {
             std::fs::create_dir(escaped_path.clone())
@@ -85,7 +83,7 @@ impl FileService {
         } else {
             // Check if this is a new podcast with the same name as an old one
 
-            let conn = &mut establish_connection();
+            let conn = &mut get_connection();
             let podcast =
                 Podcast::get_podcast_by_directory_id(&podcast_insert_model.id.to_string(), conn)?;
             match podcast {
@@ -114,7 +112,6 @@ impl FileService {
         podcast_path: &str,
         image_url: String,
         podcast_id: &str,
-        conn: &mut DbConnection,
     ) {
         let cloned_image_url = image_url.clone();
         let image_suffix = spawn_blocking(move || {
@@ -130,7 +127,7 @@ impl FileService {
         let mut image_out = std::fs::File::create(file_path.0.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
-        PodcastEpisode::update_podcast_image(podcast_id, &file_path.1, conn).unwrap();
+        PodcastEpisode::update_podcast_image(podcast_id, &file_path.1).unwrap();
     }
 
     pub fn cleanup_old_episode(episode: PodcastEpisode) -> Result<(), CustomError> {
@@ -170,12 +167,11 @@ fn move_one_path_up(path: &str) -> String {
 
 pub async fn prepare_podcast_title_to_directory(
     podcast: &PodcastInsertModel,
-    conn: &mut DbConnection,
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
-    let opt_podcast_settings = PodcastSetting::get_settings(conn, podcast.id)?;
+    let retrieved_settings = settings_service.get_settings()?.unwrap();
+    let opt_podcast_settings = PodcastSetting::get_settings(podcast.id)?;
 
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
@@ -270,17 +266,16 @@ pub fn perform_podcast_variable_replacement(
 
 pub fn prepare_podcast_episode_title_to_directory(
     podcast_episode: PodcastEpisode,
-    conn: &mut DbConnection,
 ) -> Result<String, CustomError> {
     let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings(conn)?.unwrap();
+    let retrieved_settings = settings_service.get_settings()?.unwrap();
     if retrieved_settings.use_existing_filename {
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if let Ok(res_unwrapped) = res_of_filename {
             return Ok(res_unwrapped);
         }
     }
-    let podcast_settings = PodcastSetting::get_settings(conn, podcast_episode.podcast_id)?;
+    let podcast_settings = PodcastSetting::get_settings(podcast_episode.podcast_id)?;
     perform_episode_variable_replacement(retrieved_settings, podcast_episode, podcast_settings)
 }
 

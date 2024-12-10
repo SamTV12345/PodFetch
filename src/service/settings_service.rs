@@ -6,7 +6,6 @@ use crate::service::file_service::{
 };
 use crate::utils::error::CustomError;
 use crate::utils::rss_feed_parser::PodcastParsed;
-use crate::DBType as DbConnection;
 
 #[derive(Clone)]
 pub struct SettingsService {}
@@ -18,25 +17,22 @@ impl SettingsService {
 
     pub fn get_settings(
         &mut self,
-        conn: &mut DbConnection,
     ) -> Result<Option<Setting>, CustomError> {
-        Setting::get_settings(conn)
+        Setting::get_settings()
     }
 
     pub fn update_settings(
         &mut self,
         settings: Setting,
-        conn: &mut DbConnection,
     ) -> Result<Setting, CustomError> {
-        Setting::update_settings(settings, conn)
+        Setting::update_settings(settings)
     }
 
     pub fn update_name(
         &mut self,
         update_model: UpdateNameSettings,
-        conn: &mut DbConnection,
     ) -> Result<Setting, CustomError> {
-        let mut settings_ = self.get_settings(conn)?.unwrap();
+        let mut settings_ = self.get_settings()?.unwrap();
         Self::validate_settings(update_model.clone())?;
 
         settings_.replace_invalid_characters = update_model.replace_invalid_characters;
@@ -45,7 +41,7 @@ impl SettingsService {
         settings_.replacement_strategy = update_model.replacement_strategy.to_string();
         settings_.episode_format = update_model.episode_format;
         settings_.podcast_format = update_model.podcast_format;
-        self.update_settings(settings_, conn)
+        self.update_settings(settings_)
     }
 
     fn validate_settings(

@@ -1,8 +1,8 @@
 use diesel::{AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl};
 use utoipa::ToSchema;
-use crate::DBType;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::utils::error::{map_db_error, CustomError};
-use crate::dbconfig::schema::podcast_settings;
+use crate::adapters::persistence::dbconfig::schema::podcast_settings;
 use crate::models::file_path::FilenameBuilderReturn;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -55,14 +55,14 @@ pub struct PodcastSetting {
 
 
 impl PodcastSetting {
-    pub fn get_settings(conn: &mut DBType, id: i32) -> Result<Option<PodcastSetting>,
+    pub fn get_settings(id: i32) -> Result<Option<PodcastSetting>,
         CustomError> {
-        use crate::dbconfig::schema::podcast_settings::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::podcast_settings::dsl::*;
         use diesel::ExpressionMethods;
 
         podcast_settings
             .filter(podcast_id.eq(id))
-            .first::<PodcastSetting>(conn)
+            .first::<PodcastSetting>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
     }
@@ -74,28 +74,26 @@ impl PodcastSetting {
 
     pub fn update_settings(
         setting_to_insert: &PodcastSetting,
-        conn: &mut DBType,
     ) -> Result<PodcastSetting, CustomError> {
-        use crate::dbconfig::schema::podcast_settings::dsl::*;
-        let opt_setting = Self::get_settings(conn, setting_to_insert.podcast_id)?;
+        use crate::adapters::persistence::dbconfig::schema::podcast_settings::dsl::*;
+        let opt_setting = Self::get_settings(setting_to_insert.podcast_id)?;
 
         match opt_setting {
             Some(_) => {
                 diesel::update(podcast_settings.find(setting_to_insert.podcast_id))
                     .set(setting_to_insert.clone())
-                    .execute(conn)
+                    .execute(&mut get_connection())
                     .map_err(map_db_error)?;
             }
             None => {
                 diesel::insert_into(podcast_settings)
                     .values(setting_to_insert.clone())
-                    .execute(conn)
+                    .execute(&mut get_connection())
                     .map_err(map_db_error)?;
             }
         }
-        let available_episodes = PodcastEpisode::get_episodes_by_podcast_id(setting_to_insert.podcast_id,
-                                                                           conn);
-        let podcast = Podcast::get_podcast(conn, setting_to_insert.podcast_id);
+        let available_episodes = PodcastEpisode::get_episodes_by_podcast_id(setting_to_insert.podcast_id);
+        let podcast = Podcast::get_podcast(setting_to_insert.podcast_id);
         if podcast.is_err() {
             return Err(CustomError::Conflict("Podcast not found".to_string()));
         }
@@ -109,8 +107,7 @@ impl PodcastSetting {
                                                                        .local_image_url);
                 let result = DownloadService::handle_metadata_insertion(&file_name_builder, &e
                     .clone(),
-                                                           &podcast,
-                                                           conn);
+                                                           &podcast);
                 if result.is_err() {
                     log::error!("Error while updating metadata for episode: {}", e.id);
                 }

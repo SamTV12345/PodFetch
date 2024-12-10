@@ -1,15 +1,13 @@
 use crate::controllers::web_socket::{chat_ws};
-use std::ops::DerefMut;
 
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_r2d2_error, CustomError};
-use crate::DbPool;
+use crate::utils::error::CustomError;
 use actix_web::web::Query;
-use actix_web::{get, web, web::Data, Error, HttpRequest, HttpResponse};
+use actix_web::{get, web, Error, HttpRequest, HttpResponse};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
@@ -64,7 +62,6 @@ responses(
 , tag = "info")]
 #[get("/rss")]
 pub async fn get_rss_feed(
-    db: Data<DbPool>,
     query: Option<Query<RSSQuery>>,
     api_key: Option<Query<RSSAPiKey>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -78,7 +75,7 @@ pub async fn get_rss_feed(
         }
         let api_key = api_key.as_ref().unwrap().api_key.to_string();
 
-        let api_key_exists = User::check_if_api_key_exists(api_key, db.get().unwrap().deref_mut());
+        let api_key_exists = User::check_if_api_key_exists(api_key);
 
         if !&api_key_exists {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
@@ -87,11 +84,9 @@ pub async fn get_rss_feed(
 
     let downloaded_episodes = match query {
         Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(
-            &mut db.get().unwrap(),
             q.top,
         )?,
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes(
-            &mut db.get().unwrap(),
             env,
         )?,
     };
@@ -168,7 +163,6 @@ responses(
 #[get("/rss/{id}")]
 pub async fn get_rss_feed_for_podcast(
     id: web::Path<i32>,
-    conn: Data<DbPool>,
     api_key: Option<web::Query<RSSAPiKey>>,
 ) -> Result<HttpResponse, CustomError> {
     let env = ENVIRONMENT_SERVICE.get().unwrap();
@@ -182,19 +176,18 @@ pub async fn get_rss_feed_for_podcast(
         let api_key = api_key.as_ref().unwrap().api_key.to_string();
 
         let api_key_exists =
-            User::check_if_api_key_exists(api_key, conn.get().unwrap().deref_mut());
+            User::check_if_api_key_exists(api_key);
 
         if !api_key_exists {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
         }
     }
 
-    let podcast = Podcast::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), *id)?;
+    let podcast = Podcast::get_podcast(*id)?;
 
     let downloaded_episodes =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(
             *id,
-            conn.get().map_err(map_r2d2_error)?.deref_mut(),
         )?;
 
     let mut itunes_owner = get_itunes_owner("", "");

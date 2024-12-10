@@ -14,14 +14,13 @@ impl PathService {
         directory: &str,
         episode: Option<PodcastEpisode>,
         _suffix: &str,
-        filename: &str,
-        conn: &mut DbConnection,
+        filename: &str
     ) -> Result<String, CustomError> {
         match episode {
             Some(episode) => Ok(format!(
                 "{}/{}",
                 directory,
-                prepare_podcast_episode_title_to_directory(episode, conn)?
+                prepare_podcast_episode_title_to_directory(episode)?
             )),
             None => Ok(format!("{}/{}", directory, filename)),
         }

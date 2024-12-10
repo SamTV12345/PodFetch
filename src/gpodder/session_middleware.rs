@@ -1,4 +1,3 @@
-use crate::config::dbconfig::establish_connection;
 use crate::models::session::Session;
 use actix::fut::ok;
 use actix_web::body::{EitherBody, MessageBody};
@@ -12,6 +11,7 @@ use diesel::{OptionalExtension, QueryDsl, RunQueryDsl};
 use futures_util::future::{LocalBoxFuture, Ready};
 use futures_util::FutureExt;
 use std::rc::Rc;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 pub struct CookieFilter {}
 
@@ -66,10 +66,10 @@ where
         let binding = cookie.unwrap();
         let extracted_cookie = binding.value();
 
-        use crate::dbconfig::schema::sessions::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::sessions::dsl::*;
         let session = sessions
             .filter(session_id.eq(extracted_cookie))
-            .first::<Session>(&mut establish_connection())
+            .first::<Session>(&mut get_connection())
             .optional()
             .expect("Error connecting to database");
         if session.is_none() {

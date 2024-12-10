@@ -7,7 +7,7 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::{get_default_image, unwrap_string, DbPool};
+use crate::{get_default_image, unwrap_string};
 use actix_web::dev::PeerAddr;
 use actix_web::http::Method;
 use actix_web::web::{Data, Json, Path};
@@ -19,7 +19,6 @@ use rand::rngs::ThreadRng;
 use rand::Rng;
 use rss::Channel;
 use serde_json::{from_str, Value};
-use std::ops::DerefMut;
 use std::sync::Mutex;
 use std::thread;
 use tokio::task::spawn_blocking;
@@ -34,7 +33,6 @@ use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use crate::DBType as DbConnection;
 use futures_util::StreamExt;
 use reqwest::Client;
 use reqwest::header::HeaderMap;
@@ -60,12 +58,10 @@ tag="podcasts"
 )]
 #[get("/podcasts/filter")]
 pub async fn get_filter(
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let filter = Filter::get_filter_by_username(
         requester.unwrap().username.clone(),
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
     .await?;
     Ok(HttpResponse::Ok().json(filter))
@@ -81,7 +77,6 @@ tag="podcasts"
 #[get("/podcasts/search")]
 pub async fn search_podcasts(
     query: web::Query<PodcastSearchModel>,
-    conn: Data<DbPool>,
     _podcast_service: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -92,7 +87,6 @@ pub async fn search_podcasts(
 
     let opt_filter = Filter::get_filter_by_username(
         requester.clone().unwrap().username.clone(),
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )
     .await?;
 
@@ -109,7 +103,7 @@ pub async fn search_podcasts(
         Some(_latest_pub.clone().to_string()),
         only_favored,
     );
-    Filter::save_filter(filter, conn.get().map_err(map_r2d2_error)?.deref_mut())?;
+    Filter::save_filter(filter)?;
 
     match query.favored_only {
         true => {
@@ -122,7 +116,6 @@ pub async fn search_podcasts(
                         _order.clone(),
                         query.title,
                         _latest_pub.clone(),
-                        conn.get().map_err(map_r2d2_error)?.deref_mut(),
                         username,
                         tag
                     )?;
@@ -136,7 +129,6 @@ pub async fn search_podcasts(
                     _order.clone(),
                     query.title,
                     _latest_pub.clone(),
-                    &mut conn.get().unwrap(),
                     username,
                     tag
                 )?;
@@ -157,15 +149,14 @@ tag="podcasts"
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(
     id: Path<String>,
-    conn: Data<DbPool>,
     user: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
     let username = user.unwrap().username.clone();
 
     let podcast =
-        PodcastService::get_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num)?;
-    let tags = Tag::get_tags_of_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num, &username)?;
+        PodcastService::get_podcast(id_num)?;
+    let tags = Tag::get_tags_of_podcast(id_num, &username)?;
     let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast, tags);
     Ok(HttpResponse::Ok().json(mapped_podcast))
 }
@@ -179,13 +170,12 @@ tag="podcasts"
 )]
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let username = requester.unwrap().username.clone();
 
     let podcasts =
-        PodcastService::get_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut(), username)?;
+        PodcastService::get_podcasts(username)?;
 
     Ok(HttpResponse::Ok().json(podcasts))
 }
@@ -246,7 +236,6 @@ tag="podcasts"
 pub async fn add_podcast(
     track_id: web::Json<PodcastAddModel>,
     lobby: Data<ChatServerHandle>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -271,7 +260,6 @@ pub async fn add_podcast(
     let mut podcast_service = PodcastService::new();
     podcast_service
         .handle_insert_of_podcast(
-            conn.get().map_err(map_r2d2_error)?.deref_mut(),
             PodcastInsertModel {
                 feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
                 title: unwrap_string(&res["results"][0]["collectionName"]),
@@ -298,7 +286,6 @@ pub async fn add_podcast_by_feed(
     rss_feed: web::Json<PodcastRSSAddModel>,
     lobby: Data<ChatServerHandle>,
     podcast_service: Data<Mutex<PodcastService>>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -325,7 +312,6 @@ pub async fn add_podcast_by_feed(
         let mut podcast_service = podcast_service.lock().ignore_poison().clone();
         res = podcast_service
             .handle_insert_of_podcast(
-                conn.get().map_err(map_r2d2_error)?.deref_mut(),
                 PodcastInsertModel {
                     feed_url: rss_feed.clone().rss_feed_url.clone(),
                     title: channel.title.clone(),
@@ -356,7 +342,6 @@ tag="podcasts"
 pub async fn import_podcasts_from_opml(
     opml: web::Json<OpmlModel>,
     lobby: Data<ChatServerHandle>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -367,7 +352,6 @@ pub async fn import_podcasts_from_opml(
     spawn_blocking(move || {
         for outline in document.body.outlines {
             let moved_lobby = lobby.clone();
-            let conn = conn.clone();
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 let rng = rand::thread_rng();
@@ -379,7 +363,6 @@ pub async fn import_podcasts_from_opml(
                     moved_lobby,
                     rng.clone(),
                     environment.clone(),
-                    conn,
                 ));
             });
         }
@@ -399,7 +382,6 @@ tag="podcasts"
 pub async fn add_podcast_from_podindex(
     id: web::Json<PodcastAddModel>,
     lobby: Data<ChatServerHandle>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -421,7 +403,6 @@ pub async fn add_podcast_from_podindex(
         match start_download_podindex(
             id.track_id,
             lobby,
-            conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
         ) {
             Ok(_) => {}
             Err(e) => {
@@ -435,14 +416,13 @@ pub async fn add_podcast_from_podindex(
 fn start_download_podindex(
     id: i32,
     lobby: Data<ChatServerHandle>,
-    conn: &mut DbConnection,
 ) -> Result<Podcast, CustomError> {
     let rt = Runtime::new().unwrap();
 
     rt.block_on(async {
         let mut podcast_service = PodcastService::new();
         podcast_service
-            .insert_podcast_from_podindex(conn, id, lobby)
+            .insert_podcast_from_podindex(id, lobby)
             .await
     })
 }
@@ -456,11 +436,9 @@ tag="podcasts",)]
 #[get("/podcasts/{podcast}/query")]
 pub async fn query_for_podcast(
     podcast: Path<String>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let res = PodcastEpisodeService::query_for_podcast(
         &podcast,
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
 
     Ok(HttpResponse::Ok().json(res))
@@ -476,14 +454,13 @@ tag="podcasts"
 pub async fn refresh_all_podcasts(
     lobby: Data<ChatServerHandle>,
     podcast_service: Data<Mutex<PodcastService>>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
-    let podcasts = Podcast::get_all_podcasts(conn.get().map_err(map_r2d2_error)?.deref_mut());
+    let podcasts = Podcast::get_all_podcasts();
     thread::spawn(move || {
         for podcast in podcasts.unwrap() {
             podcast_service
@@ -492,7 +469,6 @@ pub async fn refresh_all_podcasts(
                 .refresh_podcast(
                     podcast.clone(),
                     lobby.clone(),
-                    conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                 )
                 .unwrap();
             lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
@@ -518,7 +494,6 @@ pub async fn download_podcast(
     id: Path<String>,
     lobby: Data<ChatServerHandle>,
     podcast_service: Data<Mutex<PodcastService>>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -528,13 +503,12 @@ pub async fn download_podcast(
     let id_num = from_str::<i32>(&id).unwrap();
     let mut podcast_service = podcast_service.lock().ignore_poison();
     let podcast =
-        podcast_service.get_podcast_by_id(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num);
+        podcast_service.get_podcast_by_id(id_num);
     thread::spawn(move || {
         let mut podcast_service = PodcastService::new();
         match podcast_service.refresh_podcast(
             podcast.clone(),
             lobby.clone(),
-            conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
         ) {
             Ok(_) => {
                 log::info!("Succesfully refreshed podcast.");
@@ -547,7 +521,6 @@ pub async fn download_podcast(
         let download = podcast_service.schedule_episode_download(
             podcast.clone(),
             Some(lobby),
-            conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
         );
 
         if download.is_err() {
@@ -569,10 +542,9 @@ tag="podcasts"
 )]
 #[put("/podcast/favored")]
 pub async fn favorite_podcast(
-    update_model: web::Json<PodcastFavorUpdateModel>,
+    update_model: Json<PodcastFavorUpdateModel>,
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
 
@@ -580,7 +552,6 @@ pub async fn favorite_podcast(
         update_model.id,
         update_model.favored,
         requester.unwrap().username.clone(),
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
     Ok(HttpResponse::Ok().json("Favorited podcast"))
 }
@@ -595,12 +566,10 @@ tag="podcasts"
 pub async fn get_favored_podcasts(
     podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
-    conn: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
     let podcasts = podcast_service.get_favored_podcasts(
         requester.unwrap().username.clone(),
-        conn.get().map_err(map_r2d2_error)?.deref_mut(),
     )?;
     Ok(HttpResponse::Ok().json(podcasts))
 }
@@ -615,7 +584,6 @@ tag="podcasts"
 #[put("/podcast/{id}/active")]
 pub async fn update_active_podcast(
     id: Path<String>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -623,7 +591,7 @@ pub async fn update_active_podcast(
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
-    PodcastService::update_active_podcast(conn.get().map_err(map_r2d2_error)?.deref_mut(), id_num)?;
+    PodcastService::update_active_podcast(id_num)?;
     Ok(HttpResponse::Ok().json("Updated active podcast"))
 }
 
@@ -634,7 +602,6 @@ async fn insert_outline(
     lobby: Data<ChatServerHandle>,
     mut rng: ThreadRng,
     environment: EnvironmentService,
-    conn: Data<DbPool>,
 ) {
     if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
@@ -643,8 +610,7 @@ async fn insert_outline(
                 client.clone(),
                 lobby.clone(),
                 rng.clone(),
-                environment.clone(),
-                conn.clone(),
+                environment.clone()
             )
             .await;
         }
@@ -687,7 +653,6 @@ async fn insert_outline(
 
             let inserted_podcast = podcast_service
                 .handle_insert_of_podcast(
-                    conn.get().map_err(map_r2d2_error).unwrap().deref_mut(),
                     PodcastInsertModel {
                         feed_url: podcast.clone().xml_url.expect("No feed url"),
                         title: channel.clone().title.to_string(),
@@ -744,7 +709,7 @@ use crate::models::settings::Setting;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
-use crate::utils::error::{map_r2d2_error, map_reqwest_error, CustomError};
+use crate::utils::error::{map_reqwest_error, CustomError};
 use crate::utils::reqwest_client::get_async_sync_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
 
@@ -763,7 +728,6 @@ tag="podcasts"
 #[delete("/podcast/{id}")]
 pub async fn delete_podcast(
     data: web::Json<DeletePodcast>,
-    db: Data<DbPool>,
     id: Path<i32>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -771,18 +735,18 @@ pub async fn delete_podcast(
         return Err(CustomError::Forbidden);
     }
 
-    let podcast = Podcast::get_podcast(&mut db.get().unwrap(), *id).expect(
+    let podcast = Podcast::get_podcast(*id).expect(
         "Error \
         finding podcast",
     );
     if data.delete_files {
         FileService::delete_podcast_files(&podcast.directory_name);
     }
-    Episode::delete_watchtime(&mut db.get().unwrap(), *id)?;
-    PodcastEpisode::delete_episodes_of_podcast(&mut db.get().unwrap(), *id)?;
-    TagsPodcast::delete_tags_by_podcast_id(&mut db.get().unwrap(), *id)?;
+    Episode::delete_watchtime(*id)?;
+    PodcastEpisode::delete_episodes_of_podcast(*id)?;
+    TagsPodcast::delete_tags_by_podcast_id(*id)?;
 
-    Podcast::delete_podcast(&mut db.get().unwrap(), *id)?;
+    Podcast::delete_podcast(*id)?;
     Ok(HttpResponse::Ok().into())
 }
 #[derive(Debug, Deserialize)]
@@ -806,7 +770,6 @@ pub(crate) async fn proxy_podcast(
     query: Option<web::Query<RSSAPiKey>>,
     method: Method,
     rq: HttpRequest,
-    pool: Data<DbPool>,
 ) -> Result<HttpResponse, Error> {
     let is_auth_enabled =
         is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
@@ -818,16 +781,14 @@ pub(crate) async fn proxy_podcast(
         let api_key = query.unwrap().0;
 
         let api_key_exists =
-            User::check_if_api_key_exists(api_key.api_key.to_string(), &mut pool.get().unwrap());
+            User::check_if_api_key_exists(api_key.api_key.to_string());
 
         if !api_key_exists {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
         }
     }
 
-    let conn = &mut *pool.get().unwrap();
-
-    let opt_res = PodcastEpisodeService::get_podcast_episode_by_id(conn, &params.episode_id)?;
+    let opt_res = PodcastEpisodeService::get_podcast_episode_by_id(&params.episode_id)?;
     if opt_res.clone().is_none() {
         return Ok(HttpResponse::NotFound().finish());
     }
@@ -886,7 +847,6 @@ pub(crate) async fn proxy_podcast(
 pub async fn update_podcast_settings(
     id: Path<i32>,
     settings: Json<PodcastSetting>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -894,10 +854,9 @@ pub async fn update_podcast_settings(
     }
 
     let id_num = id.into_inner();
-    let mut conn = conn.get().map_err(map_r2d2_error)?;
     let mut settings = settings.into_inner();
     settings.podcast_id = id_num;
-    let updated_podcast = PodcastSetting::update_settings(&settings, &mut conn)?;
+    let updated_podcast = PodcastSetting::update_settings(&settings)?;
 
     Ok(HttpResponse::Ok().json(updated_podcast))
 }
@@ -906,7 +865,6 @@ pub async fn update_podcast_settings(
 #[get("/podcasts/{id}/settings")]
 pub async fn get_podcast_settings(
     id: Path<i32>,
-    conn: Data<DbPool>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -914,8 +872,7 @@ pub async fn get_podcast_settings(
     }
 
     let id_num = id.into_inner();
-    let mut conn = conn.get().map_err(map_r2d2_error)?;
-    let settings = PodcastSetting::get_settings(&mut conn, id_num)?;
+    let settings = PodcastSetting::get_settings(id_num)?;
 
     Ok(HttpResponse::Ok().json(settings))
 }

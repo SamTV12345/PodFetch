@@ -1,4 +1,4 @@
-use crate::dbconfig::schema::devices;
+use crate::adapters::persistence::dbconfig::schema::devices;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::{execute_with_conn, DBType as DbConnection};
 use diesel::QueryDsl;
@@ -55,10 +55,10 @@ impl DeviceEntity {
     }
 
     #[allow(clippy::redundant_closure_call)]
-    pub fn save(&self, conn: &mut DbConnection) -> Result<DeviceEntity, diesel::result::Error> {
-        use crate::dbconfig::schema::devices::dsl::*;
-
-        execute_with_conn!(conn, |conn| diesel::insert_into(devices)
+    pub fn save(&self) -> Result<DeviceEntity, diesel::result::Error> {
+        use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
+        
+        execute_with_conn!(|conn| diesel::insert_into(devices)
             .values(self)
             .get_result(conn));
     }
@@ -67,7 +67,7 @@ impl DeviceEntity {
         conn: &mut DbConnection,
         username_to_insert: String,
     ) -> Result<Vec<DeviceEntity>, diesel::result::Error> {
-        use crate::dbconfig::schema::devices::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
         devices
             .filter(username.eq(username_to_insert))
             .load::<DeviceEntity>(conn)
@@ -78,7 +78,7 @@ impl DeviceEntity {
         username1: &str,
         conn: &mut DbConnection,
     ) -> Result<usize, diesel::result::Error> {
-        use crate::dbconfig::schema::devices::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
         diesel::delete(devices.filter(username.eq(username1))).execute(conn)
     }
 }

@@ -1,8 +1,6 @@
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
 use crate::utils::error::CustomError;
-use crate::DbPool;
-use actix_web::web::Data;
 use actix_web::{get, post, Scope};
 use actix_web::{web, HttpResponse};
 use crate::adapters::api::models::device::device_response::DeviceResponse;
@@ -15,8 +13,7 @@ use crate::application::usecases::devices::query_use_case::QueryUseCase;
 pub async fn post_device(
     query: web::Path<(String, String)>,
     device_post: web::Json<DevicePost>,
-    opt_flag: Option<web::ReqData<Session>>,
-    conn: Data<DbPool>,
+    opt_flag: Option<web::ReqData<Session>>
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -33,8 +30,7 @@ pub async fn post_device(
                 caption: device_post.caption.clone(),
             };
 
-            let pool = conn.get_ref();
-            let device = DeviceService::create(device_create.into(), pool)?;
+            let device = DeviceService::create(device_create.into())?;
             let result = DeviceResponse::from(&device);
 
             Ok(HttpResponse::Ok().json(result))
@@ -47,7 +43,6 @@ pub async fn post_device(
 pub async fn get_devices_of_user(
     query: web::Path<String>,
     opt_flag: Option<web::ReqData<Session>>,
-    pool: Data<DbPool>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -56,7 +51,6 @@ pub async fn get_devices_of_user(
             }
             let devices = DeviceService::query_by_username(
                 query.clone(),
-                pool.get_ref(),
             )?;
 
             let dtos = devices

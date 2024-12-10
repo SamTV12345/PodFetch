@@ -1,4 +1,4 @@
-use crate::dbconfig::schema::playlist_items;
+use crate::adapters::persistence::dbconfig::schema::playlist_items;
 use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
@@ -10,6 +10,7 @@ use diesel::sql_types::{Integer, Text};
 use diesel::ExpressionMethods;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Serialize, Deserialize, Debug, Queryable, QueryableByName, Insertable, Clone, ToSchema,
@@ -28,7 +29,7 @@ impl PlaylistItem {
         &self,
         conn: &mut DbConnection,
     ) -> Result<PlaylistItem, CustomError> {
-        use crate::dbconfig::schema::playlist_items::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
         let res = playlist_items
             .filter(
@@ -59,7 +60,7 @@ impl PlaylistItem {
         episode_1: i32,
         conn: &mut DbConnection,
     ) -> Result<(), diesel::result::Error> {
-        use crate::dbconfig::schema::playlist_items::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
         diesel::delete(
             playlist_items.filter(playlist_id.eq(playlist_id_1).and(episode.eq(episode_1))),
@@ -70,29 +71,27 @@ impl PlaylistItem {
 
     pub fn delete_playlist_item_by_playlist_id(
         playlist_id_1: String,
-        conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::playlist_items::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
         diesel::delete(playlist_items.filter(playlist_id.eq(playlist_id_1)))
-            .execute(conn)
+            .execute(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(())
     }
 
     pub fn get_playlist_items_by_playlist_id(
         playlist_id_1: String,
-        conn: &mut DbConnection,
         user: User,
     ) -> Result<Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>, CustomError> {
-        use crate::dbconfig::schema::episodes as episode_item;
-        use crate::dbconfig::schema::episodes::episode as phistory_episode_id;
-        use crate::dbconfig::schema::episodes::timestamp as phistory_date;
-        use crate::dbconfig::schema::episodes::username as phistory_username;
-        use crate::dbconfig::schema::playlist_items::dsl::*;
-        use crate::dbconfig::schema::podcast_episodes::dsl::episode_id as epid;
-        use crate::dbconfig::schema::podcast_episodes::dsl::id as eid;
-        use crate::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+        use crate::adapters::persistence::dbconfig::schema::episodes as episode_item;
+        use crate::adapters::persistence::dbconfig::schema::episodes::episode as phistory_episode_id;
+        use crate::adapters::persistence::dbconfig::schema::episodes::timestamp as phistory_date;
+        use crate::adapters::persistence::dbconfig::schema::episodes::username as phistory_username;
+        use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::episode_id as epid;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::id as eid;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
         let (ph1, ph2) = diesel::alias!(episode_item as ph1, episode_item as ph2);
 
         let subquery = ph2
@@ -107,7 +106,7 @@ impl PlaylistItem {
             .left_join(ph1.on(ph1.field(phistory_episode_id).eq(epid)))
             .filter(ph1.field(phistory_date).nullable().eq_any(subquery))
             .order(position.asc())
-            .load::<(PlaylistItem, PodcastEpisode, Option<Episode>)>(conn)
+            .load::<(PlaylistItem, PodcastEpisode, Option<Episode>)>(&mut get_connection())
             .map_err(map_db_error)
     }
 
@@ -115,7 +114,7 @@ impl PlaylistItem {
         episode_id_1: i32,
         conn: &mut DbConnection,
     ) -> Result<(), CustomError> {
-        use crate::dbconfig::schema::playlist_items::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
         diesel::delete(playlist_items.filter(episode.eq(episode_id_1)))
             .execute(conn)

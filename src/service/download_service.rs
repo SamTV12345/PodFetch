@@ -10,10 +10,8 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use std::io;
 use std::io::Read;
 use file_format::FileFormat;
-
-use crate::config::dbconfig::establish_connection;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
-use crate::dbconfig::DBType;
 use crate::get_default_image;
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_settings::PodcastSetting;
@@ -40,9 +38,9 @@ impl DownloadService {
         podcast: Podcast
     ) -> Result<(), CustomError> {
         let client = ClientBuilder::new().build().unwrap();
-        let conn = &mut establish_connection();
+        let conn = &mut get_connection();
         let suffix = determine_file_extension(&podcast_episode.url, &client, FileType::Audio);
-        let settings_in_db = Setting::get_settings(conn)?.unwrap();
+        let settings_in_db = Setting::get_settings()?.unwrap();
         let image_suffix =
             determine_file_extension(&podcast_episode.image_url, &client, FileType::Image);
 
@@ -90,17 +88,17 @@ impl DownloadService {
                 .with_podcast(podcast.clone())
                 .with_suffix(&suffix)
                 .with_settings(settings_in_db)
-                .with_episode(podcast_episode.clone(), conn)?
+                .with_episode(podcast_episode.clone())?
                 .with_filename(PODCAST_FILENAME)
                 .with_image_filename(PODCAST_IMAGENAME)
                 .with_image_suffix(&image_suffix)
-                .with_raw_directory(conn)?
+                .with_raw_directory()?
                 .build(conn)?,
             false => FilenameBuilder::default()
                 .with_suffix(&suffix)
                 .with_settings(settings_in_db)
                 .with_image_suffix(&image_suffix)
-                .with_episode(podcast_episode.clone(), conn)?
+                .with_episode(podcast_episode.clone())?
                 .with_podcast_directory(&podcast.directory_name)
                 .with_podcast(podcast.clone())
                 .with_image_filename(PODCAST_IMAGENAME)
@@ -130,25 +128,26 @@ impl DownloadService {
             conn,
         )?;
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
-        Self::handle_metadata_insertion(&paths, &podcast_episode, &podcast, conn)?;
+        let result = Self::handle_metadata_insertion(&paths, &podcast_episode, &podcast);
+        if let Err(err) = result {
+            log::error!("Error handling metadata insertion: {:?}", err);
+        }
         Ok(())
     }
 
-    pub fn handle_metadata_insertion(paths: &FilenameBuilderReturn, podcast_episode:
-    &PodcastEpisode, podcast: &Podcast, conn: &mut DBType) -> Result<(), CustomError> {
+    pub fn handle_metadata_insertion(paths: &FilenameBuilderReturn, podcast_episode: &PodcastEpisode, podcast: &Podcast) -> Result<(), CustomError> {
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
 
         match detected_file {
             FileFormat::Mpeg12AudioLayer3 => {
-                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast,
-                                                              conn);
+                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
                     log::error!("Error updating metadata: {:?}", err);
                 }
             },
             FileFormat::AppleItunesAudio =>{
-                let result_of_itunes = Self::update_meta_data_mp4(paths, podcast_episode, podcast,
-                                                              conn);
+                let result_of_itunes = Self::update_meta_data_mp4(paths, podcast_episode,
+                                                                  podcast);
                 if let Some(err) = result_of_itunes.err() {
                     log::error!("Error updating metadata: {:?}", err);
                 }
@@ -165,8 +164,7 @@ impl DownloadService {
     fn update_meta_data_mp3(
         paths: &FilenameBuilderReturn,
         podcast_episode: &PodcastEpisode,
-        podcast: &Podcast,
-        conn: &mut DBType,
+        podcast: &Podcast
     ) -> Result<(), CustomError> {
         let mut tag = match Tag::read_from_path(&paths.filename) {
             Ok(tag) => tag,
@@ -193,27 +191,28 @@ impl DownloadService {
             });
         }
 
+        let mut conn = get_connection();
         let index = PodcastEpisode::get_position_of_episode(&podcast_episode.date_of_recording,
                                                           podcast_episode.podcast_id,
-                                      conn)?;
+                                      &mut conn)?;
 
-        let settings_for_podcast = PodcastSetting::get_settings(conn, podcast.id)?;
+        let settings_for_podcast = PodcastSetting::get_settings(podcast.id)?;
 
         if let Some(settings_for_podcast) = settings_for_podcast {
             if settings_for_podcast.episode_numbering {
                 if  !podcast_episode.episode_numbering_processed {
                     tag.set_title(format!("{} - {}", index, &podcast_episode.name));
-                    PodcastEpisode::update_episode_numbering_processed(conn, true,
+                    PodcastEpisode::update_episode_numbering_processed(&mut conn, true,
                                                                        &podcast_episode.episode_id);
                 }
             } else {
                 tag.set_title(&podcast_episode.name);
-                PodcastEpisode::update_episode_numbering_processed(conn, false, &podcast_episode
+                PodcastEpisode::update_episode_numbering_processed(&mut conn, false, &podcast_episode
                     .episode_id)
             }
         } else {
             tag.set_title(&podcast_episode.name);
-            PodcastEpisode::update_episode_numbering_processed(conn, false, &podcast_episode
+            PodcastEpisode::update_episode_numbering_processed(&mut conn, false, &podcast_episode
                 .episode_id)
         }
 
@@ -246,7 +245,6 @@ impl DownloadService {
         }
 
         let track_number = PodcastEpisodeService::get_track_number_for_episode(
-            conn,
             podcast.id,
             &podcast_episode.date_of_recording,
         );
@@ -273,7 +271,6 @@ impl DownloadService {
         paths: &FilenameBuilderReturn,
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
-        conn: &mut DBType,
     ) -> Result<(), CustomError> {
         let tag = mp4ameta::Tag::read_from_path(&paths.filename);
         match tag {
@@ -287,7 +284,6 @@ impl DownloadService {
 
                 tag.set_comment(&podcast_episode.description);
                 let track_number = PodcastEpisodeService::get_track_number_for_episode(
-                    conn,
                     podcast.id,
                     &podcast_episode.date_of_recording,
                 );
