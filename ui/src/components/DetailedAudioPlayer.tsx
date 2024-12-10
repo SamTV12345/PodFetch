@@ -10,7 +10,7 @@ import 'material-symbols/outlined.css'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 
 type DetailedAudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement>,
+    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined,
     setAudioAmplifier: (audioAmplifier: AudioAmplifier | undefined) => void
 }

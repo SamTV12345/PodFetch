@@ -1,5 +1,5 @@
-@import "theme-light";
-@import "theme-dark";
+@use "theme-light";
+@use "theme-dark";
 
 $spacing-1: .05em;
 $spacing-2: .1em;
@@ -16,24 +16,24 @@ $spacing-11: 5em;
 /* Dark theme */
 
 body.theme-dark {
-  @include theme-dark;
+  @include theme-dark.theme-dark;
 }
 
 /* Light theme */
 
 body.theme-light {
-  @include theme-light;
+  @include theme-light.theme-light;
 }
 
 /* System default theme */
 
 body.theme-default {
-  @include theme-light;
+  @include theme-light.theme-light;
 }
 
 @media screen and (prefers-color-scheme: dark) {
   body.theme-default {
-    @include theme-dark;
+    @include theme-dark.theme-dark;
   }
 }
 

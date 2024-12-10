@@ -3,7 +3,7 @@ import { IconProps } from './PlayIcon'
 import 'material-symbols/outlined.css'
 
 interface VolumeProps extends IconProps {
-    audio:  RefObject<HTMLAudioElement>,
+    audio:  RefObject<HTMLAudioElement|null>,
     max: number,
     volume: number
 }

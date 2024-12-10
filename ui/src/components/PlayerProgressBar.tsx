@@ -3,7 +3,7 @@ import useAudioPlayer from '../store/AudioPlayerSlice'
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 
 type PlayerProgressBarProps = {
-    audioplayerRef: React.RefObject<HTMLAudioElement>,
+    audioplayerRef: React.RefObject<HTMLAudioElement|null>,
     className?: string
 }
 

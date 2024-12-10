@@ -7,7 +7,7 @@ import { PlayerVolumeSlider } from './PlayerVolumeSlider'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 
 type DrawerAudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement>,
+    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined
 }
 

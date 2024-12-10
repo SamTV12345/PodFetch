@@ -14,7 +14,7 @@ import {Episode} from "../models/Episode";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 
 type PlayerTimeControlsProps = {
-    refItem: RefObject<HTMLAudioElement>
+    refItem: RefObject<HTMLAudioElement|null>
 }
 
 

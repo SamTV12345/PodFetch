@@ -5,7 +5,7 @@ import { HiddenAudioPlayer } from './HiddenAudioPlayer'
 import useCommon from "../store/CommonSlice";
 
 type AudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement>,
+    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined
     setAudioAmplifier: (audioAmplifier: AudioAmplifier | undefined) => void
 }

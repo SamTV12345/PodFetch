@@ -5,7 +5,7 @@ import { AudioAmplifier } from '../models/AudioAmplifier'
 import { VolumeIcon } from '../icons/VolumeIcon'
 
 type PlayerVolumeSliderProps = {
-    refItem: RefObject<HTMLAudioElement>,
+    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined
 }
 

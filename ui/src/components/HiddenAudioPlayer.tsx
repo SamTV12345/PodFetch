@@ -6,7 +6,7 @@ import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 
 type HiddenAudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement>,
+    refItem: RefObject<HTMLAudioElement|null>,
     setAudioAmplifier: (audioAmplifier: AudioAmplifier) => void
 }
 
