@@ -4,7 +4,7 @@ use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::web::redirect;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use crate::adapters::api::controllers::device_controller::device_routes;
+use crate::adapters::api::controllers::device_controller::{get_devices_of_user, post_device};
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::podcast_controller::proxy_podcast;
@@ -63,7 +63,8 @@ fn get_authenticated_gpodder() -> Scope<
 > {
     web::scope("")
         .wrap(crate::gpodder::session_middleware::CookieFilter::new())
-        .service(device_routes())
+        .service(post_device)
+        .service(get_devices_of_user)
         .service(get_subscriptions)
         .service(upload_subscription_changes)
         .service(crate::gpodder::episodes::gpodder_episodes::get_episode_actions)

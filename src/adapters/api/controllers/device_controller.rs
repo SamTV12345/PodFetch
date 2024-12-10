@@ -1,7 +1,7 @@
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
 use crate::utils::error::CustomError;
-use actix_web::{get, post, Scope};
+use actix_web::{get, post};
 use actix_web::{web, HttpResponse};
 use crate::adapters::api::models::device::device_response::DeviceResponse;
 use crate::adapters::api::models::device::device_create::DeviceCreate;
@@ -61,10 +61,4 @@ pub async fn get_devices_of_user(
         }
         None => Err(CustomError::Forbidden),
     }
-}
-
-pub fn device_routes() -> Scope {
-    Scope::new("")
-        .service(post_device)
-        .service(get_devices_of_user)
 }
