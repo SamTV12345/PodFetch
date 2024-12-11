@@ -7,24 +7,22 @@ use std::io::{Error, Write};
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::constants::inner_constants::MAX_FILE_TREE_DEPTH;
-use crate::models::podcast_episode::PodcastEpisode;
-use regex::Regex;
-use rss::Channel;
-use tokio::task::spawn_blocking;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::settings_controller::ReplacementStrategy;
 use crate::models::misc_models::PodcastInsertModel;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::{map_io_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
+use crate::utils::file_name_replacement::{Options, Sanitizer};
 use crate::utils::rss_feed_parser::RSSFeedParser;
 use crate::DBType as DbConnection;
-use crate::models::podcast_settings::PodcastSetting;
-use crate::utils::file_name_replacement::{Options, Sanitizer};
-
+use regex::Regex;
+use rss::Channel;
+use tokio::task::spawn_blocking;
 
 #[derive(Clone)]
 pub struct FileService {
@@ -130,39 +128,30 @@ impl FileService {
         PodcastEpisode::update_podcast_image(podcast_id, &file_path.1).unwrap();
     }
 
-    pub fn cleanup_old_episode(episode: PodcastEpisode) -> Result<(), CustomError> {
+    pub fn cleanup_old_episode(episode: &PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
-        let splitted_url = episode.url.split('/').collect::<Vec<&str>>();
-        match splitted_url.len() as i32 == MAX_FILE_TREE_DEPTH {
-            true => {
-                let path = move_one_path_up(&episode.file_image_path.unwrap());
-                std::fs::remove_dir_all(&path).map_err(|v| map_io_error(v, Some(path)))
-            }
-            false => {
-                if episode.file_episode_path.is_some() {
-                    std::fs::remove_file(episode.file_episode_path.clone().unwrap())
-                        .map_err(|e| map_io_error(e, episode.file_episode_path))?;
-                }
-                if episode.file_image_path.is_some() {
-                    std::fs::remove_file(episode.file_image_path.clone().unwrap())
-                        .map_err(|e| map_io_error(e, episode.file_image_path))?;
-                }
-                Ok(())
+
+        fn check_if_file_exists(file_path: &str) -> bool {
+            std::fs::exists(file_path).unwrap()
+        }
+        if let Some(episode_path) = episode.file_episode_path.clone() {
+            if check_if_file_exists(&episode_path) {
+                std::fs::remove_file(episode_path)
+                    .map_err(|e| map_io_error(e, episode.file_episode_path.clone()))?;
             }
         }
+        if let Some(image_path) = episode.file_image_path.clone() {
+            if check_if_file_exists(&image_path) {
+                std::fs::remove_file(image_path)
+                    .map_err(|e| map_io_error(e, episode.file_image_path.clone()))?;
+            }
+        }
+        Ok(())
     }
 
     pub fn delete_podcast_files(podcast_dir: &str) {
         std::fs::remove_dir_all(podcast_dir).expect("Error deleting podcast directory");
     }
-}
-
-fn move_one_path_up(path: &str) -> String {
-    const SEPARATOR: &str = "/";
-    let mut split = path.split(SEPARATOR).collect::<Vec<&str>>();
-    split.pop();
-
-    split.join(SEPARATOR)
 }
 
 pub async fn prepare_podcast_title_to_directory(
@@ -186,7 +175,7 @@ pub async fn prepare_podcast_title_to_directory(
         }
     };
 
-    perform_podcast_variable_replacement(retrieved_settings, podcast.clone(),opt_podcast_settings)
+    perform_podcast_variable_replacement(retrieved_settings, podcast.clone(), opt_podcast_settings)
 }
 
 fn replace_date_of_str(date: &str) -> String {
@@ -202,11 +191,15 @@ fn replace_date_of_str(date: &str) -> String {
 pub fn perform_podcast_variable_replacement(
     retrieved_settings: Setting,
     podcast: crate::utils::rss_feed_parser::PodcastParsed,
-    podcast_setting: Option<PodcastSetting>
+    podcast_setting: Option<PodcastSetting>,
 ) -> Result<String, CustomError> {
     let sanitizer = Sanitizer::new(None);
-    let escaped_podcast_title = perform_replacement(&podcast.title, retrieved_settings.clone(), podcast_setting.clone())
-        .replace(|c: char| !c.is_ascii(), "");
+    let escaped_podcast_title = perform_replacement(
+        &podcast.title,
+        retrieved_settings.clone(),
+        podcast_setting.clone(),
+    )
+    .replace(|c: char| !c.is_ascii(), "");
     let podcast_format;
 
     if podcast_setting.is_none() {
@@ -221,9 +214,7 @@ pub fn perform_podcast_variable_replacement(
         podcast_format = retrieved_settings.podcast_format.clone();
     }
 
-    if podcast_format.is_empty()
-        || podcast_format.trim() == "{}"
-    {
+    if podcast_format.is_empty() || podcast_format.trim() == "{}" {
         return Ok(sanitizer.sanitize(podcast.title));
     }
 
@@ -284,9 +275,12 @@ pub fn perform_episode_variable_replacement(
     podcast_episode: PodcastEpisode,
     podcast_settings: Option<PodcastSetting>,
 ) -> Result<String, CustomError> {
-    let escaped_episode_title =
-        perform_replacement(&podcast_episode.name, retrieved_settings.clone(), podcast_settings.clone())
-            .replace(|c: char| !c.is_ascii(), "");
+    let escaped_episode_title = perform_replacement(
+        &podcast_episode.name,
+        retrieved_settings.clone(),
+        podcast_settings.clone(),
+    )
+    .replace(|c: char| !c.is_ascii(), "");
     let episode_format;
 
     if podcast_settings.is_none() {
@@ -301,9 +295,7 @@ pub fn perform_episode_variable_replacement(
         episode_format = retrieved_settings.episode_format.clone();
     }
 
-
-    if episode_format.is_empty() || episode_format.trim() == "{}"
-    {
+    if episode_format.is_empty() || episode_format.trim() == "{}" {
         return Ok(escaped_episode_title);
     }
 
@@ -344,8 +336,11 @@ pub fn perform_episode_variable_replacement(
     }
 }
 
-fn perform_replacement(title: &str, retrieved_settings: Setting, podcast_settings: Option<PodcastSetting>) ->
-                                                                                          String {
+fn perform_replacement(
+    title: &str,
+    retrieved_settings: Setting,
+    podcast_settings: Option<PodcastSetting>,
+) -> String {
     let mut final_string: String = title.to_string();
     let replacement_strategy;
     if podcast_settings.is_none() {
@@ -369,11 +364,11 @@ fn perform_replacement(title: &str, retrieved_settings: Setting, podcast_setting
         ReplacementStrategy::Remove => {
             let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("")));
             final_string = sanitizer.sanitize(&final_string);
-        },
+        }
         ReplacementStrategy::ReplaceWithDash => {
             let sanitizer = Sanitizer::new(Some(Options::default_with_replacement("-")));
             final_string = sanitizer.sanitize(&final_string);
-        },
+        }
     }
     final_string
 }
@@ -584,7 +579,7 @@ mod tests {
             local_image_url: "".to_string(),
             download_time: None,
             deleted: false,
-            episode_numbering_processed: false
+            episode_numbering_processed: false,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -626,7 +621,7 @@ mod tests {
             local_image_url: "".to_string(),
             download_time: None,
             deleted: false,
-            episode_numbering_processed:false
+            episode_numbering_processed: false,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);

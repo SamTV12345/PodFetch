@@ -503,7 +503,7 @@ impl PodcastEpisodeService {
 
             log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
-                let res = FileService::cleanup_old_episode(old_podcast_episode.clone());
+                let res = FileService::cleanup_old_episode(&old_podcast_episode);
 
                 match res {
                     Ok(_) => {
@@ -572,10 +572,18 @@ impl PodcastEpisodeService {
         if episode.is_none() {
             return Err(CustomError::NotFound);
         }
-        FileService::cleanup_old_episode(episode.clone().unwrap())?;
-        PodcastEpisode::update_download_status_of_episode(episode.clone().unwrap().id);
-        PodcastEpisode::update_deleted(episode_id, true)?;
-        Ok(episode.unwrap())
+
+        match episode {
+            Some(episode)=>{
+                FileService::cleanup_old_episode(&episode)?;
+                PodcastEpisode::update_download_status_of_episode(episode.id);
+                PodcastEpisode::update_deleted(episode_id, true)?;
+                Ok(episode)
+            }
+            None=>{
+                Err(CustomError::NotFound)
+            }
+        }
     }
 
     pub fn get_track_number_for_episode(
