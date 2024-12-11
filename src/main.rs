@@ -40,8 +40,10 @@ use crate::controllers::playlist_controller::{
     add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
     get_playlist_by_id, update_playlist,
 };
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_settings, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
-use crate::controllers::podcast_controller::{
+use crate::adapters::api::controllers::podcast_controller::{add_podcast, add_podcast_by_feed,
+delete_podcast,
+find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_settings, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
+use crate::adapters::api::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };

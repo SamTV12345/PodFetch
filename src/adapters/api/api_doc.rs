@@ -1,5 +1,5 @@
 use crate::controllers::notification_controller::*;
-use crate::controllers::podcast_controller::*;
+use crate::adapters::api::controllers::podcast_controller::*;
 use crate::controllers::podcast_episode_controller::__path_find_all_podcast_episodes_of_podcast;
 use crate::controllers::podcast_episode_controller::*;
 use crate::controllers::settings_controller::*;
@@ -11,12 +11,12 @@ use crate::controllers::user_controller::*;
 use crate::controllers::watch_time_controller::*;
 use crate::controllers::websocket_controller::*;
 use crate::models;
-use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::filter::Filter;
 use crate::models::invite::Invite;
 use crate::models::misc_models::{
     PodcastAddModel, PodcastWatchedEpisodeModel, PodcastWatchedPostModel,
 };
+use crate::adapters::api::models::podcast::podcast_favor_update_model::PodcastFavorUpdateModel;
 use crate::models::notification::Notification;
 use crate::models::opml_model::OpmlModel;
 use crate::models::podcast_episode::PodcastEpisode;

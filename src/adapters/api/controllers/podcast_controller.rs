@@ -1,5 +1,4 @@
 use crate::constants::inner_constants::{PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM, OIDC_AUTH};
-use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
 use crate::models::search_type::SearchType::{ITunes, Podindex};
@@ -698,6 +697,7 @@ async fn insert_outline(
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
+use crate::adapters::api::models::podcast::podcast_favor_update_model::PodcastFavorUpdateModel;
 use crate::models::tag::Tag;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
