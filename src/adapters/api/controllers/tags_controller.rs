@@ -1,6 +1,7 @@
 use actix_web::{delete, get, HttpResponse, post, put, web};
 use actix_web::web::Json;
 use utoipa::ToSchema;
+use crate::adapters::api::models::podcast::podcast_dto::PodcastDto;
 use crate::models::color::Color;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;

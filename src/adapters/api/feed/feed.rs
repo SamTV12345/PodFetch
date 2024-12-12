@@ -1,65 +1,21 @@
-use crate::controllers::web_socket::{chat_ws};
-
+use actix_web::{get, web, HttpResponse};
+use actix_web::web::Query;
+use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder};
+use rss::extension::itunes::{ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder, ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder};
+use crate::adapters::api::models::shared::rss_api_key::RSSAPiKey;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-
+use crate::models::user::User;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
-use actix_web::web::Query;
-use actix_web::{get, web, Error, HttpRequest, HttpResponse};
-use rss::extension::itunes::{
-    ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
-    ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
-};
-use rss::{
-    Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
-    ItemBuilder,
-};
-use tokio::task::spawn_local;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::server::ChatServerHandle;
-use crate::models::user::User;
 
 #[utoipa::path(
-context_path = "/api/v1",
-responses(
-(status = 200, description = "Gets a web socket connection"))
-, tag = "info")]
-#[get("/ws")]
-pub async fn start_connection(
-    req: HttpRequest,
-    body: web::Payload,
-    chat_server: web::Data<ChatServerHandle>,
-) -> Result<HttpResponse, Error> {
-    let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
-
-    // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws(
-        (**chat_server).clone(),
-        session,
-        msg_stream,
-    ));
-
-    Ok(res)
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct RSSQuery {
-    top: i32,
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RSSAPiKey {
-    pub api_key: String,
-}
-
-#[utoipa::path(
-context_path = "/api/v1",
-responses(
+    context_path = "/api/v1",
+    responses(
 (status = 200, description = "Gets the complete rss feed"))
-, tag = "info")]
+    , tag = "info")]
 #[get("/rss")]
 pub async fn get_rss_feed(
     query: Option<Query<RSSQuery>>,
@@ -122,6 +78,8 @@ pub async fn get_rss_feed(
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
+
+
 fn add_api_key_to_url(url: String, api_key: &Option<Query<RSSAPiKey>>) -> String {
     if let Some(ref api_key) = api_key {
         if url.contains('?') {
@@ -156,14 +114,14 @@ fn generate_itunes_extension_conditionally(
 }
 
 #[utoipa::path(
-context_path = "/api/v1",
-responses(
+    context_path = "/api/v1",
+    responses(
 (status = 200, description = "Gets a specific rss feed"))
-, tag = "info")]
+    , tag = "info")]
 #[get("/rss/{id}")]
 pub async fn get_rss_feed_for_podcast(
     id: web::Path<i32>,
-    api_key: Option<web::Query<RSSAPiKey>>,
+    api_key: Option<Query<RSSAPiKey>>,
 ) -> Result<HttpResponse, CustomError> {
     let env = ENVIRONMENT_SERVICE.get().unwrap();
     let server_url = env.server_url.clone();

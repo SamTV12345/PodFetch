@@ -18,7 +18,7 @@ use serde_json::from_str;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use crate::controllers::server::ChatServerHandle;
+use crate::adapters::api::ws::server::ChatServerHandle;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {

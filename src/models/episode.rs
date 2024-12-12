@@ -17,9 +17,6 @@ use diesel::query_dsl::methods::DistinctDsl;
 use utoipa::ToSchema;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
-use crate::models::misc_models::{
-    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
-};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::utils::error::{map_db_error, CustomError};

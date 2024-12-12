@@ -1,4 +1,3 @@
-use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
@@ -8,6 +7,7 @@ use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
+use crate::adapters::api::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(Deserialize, Serialize)]

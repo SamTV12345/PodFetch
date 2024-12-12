@@ -5,7 +5,7 @@ use futures_util::future::{select, Either};
 use futures_util::StreamExt;
 use tokio::sync::mpsc;
 use tokio::time::interval;
-use crate::controllers::server::{ChatServerHandle, ConnId};
+use crate::adapters::api::ws::server::{ChatServerHandle, ConnId};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
