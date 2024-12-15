@@ -1,4 +1,5 @@
 use serde_json::Value;
+use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 
 pub fn unwrap_string(value: &Value) -> String {
     value.to_string().replace('\"', "")

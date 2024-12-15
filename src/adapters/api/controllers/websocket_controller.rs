@@ -17,11 +17,8 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
-use crate::adapters::api::controllers::server::ChatServerHandle;
-use crate::adapters::api::controllers::web_socket::chat_ws;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::server::ChatServerHandle;
-use crate::models::user::User;
+use crate::adapters::api::ws::server::ChatServerHandle;
+use crate::adapters::api::ws::web_socket::chat_ws;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -46,10 +43,7 @@ pub async fn start_connection(
     Ok(res)
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct RSSQuery {
-    top: i32,
-}
+
 
 
 

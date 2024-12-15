@@ -1,9 +1,5 @@
-use crate::controllers::playlist_controller::{PlaylistDto, PlaylistDtoPost};
-use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::adapters::persistence::dbconfig::schema::playlists;
-use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
-use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::{execute_with_conn, DBType as DbConnection};
@@ -15,38 +11,17 @@ use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::model::playlist::playlist::PlaylistEntity;
 
-#[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 pub struct Playlist {
-    #[diesel(sql_type = Text)]
     pub id: String,
-    #[diesel(sql_type = Text)]
     pub name: String,
-    #[diesel(sql_type = Integer)]
     pub user_id: i32,
 }
 
 impl Playlist {
     #[allow(clippy::redundant_closure_call)]
-    pub fn insert_playlist(&self, conn: &mut DbConnection) -> Result<Playlist, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::playlists::dsl::*;
 
-        let res = playlists
-            .filter(name.eq(self.name.clone()))
-            .first::<Playlist>(conn)
-            .optional()
-            .map_err(map_db_error)?;
-
-        if let Some(unwrapped_res) = res {
-            return Ok(unwrapped_res);
-        }
-        
-        
-        execute_with_conn!(|conn| diesel::insert_into(playlists)
-            .values(self)
-            .get_result::<Playlist>(conn)
-            .map_err(map_db_error))
-    }
 
     pub fn delete_playlist(
         playlist_id_1: String,
@@ -67,12 +42,12 @@ impl Playlist {
 
         let res = playlists
             .filter(id.eq(playlist_id_1))
-            .first::<Playlist>(&mut get_connection())
+            .first::<PlaylistEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
         if let Some(unwrapped_res) = res {
-            return Ok(unwrapped_res);
+            return Ok(unwrapped_res.into());
         }
 
         Err(CustomError::NotFound)

@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -109,7 +108,7 @@ pub async fn get_opml(
     type_of: Path<Mode>,
 ) -> Result<HttpResponse, CustomError> {
     let podcasts_found =
-        Podcast::get_all_podcasts()?;
+        PodcastService::get_all_podcasts()?;
 
     let mut xml = XMLBuilder::new()
         .version(XMLVersion::XML1_1)
@@ -217,6 +216,7 @@ pub async fn update_name(
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::CustomError;
 use utoipa::ToSchema;
+use crate::application::services::podcast::podcast::PodcastService;
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

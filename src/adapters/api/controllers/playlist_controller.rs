@@ -1,4 +1,3 @@
-use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::models::playlist::Playlist;
 use crate::models::user::User;
 use crate::utils::error::CustomError;

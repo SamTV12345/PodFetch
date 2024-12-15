@@ -307,6 +307,5 @@ impl DownloadService {
                 Err(err)
             }
         }
-
     }
 }

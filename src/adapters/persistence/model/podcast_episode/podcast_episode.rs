@@ -1,7 +1,6 @@
 use crate::constants::inner_constants::DEFAULT_IMAGE_URL;
 use crate::adapters::persistence::dbconfig::schema::*;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
@@ -24,6 +23,7 @@ use diesel::{
 use rss::{Guid, Item};
 use utoipa::ToSchema;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::domain::models::episode::episode::Episode;
 
 #[derive(
     Queryable,
@@ -33,13 +33,10 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
     Debug,
     PartialEq,
     Clone,
-    ToSchema,
-    Serialize,
-    Deserialize,
     Default,
     AsChangeset,
 )]
-pub struct PodcastEpisode {
+pub struct PodcastEpisodeEntity {
     #[diesel(sql_type = Integer)]
     pub(crate) id: i32,
     #[diesel(sql_type = Integer)]
@@ -78,163 +75,11 @@ pub struct PodcastEpisode {
     pub (crate) episode_numbering_processed : bool,
 }
 
-impl PodcastEpisode {
+impl PodcastEpisodeEntity {
     pub fn is_downloaded(&self) -> bool {
         self.status == "D"
     }
 
-    pub fn get_podcast_episode_by_internal_id(
-        conn: &mut DbConnection,
-        podcast_episode_id_to_be_found: i32,
-    ) -> Result<Option<PodcastEpisode>, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
-
-        let found_podcast_episode = podcast_episodes
-            .filter(id.eq(podcast_episode_id_to_be_found))
-            .first::<PodcastEpisode>(conn)
-            .optional()
-            .map_err(map_db_error)?;
-
-        Ok(found_podcast_episode)
-    }
-
-    pub fn get_position_of_episode(
-        timestamp: &str,
-        pid: i32,
-        conn: &mut DBType,
-    ) -> Result<usize, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
-
-        let result = diesel::QueryDsl::order(
-            podcast_episodes
-                .filter(podcast_id.eq(pid))
-                .filter(date_of_recording.le(timestamp)),
-            date_of_recording.desc(),
-        )
-        .execute(conn)
-        .map_err(map_db_error)?;
-        Ok(result)
-    }
-
-    pub fn get_podcast_episode_by_id(
-        podcas_episode_id_to_be_found: &str,
-    ) -> Result<Option<PodcastEpisode>, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
-
-        let found_podcast_episode = podcast_episodes
-            .filter(episode_id.eq(podcas_episode_id_to_be_found))
-            .first::<PodcastEpisode>(&mut get_connection())
-            .optional()
-            .map_err(map_db_error)?;
-
-        Ok(found_podcast_episode)
-    }
-
-    pub fn get_podcast_episode_by_url(
-        podcas_episode_url_to_be_found: &str,
-        i: Option<i32>,
-    ) -> Result<Option<PodcastEpisode>, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
-        let found_podcast_epsiode = if let Some(i_unwrapped) = i {
-            podcast_episodes
-                .filter(
-                    url.eq(podcas_episode_url_to_be_found)
-                        .and(podcast_id.eq(i_unwrapped)),
-                )
-                .first::<PodcastEpisode>(&mut get_connection())
-                .optional()
-                .map_err(map_db_error)?
-        } else {
-            podcast_episodes
-                .filter(url.eq(podcas_episode_url_to_be_found))
-                .first::<PodcastEpisode>(&mut get_connection())
-                .optional()
-                .map_err(map_db_error)?
-        };
-
-        Ok(found_podcast_epsiode)
-    }
-
-    pub fn query_podcast_episode_by_url(
-        podcas_episode_url_to_be_found: &str,
-    ) -> Result<Option<PodcastEpisode>, String> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
-
-        let found_podcast_episode = podcast_episodes
-            .filter(url.like("%".to_owned() + podcas_episode_url_to_be_found + "%"))
-            .first::<PodcastEpisode>(&mut get_connection())
-            .optional()
-            .expect("Error loading podcast by id");
-
-        Ok(found_podcast_episode)
-    }
-
-    pub fn insert_podcast_episodes(
-        podcast: Podcast,
-        item: Item,
-        optional_image: Option<String>,
-        duration: i32,
-    ) -> PodcastEpisode {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
-        let uuid_podcast = uuid::Uuid::new_v4();
-
-        let mut inserted_date = "".to_string();
-
-        if let Some(date) = &item.pub_date {
-            let parsed_date = DateTime::parse_from_rfc2822(date);
-
-            match parsed_date {
-                Ok(date) => {
-                    let conv_date = date.with_timezone(&Utc);
-                    inserted_date = conv_date.to_rfc3339()
-                }
-                Err(_) => {
-                    // Sometimes it occurs that day of the week and date are wrong. This just
-                    // takes the date and parses it
-                    let date_without_weekday = date[5..].to_string();
-                    DateTime::parse_from_str(
-                        &date_without_weekday,
-                        "%d %b %Y \
-                    %H:%M:%S %z",
-                    )
-                    .map(|date| {
-                        let conv_date = date.with_timezone(&Utc);
-                        inserted_date = conv_date.to_rfc3339()
-                    })
-                    .expect("Error parsing date");
-                }
-            }
-        }
-
-        let inserted_image_url: String = match optional_image {
-            Some(c) => c,
-            None => match podcast.image_url.is_empty() {
-                true => DEFAULT_IMAGE_URL.to_string(),
-                false => podcast.original_image_url,
-            },
-        };
-
-        let guid_to_insert = Guid {
-            value: uuid::Uuid::new_v4().to_string(),
-            ..Default::default()
-        };
-        let inserted_podcast = insert_into(podcast_episodes)
-            .values((
-                total_time.eq(duration),
-                podcast_id.eq(podcast.id),
-                episode_id.eq(uuid_podcast.to_string()),
-                name.eq(item.title.as_ref().unwrap_or(&"No title given".to_string())),
-                url.eq(item.enclosure.unwrap().url),
-                guid.eq(item.guid.unwrap_or(guid_to_insert).value),
-                date_of_recording.eq(inserted_date),
-                image_url.eq(inserted_image_url),
-                description.eq(opt_or_empty_string(item.description)),
-            ))
-            .get_result::<PodcastEpisode>(&mut get_connection())
-            .expect("Error inserting podcast episode");
-
-        inserted_podcast
-    }
 
     pub fn get_podcast_episodes_of_podcast(
         podcast_id_to_be_searched: i32,

@@ -42,15 +42,12 @@ use crate::adapters::api::controllers::podcast_controller::{
 use crate::adapters::api::run::run;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
+use crate::domain::models::podcast::podcast::Podcast;
 
 mod constants;
-mod db;
 mod models;
 mod service;
-use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
-use crate::models::podcasts::Podcast;
-use crate::models::session::Session;
-use crate::models::settings::Setting;
+
 
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
@@ -82,7 +79,7 @@ import_database_config!();
 
 pub fn run_poll(mut podcast_service: PodcastService) -> Result<(), CustomError> {
     //check for new episodes
-    let podcats_result = Podcast::get_all_podcasts()?;
+    let podcats_result = PodcastService::get_all_podcasts()?;
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();

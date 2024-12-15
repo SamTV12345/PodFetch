@@ -1,10 +1,8 @@
-use crate::models::episode::Episode;
-use crate::models::misc_models::PodcastWatchedPostModel;
 use crate::models::user::User;
 
 use crate::utils::error::CustomError;
 use actix_web::{get, post, web, HttpResponse};
-
+use crate::adapters::api::models::podcast::podcast_watched_post_model::PodcastWatchedPostModel;
 
 #[utoipa::path(
 context_path="/api/v1",

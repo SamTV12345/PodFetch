@@ -1,4 +1,3 @@
-use crate::adapters::persistence::repositories::favorite::favorite_repository_impl::FavoriteRepositoryImpl;
 use crate::domain::models::favorite::favorite::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcasts::Podcast;
@@ -15,6 +14,6 @@ pub trait QueryUseCase {
                                designated_username: &str) -> Result<Vec<(Podcast,
                                                                                  Favorite)>,
         CustomError>;
-    fn get_favored_podcasts(found_username: String) -> Result<Vec<(Podcast, Vec<Tag>)>,
+    fn get_favored_podcasts(found_username: &str) -> Result<Vec<(Podcast, Vec<Tag>)>,
         CustomError>;
 }

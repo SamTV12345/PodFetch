@@ -1,5 +1,3 @@
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
 use crate::service::path_service::PathService;
@@ -7,6 +5,8 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 use crate::DBType as DbConnection;
 use substring::Substring;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::podcast::Podcast;
 
 #[derive(Default, Clone, Debug)]
 pub struct FilenameBuilder {

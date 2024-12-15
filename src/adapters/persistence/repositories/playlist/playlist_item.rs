@@ -1,87 +1,76 @@
-use crate::adapters::persistence::dbconfig::schema::playlist_items;
-use crate::models::episode::Episode;
-use crate::models::podcast_episode::PodcastEpisode;
+use diesel::{BoolExpressionMethods, ExpressionMethods, Insertable, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl, Queryable, QueryableByName, RunQueryDsl};
+use diesel::dsl::max;
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::model::playlist::playlist_item::PlaylistItemEntity;
+use crate::adapters::persistence::model::podcast::episode::EpisodeEntity;
+use crate::adapters::persistence::model::podcast_episode::podcast_episode::PodcastEpisodeEntity;
+use crate::domain::models::episode::episode::Episode;
+use crate::domain::models::playlist::playlist_item::PlaylistItem;
+use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
-use diesel::dsl::max;
-use diesel::prelude::*;
-use diesel::sql_types::{Integer, Text};
-use diesel::ExpressionMethods;
-use diesel::{Queryable, QueryableByName};
-use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
-#[derive(
-    Serialize, Deserialize, Debug, Queryable, QueryableByName, Insertable, Clone, ToSchema,
-)]
-pub struct PlaylistItem {
-    #[diesel(sql_type = Text)]
-    pub playlist_id: String,
-    #[diesel(sql_type = Integer)]
-    pub episode: i32,
-    #[diesel(sql_type = Integer)]
-    pub position: i32,
-}
+pub struct PlaylistItemRepositoryImpl;
 
-impl PlaylistItem {
-    pub fn insert_playlist_item(
-        &self,
-        conn: &mut DbConnection,
-    ) -> Result<PlaylistItem, CustomError> {
+
+
+impl PlaylistItemRepositoryImpl {
+    pub fn insert_playlist_item(playlist_item: PlaylistItem) ->
+                                               Result<PlaylistItem, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
         let res = playlist_items
             .filter(
                 playlist_id
-                    .eq(self.playlist_id.clone())
-                    .and(episode.eq(self.episode)),
+                    .eq(&playlist_item.playlist_id)
+                    .and(episode.eq(playlist_item.episode)),
             )
-            .first::<PlaylistItem>(conn)
+            .first::<PlaylistItemEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
         if let Some(unwrapped_res) = res {
-            return Ok(unwrapped_res);
+            return Ok(unwrapped_res.into());
         }
 
         diesel::insert_into(playlist_items)
             .values((
-                playlist_id.eq(&self.playlist_id),
-                episode.eq(&self.episode),
-                position.eq(&self.position),
+                playlist_id.eq(&playlist_item.playlist_id),
+                episode.eq(&playlist_item.episode),
+                position.eq(&playlist_item.position),
             ))
-            .get_result::<PlaylistItem>(conn)
+            .get_result::<PlaylistItemEntity>(&mut get_connection())
             .map_err(map_db_error)
+            .map(|res| res.into())
     }
 
     pub fn delete_playlist_item(
         playlist_id_1: String,
         episode_1: i32,
-        conn: &mut DbConnection,
+        conn: &mut crate::adapters::persistence::dbconfig::DBType,
     ) -> Result<(), diesel::result::Error> {
         use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
         diesel::delete(
             playlist_items.filter(playlist_id.eq(playlist_id_1).and(episode.eq(episode_1))),
         )
-        .execute(conn)?;
+            .execute(conn)?;
         Ok(())
     }
 
     pub fn delete_playlist_item_by_playlist_id(
-        playlist_id_1: String,
+        playlist_id_to_delete: String,
     ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
-        diesel::delete(playlist_items.filter(playlist_id.eq(playlist_id_1)))
+        diesel::delete(playlist_items.filter(playlist_id.eq(playlist_id_to_delete)))
             .execute(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(())
     }
 
     pub fn get_playlist_items_by_playlist_id(
-        playlist_id_1: String,
+        playlist_id_to_load_from: String,
         user: User,
     ) -> Result<Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes as episode_item;
@@ -101,23 +90,34 @@ impl PlaylistItem {
             .group_by(ph2.field(phistory_episode_id));
 
         playlist_items
-            .filter(playlist_id.eq(playlist_id_1))
+            .filter(playlist_id.eq(playlist_id_to_load_from))
             .inner_join(podcast_episodes.on(episode.eq(eid)))
             .left_join(ph1.on(ph1.field(phistory_episode_id).eq(epid)))
             .filter(ph1.field(phistory_date).nullable().eq_any(subquery))
             .order(position.asc())
-            .load::<(PlaylistItem, PodcastEpisode, Option<Episode>)>(&mut get_connection())
+            .load::<(PlaylistItemEntity, PodcastEpisodeEntity, Option<EpisodeEntity>)>(&mut
+                get_connection())
             .map_err(map_db_error)
+            .map(|res| {
+                res.into_iter()
+                    .map(|(item, podcast_episode, episode)| {
+                        (
+                            item.into(),
+                            podcast_episode.into(),
+                            episode.map(|e| e.into()),
+                        )
+                    })
+                    .collect()
+            })
     }
 
     pub fn delete_playlist_item_by_episode_id(
-        episode_id_1: i32,
-        conn: &mut DbConnection,
+        episode_id_to_delete: i32,
     ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
-        diesel::delete(playlist_items.filter(episode.eq(episode_id_1)))
-            .execute(conn)
+        diesel::delete(playlist_items.filter(episode.eq(episode_id_to_delete)))
+            .execute(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(())
     }

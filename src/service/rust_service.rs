@@ -18,7 +18,9 @@ use std::time::SystemTime;
 use reqwest::Client;
 use serde::Serialize;
 use tokio::task::spawn_blocking;
+use crate::adapters::persistence::repositories::podcast::podcast::PodcastRepositoryImpl;
 use crate::controllers::server::ChatServerHandle;
+use crate::domain::models::podcast::podcast::Podcast;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::settings::Setting;
@@ -334,7 +336,7 @@ impl PodcastService {
     pub fn get_podcast(
         podcast_id_to_be_searched: i32,
     ) -> Result<Podcast, CustomError> {
-        Podcast::get_podcast(podcast_id_to_be_searched)
+        PodcastRepositoryImpl::get_podcast(podcast_id_to_be_searched)
     }
 
     pub fn get_podcasts(

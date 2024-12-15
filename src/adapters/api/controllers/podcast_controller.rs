@@ -697,12 +697,17 @@ async fn insert_outline(
 }
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
+use crate::adapters::api::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::adapters::api::models::podcast::podcast_favor_update_model::PodcastFavorUpdateModel;
+use crate::adapters::api::models::podcast::podcast_setting::PodcastSettingDto;
+use crate::adapters::api::models::shared::rss_api_key::RSSAPiKey;
+use crate::application::services::podcast::podcast_setting_service::PodcastSettingService;
 use crate::models::tag::Tag;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::domain::models::podcast::podcast_setting::PodcastSetting;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
@@ -727,7 +732,7 @@ tag="podcasts"
 )]
 #[delete("/podcast/{id}")]
 pub async fn delete_podcast(
-    data: web::Json<DeletePodcast>,
+    data: Json<DeletePodcast>,
     id: Path<i32>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -735,10 +740,8 @@ pub async fn delete_podcast(
         return Err(CustomError::Forbidden);
     }
 
-    let podcast = Podcast::get_podcast(*id).expect(
-        "Error \
-        finding podcast",
-    );
+    let podcast = PodcastService::get_podcast(*id)?;
+
     if data.delete_files {
         FileService::delete_podcast_files(&podcast.directory_name);
     }
@@ -846,7 +849,7 @@ pub(crate) async fn proxy_podcast(
 #[put("/podcasts/{id}/settings")]
 pub async fn update_podcast_settings(
     id: Path<i32>,
-    settings: Json<PodcastSetting>,
+    settings: Json<PodcastSettingDto>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -856,7 +859,8 @@ pub async fn update_podcast_settings(
     let id_num = id.into_inner();
     let mut settings = settings.into_inner();
     settings.podcast_id = id_num;
-    let updated_podcast = PodcastSetting::update_settings(&settings)?;
+    let updated_podcast: PodcastSettingDto = PodcastSettingService::update_settings(settings.into
+    ()).map(|e|e.into())?;
 
     Ok(HttpResponse::Ok().json(updated_podcast))
 }
@@ -872,7 +876,8 @@ pub async fn get_podcast_settings(
     }
 
     let id_num = id.into_inner();
-    let settings = PodcastSetting::get_settings(id_num)?;
+    let settings: Option<PodcastSettingDto> = PodcastSettingService::get_settings(id_num).map(|e|e
+        .map(|e|e.into()))?;
 
     Ok(HttpResponse::Ok().json(settings))
 }

@@ -24,7 +24,8 @@ use crate::adapters::api::controllers::sys_info_controller::{get_info, get_publi
 use crate::adapters::api::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag};
 use crate::adapters::api::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_users, onboard_user, update_role, update_user};
 use crate::adapters::api::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
-use crate::adapters::api::controllers::websocket_controller::{get_rss_feed, get_rss_feed_for_podcast, start_connection};
+use crate::adapters::api::controllers::websocket_controller::{start_connection};
+use crate::adapters::api::feed::feed::{get_rss_feed, get_rss_feed_for_podcast};
 use crate::gpodder::auth::authentication::login;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::subscription::subscriptions::{get_subscriptions, upload_subscription_changes};

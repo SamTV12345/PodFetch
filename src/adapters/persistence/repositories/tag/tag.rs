@@ -1,60 +1,24 @@
-use chrono::{NaiveDateTime, Utc};
-use diesel::{AsChangeset, Insertable, JoinOnDsl, OptionalExtension, Queryable, QueryableByName, RunQueryDsl, Table};
-use utoipa::ToSchema;
-use crate::utils::error::{CustomError, map_db_error};
-use diesel::sql_types::{Text,Nullable, Timestamp };
+use diesel::{JoinOnDsl, OptionalExtension, RunQueryDsl, Table};
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::adapters::persistence::dbconfig::schema::tags;
+use crate::adapters::persistence::model::tag::tag::TagEntity;
+use crate::domain::models::tag::tag::Tag;
 use crate::execute_with_conn;
+use crate::utils::error::{map_db_error, CustomError};
 
-#[derive(
-Debug,
-Serialize,
-Deserialize,
-QueryableByName,
-Queryable,
-AsChangeset,
-Insertable,
-Clone,
-ToSchema,
-)]
-#[diesel(treat_none_as_null = true)]
-pub struct Tag {
-    #[diesel(sql_type = Text)]
-    pub(crate) id: String,
-    #[diesel(sql_type = Text)]
-    pub name: String,
-    #[diesel(sql_type = Text)]
-    pub username: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub description: Option<String>,
-    #[diesel(sql_type = Timestamp)]
-    pub created_at: NaiveDateTime,
-    #[diesel(sql_type = Text)]
-    pub color: String,
-}
+pub struct TagRepositoryImpl;
 
-impl Tag {
-    pub fn new(name: String, description: Option<String>, color: String, username: String) -> Self {
-        Self {
-            id: uuid::Uuid::new_v4().to_string(),
-            name,
-            username,
-            description,
-            created_at: Utc::now().naive_utc(),
-            color,
-        }
-    }
 
-    pub fn insert_tag(&self) -> Result<Tag, CustomError> {
+impl TagRepositoryImpl {
+    pub fn insert_tag(tag: Tag) -> Result<Tag, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::tags::dsl::*;
-        
-        
+        let tag_entity = tag.into();
+
         execute_with_conn!(
                     |conn|diesel::insert_into(tags)
-            .values(self)
-            .get_result(conn)
+            .values(tag_entity)
+            .get_result::<TagEntity>(conn)
             .map_err(map_db_error)
+            .map(|e| e.into())
         )
     }
 
@@ -77,20 +41,24 @@ impl Tag {
 
         tags.filter(id.eq(tag_id))
             .filter(username.eq(username_to_search))
-            .first::<Tag>(&mut get_connection())
+            .first::<TagEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
+            .map(|e|e.map(|e|e.into()))
     }
 
-    pub fn update_tag(tag_id: &str, name_new: String, description_new: Option<String>, color_new: String) -> Result<Tag, CustomError> {
+    pub fn update_tag(tag_id: &str, name_new: String, description_new: Option<String>, color_new:
+    String) -> Result<Tag, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::tags::dsl::*;
         use diesel::QueryDsl;
         use diesel::ExpressionMethods;
 
         diesel::update(tags.filter(id.eq(tag_id)))
             .set((name.eq(name_new), description.eq(description_new), color.eq(color_new)))
-            .get_result::<Tag>(&mut get_connection())
+            .get_result::<TagEntity>(&mut get_connection())
             .map_err(map_db_error)
+            .map(|e| e.into())
+            .map(|e| e.into())
     }
 
     pub fn get_tags(username_to_search: String) -> Result<Vec<Tag>, CustomError> {
@@ -100,8 +68,10 @@ impl Tag {
 
         tags
             .filter(username.eq(username_to_search))
-            .load::<Tag>(&mut get_connection())
+            .load::<TagEntity>(&mut get_connection())
             .map_err(map_db_error)
+            .map(|e| e.into_iter().map(|e| e.into()).collect())
+            .map(|e| e.into_iter().map(|e| e.into()).collect())
     }
 
     pub fn get_tags_of_podcast(podcast_id_to_search: i32,
@@ -118,7 +88,8 @@ impl Tag {
             .select(tags::all_columns())
             .filter(podcast_id.eq(podcast_id_to_search))
             .filter(username.eq(username_to_search))
-            .load::<Tag>(&mut get_connection())
+            .load::<TagEntity>(&mut get_connection())
             .map_err(map_db_error)
+            .map(|e| e.into_iter().map(|e| e.into()).collect())
     }
 }

@@ -2,7 +2,6 @@ pub mod download_service;
 pub mod environment_service;
 pub(crate) mod file_service;
 pub mod logging_service;
-pub mod mapping_service;
 pub mod notification_service;
 pub mod path_service;
 pub mod podcast_episode_service;
