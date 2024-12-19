@@ -1,49 +1,22 @@
-use crate::constants::inner_constants::Role;
-use crate::adapters::persistence::dbconfig::schema::invites;
-use crate::utils::error::{map_db_error, CustomError};
-use chrono::NaiveDateTime;
-use diesel::associations::HasTable;
-use diesel::ExpressionMethods;
-use diesel::{Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl};
 use std::io::Error;
-use utoipa::ToSchema;
+use diesel::{OptionalExtension, RunQueryDsl};
+use diesel::associations::HasTable;
 use uuid::Uuid;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::schema::invites;
+use crate::adapters::persistence::model::invite::invite::InviteEntity;
+use crate::constants::inner_constants::Role;
+use crate::domain::models::invite::invite::Invite;
+use crate::utils::error::{map_db_error, CustomError};
 
-#[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct Invite {
-    pub id: String,
-    pub role: String,
-    pub created_at: NaiveDateTime,
-    pub accepted_at: Option<NaiveDateTime>,
-    pub explicit_consent: bool,
-    pub expires_at: NaiveDateTime,
-}
+pub struct InviteRepository;
+use diesel::ExpressionMethods;
 
-impl Invite {
-    pub fn new(
-        id: String,
-        role: String,
-        created_at: NaiveDateTime,
-        accepted_at: Option<NaiveDateTime>,
-        expires_at: NaiveDateTime,
-        explicit_consent_i: bool,
-    ) -> Self {
-        Invite {
-            id,
-            role,
-            created_at,
-            accepted_at,
-            explicit_consent: explicit_consent_i,
-            expires_at,
-        }
-    }
-
+impl InviteRepository {
     pub fn insert_invite(
         role_to_insert: &Role,
         explicit_consent_to_insert: bool,
-    ) -> Result<Invite, Error> {
+    ) -> Result<InviteEntity, Error> {
         use crate::adapters::persistence::dbconfig::schema::invites::dsl::*;
 
         let now = chrono::Utc::now().naive_utc();
@@ -56,22 +29,23 @@ impl Invite {
                 created_at.eq(now),
                 expires_at.eq(now + chrono::Duration::days(7)),
             ))
-            .get_result::<Invite>(&mut get_connection())
-            .unwrap();
+            .get_result::<InviteEntity>(&mut get_connection())?;
 
         Ok(created_invite)
     }
 
-    pub fn find_invite(id: String) -> Result<Option<Invite>, CustomError> {
+    pub fn find_invite(id: &str) -> Result<Option<Invite>, CustomError> {
         invites::table
             .filter(invites::id.eq(id))
-            .first::<Invite>(&mut get_connection())
+            .first::<InviteEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
+            .map(|invite| invite.map(|i| i.into()))
     }
 
     pub fn find_all_invites() -> Result<Vec<Invite>, diesel::result::Error> {
-        invites::table.load::<Invite>(&mut get_connection())
+        invites::table.load::<InviteEntity>(&mut get_connection())
+            .map(|invites| invites.into_iter().map(|i| i.into()).collect())
     }
 
     pub fn invalidate_invite(

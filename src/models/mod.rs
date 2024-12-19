@@ -1,16 +1,2 @@
-pub mod filter;
-pub mod invite;
-pub mod itunes_models;
-pub mod notification;
-pub mod oidc_model;
-pub mod opml_model;
-pub mod order_criteria;
-pub mod podcast_rssadd_model;
-pub mod search_type;
-pub mod session;
-pub mod settings;
 pub mod subscription;
-pub mod subscription_changes_from_client;
-pub mod user;
 pub mod tags_podcast;
-pub mod gpodder_available_podcasts;

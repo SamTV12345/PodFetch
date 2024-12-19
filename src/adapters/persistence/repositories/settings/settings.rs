@@ -1,78 +1,43 @@
+use diesel::{insert_into, OptionalExtension, RunQueryDsl};
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::model::settings::settings::SettingEntity;
 use crate::constants::inner_constants::DEFAULT_SETTINGS;
-use crate::adapters::persistence::dbconfig::schema::*;
-use crate::service::environment_service::OidcConfig;
+use crate::domain::models::settings::setting::Setting;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
-use diesel::insert_into;
-use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
-use diesel::{OptionalExtension, RunQueryDsl};
-use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
-#[derive(
-    Serialize,
-    Deserialize,
-    Queryable,
-    Insertable,
-    Debug,
-    Clone,
-    Identifiable,
-    AsChangeset,
-    ToSchema,
-    Default,
-)]
-#[serde(rename_all = "camelCase")]
-pub struct Setting {
-    pub id: i32,
-    pub auto_download: bool,
-    pub auto_update: bool,
-    pub auto_cleanup: bool,
-    pub auto_cleanup_days: i32,
-    pub podcast_prefill: i32,
-    pub replace_invalid_characters: bool,
-    pub use_existing_filename: bool,
-    pub replacement_strategy: String,
-    pub episode_format: String,
-    pub podcast_format: String,
-    pub direct_paths: bool
-}
+pub struct SettingsRepository;
 
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConfigModel {
-    pub podindex_configured: bool,
-    pub rss_feed: String,
-    pub server_url: String,
-    pub basic_auth: bool,
-    pub oidc_configured: bool,
-    pub oidc_config: Option<OidcConfig>,
-    pub reverse_proxy: bool,
-}
 
-impl Setting {
+impl SettingsRepository {
     pub fn get_settings() -> Result<Option<Setting>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::settings::dsl::*;
 
         settings
-            .first::<Setting>(&mut get_connection())
+            .first::<SettingEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
+            .map(|setting| setting.map(|s| s.into()))
     }
 
     pub fn update_settings(
         setting: Setting,
     ) -> Result<Setting, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::settings::dsl::*;
+
+        let setting_entity_to_save = SettingEntity::from(setting);
+
         let setting_to_update = settings
             .first::<Setting>(&mut get_connection())
             .expect("Error loading settings");
         do_retry(|| {
             diesel::update(&setting_to_update)
-                .set(setting.clone())
-                .get_result::<Setting>(&mut get_connection())
+                .set(setting_entity_to_save)
+                .get_result::<SettingEntity>(&mut get_connection())
         })
-        .map_err(map_db_error)
+            .map_err(map_db_error)
+            .map(|setting| setting.into())
     }
 
     pub fn insert_default_settings() -> Result<(), CustomError> {
@@ -90,7 +55,7 @@ impl Setting {
                 ))
                 .execute(&mut get_connection())
         })
-        .map_err(map_db_error)?;
+            .map_err(map_db_error)?;
         Ok(())
     }
 }

@@ -1,8 +1,9 @@
 use utoipa::ToSchema;
+use crate::adapters::api::models::podcast::tag_dto::TagDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::domain::models::favorite::favorite::Favorite;
 use crate::domain::models::podcast::podcast::Podcast;
-use crate::models::tag::Tag;
+use crate::domain::models::tag::tag::Tag;
 use crate::service::environment_service;
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -22,7 +23,7 @@ pub struct PodcastDto {
     pub active: bool,
     pub original_image_url: String,
     pub favorites: bool,
-    pub tags: Vec<Tag>,
+    pub tags: Vec<TagDto>,
 }
 
 impl From<(Podcast, Vec<Tag>)> for PodcastDto {
@@ -44,7 +45,7 @@ impl From<(Podcast, Vec<Tag>)> for PodcastDto {
             active: value.0.active,
             original_image_url: value.0.original_image_url,
             directory_name: value.0.directory_name,
-            tags: value.1,
+            tags: value.1.into_iter().map(|tag| tag.into()).collect(),
             favorites: false
         }
     }

@@ -1,11 +1,4 @@
 use chrono::{NaiveDateTime, Utc};
-use diesel::{AsChangeset, Insertable, JoinOnDsl, OptionalExtension, Queryable, QueryableByName, RunQueryDsl, Table};
-use utoipa::ToSchema;
-use crate::utils::error::{CustomError, map_db_error};
-use diesel::sql_types::{Text,Nullable, Timestamp };
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::adapters::persistence::dbconfig::schema::tags;
-use crate::execute_with_conn;
 
 pub struct Tag {
     pub(crate) id: String,

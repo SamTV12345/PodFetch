@@ -1,10 +1,6 @@
 use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, MAIN_ROOM, TELEGRAM_API_ENABLED};
-use crate::models::messages::BroadcastMessage;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
 use crate::service::file_service::FileService;
-use crate::service::mapping_service::MappingService;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
 
@@ -17,11 +13,9 @@ use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::controllers::server::ChatServerHandle;
-use crate::models::episode::Episode;
-use crate::models::notification::Notification;
-use crate::models::user::User;
-use crate::models::podcast_settings::PodcastSetting;
+use crate::adapters::persistence::repositories::podcast::podcast_episode::PodcastEpisodeRepositoryImpl;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::podcast::Podcast;
 use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::settings_service::SettingsService;
@@ -33,15 +27,17 @@ use crate::utils::reqwest_client::get_sync_client;
 pub struct PodcastEpisodeService;
 
 impl PodcastEpisodeService {
+
+
     pub fn download_podcast_episode_if_not_locally_available(
-        podcast_episode: PodcastEpisode,
-        podcast: Podcast,
-        lobby: Option<web::Data<ChatServerHandle>>,
+        podcast_episode: &PodcastEpisode,
+        podcast: &Podcast,
+        lobby: &Option<web::Data<ChatServerHandle>>,
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
         let podcast_cloned = podcast.clone();
 
-        match PodcastEpisode::check_if_downloaded(&podcast_episode.url) {
+        match PodcastEpisodeRepositoryImpl::check_if_downloaded(&podcast_episode) {
             Ok(true) => {}
             Ok(false) => {
                 let podcast_inserted =
@@ -76,7 +72,7 @@ impl PodcastEpisodeService {
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
-        podcast_cloned: Podcast,
+        podcast: &Podcast,
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         let mut download_service = DownloadService::new();

@@ -18,7 +18,12 @@ use serde_json::from_str;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
+use crate::adapters::api::ws::podcast_episode::notify_delete_podcast_episode_locally;
 use crate::adapters::api::ws::server::ChatServerHandle;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::settings::setting::Setting;
+use crate::domain::models::user::user::User;
+use crate::service::rust_service::PodcastService;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -160,18 +165,18 @@ pub async fn download_podcast_episodes_of_podcast(
     }
 
     thread::spawn(move || {
-        let res = PodcastEpisode::get_podcast_episode_by_id(
+        let res = PodcastEpisodeService::get_podcast_episode_by_id(
             &id.into_inner(),
         )
         .unwrap();
         if let Some(podcast_episode) = res {
-            let podcast = Podcast::get_podcast(
+            let podcast = PodcastService::get_podcast(
                 podcast_episode.podcast_id,
             )
             .unwrap();
             PodcastEpisodeService::perform_download(
                 &podcast_episode.clone(),
-                podcast,
+                &podcast,
             )
             .unwrap();
             PodcastEpisode::update_deleted(
@@ -198,23 +203,18 @@ tag = "podcast_episodes"
 #[delete("/episodes/{id}/download")]
 pub async fn delete_podcast_episode_locally(
     id: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     lobby: Data<ChatServerHandle>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
-    let delted_podcast_episode = PodcastEpisodeService::delete_podcast_episode_locally(
+    let deleted_podcast_episode = PodcastEpisodeService::delete_podcast_episode_locally(
         &id.into_inner(),
     )?;
-    lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
-        podcast_episode: Some(delted_podcast_episode),
-        podcast_episodes: None,
-        type_of: PodcastType::DeletePodcastEpisode,
-        podcast: None,
-        message: "Deleted podcast episode locally".to_string(),
-    }).unwrap()).await;
+
+    notify_delete_podcast_episode_locally(&lobby, deleted_podcast_episode).await;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -229,7 +229,7 @@ pub async fn retrieve_episode_sample_format(
     sample_string: Json<EpisodeFormatDto>,
 ) -> Result<HttpResponse, CustomError> {
     // Sample episode for formatting
-    let episode: PodcastEpisode = PodcastEpisode {
+    let episode = PodcastEpisode {
         id: 0,
         podcast_id: 0,
         episode_id: "0218342".to_string(),

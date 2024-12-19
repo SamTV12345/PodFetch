@@ -3,10 +3,12 @@ use actix_web::web::Query;
 use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder};
 use rss::extension::itunes::{ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder, ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder};
 use crate::adapters::api::models::shared::rss_api_key::RSSAPiKey;
+use crate::adapters::api::models::shared::rss_query::RSSQuery;
+use crate::application::services::podcast::podcast::PodcastService;
+use crate::application::services::user::user::UserService;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-use crate::models::user::User;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::podcast::Podcast;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
@@ -24,18 +26,20 @@ pub async fn get_rss_feed(
 ) -> Result<HttpResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
 
+    let api_key = api_key.map(|k| k.0.api_key);
     let env = ENVIRONMENT_SERVICE.get().unwrap();
     // If http basic is enabled, we need to check if the api key is valid
     if env.http_basic || env.oidc_configured {
-        if api_key.is_none() {
+        if &api_key.is_none() {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
         }
-        let api_key = api_key.as_ref().unwrap().api_key.to_string();
 
-        let api_key_exists = User::check_if_api_key_exists(api_key);
+        if let Some(ref api_key) = &api_key {
+            let api_key_exists = UserService::check_if_api_key_exists(&api_key);
 
-        if !&api_key_exists {
-            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+            if !&api_key_exists {
+                return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+            }
         }
     }
 
@@ -81,12 +85,12 @@ pub async fn get_rss_feed(
 
 
 
-fn add_api_key_to_url(url: String, api_key: &Option<Query<RSSAPiKey>>) -> String {
+fn add_api_key_to_url(url: String, api_key: &Option<String>) -> String {
     if let Some(ref api_key) = api_key {
         if url.contains('?') {
-            return format!("{}&apiKey={}", url, api_key.api_key);
+            return format!("{}&apiKey={}", url, api_key);
         }
-        return format!("{}?apiKey={}", url, api_key.api_key);
+        return format!("{}?apiKey={}", url, api_key);
     }
     url
 }
@@ -96,7 +100,7 @@ fn generate_itunes_extension_conditionally(
     mut channel_builder: ChannelBuilder,
     podcast: Option<Podcast>,
     env: &EnvironmentService,
-    api_key: &Option<Query<RSSAPiKey>>,
+    api_key: &Option<String>,
 ) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
@@ -127,23 +131,30 @@ pub async fn get_rss_feed_for_podcast(
     let env = ENVIRONMENT_SERVICE.get().unwrap();
     let server_url = env.server_url.clone();
 
+    let api_key = api_key.map(|k| k.0.api_key);
+
     // If http basic is enabled, we need to check if the api key is valid
     if env.http_basic || env.oidc_configured {
         if api_key.is_none() {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
         }
-        let api_key = api_key.as_ref().unwrap().api_key.to_string();
 
-        let api_key_exists =
-            User::check_if_api_key_exists(api_key);
+        if let Some(api_key) = &api_key {
+            let api_key_exists =
+                UserService::check_if_api_key_exists(&api_key);
 
-        if !api_key_exists {
-            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+            if !api_key_exists {
+                return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+            }
         }
     }
 
-    let podcast = Podcast::get_podcast(*id)?;
+    let podcast = PodcastService::get_podcast(*id)?;
+    if podcast.is_none() {
+        return Ok(HttpResponse::NotFound().body("Podcast not found"));
+    }
 
+    let podcast = podcast.unwrap();
     let downloaded_episodes =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(
             *id,
@@ -212,7 +223,7 @@ pub async fn get_rss_feed_for_podcast(
 
 fn get_podcast_items_rss(
     downloaded_episodes: Vec<PodcastEpisode>,
-    api_key: &Option<Query<RSSAPiKey>>,
+    api_key: &Option<String>,
 ) -> Vec<Item> {
     downloaded_episodes
         .iter()

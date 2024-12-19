@@ -1,6 +1,4 @@
 use std::fs::File;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
 use crate::service::file_service::FileService;
 
 use reqwest::blocking::ClientBuilder;
@@ -10,13 +8,12 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use std::io;
 use std::io::Read;
 use file_format::FileFormat;
+use crate::adapters::api::controllers::controller_utils::get_default_image;
+use crate::adapters::filesystem::file_path::FilenameBuilder;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
-use crate::get_default_image;
-use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
-use crate::models::podcast_settings::PodcastSetting;
-use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::error::CustomError;
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
@@ -40,7 +37,7 @@ impl DownloadService {
         let client = ClientBuilder::new().build().unwrap();
         let conn = &mut get_connection();
         let suffix = determine_file_extension(&podcast_episode.url, &client, FileType::Audio);
-        let settings_in_db = Setting::get_settings()?.unwrap();
+        let settings_in_db = SettingsService::get_settings()?.unwrap();
         let image_suffix =
             determine_file_extension(&podcast_episode.image_url, &client, FileType::Image);
 
@@ -113,7 +110,7 @@ impl DownloadService {
             .file_service
             .check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
-            let mut image_podcast = std::fs::File::create(&paths.image_filename).unwrap();
+            let mut image_podcast = File::create(&paths.image_filename).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
         }
 

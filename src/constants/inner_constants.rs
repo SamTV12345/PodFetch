@@ -65,6 +65,18 @@ impl fmt::Display for Role {
     }
 }
 
+
+impl From<&str> for Role {
+    fn from(s: &str) -> Self {
+        match s {
+            "admin" => Role::Admin,
+            "uploader" => Role::Uploader,
+            "user" => Role::User,
+            _ => Role::User,
+        }
+    }
+}
+
 impl FromStr for Role {
     type Err = ();
 

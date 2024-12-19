@@ -1,5 +1,4 @@
 use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
-use crate::models::user::User;
 
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::CustomError;

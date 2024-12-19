@@ -3,3 +3,7 @@ pub mod favorite;
 pub mod podcast;
 pub mod playlist;
 pub mod tag;
+pub mod settings;
+pub mod invite;
+pub mod notification;
+pub mod user;

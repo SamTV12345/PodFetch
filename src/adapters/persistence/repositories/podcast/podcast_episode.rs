@@ -1,5 +1,5 @@
 use actix::ActorStreamExt;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use diesel::{delete, insert_into, BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use diesel::dsl::{max, NotLike};
 use rss::{Guid, Item};
@@ -293,5 +293,55 @@ impl PodcastEpisodeRepositoryImpl {
             .execute(&mut get_connection())
             .map_err(map_db_error)?;
         Ok(())
+    }
+
+
+    pub fn update_podcast_episode_status(
+        download_url_of_episode: &str,
+        status_to_insert: &str,
+    ) -> Result<PodcastEpisode, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+
+        diesel::update(podcast_episodes.filter(url.eq(download_url_of_episode)))
+            .set((
+                status.eq(status_to_insert),
+                download_time.eq(Utc::now().naive_utc()),
+            ))
+            .get_result::<PodcastEpisodeEntity>(&mut get_connection())
+            .map(|e| e.into())
+            .map_err(map_db_error)
+    }
+
+    pub fn get_episodes() -> Result<Vec<PodcastEpisode>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+        dsl_podcast_episodes
+            .load::<PodcastEpisodeEntity>(&mut get_connection())
+            .map_err(map_db_error)
+            .map(|e| e.into_iter().map(|e| e.into()).collect())
+    }
+
+    pub fn get_podcast_episodes_older_than_days(
+        days: i32,
+        podcast_id_to_search: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+
+        podcast_episodes
+            .filter(download_time.lt(Utc::now().naive_utc() - Duration::days(days as i64)))
+            .filter(podcast_id.eq(podcast_id_to_search))
+            .load::<PodcastEpisodeEntity>(&mut get_connection())
+            .map(|e| e.into_iter().map(|e| e.into()).collect())
+            .map_err(map_db_error)
+    }
+
+    pub fn update_podcast_episode(podcast_episode: &PodcastEpisode) -> Result<PodcastEpisode,
+        CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+
+        diesel::update(podcast_episodes.filter(id.eq(podcast_episode.id)))
+            .set(podcast_episode)
+            .execute(&mut get_connection())
+            .map_err(map_db_error)?;
+        Ok(podcast_episode.clone())
     }
 }

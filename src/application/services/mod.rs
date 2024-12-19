@@ -6,3 +6,5 @@ pub mod episode;
 pub mod podcast_setting;
 pub mod playlist;
 pub mod tag;
+pub mod user;
+mod notification;

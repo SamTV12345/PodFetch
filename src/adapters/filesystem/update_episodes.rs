@@ -1,7 +1,9 @@
+use crate::adapters::filesystem::download_service::DownloadService;
 use crate::adapters::filesystem::file_path::FilenameBuilderReturn;
-use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::application::services::podcast_episode::service::PodcastEpisodeService;
+use crate::domain::models::podcast::episode::{PodcastEpisode, PodcastEpisodeStatus};
 use crate::domain::models::podcast::podcast::Podcast;
-use crate::service::download_service::DownloadService;
+use crate::utils::error::CustomError;
 
 pub struct UpdateEpisodes;
 
@@ -22,5 +24,19 @@ impl UpdateEpisodes {
                 }
             }
         }
+    }
+
+
+    pub fn perform_download(
+        podcast_episode: &mut PodcastEpisode,
+        podcast: &Podcast,
+    ) -> Result<PodcastEpisode, CustomError> {
+        log::info!("Downloading podcast episode: {}", podcast_episode.name);
+        let mut download_service = DownloadService::new();
+        download_service.download_podcast_episode(podcast_episode.clone(), podcast)?;
+        podcast_episode.status = PodcastEpisodeStatus::Downloaded;
+        PodcastEpisodeService::update_podcast_episode(podcast_episode)?;
+        NotificationS
+
     }
 }

@@ -217,6 +217,7 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::CustomError;
 use utoipa::ToSchema;
 use crate::application::services::podcast::podcast::PodcastService;
+use crate::domain::models::podcast::podcast::Podcast;
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

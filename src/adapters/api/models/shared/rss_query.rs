@@ -1,4 +1,4 @@
 #[derive(Deserialize, Serialize)]
 pub struct RSSQuery {
-    top: i32,
+    pub(crate) top: i32,
 }

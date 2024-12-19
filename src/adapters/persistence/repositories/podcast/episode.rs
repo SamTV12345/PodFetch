@@ -6,11 +6,14 @@ use reqwest::Url;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::model::podcast::episode::EpisodeEntity;
+use crate::adapters::persistence::model::podcast::gpodder_available_podcasts::GPodderAvailablePodcastsEntity;
 use crate::adapters::persistence::model::podcast::podcast::PodcastEntity;
 use crate::adapters::persistence::model::podcast_episode::podcast_episode::PodcastEpisodeEntity;
 use crate::constants::inner_constants::DEFAULT_DEVICE;
 use crate::domain::models::episode::episode::Episode;
-use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::gpodder_available_podcasts::GPodderAvailablePodcast;
+use crate::domain::models::podcast::podcast::Podcast;
 use crate::utils::error::{map_db_error, CustomError};
 
 pub struct EpisodeRepositoryImpl;
@@ -55,8 +58,9 @@ impl EpisodeRepositoryImpl {
                 position.eq(&episode_entity.position),
                 total.eq(&episode_entity.total),
             ))
-            .get_result(&mut get_connection())
+            .get_result::<EpisodeEntity>(&mut get_connection())
             .map_err(map_db_error)
+            .map(|e| e.into())
     }
 
     pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
@@ -75,7 +79,7 @@ impl EpisodeRepositoryImpl {
         opt_device: Option<String>,
         _opt_aggregate: Option<String>,
         opt_podcast: Option<String>,
-    ) -> Vec<Episode> {
+    ) -> Result<Vec<Episode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::timestamp;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
@@ -105,19 +109,20 @@ impl EpisodeRepositoryImpl {
 
 
         query
-            .load::<Episode>(&mut get_connection())
-            .expect("Error querying episodes")
+            .load::<EpisodeEntity>(&mut get_connection())
+            .map_err(map_db_error)
+            .map(|e| e.into_iter().map(|e| e.into()).collect())
     }
 
     pub fn delete_by_username_and_episode(
         username1: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
         use crate::adapters::persistence::dbconfig::schema::episodes::username;
         diesel::delete(episodes.filter(username.eq(username1)))
             .execute(&mut get_connection())
-            .expect("");
-        Ok(())
+            .map_err(map_db_error)
+            .map(|_| ())
     }
 
     pub fn get_watchlog_by_device_and_episode(
@@ -130,9 +135,10 @@ impl EpisodeRepositoryImpl {
         ep_table
             .filter(ep_dsl::device.eq(device_id))
             .filter(ep_dsl::guid.eq(episode_guid))
-            .first::<Episode>(&mut get_connection())
+            .first::<EpisodeEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
+            .map(|e| e.map(|e| e.into()))
     }
 
 
@@ -210,22 +216,21 @@ impl EpisodeRepositoryImpl {
         }
     }
 
-    pub fn find_episodes_not_in_webview() -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
+    pub fn find_episodes_not_in_webview() -> Result<Vec<GPodderAvailablePodcast>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
         use crate::adapters::persistence::dbconfig::schema::episodes::device;
         use crate::adapters::persistence::dbconfig::schema::episodes::podcast;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::rssfeed;
 
-        let result = DistinctDsl::distinct(episodes
+        DistinctDsl::distinct(episodes
             .left_join(podcasts.on(podcast.eq(rssfeed)))
             .select((device, podcast))
             .filter(rssfeed.is_null()))
             .filter(device.ne("webview"))
-            .load::<GPodderAvailablePodcasts>(&mut get_connection())
-            .map_err(map_db_error)?;
-
-        Ok(result)
+            .load::<GPodderAvailablePodcastsEntity>(&mut get_connection())
+            .map_err(map_db_error)
+            .map(|e| e.into_iter().map(|e| e.into()).collect())
     }
 
     pub fn delete_watchtime(podcast_id: i32) -> Result<(), CustomError> {
@@ -234,15 +239,18 @@ impl EpisodeRepositoryImpl {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl as podcast_dsl;
         use crate::adapters::persistence::dbconfig::schema::podcasts::table as podcast_table;
 
-        let found_podcast: Option<Podcast> = podcast_table
+        let found_podcast: Option<PodcastEntity> = podcast_table
             .filter(podcast_dsl::id.eq(podcast_id))
             .first(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
 
-        diesel::delete(ep_table.filter(ep_dsl::podcast.eq(found_podcast.unwrap().rssfeed)))
-            .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+        if let Some(found_podcast) = found_podcast {
+            diesel::delete(ep_table.filter(ep_dsl::podcast.eq(found_podcast.rssfeed)))
+                .execute(&mut get_connection())
+                .map_err(map_db_error)?;
+        }
+
         Ok(())
     }
 
@@ -308,12 +316,12 @@ impl EpisodeRepositoryImpl {
                     .eq_any(subquery),
             )
             .filter(episodes1.field(ep_dsl::action).eq("play"))
-            .load::<(PodcastEpisode, EpisodeEntity, Podcast)>(&mut get_connection())
+            .load::<(PodcastEpisodeEntity, EpisodeEntity, PodcastEntity)>(&mut get_connection())
             .map_err(map_db_error)?;
 
         let mapped_watched_episodes = query
             .iter()
-            .map(|e| (e.0.clone(), e.1.clone().into(), e.2.clone()))
+            .map(|e| (e.0.clone().into(), e.1.clone().into(), e.2.clone()))
             .collect();
         Ok(mapped_watched_episodes)
     }

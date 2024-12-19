@@ -187,26 +187,6 @@ impl PodcastEpisodeEntity {
         Ok(())
     }
 
-    pub fn delete_episodes_of_podcast(
-        podcast_id: i32,
-    ) -> Result<(), CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_id as podcast_id_column;
-
-        Self::get_episodes_by_podcast_id(podcast_id)
-            .iter()
-            .for_each(|episode| {
-                PlaylistItem::delete_playlist_item_by_episode_id(episode.id, &mut get_connection())
-                    .expect("Error deleting episode");
-            });
-
-        delete(podcast_episodes)
-            .filter(podcast_id_column.eq(podcast_id))
-            .execute(&mut get_connection())
-            .map_err(map_db_error)?;
-        Ok(())
-    }
-
     pub fn update_podcast_image(
         id: &str,
         image_url: &str,
@@ -261,43 +241,8 @@ impl PodcastEpisodeEntity {
         }
     }
 
-    pub fn update_podcast_episode_status(
-        download_url_of_episode: &str,
-        status_to_insert: &str,
-    ) -> Result<PodcastEpisode, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
 
-        let updated_podcast =
-            diesel::update(podcast_episodes.filter(url.eq(download_url_of_episode)))
-                .set((
-                    status.eq(status_to_insert),
-                    download_time.eq(Utc::now().naive_utc()),
-                ))
-                .get_result::<PodcastEpisode>(&mut get_connection())
-                .expect("Error updating podcast episode");
 
-        Ok(updated_podcast)
-    }
-
-    pub fn get_episodes() -> Vec<PodcastEpisode> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
-        dsl_podcast_episodes
-            .load::<PodcastEpisode>(&mut get_connection())
-            .expect("Error loading podcast episode by id")
-    }
-
-    pub fn get_podcast_episodes_older_than_days(
-        days: i32,
-        podcast_id_to_search: i32,
-    ) -> Vec<PodcastEpisode> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
-
-        podcast_episodes
-            .filter(download_time.lt(Utc::now().naive_utc() - Duration::days(days as i64)))
-            .filter(podcast_id.eq(podcast_id_to_search))
-            .load::<PodcastEpisode>(&mut get_connection())
-            .expect("Error loading podcast episode by id")
-    }
 
     pub fn update_download_status_of_episode(id_to_find: i32) {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;

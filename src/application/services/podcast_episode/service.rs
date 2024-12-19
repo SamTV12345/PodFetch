@@ -1,12 +1,17 @@
+use chrono::Utc;
+use diesel::RunQueryDsl;
 use crate::adapters::api::controllers::podcast_episode_controller::TimelineQueryParams;
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::model::podcast_episode::podcast_episode::PodcastEpisodeEntity;
 use crate::adapters::persistence::repositories::podcast::podcast_episode::PodcastEpisodeRepositoryImpl;
 use crate::application::services::playlist::playlist_item_service::PlaylistItemService;
 use crate::domain::models::episode::episode::Episode;
 use crate::domain::models::favorite::favorite::Favorite;
 use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::podcast::podcast::Podcast;
+use crate::domain::models::settings::filter::Filter;
 use crate::models::filter::Filter;
-use crate::utils::error::CustomError;
+use crate::utils::error::{map_db_error, CustomError};
 
 pub struct PodcastEpisodeService;
 
@@ -45,5 +50,10 @@ impl PodcastEpisodeService {
             }
         });
         PodcastEpisodeRepositoryImpl::delete_episodes_of_podcast(podcast_id)
+    }
+
+    pub fn update_podcast_episode(podcast_episode: &PodcastEpisode) -> Result<PodcastEpisode,
+        CustomError> {
+        PodcastEpisodeRepositoryImpl::update_podcast_episode(podcast_episode);
     }
 }

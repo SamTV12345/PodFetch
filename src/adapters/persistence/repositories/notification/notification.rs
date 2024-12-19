@@ -1,33 +1,25 @@
+use diesel::dsl::insert_into;
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::model::notification::notification::NotificationEntity;
+use crate::domain::models::notification::notification::Notification;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
-use diesel::insert_into;
-use diesel::Queryable;
-use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
-#[derive(Serialize, Deserialize, Queryable, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct Notification {
-    pub id: i32,
-    pub type_of_message: String,
-    pub message: String,
-    pub created_at: String,
-    pub status: String,
-}
+pub struct NotificationRepository;
 
-impl Notification {
+impl NotificationRepository {
     pub fn get_unread_notifications() -> Result<Vec<Notification>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::notifications::dsl::*;
         use diesel::ExpressionMethods;
         use diesel::QueryDsl;
         use diesel::RunQueryDsl;
 
-        let result = notifications
+        notifications
             .filter(status.eq("unread"))
             .order(created_at.desc())
-            .load::<Notification>(&mut get_connection())
-            .map_err(map_db_error)?;
-        Ok(result)
+            .load::<NotificationEntity>(&mut get_connection())
+            .map_err(map_db_error)
+            .map(|notification_entities| notification_entities.into_iter().map(|n| n.into()).collect())
     }
 
     pub fn insert_notification(
@@ -40,10 +32,10 @@ impl Notification {
 
         insert_into(notifications)
             .values((
-                type_of_message.eq(notification.clone().type_of_message),
-                message.eq(notification.clone().message),
-                status.eq(notification.clone().status),
-                created_at.eq(notification.clone().created_at),
+                type_of_message.eq(notification.type_of_message),
+                message.eq(notification.message),
+                status.eq(notification.status),
+                created_at.eq(notification.created_at),
             ))
             .execute(&mut get_connection())
             .map_err(map_db_error)?;
@@ -63,7 +55,7 @@ impl Notification {
                 .set(status.eq(status_update))
                 .execute(&mut get_connection())
         })
-        .map_err(map_db_error)?;
+            .map_err(map_db_error)?;
         Ok(())
     }
 }

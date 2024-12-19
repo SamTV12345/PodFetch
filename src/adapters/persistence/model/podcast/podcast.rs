@@ -1,6 +1,6 @@
 use diesel::{Identifiable, Queryable, QueryableByName, Selectable};
 use utoipa::ToSchema;
-
+use diesel::sql_types::{Text, Integer, Nullable, Bool};
 #[derive(
     Queryable,
     Identifiable,

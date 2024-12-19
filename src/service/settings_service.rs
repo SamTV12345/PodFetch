@@ -1,6 +1,7 @@
-use crate::controllers::settings_controller::UpdateNameSettings;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::settings::Setting;
+use crate::adapters::api::controllers::settings_controller::UpdateNameSettings;
+use crate::adapters::persistence::repositories::settings::settings::SettingsRepository;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::settings::setting::Setting;
 use crate::service::file_service::{
     perform_episode_variable_replacement, perform_podcast_variable_replacement,
 };
@@ -16,16 +17,14 @@ impl SettingsService {
     }
 
     pub fn get_settings(
-        &mut self,
     ) -> Result<Option<Setting>, CustomError> {
-        Setting::get_settings()
+        SettingsRepository::get_settings()
     }
 
     pub fn update_settings(
-        &mut self,
         settings: Setting,
     ) -> Result<Setting, CustomError> {
-        Setting::update_settings(settings)
+        SettingsRepository::update_settings(settings)
     }
 
     pub fn update_name(

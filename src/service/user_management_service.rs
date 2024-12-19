@@ -1,18 +1,18 @@
 use std::str::FromStr;
 
 use crate::constants::inner_constants::Role;
-use crate::models::invite::Invite;
-use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::CustomError;
 use sha256::digest;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::application::services::user::invite::InviteService;
+use crate::domain::models::user::user::User;
 
 pub struct UserManagementService {}
 
 impl UserManagementService {
     pub fn may_onboard_user(user: User) -> bool {
-        Role::from_str(&user.role).unwrap() == Role::Admin
+        user.role == Role::Admin
     }
 
     pub fn is_valid_password(password: String) -> bool {
@@ -40,7 +40,7 @@ impl UserManagementService {
         invite_id: String,
     ) -> Result<User, CustomError> {
         // Check if the invite is valid
-        match Invite::find_invite(invite_id.clone()) {
+        match InviteService::find_invite(&invite_id) {
             Ok(invite) => {
                 match invite {
                     Some(invite) => {
@@ -53,7 +53,7 @@ impl UserManagementService {
                         let mut actual_user = User::new(
                             1,
                             username,
-                            Role::from_str(&invite.role).unwrap(),
+                            invite.role,
                             Some(digest(password.clone())),
                             chrono::Utc::now().naive_utc(),
                             invite.explicit_consent,

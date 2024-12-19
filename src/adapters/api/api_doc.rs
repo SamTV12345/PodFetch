@@ -1,17 +1,18 @@
-use crate::controllers::notification_controller::*;
+use crate::adapters::api::controllers::notification_controller::*;
 use crate::adapters::api::controllers::podcast_controller::*;
-use crate::controllers::podcast_episode_controller::__path_find_all_podcast_episodes_of_podcast;
-use crate::controllers::podcast_episode_controller::*;
-use crate::controllers::settings_controller::*;
-use crate::controllers::sys_info_controller::SysExtraInfo;
-use crate::controllers::sys_info_controller::*;
-use crate::controllers::user_controller::InvitePostModel;
-use crate::controllers::user_controller::UserOnboardingModel;
-use crate::controllers::user_controller::*;
-use crate::controllers::watch_time_controller::*;
-use crate::controllers::websocket_controller::*;
+use crate::adapters::api::controllers::podcast_episode_controller
+::__path_find_all_podcast_episodes_of_podcast;
+use crate::adapters::api::controllers::podcast_episode_controller::*;
+use crate::adapters::api::controllers::settings_controller::*;
+use crate::adapters::api::controllers::sys_info_controller::SysExtraInfo;
+use crate::adapters::api::controllers::sys_info_controller::*;
+use crate::adapters::api::controllers::user_controller::InvitePostModel;
+use crate::adapters::api::controllers::user_controller::UserOnboardingModel;
+use crate::adapters::api::controllers::user_controller::*;
+use crate::adapters::api::controllers::watch_time_controller::*;
+use crate::adapters::api::controllers::websocket_controller::*;
 use crate::models;
-use crate::models::filter::Filter;
+use crate::adapters::api::models::filter::Filter;
 use crate::models::invite::Invite;
 use crate::models::misc_models::{
     PodcastAddModel, PodcastWatchedEpisodeModel, PodcastWatchedPostModel,

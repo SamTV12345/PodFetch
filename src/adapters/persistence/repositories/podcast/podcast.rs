@@ -15,19 +15,14 @@ pub struct PodcastRepositoryImpl;
 impl PodcastRepositoryImpl {
     pub fn get_podcast(
         podcast_id_to_be_found: i32,
-    ) -> Result<Podcast, CustomError> {
+    ) -> Result<Option<Podcast>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::adapters::persistence::dbconfig::schema::podcasts::id as podcast_id;
-        let found_podcast = podcasts
+        podcasts
             .filter(podcast_id.eq(podcast_id_to_be_found))
             .first::<PodcastEntity>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
-
-        match found_podcast {
-            Some(podcast) => Ok(podcast.into()),
-            None => Err(CustomError::NotFound),
-        }
+            .map_err(map_db_error)
     }
 
     pub fn delete_podcast(
@@ -126,14 +121,13 @@ impl PodcastRepositoryImpl {
     }
 
     pub fn get_podcast_by_directory_id(
-        podcast_id: &str,
-        conn: &mut crate::adapters::persistence::dbconfig::DBType,
+        podcast_id: &str
     ) -> Result<Option<Podcast>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
         dsl_podcast
             .filter(directory_id.eq(podcast_id))
-            .first::<PodcastEntity>(conn)
+            .first::<PodcastEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
             .map(|p|p.map(|p|p.into()))

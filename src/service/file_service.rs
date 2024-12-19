@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crate::models::podcasts::Podcast;
 use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
 
@@ -8,11 +7,6 @@ use std::path::Path;
 use std::str::FromStr;
 
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::controllers::settings_controller::ReplacementStrategy;
-use crate::models::misc_models::PodcastInsertModel;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_settings::PodcastSetting;
-use crate::models::settings::Setting;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::{map_io_error, CustomError};
@@ -23,6 +17,7 @@ use crate::DBType as DbConnection;
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
+use crate::application::services::podcast::podcast::PodcastService;
 
 #[derive(Clone)]
 pub struct FileService {
@@ -42,10 +37,9 @@ impl FileService {
     }
     pub fn check_if_podcast_main_image_downloaded(
         &mut self,
-        podcast_id: &str,
-        conn: &mut DbConnection,
+        podcast_id: &str
     ) -> bool {
-        let podcast = Podcast::get_podcast_by_directory_id(podcast_id, conn).unwrap();
+        let podcast = PodcastService::get_podcast_by_directory_id(podcast_id).unwrap();
         match podcast {
             Some(podcast) => {
                 if !podcast.image_url.contains("http") {

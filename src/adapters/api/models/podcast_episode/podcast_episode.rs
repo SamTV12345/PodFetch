@@ -2,6 +2,8 @@ use chrono::NaiveDateTime;
 use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use crate::domain::models::podcast::episode::PodcastEpisode;
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeDto {
     pub(crate) id: i32,
     pub(crate) podcast_id: i32,
