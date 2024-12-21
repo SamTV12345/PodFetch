@@ -1,8 +1,6 @@
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
 use crate::DBType as DbConnection;
 use std::path::Path;
-
+use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{map_io_error, CustomError};
@@ -40,9 +38,7 @@ impl PathService {
     }
 
     pub fn check_if_podcast_episode_directory_available(
-        base_path: &str,
-        _podcast: Podcast,
-        _conn: &mut DbConnection,
+        base_path: &str
     ) -> Result<String, CustomError> {
         let mut i = 0;
         if !Path::new(&base_path).exists() {

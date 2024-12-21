@@ -29,6 +29,7 @@ impl PlaylistRepositoryImpl {
         execute_with_conn!(|conn| diesel::insert_into(playlists)
             .values(entity)
             .get_result::<PlaylistEntity>(conn)
-            .map_err(map_db_error))
+            .map_err(map_db_error)
+            .map(|entity| entity.into()))
     }
 }

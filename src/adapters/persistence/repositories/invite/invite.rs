@@ -11,12 +11,13 @@ use crate::utils::error::{map_db_error, CustomError};
 
 pub struct InviteRepository;
 use diesel::ExpressionMethods;
+use diesel::QueryDsl;
 
 impl InviteRepository {
     pub fn insert_invite(
         role_to_insert: &Role,
         explicit_consent_to_insert: bool,
-    ) -> Result<InviteEntity, Error> {
+    ) -> Result<InviteEntity, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::invites::dsl::*;
 
         let now = chrono::Utc::now().naive_utc();
@@ -29,7 +30,8 @@ impl InviteRepository {
                 created_at.eq(now),
                 expires_at.eq(now + chrono::Duration::days(7)),
             ))
-            .get_result::<InviteEntity>(&mut get_connection())?;
+            .get_result::<InviteEntity>(&mut get_connection())
+            .map_err(map_db_error)?;
 
         Ok(created_invite)
     }

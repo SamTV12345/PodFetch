@@ -4,14 +4,14 @@ use crate::adapters::persistence::dbconfig::schema::podcasts;
 use crate::adapters::persistence::model::favorite::favorites::FavoriteEntity;
 use crate::adapters::persistence::model::podcast::podcast::PodcastEntity;
 use crate::domain::models::podcast::podcast::Podcast;
-use crate::models::tag::Tag;
+use crate::domain::models::tag::tag::Tag;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::podcast_builder::PodcastExtra;
 
 pub struct PodcastRepositoryImpl;
 
-
+use diesel::ExpressionMethods;
 impl PodcastRepositoryImpl {
     pub fn get_podcast(
         podcast_id_to_be_found: i32,
@@ -193,6 +193,15 @@ impl PodcastRepositoryImpl {
             .set(rssfeed.eq(new_url))
             .execute(&mut get_connection())
             .expect("Error updating podcast episode");
+    }
+
+    pub fn update_podcast(podcast: Podcast) -> Result<Podcast, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
+        let updated_podcast = diesel::update(podcasts.filter(id.eq(podcast.id)))
+            .set(podcast.into())
+            .get_result::<PodcastEntity>(&mut get_connection())
+            .map_err(map_db_error)?;
+        Ok(updated_podcast.into())
     }
 
 }

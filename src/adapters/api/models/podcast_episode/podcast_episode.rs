@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use crate::domain::models::podcast::episode::PodcastEpisode;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeDto {
     pub(crate) id: i32,
@@ -38,7 +38,7 @@ impl From<PodcastEpisode> for PodcastEpisodeDto {
             local_url: value.local_url,
             local_image_url: Self::map_image_url(&value.local_image_url),
             description: value.description,
-            status: value.status,
+            status: value.status.to_string(),
             download_time: value.download_time,
             guid: value.guid,
             deleted: value.deleted,

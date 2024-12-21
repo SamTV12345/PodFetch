@@ -1,5 +1,7 @@
 use chrono::NaiveDateTime;
 use utoipa::ToSchema;
+use crate::adapters::api::models::podcast::podcast_dto::PodcastDto;
+use crate::adapters::api::models::podcast_episode::podcast_episode::PodcastEpisodeDto;
 use crate::adapters::persistence::model::podcast::episode::EpisodeEntity;
 use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::podcast::podcast::Podcast;
@@ -16,8 +18,8 @@ pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub watched_time: i32,
     pub date: NaiveDateTime,
     pub total_time: i32,
-    pub podcast_episode: PodcastEpisode,
-    pub podcast: Podcast,
+    pub podcast_episode: PodcastEpisodeDto,
+    pub podcast: PodcastDto,
 }
 
 impl From<(PodcastEpisode, EpisodeEntity, Podcast)> for
@@ -33,8 +35,8 @@ PodcastWatchedEpisodeModelWithPodcastEpisode {
             watched_time: value.clone().1.position.unwrap(),
             date: value.clone().1.timestamp,
             total_time: value.clone().0.total_time,
-            podcast_episode: value.0.clone(),
-            podcast: value.2.clone(),
+            podcast_episode: value.0.into(),
+            podcast: value.2.into(),
         }
     }
 }

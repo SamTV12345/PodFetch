@@ -3,6 +3,7 @@ use crate::adapters::filesystem::update_podcast::UpdatePodcast;
 use crate::adapters::persistence::repositories::podcast::podcast::PodcastRepositoryImpl;
 use crate::application::services::episode::episode_service::EpisodeService;
 use crate::application::services::podcast_episode::service::PodcastEpisodeService;
+use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::podcast::podcast::Podcast;
 use crate::utils::error::CustomError;
 
@@ -36,5 +37,9 @@ impl PodcastService {
 
     pub fn get_podcast_by_directory_id(podcast_id: &str) -> Result<Option<Podcast>, CustomError> {
         PodcastRepositoryImpl::get_podcast_by_directory_id(podcast_id)
+    }
+
+    pub fn update_podcast(podcast: Podcast) -> Result<Podcast, CustomError> {
+        PodcastRepositoryImpl::update_podcast(podcast)
     }
 }

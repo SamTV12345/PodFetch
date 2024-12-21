@@ -41,18 +41,15 @@ impl PodcastEpisodeRepositoryImpl {
     pub fn get_position_of_episode(
         timestamp: &str,
         pid: i32,
-    ) -> Result<usize, CustomError> {
+    ) -> Result<i64, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
 
-        let result = diesel::QueryDsl::order(
             podcast_episodes
                 .filter(podcast_id.eq(pid))
-                .filter(date_of_recording.le(timestamp)),
-            date_of_recording.desc(),
-        )
-            .execute(&mut get_connection())
-            .map_err(map_db_error)?;
-        Ok(result)
+                .filter(date_of_recording.le(timestamp))
+                .count()
+                .get_result::<i64>(&mut get_connection())
+            .map_err(map_db_error)
     }
 
 

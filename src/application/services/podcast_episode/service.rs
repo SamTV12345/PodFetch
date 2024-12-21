@@ -1,7 +1,10 @@
 use chrono::Utc;
+use diesel::r2d2::ConnectionManager;
 use diesel::RunQueryDsl;
+use r2d2::PooledConnection;
 use crate::adapters::api::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::model::podcast_episode::podcast_episode::PodcastEpisodeEntity;
 use crate::adapters::persistence::repositories::podcast::podcast_episode::PodcastEpisodeRepositoryImpl;
 use crate::application::services::playlist::playlist_item_service::PlaylistItemService;
@@ -15,6 +18,12 @@ use crate::utils::error::{map_db_error, CustomError};
 
 pub struct PodcastEpisodeService;
 
+impl PodcastEpisodeService {
+    pub(crate) fn get_position_of_episode(timestamp: &String, pid: i32) -> Result<i64,
+        CustomError> {
+        PodcastEpisodeRepositoryImpl::get_position_of_episode(timestamp, pid)
+    }
+}
 
 impl PodcastEpisodeService {
     pub fn get_timeline(
@@ -54,6 +63,6 @@ impl PodcastEpisodeService {
 
     pub fn update_podcast_episode(podcast_episode: &PodcastEpisode) -> Result<PodcastEpisode,
         CustomError> {
-        PodcastEpisodeRepositoryImpl::update_podcast_episode(podcast_episode);
+        PodcastEpisodeRepositoryImpl::update_podcast_episode(podcast_episode)
     }
 }

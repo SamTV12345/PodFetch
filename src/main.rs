@@ -42,6 +42,8 @@ use crate::adapters::api::controllers::podcast_controller::{
 use crate::adapters::api::run::run;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
+use crate::application::services::podcast::podcast::PodcastService;
+use crate::application::services::podcast_episode::service::PodcastEpisodeService;
 use crate::domain::models::podcast::podcast::Podcast;
 
 mod constants;
@@ -50,16 +52,8 @@ mod service;
 
 
 use crate::service::environment_service::EnvironmentService;
-use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
-
-use crate::service::notification_service::NotificationService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::service::rust_service::PodcastService;
-use crate::service::settings_service::SettingsService;
 use crate::utils::error::CustomError;
-use crate::utils::podcast_key_checker::check_podcast_request;
-use crate::utils::reqwest_client::get_async_sync_client;
 
 mod config;
 

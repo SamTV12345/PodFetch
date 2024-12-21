@@ -30,18 +30,19 @@ impl PodcastSettingRepositoryImpl {
         match opt_setting {
             Some(_) => {
                 diesel::update(podcast_settings.find(&setting_to_insert.podcast_id))
-                    .set(setting_to_insert.clone())
+                    .set(setting_to_insert.into())
                     .execute(&mut get_connection())
                     .map_err(map_db_error)?;
             }
             None => {
                 diesel::insert_into(podcast_settings)
-                    .values(setting_to_insert.clone())
+                    .values(setting_to_insert.into())
                     .execute(&mut get_connection())
                     .map_err(map_db_error)?;
             }
         }
-        let setting_cloned = *setting_to_insert.clone();
-        Ok(*setting_cloned)
+        // Safe because we just inserted the setting
+        let setting_cloned = Self::get_settings(&setting_to_insert.podcast_id)?.unwrap();
+        Ok(setting_cloned)
     }
 }

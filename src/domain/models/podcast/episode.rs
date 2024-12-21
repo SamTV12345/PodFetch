@@ -33,6 +33,7 @@ impl PodcastEpisode {
 
 #[derive(Clone, Debug, Default)]
 pub enum PodcastEpisodeStatus {
+    #[default]
     New,
     Downloaded,
     Pending

@@ -1,7 +1,7 @@
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use log::error;
-
+use rss::Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -85,6 +85,25 @@ pub fn map_db_error(e: diesel::result::Error) -> CustomError {
         _ => CustomError::Unknown,
     }
 }
+
+pub fn map_channel_error(e: rss::Error) -> CustomError {
+    match e {
+        Error::Utf8(e) => {
+            error!("Error during utf8 conversion: {}", e);
+        }
+        Error::Xml(e) => {
+            error!("Error during xml parsing: {}", e);
+        }
+        Error::InvalidStartTag => {
+            error!("Error during parsing: Invalid start tag");
+        }
+        Error::Eof => {
+            error!("Error during parsing: End of file");
+        }
+    }
+    CustomError::Unknown
+}
+
 
 pub fn map_r2d2_error(e: r2d2::Error) -> CustomError {
     error!("R2D2 error: {}", e);

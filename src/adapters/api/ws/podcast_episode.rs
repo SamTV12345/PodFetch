@@ -19,4 +19,13 @@ pub async fn notify_delete_podcast_episode_locally(chat_handle: &ChatServerHandl
     }).unwrap()).await;
 }
 
-pub async fn notify_downloaded_podcast_episode_locally(chat_handle: &ChatServerHandle, )
+pub async fn notify_downloaded_podcast_episode_locally(chat_handle: &ChatServerHandle,
+                                                       added_podcast_episode: PodcastEpisode) {
+    chat_handle.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
+        podcast_episode: Some(added_podcast_episode),
+        podcast_episodes: None,
+        type_of: PodcastType::AddPodcastEpisode,
+        podcast: None,
+        message: "Downloaded podcast episode locally".to_string(),
+    }).unwrap()).await;
+}

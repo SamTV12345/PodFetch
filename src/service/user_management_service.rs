@@ -6,6 +6,7 @@ use crate::utils::error::CustomError;
 use sha256::digest;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::application::services::user::invite::InviteService;
+use crate::application::services::user::user::UserService;
 use crate::domain::models::user::user::User;
 
 pub struct UserManagementService {}
@@ -105,7 +106,7 @@ impl UserManagementService {
     }
 
     pub fn delete_user(user: User) -> Result<usize, CustomError> {
-        User::delete_user(&user)
+        UserService::delete_user(&user)
     }
 
     pub fn update_user(

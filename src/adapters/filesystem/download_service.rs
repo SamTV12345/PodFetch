@@ -9,13 +9,16 @@ use std::io;
 use std::io::Read;
 use file_format::FileFormat;
 use crate::adapters::api::controllers::controller_utils::get_default_image;
-use crate::adapters::filesystem::file_path::FilenameBuilder;
+use crate::adapters::filesystem::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::application::services::podcast_episode::service::PodcastEpisodeService;
+use crate::application::services::podcast_setting::service::PodcastSettingService;
 use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
-use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::podcast::Podcast;
 use crate::service::settings_service::SettingsService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use crate::utils::error::CustomError;
+use crate::utils::error::{map_io_error, map_io_extra_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 
 pub struct DownloadService {
@@ -31,8 +34,8 @@ impl DownloadService {
 
     pub fn download_podcast_episode(
         &mut self,
-        podcast_episode: PodcastEpisode,
-        podcast: Podcast
+        mut podcast_episode: PodcastEpisode,
+        podcast: &Podcast
     ) -> Result<(), CustomError> {
         let client = ClientBuilder::new().build().unwrap();
         let conn = &mut get_connection();
@@ -108,7 +111,7 @@ impl DownloadService {
 
         if !self
             .file_service
-            .check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
+            .check_if_podcast_main_image_downloaded(&podcast.clone().directory_id)
         {
             let mut image_podcast = File::create(&paths.image_filename).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
@@ -116,23 +119,23 @@ impl DownloadService {
 
         io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
 
-        PodcastEpisode::update_local_paths(
-            &podcast_episode.episode_id,
-            &paths.local_image_url,
-            &paths.local_file_url,
-            &paths.image_filename,
-            &paths.filename,
-            conn,
-        )?;
+
+        podcast_episode.local_image_url = paths.local_image_url.clone();
+        podcast_episode.local_url = paths.local_file_url.clone();
+        podcast_episode.file_image_path = Some(paths.image_filename.clone());
+        podcast_episode.file_episode_path = Some(paths.filename.clone());
+        PodcastEpisodeService::update_podcast_episode(&mut podcast_episode)?;
+
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
-        let result = Self::handle_metadata_insertion(&paths, &podcast_episode, &podcast);
+        let result = Self::handle_metadata_insertion(&paths, &mut podcast_episode, &podcast);
         if let Err(err) = result {
             log::error!("Error handling metadata insertion: {:?}", err);
         }
         Ok(())
     }
 
-    pub fn handle_metadata_insertion(paths: &FilenameBuilderReturn, podcast_episode: &PodcastEpisode, podcast: &Podcast) -> Result<(), CustomError> {
+    pub fn handle_metadata_insertion(paths: &FilenameBuilderReturn, podcast_episode:
+    &mut PodcastEpisode, podcast: &Podcast) -> Result<(), CustomError> {
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
 
         match detected_file {
@@ -160,7 +163,7 @@ impl DownloadService {
 
     fn update_meta_data_mp3(
         paths: &FilenameBuilderReturn,
-        podcast_episode: &PodcastEpisode,
+        podcast_episode: &mut PodcastEpisode,
         podcast: &Podcast
     ) -> Result<(), CustomError> {
         let mut tag = match Tag::read_from_path(&paths.filename) {
@@ -189,28 +192,29 @@ impl DownloadService {
         }
 
         let mut conn = get_connection();
-        let index = PodcastEpisode::get_position_of_episode(&podcast_episode.date_of_recording,
-                                                          podcast_episode.podcast_id,
-                                      &mut conn)?;
+        let index = PodcastEpisodeService::get_position_of_episode(&podcast_episode.date_of_recording,
+                                                          podcast_episode.podcast_id)?;
 
-        let settings_for_podcast = PodcastSetting::get_settings(podcast.id)?;
+        let settings_for_podcast = PodcastSettingService::get_settings_of_podcast(podcast.id)?;
 
         if let Some(settings_for_podcast) = settings_for_podcast {
             if settings_for_podcast.episode_numbering {
                 if  !podcast_episode.episode_numbering_processed {
                     tag.set_title(format!("{} - {}", index, &podcast_episode.name));
-                    PodcastEpisode::update_episode_numbering_processed(&mut conn, true,
-                                                                       &podcast_episode.episode_id);
+                    podcast_episode.episode_numbering_processed = true;
+                    PodcastEpisodeService::update_podcast_episode(&podcast_episode)?;
                 }
             } else {
                 tag.set_title(&podcast_episode.name);
-                PodcastEpisode::update_episode_numbering_processed(&mut conn, false, &podcast_episode
-                    .episode_id)
+                podcast_episode.episode_numbering_processed = false;
+                PodcastEpisodeService::update_podcast_episode(&podcast_episode)?;
+
             }
         } else {
             tag.set_title(&podcast_episode.name);
-            PodcastEpisode::update_episode_numbering_processed(&mut conn, false, &podcast_episode
-                .episode_id)
+            podcast_episode.episode_numbering_processed = false;
+            PodcastEpisodeService::update_podcast_episode(&podcast_episode)?;
+
         }
 
 
@@ -241,9 +245,9 @@ impl DownloadService {
             });
         }
 
-        let track_number = PodcastEpisodeService::get_track_number_for_episode(
-            podcast.id,
+        let track_number = PodcastEpisodeService::get_position_of_episode(
             &podcast_episode.date_of_recording,
+            podcast.id,
         );
 
         if tag.track().is_none() {
@@ -280,9 +284,9 @@ impl DownloadService {
                 tag.set_genre(podcast.clone().keywords.unwrap_or("Unknown".to_string()));
 
                 tag.set_comment(&podcast_episode.description);
-                let track_number = PodcastEpisodeService::get_track_number_for_episode(
-                    podcast.id,
+                let track_number = PodcastEpisodeService::get_position_of_episode(
                     &podcast_episode.date_of_recording,
+                    podcast.id,
                 );
 
                 match track_number {

@@ -1,7 +1,7 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
 use frankenstein::{Api, ParseMode, SendMessageParams, TelegramApi};
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::podcast::Podcast;
 
 pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: Podcast) {
     let telegram_config = ENVIRONMENT_SERVICE

@@ -29,8 +29,8 @@ impl SettingsRepository {
         let setting_entity_to_save = SettingEntity::from(setting);
 
         let setting_to_update = settings
-            .first::<Setting>(&mut get_connection())
-            .expect("Error loading settings");
+            .first::<SettingEntity>(&mut get_connection())
+            .map_err(map_db_error)?;
         do_retry(|| {
             diesel::update(&setting_to_update)
                 .set(setting_entity_to_save)

@@ -1,4 +1,5 @@
 use rss::Channel;
+use crate::domain::models::podcast::podcast::Podcast;
 
 #[derive(Clone)]
 pub struct PodcastParsed {

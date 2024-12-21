@@ -1,4 +1,5 @@
 mod podindex_api;
+mod RSSPodcastReader;
 
 use std::cell::LazyCell;
 use std::time::SystemTime;

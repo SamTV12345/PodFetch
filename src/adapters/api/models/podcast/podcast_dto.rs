@@ -6,7 +6,7 @@ use crate::domain::models::podcast::podcast::Podcast;
 use crate::domain::models::tag::tag::Tag;
 use crate::service::environment_service;
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema, Clone)]
 pub struct PodcastDto {
     pub(crate) id: i32,
     pub(crate) name: String,
@@ -77,7 +77,7 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
             original_image_url: value.0.original_image_url,
             favorites: favorite,
             directory_name: value.0.directory_name,
-            tags: value.2,
+            tags: value.2.into_iter().map(|tag| tag.into()).collect(),
         }
 
 

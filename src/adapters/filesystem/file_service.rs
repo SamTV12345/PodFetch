@@ -7,8 +7,6 @@ use std::path::Path;
 use std::str::FromStr;
 
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::service::path_service::PathService;
-use crate::service::settings_service::SettingsService;
 use crate::utils::error::{map_io_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
@@ -17,7 +15,12 @@ use crate::DBType as DbConnection;
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
+use crate::adapters::api::controllers::settings_controller::ReplacementStrategy;
 use crate::application::services::podcast::podcast::PodcastService;
+use crate::application::services::podcast_setting::service::PodcastSettingService;
+use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::podcast_setting::PodcastSetting;
+use crate::domain::models::settings::setting::Setting;
 
 #[derive(Clone)]
 pub struct FileService {
@@ -119,7 +122,10 @@ impl FileService {
         let mut image_out = std::fs::File::create(file_path.0.clone()).unwrap();
         let bytes = image_response.bytes().await.unwrap();
         image_out.write_all(&bytes).unwrap();
-        PodcastEpisode::update_podcast_image(podcast_id, &file_path.1).unwrap();
+        // Safe unwrap because we just added the podcast
+        let mut podcast = PodcastService::get_podcast_by_directory_id(podcast_id)?.unwrap();
+        podcast.image_url = file_path.1.clone();
+        PodcastService::update_podcast(podcast)?;
     }
 
     pub fn cleanup_old_episode(episode: &PodcastEpisode) -> Result<(), CustomError> {
@@ -152,14 +158,13 @@ pub async fn prepare_podcast_title_to_directory(
     podcast: &PodcastInsertModel,
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
-    let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings()?.unwrap();
-    let opt_podcast_settings = PodcastSetting::get_settings(podcast.id)?;
+    let retrieved_settings = SettingsService::get_settings()?.unwrap();
+    let opt_podcast_settings = PodcastSettingService::get_settings_of_podcast(podcast.id)?;
 
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
         None => {
-            let client = reqwest::Client::new();
+            let client = Client::new();
             let rss_feed = podcast.feed_url.clone();
             let feed_response = client.get(rss_feed).send().await.unwrap();
             let content = feed_response.bytes().await.unwrap();
@@ -252,15 +257,14 @@ pub fn perform_podcast_variable_replacement(
 pub fn prepare_podcast_episode_title_to_directory(
     podcast_episode: PodcastEpisode,
 ) -> Result<String, CustomError> {
-    let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings()?.unwrap();
+    let retrieved_settings = SettingsService::get_settings()?.unwrap();
     if retrieved_settings.use_existing_filename {
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if let Ok(res_unwrapped) = res_of_filename {
             return Ok(res_unwrapped);
         }
     }
-    let podcast_settings = PodcastSetting::get_settings(podcast_episode.podcast_id)?;
+    let podcast_settings = PodcastSettingService::get_settings_of_podcast(podcast_episode.podcast_id)?;
     perform_episode_variable_replacement(retrieved_settings, podcast_episode, podcast_settings)
 }
 
@@ -388,8 +392,8 @@ fn remove_extension(filename: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::podcast_episode::PodcastEpisode;
-    use crate::models::settings::Setting;
+    use crate::domain::models::podcast::episode::{PodcastEpisode, PodcastEpisodeStatus};
+    use crate::domain::models::settings::setting::Setting;
     use crate::service::file_service::{
         perform_episode_variable_replacement, perform_podcast_variable_replacement,
         perform_replacement,
@@ -517,7 +521,7 @@ mod tests {
             id: 2,
             name: "test".to_string(),
             description: "test".to_string(),
-            status: "".to_string(),
+            status: PodcastEpisodeStatus::New,
             url: "test".to_string(),
             guid: "test".to_string(),
             total_time: 0,
@@ -559,7 +563,7 @@ mod tests {
             id: 2,
             name: "MyPodcast".to_string(),
             description: "test".to_string(),
-            status: "".to_string(),
+            status: PodcastEpisodeStatus::New,
             url: "test".to_string(),
             guid: "test".to_string(),
             total_time: 0,
@@ -601,7 +605,7 @@ mod tests {
             id: 2,
             name: "MyPodcast".to_string(),
             description: "test".to_string(),
-            status: "".to_string(),
+            status: PodcastEpisodeStatus::New,
             url: "test2".to_string(),
             guid: "test".to_string(),
             total_time: 0,

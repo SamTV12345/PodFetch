@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use utoipa::ToSchema;
 use crate::domain::models::tag::tag::Tag;
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema, Clone)]
 pub struct TagDto {
     pub(crate) id: String,
     pub name: String,

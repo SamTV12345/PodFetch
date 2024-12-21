@@ -71,7 +71,6 @@ impl TagRepositoryImpl {
             .load::<TagEntity>(&mut get_connection())
             .map_err(map_db_error)
             .map(|e| e.into_iter().map(|e| e.into()).collect())
-            .map(|e| e.into_iter().map(|e| e.into()).collect())
     }
 
     pub fn get_tags_of_podcast(podcast_id_to_search: i32,
