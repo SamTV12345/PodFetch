@@ -3,7 +3,7 @@ use std::fmt::Display;
 use chrono::NaiveDateTime;
 use crate::domain::models::episode::episode::Episode;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct EpisodeDto {
     pub podcast: String,
     pub episode: String,

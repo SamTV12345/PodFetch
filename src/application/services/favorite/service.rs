@@ -31,3 +31,9 @@ impl QueryUseCase for FavoriteService {
         FavoriteRepositoryImpl::get_favored_podcasts(found_username)
     }
 }
+
+impl FavoriteService {
+    fn delete_by_username(username: &str) -> Result<(), CustomError> {
+        FavoriteRepositoryImpl::delete_by_username(username)
+    }
+}

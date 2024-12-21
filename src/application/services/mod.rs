@@ -8,3 +8,5 @@ pub mod playlist;
 pub mod tag;
 pub mod user;
 pub mod notification;
+pub mod settings;
+pub mod session;

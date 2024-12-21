@@ -14,6 +14,10 @@ impl EpisodeService {
         )
     }
 
+    pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
+        EpisodeRepositoryImpl::delete_by_username(username)
+    }
+
     pub fn delete_watchtime(podcast_episode: i32) -> Result<(), CustomError> {
         EpisodeRepositoryImpl::delete_watchtime(podcast_episode)
     }

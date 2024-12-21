@@ -42,4 +42,8 @@ impl PodcastService {
     pub fn update_podcast(podcast: Podcast) -> Result<Podcast, CustomError> {
         PodcastRepositoryImpl::update_podcast(podcast)
     }
+
+    pub fn get_podcast_by_rss_feed(rss_feed: &str) -> Result<Option<Podcast>, CustomError> {
+        PodcastRepositoryImpl::get_podcast_by_rss_feed(rss_feed)
+    }
 }

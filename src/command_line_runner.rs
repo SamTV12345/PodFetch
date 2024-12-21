@@ -1,13 +1,4 @@
 use crate::constants::inner_constants::Role;
-use crate::controllers::sys_info_controller::built_info;
-use crate::models::episode::Episode;
-use crate::models::favorites::Favorite;
-use crate::models::podcasts::Podcast;
-use crate::models::session::Session;
-use crate::models::subscription::Subscription;
-use crate::models::user::{User, UserWithoutPassword};
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::service::rust_service::PodcastService;
 use crate::utils::error::CustomError;
 use crate::utils::time::get_current_timestamp_str;
 use log::error;
@@ -19,6 +10,10 @@ use std::process::exit;
 use std::str::FromStr;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::application::services::device::service::DeviceService;
+use crate::application::services::episode::episode_service::EpisodeService;
+use crate::application::services::favorite::service::FavoriteService;
+use crate::application::services::podcast::podcast::PodcastService;
+use crate::application::services::user::user::UserService;
 use crate::application::usecases::devices::edit_use_case::EditUseCase;
 
 pub async fn start_command_line(mut args: Args) {
@@ -42,16 +37,14 @@ pub async fn start_command_line(mut args: Args) {
 
                     match podcast_rss_feed {
                         Some(feed) => {
-                            let mut podcast_service = PodcastService::new();
-                            let conn = &mut get_connection();
 
                             let replaced_feed = feed.replace(['\'', ' '], "");
                             println!("Refreshing podcast {}", replaced_feed);
 
-                            let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn)
+                            let podcast = PodcastService::get_podcast_by_rss_feed(&replaced_feed)
                                 .expect("Error getting podcast");
 
-                            PodcastEpisodeService::insert_podcast_episodes(podcast.clone())
+                            PodcastService::insert_podcast_episodes(podcast.clone())
                                 .unwrap();
                             podcast_service
                                 .schedule_episode_download(podcast, None)
@@ -64,11 +57,9 @@ pub async fn start_command_line(mut args: Args) {
                     }
                 }
                 "refresh-all" => {
-                    let podcasts = Podcast::get_all_podcasts();
-                    let mut podcast_service = PodcastService::new();
+                    let podcasts = PodcastService::get_all_podcasts();
                     for podcast in podcasts.unwrap() {
                         println!("Refreshing podcast {}", podcast.name);
-
                         PodcastEpisodeService::insert_podcast_episodes(
                             podcast.clone(),
                         )
@@ -126,12 +117,10 @@ pub async fn start_command_line(mut args: Args) {
                 }
                 "generate" => match args.next().unwrap().as_str() {
                     "apiKey" => {
-                        User::find_all_users(conn).iter().for_each(|u| {
+                        UserService::find_all_users()?.iter_mut().for_each(|mut u| {
                             log::info!("Updating api key of user {}", &u.username);
-                            User::update_api_key_of_user(
-                                &u.username,
-                                uuid::Uuid::new_v4().to_string(),
-                            )
+                            u.api_key = uuid::Uuid::new_v4().to_string();
+                            UserService::update_user(u)
                             .expect("Error updating api key");
                         })
                     }
@@ -150,16 +139,11 @@ pub async fn start_command_line(mut args: Args) {
                     username = trim_string(&username);
                     match available_users.iter().find(|u| u.username == username) {
                         Some(..) => {
-                            Episode::delete_by_username(&username)
+                            EpisodeService::delete_by_username(&username)
                                 .expect("Error deleting entries for podcast history item");
                             DeviceService::delete_by_username(&username)
                                 .expect("Error deleting devices");
-                            Episode::delete_by_username_and_episode(
-                                &username,
-                                conn,
-                            )
-                            .expect("Error deleting episodes");
-                            Favorite::delete_by_username(
+                            FavoriteService::delete_by_username(
                                 trim_string(&username),
                                 conn,
                             )

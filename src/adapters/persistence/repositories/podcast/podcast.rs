@@ -23,6 +23,7 @@ impl PodcastRepositoryImpl {
             .first::<PodcastEntity>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
+            .map(|p|p.map(|p|p.into()))
     }
 
     pub fn delete_podcast(
@@ -50,13 +51,14 @@ impl PodcastRepositoryImpl {
         Ok(optional_podcast)
     }
 
-    pub fn find_by_rss_feed_url(feed_url: &str) -> Option<Podcast> {
+    pub fn find_by_rss_feed_url(feed_url: &str) -> Result<Option<Podcast>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
         podcasts
             .filter(rssfeed.eq(feed_url))
-            .first::<Podcast>(&mut get_connection())
+            .first::<PodcastEntity>(&mut get_connection())
             .optional()
-            .expect("Error loading podcast by rss feed url")
+            .map(|p|p.map(|p|p.into()))
+            .map_err(map_db_error)
     }
 
     pub fn get_podcasts(
@@ -108,7 +110,7 @@ impl PodcastRepositoryImpl {
     }
 
     pub fn get_podcast_by_rss_feed(
-        rss_feed_1: String,
+        rss_feed_1: &str,
         conn: &mut crate::adapters::persistence::dbconfig::DBType,
     ) -> Result<Podcast, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
@@ -159,7 +161,10 @@ impl PodcastRepositoryImpl {
     ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 
-        let found_podcast = Self::get_podcast(podcast_id)?;
+        let found_podcast = match Self::get_podcast(podcast_id)? {
+            Some(podcast) => podcast,
+            None => return Err(CustomError::NotFound),
+        };
 
         diesel::update(podcasts.filter(id.eq(podcast_id)))
             .set(active.eq(!found_podcast.active))

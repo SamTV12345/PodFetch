@@ -13,6 +13,7 @@ use crate::domain::models::favorite::favorite::Favorite;
 use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::podcast::podcast::Podcast;
 use crate::domain::models::settings::filter::Filter;
+use crate::domain::models::user::user::User;
 use crate::models::filter::Filter;
 use crate::utils::error::{map_db_error, CustomError};
 
@@ -65,4 +66,14 @@ impl PodcastEpisodeService {
         CustomError> {
         PodcastEpisodeRepositoryImpl::update_podcast_episode(podcast_episode)
     }
+
+    pub fn get_podcast_episodes_of_podcast(
+        podcast_id: i32,
+        last_podcast_episode: Option<String>,
+        user: User,
+    ) -> Result<Vec<(PodcastEpisode, Episode, Favorite)>, CustomError> {
+        let last_podcast_episode = last_podcast_episode.unwrap_or_else(|| Utc::now().to_rfc3339());
+        PodcastEpisodeRepositoryImpl::get_podcast_episodes_of_podcast(podcast_id,
+                                                                   last_podcast_episode, user)
+    )
 }

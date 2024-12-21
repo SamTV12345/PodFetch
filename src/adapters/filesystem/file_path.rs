@@ -1,9 +1,9 @@
-use crate::service::file_service::prepare_podcast_episode_title_to_directory;
-use crate::service::path_service::PathService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 use crate::DBType as DbConnection;
 use substring::Substring;
+use crate::adapters::filesystem::file_service::prepare_podcast_episode_title_to_directory;
+use crate::adapters::filesystem::path_service::PathService;
+use crate::application::services::podcast_episode::service::PodcastEpisodeService;
 use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::podcast::podcast::Podcast;
 use crate::domain::models::settings::setting::Setting;
@@ -103,7 +103,7 @@ impl FilenameBuilder {
         self
     }
 
-    pub fn build(self, conn: &mut DbConnection) -> Result<FilenameBuilderReturn, CustomError> {
+    pub fn build(self) -> Result<FilenameBuilderReturn, CustomError> {
         let image_last_slash = self.podcast.image_url.rfind('/').unwrap();
         let binding_substring_for_base_url = self.podcast.image_url.clone();
         let base_url = binding_substring_for_base_url.substring(0, image_last_slash);
@@ -113,7 +113,7 @@ impl FilenameBuilder {
                 true => {
                     let episode_to_encode = format!("/{}", self.episode.clone());
                     let encoded_episode_url =
-                        PodcastEpisodeService::map_to_local_url(&episode_to_encode);
+                        Self::map_to_local_url(&episode_to_encode);
                     let resulting_link = format!(
                         "{base_url}/{episode_url}.{suffix}",
                         base_url = base_url,
@@ -125,14 +125,14 @@ impl FilenameBuilder {
                 false => {
                     let resulting_directory = self
                         .clone()
-                        .create_podcast_episode_dir(self.directory.clone(), conn)?;
+                        .create_podcast_episode_dir(self.directory.clone())?;
 
                     let mut file_paths =
                         self.create_path_dirs(resulting_directory, base_url.to_string())?;
                     file_paths.local_file_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_file_url);
+                        Self::map_to_local_url(&file_paths.local_file_url);
                     file_paths.local_image_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_image_url);
+                        Self::map_to_local_url(&file_paths.local_image_url);
                     Ok(file_paths)
                 }
             },
@@ -140,7 +140,7 @@ impl FilenameBuilder {
                 true => {
                     let episode_to_encode = format!("/{}", self.episode.clone());
                     let encoded_episode_url =
-                        PodcastEpisodeService::map_to_local_url(&episode_to_encode);
+                        Self::map_to_local_url(&episode_to_encode);
                     let resulting_link = format!(
                         "{base_url}{episode_url}",
                         base_url = base_url,
@@ -152,23 +152,32 @@ impl FilenameBuilder {
                     let sub_episode_path = format!("/{}", self.episode.clone());
                     let resulting_directory = self.clone().create_podcast_episode_dir(
                         format!("{}/{}", self.directory.clone(), self.episode.clone()),
-                        conn,
                     )?;
                     let resulting_link = format!(
                         "{base_url}{}",
-                        PodcastEpisodeService::map_to_local_url(&sub_episode_path)
+                        Self::map_to_local_url(&sub_episode_path)
                     );
 
                     let mut file_paths =
                         self.create_path_dirs(resulting_directory, resulting_link)?;
                     file_paths.local_file_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_file_url);
+                        Self::map_to_local_url(&file_paths.local_file_url);
                     file_paths.local_image_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_image_url);
+                        Self::map_to_local_url(&file_paths.local_image_url);
                     Ok(file_paths)
                 }
             },
         }
+    }
+
+    pub fn map_to_local_url(url: &str) -> String {
+        let mut splitted_url = url.split('/').collect::<Vec<&str>>();
+        let new_last_part = urlencoding::encode(splitted_url.last().unwrap())
+            .clone()
+            .to_string();
+        splitted_url.pop();
+        splitted_url.push(&new_last_part);
+        splitted_url.join("/")
     }
 
     fn create_path_dirs(
@@ -229,8 +238,7 @@ impl FilenameBuilder {
     fn create_podcast_episode_dir(
         self,
         dirname: String,
-        conn: &mut DbConnection,
     ) -> Result<String, CustomError> {
-        PathService::check_if_podcast_episode_directory_available(&dirname, self.podcast, conn)
+        PathService::check_if_podcast_episode_directory_available(&dirname)
     }
 }

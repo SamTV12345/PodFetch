@@ -4,8 +4,7 @@ use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
 
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::user::User;
+use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use actix::fut::ok;
 use actix_web::body::{EitherBody, MessageBody};
 use actix_web::error::{ErrorForbidden, ErrorUnauthorized};
@@ -23,6 +22,8 @@ use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
+use crate::application::services::user::user::UserService;
+use crate::domain::models::user::user::User;
 
 pub struct AuthFilter {}
 
@@ -100,22 +101,23 @@ where
                 Ok(auth) => {
                     let (username, password) = AuthFilter::extract_basic_auth(auth);
                     let found_user =
-                        User::find_by_username(username.as_str());
-
-                    if found_user.is_err() {
-                        return Box::pin(ok(req
-                            .error_response(ErrorUnauthorized("Unauthorized"))
-                            .map_into_right_body()));
-                    }
-                    let unwrapped_user = found_user.unwrap();
+                        match UserService::find_by_username(username.as_str()) {
+                            Ok(user) => {
+                                match user {
+                                    Some(user) => Ok(user),
+                                    None => Err(ErrorUnauthorized("Unauthorized")),
+                                }
+                            },
+                            Err(e) => Err(ErrorUnauthorized(e.to_string())),
+                        }?;
 
                     if let Some(admin_username) = env_service.username.clone() {
-                        if unwrapped_user.username.clone() == admin_username {
+                        if found_user.username.clone() == admin_username {
                             return match env_service.password.is_some()
                                 && digest(password) == env_service.password.clone().unwrap()
                             {
                                 true => {
-                                    req.extensions_mut().insert(unwrapped_user);
+                                    req.extensions_mut().insert(found_user);
                                     let service = Rc::clone(&self.service);
                                     async move {
                                         service.call(req).await.map(|res| res.map_into_left_body())
@@ -129,8 +131,8 @@ where
                         }
                     }
 
-                    if unwrapped_user.password.clone().unwrap() == digest(password) {
-                        req.extensions_mut().insert(unwrapped_user);
+                    if found_user.password.clone().unwrap() == digest(password) {
+                        req.extensions_mut().insert(found_user);
                         let service = Rc::clone(&self.service);
                         async move { service.call(req).await.map(|res| res.map_into_left_body()) }
                             .boxed_local()
@@ -182,7 +184,7 @@ where
                     .unwrap()
                     .as_str()
                     .unwrap();
-                let found_user = User::find_by_username(username);
+                let found_user = UserService::find_by_username(username);
                 let service = Rc::clone(&self.service);
 
                 match found_user {
@@ -193,8 +195,8 @@ where
                     }
                     Err(_) => {
                         // User is authenticated so we can onboard him if he is new
-                        let user = User::insert_user(
-                            &mut User {
+                        let user = UserService::insert_user(
+                            User {
                                 id: 0,
                                 username: decoded
                                     .claims
@@ -203,7 +205,7 @@ where
                                     .as_str()
                                     .unwrap()
                                     .to_string(),
-                                role: "user".to_string(),
+                                role: Role::User,
                                 password: None,
                                 explicit_consent: false,
                                 created_at: chrono::Utc::now().naive_utc(),
@@ -227,7 +229,7 @@ where
     }
 
     fn handle_no_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let user = User::create_standard_admin_user();
+        let user = UserService::create_standard_admin_user();
         req.extensions_mut().insert(user);
         let service = Rc::clone(&self.service);
         async move { service.call(req).await.map(|res| res.map_into_left_body()) }.boxed_local()
@@ -247,7 +249,7 @@ where
             let token_res = header_val.to_str();
             return match token_res {
                 Ok(token) => {
-                    let found_user = User::find_by_username(token);
+                    let found_user = UserService::find_by_username(token)?;
                     let service = Rc::clone(&self.service);
 
                     return match found_user {
@@ -260,11 +262,11 @@ where
                         }
                         Err(_) => {
                             if config.auto_sign_up {
-                                let user = User::insert_user(
-                                    &mut User {
+                                let user = UserService::insert_user(
+                                    User {
                                         id: 0,
                                         username: token.to_string(),
-                                        role: "user".to_string(),
+                                        role: Role::User,
                                         password: None,
                                         explicit_consent: false,
                                         created_at: chrono::Utc::now().naive_utc(),

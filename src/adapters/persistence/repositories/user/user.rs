@@ -7,7 +7,6 @@ use crate::adapters::persistence::dbconfig::schema::users;
 use crate::adapters::persistence::model::user::user::UserEntity;
 use crate::constants::inner_constants::{Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME};
 use crate::domain::models::user::user::User;
-use crate::models::user::{UserWithAPiKey, UserWithoutPassword};
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError};
 
@@ -88,25 +87,11 @@ impl UserRepository {
         }
     }
 
-    pub fn create_standard_admin_user() -> User {
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        let api_admin: Option<String> = env_service.api_key_admin.clone();
-        User {
-            id: 9999,
-            username: STANDARD_USER.to_string(),
-            role: Role::Admin,
-            password: None,
-            explicit_consent: true,
-            created_at: Default::default(),
-            api_key: api_admin,
-        }
-    }
-
-    pub fn find_all_users(conn: &mut crate::adapters::persistence::dbconfig::DBType) ->
+    pub fn find_all_users() ->
                                                                                      Result<Vec<User>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
 
-        users.load::<UserEntity>(conn).map_err(map_db_error).map(|users| {
+        users.load::<UserEntity>(&mut get_connection()).map_err(map_db_error).map(|users| {
             users.into_iter().map(|u| u.into()).collect()
         })
     }

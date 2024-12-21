@@ -1,6 +1,4 @@
 use crate::auth_middleware::AuthFilter;
-use crate::models::session::Session;
-use crate::models::user::User;
 
 use crate::utils::error::CustomError;
 use actix_web::post;
@@ -8,6 +6,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use awc::cookie::{Cookie, SameSite};
 use sha256::digest;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::domain::models::user::session::Session;
 use crate::service::environment_service::EnvironmentService;
 
 #[post("/auth/{username}/login.json")]
@@ -21,7 +20,7 @@ pub async fn login(
     if let Some(cookie) = rq.clone().cookie("sessionid") {
         let session = cookie.value();
         let opt_session =
-            Session::find_by_session_id(session);
+            SessionService::find_by_session_id(session);
         if let Ok(unwrapped_session) = opt_session {
             let user_cookie = create_session_cookie(unwrapped_session);
             return Ok(HttpResponse::Ok().cookie(user_cookie).finish());

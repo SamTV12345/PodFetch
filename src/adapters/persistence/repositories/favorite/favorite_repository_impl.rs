@@ -3,8 +3,11 @@ use diesel::sql_types::Text;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::adapters::persistence::model::favorite::favorites::FavoriteEntity;
+use crate::adapters::persistence::model::podcast::podcast::PodcastEntity;
+use crate::adapters::persistence::model::podcast_episode::podcast_episode::PodcastEpisodeEntity;
 use crate::application::repositories::favorite_repository::FavoriteRepository;
 use crate::domain::models::favorite::favorite::Favorite;
+use crate::domain::models::podcast::podcast::Podcast;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -157,7 +160,7 @@ impl FavoriteRepository for FavoriteRepositoryImpl {
 
         let mut matching_podcast_ids = vec![];
         let pr = query
-            .load::<(Podcast, PodcastEpisode, FavoriteEntity)>(&mut get_connection())
+            .load::<(PodcastEntity, PodcastEpisodeEntity, FavoriteEntity)>(&mut get_connection())
             .map_err(map_db_error)?;
         let distinct_podcasts: Vec<(Podcast, Favorite)> = pr
             .iter()

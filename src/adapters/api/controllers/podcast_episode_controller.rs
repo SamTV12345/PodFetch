@@ -1,29 +1,19 @@
 use crate::constants::inner_constants::{PodcastType, MAIN_ROOM};
-use crate::db::TimelineItem;
-use crate::models::episode::Episode;
-use crate::models::favorites::Favorite;
-use crate::models::messages::BroadcastMessage;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use utoipa::ToSchema;
-use crate::service::mapping_service::MappingService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 use actix_web::web::{Data, Json, Query};
 use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
 
-use crate::models::settings::Setting;
-use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
+use crate::adapters::api::models::podcast_episode::episode_dto::EpisodeDto;
 use crate::adapters::api::ws::podcast_episode::notify_delete_podcast_episode_locally;
 use crate::adapters::api::ws::server::ChatServerHandle;
+use crate::application::services::podcast_episode::service::PodcastEpisodeService;
 use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::settings::setting::Setting;
 use crate::domain::models::user::user::User;
-use crate::service::rust_service::PodcastService;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -36,7 +26,7 @@ impl OptionalId {}
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeWithHistory {
     pub podcast_episode: PodcastEpisode,
-    pub podcast_history_item: Option<Episode>,
+    pub podcast_history_item: Option<EpisodeDto>,
 }
 
 #[utoipa::path(
