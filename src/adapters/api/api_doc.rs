@@ -12,31 +12,19 @@ use crate::adapters::api::controllers::user_controller::*;
 use crate::adapters::api::controllers::watch_time_controller::*;
 use crate::adapters::api::controllers::websocket_controller::*;
 use crate::models;
-use crate::adapters::api::models::filter::Filter;
-use crate::models::invite::Invite;
-use crate::models::misc_models::{
-    PodcastAddModel, PodcastWatchedEpisodeModel, PodcastWatchedPostModel,
-};
 use crate::adapters::api::models::podcast::podcast_favor_update_model::PodcastFavorUpdateModel;
-use crate::models::notification::Notification;
-use crate::models::opml_model::OpmlModel;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::settings::Setting;
-use crate::models::user::User;
+
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::HttpResponse;
 use futures::future::LocalBoxFuture;
-use models::itunes_models::ItunesModel;
-use models::podcasts::Podcast;
 use std::future;
 use std::future::Ready;
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
 };
-use crate::models::tag::Tag;
-use crate::controllers::tags_controller::*;
-use crate::controllers::playlist_controller::*;
+
+
 #[derive(OpenApi)]
 #[openapi(
 paths(

@@ -1,5 +1,6 @@
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use std::io::Error;
+use regex::Regex;
+use crate::application::services::podcast_episode::service::PodcastEpisodeService;
 
 pub enum FileType {
     Audio,
@@ -46,5 +47,13 @@ pub fn determine_file_extension(
 }
 
 fn get_suffix_by_url(url: &str) -> Result<String, Error> {
-    PodcastEpisodeService::get_url_file_suffix(url)
+    get_url_file_suffix(url)
+}
+pub fn get_url_file_suffix(url: &str) -> Result<String, Error> {
+    let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
+    let capture = re.captures(url);
+    if capture.is_none() {
+        return Err(Error::new(std::io::ErrorKind::Other, "No"));
+    }
+    Ok(capture.unwrap().get(1).unwrap().as_str().to_string())
 }

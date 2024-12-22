@@ -1,9 +1,9 @@
-use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
 use crate::utils::error::CustomError;
 use crate::utils::time::get_current_timestamp;
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse};
+use crate::adapters::api::models::user::session::SessionDto;
 
 #[derive(Deserialize, Serialize)]
 pub struct SubscriptionRetrieveRequest {
@@ -25,7 +25,7 @@ pub struct SubscriptionPostResponse {
 #[get("/subscriptions/{username}/{deviceid}.json")]
 pub async fn get_subscriptions(
     paths: web::Path<(String, String)>,
-    opt_flag: Option<web::ReqData<Session>>,
+    opt_flag: Option<web::ReqData<SessionDto>>,
     query: web::Query<SubscriptionRetrieveRequest>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
@@ -59,7 +59,7 @@ pub async fn get_subscriptions(
 #[post("/subscriptions/{username}/{deviceid}.json")]
 pub async fn upload_subscription_changes(
     upload_request: web::Json<SubscriptionUpdateRequest>,
-    opt_flag: Option<web::ReqData<Session>>,
+    opt_flag: Option<web::ReqData<SessionDto>>,
     paths: web::Path<(String, String)>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {

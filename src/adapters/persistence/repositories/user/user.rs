@@ -11,6 +11,8 @@ use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError};
 
 pub struct UserRepository;
+use diesel::ExpressionMethods;
+use diesel::QueryDsl;
 
 impl UserRepository {
     pub fn find_by_username(

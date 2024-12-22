@@ -6,6 +6,9 @@ use actix_web::web::{Json, Path};
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 
 use utoipa::ToSchema;
+use crate::adapters::api::models::user::user::UserDto;
+use crate::application::services::user::user::UserService;
+use crate::domain::models::invite::invite::Invite;
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -135,7 +138,7 @@ pub async fn update_role(
 
 #[put("/{username}")]
 pub async fn update_user(
-    user: Option<web::ReqData<User>>,
+    user: Option<web::ReqData<UserDto>>,
     username: Path<String>,
     user_update: Json<UserCoreUpdateModel>,
 ) -> Result<HttpResponse, CustomError> {
@@ -148,7 +151,10 @@ pub async fn update_user(
         return Err(CustomError::Forbidden);
     }
     let mut user =
-        User::find_by_username(&username)?;
+        match UserService::find_by_username(&username)? {
+            Some(u) => u,
+            None => return Err(CustomError::NotFound),
+        };
 
     if let Some(admin_username) = ENVIRONMENT_SERVICE.get().unwrap().username.clone() {
         if admin_username == user.username {
@@ -161,10 +167,10 @@ pub async fn update_user(
     if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured
     {
         // Check if this username is already taken
-        let new_username_res = User::find_by_username(
+        let new_username_res = UserService::find_by_username(
             &user_update.username,
-        );
-        if new_username_res.is_ok() {
+        )?;
+        if new_username_res.is_some() {
             return Err(CustomError::Conflict("Username already taken".to_string()));
         }
         user.username = user_update.username.to_string();
@@ -182,12 +188,11 @@ pub async fn update_user(
         user.api_key = Some(api_key);
     }
 
-    let user = User::update_user(user)?;
+    let user = UserService::update_user(user)?;
 
-    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
+    Ok(HttpResponse::Ok().json(user.into()))
 }
 
-use crate::models::invite::Invite;
 #[utoipa::path(
 context_path="/api/v1",
 request_body=InvitePostModel,
@@ -198,14 +203,25 @@ tag="info"
 #[post("/invites")]
 pub async fn create_invite(
     invite: web::Json<InvitePostModel>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> impl Responder {
+    let requester = match requester {
+        None => return HttpResponse::Forbidden().body("You are not authorized to perform this action"),
+        Some(requester)=>{
+            let inner_requester = requester.into_inner();
+            if !&inner_requester.role == Role::Admin {
+                return HttpResponse::Forbidden().body("You are not authorized to perform this action");
+            }
+            inner_requester
+        }
+    };
+
     let invite = invite.into_inner();
 
     let created_invite = UserManagementService::create_invite(
         invite.role,
         invite.explicit_consent,
-        requester.unwrap().into_inner(),
+        requester.into(),
     )
     .expect("Error creating invite");
     HttpResponse::Ok().json(created_invite)
@@ -219,10 +235,15 @@ tag="info"
 )]
 #[get("/invites")]
 pub async fn get_invites(
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
-        return Err(CustomError::Forbidden);
+    match requester {
+        None => return Err(CustomError::Forbidden),
+        Some(requester)=>{
+            if !requester.into().role == Role::Admin {
+                return Err(CustomError::Forbidden);
+            }
+        }
     }
 
     let invites =
@@ -258,7 +279,7 @@ tag="info"
 #[delete("/{username}")]
 pub async fn delete_user(
     username: Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);

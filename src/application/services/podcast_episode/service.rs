@@ -7,6 +7,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::model::podcast_episode::podcast_episode::PodcastEpisodeEntity;
 use crate::adapters::persistence::repositories::podcast::podcast_episode::PodcastEpisodeRepositoryImpl;
+use crate::application::services::filter::service::FilterService;
 use crate::application::services::playlist::playlist_item_service::PlaylistItemService;
 use crate::domain::models::episode::episode::Episode;
 use crate::domain::models::favorite::favorite::Favorite;
@@ -14,7 +15,6 @@ use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::podcast::podcast::Podcast;
 use crate::domain::models::settings::filter::Filter;
 use crate::domain::models::user::user::User;
-use crate::models::filter::Filter;
 use crate::utils::error::{map_db_error, CustomError};
 
 pub struct PodcastEpisodeService;
@@ -34,10 +34,10 @@ impl PodcastEpisodeService {
         not_listened: bool
     ) -> Result<(i32, (PodcastEpisode, Podcast, Option<Episode>, Option<Favorite>)), CustomError> {
 
-        Filter::save_decision_for_timeline(
+        FilterService::save_decision_for_timeline(
             username_to_search,
             favored_only,
-        );
+        )?;
 
         PodcastEpisodeRepositoryImpl::get_timeline(
             &username_to_search,
@@ -71,9 +71,9 @@ impl PodcastEpisodeService {
         podcast_id: i32,
         last_podcast_episode: Option<String>,
         user: User,
-    ) -> Result<Vec<(PodcastEpisode, Episode, Favorite)>, CustomError> {
+    ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
         let last_podcast_episode = last_podcast_episode.unwrap_or_else(|| Utc::now().to_rfc3339());
         PodcastEpisodeRepositoryImpl::get_podcast_episodes_of_podcast(podcast_id,
-                                                                   last_podcast_episode, user)
-    )
+                                                                      Option::from(last_podcast_episode), user)
+    }
 }

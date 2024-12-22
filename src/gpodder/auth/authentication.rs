@@ -5,8 +5,11 @@ use actix_web::post;
 use actix_web::{web, HttpRequest, HttpResponse};
 use awc::cookie::{Cookie, SameSite};
 use sha256::digest;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::application::services::session::session::SessionService;
+use crate::application::services::user::user::UserService;
+use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::domain::models::user::session::Session;
+use crate::domain::models::user::user::User;
 use crate::service::environment_service::EnvironmentService;
 
 #[post("/auth/{username}/login.json")]
@@ -22,7 +25,7 @@ pub async fn login(
         let opt_session =
             SessionService::find_by_session_id(session);
         if let Ok(unwrapped_session) = opt_session {
-            let user_cookie = create_session_cookie(unwrapped_session);
+            let user_cookie = create_session_cookie(&unwrapped_session);
             return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
         }
     }
@@ -50,24 +53,31 @@ fn handle_proxy_auth(
                 return Err(CustomError::Forbidden);
             }
 
-            match User::find_by_username(
+            match UserService::find_by_username(
                 auth_val,
             ) {
                 Ok(user) => {
+                    let user = match user {
+                        Some(u) => u,
+                        None => {
+                            return Err(CustomError::Forbidden);
+                        }
+                    };
+
                     let session = Session::new(user.username);
-                    Session::insert_session(
+                    SessionService::insert_session(
                         &session,
                     )?;
-                    let user_cookie = create_session_cookie(session);
+                    let user_cookie = create_session_cookie(&session);
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
                 }
                 Err(e) => {
                     if config.auto_sign_up{
-                        User::insert_user(
-                            &mut User {
+                        UserService::insert_user(
+                            User {
                                 id: 0,
                                 username: username.to_string(),
-                                role: "user".to_string(),
+                                role: Role::User,
                                 password: None,
                                 explicit_consent: false,
                                 created_at: chrono::Utc::now().naive_utc(),
@@ -115,16 +125,27 @@ fn handle_gpodder_basic_auth(
         }
     }
 
-    let user = User::find_by_username(
+    let user = match UserService::find_by_username(
         &unwrapped_username,
-    )?;
+    ) {
+        Ok(user) => match user {
+            Some(u) => u,
+            None => {
+                return Err(CustomError::Forbidden);
+            }
+        },
+        Err(e) => {
+            log::error!("Error finding user by username: {}", e);
+            return Err(CustomError::Forbidden);
+        }
+    };
     match user.password {
         Some(p) => {
             if p == digest(password) {
                 let session = Session::new(user.username);
-                Session::insert_session(&session)
+                SessionService::insert_session(&session)
                     .expect("Error inserting session");
-                let user_cookie = create_session_cookie(session);
+                let user_cookie = create_session_cookie(&session);
                 Ok(HttpResponse::Ok().cookie(user_cookie).finish())
             } else {
                 Err(CustomError::Forbidden)
@@ -134,8 +155,8 @@ fn handle_gpodder_basic_auth(
     }
 }
 
-fn create_session_cookie(session: Session) -> Cookie<'static> {
-    let user_cookie = Cookie::build("sessionid", session.session_id)
+fn create_session_cookie(session: &Session) -> Cookie<'static> {
+    let user_cookie = Cookie::build("sessionid", session.session_id.clone())
         .http_only(true)
         .secure(false)
         .same_site(SameSite::Strict)
@@ -147,12 +168,12 @@ fn create_session_cookie(session: Session) -> Cookie<'static> {
 #[cfg(test)]
 mod tests {
     use crate::gpodder::auth::authentication::create_session_cookie;
-    use crate::models::session::Session;
+    use crate::domain::models::user::session::Session;
 
     #[test]
     fn test_create_session_cookie() {
         let session = Session::new("test".to_string());
-        let cookie = create_session_cookie(session.clone());
+        let cookie = create_session_cookie(&session);
 
         assert_eq!(cookie.name(), "sessionid");
         assert_eq!(cookie.value(), session.session_id);

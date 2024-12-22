@@ -12,6 +12,7 @@ use futures_util::future::{LocalBoxFuture, Ready};
 use futures_util::FutureExt;
 use std::rc::Rc;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::model::user::session::SessionEntity;
 
 pub struct CookieFilter {}
 
@@ -69,7 +70,7 @@ where
         use crate::adapters::persistence::dbconfig::schema::sessions::dsl::*;
         let session = sessions
             .filter(session_id.eq(extracted_cookie))
-            .first::<Session>(&mut get_connection())
+            .first::<SessionEntity>(&mut get_connection())
             .optional()
             .expect("Error connecting to database");
         if session.is_none() {

@@ -74,7 +74,7 @@ impl EpisodeRepositoryImpl {
     }
 
     pub async fn get_actions_by_username(
-        username1: String,
+        username1: &str,
         since_date: Option<NaiveDateTime>,
         opt_device: Option<String>,
         _opt_aggregate: Option<String>,

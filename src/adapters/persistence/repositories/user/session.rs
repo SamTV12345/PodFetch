@@ -14,7 +14,7 @@ use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 impl SessionRepository {
     #[allow(clippy::redundant_closure_call)]
-    pub fn insert_session(session: Session) -> Result<Session, CustomError> {
+    pub fn insert_session(session: &Session) -> Result<Session, CustomError> {
         let session_entity: SessionEntity = session.into();
 
         execute_with_conn!(|conn| diesel::insert_into(sessions::table)
@@ -32,11 +32,12 @@ impl SessionRepository {
 
     pub fn find_by_session_id(
         session_id: &str
-    ) -> Result<SessionEntity, CustomError> {
+    ) -> Result<Session, CustomError> {
         sessions::table
             .filter(sessions::session_id.eq(session_id))
             .get_result::<SessionEntity>(&mut get_connection())
             .map_err(map_db_error)
+            .map(|s| s.into())
     }
 
     pub fn delete_by_username(

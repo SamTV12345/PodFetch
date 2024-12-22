@@ -20,3 +20,15 @@ pub struct UserWithAPiKey {
     pub explicit_consent: bool,
     pub api_key: Option<String>,
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserDto {
+    pub id: i32,
+    pub username: String,
+    pub role: String,
+    pub password: Option<String>,
+    pub explicit_consent: bool,
+    pub created_at: NaiveDateTime,
+    pub api_key: Option<String>,
+}

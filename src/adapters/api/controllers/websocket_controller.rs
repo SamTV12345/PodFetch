@@ -1,21 +1,4 @@
-use crate::controllers::web_socket::{chat_ws};
-
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-
-use crate::service::environment_service::EnvironmentService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::CustomError;
-use actix_web::web::Query;
 use actix_web::{get, web, Error, HttpRequest, HttpResponse};
-use rss::extension::itunes::{
-    ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
-    ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
-};
-use rss::{
-    Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
-    ItemBuilder,
-};
 use tokio::task::spawn_local;
 use crate::adapters::api::ws::server::ChatServerHandle;
 use crate::adapters::api::ws::web_socket::chat_ws;

@@ -2,15 +2,17 @@ use actix_web::{web, HttpResponse};
 
 use actix_web::{get, post};
 
-use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::session::Session;
 use crate::utils::error::CustomError;
 use crate::utils::time::get_current_timestamp;
 use chrono::{DateTime};
+use crate::adapters::api::models::episode::episode::EpisodeDto;
+use crate::adapters::api::models::user::session::SessionDto;
+use crate::application::services::episode::episode_service::EpisodeService;
+use crate::domain::models::episode::episode::Episode;
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeActionResponse {
-    actions: Vec<Episode>,
+    actions: Vec<EpisodeDto>,
     timestamp: i64,
 }
 
@@ -31,7 +33,7 @@ pub struct EpisodeSinceRequest {
 #[get("/episodes/{username}.json")]
 pub async fn get_episode_actions(
     username: web::Path<String>,
-    opt_flag: Option<web::ReqData<Session>>,
+    opt_flag: Option<web::ReqData<SessionDto>>,
     since: web::Query<EpisodeSinceRequest>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
@@ -43,8 +45,8 @@ pub async fn get_episode_actions(
 
             let since_date = DateTime::from_timestamp(since.since, 0)
                 .map(|v| v.naive_utc());
-            let mut actions = Episode::get_actions_by_username(
-                username.clone(),
+            let mut actions = EpisodeService::get_actions_by_username(
+                &username,
                 since_date,
                 since.device.clone(),
                 since.aggregate.clone(),
@@ -72,8 +74,8 @@ pub async fn get_episode_actions(
 #[post("/episodes/{username}.json")]
 pub async fn upload_episode_actions(
     username: web::Path<String>,
-    podcast_episode: web::Json<Vec<EpisodeDto>>,
-    opt_flag: Option<web::ReqData<Session>>,
+    mut podcast_episode: web::Json<Vec<EpisodeDto>>,
+    opt_flag: Option<web::ReqData<SessionDto>>,
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -81,13 +83,13 @@ pub async fn upload_episode_actions(
                 return Ok(HttpResponse::Unauthorized().finish());
             }
             let mut inserted_episodes: Vec<Episode> = vec![];
-            podcast_episode.iter().for_each(|episode| {
-                let episode = Episode::convert_to_episode(episode, username.clone());
+            podcast_episode.iter_mut().for_each(|mut episode| {
+                episode.username = username.clone();
+                let episode = episode.into();
                 inserted_episodes.push(
-                    Episode::insert_episode(
+                    EpisodeService::insert_episode(
                         &episode.clone(),
-                    )
-                    .unwrap(),
+                    )?
                 );
             });
             Ok(HttpResponse::Ok().json(EpisodeActionPostResponse {

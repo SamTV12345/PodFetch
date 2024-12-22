@@ -10,3 +10,4 @@ pub mod user;
 pub mod notification;
 pub mod settings;
 pub mod session;
+pub mod filter;
