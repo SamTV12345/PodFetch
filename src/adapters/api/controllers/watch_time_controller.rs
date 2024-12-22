@@ -1,8 +1,10 @@
-use crate::models::user::User;
+
 
 use crate::utils::error::CustomError;
 use actix_web::{get, post, web, HttpResponse};
 use crate::adapters::api::models::podcast::podcast_watched_post_model::PodcastWatchedPostModel;
+use crate::adapters::api::models::user::user::UserDto;
+use crate::application::services::episode::episode_service::EpisodeService;
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -13,12 +15,13 @@ tag="watchtime"
 #[post("/podcast/episode")]
 pub async fn log_watchtime(
     podcast_watch: web::Json<PodcastWatchedPostModel>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
-    let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
-    Episode::log_watchtime(
-        podcast_watch.0,
-        requester.unwrap().username.clone(),
+    let podcast_episode_id = podcast_watch.into_inner();
+    EpisodeService::log_watchtime(
+        &podcast_episode_id.podcast_episode_id,
+        podcast_episode_id.time,
+        &*requester.unwrap().username.clone(),
     )?;
     log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
     Ok(HttpResponse::Ok().body("Watchtime logged."))
@@ -32,11 +35,11 @@ tag="watchtime"
 )]
 #[get("/podcast/episode/lastwatched")]
 pub async fn get_last_watched(
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
     let designated_username = requester.unwrap().username.clone();
 
-    let mut episodes = Episode::get_last_watched_episodes(
+    let mut episodes = EpisodeService::get_last_watched_episodes(
         designated_username,
     )?;
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());

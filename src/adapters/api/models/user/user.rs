@@ -32,3 +32,9 @@ pub struct UserDto {
     pub created_at: NaiveDateTime,
     pub api_key: Option<String>,
 }
+
+impl UserDto {
+    pub fn is_admin(&self) -> bool {
+        self.role == "admin"
+    }
+}

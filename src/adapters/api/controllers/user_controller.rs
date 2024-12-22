@@ -59,7 +59,7 @@ pub async fn onboard_user(
         user_to_onboard.invite_id,
     )?;
 
-    Ok(HttpResponse::Ok().json(User::map_to_dto(res)))
+    Ok(HttpResponse::Ok().json(res.into()))
 }
 
 #[utoipa::path(
@@ -70,10 +70,21 @@ tag="info"
 )]
 #[get("")]
 pub async fn get_users(
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
-    let res = UserManagementService::get_users(
-        requester.unwrap().into_inner(),
+    let requester = match requester {
+        None => return Err(CustomError::Forbidden),
+        Some(requester)=>{
+            let inner_requester = requester.into_inner();
+
+            if !&inner_requester.role == Role::Admin {
+                return Err(CustomError::Forbidden);
+            }
+            inner_requester
+        }
+    };
+
+    let res = UserManagementService::get_users(requester.into(),
     )?;
 
     Ok(HttpResponse::Ok().json(res))
@@ -82,52 +93,59 @@ pub async fn get_users(
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Gets a user by username", body = Option<User>)),
+(status = 200, description = "Gets a user by username", body = Option<UserDto>)),
 tag="info"
 )]
 #[get("/{username}")]
 pub async fn get_user(
     username: Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
     let user = requester.unwrap().into_inner();
     let username = username.into_inner();
     if user.username == username || username == "me" {
-        return Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)));
+        return Ok(HttpResponse::Ok().json(user));
     }
 
-    if !user.is_admin() || user.username != username {
+    if !user.role == Role::Admin || user.username != username {
         return Err(CustomError::Forbidden);
     }
 
-    let user = User::find_by_username(
+    let user = match UserService::find_by_username(
         &username.clone(),
-    )?;
-    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
+    )? {
+        Some(u) => u,
+        None => return Err(CustomError::NotFound),
+    };
+    Ok(HttpResponse::Ok().json(user.into()))
 }
 
 #[utoipa::path(
 context_path="/api/v1",
 request_body = UserOnboardingModel,
 responses(
-(status = 200, description = "Updates the role of a user", body = Option<User>)),
+(status = 200, description = "Updates the role of a user", body = Option<UserDto>)),
 tag="info"
 )]
 #[put("/{username}/role")]
 pub async fn update_role(
     role: web::Json<UserRoleUpdateModel>,
     username: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
     }
     let mut user_to_update =
-        User::find_by_username(&username)?;
+        match UserService::find_by_username(&username)? {
+            Some(u) => u,
+            None => return Err(CustomError::NotFound),
+        };
 
+    let role_to_assign = role.into_inner();
     // Update to his/her designated role
-    user_to_update.role = role.role.to_string();
-    user_to_update.explicit_consent = role.explicit_consent;
+    user_to_update.role = role_to_assign.role;
+    user_to_update.explicit_consent = role_to_assign.explicit_consent;
 
     let res = UserManagementService::update_user(
         user_to_update,
@@ -281,12 +299,19 @@ pub async fn delete_user(
     username: Path<String>,
     requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
-        return Err(CustomError::Forbidden);
+    match requester {
+        None => return Err(CustomError::Forbidden),
+        Some(requester)=>{
+            if !requester.into().role == Role::Admin {
+                return Err(CustomError::Forbidden);
+            }
+        }
     }
 
-    let user_to_delete =
-        User::find_by_username(&username).unwrap();
+    let user_to_delete = match UserService::find_by_username(&username)? {
+        Some(u) => u,
+        None => return Err(CustomError::NotFound),
+    };
     match UserManagementService::delete_user(
         user_to_delete,
     ) {
@@ -303,7 +328,7 @@ responses(
 #[get("/invites/{invite_id}/link")]
 pub async fn get_invite_link(
     invite_id: Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> impl Responder {
     if !requester.unwrap().is_admin() {
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
@@ -325,8 +350,8 @@ responses(
 (status = 200, description = "Deletes an invite by id")))]
 #[delete("/invites/{invite_id}")]
 pub async fn delete_invite(
-    invite_id: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    invite_id: Path<String>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> impl Responder {
     if !requester.unwrap().is_admin() {
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
