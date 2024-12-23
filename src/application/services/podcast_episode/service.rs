@@ -76,4 +76,18 @@ impl PodcastEpisodeService {
         PodcastEpisodeRepositoryImpl::get_podcast_episodes_of_podcast(podcast_id,
                                                                       Option::from(last_podcast_episode), user)
     }
+
+    pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
+        podcast_id: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        PodcastEpisodeRepositoryImpl::get_episodes_by_podcast_id(podcast_id)
+    }
+
+    pub fn get_all_episodes() -> Result<Vec<PodcastEpisode>, CustomError> {
+        PodcastEpisodeRepositoryImpl::get_episodes()
+    }
+
+    pub fn get_all_episodes_with_top_k(top_k: i32) -> Result<Vec<PodcastEpisode>, CustomError> {
+        PodcastEpisodeRepositoryImpl::get_podcast_episodes_by_podcast_to_k(top_k)
+    }
 }

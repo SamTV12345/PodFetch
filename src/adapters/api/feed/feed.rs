@@ -1,16 +1,18 @@
+use std::io::Error;
 use actix_web::{get, web, HttpResponse};
 use actix_web::web::Query;
+use regex::Regex;
 use rss::{Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item, ItemBuilder};
 use rss::extension::itunes::{ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder, ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder};
 use crate::adapters::api::models::shared::rss_api_key::RSSAPiKey;
 use crate::adapters::api::models::shared::rss_query::RSSQuery;
 use crate::application::services::podcast::podcast::PodcastService;
+use crate::application::services::podcast_episode::service::PodcastEpisodeService;
 use crate::application::services::user::user::UserService;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::domain::models::podcast::episode::PodcastEpisode;
 use crate::domain::models::podcast::podcast::Podcast;
 use crate::service::environment_service::EnvironmentService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 
 
@@ -44,12 +46,10 @@ pub async fn get_rss_feed(
     }
 
     let downloaded_episodes = match query {
-        Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(
+        Some(q) => PodcastEpisodeService::get_all_episodes_with_top_k(
             q.top,
         )?,
-        None => PodcastEpisodeService::find_all_downloaded_podcast_episodes(
-            env,
-        )?,
+        None => PodcastEpisodeService::get_all_episodes()?,
     };
 
     let server_url = env.get_server_url();
@@ -237,7 +237,7 @@ fn get_podcast_items_rss(
                 .length(episode.clone().total_time.to_string())
                 .mime_type(format!(
                     "audio/{}",
-                    PodcastEpisodeService::get_url_file_suffix(&episode.clone().local_url).unwrap()
+                    get_url_file_suffix(&episode.clone().local_url).unwrap()
                 ))
                 .build();
 
@@ -261,6 +261,15 @@ fn get_podcast_items_rss(
             item
         })
         .collect::<Vec<Item>>()
+}
+
+fn get_url_file_suffix(url: &str) -> Result<String, Error> {
+    let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
+    let capture = re.captures(url);
+    if capture.is_none() {
+        return Err(Error::new(std::io::ErrorKind::Other, "No"));
+    }
+    Ok(capture.unwrap().get(1).unwrap().as_str().to_string())
 }
 
 fn get_categories(categories: Vec<String>) -> Vec<ITunesCategory> {

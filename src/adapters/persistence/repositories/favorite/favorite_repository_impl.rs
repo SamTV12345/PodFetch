@@ -5,13 +5,12 @@ use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::adapters::persistence::model::favorite::favorites::FavoriteEntity;
 use crate::adapters::persistence::model::podcast::podcast::PodcastEntity;
 use crate::adapters::persistence::model::podcast_episode::podcast_episode::PodcastEpisodeEntity;
+use crate::adapters::persistence::repositories::tag::tag::TagRepositoryImpl;
 use crate::application::repositories::favorite_repository::FavoriteRepository;
 use crate::domain::models::favorite::favorite::Favorite;
+use crate::domain::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::domain::models::podcast::podcast::Podcast;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-use crate::models::tag::Tag;
+use crate::domain::models::tag::tag::Tag;
 use crate::utils::error::{map_db_error, CustomError};
 
 pub struct FavoriteRepositoryImpl;
@@ -96,16 +95,17 @@ impl FavoriteRepository for FavoriteRepositoryImpl {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as user_favor;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
 
-        let result: Vec<(Podcast, FavoriteEntity)> = dsl_podcast
+        let result: Vec<(Podcast, Favorite)> = dsl_podcast
             .inner_join(f_db)
             .filter(favor_column.eq(true).and(user_favor.eq(&found_username)))
-            .load::<(Podcast, FavoriteEntity)>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .load::<(PodcastEntity, FavoriteEntity)>(&mut get_connection())
+            .map_err(map_db_error)
+            .map(|c|c.into_iter().map(|c|(c.0.into(), c.1.into())).collect())?;
 
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &found_username).unwrap();
+                let tags = TagRepositoryImpl::get_tags_of_podcast(podcast.0.id, &found_username).unwrap();
                 (podcast, tags)
             })
             .collect::<Vec<(Podcast, Vec<Tag>)>>();

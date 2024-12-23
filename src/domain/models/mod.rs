@@ -8,3 +8,4 @@ pub mod settings;
 pub mod invite;
 pub mod notification;
 pub mod user;
+pub mod order_criteria;

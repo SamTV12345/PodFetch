@@ -31,7 +31,7 @@ impl PodcastEpisode {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum PodcastEpisodeStatus {
     #[default]
     New,

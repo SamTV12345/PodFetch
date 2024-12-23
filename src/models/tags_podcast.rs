@@ -37,20 +37,6 @@ use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::*;
             .map_err(map_db_error))
     }
 
-    pub fn delete_tags_by_podcast_id(podcast_id_to_delete: i32) -> Result<(),
-        CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::*;
-        use crate::adapters::persistence::dbconfig::schema::tags_podcasts::table as t_podcasts;
-        use diesel::RunQueryDsl;
-        use diesel::ExpressionMethods;
-        use diesel::QueryDsl;
-
-        insert_with_conn!(|conn| diesel::delete(t_podcasts.filter(podcast_id.eq(podcast_id_to_delete)))
-            .execute(conn)
-            .map_err(map_db_error));
-        Ok(())
-    }
-
     pub fn delete_tag_podcasts(tag_id_to_delete: &str) -> Result<(),
         CustomError> {
         use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::*;

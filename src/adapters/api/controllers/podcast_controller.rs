@@ -1,12 +1,6 @@
 use crate::constants::inner_constants::{PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM, OIDC_AUTH};
-use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
-use crate::models::opml_model::OpmlModel;
-use crate::models::search_type::SearchType::{ITunes, Podindex};
+
 use crate::service::environment_service::EnvironmentService;
-use crate::service::mapping_service::MappingService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::service::rust_service::PodcastService;
-use crate::{get_default_image, unwrap_string};
 use actix_web::dev::PeerAddr;
 use actix_web::http::Method;
 use actix_web::web::{Data, Json, Path};
@@ -20,17 +14,9 @@ use rss::Channel;
 use serde_json::{from_str, Value};
 use std::sync::Mutex;
 use std::thread;
+use actix::ActorStreamExt;
 use tokio::task::spawn_blocking;
-
-use crate::models::filter::Filter;
-use crate::models::messages::BroadcastMessage;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
-use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::mutex::LockResultExt;
-use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use futures_util::StreamExt;
 use reqwest::Client;
@@ -52,15 +38,15 @@ pub struct PodcastSearchModel {
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Gets the user specific filter.",body= Option<Filter>)),
+(status = 200, description = "Gets the user specific filter.",body= Option<FilterDto>)),
 tag="podcasts"
 )]
 #[get("/podcasts/filter")]
 pub async fn get_filter(
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
-    let filter = Filter::get_filter_by_username(
-        requester.unwrap().username.clone(),
+    let filter = FilterService::get_filter_by_username(
+        &requester.unwrap().username,
     )
     .await?;
     Ok(HttpResponse::Ok().json(filter))
@@ -70,22 +56,21 @@ pub async fn get_filter(
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the podcasts matching the searching criteria",body=
-Vec<Podcast>)),
+Vec<PodcastDto>)),
 tag="podcasts"
 )]
 #[get("/podcasts/search")]
 pub async fn search_podcasts(
     query: web::Query<PodcastSearchModel>,
-    _podcast_service: Data<Mutex<PodcastService>>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
     let query = query.into_inner();
     let _order = query.order.unwrap_or(OrderCriteria::Asc);
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
     let tag = query.tag;
 
-    let opt_filter = Filter::get_filter_by_username(
-        requester.clone().unwrap().username.clone(),
+    let opt_filter = FilterService::get_filter_by_username(
+        &requester.clone().unwrap().username,
     )
     .await?;
 
@@ -102,35 +87,30 @@ pub async fn search_podcasts(
         Some(_latest_pub.clone().to_string()),
         only_favored,
     );
-    Filter::save_filter(filter)?;
+    FilterService::save_filter(filter)?;
 
     match query.favored_only {
         true => {
-            let podcasts;
-            {
-                podcasts = _podcast_service
-                    .lock()
-                    .ignore_poison()
-                    .search_podcasts_favored(
+            let podcasts: Vec<(PodcastDto, FavoriteDto, Vec<TagDto>)> =  PodcastService
+                    ::search_podcasts_favored(
                         _order.clone(),
                         query.title,
                         _latest_pub.clone(),
                         username,
                         tag
-                    )?;
-            }
+                    ).map(|c|c.into_iter().map(|c|(c.0.into(), c.1.into(), c.2.into())).collect())?;
             Ok(HttpResponse::Ok().json(podcasts))
         }
         false => {
-            let podcasts;
+            let podcasts: Vec<PodcastDto>;
             {
-                podcasts = _podcast_service.lock().ignore_poison().search_podcasts(
+                podcasts = PodcastService::search_podcasts(
                     _order.clone(),
                     query.title,
                     _latest_pub.clone(),
                     username,
                     tag
-                )?;
+                ).into_iter().map(|c|c.into_iter().map(|c|(c.0.into(), c.1.into(), c.2.into())).collect())?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
         }
@@ -148,15 +128,18 @@ tag="podcasts"
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(
     id: Path<String>,
-    user: Option<web::ReqData<User>>,
+    user: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
     let username = user.unwrap().username.clone();
 
     let podcast =
-        PodcastService::get_podcast(id_num)?;
-    let tags = Tag::get_tags_of_podcast(id_num, &username)?;
-    let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast, tags);
+        match PodcastService::get_podcast(id_num)? {
+            Some(podcast) => podcast,
+            None => return Err(CustomError::NotFound),
+        };
+    let tags = TagService::get_tags_of_podcast(id_num, &username)?;
+    let mapped_podcast: PodcastDto = (podcast, tags).into();
     Ok(HttpResponse::Ok().json(mapped_podcast))
 }
 
@@ -169,12 +152,12 @@ tag="podcasts"
 )]
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
-    requester: Option<web::ReqData<User>>,
+    requester: Option<web::ReqData<UserDto>>,
 ) -> Result<HttpResponse, CustomError> {
     let username = requester.unwrap().username.clone();
 
-    let podcasts =
-        PodcastService::get_podcasts(username)?;
+    let podcasts = PodcastService::get_podcasts(&username).into_iter().map(|c|c.into_iter().map
+    (|c|(c.0.into(), c.1.into())))?;
 
     Ok(HttpResponse::Ok().json(podcasts))
 }
@@ -698,17 +681,28 @@ async fn insert_outline(
 use crate::models::episode::Episode;
 use utoipa::ToSchema;
 use crate::adapters::api::controllers::podcast_episode_controller::EpisodeFormatDto;
+use crate::adapters::api::models::favorite::favorite::FavoriteDto;
+use crate::adapters::api::models::podcast::filter_dto::FilterDto;
+use crate::adapters::api::models::podcast::podcast_dto::PodcastDto;
 use crate::adapters::api::models::podcast::podcast_favor_update_model::PodcastFavorUpdateModel;
 use crate::adapters::api::models::podcast::podcast_setting::PodcastSettingDto;
+use crate::adapters::api::models::podcast::tag_dto::TagDto;
 use crate::adapters::api::models::shared::rss_api_key::RSSAPiKey;
+use crate::adapters::api::models::user::user::UserDto;
 use crate::adapters::api::ws::server::ChatServerHandle;
+use crate::application::services::filter::service::FilterService;
+use crate::application::services::podcast::podcast::PodcastService;
 use crate::application::services::podcast::podcast_setting_service::PodcastSettingService;
+use crate::application::services::tag::tag::TagService;
 use crate::models::tag::Tag;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::domain::models::order_criteria::{OrderCriteria, OrderOption};
+use crate::domain::models::podcast::podcast::Podcast;
 use crate::domain::models::podcast::podcast_setting::PodcastSetting;
+use crate::domain::models::settings::filter::Filter;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;

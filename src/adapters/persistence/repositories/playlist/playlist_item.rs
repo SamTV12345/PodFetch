@@ -7,6 +7,7 @@ use crate::adapters::persistence::model::podcast_episode::podcast_episode::Podca
 use crate::domain::models::episode::episode::Episode;
 use crate::domain::models::playlist::playlist_item::PlaylistItem;
 use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::user::user::User;
 use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
 

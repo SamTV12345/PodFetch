@@ -2,9 +2,8 @@ use crate::adapters::persistence::repositories::favorite::favorite_repository_im
 use crate::application::repositories::favorite_repository::FavoriteRepository;
 use crate::application::usecases::favorite::query_use_case::QueryUseCase;
 use crate::domain::models::favorite::favorite::Favorite;
+use crate::domain::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::domain::models::podcast::podcast::Podcast;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::models::tag::Tag;
 use crate::utils::error::{CustomError};
 
 pub struct FavoriteService;

@@ -1,7 +1,7 @@
 use crate::domain::models::favorite::favorite::Favorite;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::models::podcasts::Podcast;
-use crate::models::tag::Tag;
+use crate::domain::models::order_criteria::{OrderCriteria, OrderOption};
+use crate::domain::models::podcast::podcast::Podcast;
+use crate::domain::models::tag::tag::Tag;
 use crate::utils::error::CustomError;
 
 pub trait QueryUseCase {

@@ -1,4 +1,3 @@
-use crate::models::session::Session;
 use actix::fut::ok;
 use actix_web::body::{EitherBody, MessageBody};
 use actix_web::error::{ErrorForbidden, ErrorUnauthorized};

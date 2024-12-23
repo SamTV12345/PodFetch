@@ -1,6 +1,7 @@
+use std::cmp::PartialEq;
 use chrono::NaiveDateTime;
 use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
-use crate::domain::models::podcast::episode::PodcastEpisode;
+use crate::domain::models::podcast::episode::{PodcastEpisode, PodcastEpisodeStatus};
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -31,12 +32,12 @@ impl From<PodcastEpisode> for PodcastEpisodeDto {
             podcast_id: value.podcast_id,
             episode_id: value.episode_id,
             name: value.name,
-            url: value.url,
+            url: value.url.clone(),
             date_of_recording: value.date_of_recording,
-            image_url: Self::map_image_url(&value.image_url.clone()),
+            image_url: value.image_url.clone(),
             total_time: value.total_time,
-            local_url: value.local_url,
-            local_image_url: Self::map_image_url(&value.local_image_url),
+            local_url: Self::map_url(&value.local_url, &value.status, &value.url),
+            local_image_url: Self::map_url(&value.local_image_url, &value.status, &value.image_url),
             description: value.description,
             status: value.status.to_string(),
             download_time: value.download_time,
@@ -48,14 +49,23 @@ impl From<PodcastEpisode> for PodcastEpisodeDto {
 }
 
 impl PodcastEpisodeDto {
-    fn map_image_url(image_url: &str) -> String {
+
+    fn map_url(image_url: &str, status: &PodcastEpisodeStatus, remote_url: &str) -> String {
         match image_url == DEFAULT_IMAGE_URL {
             true => {
                 let env = ENVIRONMENT_SERVICE.get().unwrap();
 
                 env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
             }
-            false => image_url.to_string(),
+            false => {
+                if status.clone() == PodcastEpisodeStatus::Downloaded {
+                    let env = ENVIRONMENT_SERVICE.get().unwrap();
+
+                    env.server_url.clone().to_owned() + image_url
+                } else {
+                    remote_url.to_owned()
+                }
+            }
         }
     }
 }

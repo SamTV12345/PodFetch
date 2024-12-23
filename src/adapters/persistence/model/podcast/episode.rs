@@ -11,7 +11,7 @@ use diesel::{
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::models::episode::Episode;
+use crate::domain::models::episode::episode::Episode;
 
 #[derive(
     Serialize,

@@ -62,15 +62,19 @@ impl PodcastRepositoryImpl {
     }
 
     pub fn get_podcasts(
-        u: String,
+        u: &str,
     ) -> Result<Vec<(Podcast, Tag)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::adapters::persistence::dbconfig::schema::tags::dsl::tags as p_tags;
+        use crate::adapters::persistence::dbconfig::schema::tags_podcasts as p_tags_of_p;
         use crate::adapters::persistence::dbconfig::schema::podcasts::id as p_id;
         podcasts
             .left_join(f_db.on(username.eq(&u).and(f_id.eq(p_id))))
+            .inner_join(p_tags.on(p_id.eq(p_tags::dsl::podcast_id)))
+            .inner_join()
             .load::<(PodcastEntity, Option<FavoriteEntity>)>(&mut get_connection())
             .map_err(map_db_error)
             .map(|r|r.into_iter().map(|e,p|(e.into(), p.into()))).collect::<Vec<Podcast, Tag>>()
@@ -111,13 +115,13 @@ impl PodcastRepositoryImpl {
 
     pub fn get_podcast_by_rss_feed(
         rss_feed_1: &str,
-        conn: &mut crate::adapters::persistence::dbconfig::DBType,
-    ) -> Result<Podcast, CustomError> {
+    ) -> Result<Option<Podcast>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 
         podcasts
             .filter(rssfeed.eq(rss_feed_1))
-            .first::<PodcastEntity>(conn)
+            .first::<PodcastEntity>(&mut get_connection())
+            .optional()
             .map_err(map_db_error)
             .map(|p|p.into())
     }

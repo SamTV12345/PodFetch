@@ -1,10 +1,3 @@
-use crate::adapters::persistence::dbconfig::schema::favorites;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::models::podcast_dto::PodcastDto;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-use crate::models::user::User;
-use crate::service::mapping_service::MappingService;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
 use diesel::insert_into;
@@ -13,7 +6,6 @@ use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::domain::models::favorite::favorite::Favorite;
-use crate::models::tag::Tag;
 
 #[derive(
     Queryable,

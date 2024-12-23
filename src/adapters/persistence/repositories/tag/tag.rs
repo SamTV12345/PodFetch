@@ -2,7 +2,7 @@ use diesel::{JoinOnDsl, OptionalExtension, RunQueryDsl, Table};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::model::tag::tag::TagEntity;
 use crate::domain::models::tag::tag::Tag;
-use crate::execute_with_conn;
+use crate::{execute_with_conn, insert_with_conn};
 use crate::utils::error::{map_db_error, CustomError};
 
 pub struct TagRepositoryImpl;
@@ -90,5 +90,19 @@ impl TagRepositoryImpl {
             .load::<TagEntity>(&mut get_connection())
             .map_err(map_db_error)
             .map(|e| e.into_iter().map(|e| e.into()).collect())
+    }
+
+    pub fn delete_tags_by_podcast_id(podcast_id_to_delete: i32) -> Result<(),
+        CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::tags_podcasts::table as t_podcasts;
+        use diesel::RunQueryDsl;
+        use diesel::ExpressionMethods;
+        use diesel::QueryDsl;
+
+        insert_with_conn!(|conn| diesel::delete(t_podcasts.filter(podcast_id.eq(podcast_id_to_delete)))
+            .execute(conn)
+            .map_err(map_db_error));
+        Ok(())
     }
 }

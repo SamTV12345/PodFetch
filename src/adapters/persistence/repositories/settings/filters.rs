@@ -40,7 +40,7 @@ impl FilterRepository {
     }
 
     pub async fn get_filter_by_username(
-        username1: String,
+        username1: &str,
     ) -> Result<Option<Filter>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::filters::dsl::*;
         filters

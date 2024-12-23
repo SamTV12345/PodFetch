@@ -1,11 +1,11 @@
 use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH};
-use crate::models::user::User;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use actix_web::dev::{Service, ServiceRequest};
 use actix_web::error::ErrorUnauthorized;
 use actix_web::Error;
 use futures_util::FutureExt;
 use std::collections::HashMap;
+use crate::application::services::user::user::UserService;
 
 pub fn check_podcast_request<S, B>(
     req: ServiceRequest,
@@ -36,7 +36,7 @@ where
             return async { Err(ErrorUnauthorized("Unauthorized")) }.boxed_local();
         }
 
-        let api_key_exists = User::check_if_api_key_exists(api_key.unwrap().to_string());
+        let api_key_exists = UserService::check_if_api_key_exists(api_key.unwrap());
         if !api_key_exists {
             return async { Err(ErrorUnauthorized("Unauthorized")) }.boxed_local();
         }
