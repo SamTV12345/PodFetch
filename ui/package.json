@@ -48,7 +48,7 @@
     "react-oidc-context": "^2.4.0",
     "react-router-dom": "^7.0.2",
     "react-waypoint": "^10.3.0",
-    "sanitize-html": "^2.13.1",
+    "sanitize-html": "^2.14.0",
     "uuid": "^11.0.3",
     "zustand": "^5.0.1"
   },
