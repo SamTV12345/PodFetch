@@ -15,7 +15,6 @@ use diesel::QueryDsl;
 use diesel::{
     delete, insert_into, BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl,
 };
-use utoipa::ToSchema;
 
 use crate::utils::error::{map_db_error, CustomError};
 #[derive(

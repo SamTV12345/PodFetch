@@ -124,7 +124,7 @@ pub async fn get_timeline(
         .iter()
         .map(|podcast_episode| {
             let (podcast_episode, podcast, history, favorite) = podcast_episode.clone();
-            let mapped_podcast_episode: PodcastEpisodeDto = podcast_episode.clone().into();
+            let mapped_podcast_episode: PodcastEpisodeDto = podcast_episode.clone();
             let podcast: PodcastDto = podcast.clone();
 
             TimeLinePodcastEpisode {
