@@ -1,21 +1,7 @@
-use crate::constants::inner_constants::DEFAULT_DEVICE;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
-use crate::DBType as DbConnection;
-use chrono::{NaiveDateTime, Utc};
-use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::{ExpressionMethods, JoinOnDsl};
-use diesel::{
-    BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
-    QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
-};
-use reqwest::Url;
-use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::io::Error;
-use diesel::query_dsl::methods::DistinctDsl;
-use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::constants::inner_constants::DEFAULT_DEVICE;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
@@ -23,6 +9,20 @@ use crate::models::misc_models::{
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::utils::error::{map_db_error, CustomError};
+use crate::DBType as DbConnection;
+use chrono::{NaiveDateTime, Utc};
+use diesel::query_dsl::methods::DistinctDsl;
+use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
+use diesel::{
+    BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
+    QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
+};
+use diesel::{ExpressionMethods, JoinOnDsl};
+use reqwest::Url;
+use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::io::Error;
+use utoipa::ToSchema;
 
 #[derive(
     Serialize,
@@ -62,9 +62,7 @@ pub struct Episode {
 }
 
 impl Episode {
-    pub fn insert_episode(
-        &self,
-    ) -> Result<Episode, diesel::result::Error> {
+    pub fn insert_episode(&self) -> Result<Episode, diesel::result::Error> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::*;
 
         let res = episodes
@@ -169,7 +167,6 @@ impl Episode {
             query = query.filter(ep_dsl::podcast.eq(podcast));
         }
 
-
         query
             .load::<Episode>(&mut get_connection())
             .expect("Error querying episodes")
@@ -251,8 +248,8 @@ impl Episode {
                 watched_time: e.clone().1.position.unwrap(),
                 date: e.clone().1.timestamp,
                 total_time: e.clone().0.total_time,
-                podcast_episode: e.0.clone(),
-                podcast: e.2.clone(),
+                podcast_episode: e.0.clone().into(),
+                podcast: e.2.clone().into(),
             })
             .collect();
         Ok(mapped_watched_episodes)
@@ -270,22 +267,22 @@ impl Episode {
         Ok(())
     }
 
-
     pub fn find_episodes_not_in_webview() -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
         use crate::adapters::persistence::dbconfig::schema::episodes::device;
+        use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
         use crate::adapters::persistence::dbconfig::schema::episodes::podcast;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::rssfeed;
 
-        let result = DistinctDsl::distinct(episodes
-            .left_join(podcasts.on(podcast.eq(rssfeed)))
-            .select((device, podcast))
-            .filter(rssfeed.is_null()))
-             .filter(device.ne("webview"))
-            .load::<GPodderAvailablePodcasts>(&mut get_connection())
-            .map_err(map_db_error)?;
-
+        let result = DistinctDsl::distinct(
+            episodes
+                .left_join(podcasts.on(podcast.eq(rssfeed)))
+                .select((device, podcast))
+                .filter(rssfeed.is_null()),
+        )
+        .filter(device.ne("webview"))
+        .load::<GPodderAvailablePodcasts>(&mut get_connection())
+        .map_err(map_db_error)?;
 
         Ok(result)
     }

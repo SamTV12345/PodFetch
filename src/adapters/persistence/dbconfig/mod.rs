@@ -1,6 +1,6 @@
+pub mod db;
 #[path = "schemas/sqlite/schema.rs"]
 pub mod schema;
-pub mod db;
 
 use diesel::QueryResult;
 
@@ -22,33 +22,31 @@ macro_rules! import_database_config {
 
 #[macro_export]
 macro_rules! execute_with_conn {
-    ($diesel_func:expr) => {
-        {
-            use $crate::get_connection;
-            use std::ops::DerefMut;
-        
+    ($diesel_func:expr) => {{
+        use std::ops::DerefMut;
+        use $crate::get_connection;
+
         let mut conn = get_connection();
         let _ = match conn.deref_mut() {
-            $crate::adapters::persistence::dbconfig::DBType::Sqlite(conn) => return $diesel_func
-            (conn),
-            $crate::adapters::persistence::dbconfig::DBType::Postgresql(conn) => return $diesel_func(conn),
+            $crate::adapters::persistence::dbconfig::DBType::Sqlite(conn) => {
+                return $diesel_func(conn)
+            }
+            $crate::adapters::persistence::dbconfig::DBType::Postgresql(conn) => {
+                return $diesel_func(conn)
+            }
         };
-        }
-    };
+    }};
 }
 
 #[macro_export]
 macro_rules! insert_with_conn {
-    ($diesel_func:expr) => {
-        {
-         
-         use $crate::get_connection;
-         use std::ops::DerefMut;
+    ($diesel_func:expr) => {{
+        use std::ops::DerefMut;
+        use $crate::get_connection;
         let mut conn = get_connection();
-         let _ = match conn.deref_mut() {
+        let _ = match conn.deref_mut() {
             $crate::adapters::persistence::dbconfig::DBType::Sqlite(conn) => $diesel_func(conn),
             $crate::adapters::persistence::dbconfig::DBType::Postgresql(conn) => $diesel_func(conn),
         };
-        }
-    };
+    }};
 }

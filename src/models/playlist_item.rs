@@ -1,3 +1,4 @@
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::playlist_items;
 use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -10,7 +11,6 @@ use diesel::sql_types::{Integer, Text};
 use diesel::ExpressionMethods;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Serialize, Deserialize, Debug, Queryable, QueryableByName, Insertable, Clone, ToSchema,
@@ -69,9 +69,7 @@ impl PlaylistItem {
         Ok(())
     }
 
-    pub fn delete_playlist_item_by_playlist_id(
-        playlist_id_1: String,
-    ) -> Result<(), CustomError> {
+    pub fn delete_playlist_item_by_playlist_id(playlist_id_1: String) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
 
         diesel::delete(playlist_items.filter(playlist_id.eq(playlist_id_1)))

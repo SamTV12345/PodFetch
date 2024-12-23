@@ -11,7 +11,7 @@ pub struct PlaylistDtoPost {
     pub items: Vec<PlaylistItem>,
 }
 
-#[derive(Serialize, Deserialize, Clone,ToSchema)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct PlaylistItem {
     pub episode: i32,
 }
@@ -37,10 +37,7 @@ pub async fn add_playlist(
     let user = requester.unwrap().into_inner();
     let playlist = playlist.into_inner();
 
-    let res = Playlist::create_new_playlist(
-        playlist,
-        user,
-    )?;
+    let res = Playlist::create_new_playlist(playlist, user)?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -60,11 +57,7 @@ pub async fn update_playlist(
     let user = requester.unwrap().into_inner();
     let playlist = playlist.into_inner();
 
-    let res = Playlist::update_playlist(
-        playlist,
-        playlist_id.clone(),
-        user,
-    )?;
+    let res = Playlist::update_playlist(playlist, playlist_id.clone(), user)?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -79,10 +72,8 @@ tag="playlist"
 pub async fn get_all_playlists(
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
-    Playlist::get_playlists(
-        requester.unwrap().into_inner().id,
-    )
-    .map(|playlists| HttpResponse::Ok().json(playlists))
+    Playlist::get_playlists(requester.unwrap().into_inner().id)
+        .map(|playlists| HttpResponse::Ok().json(playlists))
 }
 
 #[utoipa::path(
@@ -97,15 +88,10 @@ pub async fn get_playlist_by_id(
     playlist_id: web::Path<String>,
 ) -> Result<HttpResponse, CustomError> {
     let user_id = requester.clone().unwrap();
-    let playlist = Playlist::get_playlist_by_user_and_id(
-        playlist_id.clone(),
-        user_id.clone().into_inner(),
-    )?;
-    let playlist = Playlist::get_playlist_dto(
-        playlist_id.clone(),
-        playlist,
-        user_id.clone().into_inner(),
-    )?;
+    let playlist =
+        Playlist::get_playlist_by_user_and_id(playlist_id.clone(), user_id.clone().into_inner())?;
+    let playlist =
+        Playlist::get_playlist_dto(playlist_id.clone(), playlist, user_id.clone().into_inner())?;
     Ok(HttpResponse::Ok().json(playlist))
 }
 
@@ -121,10 +107,7 @@ pub async fn delete_playlist_by_id(
     playlist_id: web::Path<String>,
 ) -> Result<HttpResponse, CustomError> {
     let user_id = requester.clone().unwrap().id;
-    Playlist::delete_playlist_by_id(
-        playlist_id.clone(),
-        user_id,
-    )?;
+    Playlist::delete_playlist_by_id(playlist_id.clone(), user_id)?;
     Ok(HttpResponse::Ok().json(()))
 }
 
@@ -141,11 +124,6 @@ pub async fn delete_playlist_item(
 ) -> Result<HttpResponse, CustomError> {
     let user_id = requester.clone().unwrap().id;
     let unwrapped_path = path.into_inner();
-    Playlist::delete_playlist_item(
-        unwrapped_path.0,
-        unwrapped_path.1,
-        user_id,
-    )
-    .await?;
+    Playlist::delete_playlist_item(unwrapped_path.0, unwrapped_path.1, user_id).await?;
     Ok(HttpResponse::Ok().json(()))
 }

@@ -1,11 +1,11 @@
+use crate::models::notification::Notification;
+use crate::mutex::LockResultExt;
+use crate::service::notification_service::NotificationService;
+use crate::utils::error::CustomError;
 use actix_web::web::Data;
 use actix_web::{get, put, web, HttpResponse};
 use std::sync::Mutex;
 use utoipa::ToSchema;
-use crate::mutex::LockResultExt;
-use crate::service::notification_service::NotificationService;
-use crate::utils::error::CustomError;
-use crate::models::notification::Notification;
 #[utoipa::path(
 context_path="/api/v1",
 responses(
@@ -42,9 +42,6 @@ pub async fn dismiss_notifications(
     notification_service
         .lock()
         .ignore_poison()
-        .update_status_of_notification(
-            id.id,
-            "dismissed",
-        )?;
+        .update_status_of_notification(id.id, "dismissed")?;
     Ok(HttpResponse::Ok().body(""))
 }

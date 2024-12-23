@@ -1,5 +1,6 @@
-use crate::constants::inner_constants::Role;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::invites;
+use crate::constants::inner_constants::Role;
 use crate::utils::error::{map_db_error, CustomError};
 use chrono::NaiveDateTime;
 use diesel::associations::HasTable;
@@ -8,7 +9,6 @@ use diesel::{Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, R
 use std::io::Error;
 use utoipa::ToSchema;
 use uuid::Uuid;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(Queryable, Insertable, Identifiable, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -74,9 +74,7 @@ impl Invite {
         invites::table.load::<Invite>(&mut get_connection())
     }
 
-    pub fn invalidate_invite(
-        invite_id: String,
-    ) -> Result<(), diesel::result::Error> {
+    pub fn invalidate_invite(invite_id: String) -> Result<(), diesel::result::Error> {
         use crate::adapters::persistence::dbconfig::schema::invites::dsl::*;
 
         diesel::update(invites.filter(id.eq(invite_id)))

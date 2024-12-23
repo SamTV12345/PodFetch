@@ -1,13 +1,13 @@
-use crate::utils::error::{map_db_error, CustomError};
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::schema::filters;
 use crate::execute_with_conn;
+use crate::utils::error::{map_db_error, CustomError};
 use diesel::AsChangeset;
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::Queryable;
 use diesel::{Insertable, OptionalExtension, RunQueryDsl};
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::adapters::persistence::dbconfig::schema::filters;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Insertable, AsChangeset, Queryable, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -65,9 +65,7 @@ impl Filter {
         Ok(())
     }
 
-    pub async fn get_filter_by_username(
-        username1: String,
-    ) -> Result<Option<Filter>, CustomError> {
+    pub async fn get_filter_by_username(username1: String) -> Result<Option<Filter>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::filters::dsl::*;
         let res = filters
             .filter(username.eq(username1))
@@ -77,10 +75,7 @@ impl Filter {
         Ok(res)
     }
 
-    pub fn save_decision_for_timeline(
-        username_to_search: String,
-        only_favored_to_insert: bool,
-    ) {
+    pub fn save_decision_for_timeline(username_to_search: String, only_favored_to_insert: bool) {
         use crate::adapters::persistence::dbconfig::schema::filters::dsl::*;
         diesel::update(filters.filter(username.eq(username_to_search)))
             .set(only_favored.eq(only_favored_to_insert))

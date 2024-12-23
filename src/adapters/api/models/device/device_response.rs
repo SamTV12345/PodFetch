@@ -9,7 +9,6 @@ pub struct DeviceResponse {
     subscriptions: u32,
 }
 
-
 impl From<&Device> for DeviceResponse {
     fn from(device: &Device) -> Self {
         DeviceResponse {

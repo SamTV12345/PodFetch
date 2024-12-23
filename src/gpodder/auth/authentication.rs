@@ -2,13 +2,13 @@ use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;
 
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::CustomError;
 use actix_web::post;
 use actix_web::{web, HttpRequest, HttpResponse};
 use awc::cookie::{Cookie, SameSite};
 use sha256::digest;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::service::environment_service::EnvironmentService;
 
 #[post("/auth/{username}/login.json")]
 pub async fn login(
@@ -20,8 +20,7 @@ pub async fn login(
     // If cookie is already set, return it
     if let Some(cookie) = rq.clone().cookie("sessionid") {
         let session = cookie.value();
-        let opt_session =
-            Session::find_by_session_id(session);
+        let opt_session = Session::find_by_session_id(session);
         if let Ok(unwrapped_session) = opt_session {
             let user_cookie = create_session_cookie(unwrapped_session);
             return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
@@ -51,30 +50,25 @@ fn handle_proxy_auth(
                 return Err(CustomError::Forbidden);
             }
 
-            match User::find_by_username(
-                auth_val,
-            ) {
+            match User::find_by_username(auth_val) {
                 Ok(user) => {
                     let session = Session::new(user.username);
-                    Session::insert_session(
-                        &session,
-                    )?;
+                    Session::insert_session(&session)?;
                     let user_cookie = create_session_cookie(session);
                     Ok(HttpResponse::Ok().cookie(user_cookie).finish())
                 }
                 Err(e) => {
-                    if config.auto_sign_up{
-                        User::insert_user(
-                            &mut User {
-                                id: 0,
-                                username: username.to_string(),
-                                role: "user".to_string(),
-                                password: None,
-                                explicit_consent: false,
-                                created_at: chrono::Utc::now().naive_utc(),
-                                api_key: None,
-                            },
-                        ).expect("Error inserting user on auto registering");
+                    if config.auto_sign_up {
+                        User::insert_user(&mut User {
+                            id: 0,
+                            username: username.to_string(),
+                            role: "user".to_string(),
+                            password: None,
+                            explicit_consent: false,
+                            created_at: chrono::Utc::now().naive_utc(),
+                            api_key: None,
+                        })
+                        .expect("Error inserting user on auto registering");
                         handle_proxy_auth(rq, username.clone(), env)
                     } else {
                         log::error!("Error finding user by username: {}", e);
@@ -116,15 +110,12 @@ fn handle_gpodder_basic_auth(
         }
     }
 
-    let user = User::find_by_username(
-        &unwrapped_username,
-    )?;
+    let user = User::find_by_username(&unwrapped_username)?;
     match user.password {
         Some(p) => {
             if p == digest(password) {
                 let session = Session::new(user.username);
-                Session::insert_session(&session)
-                    .expect("Error inserting session");
+                Session::insert_session(&session).expect("Error inserting session");
                 let user_cookie = create_session_cookie(session);
                 Ok(HttpResponse::Ok().cookie(user_cookie).finish())
             } else {

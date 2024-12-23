@@ -1,8 +1,7 @@
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-
 use chrono::NaiveDateTime;
 use utoipa::ToSchema;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::models::podcast_dto::PodcastDto;
 
 // this is to insert users to database
 #[derive(Serialize, Deserialize)]
@@ -59,6 +58,6 @@ pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub watched_time: i32,
     pub date: NaiveDateTime,
     pub total_time: i32,
-    pub podcast_episode: PodcastEpisode,
-    pub podcast: Podcast,
+    pub podcast_episode: PodcastEpisodeDto,
+    pub podcast: PodcastDto,
 }

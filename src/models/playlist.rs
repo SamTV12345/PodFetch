@@ -1,6 +1,8 @@
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::schema::playlists;
 use crate::controllers::playlist_controller::{PlaylistDto, PlaylistDtoPost};
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
-use crate::adapters::persistence::dbconfig::schema::playlists;
 use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -14,7 +16,6 @@ use diesel::RunQueryDsl;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 pub struct Playlist {
@@ -40,8 +41,7 @@ impl Playlist {
         if let Some(unwrapped_res) = res {
             return Ok(unwrapped_res);
         }
-        
-        
+
         execute_with_conn!(|conn| diesel::insert_into(playlists)
             .values(self)
             .get_result::<Playlist>(conn)
@@ -60,9 +60,7 @@ impl Playlist {
         Ok(())
     }
 
-    pub fn get_playlist_by_id(
-        playlist_id_1: String,
-    ) -> Result<Playlist, CustomError> {
+    pub fn get_playlist_by_id(playlist_id_1: String) -> Result<Playlist, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::playlists::dsl::*;
 
         let res = playlists
@@ -98,9 +96,7 @@ impl Playlist {
         Err(CustomError::NotFound)
     }
 
-    pub fn get_playlists(
-        user_id1: i32,
-    ) -> Result<Vec<Playlist>, CustomError> {
+    pub fn get_playlists(user_id1: i32) -> Result<Vec<Playlist>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::playlists::dsl::*;
 
         playlists
@@ -131,10 +127,8 @@ impl Playlist {
                 .expect("Error inserting playlist item");
         });
 
-        let items = PlaylistItem::get_playlist_items_by_playlist_id(
-            inserted_playlist.id.clone(),
-            user,
-        )?;
+        let items =
+            PlaylistItem::get_playlist_items_by_playlist_id(inserted_playlist.id.clone(), user)?;
         let playlist_dto_returned = inserted_playlist.to_playlist_dto(items);
         Ok(playlist_dto_returned)
     }
@@ -146,7 +140,7 @@ impl Playlist {
         let item = item
             .iter()
             .map(|(_, y, z)| PodcastEpisodeWithHistory {
-                podcast_episode: y.clone(),
+                podcast_episode: <PodcastEpisode as Into<PodcastEpisodeDto>>::into(y.clone()),
                 podcast_history_item: z.clone(),
             })
             .collect::<Vec<PodcastEpisodeWithHistory>>();
@@ -185,11 +179,7 @@ impl Playlist {
             return Err(CustomError::Forbidden);
         }
 
-        Self::update_playlist_fields(
-            playlist_id.clone(),
-            playlist_dto.clone(),
-            user.clone(),
-        )?;
+        Self::update_playlist_fields(playlist_id.clone(), playlist_dto.clone(), user.clone())?;
 
         // deletes all old playlist entries
         PlaylistItem::delete_playlist_item_by_playlist_id(playlist_id.clone())?;
@@ -218,16 +208,12 @@ impl Playlist {
         if playlist.user_id != user.id {
             return Err(CustomError::Forbidden);
         }
-        let items_in_playlist =
-            PlaylistItem::get_playlist_items_by_playlist_id(playlist_id, user)?;
+        let items_in_playlist = PlaylistItem::get_playlist_items_by_playlist_id(playlist_id, user)?;
 
         Ok(playlist.to_playlist_dto(items_in_playlist))
     }
 
-    pub fn delete_playlist_by_id(
-        playlist_id: String,
-        user_id1: i32,
-    ) -> Result<(), CustomError> {
+    pub fn delete_playlist_by_id(playlist_id: String, user_id1: i32) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::playlists::dsl::*;
 
         let playlist_to_delete = Playlist::get_playlist_by_id(playlist_id.clone())?;

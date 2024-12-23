@@ -4,12 +4,12 @@ pub struct DeviceCreate {
     pub(crate) id: String,
     pub(crate) caption: String,
     pub(crate) type_: String,
-    pub(crate) username: String
+    pub(crate) username: String,
 }
 
 impl From<DeviceCreate> for Device {
     fn from(val: DeviceCreate) -> Self {
-        Device{
+        Device {
             id: None,
             deviceid: val.id,
             kind: val.type_,

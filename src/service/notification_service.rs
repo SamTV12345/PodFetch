@@ -9,9 +9,7 @@ impl NotificationService {
         NotificationService {}
     }
 
-    pub fn get_unread_notifications(
-        &mut self,
-    ) -> Result<Vec<Notification>, CustomError> {
+    pub fn get_unread_notifications(&mut self) -> Result<Vec<Notification>, CustomError> {
         Notification::get_unread_notifications()
     }
 

@@ -1,3 +1,6 @@
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::application::services::device::service::DeviceService;
+use crate::application::usecases::devices::edit_use_case::EditUseCase;
 use crate::constants::inner_constants::Role;
 use crate::controllers::sys_info_controller::built_info;
 use crate::models::episode::Episode;
@@ -17,9 +20,6 @@ use std::env::Args;
 use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use std::process::exit;
 use std::str::FromStr;
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::application::services::device::service::DeviceService;
-use crate::application::usecases::devices::edit_use_case::EditUseCase;
 
 pub async fn start_command_line(mut args: Args) {
     println!("Starting from command line");
@@ -69,10 +69,7 @@ pub async fn start_command_line(mut args: Args) {
                     for podcast in podcasts.unwrap() {
                         println!("Refreshing podcast {}", podcast.name);
 
-                        PodcastEpisodeService::insert_podcast_episodes(
-                            podcast.clone(),
-                        )
-                        .unwrap();
+                        PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
                         podcast_service
                             .schedule_episode_download(podcast, None)
                             .unwrap();
@@ -125,16 +122,11 @@ pub async fn start_command_line(mut args: Args) {
                     }
                 }
                 "generate" => match args.next().unwrap().as_str() {
-                    "apiKey" => {
-                        User::find_all_users(conn).iter().for_each(|u| {
-                            log::info!("Updating api key of user {}", &u.username);
-                            User::update_api_key_of_user(
-                                &u.username,
-                                uuid::Uuid::new_v4().to_string(),
-                            )
+                    "apiKey" => User::find_all_users(conn).iter().for_each(|u| {
+                        log::info!("Updating api key of user {}", &u.username);
+                        User::update_api_key_of_user(&u.username, uuid::Uuid::new_v4().to_string())
                             .expect("Error updating api key");
-                        })
-                    }
+                    }),
                     _ => {
                         error!("Command not found")
                     }
@@ -154,28 +146,19 @@ pub async fn start_command_line(mut args: Args) {
                                 .expect("Error deleting entries for podcast history item");
                             DeviceService::delete_by_username(&username)
                                 .expect("Error deleting devices");
-                            Episode::delete_by_username_and_episode(
-                                &username,
-                                conn,
-                            )
-                            .expect("Error deleting episodes");
-                            Favorite::delete_by_username(
-                                trim_string(&username),
-                                conn,
-                            )
-                            .expect("Error deleting favorites");
-                            Session::delete_by_username(
-                                &trim_string(&username)
-                            )
-                            .expect("Error deleting sessions");
+                            Episode::delete_by_username_and_episode(&username, conn)
+                                .expect("Error deleting episodes");
+                            Favorite::delete_by_username(trim_string(&username), conn)
+                                .expect("Error deleting favorites");
+                            Session::delete_by_username(&trim_string(&username))
+                                .expect("Error deleting sessions");
                             Subscription::delete_by_username(
                                 &trim_string(&username),
-                                &mut get_connection()
+                                &mut get_connection(),
                             )
                             .expect("TODO: panic message");
-                            User::delete_by_username(
-                                trim_string(&username), &mut get_connection())
-                            .expect("Error deleting user");
+                            User::delete_by_username(trim_string(&username), &mut get_connection())
+                                .expect("Error deleting user");
                             println!("User deleted")
                         }
                         None => {
@@ -194,9 +177,7 @@ pub async fn start_command_line(mut args: Args) {
                     );
                     username = trim_string(&username);
                     println!(">{}<", username);
-                    let user =
-                        User::find_by_username(username.as_str())
-                            .unwrap();
+                    let user = User::find_by_username(username.as_str()).unwrap();
 
                     do_user_update(user)
                 }

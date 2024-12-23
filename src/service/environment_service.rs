@@ -1,4 +1,11 @@
-use crate::constants::inner_constants::{API_KEY, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
+use crate::constants::inner_constants::{
+    API_KEY, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE,
+    GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS,
+    OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY,
+    PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY,
+    REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY,
+    TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME,
+};
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use regex::Regex;
@@ -74,7 +81,10 @@ impl EnvironmentService {
         if !server_url.ends_with('/') {
             server_url += "/"
         }
-        let mut opt_sub_dir = var(SUB_DIRECTORY).map_err(|_|None::<String>).map(Some).unwrap_or(None);
+        let mut opt_sub_dir = var(SUB_DIRECTORY)
+            .map_err(|_| None::<String>)
+            .map(Some)
+            .unwrap_or(None);
         if opt_sub_dir.is_none() {
             let re = Regex::new(r"^http[s]?://[^/]+(/.*)?$").unwrap();
             let directory = re.captures(&server_url).unwrap().get(1).unwrap().as_str();
@@ -136,8 +146,11 @@ impl EnvironmentService {
             any_auth_enabled: is_env_var_present_and_true(BASIC_AUTH)
                 || is_env_var_present_and_true(OIDC_AUTH)
                 || is_env_var_present_and_true(REVERSE_PROXY),
-            conn_number: var(CONNECTION_NUMBERS).unwrap_or("10".to_string()).parse::<i16>().unwrap_or(10),
-            api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None)
+            conn_number: var(CONNECTION_NUMBERS)
+                .unwrap_or("10".to_string())
+                .parse::<i16>()
+                .unwrap_or(10),
+            api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None),
         }
     }
 

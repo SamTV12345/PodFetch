@@ -99,8 +99,7 @@ where
             Some(header) => match header.to_str() {
                 Ok(auth) => {
                     let (username, password) = AuthFilter::extract_basic_auth(auth);
-                    let found_user =
-                        User::find_by_username(username.as_str());
+                    let found_user = User::find_by_username(username.as_str());
 
                     if found_user.is_err() {
                         return Box::pin(ok(req
@@ -193,23 +192,21 @@ where
                     }
                     Err(_) => {
                         // User is authenticated so we can onboard him if he is new
-                        let user = User::insert_user(
-                            &mut User {
-                                id: 0,
-                                username: decoded
-                                    .claims
-                                    .get("preferred_username")
-                                    .unwrap()
-                                    .as_str()
-                                    .unwrap()
-                                    .to_string(),
-                                role: "user".to_string(),
-                                password: None,
-                                explicit_consent: false,
-                                created_at: chrono::Utc::now().naive_utc(),
-                                api_key: None,
-                            }
-                        )
+                        let user = User::insert_user(&mut User {
+                            id: 0,
+                            username: decoded
+                                .claims
+                                .get("preferred_username")
+                                .unwrap()
+                                .as_str()
+                                .unwrap()
+                                .to_string(),
+                            role: "user".to_string(),
+                            password: None,
+                            explicit_consent: false,
+                            created_at: chrono::Utc::now().naive_utc(),
+                            api_key: None,
+                        })
                         .expect("Error inserting user");
                         req.extensions_mut().insert(user);
                         async move { service.call(req).await.map(|res| res.map_into_left_body()) }
@@ -260,17 +257,15 @@ where
                         }
                         Err(_) => {
                             if config.auto_sign_up {
-                                let user = User::insert_user(
-                                    &mut User {
-                                        id: 0,
-                                        username: token.to_string(),
-                                        role: "user".to_string(),
-                                        password: None,
-                                        explicit_consent: false,
-                                        created_at: chrono::Utc::now().naive_utc(),
-                                        api_key: None,
-                                    },
-                                )
+                                let user = User::insert_user(&mut User {
+                                    id: 0,
+                                    username: token.to_string(),
+                                    role: "user".to_string(),
+                                    password: None,
+                                    explicit_consent: false,
+                                    created_at: chrono::Utc::now().naive_utc(),
+                                    api_key: None,
+                                })
                                 .expect("Error inserting user");
                                 req.extensions_mut().insert(user);
                                 return async move {

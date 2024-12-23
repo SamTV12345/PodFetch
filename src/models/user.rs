@@ -1,5 +1,8 @@
-use crate::constants::inner_constants::{Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME};
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::users;
+use crate::constants::inner_constants::{
+    Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME,
+};
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
@@ -12,7 +15,6 @@ use diesel::QueryDsl;
 use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use std::io::Error;
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset,
@@ -69,9 +71,7 @@ impl User {
         }
     }
 
-    pub fn find_by_username(
-        username_to_find: &str,
-    ) -> Result<User, CustomError> {
+    pub fn find_by_username(username_to_find: &str) -> Result<User, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         let env_service = ENVIRONMENT_SERVICE.get().unwrap();
         if let Some(res) = env_service.username.clone() {
@@ -122,9 +122,7 @@ impl User {
             .map_err(map_db_error)
     }
 
-    pub fn update_role(
-        &self,
-    ) -> Result<UserWithoutPassword, diesel::result::Error> {
+    pub fn update_role(&self) -> Result<UserWithoutPassword, diesel::result::Error> {
         let user = diesel::update(users::table.filter(users::id.eq(self.id)))
             .set(users::role.eq(self.role.clone()))
             .get_result::<User>(&mut get_connection());
@@ -132,9 +130,7 @@ impl User {
         Ok(User::map_to_dto(user.unwrap()))
     }
 
-    pub fn update_explicit_consent(
-        &self,
-    ) -> Result<UserWithoutPassword, diesel::result::Error> {
+    pub fn update_explicit_consent(&self) -> Result<UserWithoutPassword, diesel::result::Error> {
         let user = diesel::update(users::table.filter(users::id.eq(self.id)))
             .set(users::explicit_consent.eq(self.explicit_consent))
             .get_result::<User>(&mut get_connection());
@@ -240,9 +236,7 @@ impl User {
         Ok(None)
     }
 
-    pub fn check_if_admin(
-        username: &Option<String>,
-    ) -> Result<(), CustomError> {
+    pub fn check_if_admin(username: &Option<String>) -> Result<(), CustomError> {
         if let Some(username_unwrapped) = username {
             let found_user = User::find_by_username(username_unwrapped)?;
 
@@ -294,9 +288,7 @@ impl User {
         self.role.eq(&Role::Admin.to_string())
     }
 
-    pub fn find_by_api_key(
-        api_key_to_find: String,
-    ) -> Result<Option<User>, CustomError> {
+    pub fn find_by_api_key(api_key_to_find: String) -> Result<Option<User>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
 
         users
@@ -326,7 +318,6 @@ impl User {
         }
 
         let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-
 
         if let Some(res) = env_service.api_key_admin.clone() {
             if !res.is_empty() && res == api_key_to_find {

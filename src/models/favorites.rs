@@ -1,18 +1,17 @@
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::models::tag::Tag;
 use crate::models::user::User;
-use crate::service::mapping_service::MappingService;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
 use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::models::tag::Tag;
 
 #[derive(
     Queryable,
@@ -91,9 +90,20 @@ impl Favorite {
         }
     }
 
-    pub fn get_favored_podcasts(
-        found_username: String,
-    ) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_favored_podcast_by_username_and_podcast_id(
+        username1: &str,
+        podcast_id1: i32,
+    ) -> Result<Option<Favorite>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::favorites::dsl::*;
+        let res = favorites
+            .filter(username.eq(username1).and(podcast_id.eq(podcast_id1)))
+            .first::<Favorite>(&mut get_connection())
+            .optional()
+            .map_err(map_db_error)?;
+        Ok(res)
+    }
+
+    pub fn get_favored_podcasts(found_username: String) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as user_favor;
@@ -109,7 +119,7 @@ impl Favorite {
             .iter()
             .map(|podcast| {
                 let tags = Tag::get_tags_of_podcast(podcast.0.id, &found_username).unwrap();
-                MappingService::map_podcast_to_podcast_dto_with_favorites_option(podcast, tags)
+                (podcast.0.clone(), Some(podcast.1.clone()), tags).into()
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
@@ -119,7 +129,7 @@ impl Favorite {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: &str
+        designated_username: &str,
     ) -> Result<Vec<(Podcast, Favorite)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as podcastsid;

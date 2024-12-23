@@ -6,7 +6,7 @@ use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::session::Session;
 use crate::utils::error::CustomError;
 use crate::utils::time::get_current_timestamp;
-use chrono::{DateTime};
+use chrono::DateTime;
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeActionResponse {
@@ -41,8 +41,7 @@ pub async fn get_episode_actions(
                 return Err(CustomError::Forbidden);
             }
 
-            let since_date = DateTime::from_timestamp(since.since, 0)
-                .map(|v| v.naive_utc());
+            let since_date = DateTime::from_timestamp(since.since, 0).map(|v| v.naive_utc());
             let mut actions = Episode::get_actions_by_username(
                 username.clone(),
                 since_date,
@@ -52,13 +51,11 @@ pub async fn get_episode_actions(
             )
             .await;
 
-
             if let Some(device) = since.device.clone() {
                 actions.iter_mut().for_each(|a| {
                     a.device = device.clone();
                 });
             }
-
 
             Ok(HttpResponse::Ok().json(EpisodeActionResponse {
                 actions,
@@ -83,12 +80,7 @@ pub async fn upload_episode_actions(
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
                 let episode = Episode::convert_to_episode(episode, username.clone());
-                inserted_episodes.push(
-                    Episode::insert_episode(
-                        &episode.clone(),
-                    )
-                    .unwrap(),
-                );
+                inserted_episodes.push(Episode::insert_episode(&episode.clone()).unwrap());
             });
             Ok(HttpResponse::Ok().json(EpisodeActionPostResponse {
                 update_urls: vec![],

@@ -6,19 +6,20 @@ use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use utoipa::ToSchema;
-use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 use actix_web::web::{Data, Json, Query};
 use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
 use serde_json::from_str;
+use utoipa::ToSchema;
 
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::controllers::server::ChatServerHandle;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use crate::controllers::server::ChatServerHandle;
+use crate::models::podcast_dto::PodcastDto;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -30,7 +31,7 @@ impl OptionalId {}
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeWithHistory {
-    pub podcast_episode: PodcastEpisode,
+    pub podcast_episode: PodcastEpisodeDto,
     pub podcast_history_item: Option<Episode>,
 }
 
@@ -57,7 +58,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast| {
-            let mapped_podcast_episode = MappingService::map_podcastepisode_to_dto(&podcast.0);
+            let mapped_podcast_episode: PodcastEpisodeDto = podcast.0.into();
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast.1,
@@ -69,8 +70,8 @@ pub async fn find_all_podcast_episodes_of_podcast(
 
 #[derive(Serialize, Deserialize)]
 pub struct TimeLinePodcastEpisode {
-    podcast_episode: PodcastEpisode,
-    podcast: Podcast,
+    podcast_episode: PodcastEpisodeDto,
+    podcast: PodcastDto,
     history: Option<Episode>,
     favorite: Option<Favorite>,
 }
@@ -78,12 +79,11 @@ pub struct TimeLinePodcastEpisode {
 #[get("/podcast/available/gpodder")]
 pub async fn get_available_podcasts_not_in_webview(
     requester: Option<web::ReqData<User>>,
-) -> Result<HttpResponse, CustomError>  {
+) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
-        return Err(CustomError::Forbidden)
+        return Err(CustomError::Forbidden);
     }
-    let found_episodes  = Episode::
-    find_episodes_not_in_webview()?;
+    let found_episodes = Episode::find_episodes_not_in_webview()?;
 
     Ok(HttpResponse::Ok().json(found_episodes))
 }
@@ -124,14 +124,14 @@ pub async fn get_timeline(
         .iter()
         .map(|podcast_episode| {
             let (podcast_episode, podcast, history, favorite) = podcast_episode.clone();
-            let mapped_podcast_episode =
-                MappingService::map_podcastepisode_to_dto(&podcast_episode);
+            let mapped_podcast_episode: PodcastEpisodeDto = podcast_episode.clone().into();
+            let podcast: PodcastDto = podcast.clone();
 
             TimeLinePodcastEpisode {
                 podcast_episode: mapped_podcast_episode,
                 podcast,
-                history,
-                favorite,
+                history: history.clone(),
+                favorite: favorite.clone(),
             }
         })
         .collect::<Vec<TimeLinePodcastEpisode>>();
@@ -160,25 +160,11 @@ pub async fn download_podcast_episodes_of_podcast(
     }
 
     thread::spawn(move || {
-        let res = PodcastEpisode::get_podcast_episode_by_id(
-            &id.into_inner(),
-        )
-        .unwrap();
+        let res = PodcastEpisode::get_podcast_episode_by_id(&id.into_inner()).unwrap();
         if let Some(podcast_episode) = res {
-            let podcast = Podcast::get_podcast(
-                podcast_episode.podcast_id,
-            )
-            .unwrap();
-            PodcastEpisodeService::perform_download(
-                &podcast_episode.clone(),
-                podcast,
-            )
-            .unwrap();
-            PodcastEpisode::update_deleted(
-                &podcast_episode.clone().episode_id,
-                false,
-            )
-            .unwrap();
+            let podcast = Podcast::get_podcast(podcast_episode.podcast_id).unwrap();
+            PodcastEpisodeService::perform_download(&podcast_episode.clone(), podcast).unwrap();
+            PodcastEpisode::update_deleted(&podcast_episode.clone().episode_id, false).unwrap();
         }
     });
 
@@ -205,16 +191,21 @@ pub async fn delete_podcast_episode_locally(
         return Err(CustomError::Forbidden);
     }
 
-    let delted_podcast_episode = PodcastEpisodeService::delete_podcast_episode_locally(
-        &id.into_inner(),
-    )?;
-    lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
-        podcast_episode: Some(delted_podcast_episode),
-        podcast_episodes: None,
-        type_of: PodcastType::DeletePodcastEpisode,
-        podcast: None,
-        message: "Deleted podcast episode locally".to_string(),
-    }).unwrap()).await;
+    let delted_podcast_episode: PodcastEpisodeDto =
+        PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner())?.into();
+    lobby
+        .send_broadcast(
+            MAIN_ROOM.parse().unwrap(),
+            serde_json::to_string(&BroadcastMessage {
+                podcast_episode: Some(delted_podcast_episode),
+                podcast_episodes: None,
+                type_of: PodcastType::DeletePodcastEpisode,
+                podcast: None,
+                message: "Deleted podcast episode locally".to_string(),
+            })
+            .unwrap(),
+        )
+        .await;
 
     Ok(HttpResponse::NoContent().finish())
 }

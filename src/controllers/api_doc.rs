@@ -1,10 +1,12 @@
 use crate::controllers::notification_controller::*;
+use crate::controllers::playlist_controller::*;
 use crate::controllers::podcast_controller::*;
 use crate::controllers::podcast_episode_controller::__path_find_all_podcast_episodes_of_podcast;
 use crate::controllers::podcast_episode_controller::*;
 use crate::controllers::settings_controller::*;
 use crate::controllers::sys_info_controller::SysExtraInfo;
 use crate::controllers::sys_info_controller::*;
+use crate::controllers::tags_controller::*;
 use crate::controllers::user_controller::InvitePostModel;
 use crate::controllers::user_controller::UserOnboardingModel;
 use crate::controllers::user_controller::*;
@@ -21,6 +23,7 @@ use crate::models::notification::Notification;
 use crate::models::opml_model::OpmlModel;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::settings::Setting;
+use crate::models::tag::Tag;
 use crate::models::user::User;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::HttpResponse;
@@ -33,9 +36,8 @@ use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
 };
-use crate::models::tag::Tag;
-use crate::controllers::tags_controller::*;
-use crate::controllers::playlist_controller::*;
+use crate::models::podcast_dto::PodcastDto;
+
 #[derive(OpenApi)]
 #[openapi(
 paths(
@@ -63,7 +65,7 @@ paths(
 delete_podcast,proxy_podcast,insert_tag, get_tags, delete_tag, update_tag, add_podcast_to_tag, delete_podcast_from_tag
 ),
 components(
-schemas(Podcast, PodcastEpisode, ItunesModel,PodcastFavorUpdateModel,
+schemas(PodcastDto, PodcastEpisode, ItunesModel,PodcastFavorUpdateModel,
 PodcastWatchedEpisodeModel, PodcastWatchedPostModel, PodcastAddModel,Notification, Setting,
 Invite,LoginRequest,PlaylistDtoPost,Tag,
 Filter,OpmlModel,DeletePodcast, UpdateNameSettings,SysExtraInfo,UserOnboardingModel,User,InvitePostModel, TagCreate,TagWithPodcast)

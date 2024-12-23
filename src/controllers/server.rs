@@ -1,8 +1,8 @@
+use crate::constants::inner_constants::MAIN_ROOM;
+use rand::random;
 use std::collections::{HashMap, HashSet};
 use std::io;
-use rand::{random};
 use tokio::sync::{mpsc, oneshot};
-use crate::constants::inner_constants::MAIN_ROOM;
 
 type RoomId = String;
 pub type ConnId = usize;
@@ -43,8 +43,6 @@ enum Command {
     },
 }
 
-
-
 /// A multi-room chat server.
 ///
 /// Contains the logic of how connections chat with each other plus room management.
@@ -61,7 +59,6 @@ pub struct ChatServer {
     /// Command receiver.
     cmd_rx: mpsc::UnboundedReceiver<Command>,
 }
-
 
 impl ChatServer {
     pub fn new() -> (Self, ChatServerHandle) {
@@ -84,18 +81,16 @@ impl ChatServer {
         )
     }
 
-
-
     /// Send message to specific room, also to the user itself
     async fn send_broadcast_to_room(&self, room_id: &str, msg: impl Into<Msg>) {
         if let Some(sessions) = self.rooms.get(room_id) {
             let msg = msg.into();
 
             for conn_id in sessions {
-                    if let Some(tx) = self.sessions.get(conn_id) {
-                        // errors if client disconnected abruptly and hasn't been timed-out yet
-                        let _ = tx.send(msg.clone());
-                    }
+                if let Some(tx) = self.sessions.get(conn_id) {
+                    // errors if client disconnected abruptly and hasn't been timed-out yet
+                    let _ = tx.send(msg.clone());
+                }
             }
         }
     }
@@ -144,12 +139,15 @@ impl ChatServer {
         self.sessions.insert(id, tx);
 
         // auto join session to main room
-        self.rooms.entry(MAIN_ROOM.parse().unwrap()).or_default().insert(id);
+        self.rooms
+            .entry(MAIN_ROOM.parse().unwrap())
+            .or_default()
+            .insert(id);
         log::info!("Joined main room");
 
         //let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
         /*self.send_system_message("main", 0, format!("Total visitors {count}"))
-            .await;*/
+        .await;*/
 
         // send id back
         id
@@ -208,7 +206,7 @@ impl ChatServer {
     pub async fn run(mut self) -> io::Result<()> {
         while let Some(cmd) = self.cmd_rx.recv().await {
             match cmd {
-                Command::Broadcast{msg,room, res_tx}=>{
+                Command::Broadcast { msg, room, res_tx } => {
                     let res = self.send_broadcast_to_room(&room, msg).await;
 
                     if let Some(res_tx) = res_tx {
@@ -242,7 +240,6 @@ impl ChatServer {
     }
 }
 
-
 /// Handle and command sender for chat server.
 ///
 /// Reduces boilerplate of setting up response channels in WebSocket handlers.
@@ -250,7 +247,6 @@ impl ChatServer {
 pub struct ChatServerHandle {
     cmd_tx: mpsc::UnboundedSender<Command>,
 }
-
 
 impl ChatServerHandle {
     /// Register client message sender and obtain connection ID.
@@ -297,26 +293,27 @@ impl ChatServerHandle {
     pub async fn send_broadcast(&self, room_id: RoomId, msg: impl Into<Msg>) {
         let (res_tx, res_rx) = oneshot::channel();
 
-        self.cmd_tx.send(Command::Broadcast {
-            msg: msg.into(),
-            room: room_id,
-            res_tx: Some(res_tx),
-        }).unwrap();
+        self.cmd_tx
+            .send(Command::Broadcast {
+                msg: msg.into(),
+                room: room_id,
+                res_tx: Some(res_tx),
+            })
+            .unwrap();
 
         // unwrap: chat server does not drop our response channel
         res_rx.await.unwrap();
     }
 
-
     pub fn send_broadcast_sync(&self, room_id: RoomId, msg: impl Into<Msg>) {
-
-        self.cmd_tx.send(Command::Broadcast {
-            msg: msg.into(),
-            room: room_id,
-            res_tx: None,
-        }).unwrap();
+        self.cmd_tx
+            .send(Command::Broadcast {
+                msg: msg.into(),
+                room: room_id,
+                res_tx: None,
+            })
+            .unwrap();
     }
-
 
     /// Broadcast message to current room.
     pub async fn send_message(&self, conn: ConnId, msg: impl Into<Msg>) {

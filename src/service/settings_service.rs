@@ -15,16 +15,11 @@ impl SettingsService {
         SettingsService {}
     }
 
-    pub fn get_settings(
-        &mut self,
-    ) -> Result<Option<Setting>, CustomError> {
+    pub fn get_settings(&mut self) -> Result<Option<Setting>, CustomError> {
         Setting::get_settings()
     }
 
-    pub fn update_settings(
-        &mut self,
-        settings: Setting,
-    ) -> Result<Setting, CustomError> {
+    pub fn update_settings(&mut self, settings: Setting) -> Result<Setting, CustomError> {
         Setting::update_settings(settings)
     }
 
@@ -80,7 +75,7 @@ impl SettingsService {
         perform_podcast_variable_replacement(
             update_setttings.clone().into(),
             sample_podcast.clone(),
-            None
+            None,
         )?;
         perform_episode_variable_replacement(
             update_setttings.clone().into(),

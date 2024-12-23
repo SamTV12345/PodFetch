@@ -1,9 +1,9 @@
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::insert_into;
 use diesel::Queryable;
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(Serialize, Deserialize, Queryable, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -30,9 +30,7 @@ impl Notification {
         Ok(result)
     }
 
-    pub fn insert_notification(
-        notification: Notification,
-    ) -> Result<(), CustomError> {
+    pub fn insert_notification(notification: Notification) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::notifications::dsl::notifications;
         use crate::adapters::persistence::dbconfig::schema::notifications::*;
         use diesel::ExpressionMethods;

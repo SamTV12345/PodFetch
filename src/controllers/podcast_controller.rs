@@ -1,10 +1,12 @@
-use crate::constants::inner_constants::{PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM, OIDC_AUTH};
+use crate::constants::inner_constants::{
+    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM,
+    OIDC_AUTH,
+};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
 use crate::models::search_type::SearchType::{ITunes, Podindex};
 use crate::service::environment_service::EnvironmentService;
-use crate::service::mapping_service::MappingService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string};
@@ -34,8 +36,8 @@ use crate::mutex::LockResultExt;
 use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use futures_util::StreamExt;
-use reqwest::Client;
 use reqwest::header::HeaderMap;
+use reqwest::Client;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -47,7 +49,7 @@ pub struct PodcastSearchModel {
     title: Option<String>,
     order_option: Option<OrderOption>,
     favored_only: bool,
-    tag: Option<String>
+    tag: Option<String>,
 }
 
 #[utoipa::path(
@@ -60,10 +62,7 @@ tag="podcasts"
 pub async fn get_filter(
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
-    let filter = Filter::get_filter_by_username(
-        requester.unwrap().username.clone(),
-    )
-    .await?;
+    let filter = Filter::get_filter_by_username(requester.unwrap().username.clone()).await?;
     Ok(HttpResponse::Ok().json(filter))
 }
 
@@ -71,7 +70,7 @@ pub async fn get_filter(
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the podcasts matching the searching criteria",body=
-Vec<Podcast>)),
+Vec<PodcastDto>)),
 tag="podcasts"
 )]
 #[get("/podcasts/search")]
@@ -85,10 +84,8 @@ pub async fn search_podcasts(
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
     let tag = query.tag;
 
-    let opt_filter = Filter::get_filter_by_username(
-        requester.clone().unwrap().username.clone(),
-    )
-    .await?;
+    let opt_filter =
+        Filter::get_filter_by_username(requester.clone().unwrap().username.clone()).await?;
 
     let only_favored = match opt_filter {
         Some(filter) => filter.only_favored,
@@ -117,7 +114,7 @@ pub async fn search_podcasts(
                         query.title,
                         _latest_pub.clone(),
                         username,
-                        tag
+                        tag,
                     )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
@@ -130,14 +127,13 @@ pub async fn search_podcasts(
                     query.title,
                     _latest_pub.clone(),
                     username,
-                    tag
+                    tag,
                 )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
         }
     }
 }
-
 
 #[utoipa::path(
 context_path="/api/v1",
@@ -154,17 +150,17 @@ pub async fn find_podcast_by_id(
     let id_num = from_str::<i32>(&id).unwrap();
     let username = user.unwrap().username.clone();
 
-    let podcast =
-        PodcastService::get_podcast(id_num)?;
+    let podcast = PodcastService::get_podcast(id_num)?;
     let tags = Tag::get_tags_of_podcast(id_num, &username)?;
-    let mapped_podcast = MappingService::map_podcast_to_podcast_dto(&podcast, tags);
-    Ok(HttpResponse::Ok().json(mapped_podcast))
+    let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(&username, id_num)?;
+    let podcast_dto: PodcastDto = (podcast, favorite, tags).into();
+    Ok(HttpResponse::Ok().json(podcast_dto))
 }
 
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Gets all stored podcasts as a list", body = [Podcast])
+(status = 200, description = "Gets all stored podcasts as a list", body = [PodcastDto])
 ),
 tag="podcasts"
 )]
@@ -174,8 +170,7 @@ pub async fn find_all_podcasts(
 ) -> Result<HttpResponse, CustomError> {
     let username = requester.unwrap().username.clone();
 
-    let podcasts =
-        PodcastService::get_podcasts(username)?;
+    let podcasts = PodcastService::get_podcasts(username)?;
 
     Ok(HttpResponse::Ok().json(podcasts))
 }
@@ -278,7 +273,7 @@ pub async fn add_podcast(
 #[utoipa::path(
 context_path="/api/v1",
 responses(
-(status = 200, description = "Adds a podcast by its feed url",body=Podcast)),
+(status = 200, description = "Adds a podcast by its feed url",body=PodcastDto)),
 tag="podcasts"
 )]
 #[post("/podcast/feed")]
@@ -307,7 +302,7 @@ pub async fn add_podcast_by_feed(
     let channel = Channel::read_from(bytes.as_bytes()).unwrap();
     let num = rand::thread_rng().gen_range(100..10000000);
 
-    let res;
+    let res: PodcastDto;
     {
         let mut podcast_service = podcast_service.lock().ignore_poison().clone();
         res = podcast_service
@@ -325,7 +320,7 @@ pub async fn add_podcast_by_feed(
                 lobby,
                 Some(channel),
             )
-            .await?;
+            .await?.into();
     }
 
     Ok(HttpResponse::Ok().json(res))
@@ -399,24 +394,16 @@ pub async fn add_podcast_from_podindex(
         ));
     }
 
-    spawn_blocking(move || {
-        match start_download_podindex(
-            id.track_id,
-            lobby,
-        ) {
-            Ok(_) => {}
-            Err(e) => {
-                log::error!("Error: {}", e)
-            }
+    spawn_blocking(move || match start_download_podindex(id.track_id, lobby) {
+        Ok(_) => {}
+        Err(e) => {
+            log::error!("Error: {}", e)
         }
     });
     Ok(HttpResponse::Ok().into())
 }
 
-fn start_download_podindex(
-    id: i32,
-    lobby: Data<ChatServerHandle>,
-) -> Result<Podcast, CustomError> {
+fn start_download_podindex(id: i32, lobby: Data<ChatServerHandle>) -> Result<Podcast, CustomError> {
     let rt = Runtime::new().unwrap();
 
     rt.block_on(async {
@@ -434,12 +421,8 @@ responses(
 (status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisode>)),
 tag="podcasts",)]
 #[get("/podcasts/{podcast}/query")]
-pub async fn query_for_podcast(
-    podcast: Path<String>,
-) -> Result<HttpResponse, CustomError> {
-    let res = PodcastEpisodeService::query_for_podcast(
-        &podcast,
-    )?;
+pub async fn query_for_podcast(podcast: Path<String>) -> Result<HttpResponse, CustomError> {
+    let res = PodcastEpisodeService::query_for_podcast(&podcast)?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -466,18 +449,20 @@ pub async fn refresh_all_podcasts(
             podcast_service
                 .lock()
                 .ignore_poison()
-                .refresh_podcast(
-                    podcast.clone(),
-                    lobby.clone(),
-                )
+                .refresh_podcast(podcast.clone(), lobby.clone())
                 .unwrap();
-            lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
-                podcast_episode: None,
-                type_of: PodcastType::RefreshPodcast,
-                message: format!("Refreshed podcast: {}", podcast.name),
-                podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
-                podcast_episodes: None,
-            }).unwrap());
+            let podcast_dto: PodcastDto = podcast.clone().into();
+            lobby.send_broadcast_sync(
+                MAIN_ROOM.parse().unwrap(),
+                serde_json::to_string(&BroadcastMessage {
+                    podcast_episode: None,
+                    type_of: PodcastType::RefreshPodcast,
+                    message: format!("Refreshed podcast: {}", &podcast.name),
+                    podcast: Option::from(podcast_dto),
+                    podcast_episodes: None,
+                })
+                .unwrap(),
+            );
         }
     });
     Ok(HttpResponse::Ok().into())
@@ -502,14 +487,10 @@ pub async fn download_podcast(
 
     let id_num = from_str::<i32>(&id).unwrap();
     let mut podcast_service = podcast_service.lock().ignore_poison();
-    let podcast =
-        podcast_service.get_podcast_by_id(id_num);
+    let podcast = podcast_service.get_podcast_by_id(id_num);
     thread::spawn(move || {
         let mut podcast_service = PodcastService::new();
-        match podcast_service.refresh_podcast(
-            podcast.clone(),
-            lobby.clone(),
-        ) {
+        match podcast_service.refresh_podcast(podcast.clone(), lobby.clone()) {
             Ok(_) => {
                 log::info!("Succesfully refreshed podcast.");
             }
@@ -518,17 +499,12 @@ pub async fn download_podcast(
             }
         }
 
-        let download = podcast_service.schedule_episode_download(
-            podcast.clone(),
-            Some(lobby),
-        );
+        let download = podcast_service.schedule_episode_download(podcast.clone(), Some(lobby));
 
         if download.is_err() {
             log::error!("Error downloading podcast: {}", download.err().unwrap());
         }
     });
-
-
 
     Ok(HttpResponse::Ok().json("Refreshing podcast"))
 }
@@ -568,9 +544,7 @@ pub async fn get_favored_podcasts(
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts(
-        requester.unwrap().username.clone(),
-    )?;
+    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone())?;
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -610,7 +584,7 @@ async fn insert_outline(
                 client.clone(),
                 lobby.clone(),
                 rng.clone(),
-                environment.clone()
+                environment.clone(),
             )
             .await;
         }
@@ -623,13 +597,19 @@ async fn insert_outline(
 
     let feed_response = client.get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
-        lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
-            type_of: PodcastType::OpmlErrored,
-            message: feed_response.err().unwrap().to_string(),
-            podcast: None,
-            podcast_episodes: None,
-            podcast_episode: None,
-        }).unwrap()).await;
+        lobby
+            .send_broadcast(
+                MAIN_ROOM.parse().unwrap(),
+                serde_json::to_string(&BroadcastMessage {
+                    type_of: PodcastType::OpmlErrored,
+                    message: feed_response.err().unwrap().to_string(),
+                    podcast: None,
+                    podcast_episodes: None,
+                    podcast_episode: None,
+                })
+                .unwrap(),
+            )
+            .await;
         return;
     }
     let content = feed_response.unwrap().bytes().await.unwrap();
@@ -665,44 +645,62 @@ async fn insert_outline(
                 .await;
             match inserted_podcast {
                 Ok(podcast) => {
-
-                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
-                        type_of: PodcastType::OpmlAdded,
-                        message: "Refreshed podcasts".to_string(),
-                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
-                        podcast_episodes: None,
-                        podcast_episode: None,
-                    }).unwrap()).await;
-                },
+                    let _ = lobby
+                        .send_broadcast(
+                            MAIN_ROOM.parse().unwrap(),
+                            serde_json::to_string(&BroadcastMessage {
+                                type_of: PodcastType::OpmlAdded,
+                                message: "Refreshed podcasts".to_string(),
+                                podcast: Option::from(<Podcast as Into<PodcastDto>>::into(podcast)),
+                                podcast_episodes: None,
+                                podcast_episode: None,
+                            })
+                            .unwrap(),
+                        )
+                        .await;
+                }
                 Err(e) => {
-                    let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
+                    let _ = lobby
+                        .send_broadcast(
+                            MAIN_ROOM.parse().unwrap(),
+                            serde_json::to_string(&BroadcastMessage {
+                                type_of: PodcastType::OpmlErrored,
+                                message: e.to_string(),
+                                podcast: None,
+                                podcast_episodes: None,
+                                podcast_episode: None,
+                            })
+                            .unwrap(),
+                        )
+                        .await;
+                }
+            }
+        }
+        Err(e) => {
+            let _ = lobby
+                .send_broadcast(
+                    MAIN_ROOM.parse().unwrap(),
+                    serde_json::to_string(&BroadcastMessage {
                         type_of: PodcastType::OpmlErrored,
                         message: e.to_string(),
                         podcast: None,
                         podcast_episodes: None,
                         podcast_episode: None,
-                    }).unwrap()).await;
-                },
-            }
+                    })
+                    .unwrap(),
+                )
+                .await;
         }
-        Err(e) => {
-            let _ = lobby.send_broadcast(MAIN_ROOM.parse().unwrap(),serde_json::to_string(&BroadcastMessage {
-                type_of: PodcastType::OpmlErrored,
-                message: e.to_string(),
-                podcast: None,
-                podcast_episodes: None,
-                podcast_episode: None,
-            }).unwrap()).await;
-        },
     }
 }
 use crate::models::episode::Episode;
-use utoipa::ToSchema;
 use crate::models::tag::Tag;
+use utoipa::ToSchema;
 
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
@@ -780,8 +778,7 @@ pub(crate) async fn proxy_podcast(
         }
         let api_key = query.unwrap().0;
 
-        let api_key_exists =
-            User::check_if_api_key_exists(api_key.api_key.to_string());
+        let api_key_exists = User::check_if_api_key_exists(api_key.api_key.to_string());
 
         if !api_key_exists {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
@@ -804,7 +801,11 @@ pub(crate) async fn proxy_podcast(
     let mut header_map = HeaderMap::new();
     let headers_from_request = rq.headers().clone();
     for (header, header_value) in headers_from_request {
-        if header == "host" || header == "referer" || header == "sec-fetch-site" || header == "sec-fetch-mode" {
+        if header == "host"
+            || header == "referer"
+            || header == "sec-fetch-site"
+            || header == "sec-fetch-mode"
+        {
             continue;
         }
         let header = reqwest::header::HeaderName::from_str(header.as_ref()).unwrap();
@@ -816,8 +817,13 @@ pub(crate) async fn proxy_podcast(
     header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
     header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
     use std::str::FromStr;
-    let forwarded_req = get_async_sync_client().build().unwrap()
-        .request(reqwest::Method::from_str(method.as_str()).unwrap(), episode.url)
+    let forwarded_req = get_async_sync_client()
+        .build()
+        .unwrap()
+        .request(
+            reqwest::Method::from_str(method.as_str()).unwrap(),
+            episode.url,
+        )
         .headers(header_map)
         .fetch_mode_no_cors()
         .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
@@ -832,16 +838,14 @@ pub(crate) async fn proxy_podcast(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    let mut client_resp = HttpResponse::build(actix_web::http::StatusCode::from_u16(res.status()
-        .as_u16()).unwrap
-    ());
+    let mut client_resp =
+        HttpResponse::build(actix_web::http::StatusCode::from_u16(res.status().as_u16()).unwrap());
     for (header_name, header_value) in res.headers().iter() {
         client_resp.insert_header((header_name.as_str(), header_value.to_str().unwrap()));
     }
 
     Ok(client_resp.streaming(res.bytes_stream()))
 }
-
 
 #[put("/podcasts/{id}/settings")]
 pub async fn update_podcast_settings(
@@ -860,7 +864,6 @@ pub async fn update_podcast_settings(
 
     Ok(HttpResponse::Ok().json(updated_podcast))
 }
-
 
 #[get("/podcasts/{id}/settings")]
 pub async fn get_podcast_settings(

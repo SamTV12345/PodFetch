@@ -1,2 +1,2 @@
-pub mod device_response;
 pub mod device_create;
+pub mod device_response;

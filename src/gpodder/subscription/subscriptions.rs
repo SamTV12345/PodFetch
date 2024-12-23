@@ -43,12 +43,8 @@ pub async fn get_subscriptions(
             )
             .await;
 
-
             match res {
-                Ok(res) => {
-
-                    Ok(HttpResponse::Ok().json(res))
-                },
+                Ok(res) => Ok(HttpResponse::Ok().json(res)),
                 Err(_) => Ok(HttpResponse::InternalServerError().finish()),
             }
         }
@@ -69,13 +65,9 @@ pub async fn upload_subscription_changes(
             if flag.username != username.clone() {
                 return Err(CustomError::Forbidden);
             }
-            SubscriptionChangesToClient::update_subscriptions(
-                &deviceid,
-                &username,
-                upload_request,
-            )
-            .await
-            .unwrap();
+            SubscriptionChangesToClient::update_subscriptions(&deviceid, &username, upload_request)
+                .await
+                .unwrap();
 
             Ok(HttpResponse::Ok().json(SubscriptionPostResponse {
                 update_urls: vec![],

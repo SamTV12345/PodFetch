@@ -27,7 +27,6 @@ impl Options {
     }
 }
 
-
 #[derive(Clone)]
 pub struct Sanitizer {
     illegal_re: Regex,
@@ -42,15 +41,16 @@ impl Sanitizer {
     pub fn new(option: Option<Options>) -> Sanitizer {
         let options_retrieved = option.unwrap_or_default();
 
-
         Sanitizer {
             illegal_re: Regex::new(r#"[/\?<>\\:\*\|":]"#).unwrap(),
             control_re: Regex::new(r#"[\x00-\x1f\x80-\x9f]"#).unwrap(),
             reserved_re: Regex::new(r#"^\.+$"#).unwrap(),
-            windows_reserved_re: RegexBuilder::new(r#"(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$"#)
-                .case_insensitive(true)
-                .build()
-                .unwrap(),
+            windows_reserved_re: RegexBuilder::new(
+                r#"(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$"#,
+            )
+            .case_insensitive(true)
+            .build()
+            .unwrap(),
             windows_trailing_re: Regex::new(r#"[\. ]+$"#).unwrap(),
             options: options_retrieved,
         }
@@ -60,9 +60,12 @@ impl Sanitizer {
         self.sanitize_with_options(name)
     }
 
-
     pub fn sanitize_with_options<S: AsRef<str>>(&self, name: S) -> String {
-        let Options { windows, truncate, replacement } = self.options.clone();
+        let Options {
+            windows,
+            truncate,
+            replacement,
+        } = self.options.clone();
         let name = name.as_ref();
 
         let name = self.illegal_re.replace_all(name, &replacement);
@@ -73,7 +76,9 @@ impl Sanitizer {
             if truncate && name.len() > 255 {
                 let mut end = 255;
                 loop {
-                    if name.is_char_boundary(end) { break; }
+                    if name.is_char_boundary(end) {
+                        break;
+                    }
                     end -= 1;
                 }
                 String::from(&name[..end])
@@ -91,9 +96,10 @@ impl Sanitizer {
         }
     }
 
-
     pub fn is_sanitized_with_options<S: AsRef<str>>(&self, name: S) -> bool {
-        let Options { windows, truncate, .. } = self.options;
+        let Options {
+            windows, truncate, ..
+        } = self.options;
         let name = name.as_ref();
 
         if self.illegal_re.is_match(name) {
@@ -120,7 +126,6 @@ impl Sanitizer {
         true
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -170,7 +175,7 @@ mod tests {
         "./././foobar",
         "|*.what",
         "LPT9.asdf",
-        "foobar..."
+        "foobar...",
     ];
 
     static NAMES_CLEANED: &[&str] = &[
@@ -216,53 +221,14 @@ mod tests {
         "...foobar",
         ".what",
         "",
-        "foobar"
+        "foobar",
     ];
 
     static NAMES_IS_SANITIZED: &[bool] = &[
-        true,
-        true,
-        false,
-        false,
-        true,
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
+        true, true, false, false, true, true, false, false, false, false, false, false, true,
+        false, false, true, false, true, false, true, false, false, false, false, true, false,
+        false, false, false, false, false, false, false, false, false, false, false, false, false,
+        false, false, false, false,
     ];
 
     #[test]
@@ -293,7 +259,10 @@ mod tests {
         let sanitizer = Sanitizer::new(Some(options));
 
         for (idx, name) in NAMES.iter().enumerate() {
-            assert_eq!(sanitizer.is_sanitized_with_options(name), NAMES_IS_SANITIZED[idx]);
+            assert_eq!(
+                sanitizer.is_sanitized_with_options(name),
+                NAMES_IS_SANITIZED[idx]
+            );
         }
 
         let long = "a".repeat(300);

@@ -1,12 +1,12 @@
-use std::process::exit;
-use std::sync::OnceLock;
-use std::time::Duration;
-use diesel::Connection;
-use diesel::r2d2::ConnectionManager;
-use r2d2::Pool;
 use crate::adapters::persistence::dbconfig::DBType;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::DbPool;
+use diesel::r2d2::ConnectionManager;
+use diesel::Connection;
+use r2d2::Pool;
+use std::process::exit;
+use std::sync::OnceLock;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct ConnectionOptions {
@@ -30,7 +30,7 @@ impl r2d2::CustomizeConnection<DBType, diesel::r2d2::Error> for ConnectionOption
             }
             Ok(())
         })()
-            .map_err(diesel::r2d2::Error::QueryError)
+        .map_err(diesel::r2d2::Error::QueryError)
     }
 }
 
@@ -44,7 +44,6 @@ pub fn establish_connection() -> DBType {
 
 static POOL: OnceLock<DbPool> = OnceLock::new();
 
-
 pub fn get_connection() -> r2d2::PooledConnection<ConnectionManager<DBType>> {
     POOL.get_or_init(init_pool).get().unwrap()
 }
@@ -56,17 +55,12 @@ fn init_pool() -> DbPool {
             init_postgres_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
                 .expect("Failed to connect to database")
         }
-        DBType::Sqlite(_) => {
-            init_sqlite_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
-                .expect("Failed to connect to database")
-        }
+        DBType::Sqlite(_) => init_sqlite_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
+            .expect("Failed to connect to database"),
     }
 }
 
-
-fn init_postgres_db_pool(
-    database_url: &str,
-) -> Result<Pool<ConnectionManager<DBType>>, String> {
+fn init_postgres_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBType>>, String> {
     let env_service = ENVIRONMENT_SERVICE.get().unwrap();
     let db_connections = env_service.conn_number;
     let manager = ConnectionManager::<DBType>::new(database_url);
@@ -77,9 +71,7 @@ fn init_postgres_db_pool(
     Ok(pool)
 }
 
-fn init_sqlite_db_pool(
-    database_url: &str,
-) -> Result<Pool<ConnectionManager<DBType>>, String> {
+fn init_sqlite_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBType>>, String> {
     let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder()
         .max_size(16)

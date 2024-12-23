@@ -1,9 +1,10 @@
 use crate::adapters::persistence::dbconfig::schema::*;
 
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::service::mapping_service::MappingService;
+use crate::models::tag::Tag;
 use crate::utils::do_retry::do_retry;
 use crate::utils::podcast_builder::PodcastExtra;
 use crate::DBType as DbConnection;
@@ -15,8 +16,6 @@ use diesel::{
     delete, insert_into, BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl,
 };
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::models::tag::Tag;
 
 use crate::utils::error::{map_db_error, CustomError};
 #[derive(
@@ -27,9 +26,6 @@ use crate::utils::error::{map_db_error, CustomError};
     Debug,
     PartialEq,
     Clone,
-    ToSchema,
-    Serialize,
-    Deserialize,
     Default,
 )]
 pub struct Podcast {
@@ -73,9 +69,7 @@ impl Podcast {
             .expect("Error loading podcast by rss feed url")
     }
 
-    pub fn get_podcasts(
-        u: String,
-    ) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: String) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username;
@@ -90,7 +84,7 @@ impl Podcast {
             .iter()
             .map(|podcast| {
                 let tags = Tag::get_tags_of_podcast(podcast.0.id, &u).unwrap();
-                MappingService::map_podcast_to_podcast_dto_with_favorites(podcast, tags)
+                (podcast.0.clone(), podcast.1.clone(), tags).into()
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
@@ -98,13 +92,13 @@ impl Podcast {
 
     pub fn get_all_podcasts() -> Result<Vec<Podcast>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
-        let result = podcasts.load::<Podcast>(&mut get_connection()).map_err(map_db_error)?;
+        let result = podcasts
+            .load::<Podcast>(&mut get_connection())
+            .map_err(map_db_error)?;
         Ok(result)
     }
 
-    pub fn get_podcast(
-        podcast_id_to_be_found: i32,
-    ) -> Result<Podcast, CustomError> {
+    pub fn get_podcast(podcast_id_to_be_found: i32) -> Result<Podcast, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::adapters::persistence::dbconfig::schema::podcasts::id as podcast_id;
         let found_podcast = podcasts
@@ -119,9 +113,7 @@ impl Podcast {
         }
     }
 
-    pub fn delete_podcast(
-        podcast_id_to_find: i32,
-    ) -> Result<(), CustomError> {
+    pub fn delete_podcast(podcast_id_to_find: i32) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
         let _ = delete(podcasts.filter(id.eq(podcast_id_to_find)))
             .execute(&mut get_connection())
@@ -129,9 +121,7 @@ impl Podcast {
         Ok(())
     }
 
-    pub fn get_podcast_by_track_id(
-        podcast_id: i32,
-    ) -> Result<Option<Podcast>, CustomError> {
+    pub fn get_podcast_by_track_id(podcast_id: i32) -> Result<Option<Podcast>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::directory_id;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
         let optional_podcast = podcasts
@@ -153,7 +143,9 @@ impl Podcast {
         use crate::adapters::persistence::dbconfig::schema::podcasts::{
             directory_id, image_url, name as podcast_name, rssfeed,
         };
-        use crate::adapters::persistence::dbconfig::schema::podcasts::{directory_name, original_image_url};
+        use crate::adapters::persistence::dbconfig::schema::podcasts::{
+            directory_name, original_image_url,
+        };
 
         let inserted_podcast = insert_into(podcasts::table)
             .values((
@@ -195,9 +187,7 @@ impl Podcast {
         Ok(result)
     }
 
-    pub fn query_for_podcast(
-        query: &str,
-    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+    pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
         use diesel::TextExpressionMethods;
         let result = podcast_episodes
@@ -210,9 +200,7 @@ impl Podcast {
         Ok(result)
     }
 
-    pub fn update_podcast_fields(
-        podcast_extra: PodcastExtra,
-    ) -> Result<usize, CustomError> {
+    pub fn update_podcast_fields(podcast_extra: PodcastExtra) -> Result<usize, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 
         do_retry(|| {
@@ -231,9 +219,7 @@ impl Podcast {
         .map_err(map_db_error)
     }
 
-    pub fn update_podcast_active(
-        podcast_id: i32,
-    ) -> Result<(), CustomError> {
+    pub fn update_podcast_active(podcast_id: i32) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 
         let found_podcast = Podcast::get_podcast(podcast_id)?;
@@ -259,10 +245,7 @@ impl Podcast {
         Ok(())
     }
 
-    pub fn update_podcast_urls_on_redirect(
-        podcast_id_to_update: i32,
-        new_url: String,
-    ) {
+    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: String) {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as pid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 

@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::Role;
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::CustomError;
 use sha256::digest;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 pub struct UserManagementService {}
 
@@ -108,9 +108,7 @@ impl UserManagementService {
         User::delete_user(&user)
     }
 
-    pub fn update_user(
-        user_to_update: User,
-    ) -> Result<UserWithoutPassword, CustomError> {
+    pub fn update_user(user_to_update: User) -> Result<UserWithoutPassword, CustomError> {
         match User::update_role(&user_to_update) {
             Ok(user) => {
                 match User::update_explicit_consent(&user_to_update) {
@@ -164,9 +162,7 @@ impl UserManagementService {
         }
     }
 
-    pub fn get_users(
-        requester: User,
-    ) -> Result<Vec<UserWithoutPassword>, CustomError> {
+    pub fn get_users(requester: User) -> Result<Vec<UserWithoutPassword>, CustomError> {
         if !Self::may_onboard_user(requester) {
             return Err(CustomError::Forbidden);
         }

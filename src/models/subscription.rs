@@ -5,6 +5,7 @@ use diesel::ExpressionMethods;
 use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use std::io::Error;
 
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::subscriptions;
 use crate::utils::time::get_current_timestamp;
 use crate::DBType as DbConnection;
@@ -13,7 +14,6 @@ use diesel::OptionalExtension;
 use diesel::{AsChangeset, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Debug,
@@ -75,7 +75,9 @@ impl SubscriptionChangesToClient {
         username: &str,
         since: i32,
     ) -> Result<SubscriptionChangesToClient, Error> {
-        let since = DateTime::from_timestamp(since as i64, 0).map(|v|v.naive_utc()).unwrap();
+        let since = DateTime::from_timestamp(since as i64, 0)
+            .map(|v| v.naive_utc())
+            .unwrap();
         let res: Vec<Subscription> = subscriptions::table
             .filter(subscriptions::username.eq(username))
             .filter(
@@ -117,15 +119,12 @@ impl SubscriptionChangesToClient {
                 return;
             }
 
-            let opt_sub = Self::find_by_podcast(
-                username.to_string(),
-                device_id.to_string(),
-                c.to_string(),
-            )
-            .expect(
-                "Error retrieving \
+            let opt_sub =
+                Self::find_by_podcast(username.to_string(), device_id.to_string(), c.to_string())
+                    .expect(
+                        "Error retrieving \
                                              subscription",
-            );
+                    );
             match opt_sub {
                 Some(s) => {
                     diesel::update(subscriptions.filter(dsl_types::id.eq(s.id)))
@@ -156,15 +155,12 @@ impl SubscriptionChangesToClient {
                 rewritten_urls.push(vec![c.to_string(), "".to_string()]);
                 return;
             }
-            let opt_sub = Self::find_by_podcast(
-                username.to_string(),
-                device_id.to_string(),
-                c.to_string(),
-            )
-            .expect(
-                "Error retrieving \
+            let opt_sub =
+                Self::find_by_podcast(username.to_string(), device_id.to_string(), c.to_string())
+                    .expect(
+                        "Error retrieving \
                                              subscription",
-            );
+                    );
             if let Some(s) = opt_sub {
                 diesel::update(subscriptions.filter(dsl_types::id.eq(s.id)))
                     .set(dsl_types::deleted.eq(Some(Utc::now().naive_utc())))

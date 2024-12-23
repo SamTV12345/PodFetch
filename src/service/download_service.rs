@@ -1,17 +1,14 @@
-use std::fs::File;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::FileService;
+use std::fs::File;
 
 use reqwest::blocking::ClientBuilder;
 
-use id3::{ErrorKind, Tag, TagLike, Version};
-use reqwest::header::{HeaderMap, HeaderValue};
-use std::io;
-use std::io::Read;
-use file_format::FileFormat;
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::constants::inner_constants::{COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME};
+use crate::constants::inner_constants::{
+    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME,
+};
 use crate::get_default_image;
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_settings::PodcastSetting;
@@ -20,6 +17,11 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::error::CustomError;
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
+use file_format::FileFormat;
+use id3::{ErrorKind, Tag, TagLike, Version};
+use reqwest::header::{HeaderMap, HeaderValue};
+use std::io;
+use std::io::Read;
 
 pub struct DownloadService {
     pub file_service: FileService,
@@ -35,7 +37,7 @@ impl DownloadService {
     pub fn download_podcast_episode(
         &mut self,
         podcast_episode: PodcastEpisode,
-        podcast: Podcast
+        podcast: Podcast,
     ) -> Result<(), CustomError> {
         let client = ClientBuilder::new().build().unwrap();
         let conn = &mut get_connection();
@@ -45,7 +47,10 @@ impl DownloadService {
             determine_file_extension(&podcast_episode.image_url, &client, FileType::Image);
 
         let mut header_map = HeaderMap::new();
-        header_map.insert("User-Agent", HeaderValue::from_str(COMMON_USER_AGENT).unwrap());
+        header_map.insert(
+            "User-Agent",
+            HeaderValue::from_str(COMMON_USER_AGENT).unwrap(),
+        );
         add_basic_auth_headers_conditionally(podcast_episode.url.clone(), &mut header_map);
         let mut resp = client
             .get(podcast_episode.url.clone())
@@ -135,7 +140,11 @@ impl DownloadService {
         Ok(())
     }
 
-    pub fn handle_metadata_insertion(paths: &FilenameBuilderReturn, podcast_episode: &PodcastEpisode, podcast: &Podcast) -> Result<(), CustomError> {
+    pub fn handle_metadata_insertion(
+        paths: &FilenameBuilderReturn,
+        podcast_episode: &PodcastEpisode,
+        podcast: &Podcast,
+    ) -> Result<(), CustomError> {
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
 
         match detected_file {
@@ -144,27 +153,27 @@ impl DownloadService {
                 if let Some(err) = result_of_update.err() {
                     log::error!("Error updating metadata: {:?}", err);
                 }
-            },
-            FileFormat::AppleItunesAudio =>{
-                let result_of_itunes = Self::update_meta_data_mp4(paths, podcast_episode,
-                                                                  podcast);
+            }
+            FileFormat::AppleItunesAudio => {
+                let result_of_itunes = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_itunes.err() {
                     log::error!("Error updating metadata: {:?}", err);
                 }
-            },
+            }
             _ => {
                 log::error!("File format not supported: {:?}", detected_file);
-                return Err(CustomError::Conflict("File format not supported".to_string()))
+                return Err(CustomError::Conflict(
+                    "File format not supported".to_string(),
+                ));
             }
         }
         Ok(())
     }
 
-
     fn update_meta_data_mp3(
         paths: &FilenameBuilderReturn,
         podcast_episode: &PodcastEpisode,
-        podcast: &Podcast
+        podcast: &Podcast,
     ) -> Result<(), CustomError> {
         let mut tag = match Tag::read_from_path(&paths.filename) {
             Ok(tag) => tag,
@@ -192,31 +201,40 @@ impl DownloadService {
         }
 
         let mut conn = get_connection();
-        let index = PodcastEpisode::get_position_of_episode(&podcast_episode.date_of_recording,
-                                                          podcast_episode.podcast_id,
-                                      &mut conn)?;
+        let index = PodcastEpisode::get_position_of_episode(
+            &podcast_episode.date_of_recording,
+            podcast_episode.podcast_id,
+            &mut conn,
+        )?;
 
         let settings_for_podcast = PodcastSetting::get_settings(podcast.id)?;
 
         if let Some(settings_for_podcast) = settings_for_podcast {
             if settings_for_podcast.episode_numbering {
-                if  !podcast_episode.episode_numbering_processed {
+                if !podcast_episode.episode_numbering_processed {
                     tag.set_title(format!("{} - {}", index, &podcast_episode.name));
-                    PodcastEpisode::update_episode_numbering_processed(&mut conn, true,
-                                                                       &podcast_episode.episode_id);
+                    PodcastEpisode::update_episode_numbering_processed(
+                        &mut conn,
+                        true,
+                        &podcast_episode.episode_id,
+                    );
                 }
             } else {
                 tag.set_title(&podcast_episode.name);
-                PodcastEpisode::update_episode_numbering_processed(&mut conn, false, &podcast_episode
-                    .episode_id)
+                PodcastEpisode::update_episode_numbering_processed(
+                    &mut conn,
+                    false,
+                    &podcast_episode.episode_id,
+                )
             }
         } else {
             tag.set_title(&podcast_episode.name);
-            PodcastEpisode::update_episode_numbering_processed(&mut conn, false, &podcast_episode
-                .episode_id)
+            PodcastEpisode::update_episode_numbering_processed(
+                &mut conn,
+                false,
+                &podcast_episode.episode_id,
+            )
         }
-
-
 
         if tag.artist().is_none() {
             if let Some(author) = &podcast.author {
@@ -255,17 +273,19 @@ impl DownloadService {
             }
         }
 
-        let write_succesful = tag.write_to_path(&paths.filename, Version::Id3v24)
+        let write_succesful = tag
+            .write_to_path(&paths.filename, Version::Id3v24)
             .map(|_| ())
             .map_err(|e| CustomError::Conflict(e.to_string()));
 
         if write_succesful.is_err() {
-           log::error!("Error writing metadata: {:?}", write_succesful.err().unwrap());
+            log::error!(
+                "Error writing metadata: {:?}",
+                write_succesful.err().unwrap()
+            );
         }
         Ok(())
     }
-
-
 
     fn update_meta_data_mp4(
         paths: &FilenameBuilderReturn,
@@ -275,8 +295,6 @@ impl DownloadService {
         let tag = mp4ameta::Tag::read_from_path(&paths.filename);
         match tag {
             Ok(mut tag) => {
-
-
                 tag.set_title(&podcast_episode.name);
                 tag.set_artist(podcast.clone().author.unwrap_or("Unknown".to_string()));
                 tag.set_album(&podcast.name);
@@ -300,13 +318,12 @@ impl DownloadService {
 
                 tag.write_to_path(&paths.filename).unwrap();
                 Ok(())
-            },
+            }
             Err(e) => {
                 log::error!("Error reading metadata: {:?}", e);
                 let err = CustomError::Conflict(e.to_string());
                 Err(err)
             }
         }
-
     }
 }

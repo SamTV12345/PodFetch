@@ -1,3 +1,4 @@
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::models::session::Session;
 use actix::fut::ok;
 use actix_web::body::{EitherBody, MessageBody};
@@ -11,7 +12,6 @@ use diesel::{OptionalExtension, QueryDsl, RunQueryDsl};
 use futures_util::future::{LocalBoxFuture, Ready};
 use futures_util::FutureExt;
 use std::rc::Rc;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 pub struct CookieFilter {}
 

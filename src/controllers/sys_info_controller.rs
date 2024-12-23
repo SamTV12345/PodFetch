@@ -51,7 +51,6 @@ pub struct SysExtraInfo {
     pub podcast_directory: u64,
 }
 
-
 impl From<System> for SystemDto {
     fn from(sys: System) -> Self {
         SystemDto {
@@ -91,7 +90,7 @@ pub struct SystemDto {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct CpusWrapperDto {
     global: f32,
-    cpus: Vec<Cpu>
+    cpus: Vec<Cpu>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -105,7 +104,7 @@ pub struct Cpu {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct CpuUsageDto {
-    percent: f32
+    percent: f32,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -114,7 +113,6 @@ pub struct SimplifiedDisk {
     pub total_space: u64,
     pub available_space: u64,
 }
-
 
 impl From<&Disk> for SimplifiedDisk {
     fn from(disk: &Disk) -> Self {
@@ -148,9 +146,7 @@ body=String)),
 tag="sys"
 )]
 #[post("/login")]
-pub async fn login(
-    auth: web::Json<LoginRequest>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn login(auth: web::Json<LoginRequest>) -> Result<HttpResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
     let env_service = ENVIRONMENT_SERVICE.get().unwrap();
 

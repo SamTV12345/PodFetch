@@ -1,8 +1,11 @@
-use crate::controllers::web_socket::{chat_ws};
+use crate::controllers::web_socket::chat_ws;
 
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::controllers::server::ChatServerHandle;
+use crate::models::user::User;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
@@ -17,9 +20,6 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::server::ChatServerHandle;
-use crate::models::user::User;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -35,11 +35,7 @@ pub async fn start_connection(
     let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
 
     // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws(
-        (**chat_server).clone(),
-        session,
-        msg_stream,
-    ));
+    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream));
 
     Ok(res)
 }
@@ -83,12 +79,8 @@ pub async fn get_rss_feed(
     }
 
     let downloaded_episodes = match query {
-        Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(
-            q.top,
-        )?,
-        None => PodcastEpisodeService::find_all_downloaded_podcast_episodes(
-            env,
-        )?,
+        Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(q.top)?,
+        None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };
 
     let server_url = env.get_server_url();
@@ -175,8 +167,7 @@ pub async fn get_rss_feed_for_podcast(
         }
         let api_key = api_key.as_ref().unwrap().api_key.to_string();
 
-        let api_key_exists =
-            User::check_if_api_key_exists(api_key);
+        let api_key_exists = User::check_if_api_key_exists(api_key);
 
         if !api_key_exists {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
@@ -186,9 +177,7 @@ pub async fn get_rss_feed_for_podcast(
     let podcast = Podcast::get_podcast(*id)?;
 
     let downloaded_episodes =
-        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(
-            *id,
-        )?;
+        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?;
 
     let mut itunes_owner = get_itunes_owner("", "");
 

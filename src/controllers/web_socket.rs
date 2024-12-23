@@ -1,11 +1,11 @@
-use std::pin::pin;
-use std::time::{Duration, Instant};
+use crate::controllers::server::{ChatServerHandle, ConnId};
 use actix_ws::AggregatedMessage;
 use futures_util::future::{select, Either};
 use futures_util::StreamExt;
+use std::pin::pin;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::interval;
-use crate::controllers::server::{ChatServerHandle, ConnId};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -132,14 +132,13 @@ async fn process_text_msg(
         let mut cmd_args = msg.splitn(2, ' ');
 
         // unwrap: we have guaranteed non-zero string length already
-             cmd_args.next().unwrap();
-               {
-                         session
-                           .text(format!("!!! unknown command: {msg}"))
-                           .await
-                           .unwrap();
-               }
-
+        cmd_args.next().unwrap();
+        {
+            session
+                .text(format!("!!! unknown command: {msg}"))
+                .await
+                .unwrap();
+        }
     } else {
         // prefix message with our name, if assigned
         let msg = match name {

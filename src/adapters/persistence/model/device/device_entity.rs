@@ -1,11 +1,11 @@
 use crate::adapters::persistence::dbconfig::schema::devices;
+use crate::domain::models::device::model::Device;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::{execute_with_conn, DBType as DbConnection};
+use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{Insertable, Queryable, QueryableByName, RunQueryDsl};
 use utoipa::ToSchema;
-use diesel::ExpressionMethods;
-use crate::domain::models::device::model::Device;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 #[diesel(table_name=devices)]
@@ -18,10 +18,9 @@ pub struct DeviceEntity {
     pub username: String,
 }
 
-
-impl From<Device> for DeviceEntity{
+impl From<Device> for DeviceEntity {
     fn from(value: Device) -> Self {
-        DeviceEntity{
+        DeviceEntity {
             id: value.id,
             deviceid: value.deviceid,
             kind: value.kind,
@@ -38,7 +37,7 @@ impl From<DeviceEntity> for Device {
             kind: val.kind,
             name: val.name,
             deviceid: val.deviceid,
-            username: val.username
+            username: val.username,
         }
     }
 }
@@ -57,10 +56,8 @@ impl DeviceEntity {
     #[allow(clippy::redundant_closure_call)]
     pub fn save(&self) -> Result<DeviceEntity, diesel::result::Error> {
         use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
-        
-        execute_with_conn!(|conn| diesel::insert_into(devices)
-            .values(self)
-            .get_result(conn));
+
+        execute_with_conn!(|conn| diesel::insert_into(devices).values(self).get_result(conn));
     }
 
     pub fn get_devices_of_user(
@@ -72,7 +69,6 @@ impl DeviceEntity {
             .filter(username.eq(username_to_insert))
             .load::<DeviceEntity>(conn)
     }
-
 
     pub fn delete_by_username(
         username1: &str,

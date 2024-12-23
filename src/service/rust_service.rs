@@ -1,31 +1,33 @@
-use crate::constants::inner_constants::{PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL, MAIN_ROOM};
+use crate::constants::inner_constants::{
+    PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL, MAIN_ROOM,
+};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 
 use crate::models::messages::BroadcastMessage;
 use crate::models::misc_models::PodcastInsertModel;
 
-use crate::service::file_service::FileService;
-use crate::service::mapping_service::MappingService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::unwrap_string;
-use actix_web::web::Data;
-use reqwest::header::{HeaderMap, HeaderValue};
-use rss::Channel;
-use serde_json::Value;
-use sha1::{Digest, Sha1};
-use std::time::SystemTime;
-use reqwest::Client;
-use serde::Serialize;
-use tokio::task::spawn_blocking;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::models::settings::Setting;
-use crate::utils::error::{map_reqwest_error, CustomError};
 use crate::models::podcast_settings::PodcastSetting;
-use crate::utils::reqwest_client::get_async_sync_client;
+use crate::models::settings::Setting;
 use crate::models::tag::Tag;
+use crate::service::file_service::FileService;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::unwrap_string;
+use crate::utils::error::{map_reqwest_error, CustomError};
+use crate::utils::reqwest_client::get_async_sync_client;
+use actix_web::web::Data;
+use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::Client;
+use rss::Channel;
+use serde::Serialize;
+use serde_json::Value;
+use sha1::{Digest, Sha1};
+use std::time::SystemTime;
+use tokio::task::spawn_blocking;
 
 #[derive(Clone)]
 pub struct PodcastService {
@@ -69,7 +71,6 @@ impl PodcastService {
     }
 
     pub async fn find_podcast_on_podindex(&mut self, podcast: &str) -> Result<Value, CustomError> {
-
         let headers = self.compute_podindex_header();
 
         let query = vec![("q", podcast)];
@@ -175,16 +176,18 @@ impl PodcastService {
             .await;
         let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id).unwrap();
         lobby
-            .send_broadcast(MAIN_ROOM.parse().unwrap(), serde_json::to_string(&BroadcastMessage {
-                podcast_episode: None,
-                type_of: PodcastType::AddPodcast,
-                message: format!("Added podcast: {}", inserted_podcast.name),
-                podcast: Option::from(MappingService::map_podcast_to_podcast_dto(
-                    &podcast.clone().unwrap(),
-                    vec![]
-                )),
-                podcast_episodes: None,
-            }).unwrap()).await;
+            .send_broadcast(
+                MAIN_ROOM.parse().unwrap(),
+                serde_json::to_string(&BroadcastMessage {
+                    podcast_episode: None,
+                    type_of: PodcastType::AddPodcast,
+                    message: format!("Added podcast: {}", inserted_podcast.name),
+                    podcast: podcast.clone().map(|p| p.into()),
+                    podcast_episodes: None,
+                })
+                .unwrap(),
+            )
+            .await;
         match podcast {
             Some(podcast) => {
                 spawn_blocking(move || {
@@ -192,19 +195,25 @@ impl PodcastService {
 
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
                     let inserted_podcasts =
-                        PodcastEpisodeService::insert_podcast_episodes(podcast.clone())
-                            .unwrap();
+                        PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
 
-                    lobby.send_broadcast_sync(MAIN_ROOM.parse().unwrap(), serde_json::to_string
-                        (&BroadcastMessage {
-                        podcast_episode: None,
-                        type_of: PodcastType::AddPodcastEpisodes,
-                        message: format!("Added podcast episodes: {}", podcast.name),
-                        podcast: Option::from(MappingService::map_podcast_to_podcast_dto(&podcast, vec![])),
-                        podcast_episodes: Option::from(inserted_podcasts),
-                    }).unwrap());
-                    if let Err(e) =
-                        podcast_service.schedule_episode_download(podcast, Some(lobby))
+                    lobby.send_broadcast_sync(
+                        MAIN_ROOM.parse().unwrap(),
+                        serde_json::to_string(&BroadcastMessage {
+                            podcast_episode: None,
+                            type_of: PodcastType::AddPodcastEpisodes,
+                            message: format!("Added podcast episodes: {}", podcast.name),
+                            podcast: Some(podcast.clone().into()),
+                            podcast_episodes: Option::from(
+                                inserted_podcasts
+                                    .into_iter()
+                                    .map(|p| p.into())
+                                    .collect::<Vec<PodcastEpisodeDto>>(),
+                            ),
+                        })
+                        .unwrap(),
+                    );
+                    if let Err(e) = podcast_service.schedule_episode_download(podcast, Some(lobby))
                     {
                         log::error!("Error scheduling episode download: {}", e);
                     }
@@ -228,7 +237,9 @@ impl PodcastService {
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
         match settings {
             Some(settings) => {
-                if (podcast_settings.is_some() && podcast_settings.unwrap().auto_download) || settings.auto_download {
+                if (podcast_settings.is_some() && podcast_settings.unwrap().auto_download)
+                    || settings.auto_download
+                {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
                     for podcast_episode in result {
@@ -331,15 +342,11 @@ impl PodcastService {
         headers
     }
 
-    pub fn get_podcast(
-        podcast_id_to_be_searched: i32,
-    ) -> Result<Podcast, CustomError> {
+    pub fn get_podcast(podcast_id_to_be_searched: i32) -> Result<Podcast, CustomError> {
         Podcast::get_podcast(podcast_id_to_be_searched)
     }
 
-    pub fn get_podcasts(
-        u: String,
-    ) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: String) -> Result<Vec<PodcastDto>, CustomError> {
         Podcast::get_podcasts(u)
     }
 
@@ -352,23 +359,28 @@ impl PodcastService {
         tag: Option<String>,
     ) -> Result<Vec<impl Serialize>, CustomError> {
         let podcasts =
-            Favorite::search_podcasts_favored(order, title, latest_pub,
-                                              &designated_username)?;
-        let mut podcast_dto_vec = Vec::new();
+            Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?;
+        let mut podcast_dto_vec: Vec<PodcastDto> = Vec::new();
         for podcast in podcasts {
             let tags_of_podcast = Tag::get_tags_of_podcast(podcast.0.id, &designated_username)?;
-            let podcast_dto =
-                MappingService::map_podcast_to_podcast_dto_with_favorites_option(&podcast, tags_of_podcast);
-            podcast_dto_vec.push(podcast_dto);
+            podcast_dto_vec.push(
+                (
+                    podcast.0.clone(),
+                    Some(podcast.1.clone()),
+                    tags_of_podcast.clone(),
+                )
+                    .into(),
+            );
         }
 
         if let Some(tag) = tag {
-            let found_tag =  Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
+            let found_tag = Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
 
             if let Some(foud_tag) = found_tag {
-                podcast_dto_vec = podcast_dto_vec.into_iter().filter(|p|{
-                    p.tags.iter().any(|t| t.id == foud_tag.id)
-                }).collect::<Vec<PodcastDto>>()
+                podcast_dto_vec = podcast_dto_vec
+                    .into_iter()
+                    .filter(|p| p.tags.iter().any(|t| t.id == foud_tag.id))
+                    .collect::<Vec<PodcastDto>>()
             }
         }
 
@@ -383,24 +395,23 @@ impl PodcastService {
         designated_username: String,
         tag: Option<String>,
     ) -> Result<Vec<PodcastDto>, CustomError> {
-        let podcasts =
-            Favorite::search_podcasts(order, title, latest_pub, &designated_username)?;
+        let podcasts = Favorite::search_podcasts(order, title, latest_pub, &designated_username)?;
         let mut mapped_result = podcasts
             .iter()
             .map(|podcast| {
                 let tags = Tag::get_tags_of_podcast(podcast.0.id, &designated_username).unwrap();
-                MappingService::map_podcast_to_podcast_dto_with_favorites(podcast, tags)
+                (podcast.0.clone(), podcast.1.clone(), tags).into()
             })
             .collect::<Vec<PodcastDto>>();
 
-
         if let Some(tag) = tag {
-            let found_tag =  Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
+            let found_tag = Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
 
             if let Some(foud_tag) = found_tag {
-                mapped_result = mapped_result.into_iter().filter(|p|{
-                    p.tags.iter().any(|t| t.id == foud_tag.id)
-                }).collect::<Vec<PodcastDto>>()
+                mapped_result = mapped_result
+                    .into_iter()
+                    .filter(|p| p.tags.iter().any(|t| t.id == foud_tag.id))
+                    .collect::<Vec<PodcastDto>>()
             }
         }
         Ok(mapped_result)

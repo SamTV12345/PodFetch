@@ -67,12 +67,8 @@ responses(
 tag="info"
 )]
 #[get("")]
-pub async fn get_users(
-    requester: Option<web::ReqData<User>>,
-) -> Result<HttpResponse, CustomError> {
-    let res = UserManagementService::get_users(
-        requester.unwrap().into_inner(),
-    )?;
+pub async fn get_users(requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
+    let res = UserManagementService::get_users(requester.unwrap().into_inner())?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -98,9 +94,7 @@ pub async fn get_user(
         return Err(CustomError::Forbidden);
     }
 
-    let user = User::find_by_username(
-        &username.clone(),
-    )?;
+    let user = User::find_by_username(&username.clone())?;
     Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
 }
 
@@ -120,16 +114,13 @@ pub async fn update_role(
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
     }
-    let mut user_to_update =
-        User::find_by_username(&username)?;
+    let mut user_to_update = User::find_by_username(&username)?;
 
     // Update to his/her designated role
     user_to_update.role = role.role.to_string();
     user_to_update.explicit_consent = role.explicit_consent;
 
-    let res = UserManagementService::update_user(
-        user_to_update,
-    )?;
+    let res = UserManagementService::update_user(user_to_update)?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -148,8 +139,7 @@ pub async fn update_user(
     if old_username != &username {
         return Err(CustomError::Forbidden);
     }
-    let mut user =
-        User::find_by_username(&username)?;
+    let mut user = User::find_by_username(&username)?;
 
     if let Some(admin_username) = ENVIRONMENT_SERVICE.get().unwrap().username.clone() {
         if admin_username == user.username {
@@ -162,9 +152,7 @@ pub async fn update_user(
     if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured
     {
         // Check if this username is already taken
-        let new_username_res = User::find_by_username(
-            &user_update.username,
-        );
+        let new_username_res = User::find_by_username(&user_update.username);
         if new_username_res.is_ok() {
             return Err(CustomError::Conflict("Username already taken".to_string()));
         }
@@ -226,8 +214,7 @@ pub async fn get_invites(
         return Err(CustomError::Forbidden);
     }
 
-    let invites =
-        UserManagementService::get_invites()?;
+    let invites = UserManagementService::get_invites()?;
 
     Ok(HttpResponse::Ok().json(invites))
 }
@@ -239,12 +226,8 @@ responses(
 tag="info"
 )]
 #[get("/users/invites/{invite_id}")]
-pub async fn get_invite(
-    invite_id: web::Path<String>,
-) -> Result<HttpResponse, CustomError> {
-    match UserManagementService::get_invite(
-        invite_id.into_inner(),
-    ) {
+pub async fn get_invite(invite_id: web::Path<String>) -> Result<HttpResponse, CustomError> {
+    match UserManagementService::get_invite(invite_id.into_inner()) {
         Ok(invite) => Ok(HttpResponse::Ok().json(invite)),
         Err(e) => Ok(HttpResponse::BadRequest().body(e.to_string())),
     }
@@ -265,11 +248,8 @@ pub async fn delete_user(
         return Err(CustomError::Forbidden);
     }
 
-    let user_to_delete =
-        User::find_by_username(&username).unwrap();
-    match UserManagementService::delete_user(
-        user_to_delete,
-    ) {
+    let user_to_delete = User::find_by_username(&username).unwrap();
+    match UserManagementService::delete_user(user_to_delete) {
         Ok(_) => Ok(HttpResponse::Ok().into()),
         Err(e) => Err(e),
     }
@@ -312,9 +292,7 @@ pub async fn delete_invite(
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
     }
 
-    match UserManagementService::delete_invite(
-        invite_id.into_inner(),
-    ) {
+    match UserManagementService::delete_invite(invite_id.into_inner()) {
         Ok(_) => HttpResponse::Ok().into(),
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }

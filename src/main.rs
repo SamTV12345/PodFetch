@@ -6,19 +6,12 @@ extern crate core;
 extern crate serde_json;
 
 use actix_files::{Files, NamedFile};
+use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
 use clokwerk::{Scheduler, TimeUnits};
-use std::collections::HashSet;
-use std::env::args;
-use std::io::Read;
-use std::sync::Mutex;
-use std::time::Duration;
-use std::{env, thread};
-use std::ops::DerefMut;
-use actix_web::body::{BoxBody, EitherBody};
 use diesel::r2d2::ConnectionManager;
 use jsonwebtoken::jwk::{
     AlgorithmParameters, CommonParameters, Jwk, KeyAlgorithm, RSAKeyParameters, RSAKeyType,
@@ -26,10 +19,20 @@ use jsonwebtoken::jwk::{
 use log::info;
 use r2d2::Pool;
 use regex::Regex;
+use std::collections::HashSet;
+use std::env::args;
+use std::io::Read;
+use std::ops::DerefMut;
 use std::process::exit;
+use std::sync::Mutex;
+use std::time::Duration;
+use std::{env, thread};
 use tokio::{spawn, try_join};
 
 mod controllers;
+use crate::adapters::api::controllers::routes::{get_gpodder_api, global_routes};
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::DBType;
 use crate::auth_middleware::AuthFilter;
 use crate::command_line_runner::start_command_line;
 use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
@@ -40,27 +43,34 @@ use crate::controllers::playlist_controller::{
     add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
     get_playlist_by_id, update_playlist,
 };
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_settings, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
+use crate::controllers::podcast_controller::{
+    add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast,
+    find_podcast_by_id, get_filter, get_podcast_settings, refresh_all_podcasts,
+    retrieve_podcast_sample_format, search_podcasts, update_podcast_settings,
+};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
-use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_timeline, retrieve_episode_sample_format};
+use crate::controllers::podcast_episode_controller::{
+    delete_podcast_episode_locally, download_podcast_episodes_of_podcast,
+    find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_timeline,
+    retrieve_episode_sample_format,
+};
+use crate::controllers::server::ChatServer;
 use crate::controllers::settings_controller::{
     get_opml, get_settings, run_cleanup, update_name, update_settings,
 };
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
+use crate::controllers::tags_controller::{
+    add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag,
+};
 use crate::controllers::user_controller::{
     create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user,
     get_users, onboard_user, update_role, update_user,
 };
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 pub use controllers::controller_utils::*;
-use crate::adapters::api::controllers::routes::{get_gpodder_api, global_routes};
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::adapters::persistence::dbconfig::DBType;
-use crate::controllers::server::ChatServer;
-use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag};
 
 mod constants;
 mod db;
@@ -85,15 +95,15 @@ use crate::utils::reqwest_client::get_async_sync_client;
 
 mod config;
 
+mod adapters;
+mod application;
 mod auth_middleware;
 mod command_line_runner;
+mod domain;
 mod exception;
 mod gpodder;
 pub mod mutex;
 pub mod utils;
-mod adapters;
-mod domain;
-mod application;
 
 type DbPool = Pool<ConnectionManager<DBType>>;
 
@@ -106,10 +116,7 @@ pub fn run_poll(mut podcast_service: PodcastService) -> Result<(), CustomError> 
         if podcast.active {
             let podcast_clone = podcast.clone();
             PodcastEpisodeService::insert_podcast_episodes(podcast)?;
-            podcast_service.schedule_episode_download(
-                podcast_clone,
-                None,
-            )?;
+            podcast_service.schedule_episode_download(podcast_clone, None)?;
         }
     }
     Ok(())
@@ -128,7 +135,6 @@ async fn index() -> impl Responder {
         .content_type("text/html")
         .body(fix_links(index_html))
 }
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -228,9 +234,7 @@ async fn main() -> std::io::Result<()> {
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
-                        PodcastEpisodeService::cleanup_old_episodes(
-                            settings.auto_cleanup_days,
-                        )
+                        PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days)
                     }
                 }
                 None => {
@@ -251,9 +255,7 @@ async fn main() -> std::io::Result<()> {
 
     match ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
         Some(jwk_config) => {
-            let client = get_async_sync_client()
-                .build()
-                .unwrap();
+            let client = get_async_sync_client().build().unwrap();
             let resp = client
                 .get(&jwk_config.jwks_uri)
                 .send()
@@ -330,13 +332,12 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(Mutex::new(settings_service.clone())))
             .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
-        .workers(4)
-        .bind(("0.0.0.0", 8000))?
-        .run();
+    .workers(4)
+    .bind(("0.0.0.0", 8000))?
+    .run();
     try_join!(http_server, async move { chat_server.await.unwrap() })?;
     Ok(())
 }
-
 
 pub fn get_api_config() -> Scope {
     web::scope("/api/v1").configure(config)
@@ -526,5 +527,3 @@ fn check_if_multiple_auth_is_configured(env: &EnvironmentService) -> bool {
     }
     num_of_auth_count > 1
 }
-
-

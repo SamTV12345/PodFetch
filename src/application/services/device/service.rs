@@ -8,7 +8,6 @@ use crate::utils::error::CustomError;
 
 pub struct DeviceService;
 
-
 impl CreateUseCase for DeviceService {
     fn create(device_to_safe: Device) -> Result<Device, CustomError> {
         DeviceRepositoryImpl::create(device_to_safe)

@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::models::user::User;
@@ -10,6 +9,7 @@ use actix_web::web::{Data, Path, ReqData};
 use actix_web::{get, put};
 use actix_web::{web, HttpResponse};
 use chrono::Local;
+use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::Mutex;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
@@ -52,9 +52,7 @@ pub async fn update_settings(
     }
 
     let mut settings_service = settings_service.lock().ignore_poison();
-    let settings = settings_service.update_settings(
-        settings.into_inner(),
-    )?;
+    let settings = settings_service.update_settings(settings.into_inner())?;
     Ok(HttpResponse::Ok().json(settings))
 }
 
@@ -72,15 +70,10 @@ pub async fn run_cleanup(
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
     }
-    let settings = settings_service
-        .lock()
-        .ignore_poison()
-        .get_settings()?;
+    let settings = settings_service.lock().ignore_poison().get_settings()?;
     match settings {
         Some(settings) => {
-            PodcastEpisodeService::cleanup_old_episodes(
-                settings.auto_cleanup_days,
-            );
+            PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
             Ok(HttpResponse::Ok().finish())
         }
         None => {
@@ -108,8 +101,7 @@ pub async fn get_opml(
     requester: Option<ReqData<User>>,
     type_of: Path<Mode>,
 ) -> Result<HttpResponse, CustomError> {
-    let podcasts_found =
-        Podcast::get_all_podcasts()?;
+    let podcasts_found = Podcast::get_all_podcasts()?;
 
     let mut xml = XMLBuilder::new()
         .version(XMLVersion::XML1_1)
@@ -208,9 +200,7 @@ pub async fn update_name(
 
     let mut settings_service = settings_service.lock().ignore_poison();
 
-    let settings = settings_service.update_name(
-        update_information.into_inner(),
-    )?;
+    let settings = settings_service.update_name(update_information.into_inner())?;
     Ok(HttpResponse::Ok().json(settings))
 }
 

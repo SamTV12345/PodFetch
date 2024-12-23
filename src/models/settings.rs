@@ -1,5 +1,6 @@
-use crate::constants::inner_constants::DEFAULT_SETTINGS;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::*;
+use crate::constants::inner_constants::DEFAULT_SETTINGS;
 use crate::service::environment_service::OidcConfig;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
@@ -7,7 +8,6 @@ use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 
 #[derive(
     Serialize,
@@ -34,9 +34,8 @@ pub struct Setting {
     pub replacement_strategy: String,
     pub episode_format: String,
     pub podcast_format: String,
-    pub direct_paths: bool
+    pub direct_paths: bool,
 }
-
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,9 +59,7 @@ impl Setting {
             .map_err(map_db_error)
     }
 
-    pub fn update_settings(
-        setting: Setting,
-    ) -> Result<Setting, CustomError> {
+    pub fn update_settings(setting: Setting) -> Result<Setting, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::settings::dsl::*;
         let setting_to_update = settings
             .first::<Setting>(&mut get_connection())

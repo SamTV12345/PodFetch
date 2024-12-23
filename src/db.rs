@@ -1,3 +1,4 @@
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
@@ -8,12 +9,13 @@ use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::models::podcast_dto::PodcastDto;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineItem {
-    pub data: Vec<(PodcastEpisode, Podcast, Option<Episode>, Option<Favorite>)>,
+    pub data: Vec<(PodcastEpisodeDto, PodcastDto, Option<Episode>, Option<Favorite>)>,
     pub total_elements: i64,
 }
 
@@ -37,10 +39,7 @@ impl TimelineItem {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::guid as pguid;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
 
-        Filter::save_decision_for_timeline(
-            username_to_search.clone(),
-            favored_only.favored_only,
-        );
+        Filter::save_decision_for_timeline(username_to_search.clone(), favored_only.favored_only);
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
@@ -93,10 +92,23 @@ impl TimelineItem {
             query = query.filter(ph1.field(phistory_date).nullable().ne_all(subquery.clone()));
             total_count = total_count.filter(ph1.field(phistory_date).nullable().ne_all(subquery));
         }
-        let results = total_count.get_result::<i64>(&mut get_connection()).map_err(map_db_error)?;
-        let result = query
-            .load::<(PodcastEpisode, Podcast, Option<Episode>, Option<Favorite>)>(&mut get_connection())
+        let results = total_count
+            .get_result::<i64>(&mut get_connection())
             .map_err(map_db_error)?;
+        let result = query
+            .load::<(PodcastEpisode, Podcast, Option<Episode>, Option<Favorite>)>(
+                &mut get_connection(),
+            )
+            .map_err(map_db_error)?
+            .into_iter()
+            .map(|(podcast_episode, podcast, history, favorite)| {
+                (
+                    PodcastEpisodeDto::from(podcast_episode),
+                    PodcastDto::from(podcast),
+                    history,
+                    favorite,
+                )
+            }).collect();
 
         Ok(TimelineItem {
             total_elements: results,
