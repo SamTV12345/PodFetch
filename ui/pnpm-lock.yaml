@@ -156,9 +156,6 @@ importers:
       postcss:
         specifier: ^8.4.49
         version: 8.4.49
-      sass:
-        specifier: ^1.79.4
-        version: 1.79.4
       tailwindcss:
         specifier: ^3.4.15
         version: 3.4.15
@@ -4344,6 +4341,7 @@ snapshots:
   chokidar@4.0.1:
     dependencies:
       readdirp: 4.0.1
+    optional: true
 
   clsx@1.2.1: {}
 
@@ -4638,7 +4636,8 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  immutable@4.3.5: {}
+  immutable@4.3.5:
+    optional: true
 
   immutable@5.0.3: {}
 
@@ -5014,7 +5013,8 @@ snapshots:
     dependencies:
       picomatch: 2.3.1
 
-  readdirp@4.0.1: {}
+  readdirp@4.0.1:
+    optional: true
 
   reduce-configs@1.1.0: {}
 
@@ -5170,6 +5170,7 @@ snapshots:
       chokidar: 4.0.1
       immutable: 4.3.5
       source-map-js: 1.2.1
+    optional: true
 
   saxes@6.0.0:
     dependencies:

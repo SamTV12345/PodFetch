@@ -23,7 +23,7 @@ import '@fontsource/poppins/500-italic.css'
 import '@fontsource/poppins/700.css'
 import '@fontsource/poppins/700-italic.css'
 import './index.css'
-import './assets/scss/style.scss'
+
 export let apiURL: string
 export let uiURL: string
 if (window.location.pathname.startsWith("/ui")) {

@@ -11,7 +11,8 @@ export const PlaylistData = ()=>{
     const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
 
     const changeName = (e:string)=>{
-        setCurrentPlaylistToEdit({
+
+        currentPlaylistToEdit && setCurrentPlaylistToEdit({
             name: e,
             id: currentPlaylistToEdit!.id,
             items: currentPlaylistToEdit!.items
