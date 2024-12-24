@@ -24,7 +24,6 @@ use std::env::args;
 use std::io::Read;
 use std::ops::DerefMut;
 use std::process::exit;
-use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, thread};
 use tokio::{spawn, try_join};
@@ -85,13 +84,11 @@ use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
 use crate::service::logging_service::init_logging;
 
-use crate::service::notification_service::NotificationService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::service::settings_service::SettingsService;
 use crate::utils::error::CustomError;
+use crate::utils::http_client::get_http_client;
 use crate::utils::podcast_key_checker::check_podcast_request;
-use crate::utils::reqwest_client::get_async_sync_client;
 
 mod config;
 
@@ -109,14 +106,14 @@ type DbPool = Pool<ConnectionManager<DBType>>;
 
 import_database_config!();
 
-pub fn run_poll(mut podcast_service: PodcastService) -> Result<(), CustomError> {
+pub fn run_poll() -> Result<(), CustomError> {
     //check for new episodes
     let podcats_result = Podcast::get_all_podcasts()?;
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
             PodcastEpisodeService::insert_podcast_episodes(podcast)?;
-            podcast_service.schedule_episode_download(podcast_clone, None)?;
+            PodcastService::schedule_episode_download(podcast_clone, None)?;
         }
     }
     Ok(())
@@ -175,10 +172,6 @@ async fn main() -> std::io::Result<()> {
     check_server_config();
 
     //services
-    let podcast_service = PodcastService::new();
-    let file_service = FileService::new_db();
-    let notification_service = NotificationService::new();
-    let settings_service = SettingsService::new();
 
     let (chat_server, server_tx) = ChatServer::new();
 
@@ -205,9 +198,8 @@ async fn main() -> std::io::Result<()> {
             match settings {
                 Some(settings) => {
                     if settings.auto_update {
-                        let podcast_service = PodcastService::new();
                         info!("Polling for new episodes");
-                        match run_poll(podcast_service) {
+                        match run_poll() {
                             Ok(_) => {
                                 log::info!("Polling for new episodes successful");
                             }
@@ -255,8 +247,7 @@ async fn main() -> std::io::Result<()> {
 
     match ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
         Some(jwk_config) => {
-            let client = get_async_sync_client().build().unwrap();
-            let resp = client
+            let resp = get_http_client()
                 .get(&jwk_config.jwks_uri)
                 .send()
                 .await
@@ -326,10 +317,6 @@ async fn main() -> std::io::Result<()> {
             .service(redirect("/", sub_dir.clone() + "/ui/"))
             .service(get_gpodder_api())
             .service(global_routes())
-            .app_data(Data::new(Mutex::new(podcast_service.clone())))
-            .app_data(Data::new(Mutex::new(file_service.clone())))
-            .app_data(Data::new(Mutex::new(notification_service.clone())))
-            .app_data(Data::new(Mutex::new(settings_service.clone())))
             .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
     .workers(4)

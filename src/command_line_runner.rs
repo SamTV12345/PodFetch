@@ -42,7 +42,6 @@ pub async fn start_command_line(mut args: Args) {
 
                     match podcast_rss_feed {
                         Some(feed) => {
-                            let mut podcast_service = PodcastService::new();
                             let conn = &mut get_connection();
 
                             let replaced_feed = feed.replace(['\'', ' '], "");
@@ -53,9 +52,7 @@ pub async fn start_command_line(mut args: Args) {
 
                             PodcastEpisodeService::insert_podcast_episodes(podcast.clone())
                                 .unwrap();
-                            podcast_service
-                                .schedule_episode_download(podcast, None)
-                                .unwrap();
+                            PodcastService::schedule_episode_download(podcast, None).unwrap();
                         }
                         None => {
                             println!("Please provide a podcast rss feed url");
@@ -65,14 +62,11 @@ pub async fn start_command_line(mut args: Args) {
                 }
                 "refresh-all" => {
                     let podcasts = Podcast::get_all_podcasts();
-                    let mut podcast_service = PodcastService::new();
                     for podcast in podcasts.unwrap() {
                         println!("Refreshing podcast {}", podcast.name);
 
                         PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
-                        podcast_service
-                            .schedule_episode_download(podcast, None)
-                            .unwrap();
+                        PodcastService::schedule_episode_download(podcast, None).unwrap();
                     }
                 }
                 "list" => {

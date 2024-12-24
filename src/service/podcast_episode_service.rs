@@ -85,8 +85,7 @@ impl PodcastEpisodeService {
         podcast_cloned: Podcast,
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
-        let mut download_service = DownloadService::new();
-        download_service.download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
+        DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
         let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D")?;
         let notification = Notification {
             id: 0,
@@ -102,9 +101,8 @@ impl PodcastEpisodeService {
     pub fn get_last_n_podcast_episodes(
         podcast: Podcast,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
-        let mut settings_service = SettingsService::new();
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
-        let settings = settings_service.get_settings()?.unwrap();
+        let settings = SettingsService::get_settings()?.unwrap();
         let n_episodes;
 
         if let Some(podcast_settings) = podcast_settings {
@@ -387,7 +385,7 @@ impl PodcastEpisodeService {
     }
 
     pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
-       Podcast::query_for_podcast(query)
+        Podcast::query_for_podcast(query)
     }
 
     pub fn find_all_downloaded_podcast_episodes() -> Result<Vec<PodcastEpisode>, CustomError> {

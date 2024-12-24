@@ -7,27 +7,19 @@ use crate::service::file_service::{
 use crate::utils::error::CustomError;
 use crate::utils::rss_feed_parser::PodcastParsed;
 
-#[derive(Clone)]
 pub struct SettingsService {}
 
 impl SettingsService {
-    pub fn new() -> SettingsService {
-        SettingsService {}
-    }
-
-    pub fn get_settings(&mut self) -> Result<Option<Setting>, CustomError> {
+    pub fn get_settings() -> Result<Option<Setting>, CustomError> {
         Setting::get_settings()
     }
 
-    pub fn update_settings(&mut self, settings: Setting) -> Result<Setting, CustomError> {
+    pub fn update_settings(settings: Setting) -> Result<Setting, CustomError> {
         Setting::update_settings(settings)
     }
 
-    pub fn update_name(
-        &mut self,
-        update_model: UpdateNameSettings,
-    ) -> Result<Setting, CustomError> {
-        let mut settings_ = self.get_settings()?.unwrap();
+    pub fn update_name(update_model: UpdateNameSettings) -> Result<Setting, CustomError> {
+        let mut settings_ = Self::get_settings()?.unwrap();
         Self::validate_settings(update_model.clone())?;
 
         settings_.replace_invalid_characters = update_model.replace_invalid_characters;
@@ -36,7 +28,7 @@ impl SettingsService {
         settings_.replacement_strategy = update_model.replacement_strategy.to_string();
         settings_.episode_format = update_model.episode_format;
         settings_.podcast_format = update_model.podcast_format;
-        self.update_settings(settings_)
+        Self::update_settings(settings_)
     }
 
     fn validate_settings(

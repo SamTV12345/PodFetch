@@ -16,10 +16,10 @@ use utoipa::ToSchema;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::server::ChatServerHandle;
+use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use crate::models::podcast_dto::PodcastDto;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {

@@ -462,8 +462,9 @@ impl PodcastEpisode {
         .expect("Error updating podcast episode");
     }
 
-    pub fn get_episodes_by_podcast_id(id_to_search: i32) -> Result<Vec<PodcastEpisode>,
-        CustomError> {
+    pub fn get_episodes_by_podcast_id(
+        id_to_search: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
         podcast_episodes
             .filter(podcast_id.eq(id_to_search))

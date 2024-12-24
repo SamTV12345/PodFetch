@@ -1,21 +1,26 @@
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
+use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::models::podcast_dto::PodcastDto;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineItem {
-    pub data: Vec<(PodcastEpisodeDto, PodcastDto, Option<Episode>, Option<Favorite>)>,
+    pub data: Vec<(
+        PodcastEpisodeDto,
+        PodcastDto,
+        Option<Episode>,
+        Option<Favorite>,
+    )>,
     pub total_elements: i64,
 }
 
@@ -108,7 +113,8 @@ impl TimelineItem {
                     history,
                     favorite,
                 )
-            }).collect();
+            })
+            .collect();
 
         Ok(TimelineItem {
             total_elements: results,

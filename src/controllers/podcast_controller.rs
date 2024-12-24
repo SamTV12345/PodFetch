@@ -21,7 +21,6 @@ use rand::rngs::ThreadRng;
 use rand::Rng;
 use rss::Channel;
 use serde_json::{from_str, Value};
-use std::sync::Mutex;
 use std::thread;
 use tokio::task::spawn_blocking;
 
@@ -32,12 +31,10 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use crate::mutex::LockResultExt;
 use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use futures_util::StreamExt;
 use reqwest::header::HeaderMap;
-use reqwest::Client;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -76,7 +73,6 @@ tag="podcasts"
 #[get("/podcasts/search")]
 pub async fn search_podcasts(
     query: web::Query<PodcastSearchModel>,
-    _podcast_service: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     let query = query.into_inner();
@@ -106,23 +102,20 @@ pub async fn search_podcasts(
         true => {
             let podcasts;
             {
-                podcasts = _podcast_service
-                    .lock()
-                    .ignore_poison()
-                    .search_podcasts_favored(
-                        _order.clone(),
-                        query.title,
-                        _latest_pub.clone(),
-                        username,
-                        tag,
-                    )?;
+                podcasts = PodcastService::search_podcasts_favored(
+                    _order.clone(),
+                    query.title,
+                    _latest_pub.clone(),
+                    username,
+                    tag,
+                )?;
             }
             Ok(HttpResponse::Ok().json(podcasts))
         }
         false => {
             let podcasts;
             {
-                podcasts = _podcast_service.lock().ignore_poison().search_podcasts(
+                podcasts = PodcastService::search_podcasts(
                     _order.clone(),
                     query.title,
                     _latest_pub.clone(),
@@ -185,7 +178,6 @@ tag="podcasts"
 #[get("/podcasts/{type_of}/{podcast}/search")]
 pub async fn find_podcast(
     podcast_col: Path<(i32, String)>,
-    podcast_service: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -197,9 +189,8 @@ pub async fn find_podcast(
         Ok(ITunes) => {
             let res;
             {
-                let mut podcast_service = podcast_service.lock().ignore_poison().clone();
                 log::debug!("Searching for podcast: {}", podcast);
-                res = podcast_service.find_podcast(&podcast).await;
+                res = PodcastService::find_podcast(&podcast).await;
             }
             Ok(HttpResponse::Ok().json(res))
         }
@@ -212,9 +203,8 @@ pub async fn find_podcast(
             {
                 return Ok(HttpResponse::BadRequest().json("Podindex is not configured"));
             }
-            let mut podcast_service = podcast_service.lock().ignore_poison().clone();
 
-            Ok(HttpResponse::Ok().json(podcast_service.find_podcast_on_podindex(&podcast).await?))
+            Ok(HttpResponse::Ok().json(PodcastService::find_podcast_on_podindex(&podcast).await?))
         }
         Err(_) => Err(CustomError::BadRequest("Invalid search type".to_string())),
     }
@@ -236,14 +226,13 @@ pub async fn add_podcast(
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
-    let client = get_async_sync_client().build().unwrap();
 
     let query: Vec<(&str, String)> = vec![
         ("id", track_id.track_id.to_string()),
         ("entity", "podcast".to_string()),
     ];
 
-    let res = client
+    let res = get_http_client()
         .get("https://itunes.apple.com/lookup")
         .query(&query)
         .send()
@@ -252,21 +241,19 @@ pub async fn add_podcast(
 
     let res = res.json::<Value>().await.unwrap();
 
-    let mut podcast_service = PodcastService::new();
-    podcast_service
-        .handle_insert_of_podcast(
-            PodcastInsertModel {
-                feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
-                title: unwrap_string(&res["results"][0]["collectionName"]),
-                id: unwrap_string(&res["results"][0]["collectionId"])
-                    .parse()
-                    .unwrap(),
-                image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
-            },
-            lobby,
-            None,
-        )
-        .await?;
+    PodcastService::handle_insert_of_podcast(
+        PodcastInsertModel {
+            feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
+            title: unwrap_string(&res["results"][0]["collectionName"]),
+            id: unwrap_string(&res["results"][0]["collectionId"])
+                .parse()
+                .unwrap(),
+            image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
+        },
+        lobby,
+        None,
+    )
+    .await?;
     Ok(HttpResponse::Ok().into())
 }
 
@@ -280,17 +267,15 @@ tag="podcasts"
 pub async fn add_podcast_by_feed(
     rss_feed: web::Json<PodcastRSSAddModel>,
     lobby: Data<ChatServerHandle>,
-    podcast_service: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
-    let client = get_async_sync_client().build().unwrap();
     let mut header_map = HeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
-    let result = client
+    let result = get_http_client()
         .get(rss_feed.clone().rss_feed_url)
         .headers(header_map)
         .send()
@@ -304,23 +289,22 @@ pub async fn add_podcast_by_feed(
 
     let res: PodcastDto;
     {
-        let mut podcast_service = podcast_service.lock().ignore_poison().clone();
-        res = podcast_service
-            .handle_insert_of_podcast(
-                PodcastInsertModel {
-                    feed_url: rss_feed.clone().rss_feed_url.clone(),
-                    title: channel.title.clone(),
-                    id: num,
-                    image_url: channel
-                        .image
-                        .clone()
-                        .map(|i| i.url)
-                        .unwrap_or(get_default_image()),
-                },
-                lobby,
-                Some(channel),
-            )
-            .await?.into();
+        res = PodcastService::handle_insert_of_podcast(
+            PodcastInsertModel {
+                feed_url: rss_feed.clone().rss_feed_url.clone(),
+                title: channel.title.clone(),
+                id: num,
+                image_url: channel
+                    .image
+                    .clone()
+                    .map(|i| i.url)
+                    .unwrap_or(get_default_image()),
+            },
+            lobby,
+            Some(channel),
+        )
+        .await?
+        .into();
     }
 
     Ok(HttpResponse::Ok().json(res))
@@ -335,7 +319,7 @@ tag="podcasts"
 )]
 #[post("/podcast/opml")]
 pub async fn import_podcasts_from_opml(
-    opml: web::Json<OpmlModel>,
+    opml: Json<OpmlModel>,
     lobby: Data<ChatServerHandle>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -351,10 +335,8 @@ pub async fn import_podcasts_from_opml(
                 let rt = Runtime::new().unwrap();
                 let rng = rand::thread_rng();
                 let environment = ENVIRONMENT_SERVICE.get().unwrap();
-                let client = get_async_sync_client().build().unwrap();
                 rt.block_on(insert_outline(
                     outline.clone(),
-                    client.clone(),
                     moved_lobby,
                     rng.clone(),
                     environment.clone(),
@@ -406,12 +388,7 @@ pub async fn add_podcast_from_podindex(
 fn start_download_podindex(id: i32, lobby: Data<ChatServerHandle>) -> Result<Podcast, CustomError> {
     let rt = Runtime::new().unwrap();
 
-    rt.block_on(async {
-        let mut podcast_service = PodcastService::new();
-        podcast_service
-            .insert_podcast_from_podindex(id, lobby)
-            .await
-    })
+    rt.block_on(async { PodcastService::insert_podcast_from_podindex(id, lobby).await })
 }
 
 #[utoipa::path(
@@ -436,21 +413,16 @@ tag="podcasts"
 #[post("/podcast/all")]
 pub async fn refresh_all_podcasts(
     lobby: Data<ChatServerHandle>,
-    podcast_service: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
-    let podcasts = Podcast::get_all_podcasts();
+    let podcasts = Podcast::get_all_podcasts()?;
     thread::spawn(move || {
-        for podcast in podcasts.unwrap() {
-            podcast_service
-                .lock()
-                .ignore_poison()
-                .refresh_podcast(podcast.clone(), lobby.clone())
-                .unwrap();
+        for podcast in podcasts {
+            PodcastService::refresh_podcast(podcast.clone(), lobby.clone()).unwrap();
             let podcast_dto: PodcastDto = podcast.clone().into();
             lobby.send_broadcast_sync(
                 MAIN_ROOM.parse().unwrap(),
@@ -478,7 +450,6 @@ tag="podcasts"
 pub async fn download_podcast(
     id: Path<String>,
     lobby: Data<ChatServerHandle>,
-    podcast_service: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_privileged_user() {
@@ -486,11 +457,9 @@ pub async fn download_podcast(
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
-    let mut podcast_service = podcast_service.lock().ignore_poison();
-    let podcast = podcast_service.get_podcast_by_id(id_num);
+    let podcast = PodcastService::get_podcast_by_id(id_num);
     thread::spawn(move || {
-        let mut podcast_service = PodcastService::new();
-        match podcast_service.refresh_podcast(podcast.clone(), lobby.clone()) {
+        match PodcastService::refresh_podcast(podcast.clone(), lobby.clone()) {
             Ok(_) => {
                 log::info!("Succesfully refreshed podcast.");
             }
@@ -499,7 +468,7 @@ pub async fn download_podcast(
             }
         }
 
-        let download = podcast_service.schedule_episode_download(podcast.clone(), Some(lobby));
+        let download = PodcastService::schedule_episode_download(podcast.clone(), Some(lobby));
 
         if download.is_err() {
             log::error!("Error downloading podcast: {}", download.err().unwrap());
@@ -519,12 +488,9 @@ tag="podcasts"
 #[put("/podcast/favored")]
 pub async fn favorite_podcast(
     update_model: Json<PodcastFavorUpdateModel>,
-    podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
-    let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-
-    podcast_service.update_favor_podcast(
+    PodcastService::update_favor_podcast(
         update_model.id,
         update_model.favored,
         requester.unwrap().username.clone(),
@@ -540,11 +506,9 @@ tag="podcasts"
 )]
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
-    podcast_service_mutex: Data<Mutex<PodcastService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
-    let mut podcast_service = podcast_service_mutex.lock().ignore_poison();
-    let podcasts = podcast_service.get_favored_podcasts(requester.unwrap().username.clone())?;
+    let podcasts = PodcastService::get_favored_podcasts(requester.unwrap().username.clone())?;
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -572,7 +536,6 @@ pub async fn update_active_podcast(
 #[async_recursion(?Send)]
 async fn insert_outline(
     podcast: Outline,
-    client: Client,
     lobby: Data<ChatServerHandle>,
     mut rng: ThreadRng,
     environment: EnvironmentService,
@@ -581,7 +544,6 @@ async fn insert_outline(
         for outline_nested in podcast.clone().outlines {
             insert_outline(
                 outline_nested,
-                client.clone(),
                 lobby.clone(),
                 rng.clone(),
                 environment.clone(),
@@ -595,7 +557,7 @@ async fn insert_outline(
         return;
     }
 
-    let feed_response = client.get(feed_url.unwrap()).send().await;
+    let feed_response = get_http_client().get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
         lobby
             .send_broadcast(
@@ -618,8 +580,6 @@ async fn insert_outline(
 
     match channel {
         Ok(channel) => {
-            let mut podcast_service = PodcastService::new();
-
             let image_url = match channel.image {
                 Some(ref image) => image.url.clone(),
                 None => {
@@ -631,18 +591,17 @@ async fn insert_outline(
                 }
             };
 
-            let inserted_podcast = podcast_service
-                .handle_insert_of_podcast(
-                    PodcastInsertModel {
-                        feed_url: podcast.clone().xml_url.expect("No feed url"),
-                        title: channel.clone().title.to_string(),
-                        id: rng.gen::<i32>(),
-                        image_url,
-                    },
-                    lobby.clone(),
-                    Some(channel),
-                )
-                .await;
+            let inserted_podcast = PodcastService::handle_insert_of_podcast(
+                PodcastInsertModel {
+                    feed_url: podcast.clone().xml_url.expect("No feed url"),
+                    title: channel.clone().title.to_string(),
+                    id: rng.gen::<i32>(),
+                    image_url,
+                },
+                lobby.clone(),
+                Some(channel),
+            )
+            .await;
             match inserted_podcast {
                 Ok(podcast) => {
                     let _ = lobby
@@ -708,7 +667,7 @@ use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
 use crate::utils::error::{map_reqwest_error, CustomError};
-use crate::utils::reqwest_client::get_async_sync_client;
+use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
 
 #[derive(Deserialize, ToSchema)]
@@ -817,9 +776,7 @@ pub(crate) async fn proxy_podcast(
     header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
     header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
     use std::str::FromStr;
-    let forwarded_req = get_async_sync_client()
-        .build()
-        .unwrap()
+    let forwarded_req = get_http_client()
         .request(
             reqwest::Method::from_str(method.as_str()).unwrap(),
             episode.url,

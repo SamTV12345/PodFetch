@@ -25,17 +25,6 @@ enum Command {
     Disconnect {
         conn: ConnId,
     },
-
-    List {
-        res_tx: oneshot::Sender<Vec<RoomId>>,
-    },
-
-    Join {
-        conn: ConnId,
-        room: RoomId,
-        res_tx: oneshot::Sender<()>,
-    },
-
     Message {
         msg: Msg,
         conn: ConnId,
@@ -43,7 +32,7 @@ enum Command {
     },
 }
 
-/// A multi-room chat server.
+/// A multiroom chat server.
 ///
 /// Contains the logic of how connections chat with each other plus room management.
 ///
@@ -176,33 +165,6 @@ impl ChatServer {
         }
     }
 
-    /// Returns list of created room names.
-    fn list_rooms(&mut self) -> Vec<RoomId> {
-        self.rooms.keys().cloned().collect()
-    }
-
-    /// Join room, send disconnect message to old room send join message to new room.
-    async fn join_room(&mut self, conn_id: ConnId, room: RoomId) {
-        let mut rooms = Vec::new();
-
-        // remove session from all rooms
-        for (n, sessions) in &mut self.rooms {
-            if sessions.remove(&conn_id) {
-                rooms.push(n.to_owned());
-            }
-        }
-        // send message to other users
-        for room in rooms {
-            self.send_system_message(&room, 0, "Someone disconnected")
-                .await;
-        }
-
-        self.rooms.entry(room.clone()).or_default().insert(conn_id);
-
-        self.send_system_message(&room, conn_id, "Someone connected")
-            .await;
-    }
-
     pub async fn run(mut self) -> io::Result<()> {
         while let Some(cmd) = self.cmd_rx.recv().await {
             match cmd {
@@ -219,15 +181,6 @@ impl ChatServer {
                 }
                 Command::Disconnect { conn } => {
                     self.disconnect(conn).await;
-                }
-
-                Command::List { res_tx } => {
-                    let _ = res_tx.send(self.list_rooms());
-                }
-
-                Command::Join { conn, room, res_tx } => {
-                    self.join_room(conn, room).await;
-                    let _ = res_tx.send(());
                 }
                 Command::Message { conn, msg, res_tx } => {
                     self.send_message(conn, msg).await;
@@ -260,34 +213,6 @@ impl ChatServerHandle {
 
         // unwrap: chat server does not drop out response channel
         res_rx.await.unwrap()
-    }
-
-    /// List all created rooms.
-    pub async fn list_rooms(&self) -> Vec<RoomId> {
-        let (res_tx, res_rx) = oneshot::channel();
-
-        // unwrap: chat server should not have been dropped
-        self.cmd_tx.send(Command::List { res_tx }).unwrap();
-
-        // unwrap: chat server does not drop our response channel
-        res_rx.await.unwrap()
-    }
-
-    /// Join `room`, creating it if it does not exist.
-    pub async fn join_room(&self, conn: ConnId, room: impl Into<RoomId>) {
-        let (res_tx, res_rx) = oneshot::channel();
-
-        // unwrap: chat server should not have been dropped
-        self.cmd_tx
-            .send(Command::Join {
-                conn,
-                room: room.into(),
-                res_tx,
-            })
-            .unwrap();
-
-        // unwrap: chat server does not drop our response channel
-        res_rx.await.unwrap();
     }
 
     pub async fn send_broadcast(&self, room_id: RoomId, msg: impl Into<Msg>) {

@@ -21,6 +21,7 @@ use crate::models::misc_models::{
 };
 use crate::models::notification::Notification;
 use crate::models::opml_model::OpmlModel;
+use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::settings::Setting;
 use crate::models::tag::Tag;
@@ -35,7 +36,6 @@ use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
 };
-use crate::models::podcast_dto::PodcastDto;
 
 #[derive(OpenApi)]
 #[openapi(

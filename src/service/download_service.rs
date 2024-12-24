@@ -23,19 +23,10 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use std::io;
 use std::io::Read;
 
-pub struct DownloadService {
-    pub file_service: FileService,
-}
+pub struct DownloadService {}
 
 impl DownloadService {
-    pub fn new() -> Self {
-        DownloadService {
-            file_service: FileService::new(),
-        }
-    }
-
     pub fn download_podcast_episode(
-        &mut self,
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
     ) -> Result<(), CustomError> {
@@ -114,9 +105,7 @@ impl DownloadService {
         let mut podcast_out = File::create(&paths.filename).unwrap();
         let mut image_out = File::create(&paths.image_filename).unwrap();
 
-        if !self
-            .file_service
-            .check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
+        if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
             let mut image_podcast = std::fs::File::create(&paths.image_filename).unwrap();
             io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");

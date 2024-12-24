@@ -18,14 +18,7 @@ use diesel::{
 
 use crate::utils::error::{map_db_error, CustomError};
 #[derive(
-    Queryable,
-    Identifiable,
-    QueryableByName,
-    Selectable,
-    Debug,
-    PartialEq,
-    Clone,
-    Default,
+    Queryable, Identifiable, QueryableByName, Selectable, Debug, PartialEq, Clone, Default,
 )]
 pub struct Podcast {
     #[diesel(sql_type = Integer)]

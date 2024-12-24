@@ -1,17 +1,15 @@
 use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::models::user::User;
-use crate::mutex::LockResultExt;
 use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::settings_service::SettingsService;
-use actix_web::web::{Data, Path, ReqData};
+use actix_web::web::{Path, ReqData};
 use actix_web::{get, put};
 use actix_web::{web, HttpResponse};
 use chrono::Local;
 use std::fmt::Display;
 use std::str::FromStr;
-use std::sync::Mutex;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[utoipa::path(
@@ -43,16 +41,13 @@ tag="settings"
 )]
 #[put("/settings")]
 pub async fn update_settings(
-    settings_service: Data<Mutex<SettingsService>>,
     settings: web::Json<Setting>,
-    requester: Option<web::ReqData<User>>,
+    requester: Option<ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
     }
-
-    let mut settings_service = settings_service.lock().ignore_poison();
-    let settings = settings_service.update_settings(settings.into_inner())?;
+    let settings = SettingsService::update_settings(settings.into_inner())?;
     Ok(HttpResponse::Ok().json(settings))
 }
 
@@ -64,13 +59,12 @@ tag="settings"
 )]
 #[put("/settings/runcleanup")]
 pub async fn run_cleanup(
-    settings_service: Data<Mutex<SettingsService>>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.unwrap().is_admin() {
         return Err(CustomError::Forbidden);
     }
-    let settings = settings_service.lock().ignore_poison().get_settings()?;
+    let settings = SettingsService::get_settings()?;
     match settings {
         Some(settings) => {
             PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
@@ -190,7 +184,6 @@ request_body=UpdateNameSettings
 )]
 #[put("/settings/name")]
 pub async fn update_name(
-    settings_service: Data<Mutex<SettingsService>>,
     update_information: web::Json<UpdateNameSettings>,
     requester: Option<web::ReqData<User>>,
 ) -> Result<HttpResponse, CustomError> {
@@ -198,9 +191,7 @@ pub async fn update_name(
         return Err(CustomError::Forbidden);
     }
 
-    let mut settings_service = settings_service.lock().ignore_poison();
-
-    let settings = settings_service.update_name(update_information.into_inner())?;
+    let settings = SettingsService::update_name(update_information.into_inner())?;
     Ok(HttpResponse::Ok().json(settings))
 }
 

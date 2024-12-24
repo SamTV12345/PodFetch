@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::models::podcasts::Podcast;
-use reqwest::{Client, ClientBuilder};
 use std::io::{Error, Write};
 
 use std::path::Path;
@@ -18,6 +17,7 @@ use crate::service::settings_service::SettingsService;
 use crate::utils::error::{map_io_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
+use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::RSSFeedParser;
 use crate::DBType as DbConnection;
 use regex::Regex;
@@ -25,23 +25,10 @@ use rss::Channel;
 use tokio::task::spawn_blocking;
 
 #[derive(Clone)]
-pub struct FileService {
-    pub client: Client,
-}
+pub struct FileService {}
 
 impl FileService {
-    pub fn new() -> Self {
-        FileService {
-            client: ClientBuilder::new().build().unwrap(),
-        }
-    }
-    pub fn new_db() -> Self {
-        FileService {
-            client: ClientBuilder::new().build().unwrap(),
-        }
-    }
     pub fn check_if_podcast_main_image_downloaded(
-        &mut self,
         podcast_id: &str,
         conn: &mut DbConnection,
     ) -> bool {
@@ -105,12 +92,7 @@ impl FileService {
         }
     }
 
-    pub async fn download_podcast_image(
-        &self,
-        podcast_path: &str,
-        image_url: String,
-        podcast_id: &str,
-    ) {
+    pub async fn download_podcast_image(podcast_path: &str, image_url: String, podcast_id: &str) {
         let cloned_image_url = image_url.clone();
         let image_suffix = spawn_blocking(move || {
             let client = reqwest::blocking::Client::new();
@@ -119,7 +101,7 @@ impl FileService {
         .await
         .unwrap();
 
-        let image_response = self.client.get(image_url).send().await.unwrap();
+        let image_response = get_http_client().get(image_url).send().await.unwrap();
         let file_path =
             PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix);
         let mut image_out = std::fs::File::create(file_path.0.clone()).unwrap();
@@ -158,8 +140,7 @@ pub async fn prepare_podcast_title_to_directory(
     podcast: &PodcastInsertModel,
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
-    let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings()?.unwrap();
+    let retrieved_settings = SettingsService::get_settings()?.unwrap();
     let opt_podcast_settings = PodcastSetting::get_settings(podcast.id)?;
 
     let podcast = match channel {
@@ -258,8 +239,7 @@ pub fn perform_podcast_variable_replacement(
 pub fn prepare_podcast_episode_title_to_directory(
     podcast_episode: PodcastEpisode,
 ) -> Result<String, CustomError> {
-    let mut settings_service = SettingsService::new();
-    let retrieved_settings = settings_service.get_settings()?.unwrap();
+    let retrieved_settings = SettingsService::get_settings()?.unwrap();
     if retrieved_settings.use_existing_filename {
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if let Ok(res_unwrapped) = res_of_filename {

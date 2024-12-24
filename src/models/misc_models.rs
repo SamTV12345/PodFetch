@@ -1,7 +1,7 @@
-use chrono::NaiveDateTime;
-use utoipa::ToSchema;
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::models::podcast_dto::PodcastDto;
+use chrono::NaiveDateTime;
+use utoipa::ToSchema;
 
 // this is to insert users to database
 #[derive(Serialize, Deserialize)]

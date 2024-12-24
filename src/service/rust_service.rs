@@ -18,10 +18,9 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
 use crate::utils::error::{map_reqwest_error, CustomError};
-use crate::utils::reqwest_client::get_async_sync_client;
+use crate::utils::http_client::get_http_client;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::Client;
 use rss::Channel;
 use serde::Serialize;
 use serde_json::Value;
@@ -29,28 +28,12 @@ use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
 
-#[derive(Clone)]
-pub struct PodcastService {
-    pub client: Client,
-}
-
-impl Default for PodcastService {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub struct PodcastService;
 
 impl PodcastService {
-    pub fn new() -> PodcastService {
-        PodcastService {
-            client: get_async_sync_client().build().unwrap(),
-        }
-    }
-
-    pub async fn find_podcast(&mut self, podcast: &str) -> Value {
+    pub async fn find_podcast(podcast: &str) -> Value {
         let query = vec![("term", podcast), ("entity", "podcast")];
-        let result = self
-            .client
+        let result = get_http_client()
             .get(ITUNES_URL)
             .query(&query)
             .send()
@@ -70,13 +53,12 @@ impl PodcastService {
         }
     }
 
-    pub async fn find_podcast_on_podindex(&mut self, podcast: &str) -> Result<Value, CustomError> {
-        let headers = self.compute_podindex_header();
+    pub async fn find_podcast_on_podindex(podcast: &str) -> Result<Value, CustomError> {
+        let headers = Self::compute_podindex_header();
 
         let query = vec![("q", podcast)];
 
-        let result = self
-            .client
+        let result = get_http_client()
             .get("https://api.podcastindex.org/api/1.0/search/byterm")
             .query(&query)
             .headers(headers)
@@ -108,17 +90,15 @@ impl PodcastService {
     }
 
     pub async fn insert_podcast_from_podindex(
-        &mut self,
         id: i32,
         lobby: Data<ChatServerHandle>,
     ) -> Result<Podcast, CustomError> {
-        let resp = self
-            .client
+        let resp = get_http_client()
             .get(
                 "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id=".to_owned()
                     + &id.to_string(),
             )
-            .headers(self.compute_podindex_header())
+            .headers(Self::compute_podindex_header())
             .send()
             .await
             .unwrap();
@@ -127,7 +107,7 @@ impl PodcastService {
 
         let podcast = resp.json::<Value>().await.unwrap();
 
-        self.handle_insert_of_podcast(
+        Self::handle_insert_of_podcast(
             PodcastInsertModel {
                 title: unwrap_string(&podcast["feed"]["title"]),
                 id,
@@ -141,7 +121,6 @@ impl PodcastService {
     }
 
     pub async fn handle_insert_of_podcast(
-        &mut self,
         podcast_insert: PodcastInsertModel,
         lobby: Data<ChatServerHandle>,
         channel: Option<Channel>,
@@ -154,8 +133,6 @@ impl PodcastService {
             )));
         }
 
-        let fileservice = FileService::new();
-
         let podcast_directory_created =
             FileService::create_podcast_directory_exists(&podcast_insert, channel).await?;
 
@@ -167,13 +144,12 @@ impl PodcastService {
             podcast_directory_created,
         )?;
 
-        fileservice
-            .download_podcast_image(
-                &inserted_podcast.directory_name.clone().to_string(),
-                podcast_insert.image_url.clone().to_string(),
-                &podcast_insert.id.clone().to_string(),
-            )
-            .await;
+        FileService::download_podcast_image(
+            &inserted_podcast.directory_name.clone().to_string(),
+            podcast_insert.image_url.clone().to_string(),
+            &podcast_insert.id.clone().to_string(),
+        )
+        .await;
         let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id).unwrap();
         lobby
             .send_broadcast(
@@ -191,8 +167,6 @@ impl PodcastService {
         match podcast {
             Some(podcast) => {
                 spawn_blocking(move || {
-                    let mut podcast_service = PodcastService::new();
-
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
                     let inserted_podcasts =
                         PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
@@ -213,8 +187,7 @@ impl PodcastService {
                         })
                         .unwrap(),
                     );
-                    if let Err(e) = podcast_service.schedule_episode_download(podcast, Some(lobby))
-                    {
+                    if let Err(e) = Self::schedule_episode_download(podcast, Some(lobby)) {
                         log::error!("Error scheduling episode download: {}", e);
                     }
                 })
@@ -229,7 +202,6 @@ impl PodcastService {
     }
 
     pub fn schedule_episode_download(
-        &mut self,
         podcast: Podcast,
         lobby: Option<Data<ChatServerHandle>>,
     ) -> Result<(), CustomError> {
@@ -265,32 +237,23 @@ impl PodcastService {
     }
 
     pub fn refresh_podcast(
-        &mut self,
         podcast: Podcast,
         lobby: Data<ChatServerHandle>,
     ) -> Result<(), CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
         PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
-        self.schedule_episode_download(podcast.clone(), Some(lobby.clone()))
+        Self::schedule_episode_download(podcast.clone(), Some(lobby.clone()))
     }
 
-    pub fn update_favor_podcast(
-        &mut self,
-        id: i32,
-        x: bool,
-        username: String,
-    ) -> Result<(), CustomError> {
+    pub fn update_favor_podcast(id: i32, x: bool, username: String) -> Result<(), CustomError> {
         Favorite::update_podcast_favor(&id, x, username)
     }
 
-    pub fn get_podcast_by_id(&mut self, id: i32) -> Podcast {
+    pub fn get_podcast_by_id(id: i32) -> Podcast {
         Podcast::get_podcast(id).unwrap()
     }
 
-    pub fn get_favored_podcasts(
-        &mut self,
-        found_username: String,
-    ) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_favored_podcasts(found_username: String) -> Result<Vec<PodcastDto>, CustomError> {
         Favorite::get_favored_podcasts(found_username)
     }
 
@@ -298,7 +261,7 @@ impl PodcastService {
         Podcast::update_podcast_active(id)
     }
 
-    fn compute_podindex_header(&mut self) -> HeaderMap {
+    fn compute_podindex_header() -> HeaderMap {
         let seconds = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -351,7 +314,6 @@ impl PodcastService {
     }
 
     pub fn search_podcasts_favored(
-        &mut self,
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
@@ -388,7 +350,6 @@ impl PodcastService {
     }
 
     pub fn search_podcasts(
-        &mut self,
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
