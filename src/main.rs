@@ -132,7 +132,7 @@ async fn index() -> actix_web::Result<Markup> {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
         let manifest_json_location = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap()
             +"/manifest.json";
-        let found_files = std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/static/assets/"))
+        let found_files = std::fs::read_dir( "./static/assets/")
             .expect("Could not read directory")
             .map(|x| x.unwrap().file_name().into_string().unwrap())
             .collect::<Vec<String>>();
