@@ -1,5 +1,5 @@
-use actix_files::NamedFile;
-use actix_web::HttpRequest;
+mod ui_middleware;
+
 use maud::{html, Markup};
 
 pub fn sidebar() -> Markup {
@@ -40,8 +40,14 @@ pub fn sidebar_item(text: &str, active: bool) -> Markup {
 
 pub fn navbar() -> Markup {
     html!{
-        div class="navbar" {
-
+        div class="navbar" onclick="toggleLanguageDropdown()" {
+            select default="English" {
+                option {"German"}
+                option { "English"}
+                option { "Français"}
+                option {"Polski"}
+                option { "Español"}
+            }
         }
     }
 }
@@ -61,7 +67,7 @@ pub fn homepage() -> Markup {
                         div class="main-container" {
                         (sidebar())
                         div class="main-content" {
-
+                            (navbar())
                         }
                         }
                 }
