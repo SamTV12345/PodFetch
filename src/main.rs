@@ -87,6 +87,7 @@ use crate::service::file_service::FileService;
 
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
+use crate::ui::{index_ui};
 use crate::utils::error::CustomError;
 use crate::utils::http_client::get_http_client;
 use crate::utils::podcast_key_checker::check_podcast_request;
@@ -102,6 +103,7 @@ mod exception;
 mod gpodder;
 pub mod mutex;
 pub mod utils;
+mod ui;
 
 type DbPool = Pool<ConnectionManager<DBType>>;
 
@@ -366,10 +368,14 @@ pub fn get_api_config() -> Scope {
     web::scope("/api/v1").configure(config)
 }
 
+
+
 fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(get_invite)
         .service(onboard_user)
         .service(login)
+        .route("/ui-new", web::get().to(index_ui))
+        .service(Files::new("/assets", "./src/ui/assets").show_files_listing())
         .service(get_public_config)
         .service(get_private_api());
 }

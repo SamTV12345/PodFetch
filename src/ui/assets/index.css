@@ -1,0 +1,186 @@
+:root {
+    --accent-color: #e69a13;
+    --accent-color-hover: #f3ae34;
+    --tw-bg-opacity: 1;
+}
+
+
+body {
+    margin: 0;
+}
+
+html.light {
+    --sidebar-color: rgb(12 10 9 / var(--tw-bg-opacity, 1));
+    --text-color: black;
+    --bg-color: white;
+}
+
+html.dark {
+    --sidebar-color: rgb(22 21 20 / var(--tw-bg-opacity, 1));
+    --text-color: white;
+    --bg-color: #1c1917;
+}
+
+#root, body, html {
+    height: 100%;
+}
+
+*, ::before, ::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: #e5e7eb;
+}
+
+
+.sidebar {
+    position: fixed;
+    background-color: var(--sidebar-color);
+    left: -18rem;
+    tab-size: 4;
+    font-feature-settings: normal;
+    font-variation-settings: normal;
+    line-height: inherit;
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: #e5e7eb;
+    font-family: 'Poppins', sans-serif;
+    z-index: 20;
+    height: 100%;
+    width: 18rem;
+    padding: 2rem 1.5rem;
+    --tw-text-opacity: 1;
+    color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+    transition-property: left;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    --tw-bg-opacity: 1;
+}
+
+ul {
+    list-style-type: none;
+}
+
+.sidebar-item {
+    tab-size: 4;
+    font-feature-settings: normal;
+    font-variation-settings: normal;
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: #e5e7eb;
+    display: flex;
+    text-decoration: none;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    color: var(--text-color);
+}
+
+.sidebar-item.active {
+    background-color: rgba(192,124,3,0.1);
+    color: var(--accent-color);
+}
+
+.main-container {
+    tab-size: 4;
+    font-feature-settings: normal;
+    font-variation-settings: normal;
+    line-height: inherit;
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: #e5e7eb;
+    font-family: 'Poppins', sans-serif;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: 18rem 1fr;
+    height: 100%;
+}
+
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    background-color: var(--bg-color);
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.logo-container .material-icons {
+    color: var(--accent-color);
+}
+
+.navbar {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+.logo-container {
+    font-feature-settings: normal;
+    font-variation-settings: normal;
+    color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: #e5e7eb;
+    font-family: 'Poppins', sans-serif;
+    margin-bottom: 2.5rem;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    transition-property: opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    opacity: 1;
+}
+
+
+/* md override  */
+@media (min-width: 768px) {
+    .sidebar {
+        position: static;
+    }
+}
+
+
+
+@font-face {
+    font-family: 'Material Icons';
+    font-style: normal;
+    font-weight: 400;
+    src: url(material-symbols-outlined.woff2) format('woff2');
+}
+
+.material-icons {
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
