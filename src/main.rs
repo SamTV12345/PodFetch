@@ -17,6 +17,7 @@ use jsonwebtoken::jwk::{
     AlgorithmParameters, CommonParameters, Jwk, KeyAlgorithm, RSAKeyParameters, RSAKeyType,
 };
 use log::info;
+use maud::{html, Markup};
 use r2d2::Pool;
 use regex::Regex;
 use std::collections::HashSet;
@@ -24,10 +25,9 @@ use std::env::args;
 use std::io::Read;
 use std::ops::DerefMut;
 use std::process::exit;
+use std::sync::OnceLock;
 use std::time::Duration;
 use std::{env, thread};
-use std::sync::OnceLock;
-use maud::{html, Markup};
 use tokio::{spawn, try_join};
 
 mod controllers;
@@ -125,38 +125,48 @@ fn fix_links(content: &str) -> String {
     content.replace("/ui/", &dir)
 }
 
-
-pub static  INDEX_HTML: OnceLock<Markup> = OnceLock::new();
+pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
 async fn index() -> actix_web::Result<Markup> {
-    let html = INDEX_HTML.get_or_init(||{
+    let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
+        let manifest_json_location = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap()
+            +"/manifest.json";
         let found_files = std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/static/assets/"))
             .expect("Could not read directory")
             .map(|x| x.unwrap().file_name().into_string().unwrap())
             .collect::<Vec<String>>();
-        let js_file = found_files.iter().filter(|x|x.starts_with("index") && x.ends_with(".js")).collect::<Vec<&String>>()[0];
-        let css_file = found_files.iter().filter(|x|x.starts_with("index") && x.ends_with(".css"))
+        let js_file = found_files
+            .iter()
+            .filter(|x| x.starts_with("index") && x.ends_with(".js"))
+            .collect::<Vec<&String>>()[0];
+        let css_file = found_files
+            .iter()
+            .filter(|x| x.starts_with("index") && x.ends_with(".css"))
             .collect::<Vec<&String>>()[0];
 
-        let html = html!{
-        meta charset="utf-8";
-        meta name="viewport" content="width=device-width, initial-scale=1";
-        title {"Podfetch"};
-        link rel="icon" type="image/png" href="/ui/favicon.ico";
-        link rel="manifest" href="../manifest.json";
-        script type="module" crossorigin src=(dir.clone() + "assets/" + js_file) {};
-        link rel="stylesheet" href=(dir.clone() + "assets/"+ css_file);
-        div id="root" {};
-        div id="modal" {};
-        div id="modal1"{};
-        div id="modal2"{};
-        div id="confirm-modal"{};
-    };
-    html
+        let html = html! {
+            html {
+                head {
+                    meta charset="utf-8";
+                    meta name="viewport" content="width=device-width, initial-scale=1";
+                    title {"Podfetch"};
+                    link rel="icon" type="image/png" href="/ui/favicon.ico";
+                    link rel="manifest" href=(manifest_json_location);
+                    script type="module" crossorigin src=(dir.clone() + "assets/" + js_file) {};
+                    link rel="stylesheet" href=(dir.clone() + "assets/"+ css_file);
+                }
+            body {
+            div id="root" {};
+            div id="modal" {};
+            div id="modal1"{};
+            div id="modal2"{};
+            div id="confirm-modal"{};
+                }
+
+        }};
+        html
     });
-
-
 
     Ok(html.clone())
 }
@@ -329,7 +339,10 @@ async fn main() -> std::io::Result<()> {
         hash.insert(oidc_config.client_id);
     }
 
-    let sub_dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap_or("/".to_string());
+    let sub_dir = ENVIRONMENT_SERVICE
+        .sub_directory
+        .clone()
+        .unwrap_or("/".to_string());
 
     let http_server = HttpServer::new(move || {
         App::new()
@@ -504,14 +517,17 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
 }
 
 pub fn check_server_config() {
-    if ENVIRONMENT_SERVICE.http_basic && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
+    if ENVIRONMENT_SERVICE.http_basic
+        && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
     {
         eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
         exit(1);
     }
 
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled
-        && !(ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured || ENVIRONMENT_SERVICE.reverse_proxy)
+        && !(ENVIRONMENT_SERVICE.http_basic
+            || ENVIRONMENT_SERVICE.oidc_configured
+            || ENVIRONMENT_SERVICE.reverse_proxy)
     {
         eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
         exit(1);
