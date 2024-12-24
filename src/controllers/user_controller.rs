@@ -141,7 +141,7 @@ pub async fn update_user(
     }
     let mut user = User::find_by_username(&username)?;
 
-    if let Some(admin_username) = ENVIRONMENT_SERVICE.get().unwrap().username.clone() {
+    if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
         if admin_username == user.username {
             return Err(CustomError::Conflict(
                 "Cannot update admin user".to_string(),
@@ -149,7 +149,7 @@ pub async fn update_user(
         }
     }
 
-    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.get().unwrap().oidc_configured
+    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.oidc_configured
     {
         // Check if this username is already taken
         let new_username_res = User::find_by_username(&user_update.username);
@@ -271,7 +271,6 @@ pub async fn get_invite_link(
 
     match UserManagementService::get_invite_link(
         invite_id.into_inner(),
-        ENVIRONMENT_SERVICE.get().unwrap(),
     ) {
         Ok(invite) => HttpResponse::Ok().json(invite),
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),

@@ -82,7 +82,6 @@ use crate::models::settings::Setting;
 
 use crate::service::environment_service::EnvironmentService;
 use crate::service::file_service::FileService;
-use crate::service::logging_service::init_logging;
 
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
@@ -120,8 +119,7 @@ pub fn run_poll() -> Result<(), CustomError> {
 }
 
 fn fix_links(content: &str) -> String {
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    let dir = env_service.sub_directory.clone().unwrap() + "/ui/";
+    let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
     content.replace("/ui/", &dir)
 }
 
@@ -135,15 +133,13 @@ async fn index() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let env_service = EnvironmentService::new();
-
     println!(
         "Debug file located at {}",
         concat!(env!("OUT_DIR"), "/built.rs")
     );
-    init_logging();
-    ENVIRONMENT_SERVICE.get_or_init(|| env_service);
 
+    EnvironmentService::print_banner();
+    ENVIRONMENT_SERVICE.get_environment();
     if args().len() > 1 {
         start_command_line(args()).await;
         exit(0)
@@ -177,7 +173,6 @@ async fn main() -> std::io::Result<()> {
 
     let chat_server = spawn(chat_server.run());
 
-    EnvironmentService::print_banner();
     match FileService::create_podcast_root_directory_exists() {
         Ok(_) => {}
         Err(e) => {
@@ -191,8 +186,7 @@ async fn main() -> std::io::Result<()> {
     thread::spawn(|| {
         let mut scheduler = Scheduler::new();
 
-        ENVIRONMENT_SERVICE.get().unwrap().get_environment();
-        let polling_interval = ENVIRONMENT_SERVICE.get().unwrap().get_polling_interval();
+        let polling_interval = ENVIRONMENT_SERVICE.get_polling_interval();
         scheduler.every(polling_interval.minutes()).run(|| {
             let settings = Setting::get_settings().unwrap();
             match settings {
@@ -245,7 +239,7 @@ async fn main() -> std::io::Result<()> {
     let mut hash = HashSet::new();
     let jwk: Option<Jwk>;
 
-    match ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
+    match ENVIRONMENT_SERVICE.oidc_config.clone() {
         Some(jwk_config) => {
             let resp = get_http_client()
                 .get(&jwk_config.jwks_uri)
@@ -301,12 +295,11 @@ async fn main() -> std::io::Result<()> {
         }
     }
 
-    if let Some(oidc_config) = ENVIRONMENT_SERVICE.get().unwrap().oidc_config.clone() {
+    if let Some(oidc_config) = ENVIRONMENT_SERVICE.oidc_config.clone() {
         hash.insert(oidc_config.client_id);
     }
 
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    let sub_dir = env_service.sub_directory.clone().unwrap_or("/".to_string());
+    let sub_dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap_or("/".to_string());
 
     let http_server = HttpServer::new(move || {
         App::new()
@@ -418,7 +411,7 @@ fn get_private_api() -> Scope<
 }
 
 pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {
-    if ENVIRONMENT_SERVICE.get().unwrap().any_auth_enabled {
+    if ENVIRONMENT_SERVICE.any_auth_enabled {
         cfg.service(get_secure_user_management());
     }
 }
@@ -481,35 +474,34 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
 }
 
 pub fn check_server_config() {
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    if env_service.http_basic && (env_service.password.is_none() || env_service.username.is_none())
+    if ENVIRONMENT_SERVICE.http_basic && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
     {
         eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
         exit(1);
     }
 
-    if env_service.gpodder_integration_enabled
-        && !(env_service.http_basic || env_service.oidc_configured || env_service.reverse_proxy)
+    if ENVIRONMENT_SERVICE.gpodder_integration_enabled
+        && !(ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured || ENVIRONMENT_SERVICE.reverse_proxy)
     {
         eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
         exit(1);
     }
 
-    if check_if_multiple_auth_is_configured(env_service) {
+    if check_if_multiple_auth_is_configured() {
         eprintln!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
         exit(1);
     }
 }
 
-fn check_if_multiple_auth_is_configured(env: &EnvironmentService) -> bool {
+fn check_if_multiple_auth_is_configured() -> bool {
     let mut num_of_auth_count = 0;
-    if env.http_basic {
+    if ENVIRONMENT_SERVICE.http_basic {
         num_of_auth_count += 1;
     }
-    if env.oidc_configured {
+    if ENVIRONMENT_SERVICE.oidc_configured {
         num_of_auth_count += 1;
     }
-    if env.reverse_proxy {
+    if ENVIRONMENT_SERVICE.reverse_proxy {
         num_of_auth_count += 1;
     }
     num_of_auth_count > 1

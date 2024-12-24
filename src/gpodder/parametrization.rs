@@ -22,10 +22,10 @@ pub struct BaseURL {
 pub async fn get_client_parametrization() -> impl Responder {
     let answer = ClientParametrization {
         mygpo_feedservice: BaseURL {
-            base_url: ENVIRONMENT_SERVICE.get().unwrap().server_url.clone(),
+            base_url: ENVIRONMENT_SERVICE.server_url.clone(),
         },
         mygpo: BaseURL {
-            base_url: ENVIRONMENT_SERVICE.get().unwrap().server_url.to_string() + "rss",
+            base_url: ENVIRONMENT_SERVICE.server_url.to_string() + "rss",
         },
         update_timeout: 604800,
     };

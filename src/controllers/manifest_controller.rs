@@ -23,10 +23,9 @@ pub struct Manifest {
 
 #[get("manifest.json")]
 pub async fn get_manifest() -> Result<HttpResponse, CustomError> {
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
     let mut icons = Vec::new();
     let icon = Icon {
-        src: env_service.server_url.to_string() + "ui/logo.png",
+        src: ENVIRONMENT_SERVICE.server_url.to_string() + "ui/logo.png",
         sizes: "512x512".to_string(),
         r#type: "image/png".to_string(),
     };
@@ -35,7 +34,7 @@ pub async fn get_manifest() -> Result<HttpResponse, CustomError> {
     let manifest = Manifest {
         name: "PodFetch".to_string(),
         short_name: "PodFetch".to_string(),
-        start_url: env_service.server_url.to_string(),
+        start_url: ENVIRONMENT_SERVICE.server_url.to_string(),
         icons,
         orientation: "landscape".to_string(),
         theme_color: "#ffffff".to_string(),

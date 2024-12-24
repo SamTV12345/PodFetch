@@ -73,8 +73,7 @@ impl User {
 
     pub fn find_by_username(username_to_find: &str) -> Result<User, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        if let Some(res) = env_service.username.clone() {
+        if let Some(res) = ENVIRONMENT_SERVICE.username.clone() {
             if res == username_to_find {
                 return Ok(User::create_admin_user());
             }
@@ -94,8 +93,7 @@ impl User {
 
     pub fn insert_user(&mut self) -> Result<User, Error> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        if let Some(res) = env_service.username.clone() {
+        if let Some(res) = ENVIRONMENT_SERVICE.username.clone() {
             if res == self.username {
                 return Err(Error::new(
                     std::io::ErrorKind::Other,
@@ -139,9 +137,8 @@ impl User {
     }
 
     pub(crate) fn create_admin_user() -> User {
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        let password: Option<String> = env_service.password.clone();
-        let username = env_service.username.clone();
+        let password: Option<String> = ENVIRONMENT_SERVICE.password.clone();
+        let username = ENVIRONMENT_SERVICE.username.clone();
         User {
             id: 9999,
             username: username.unwrap_or(STANDARD_USER.to_string()),
@@ -149,7 +146,7 @@ impl User {
             password,
             explicit_consent: true,
             created_at: Default::default(),
-            api_key: env_service.api_key_admin.clone(),
+            api_key: ENVIRONMENT_SERVICE.api_key_admin.clone(),
         }
     }
 
@@ -175,8 +172,7 @@ impl User {
     }
 
     pub fn create_standard_admin_user() -> User {
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-        let api_admin: Option<String> = env_service.api_key_admin.clone();
+        let api_admin: Option<String> = ENVIRONMENT_SERVICE.api_key_admin.clone();
         User {
             id: 9999,
             username: STANDARD_USER.to_string(),
@@ -317,9 +313,8 @@ impl User {
             return false;
         }
 
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
 
-        if let Some(res) = env_service.api_key_admin.clone() {
+        if let Some(res) = ENVIRONMENT_SERVICE.api_key_admin.clone() {
             if !res.is_empty() && res == api_key_to_find {
                 return true;
             }

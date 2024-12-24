@@ -3,7 +3,6 @@ use crate::models::session::Session;
 use crate::models::user::User;
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::CustomError;
 use actix_web::post;
 use actix_web::{web, HttpRequest, HttpResponse};
@@ -15,8 +14,6 @@ pub async fn login(
     username: web::Path<String>,
     rq: HttpRequest,
 ) -> Result<HttpResponse, CustomError> {
-    let env = ENVIRONMENT_SERVICE.get().unwrap();
-
     // If cookie is already set, return it
     if let Some(cookie) = rq.clone().cookie("sessionid") {
         let session = cookie.value();
@@ -27,18 +24,17 @@ pub async fn login(
         }
     }
 
-    match env.reverse_proxy {
-        true => handle_proxy_auth(rq, username.into_inner(), env),
-        false => handle_gpodder_basic_auth(rq, username, env),
+    match ENVIRONMENT_SERVICE.reverse_proxy {
+        true => handle_proxy_auth(rq, username.into_inner()),
+        false => handle_gpodder_basic_auth(rq, username),
     }
 }
 
 fn handle_proxy_auth(
     rq: HttpRequest,
     username: String,
-    env: &EnvironmentService,
 ) -> Result<HttpResponse, CustomError> {
-    let config = env.reverse_proxy_config.clone().unwrap();
+    let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
     match opt_authorization {
         Some(auth) => {
@@ -69,7 +65,7 @@ fn handle_proxy_auth(
                             api_key: None,
                         })
                         .expect("Error inserting user on auto registering");
-                        handle_proxy_auth(rq, username.clone(), env)
+                        handle_proxy_auth(rq, username.clone())
                     } else {
                         log::error!("Error finding user by username: {}", e);
                         Err(CustomError::Forbidden)
@@ -84,7 +80,6 @@ fn handle_proxy_auth(
 fn handle_gpodder_basic_auth(
     rq: HttpRequest,
     username: web::Path<String>,
-    env: &EnvironmentService,
 ) -> Result<HttpResponse, CustomError> {
     let opt_authorization = rq.headers().get("Authorization");
 
@@ -100,7 +95,7 @@ fn handle_gpodder_basic_auth(
         return Err(CustomError::Forbidden);
     }
 
-    if let Some(admin_username) = &env.username {
+    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
         if admin_username == &unwrapped_username {
             return Err(CustomError::Conflict(
                 "The user you are trying to login is equal to the admin user. Please\

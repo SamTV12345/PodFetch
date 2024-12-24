@@ -1,7 +1,6 @@
 use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::models::user::User;
-use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::settings_service::SettingsService;
 use actix_web::web::{Path, ReqData};
@@ -106,7 +105,6 @@ pub async fn get_opml(
     opml.add_child(add_header()).expect("TODO: panic message");
     opml.add_child(add_podcasts(
         podcasts_found,
-        ENVIRONMENT_SERVICE.get().unwrap(),
         type_of.into_inner(),
         requester,
     ))
@@ -144,7 +142,6 @@ fn add_body() -> XMLElement {
 
 fn add_podcasts(
     podcasts_found: Vec<Podcast>,
-    env_service: &EnvironmentService,
     type_of: Mode,
     requester: Option<ReqData<User>>,
 ) -> XMLElement {
@@ -158,7 +155,8 @@ fn add_podcasts(
         outline.add_attribute("type", "rss");
         match type_of {
             Mode::Local => {
-                let mut local_url = format!("{}rss/{}", &*env_service.get_server_url(), podcast.id);
+                let mut local_url = format!("{}rss/{}", &*ENVIRONMENT_SERVICE.get_server_url(),
+                                            podcast.id);
 
                 if let Some(req) = requester.as_ref() {
                     if let Some(api_key) = req.api_key.as_ref() {

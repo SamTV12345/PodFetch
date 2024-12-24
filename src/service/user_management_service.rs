@@ -1,10 +1,9 @@
 use std::str::FromStr;
 
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::constants::inner_constants::Role;
+use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
-use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::CustomError;
 use sha256::digest;
 
@@ -129,11 +128,10 @@ impl UserManagementService {
 
     pub fn get_invite_link(
         invite_id: String,
-        environment_service: &EnvironmentService,
     ) -> Result<String, CustomError> {
         let invite = Invite::find_invite(invite_id)?;
         match invite {
-            Some(invite) => Ok(environment_service.clone().server_url + "ui/invite/" + &invite.id),
+            Some(invite) => Ok(ENVIRONMENT_SERVICE.server_url.to_string() + "ui/invite/" + &invite.id),
             None => Err(CustomError::NotFound),
         }
     }

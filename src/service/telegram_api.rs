@@ -5,8 +5,6 @@ use frankenstein::{Api, ParseMode, SendMessageParams, TelegramApi};
 
 pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: Podcast) {
     let telegram_config = ENVIRONMENT_SERVICE
-        .get()
-        .unwrap()
         .telegram_api
         .clone()
         .unwrap();

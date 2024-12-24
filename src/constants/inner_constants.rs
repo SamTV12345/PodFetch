@@ -2,7 +2,7 @@ use crate::service::environment_service::EnvironmentService;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search?term=";
 
@@ -40,6 +40,8 @@ pub const TELEGRAM_BOT_CHAT_ID: &str = "TELEGRAM_BOT_CHAT_ID";
 pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";
 
 use utoipa::ToSchema;
+use crate::service::logging_service::init_logging;
+
 // User management roles
 #[derive(Serialize, Deserialize, Debug, PartialEq, ToSchema)]
 #[serde(rename_all = "lowercase")]
@@ -132,7 +134,12 @@ pub const DEFAULT_DEVICE: &str = "webview";
 
 // static constants
 
-pub static ENVIRONMENT_SERVICE: OnceLock<EnvironmentService> = OnceLock::new();
+pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new
+    (|| {
+        init_logging();
+        EnvironmentService::new()
+    });
+
 
 pub static DEFAULT_IMAGE_URL: &str = "ui/default.jpg";
 pub static ITUNES: &str = "itunes";

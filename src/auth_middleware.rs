@@ -69,11 +69,11 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        if ENVIRONMENT_SERVICE.get().unwrap().http_basic {
+        if ENVIRONMENT_SERVICE.http_basic {
             self.handle_basic_auth(req)
-        } else if ENVIRONMENT_SERVICE.get().unwrap().oidc_configured {
+        } else if ENVIRONMENT_SERVICE.oidc_configured {
             self.handle_oidc_auth(req)
-        } else if ENVIRONMENT_SERVICE.get().unwrap().reverse_proxy {
+        } else if ENVIRONMENT_SERVICE.reverse_proxy {
             self.handle_proxy_auth(req)
         } else {
             // It can only be no auth
@@ -92,7 +92,6 @@ where
     S::Future: 'static,
 {
     fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let env_service = ENVIRONMENT_SERVICE.get().unwrap();
         let opt_auth_header = req.headers().get("Authorization");
 
         match opt_auth_header {
@@ -108,10 +107,10 @@ where
                     }
                     let unwrapped_user = found_user.unwrap();
 
-                    if let Some(admin_username) = env_service.username.clone() {
+                    if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
                         if unwrapped_user.username.clone() == admin_username {
-                            return match env_service.password.is_some()
-                                && digest(password) == env_service.password.clone().unwrap()
+                            return match ENVIRONMENT_SERVICE.password.is_some()
+                                && digest(password) == ENVIRONMENT_SERVICE.password.clone().unwrap()
                             {
                                 true => {
                                     req.extensions_mut().insert(unwrapped_user);
@@ -232,8 +231,6 @@ where
 
     fn handle_proxy_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let config = ENVIRONMENT_SERVICE
-            .get()
-            .unwrap()
             .reverse_proxy_config
             .clone()
             .unwrap();

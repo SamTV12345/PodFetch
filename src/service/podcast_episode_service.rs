@@ -292,8 +292,7 @@ impl PodcastEpisodeService {
                 Podcast::update_original_image_url(&image.url.to_string(), podcast.id)?;
             }
             None => {
-                let env = ENVIRONMENT_SERVICE.get().unwrap();
-                let url = env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL;
+                let url = ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL;
                 Podcast::update_original_image_url(&url, podcast.id)?;
             }
         }

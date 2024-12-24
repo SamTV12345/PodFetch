@@ -268,14 +268,10 @@ impl PodcastService {
             .as_secs();
         let mut headers = HeaderMap::new();
         let non_hashed_string = ENVIRONMENT_SERVICE
-            .get()
-            .unwrap()
             .podindex_api_key
             .clone()
             .to_owned()
             + &*ENVIRONMENT_SERVICE
-                .get()
-                .unwrap()
                 .podindex_api_secret
                 .clone()
             + &seconds.to_string();
@@ -291,7 +287,7 @@ impl PodcastService {
         );
         headers.insert(
             "X-Auth-Key",
-            HeaderValue::from_str(&ENVIRONMENT_SERVICE.get().unwrap().podindex_api_key).unwrap(),
+            HeaderValue::from_str(&ENVIRONMENT_SERVICE.podindex_api_key).unwrap(),
         );
         headers.insert(
             "X-Auth-Date",

@@ -5,7 +5,7 @@ use reqwest::Proxy;
 pub fn get_sync_client() -> ClientBuilder {
     let mut res = ClientBuilder::new();
 
-    if let Some(unwrapped_proxy) = ENVIRONMENT_SERVICE.get().unwrap().proxy_url.clone() {
+    if let Some(unwrapped_proxy) = ENVIRONMENT_SERVICE.proxy_url.clone() {
         let proxy = Proxy::all(unwrapped_proxy);
         match proxy {
             Ok(e) => {

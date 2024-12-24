@@ -48,15 +48,12 @@ impl From<PodcastEpisode> for PodcastEpisodeDto {
 fn map_url(url: &str, status: &str, remote_url: &str) -> String {
     match url == DEFAULT_IMAGE_URL {
         true => {
-            let env = ENVIRONMENT_SERVICE.get().unwrap();
 
-            env.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
+            ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
         }
         false => {
             if status == "D" {
                 ENVIRONMENT_SERVICE
-                    .get()
-                    .unwrap()
                     .server_url
                     .clone()
                     .to_owned()

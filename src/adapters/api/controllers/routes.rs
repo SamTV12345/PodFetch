@@ -18,8 +18,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub fn global_routes() -> Scope {
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    let base_path = env_service.sub_directory.clone().unwrap_or("/".to_string());
+    let base_path = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap_or("/".to_string());
     let openapi = ApiDoc::openapi();
     let service = get_api_config();
 
@@ -40,8 +39,6 @@ pub fn global_routes() -> Scope {
 
 pub fn get_gpodder_api() -> Scope {
     if ENVIRONMENT_SERVICE
-        .get()
-        .unwrap()
         .gpodder_integration_enabled
     {
         web::scope("/api/2")

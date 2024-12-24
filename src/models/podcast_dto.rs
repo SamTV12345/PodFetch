@@ -2,7 +2,6 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
-use crate::service::environment_service;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
@@ -33,9 +32,7 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
             name: value.0.name.clone(),
             directory_id: value.0.directory_id.clone(),
             rssfeed: value.0.rssfeed.clone(),
-            image_url: environment_service::EnvironmentService::get_server_url(
-                ENVIRONMENT_SERVICE.get().unwrap(),
-            ) + &value.0.image_url.clone(),
+            image_url: ENVIRONMENT_SERVICE.get_server_url() + &value.0.image_url.clone(),
             language: value.0.language.clone(),
             keywords: value.0.keywords.clone(),
             summary: value.0.summary.clone(),
@@ -59,9 +56,7 @@ impl From<Podcast> for PodcastDto {
             name: value.name.clone(),
             directory_id: value.directory_id.clone(),
             rssfeed: value.rssfeed.clone(),
-            image_url: environment_service::EnvironmentService::get_server_url(
-                ENVIRONMENT_SERVICE.get().unwrap(),
-            ) + &value.image_url.clone(),
+            image_url: ENVIRONMENT_SERVICE.get_server_url() + &value.image_url.clone(),
             language: value.language.clone(),
             keywords: value.keywords.clone(),
             summary: value.summary.clone(),

@@ -6,7 +6,6 @@ use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
 use crate::models::search_type::SearchType::{ITunes, Podindex};
-use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string};
@@ -196,8 +195,6 @@ pub async fn find_podcast(
         }
         Ok(Podindex) => {
             if !ENVIRONMENT_SERVICE
-                .get()
-                .unwrap()
                 .get_config()
                 .podindex_configured
             {
@@ -334,12 +331,10 @@ pub async fn import_podcasts_from_opml(
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 let rng = rand::thread_rng();
-                let environment = ENVIRONMENT_SERVICE.get().unwrap();
                 rt.block_on(insert_outline(
                     outline.clone(),
                     moved_lobby,
                     rng.clone(),
-                    environment.clone(),
                 ));
             });
         }
@@ -366,8 +361,6 @@ pub async fn add_podcast_from_podindex(
     }
 
     if !ENVIRONMENT_SERVICE
-        .get()
-        .unwrap()
         .get_config()
         .podindex_configured
     {
@@ -538,7 +531,6 @@ async fn insert_outline(
     podcast: Outline,
     lobby: Data<ChatServerHandle>,
     mut rng: ThreadRng,
-    environment: EnvironmentService,
 ) {
     if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
@@ -546,7 +538,6 @@ async fn insert_outline(
                 outline_nested,
                 lobby.clone(),
                 rng.clone(),
-                environment.clone(),
             )
             .await;
         }
@@ -585,9 +576,9 @@ async fn insert_outline(
                 None => {
                     log::info!(
                         "No image found for podcast. Downloading from {}",
-                        environment.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
+                        ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
                     );
-                    environment.server_url.clone().to_owned() + "ui/default.jpg"
+                    ENVIRONMENT_SERVICE.server_url.clone().to_owned() + "ui/default.jpg"
                 }
             };
 

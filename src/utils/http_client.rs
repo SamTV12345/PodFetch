@@ -15,7 +15,7 @@ pub fn get_http_client() -> Client {
 pub fn get_async_sync_client() -> reqwest::ClientBuilder {
     let mut res = reqwest::ClientBuilder::new();
 
-    if let Some(unwrapped_proxy) = ENVIRONMENT_SERVICE.get().unwrap().proxy_url.clone() {
+    if let Some(unwrapped_proxy) = ENVIRONMENT_SERVICE.proxy_url.clone() {
         let proxy = Proxy::all(unwrapped_proxy);
         match proxy {
             Ok(e) => {

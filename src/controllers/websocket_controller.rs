@@ -6,7 +6,6 @@ use crate::models::podcasts::Podcast;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::user::User;
-use crate::service::environment_service::EnvironmentService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 use actix_web::web::Query;
@@ -63,9 +62,8 @@ pub async fn get_rss_feed(
 ) -> Result<HttpResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
 
-    let env = ENVIRONMENT_SERVICE.get().unwrap();
     // If http basic is enabled, we need to check if the api key is valid
-    if env.http_basic || env.oidc_configured {
+    if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         if api_key.is_none() {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
         }
@@ -83,7 +81,7 @@ pub async fn get_rss_feed(
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };
 
-    let server_url = env.get_server_url();
+    let server_url = ENVIRONMENT_SERVICE.get_server_url();
     let feed_url = add_api_key_to_url(format!("{}{}", &server_url, &"rss"), &api_key);
 
     let itunes_owner = get_itunes_owner("Podfetch", "dev@podfetch.com");
@@ -109,7 +107,7 @@ pub async fn get_rss_feed(
         .clone();
 
     let channel =
-        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, env, &api_key);
+        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, &api_key);
 
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
@@ -128,17 +126,16 @@ fn generate_itunes_extension_conditionally(
     mut itunes_ext: ITunesChannelExtension,
     mut channel_builder: ChannelBuilder,
     podcast: Option<Podcast>,
-    env: &EnvironmentService,
     api_key: &Option<Query<RSSAPiKey>>,
 ) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
             true => itunes_ext.set_image(add_api_key_to_url(
-                env.server_url.to_string() + &*e.image_url,
+                ENVIRONMENT_SERVICE.server_url.to_string() + &*e.image_url,
                 api_key,
             )),
             false => itunes_ext.set_image(add_api_key_to_url(
-                env.server_url.to_string() + &*e.original_image_url,
+                ENVIRONMENT_SERVICE.server_url.to_string() + &*e.original_image_url,
                 api_key,
             )),
         }
@@ -157,11 +154,10 @@ pub async fn get_rss_feed_for_podcast(
     id: web::Path<i32>,
     api_key: Option<web::Query<RSSAPiKey>>,
 ) -> Result<HttpResponse, CustomError> {
-    let env = ENVIRONMENT_SERVICE.get().unwrap();
-    let server_url = env.server_url.clone();
+    let server_url = ENVIRONMENT_SERVICE.server_url.clone();
 
     // If http basic is enabled, we need to check if the api key is valid
-    if env.http_basic || env.oidc_configured {
+    if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         if api_key.is_none() {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
         }
@@ -233,7 +229,6 @@ pub async fn get_rss_feed_for_podcast(
         itunes_ext,
         channel_builder,
         Some(podcast.clone()),
-        ENVIRONMENT_SERVICE.get().unwrap(),
         &api_key,
     );
 

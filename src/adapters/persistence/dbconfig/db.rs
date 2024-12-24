@@ -35,7 +35,7 @@ impl r2d2::CustomizeConnection<DBType, diesel::r2d2::Error> for ConnectionOption
 }
 
 pub fn establish_connection() -> DBType {
-    let database_url = &ENVIRONMENT_SERVICE.get().unwrap().database_url;
+    let database_url = &ENVIRONMENT_SERVICE.database_url;
     DBType::establish(database_url).unwrap_or_else(|e| {
         log::error!("Error connecting to {} with reason {}", database_url, e);
         exit(1)
@@ -52,17 +52,16 @@ fn init_pool() -> DbPool {
     let conn = establish_connection();
     match conn {
         DBType::Postgresql(_) => {
-            init_postgres_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
+            init_postgres_db_pool(&ENVIRONMENT_SERVICE.database_url)
                 .expect("Failed to connect to database")
         }
-        DBType::Sqlite(_) => init_sqlite_db_pool(&ENVIRONMENT_SERVICE.get().unwrap().database_url)
+        DBType::Sqlite(_) => init_sqlite_db_pool(&ENVIRONMENT_SERVICE.database_url)
             .expect("Failed to connect to database"),
     }
 }
 
 fn init_postgres_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBType>>, String> {
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
-    let db_connections = env_service.conn_number;
+    let db_connections = ENVIRONMENT_SERVICE.conn_number;
     let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder()
         .max_size(db_connections as u32)

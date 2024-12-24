@@ -133,7 +133,7 @@ tag="sys"
 )]
 #[get("/sys/config")]
 pub async fn get_public_config() -> impl Responder {
-    let config = ENVIRONMENT_SERVICE.get().unwrap().get_config();
+    let config = ENVIRONMENT_SERVICE.get_config();
     HttpResponse::Ok().json(config)
 }
 
@@ -148,12 +148,11 @@ tag="sys"
 #[post("/login")]
 pub async fn login(auth: web::Json<LoginRequest>) -> Result<HttpResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
-    let env_service = ENVIRONMENT_SERVICE.get().unwrap();
 
     let digested_password = digest(auth.0.password);
-    if let Some(admin_username) = &env_service.username {
+    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
         if admin_username == &auth.0.username {
-            if let Some(admin_password) = &env_service.password {
+            if let Some(admin_password) = &ENVIRONMENT_SERVICE.password {
                 if admin_password == &digested_password {
                     return Ok(HttpResponse::Ok().json("Login successful"));
                 }
