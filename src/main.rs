@@ -10,7 +10,7 @@ use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
 use actix_web::web::{redirect, Data};
-use actix_web::{web, App, HttpResponse, HttpServer, Responder, Scope};
+use actix_web::{web, App, HttpResponse, HttpServer, Scope};
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
 use jsonwebtoken::jwk::{
@@ -26,6 +26,8 @@ use std::ops::DerefMut;
 use std::process::exit;
 use std::time::Duration;
 use std::{env, thread};
+use std::sync::OnceLock;
+use maud::{html, Markup};
 use tokio::{spawn, try_join};
 
 mod controllers;
@@ -123,12 +125,40 @@ fn fix_links(content: &str) -> String {
     content.replace("/ui/", &dir)
 }
 
-async fn index() -> impl Responder {
-    let index_html = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/static/index.html"));
 
-    HttpResponse::Ok()
-        .content_type("text/html")
-        .body(fix_links(index_html))
+pub static  INDEX_HTML: OnceLock<Markup> = OnceLock::new();
+
+async fn index() -> actix_web::Result<Markup> {
+    let html = INDEX_HTML.get_or_init(||{
+        let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
+        let found_files = std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/static/assets/"))
+            .expect("Could not read directory")
+            .map(|x| x.unwrap().file_name().into_string().unwrap())
+            .collect::<Vec<String>>();
+        let js_file = found_files.iter().filter(|x|x.starts_with("index") && x.ends_with(".js")).collect::<Vec<&String>>()[0];
+        let css_file = found_files.iter().filter(|x|x.starts_with("index") && x.ends_with(".css"))
+            .collect::<Vec<&String>>()[0];
+
+        let html = html!{
+        meta charset="utf-8";
+        meta name="viewport" content="width=device-width, initial-scale=1";
+        title {"Podfetch"};
+        link rel="icon" type="image/png" href="/ui/favicon.ico";
+        link rel="manifest" href="../manifest.json";
+        script type="module" crossorigin src=(dir.clone() + "assets/" + js_file) {};
+        link rel="stylesheet" href=(dir.clone() + "assets/"+ css_file);
+        div id="root" {};
+        div id="modal" {};
+        div id="modal1"{};
+        div id="modal2"{};
+        div id="confirm-modal"{};
+    };
+    html
+    });
+
+
+
+    Ok(html.clone())
 }
 
 #[actix_web::main]

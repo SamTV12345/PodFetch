@@ -11,7 +11,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "build-github": "tsc && vite build --outDir ../static"
+    "build-github": "tsc && vite build --emptyOutDir --outDir ../static"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",
