@@ -68,11 +68,66 @@
     aspect-ratio: 1 / 1;
     border-radius: 9999px;
     padding: 0.5rem;
-    background-color: var(--border-color);
+    background-color: var(--bg-color);
     color: var(--fg-color);
 }
 
 #mode-selector > button.selected {
     background-color: var(--reverse-bg-color);
     color: var(--fg-color);
+}
+
+#notification-container > i {
+    color: var(--text-color);
+}
+
+#notification-container {
+    cursor: pointer;
+}
+
+
+
+#notification-container {
+    position: relative;
+    cursor: pointer;
+}
+
+#notification-dropdown {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background-color: var(--bg-color);
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 5px;
+    width: 20rem; /* Adjust as needed */
+    display: none;
+    max-height: 20rem;
+    overflow: auto;
+}
+
+#notification-dropdown.show {
+    display: block;
+}
+
+.notification-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.notification-item:hover {
+    background-color: var(--bg-color);
+}
+
+.arrow-up {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid white;
+    position: absolute;
+    top: -10px;
+    right: 10px; /* Adjust to align with the dropdown */
+    background-color: white;
 }

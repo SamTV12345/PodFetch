@@ -1,12 +1,11 @@
 use std::collections::HashSet;
-use std::future::{ready, Future, Ready};
+use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
 use actix::fut::ok;
 use actix_web::{dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform}, web, Error, HttpMessage, HttpResponse};
 use actix_web::body::{EitherBody, MessageBody};
-use actix_web::error::{ErrorForbidden, ErrorUnauthorized};
 use actix_web::http::header;
 use futures_util::future::LocalBoxFuture;
 use futures_util::FutureExt;
@@ -15,7 +14,7 @@ use jsonwebtoken::jwk::Jwk;
 use log::info;
 use serde_json::Value;
 use sha256::digest;
-use crate::auth_middleware::{AuthFilter, AuthFilterMiddleware};
+use crate::auth_middleware::AuthFilter;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 

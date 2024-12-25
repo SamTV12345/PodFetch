@@ -1,6 +1,9 @@
-mod ui_middleware;
+pub mod ui_middleware;
 
+use actix_web::web;
 use maud::{html, Markup};
+use crate::models::user::User;
+use crate::service::notification_service::NotificationService;
 
 pub fn sidebar() -> Markup {
     html!{
@@ -38,7 +41,9 @@ pub fn sidebar_item(text: &str, active: bool) -> Markup {
 }
 
 
-pub fn navbar() -> Markup {
+pub fn navbar(requester: web::ReqData<User>) -> Markup {
+    let notifications = NotificationService::get_unread_notifications().unwrap();
+
     html!{
         div class="navbar" {
             div id="language-wrapper" {
@@ -66,28 +71,39 @@ pub fn navbar() -> Markup {
                     i class="material-icons" {"dark_mode"};
                 };
             };
-
+            div id="notification-container" {
+              i class="material-icons" id="notification-bell" {"notifications"};
+              div id="notification-dropdown" class="hidden" {
+                    div class="arrow-up" {};
+                    @for notification in notifications {
+                        div class="notification-item" data-id=(notification.id) {
+                            span {(notification.message)};
+                            i class="material-icons" {"close"};
+                        };
+                    }
+                }
+            };
         }
     }
 }
 
-pub fn homepage() -> Markup {
+pub fn homepage(requester: web::ReqData<User>) -> Markup {
     html!{
-        html class="dark" {
+        html {
             head {
                 meta name="viewport" content="width=device-width, initial-scale=1";
                 meta charset="utf-8";
                 title {"PodFetch"};
-                link rel="stylesheet" href="/api/v1/assets/reset.css";
-                link rel="stylesheet" href="/api/v1/assets/index.css";
-                script src="/api/v1/assets/index.js" {}
+                link rel="stylesheet" href="/ui-new/assets/reset.css";
+                link rel="stylesheet" href="/ui-new/assets/index.css";
+                script src="/ui-new/assets/index.js" {}
             }
             body {
                 div id="root" {
                         div class="main-container" {
                         (sidebar())
                         div class="main-content" {
-                            (navbar())
+                            (navbar(requester))
                         }
                         }
                 }
@@ -97,6 +113,7 @@ pub fn homepage() -> Markup {
 }
 
 
-pub async fn index_ui() -> actix_web::error::Result<Markup> {
-    Ok(homepage())
+pub async fn index_ui(requester: web::ReqData<User>) -> actix_web::error::Result<Markup> {
+    println!("{:?}", requester);
+    Ok(homepage(requester))
 }

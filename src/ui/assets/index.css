@@ -4,7 +4,6 @@
     --accent-color: #e69a13;
     --accent-color-hover: #f3ae34;
     --tw-bg-opacity: 1;
-    --border-color: #44403c;
 }
 
 
@@ -12,18 +11,24 @@ body {
     margin: 0;
 }
 
-html.light {
+html {
     --sidebar-color: rgb(12 10 9 / var(--tw-bg-opacity, 1));
+    --sidebar-text-color: white;
     --text-color: black;
     --bg-color: white;
-    --reverse-bg-color: black;
+    --reverse-bg-color: gray;
+    --border-color: #44403c;
+    --fg-color: #1c1917;
 }
 
 html.dark {
     --sidebar-color: rgb(22 21 20 / var(--tw-bg-opacity, 1));
+    --sidebar-text-color: white;
     --text-color: white;
     --bg-color: #1c1917;
     --reverse-bg-color: white;
+    --border-color: #44403c;
+    --fg-color: #44403c;
 }
 
 #root, body, html {

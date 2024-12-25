@@ -88,6 +88,7 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::ui::{index_ui};
+use crate::ui::ui_middleware::UIFilter;
 use crate::utils::error::CustomError;
 use crate::utils::http_client::get_http_client;
 use crate::utils::podcast_key_checker::check_podcast_request;
@@ -354,6 +355,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(hash.clone()))
             .service(redirect("/", sub_dir.clone() + "/ui/"))
             .service(get_gpodder_api())
+            .service(get_ui_new_config())
             .service(global_routes())
             .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
     })
@@ -374,8 +376,6 @@ fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(get_invite)
         .service(onboard_user)
         .service(login)
-        .route("/ui-new", web::get().to(index_ui))
-        .service(Files::new("/assets", "./src/ui/assets").show_files_listing())
         .service(get_public_config)
         .service(get_private_api());
 }
@@ -463,6 +463,16 @@ pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {
     if ENVIRONMENT_SERVICE.any_auth_enabled {
         cfg.service(get_secure_user_management());
     }
+}
+
+
+pub fn get_ui_new_config() -> actix_web::Scope<impl ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<EitherBody<BoxBody>>, Error = actix_web::Error, InitError = ()>> {
+    let ui_middleware = UIFilter::new();
+
+    web::scope("/ui-new")
+        .wrap(ui_middleware)
+        .route("/", web::get().to(index_ui))
+        .service(Files::new("/assets", "./src/ui/assets").show_files_listing())
 }
 
 pub fn get_ui_config() -> Scope {
