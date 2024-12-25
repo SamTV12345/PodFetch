@@ -40,14 +40,33 @@ pub fn sidebar_item(text: &str, active: bool) -> Markup {
 
 pub fn navbar() -> Markup {
     html!{
-        div class="navbar" onclick="toggleLanguageDropdown()" {
-            select default="English" {
-                option {"German"}
-                option { "English"}
-                option { "Français"}
-                option {"Polski"}
-                option { "Español"}
+        div class="navbar" {
+            div id="language-wrapper" {
+            button id="language-select" {
+                i class="material-icons" {"translate"};
+                span {"Language"};
+                i class="material-icons arrow" {"keyboard_arrow_down"};
+                };
+            div id="language-show" class="hidden" {
+                div {"English"};
+                div {"Deutsch"};
+                div {"Français"};
+                div {"Polski"};
+                div {"Español"};
+            };
             }
+            div id="mode-selector" {
+                button id="system-default" {
+                    i class="material-icons" {"desktop_windows"};
+                };
+                button id="light-mode" {
+                    i class="material-icons" {"light_mode"};
+                };
+                button id="dark-mode" {
+                    i class="material-icons" {"dark_mode"};
+                };
+            };
+
         }
     }
 }
@@ -61,6 +80,7 @@ pub fn homepage() -> Markup {
                 title {"PodFetch"};
                 link rel="stylesheet" href="/api/v1/assets/reset.css";
                 link rel="stylesheet" href="/api/v1/assets/index.css";
+                script src="/api/v1/assets/index.js" {}
             }
             body {
                 div id="root" {

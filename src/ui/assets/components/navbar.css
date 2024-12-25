@@ -1,0 +1,78 @@
+#language-select {
+    background-color: transparent;
+    color: var(--text-color);
+    border-radius: 20px;
+    font-size: 16px;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    gap: 5px;
+}
+
+#language-select > span {
+    margin-top: auto;
+}
+
+#language-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+#language-show {
+    position: absolute;
+    background-color: white;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 5px;
+    overflow: hidden;
+    width: 100%;
+}
+
+#language-show.hidden{
+    display: none;
+}
+
+#language-show div {
+    padding: 12px 16px;
+    cursor: pointer;
+}
+
+#language-show div:hover {
+    background-color: #ddd;
+}
+
+#language-show.show {
+    display: block;
+}
+
+.rotate {
+    transform: rotate(180deg);
+}
+
+
+#mode-selector {
+    display: flex;
+    align-items: center;
+    border-radius: 9999px;
+    border-width: 1px 1px;
+    border: solid var(--border-color);
+    padding: 0.125rem;
+    outline: none;
+    gap: 2px;
+}
+
+
+#mode-selector > button {
+    background-image: none;
+    cursor: pointer;
+    aspect-ratio: 1 / 1;
+    border-radius: 9999px;
+    padding: 0.5rem;
+    background-color: var(--border-color);
+    color: var(--fg-color);
+}
+
+#mode-selector > button.selected {
+    background-color: var(--reverse-bg-color);
+    color: var(--fg-color);
+}
