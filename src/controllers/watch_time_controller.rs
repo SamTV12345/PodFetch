@@ -34,7 +34,7 @@ pub async fn get_last_watched(
 ) -> Result<HttpResponse, CustomError> {
     let designated_username = requester.unwrap().username.clone();
 
-    let mut episodes = Episode::get_last_watched_episodes(designated_username)?;
+    let mut episodes = Episode::get_last_watched_episodes(&designated_username)?;
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
     Ok(HttpResponse::Ok().json(episodes))
 }

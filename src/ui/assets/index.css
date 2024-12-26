@@ -4,6 +4,7 @@
     --accent-color: #e69a13;
     --accent-color-hover: #f3ae34;
     --tw-bg-opacity: 1;
+    --text-color-light: #b5a7a7;
 }
 
 
@@ -114,4 +115,8 @@ ul {
     direction: ltr;
     -webkit-font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
+}
+
+#main-audio {
+    display: none;
 }

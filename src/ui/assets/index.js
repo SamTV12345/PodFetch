@@ -1,4 +1,4 @@
-window.onload = ()=>{
+window.addEventListener('load',()=>{
     const mapOfCookies = new Map();
     document.cookie.split(';').forEach((cookie)=>{
         let [key, value] = cookie.split('=');
@@ -9,6 +9,19 @@ window.onload = ()=>{
     handleLanguageChange(mapOfCookies)
     handleThemeToggle(mapOfCookies)
     handleNotificationClose()
+    handleUserToggle()
+})
+
+function handleUserToggle() {
+    let userDropdownTrigger = document.querySelector('#user-container i')
+    let userDropdown = document.querySelector('#user-dropdown')
+    userDropdownTrigger.addEventListener('click', (event) => {
+        userDropdown.classList.toggle('hidden')
+    })
+    userDropdownTrigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        userDropdown.classList.toggle('show');
+    });
 }
 
 
@@ -40,9 +53,7 @@ function persistCookies(mapOfCookies) {
 }
 
 function handleThemeToggle(mapOfCookies) {
-    console.log("Cookies are", mapOfCookies)
     const currentTheme = mapOfCookies.get('theme') ?? 'light';
-    console.log("Loaded theme is", mapOfCookies.get('theme'))
     const themeToggleMode = document.getElementById('mode-selector');
     const themeToggleButtons = themeToggleMode.querySelectorAll('button')
 
@@ -70,7 +81,6 @@ function handleThemeToggle(mapOfCookies) {
     }
 
 
-    console.log("Current theme is: ", currentTheme)
     handleThemeChange(currentTheme)
     themeToggleButtons.forEach((button)=>{
         if (button.id.split('-')[0] === currentTheme) {
@@ -98,6 +108,8 @@ function handleLanguageChange(mapOfCookies) {
     let languageItems = document.getElementById('language-show')
     let languageChevron = document.querySelector('#language-select > .arrow')
     let languageCookieFound = false;
+    let userDropdownTrigger = document.querySelector('#user-container i')
+    let userDropdown = document.querySelector('#user-dropdown')
 
     languageSelectShow.innerText = mapOfCookies.get('language') || 'English';
 
@@ -143,6 +155,11 @@ function handleLanguageChange(mapOfCookies) {
         if (!languageItems.classList.contains('hidden') && !languageItems.contains(event.target)) {
             handleToggleOfLanguage()
         }
+
+        if (!userDropdownTrigger.contains(event.target)) {
+            userDropdown.classList.remove('show');
+        }
+
         if (!notificationDropdown.contains(event.target)) {
             notificationDropdown.classList.remove('show');
         }

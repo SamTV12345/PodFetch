@@ -195,7 +195,7 @@ impl Episode {
     }
 
     pub fn get_last_watched_episodes(
-        username_to_find: String,
+        username_to_find: &str,
     ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::guid as eguid;
