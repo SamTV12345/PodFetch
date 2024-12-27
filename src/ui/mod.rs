@@ -2,6 +2,10 @@ pub mod ui_middleware;
 
 use actix_web::web;
 use maud::{html, Markup};
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::constants::inner_constants::DEFAULT_IMAGE_URL;
+use crate::controllers::podcast_episode_controller::{TimeLinePodcastEpisode, TimelineQueryParams};
+use crate::db::TimelineItem;
 use crate::models::user::User;
 use crate::service::notification_service::NotificationService;
 use crate::ENVIRONMENT_SERVICE;
@@ -186,29 +190,74 @@ pub fn homepage(requester: &web::ReqData<User>, main_content: Markup, additional
     }
 }
 
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::models::episode::Episode;
 use crate::models::misc_models::PodcastWatchedEpisodeModelWithPodcastEpisode;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::models::podcast_dto::PodcastDto;
 
-fn podcast_episode_preview(podcast_episode: PodcastWatchedEpisodeModelWithPodcastEpisode) -> Markup {
+enum PodcastEpisodePreviewInput {
+    PodcastWatchedEpisodeModelWithPodcastEpisode(PodcastWatchedEpisodeModelWithPodcastEpisode),
+    TimelineDto(TimeLinePodcastEpisode),
+}
 
-    let url_to_use = if podcast_episode.podcast_episode.status == "D" {
-        podcast_episode.podcast_episode.local_url
-    } else {
-        ENVIRONMENT_SERVICE.server_url.to_string() + "proxy/podcast?episodeId=" + podcast_episode
-            .podcast_episode.episode_id.as_str()
+struct RequiredInputs {
+    url_to_use: String,
+    image_url_to_use: String,
+    podcast_episode_id: String,
+    progress: f64,
+    podcast_episode_name: String,
+    podcast_name: String,
+}
+
+fn podcast_episode_preview(podcast_episode: PodcastEpisodePreviewInput) -> Markup {
+
+    let required_inputs = match podcast_episode {
+        PodcastEpisodePreviewInput::PodcastWatchedEpisodeModelWithPodcastEpisode(e)=>{
+            RequiredInputs{
+                podcast_episode_id: e.podcast_episode.episode_id.clone(),
+                url_to_use: if e.podcast_episode.status == "D" {
+                    e.podcast_episode.local_url
+                } else {
+                    ENVIRONMENT_SERVICE.server_url.to_string() + "proxy/podcast?episodeId=" + e
+                        .podcast_episode.episode_id.as_str()
+                },
+                progress: (e.watched_time as f64 / e.podcast_episode.total_time as f64) * 100.0,
+                image_url_to_use: e.podcast_episode.local_image_url,
+                podcast_episode_name: e.podcast_episode.name,
+                podcast_name: e.podcast.name,
+            }
+        }
+        PodcastEpisodePreviewInput::TimelineDto(dto)=>{
+            RequiredInputs {
+                podcast_episode_id: dto.podcast_episode.episode_id.clone(),
+                url_to_use: if dto.podcast_episode.status == "D" {
+                    dto.podcast_episode.local_url
+                } else {
+                    ENVIRONMENT_SERVICE.server_url.to_string() + "proxy/podcast?episodeId=" + dto
+                        .podcast_episode.episode_id.as_str()
+                },
+                progress: dto.history.map_or(0.0, |h| (h.position.unwrap() as f64 / dto.podcast_episode
+                    .total_time as f64) * 100.0),
+                image_url_to_use: dto.podcast_episode.local_image_url,
+                podcast_episode_name: dto.podcast_episode.name,
+                podcast_name: dto.podcast.name,
+            }
+        }
     };
 
     html! {
         div class="podcast-episode-preview" {
-            div class="image-wrapper"  data-url=(url_to_use){
-                img src=(podcast_episode.podcast_episode.local_image_url) alt=(podcast_episode.name) {};
+            div class="image-wrapper"  data-url=(required_inputs.url_to_use){
+                img src=(required_inputs.image_url_to_use) alt=(&required_inputs
+                    .podcast_episode_name) onerror=("this.onerror=null;this.src='".to_owned()+&ENVIRONMENT_SERVICE
+                    .server_url + "ui-new/assets/technology.jpg"+ "'") {};
                 i class="material-icons" {"play_circle"};
+                div class="progress-bar" style=("width:".to_owned()+&required_inputs.progress
+                    .to_string()+"%;")
+                {};
             }
             div class="podcast-episode-preview-text" {
-                p {(podcast_episode.name)}
-                p {(podcast_episode.podcast.name)}
+                p {(required_inputs.podcast_episode_name)}
+                p {(required_inputs.podcast_name)}
             }
         }
     }
@@ -218,6 +267,32 @@ pub fn main_page(requester: &web::ReqData<User>) -> Markup {
     let mut episodes = Episode::get_last_watched_episodes(&requester.username).unwrap();
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
 
+
+    let res = TimelineItem::get_timeline(
+        &requester.username,
+        TimelineQueryParams{
+            favored_only: false,
+            last_timestamp: None,
+            not_listened: false,
+        },
+    ).unwrap();
+
+    let mapped_timeline = res
+        .data
+        .iter()
+        .map(|podcast_episode| {
+            let (podcast_episode, podcast, history, favorite) = podcast_episode.clone();
+            let mapped_podcast_episode: PodcastEpisodeDto = podcast_episode.clone();
+            let podcast: PodcastDto = podcast.clone();
+
+            TimeLinePodcastEpisode {
+                podcast_episode: mapped_podcast_episode,
+                podcast,
+                history: history.clone(),
+                favorite: favorite.clone(),
+            }
+        })
+        .collect::<Vec<TimeLinePodcastEpisode>>();
 
     html! {
         div class="main-page" {
@@ -236,12 +311,18 @@ pub fn main_page(requester: &web::ReqData<User>) -> Markup {
                 h3 {"Kürzlich gehört"}
                 div {
                    @for episode in episodes {
-                    (podcast_episode_preview(episode))
+                    (podcast_episode_preview
+                        (PodcastEpisodePreviewInput::PodcastWatchedEpisodeModelWithPodcastEpisode(episode)))
                     }
                 }
             }
             div class="recently-added" {
                 h3 {"Nächste Folgen"}
+                div {
+                   @for timeline in mapped_timeline {
+                    (podcast_episode_preview(PodcastEpisodePreviewInput::TimelineDto(timeline)))
+                    }
+                }
             }
             audio id="main-audio";
         }

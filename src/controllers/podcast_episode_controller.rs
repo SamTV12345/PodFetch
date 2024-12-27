@@ -70,10 +70,10 @@ pub async fn find_all_podcast_episodes_of_podcast(
 
 #[derive(Serialize, Deserialize)]
 pub struct TimeLinePodcastEpisode {
-    podcast_episode: PodcastEpisodeDto,
-    podcast: PodcastDto,
-    history: Option<Episode>,
-    favorite: Option<Favorite>,
+    pub(crate) podcast_episode: PodcastEpisodeDto,
+    pub(crate) podcast: PodcastDto,
+    pub(crate) history: Option<Episode>,
+    pub(crate) favorite: Option<Favorite>,
 }
 
 #[get("/podcast/available/gpodder")]
@@ -115,7 +115,7 @@ pub async fn get_timeline(
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
     let res = TimelineItem::get_timeline(
-        requester.unwrap().username.clone(),
+        &requester.unwrap().username,
         favored_only.into_inner(),
     )?;
 

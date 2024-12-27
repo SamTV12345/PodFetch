@@ -218,14 +218,14 @@ impl Episode {
             .filter(
                 episodes2
                     .field(ep_dsl::username)
-                    .eq(username_to_find.clone()),
+                    .eq(username_to_find),
             )
             .group_by(episodes2.field(ep_dsl::episode));
 
         let query = podcast_episodes
             .inner_join(episodes1.on(pguid.nullable().eq(episodes1.field(eguid))))
             .inner_join(podcast_table::table.on(podcast_table::id.eq(podcast_id)))
-            .filter(episodes1.field(e_username).eq(username_to_find.clone()))
+            .filter(episodes1.field(e_username).eq(username_to_find))
             .filter(
                 episodes1
                     .field(ep_dsl::timestamp)

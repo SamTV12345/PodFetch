@@ -26,7 +26,7 @@ pub struct TimelineItem {
 
 impl TimelineItem {
     pub fn get_timeline(
-        username_to_search: String,
+        username_to_search: &str,
         favored_only: TimelineQueryParams,
     ) -> Result<TimelineItem, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
@@ -44,13 +44,13 @@ impl TimelineItem {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::guid as pguid;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
 
-        Filter::save_decision_for_timeline(username_to_search.clone(), favored_only.favored_only);
+        Filter::save_decision_for_timeline(username_to_search, favored_only.favored_only);
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(phi_username).eq(username_to_search.clone()))
+            .filter(ph2.field(phi_username).eq(username_to_search))
             .group_by(ph2.field(ehid));
 
         let part_query = podcast_episodes

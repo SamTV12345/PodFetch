@@ -23,4 +23,14 @@ window.addEventListener('load', ()=>{
             audioPlayerInstance.setVolume(0.5)
         })
     })
+
+    const recentlyAdded = document.querySelectorAll('.recently-added i')
+    recentlyAdded.forEach(button=>{
+        button.addEventListener('click', ()=>{
+            const audioPlayerInstance = getAudioPlayerInstance()
+            audioPlayerInstance.loadSource(button.parentElement.getAttribute('data-url'))
+            audioPlayerInstance.getSource().mediaElement.play()
+            audioPlayerInstance.setVolume(0.5)
+        })
+    })
 })
