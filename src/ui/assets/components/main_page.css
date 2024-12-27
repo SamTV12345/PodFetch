@@ -1,7 +1,7 @@
 .main-page {
     display: grid;
     grid-template-rows: 1fr auto;
-    gap: 3rem;
+    gap: 2rem;
     padding-bottom: 2rem;
     color: var(--text-color);
 }

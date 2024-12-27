@@ -185,6 +185,29 @@ pub fn homepage(requester: &web::ReqData<User>, main_content: Markup, additional
                         }
                         }
                 }
+                div id="mediaplayer" {
+                    img src="/ui-new/assets/technology.jpg" alt="Technology" {};
+                    div {"My podcast episode :)"};
+                    div {
+                        div class="controls" {
+                            span class="material-icons" {"replay_30"};
+                            span class="material-icons" {"skip_previous"};
+                            span {span class="material-icons" {"play_arrow"}};
+                            span class="material-icons" {"skip_next"};
+                            span class="material-icons" {"forward_30"};
+                    };
+                        div class="progress-bar" {
+                            span {"0:00"};
+                            span {
+                                span {
+
+                                }
+                            }
+                            span {"10:06"};
+                        }
+                    }
+                };
+                audio id="main-audio";
             }
         }
     }
@@ -324,7 +347,6 @@ pub fn main_page(requester: &web::ReqData<User>) -> Markup {
                     }
                 }
             }
-            audio id="main-audio";
         }
     }
 }
