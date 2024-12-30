@@ -65,7 +65,7 @@ impl Filter {
         Ok(())
     }
 
-    pub async fn get_filter_by_username(username1: String) -> Result<Option<Filter>, CustomError> {
+    pub async fn get_filter_by_username(username1: &str) -> Result<Option<Filter>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::filters::dsl::*;
         let res = filters
             .filter(username.eq(username1))

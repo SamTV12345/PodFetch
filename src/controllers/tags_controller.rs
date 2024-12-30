@@ -31,13 +31,13 @@ tag="tags"
 #[post("/tags")]
 pub async fn insert_tag(
     tag_create: Json<TagCreate>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     let new_tag = Tag::new(
         tag_create.name.clone(),
         tag_create.description.clone(),
         tag_create.color.to_string(),
-        requester.unwrap().username.clone(),
+        requester.username.clone(),
     );
     new_tag.insert_tag().map(|tag| HttpResponse::Ok().json(tag))
 }
@@ -49,8 +49,8 @@ responses(
 tag="tags"
 )]
 #[get("/tags")]
-pub async fn get_tags(requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
-    let tags = Tag::get_tags(requester.unwrap().username.clone())?;
+pub async fn get_tags(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+    let tags = Tag::get_tags(requester.username.clone())?;
     Ok(HttpResponse::Ok().json(tags))
 }
 
@@ -63,11 +63,11 @@ tag="tags"
 #[delete("/tags/{tag_id}")]
 pub async fn delete_tag(
     tag_id: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     let opt_tag = Tag::get_tag_by_id_and_username(
         &tag_id.into_inner(),
-        &requester.unwrap().username.clone(),
+        &requester.username.clone(),
     )?;
     match opt_tag {
         Some(tag) => {
@@ -89,11 +89,11 @@ tag="tags"
 pub async fn update_tag(
     tag_id: web::Path<String>,
     tag_create: Json<TagCreate>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     let opt_tag = Tag::get_tag_by_id_and_username(
         &tag_id.into_inner(),
-        &requester.unwrap().username.clone(),
+        &requester.username.clone(),
     )?;
     match opt_tag {
         Some(tag) => {
@@ -118,10 +118,10 @@ tag="tags"
 #[post("/tags/{tag_id}/{podcast_id}")]
 pub async fn add_podcast_to_tag(
     tag_id: web::Path<(String, i32)>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     let (tag_id, podcast_id) = tag_id.into_inner();
-    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.unwrap().username.clone())?;
+    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             let podcast = TagsPodcast::add_podcast_to_tag(tag.id.clone(), podcast_id)?;
@@ -140,11 +140,11 @@ tag="tags"
 #[delete("/tags/{tag_id}/{podcast_id}")]
 pub async fn delete_podcast_from_tag(
     tag_id: web::Path<(String, i32)>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     let (tag_id, podcast_id) = tag_id.into_inner();
 
-    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.unwrap().username.clone())?;
+    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(podcast_id, &tag.id)?;

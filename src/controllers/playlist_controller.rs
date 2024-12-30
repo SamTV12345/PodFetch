@@ -31,10 +31,10 @@ tag="playlist"
 )]
 #[post("/playlist")]
 pub async fn add_playlist(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     playlist: web::Json<PlaylistDtoPost>,
 ) -> Result<HttpResponse, CustomError> {
-    let user = requester.unwrap().into_inner();
+    let user = requester.into_inner();
     let playlist = playlist.into_inner();
 
     let res = Playlist::create_new_playlist(playlist, user)?;
@@ -50,11 +50,11 @@ tag="playlist"
 )]
 #[put("/playlist/{playlist_id}")]
 pub async fn update_playlist(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     playlist: web::Json<PlaylistDtoPost>,
     playlist_id: web::Path<String>,
 ) -> Result<HttpResponse, CustomError> {
-    let user = requester.unwrap().into_inner();
+    let user = requester.into_inner();
     let playlist = playlist.into_inner();
 
     let res = Playlist::update_playlist(playlist, playlist_id.clone(), user)?;
@@ -70,9 +70,9 @@ tag="playlist"
 )]
 #[get("/playlist")]
 pub async fn get_all_playlists(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    Playlist::get_playlists(requester.unwrap().into_inner().id)
+    Playlist::get_playlists(requester.into_inner().id)
         .map(|playlists| HttpResponse::Ok().json(playlists))
 }
 
@@ -84,10 +84,10 @@ tag="playlist"
 )]
 #[get("/playlist/{playlist_id}")]
 pub async fn get_playlist_by_id(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     playlist_id: web::Path<String>,
 ) -> Result<HttpResponse, CustomError> {
-    let user_id = requester.clone().unwrap();
+    let user_id = requester;
     let playlist =
         Playlist::get_playlist_by_user_and_id(playlist_id.clone(), user_id.clone().into_inner())?;
     let playlist =
@@ -103,10 +103,10 @@ tag="playlist"
 )]
 #[delete("/playlist/{playlist_id}")]
 pub async fn delete_playlist_by_id(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     playlist_id: web::Path<String>,
 ) -> Result<HttpResponse, CustomError> {
-    let user_id = requester.clone().unwrap().id;
+    let user_id = requester.id;
     Playlist::delete_playlist_by_id(playlist_id.clone(), user_id)?;
     Ok(HttpResponse::Ok().json(()))
 }
@@ -119,10 +119,10 @@ tag="playlist"
 )]
 #[delete("/playlist/{playlist_id}/episode/{episode_id}")]
 pub async fn delete_playlist_item(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     path: web::Path<(String, i32)>,
 ) -> Result<HttpResponse, CustomError> {
-    let user_id = requester.clone().unwrap().id;
+    let user_id = requester.id;
     let unwrapped_path = path.into_inner();
     Playlist::delete_playlist_item(unwrapped_path.0, unwrapped_path.1, user_id).await?;
     Ok(HttpResponse::Ok().json(()))

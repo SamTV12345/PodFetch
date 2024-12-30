@@ -19,9 +19,9 @@ tag="podcast_episodes"
 )]
 #[get("/settings")]
 pub async fn get_settings(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
     let settings = Setting::get_settings()?;
@@ -58,9 +58,9 @@ tag="settings"
 )]
 #[put("/settings/runcleanup")]
 pub async fn run_cleanup(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
     let settings = SettingsService::get_settings()?;
@@ -186,9 +186,9 @@ request_body=UpdateNameSettings
 #[put("/settings/name")]
 pub async fn update_name(
     update_information: web::Json<UpdateNameSettings>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
 

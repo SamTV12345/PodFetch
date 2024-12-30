@@ -61,7 +61,7 @@ impl Podcast {
             .expect("Error loading podcast by rss feed url")
     }
 
-    pub fn get_podcasts(u: String) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: &str) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username;
@@ -75,7 +75,7 @@ impl Podcast {
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &u).unwrap();
+                let tags = Tag::get_tags_of_podcast(podcast.0.id, u).unwrap();
                 (podcast.0.clone(), podcast.1.clone(), tags).into()
             })
             .collect::<Vec<PodcastDto>>();

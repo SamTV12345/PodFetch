@@ -245,7 +245,7 @@ impl PodcastService {
         Self::schedule_episode_download(podcast.clone(), Some(lobby.clone()))
     }
 
-    pub fn update_favor_podcast(id: i32, x: bool, username: String) -> Result<(), CustomError> {
+    pub fn update_favor_podcast(id: i32, x: bool, username: &str) -> Result<(), CustomError> {
         Favorite::update_podcast_favor(&id, x, username)
     }
 
@@ -300,7 +300,7 @@ impl PodcastService {
         Podcast::get_podcast(podcast_id_to_be_searched)
     }
 
-    pub fn get_podcasts(u: String) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: &str) -> Result<Vec<PodcastDto>, CustomError> {
         Podcast::get_podcasts(u)
     }
 

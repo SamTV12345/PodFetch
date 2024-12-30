@@ -45,7 +45,7 @@ tag = "podcast_episodes"
 #[get("/podcast/{id}/episodes")]
 pub async fn find_all_podcast_episodes_of_podcast(
     id: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     last_podcast_episode: Query<OptionalId>,
 ) -> Result<HttpResponse, CustomError> {
     let last_podcast_episode = last_podcast_episode.into_inner();
@@ -53,7 +53,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
         id_num,
         last_podcast_episode.last_podcast_episode,
-        requester.unwrap().into_inner(),
+        requester.into_inner(),
     )?;
     let mapped_podcasts = res
         .into_iter()
@@ -78,9 +78,9 @@ pub struct TimeLinePodcastEpisode {
 
 #[get("/podcast/available/gpodder")]
 pub async fn get_available_podcasts_not_in_webview(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
     let found_episodes = Episode::find_episodes_not_in_webview()?;
@@ -111,11 +111,11 @@ tag = "podcasts"
 )]
 #[get("/podcasts/timeline")]
 pub async fn get_timeline(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
     let res = TimelineItem::get_timeline(
-        requester.unwrap().username.clone(),
+        requester.username.clone(),
         favored_only.into_inner(),
     )?;
 
@@ -153,9 +153,9 @@ tag = "podcast_episodes"
 #[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(
     id: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -184,10 +184,10 @@ tag = "podcast_episodes"
 #[delete("/episodes/{id}/download")]
 pub async fn delete_podcast_episode_locally(
     id: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
     lobby: Data<ChatServerHandle>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 

@@ -67,8 +67,8 @@ responses(
 tag="info"
 )]
 #[get("")]
-pub async fn get_users(requester: Option<web::ReqData<User>>) -> Result<HttpResponse, CustomError> {
-    let res = UserManagementService::get_users(requester.unwrap().into_inner())?;
+pub async fn get_users(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+    let res = UserManagementService::get_users(requester.into_inner())?;
 
     Ok(HttpResponse::Ok().json(res))
 }
@@ -82,9 +82,9 @@ tag="info"
 #[get("/{username}")]
 pub async fn get_user(
     username: Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    let user = requester.unwrap().into_inner();
+    let user = requester.into_inner();
     let username = username.into_inner();
     if user.username == username || username == "me" {
         return Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)));
@@ -109,9 +109,9 @@ tag="info"
 pub async fn update_role(
     role: web::Json<UserRoleUpdateModel>,
     username: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
     let mut user_to_update = User::find_by_username(&username)?;
@@ -127,15 +127,12 @@ pub async fn update_role(
 
 #[put("/{username}")]
 pub async fn update_user(
-    user: Option<web::ReqData<User>>,
+    user: web::ReqData<User>,
     username: Path<String>,
     user_update: Json<UserCoreUpdateModel>,
 ) -> Result<HttpResponse, CustomError> {
     let username = username.into_inner();
-    let old_username = &user.clone().unwrap().username;
-    if user.is_none() {
-        return Err(CustomError::Forbidden);
-    }
+    let old_username = &user.clone().username;
     if old_username != &username {
         return Err(CustomError::Forbidden);
     }
@@ -186,14 +183,14 @@ tag="info"
 #[post("/invites")]
 pub async fn create_invite(
     invite: web::Json<InvitePostModel>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> impl Responder {
     let invite = invite.into_inner();
 
     let created_invite = UserManagementService::create_invite(
         invite.role,
         invite.explicit_consent,
-        requester.unwrap().into_inner(),
+        requester.into_inner(),
     )
     .expect("Error creating invite");
     HttpResponse::Ok().json(created_invite)
@@ -207,9 +204,9 @@ tag="info"
 )]
 #[get("/invites")]
 pub async fn get_invites(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
 
@@ -241,13 +238,13 @@ tag="info"
 #[delete("/{username}")]
 pub async fn delete_user(
     username: Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
 
-    let user_to_delete = User::find_by_username(&username).unwrap();
+    let user_to_delete = User::find_by_username(&username)?;
     match UserManagementService::delete_user(user_to_delete) {
         Ok(_) => Ok(HttpResponse::Ok().into()),
         Err(e) => Err(e),
@@ -262,9 +259,9 @@ responses(
 #[get("/invites/{invite_id}/link")]
 pub async fn get_invite_link(
     invite_id: Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> impl Responder {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
     }
 
@@ -282,9 +279,9 @@ responses(
 #[delete("/invites/{invite_id}")]
 pub async fn delete_invite(
     invite_id: web::Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> impl Responder {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
     }
 

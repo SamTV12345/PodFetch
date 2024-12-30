@@ -49,7 +49,7 @@ impl Favorite {
     pub fn update_podcast_favor(
         podcast_id_1: &i32,
         favor: bool,
-        username_1: String,
+        username_1: &str,
     ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
@@ -60,7 +60,7 @@ impl Favorite {
             .filter(
                 podcast_id
                     .eq(podcast_id_1)
-                    .and(username.eq(username_1.clone())),
+                    .and(username.eq(username_1)),
             )
             .first::<Favorite>(&mut get_connection())
             .optional()

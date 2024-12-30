@@ -56,9 +56,9 @@ tag="podcasts"
 )]
 #[get("/podcasts/filter")]
 pub async fn get_filter(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    let filter = Filter::get_filter_by_username(requester.unwrap().username.clone()).await?;
+    let filter = Filter::get_filter_by_username(&requester.username).await?;
     Ok(HttpResponse::Ok().json(filter))
 }
 
@@ -72,7 +72,7 @@ tag="podcasts"
 #[get("/podcasts/search")]
 pub async fn search_podcasts(
     query: web::Query<PodcastSearchModel>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     let query = query.into_inner();
     let _order = query.order.unwrap_or(OrderCriteria::Asc);
@@ -80,14 +80,14 @@ pub async fn search_podcasts(
     let tag = query.tag;
 
     let opt_filter =
-        Filter::get_filter_by_username(requester.clone().unwrap().username.clone()).await?;
+        Filter::get_filter_by_username(&requester.username).await?;
 
     let only_favored = match opt_filter {
         Some(filter) => filter.only_favored,
         None => true,
     };
 
-    let username = requester.unwrap().username.clone();
+    let username = requester.username.clone();
     let filter = Filter::new(
         username.clone(),
         query.title.clone(),
@@ -137,14 +137,14 @@ tag="podcasts"
 #[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(
     id: Path<String>,
-    user: Option<web::ReqData<User>>,
+    user: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
-    let username = user.unwrap().username.clone();
+    let username = &user.username;
 
     let podcast = PodcastService::get_podcast(id_num)?;
-    let tags = Tag::get_tags_of_podcast(id_num, &username)?;
-    let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(&username, id_num)?;
+    let tags = Tag::get_tags_of_podcast(id_num, username)?;
+    let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?;
     let podcast_dto: PodcastDto = (podcast, favorite, tags).into();
     Ok(HttpResponse::Ok().json(podcast_dto))
 }
@@ -158,9 +158,9 @@ tag="podcasts"
 )]
 #[get("/podcasts")]
 pub async fn find_all_podcasts(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    let username = requester.unwrap().username.clone();
+    let username = &requester.username;
 
     let podcasts = PodcastService::get_podcasts(username)?;
 
@@ -177,9 +177,9 @@ tag="podcasts"
 #[get("/podcasts/{type_of}/{podcast}/search")]
 pub async fn find_podcast(
     podcast_col: Path<(i32, String)>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -215,9 +215,9 @@ tag="podcasts"
 pub async fn add_podcast(
     track_id: web::Json<PodcastAddModel>,
     lobby: Data<ChatServerHandle>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -261,9 +261,9 @@ tag="podcasts"
 pub async fn add_podcast_by_feed(
     rss_feed: web::Json<PodcastRSSAddModel>,
     lobby: Data<ChatServerHandle>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
     let mut header_map = HeaderMap::new();
@@ -315,9 +315,9 @@ tag="podcasts"
 pub async fn import_podcasts_from_opml(
     opml: Json<OpmlModel>,
     lobby: Data<ChatServerHandle>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
     let document = OPML::from_str(&opml.content).unwrap();
@@ -347,9 +347,9 @@ tag="podcasts"
 pub async fn add_podcast_from_podindex(
     id: web::Json<PodcastAddModel>,
     lobby: Data<ChatServerHandle>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -396,9 +396,9 @@ tag="podcasts"
 #[post("/podcast/all")]
 pub async fn refresh_all_podcasts(
     lobby: Data<ChatServerHandle>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -433,9 +433,9 @@ tag="podcasts"
 pub async fn download_podcast(
     id: Path<String>,
     lobby: Data<ChatServerHandle>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -471,12 +471,12 @@ tag="podcasts"
 #[put("/podcast/favored")]
 pub async fn favorite_podcast(
     update_model: Json<PodcastFavorUpdateModel>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     PodcastService::update_favor_podcast(
         update_model.id,
         update_model.favored,
-        requester.unwrap().username.clone(),
+        &requester.username,
     )?;
     Ok(HttpResponse::Ok().json("Favorited podcast"))
 }
@@ -489,9 +489,9 @@ tag="podcasts"
 )]
 #[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    let podcasts = PodcastService::get_favored_podcasts(requester.unwrap().username.clone())?;
+    let podcasts = PodcastService::get_favored_podcasts(requester.username.clone())?;
     Ok(HttpResponse::Ok().json(podcasts))
 }
 
@@ -505,9 +505,9 @@ tag="podcasts"
 #[put("/podcast/{id}/active")]
 pub async fn update_active_podcast(
     id: Path<String>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -658,9 +658,9 @@ tag="podcasts"
 pub async fn delete_podcast(
     data: web::Json<DeletePodcast>,
     id: Path<i32>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -780,9 +780,9 @@ pub(crate) async fn proxy_podcast(
 pub async fn update_podcast_settings(
     id: Path<i32>,
     settings: Json<PodcastSetting>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
@@ -797,9 +797,9 @@ pub async fn update_podcast_settings(
 #[get("/podcasts/{id}/settings")]
 pub async fn get_podcast_settings(
     id: Path<i32>,
-    requester: Option<web::ReqData<User>>,
+    requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_privileged_user() {
+    if !requester.is_privileged_user() {
         return Err(CustomError::Forbidden);
     }
 
