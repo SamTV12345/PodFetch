@@ -64,18 +64,24 @@ impl Default for EnvironmentService {
 }
 
 impl EnvironmentService {
-    pub fn new() -> EnvironmentService {
-        let mut option_oidc_config = None;
+
+    fn handle_oidc() -> Option<OidcConfig> {
         let oidc_configured = is_env_var_present_and_true(OIDC_AUTH);
         if oidc_configured {
-            option_oidc_config = Some(OidcConfig {
+            Some(OidcConfig {
                 redirect_uri: var(OIDC_REDIRECT_URI).expect("OIDC redirect uri not configured"),
                 authority: var(OIDC_AUTHORITY).expect("OIDC authority not configured"),
                 client_id: var(OIDC_CLIENT_ID).expect("OIDC client id not configured"),
                 scope: var(OIDC_SCOPE).unwrap_or("openid profile email".to_string()),
                 jwks_uri: var(OIDC_JWKS).unwrap(),
-            });
+            })
+        } else {
+            None
         }
+    }
+
+    pub fn new() -> EnvironmentService {
+        let oidc_configured = Self::handle_oidc();
         let mut server_url = var(SERVER_URL).unwrap_or("http://localhost:8000".to_string());
         // Add trailing slash if not present
         if !server_url.ends_with('/') {
@@ -126,16 +132,16 @@ impl EnvironmentService {
         EnvironmentService {
             server_url: server_url.clone(),
             polling_interval: var(POLLING_INTERVAL)
-                .unwrap_or(POLLING_INTERVAL_DEFAULT.to_string())
-                .parse::<u32>()
-                .unwrap(),
+                .map(|v| v.parse::<u32>().map_err(|_|POLLING_INTERVAL_DEFAULT)
+                    .unwrap_or(POLLING_INTERVAL_DEFAULT))
+                .unwrap_or(POLLING_INTERVAL_DEFAULT),
             podindex_api_key: var(PODINDEX_API_KEY).unwrap_or("".to_string()),
             podindex_api_secret: var(PODINDEX_API_SECRET).unwrap_or("".to_string()),
             http_basic: is_env_var_present_and_true(BASIC_AUTH),
             username: username_send,
             password,
-            oidc_configured,
-            oidc_config: option_oidc_config,
+            oidc_configured: oidc_configured.is_some(),
+            oidc_config: oidc_configured,
             reverse_proxy_config,
             gpodder_integration_enabled: is_env_var_present_and_true(GPODDER_INTEGRATION_ENABLED),
             database_url: var(DATABASE_URL).unwrap_or(DATABASE_URL_DEFAULT_SQLITE.to_string()),
@@ -156,21 +162,26 @@ impl EnvironmentService {
 
     fn handle_telegram_config() -> Option<TelegramConfig> {
         if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
-            let telegram_bot_token = var(TELEGRAM_BOT_TOKEN);
+            let telegram_bot_token = match var(TELEGRAM_BOT_TOKEN) {
+                Ok(token) => Some(token),
+                Err(_) => None,
+            }.map_or_else(|| {
+                log::error!("Telegram bot token not configured");
+                std::process::exit(1);
+            }, |v| v);
 
-            if telegram_bot_token.is_err() {
-                panic!("Telegram bot token not configured");
-            }
 
-            let telegram_bot_chat_id = var(TELEGRAM_BOT_CHAT_ID);
-
-            if telegram_bot_chat_id.is_err() {
-                panic!("Telegram bot chat id not configured");
-            }
+            let telegram_chat_id = match var(TELEGRAM_BOT_CHAT_ID) {
+                Ok(chat_id) => Some(chat_id),
+                Err(_) => None,
+            }.map_or_else(|| {
+                log::error!("Telegram chat id not configured");
+                std::process::exit(1);
+            }, |v| v);
 
             Some(TelegramConfig {
-                telegram_bot_token: telegram_bot_token.unwrap(),
-                telegram_chat_id: telegram_bot_chat_id.unwrap(),
+                telegram_bot_token,
+                telegram_chat_id,
             })
         } else {
             None

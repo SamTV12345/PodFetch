@@ -42,7 +42,7 @@ impl Sanitizer {
         let options_retrieved = option.unwrap_or_default();
 
         Sanitizer {
-            illegal_re: Regex::new(r#"[/\?<>\\:\*\|":]"#).unwrap(),
+            illegal_re: Regex::new(r#"[/?<>\\:*|":]"#).unwrap(),
             control_re: Regex::new(r#"[\x00-\x1f\x80-\x9f]"#).unwrap(),
             reserved_re: Regex::new(r#"^\.+$"#).unwrap(),
             windows_reserved_re: RegexBuilder::new(

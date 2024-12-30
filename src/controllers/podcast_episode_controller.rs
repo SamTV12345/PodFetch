@@ -195,7 +195,7 @@ pub async fn delete_podcast_episode_locally(
         PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner())?.into();
     lobby
         .send_broadcast(
-            MAIN_ROOM.parse().unwrap(),
+            MAIN_ROOM.to_string(),
             serde_json::to_string(&BroadcastMessage {
                 podcast_episode: Some(delted_podcast_episode),
                 podcast_episodes: None,

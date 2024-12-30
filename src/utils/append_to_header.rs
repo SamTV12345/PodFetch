@@ -1,14 +1,25 @@
+use std::process::exit;
+use std::sync::LazyLock;
 use base64::engine::general_purpose;
 use base64::Engine;
 use regex::Regex;
+
+
+
+static BASIC_AUTH_COND_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    let com_regex = Regex::new(r".*//([^/?#\s]+)@.*");
+    match com_regex {
+        Ok(re) => re,
+        Err(_) => exit(1),
+    }
+});
 
 pub fn add_basic_auth_headers_conditionally(
     url: String,
     header_map: &mut reqwest::header::HeaderMap,
 ) {
     if url.contains('@') {
-        let re = Regex::new(r".*//([^/?#\s]+)@.*").unwrap();
-        if let Some(captures) = re.captures(&url) {
+        if let Some(captures) = BASIC_AUTH_COND_REGEX.captures(&url) {
             if let Some(auth) = captures.get(1) {
                 let b64_auth = general_purpose::STANDARD.encode(auth.as_str());
                 header_map.append(

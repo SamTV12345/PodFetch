@@ -63,9 +63,15 @@ fn init_postgres_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DB
     let manager = ConnectionManager::<DBType>::new(database_url);
     let pool = Pool::builder()
         .max_size(db_connections as u32)
-        .build(manager)
-        .expect("Failed to create pool.");
-    Ok(pool)
+        .build(manager);
+
+    match pool {
+        Err(e) => {
+            log::error!("Failed to create postgres pool: {}", e);
+            exit(1);
+        }
+        Ok(pool) => Ok(pool),
+    }
 }
 
 fn init_sqlite_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBType>>, String> {
@@ -77,7 +83,13 @@ fn init_sqlite_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBTy
             enable_foreign_keys: true,
             busy_timeout: Some(Duration::from_secs(120)),
         }))
-        .build(manager)
-        .unwrap();
-    Ok(pool)
+        .build(manager);
+
+    match pool {
+        Err(e) => {
+            log::error!("Failed to create pool: {}", e);
+            exit(1);
+        }
+        Ok(pool) => Ok(pool),
+    }
 }

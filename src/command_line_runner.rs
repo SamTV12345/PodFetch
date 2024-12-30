@@ -21,22 +21,37 @@ use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use std::process::exit;
 use std::str::FromStr;
 
-pub async fn start_command_line(mut args: Args) {
+pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
     // This needs to be nth(1) because the first argument is the binary name
     let conn = &mut get_connection();
-    match args.nth(1).unwrap().as_str() {
+    let arg = match args.next() {
+        Some(arg) => arg,
+        None => {
+            println!("Please provide a command");
+            exit(1);
+        }
+    };
+    match arg.as_str() {
         "help" | "--help" => {
             println!(
                 r" The following commands are available:
             users => Handles user management
             podcasts => Handles podcast management
             "
-            )
+            );
+            Ok(())
         }
         "podcasts" => {
             println!("Podcast management");
-            match args.next().unwrap().as_str() {
+            let podcast_args = match args.next() {
+                Some(arg) => arg,
+                None => {
+                    println!("Please provide a command");
+                    exit(1);
+                }
+            };
+            match podcast_args.as_str() {
                 "refresh" => {
                     let podcast_rss_feed = args.next();
 
@@ -50,9 +65,8 @@ pub async fn start_command_line(mut args: Args) {
                             let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn)
                                 .expect("Error getting podcast");
 
-                            PodcastEpisodeService::insert_podcast_episodes(podcast.clone())
-                                .unwrap();
-                            PodcastService::schedule_episode_download(podcast, None).unwrap();
+                            PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
+                            PodcastService::schedule_episode_download(podcast, None)
                         }
                         None => {
                             println!("Please provide a podcast rss feed url");
@@ -61,13 +75,14 @@ pub async fn start_command_line(mut args: Args) {
                     }
                 }
                 "refresh-all" => {
-                    let podcasts = Podcast::get_all_podcasts();
-                    for podcast in podcasts.unwrap() {
+                    let podcasts = Podcast::get_all_podcasts()?;
+                    for podcast in podcasts {
                         println!("Refreshing podcast {}", podcast.name);
 
-                        PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
-                        PodcastService::schedule_episode_download(podcast, None).unwrap();
+                        PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
+                        PodcastService::schedule_episode_download(podcast, None)?;
                     }
+                    Ok(())
                 }
                 "list" => {
                     let podcasts = Podcast::get_all_podcasts();
@@ -77,9 +92,11 @@ pub async fn start_command_line(mut args: Args) {
                             for podcast in podcasts {
                                 println!("{} - {} - {}", podcast.id, podcast.name, podcast.rssfeed);
                             }
+                            Ok(())
                         }
                         Err(..) => {
                             println!("Error getting podcasts");
+                            Ok(())
                         }
                     }
                 }
@@ -90,39 +107,66 @@ pub async fn start_command_line(mut args: Args) {
                     refresh-all => Refreshes all podcasts
                     list => Lists all podcasts
                     "
-                    )
+                    );
+                    Ok(())
                 }
                 _ => {
                     println!("Unknown command");
+                    Err(CustomError::BadRequest("Unknown command".to_string()))
                 }
             }
         }
         "users" => {
             println!("User management");
-            match args.next().unwrap().as_str() {
+            let user_args = match args.next() {
+                Some(arg) => arg,
+                None => {
+                    println!("Please provide a command");
+                    exit(1);
+                }
+            };
+            match user_args.as_str() {
                 "add" => {
-                    let mut user = read_user_account().unwrap();
+                    let mut user = read_user_account()?;
 
                     println!(
                         "Should a user with the following settings be applied {:?}",
                         user
                     );
 
+
                     if ask_for_confirmation().is_ok() {
-                        user.password = Some(digest(user.password.unwrap()));
+                        user.password = Some(digest(user.password.expect("Error digesting password")));
                         if User::insert_user(&mut user).is_ok() {
                             println!("User succesfully created")
                         }
                     }
+                    Ok(())
                 }
-                "generate" => match args.next().unwrap().as_str() {
-                    "apiKey" => User::find_all_users(conn).iter().for_each(|u| {
-                        log::info!("Updating api key of user {}", &u.username);
-                        User::update_api_key_of_user(&u.username, uuid::Uuid::new_v4().to_string())
-                            .expect("Error updating api key");
-                    }),
-                    _ => {
-                        error!("Command not found")
+                "generate" => {
+                    let arg = match args.next() {
+                        Some(arg)=>{
+                            arg
+                        },
+                        None=>{
+                            error!("Command not found");
+                            return Err(CustomError::BadRequest("Command not found".to_string()))
+                        }
+                    };
+
+                    match arg.as_str() {
+                        "apiKey" => {
+                            User::find_all_users(conn).iter().for_each(|u| {
+                                log::info!("Updating api key of user {}", &u.username);
+                                User::update_api_key_of_user(&u.username, uuid::Uuid::new_v4()
+                                    .to_string()).expect("Error updating api key")
+                            });
+                            Ok(())
+                        },
+                        _ => {
+                            error!("Command not found");
+                            Err(CustomError::BadRequest("Command not found".to_string()))
+                        }
                     }
                 },
                 "remove" => {
@@ -153,10 +197,12 @@ pub async fn start_command_line(mut args: Args) {
                             .expect("TODO: panic message");
                             User::delete_by_username(trim_string(&username), &mut get_connection())
                                 .expect("Error deleting user");
-                            println!("User deleted")
+                            println!("User deleted");
+                            Ok(())
                         }
                         None => {
-                            println!("Username not found")
+                            println!("Username not found");
+                            Ok(())
                         }
                     }
                 }
@@ -171,14 +217,16 @@ pub async fn start_command_line(mut args: Args) {
                     );
                     username = trim_string(&username);
                     println!(">{}<", username);
-                    let user = User::find_by_username(username.as_str()).unwrap();
+                    let user = User::find_by_username(username.as_str())?;
 
-                    do_user_update(user)
+                    do_user_update(user);
+                    Ok(())
                 }
                 "list" => {
                     // list users
 
                     list_users();
+                    Ok(())
                 }
                 "help" | "--help" => {
                     println!(
@@ -188,21 +236,26 @@ pub async fn start_command_line(mut args: Args) {
                     update => Updates a user
                     list => Lists all users
                     "
-                    )
+                    );
+                    Ok(())
                 }
                 _ => {
-                    error!("Command not found")
+                    error!("Command not found");
+                    Ok(())
                 }
             }
         }
         "migration" => {
-            error!("Command not found")
+            error!("Command not found");
+            Ok(())
         }
         "debug" => {
             create_debug_message();
+            Ok(())
         }
         _ => {
-            error!("Command not found")
+            error!("Command not found");
+            Ok(())
         }
     }
 }
@@ -252,7 +305,13 @@ pub fn read_user_account() -> Result<User, CustomError> {
 
 pub fn retry_read(prompt: &str, input: &mut String) {
     println!("{}", prompt);
-    stdin().read_line(input).unwrap();
+    match stdin().read_line(input) {
+        Ok(..) => {}
+        Err(..) => {
+            println!("Error reading from terminal");
+            exit(1);
+        }
+    }
     match !input.is_empty() {
         true => {
             if input.trim().is_empty() {
@@ -267,8 +326,20 @@ pub fn retry_read(prompt: &str, input: &mut String) {
 
 pub fn retry_read_secret(prompt: &str) -> String {
     println!("{}", prompt);
-    stdout().flush().unwrap();
-    let input = read_password().unwrap();
+    match stdout().flush() {
+        Ok(..) => {}
+        Err(..) => {
+            println!("Error reading from terminal");
+            exit(1);
+        }
+    }
+    let input = match read_password() {
+        Ok(input) => input,
+        Err(..) => {
+            println!("Error reading from terminal");
+            exit(1);
+        }
+    };
     match !input.is_empty() {
         true => {
             if input.trim().is_empty() {
@@ -285,14 +356,20 @@ pub fn retry_read_secret(prompt: &str) -> String {
 pub fn retry_read_role(prompt: &str) -> Role {
     let mut input = String::new();
     println!("{}", prompt);
-    stdin().read_line(&mut input).unwrap();
+    match stdin().read_line(&mut input) {
+        Ok(..) => {}
+        Err(..) => {
+            println!("Error reading from terminal");
+            exit(1);
+        }
+    }
     let res = Role::from_str(&trim_string(&input));
     match res {
         Err(..) => {
             println!("Error setting role. Please choose one of the possible roles.");
             retry_read_role(prompt)
         }
-        Ok(..) => res.unwrap(),
+        Ok(e) => e,
     }
 }
 
@@ -313,7 +390,7 @@ fn trim_string(string_to_trim: &str) -> String {
         .trim_end_matches('\n')
         .trim()
         .parse()
-        .unwrap()
+        .expect("Error parsing string")
 }
 
 fn do_user_update(mut user: User) {

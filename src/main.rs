@@ -181,7 +181,10 @@ async fn main() -> std::io::Result<()> {
     EnvironmentService::print_banner();
     ENVIRONMENT_SERVICE.get_environment();
     if args().len() > 1 {
-        start_command_line(args()).await;
+        if let Err(e) = start_command_line(args()).await {
+            log::error!("Error in command line: {}", e);
+            exit(1);
+        }
         exit(0)
     }
 
