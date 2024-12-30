@@ -267,13 +267,8 @@ impl PodcastService {
             .unwrap()
             .as_secs();
         let mut headers = HeaderMap::new();
-        let non_hashed_string = ENVIRONMENT_SERVICE
-            .podindex_api_key
-            .clone()
-            .to_owned()
-            + &*ENVIRONMENT_SERVICE
-                .podindex_api_secret
-                .clone()
+        let non_hashed_string = ENVIRONMENT_SERVICE.podindex_api_key.clone().to_owned()
+            + &*ENVIRONMENT_SERVICE.podindex_api_secret.clone()
             + &seconds.to_string();
         let mut hasher = Sha1::new();
 

@@ -230,10 +230,7 @@ where
     }
 
     fn handle_proxy_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let config = ENVIRONMENT_SERVICE
-            .reverse_proxy_config
-            .clone()
-            .unwrap();
+        let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
 
         let header_val = req.headers().get(config.header_name);
 

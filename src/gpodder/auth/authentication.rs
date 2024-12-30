@@ -30,10 +30,7 @@ pub async fn login(
     }
 }
 
-fn handle_proxy_auth(
-    rq: HttpRequest,
-    username: String,
-) -> Result<HttpResponse, CustomError> {
+fn handle_proxy_auth(rq: HttpRequest, username: String) -> Result<HttpResponse, CustomError> {
     let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
     match opt_authorization {

@@ -130,9 +130,9 @@ pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 async fn index() -> actix_web::Result<Markup> {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
-        let manifest_json_location = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap()
-            +"/manifest.json";
-        let found_files = std::fs::read_dir( "./static/assets/")
+        let manifest_json_location =
+            ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/manifest.json";
+        let found_files = std::fs::read_dir("./static/assets/")
             .expect("Could not read directory")
             .map(|x| x.unwrap().file_name().into_string().unwrap())
             .collect::<Vec<String>>();

@@ -313,7 +313,6 @@ impl User {
             return false;
         }
 
-
         if let Some(res) = ENVIRONMENT_SERVICE.api_key_admin.clone() {
             if !res.is_empty() && res == api_key_to_find {
                 return true;

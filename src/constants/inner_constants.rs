@@ -39,8 +39,8 @@ pub const TELEGRAM_BOT_TOKEN: &str = "TELEGRAM_BOT_TOKEN";
 pub const TELEGRAM_BOT_CHAT_ID: &str = "TELEGRAM_BOT_CHAT_ID";
 pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";
 
-use utoipa::ToSchema;
 use crate::service::logging_service::init_logging;
+use utoipa::ToSchema;
 
 // User management roles
 #[derive(Serialize, Deserialize, Debug, PartialEq, ToSchema)]
@@ -134,12 +134,10 @@ pub const DEFAULT_DEVICE: &str = "webview";
 
 // static constants
 
-pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new
-    (|| {
-        init_logging();
-        EnvironmentService::new()
-    });
-
+pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new(|| {
+    init_logging();
+    EnvironmentService::new()
+});
 
 pub static DEFAULT_IMAGE_URL: &str = "ui/default.jpg";
 pub static ITUNES: &str = "itunes";

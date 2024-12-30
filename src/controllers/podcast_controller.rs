@@ -194,10 +194,7 @@ pub async fn find_podcast(
             Ok(HttpResponse::Ok().json(res))
         }
         Ok(Podindex) => {
-            if !ENVIRONMENT_SERVICE
-                .get_config()
-                .podindex_configured
-            {
+            if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
                 return Ok(HttpResponse::BadRequest().json("Podindex is not configured"));
             }
 
@@ -331,11 +328,7 @@ pub async fn import_podcasts_from_opml(
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 let rng = rand::thread_rng();
-                rt.block_on(insert_outline(
-                    outline.clone(),
-                    moved_lobby,
-                    rng.clone(),
-                ));
+                rt.block_on(insert_outline(outline.clone(), moved_lobby, rng.clone()));
             });
         }
     });
@@ -360,10 +353,7 @@ pub async fn add_podcast_from_podindex(
         return Err(CustomError::Forbidden);
     }
 
-    if !ENVIRONMENT_SERVICE
-        .get_config()
-        .podindex_configured
-    {
+    if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
         return Err(CustomError::BadRequest(
             "Podindex is not configured".to_string(),
         ));
@@ -527,19 +517,10 @@ pub async fn update_active_podcast(
 }
 
 #[async_recursion(?Send)]
-async fn insert_outline(
-    podcast: Outline,
-    lobby: Data<ChatServerHandle>,
-    mut rng: ThreadRng,
-) {
+async fn insert_outline(podcast: Outline, lobby: Data<ChatServerHandle>, mut rng: ThreadRng) {
     if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
-            insert_outline(
-                outline_nested,
-                lobby.clone(),
-                rng.clone(),
-            )
-            .await;
+            insert_outline(outline_nested, lobby.clone(), rng.clone()).await;
         }
         return;
     }

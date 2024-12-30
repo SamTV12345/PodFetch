@@ -47,17 +47,10 @@ impl From<PodcastEpisode> for PodcastEpisodeDto {
 }
 fn map_url(url: &str, status: &str, remote_url: &str) -> String {
     match url == DEFAULT_IMAGE_URL {
-        true => {
-
-            ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
-        }
+        true => ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL,
         false => {
             if status == "D" {
-                ENVIRONMENT_SERVICE
-                    .server_url
-                    .clone()
-                    .to_owned()
-                    + url
+                ENVIRONMENT_SERVICE.server_url.clone().to_owned() + url
             } else {
                 remote_url.to_string()
             }
