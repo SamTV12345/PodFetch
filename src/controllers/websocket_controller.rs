@@ -1,6 +1,5 @@
 use crate::controllers::web_socket::chat_ws;
 
-use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
@@ -19,6 +18,7 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -96,7 +96,7 @@ pub async fn get_rss_feed(
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
-    let items = get_podcast_items_rss(downloaded_episodes.clone(), &api_key);
+    let items = get_podcast_items_rss(&downloaded_episodes, &api_key);
 
     let channel_builder = ChannelBuilder::default()
         .language("en".to_string())
@@ -236,7 +236,7 @@ pub async fn get_rss_feed_for_podcast(
 }
 
 fn get_podcast_items_rss(
-    downloaded_episodes: Vec<PodcastEpisode>,
+    downloaded_episodes: &[PodcastEpisodeDto],
     api_key: &Option<Query<RSSAPiKey>>,
 ) -> Vec<Item> {
     downloaded_episodes
