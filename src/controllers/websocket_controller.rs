@@ -19,6 +19,7 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -81,6 +82,10 @@ pub async fn get_rss_feed(
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };
 
+    let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes.into_iter().map(|c|c
+        .into())
+        .collect();
+
     let server_url = ENVIRONMENT_SERVICE.get_server_url();
     let feed_url = add_api_key_to_url(format!("{}{}", &server_url, &"rss"), &api_key);
 
@@ -96,7 +101,7 @@ pub async fn get_rss_feed(
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
-    let items = get_podcast_items_rss(downloaded_episodes.clone(), &api_key);
+    let items = get_podcast_items_rss(&downloaded_episodes, &api_key);
 
     let channel_builder = ChannelBuilder::default()
         .language("en".to_string())
@@ -172,8 +177,9 @@ pub async fn get_rss_feed_for_podcast(
 
     let podcast = Podcast::get_podcast(*id)?;
 
-    let downloaded_episodes =
-        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?;
+    let downloaded_episodes: Vec<PodcastEpisodeDto> =
+        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?.into_iter
+        ().map(|c|c.into()).collect();
 
     let mut itunes_owner = get_itunes_owner("", "");
 
@@ -212,7 +218,7 @@ pub async fn get_rss_feed_for_podcast(
         .summary(podcast.summary.clone())
         .build();
 
-    let items = get_podcast_items_rss(downloaded_episodes.clone(), &api_key);
+    let items = get_podcast_items_rss(&downloaded_episodes, &api_key);
     let channel_builder = ChannelBuilder::default()
         .language(podcast.clone().language)
         .categories(categories)
@@ -236,7 +242,7 @@ pub async fn get_rss_feed_for_podcast(
 }
 
 fn get_podcast_items_rss(
-    downloaded_episodes: Vec<PodcastEpisode>,
+    downloaded_episodes: &Vec<PodcastEpisodeDto>,
     api_key: &Option<Query<RSSAPiKey>>,
 ) -> Vec<Item> {
     downloaded_episodes
