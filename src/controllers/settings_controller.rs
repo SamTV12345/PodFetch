@@ -41,9 +41,9 @@ tag="settings"
 #[put("/settings")]
 pub async fn update_settings(
     settings: web::Json<Setting>,
-    requester: Option<ReqData<User>>,
+    requester: ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    if !requester.unwrap().is_admin() {
+    if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
     let settings = SettingsService::update_settings(settings.into_inner())?;
@@ -91,7 +91,7 @@ tag="podcasts"
 )]
 #[get("/settings/opml/{type_of}")]
 pub async fn get_opml(
-    requester: Option<ReqData<User>>,
+    requester: ReqData<User>,
     type_of: Path<Mode>,
 ) -> Result<HttpResponse, CustomError> {
     let podcasts_found = Podcast::get_all_podcasts()?;
@@ -143,7 +143,7 @@ fn add_body() -> XMLElement {
 fn add_podcasts(
     podcasts_found: Vec<Podcast>,
     type_of: Mode,
-    requester: Option<ReqData<User>>,
+    requester: ReqData<User>,
 ) -> XMLElement {
     let mut body = add_body();
     for podcast in podcasts_found {
@@ -161,11 +161,9 @@ fn add_podcasts(
                     podcast.id
                 );
 
-                if let Some(req) = requester.as_ref() {
-                    if let Some(api_key) = req.api_key.as_ref() {
+                    if let Some(api_key) = &requester.api_key {
                         local_url = format!("{}?apiKey={}", local_url, api_key);
                     }
-                }
 
                 outline.add_attribute("xmlUrl", &local_url)
             }
