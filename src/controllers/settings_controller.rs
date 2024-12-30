@@ -155,8 +155,11 @@ fn add_podcasts(
         outline.add_attribute("type", "rss");
         match type_of {
             Mode::Local => {
-                let mut local_url = format!("{}rss/{}", &*ENVIRONMENT_SERVICE.get_server_url(),
-                                            podcast.id);
+                let mut local_url = format!(
+                    "{}rss/{}",
+                    &*ENVIRONMENT_SERVICE.get_server_url(),
+                    podcast.id
+                );
 
                 if let Some(req) = requester.as_ref() {
                     if let Some(api_key) = req.api_key.as_ref() {

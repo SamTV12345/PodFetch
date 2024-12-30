@@ -149,6 +149,18 @@ impl DownloadService {
                     log::error!("Error updating metadata: {:?}", err);
                 }
             }
+            FileFormat::Id3v2 => {
+                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
+                if let Some(err) = result_of_update.err() {
+                    log::error!("Error updating metadata: {:?}", err);
+                }
+            }
+            FileFormat::WaveformAudio => {
+                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
+                if let Some(err) = result_of_update.err() {
+                    log::error!("Error updating metadata: {:?}", err);
+                }
+            }
             _ => {
                 log::error!("File format not supported: {:?}", detected_file);
                 return Err(CustomError::Conflict(

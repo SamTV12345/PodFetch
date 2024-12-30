@@ -149,8 +149,7 @@ pub async fn update_user(
         }
     }
 
-    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.oidc_configured
-    {
+    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.oidc_configured {
         // Check if this username is already taken
         let new_username_res = User::find_by_username(&user_update.username);
         if new_username_res.is_ok() {
@@ -269,9 +268,7 @@ pub async fn get_invite_link(
         return HttpResponse::Forbidden().body("You are not authorized to perform this action");
     }
 
-    match UserManagementService::get_invite_link(
-        invite_id.into_inner(),
-    ) {
+    match UserManagementService::get_invite_link(invite_id.into_inner()) {
         Ok(invite) => HttpResponse::Ok().json(invite),
         Err(e) => HttpResponse::BadRequest().body(e.to_string()),
     }

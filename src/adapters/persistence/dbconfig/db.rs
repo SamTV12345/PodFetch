@@ -51,10 +51,8 @@ pub fn get_connection() -> r2d2::PooledConnection<ConnectionManager<DBType>> {
 fn init_pool() -> DbPool {
     let conn = establish_connection();
     match conn {
-        DBType::Postgresql(_) => {
-            init_postgres_db_pool(&ENVIRONMENT_SERVICE.database_url)
-                .expect("Failed to connect to database")
-        }
+        DBType::Postgresql(_) => init_postgres_db_pool(&ENVIRONMENT_SERVICE.database_url)
+            .expect("Failed to connect to database"),
         DBType::Sqlite(_) => init_sqlite_db_pool(&ENVIRONMENT_SERVICE.database_url)
             .expect("Failed to connect to database"),
     }

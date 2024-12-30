@@ -126,12 +126,12 @@ impl UserManagementService {
         }
     }
 
-    pub fn get_invite_link(
-        invite_id: String,
-    ) -> Result<String, CustomError> {
+    pub fn get_invite_link(invite_id: String) -> Result<String, CustomError> {
         let invite = Invite::find_invite(invite_id)?;
         match invite {
-            Some(invite) => Ok(ENVIRONMENT_SERVICE.server_url.to_string() + "ui/invite/" + &invite.id),
+            Some(invite) => {
+                Ok(ENVIRONMENT_SERVICE.server_url.to_string() + "ui/invite/" + &invite.id)
+            }
             None => Err(CustomError::NotFound),
         }
     }

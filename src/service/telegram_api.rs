@@ -4,10 +4,7 @@ use crate::models::podcasts::Podcast;
 use frankenstein::{Api, ParseMode, SendMessageParams, TelegramApi};
 
 pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: Podcast) {
-    let telegram_config = ENVIRONMENT_SERVICE
-        .telegram_api
-        .clone()
-        .unwrap();
+    let telegram_config = ENVIRONMENT_SERVICE.telegram_api.clone().unwrap();
     let api = Api::new(&telegram_config.telegram_bot_token);
 
     let episode_text = format!(
