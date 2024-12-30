@@ -50,7 +50,7 @@
     "react-waypoint": "^10.3.0",
     "sanitize-html": "^2.14.0",
     "uuid": "^11.0.3",
-    "zustand": "^5.0.1"
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@rsbuild/core": "^1.1.9",
