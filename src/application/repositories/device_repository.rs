@@ -3,6 +3,6 @@ use crate::utils::error::CustomError;
 
 pub trait DeviceRepository {
     fn create(device: Device) -> Result<Device, CustomError>;
-    fn get_devices_of_user(username: String) -> Result<Vec<Device>, CustomError>;
+    fn get_devices_of_user(username: &str) -> Result<Vec<Device>, CustomError>;
     fn delete_by_username(username: &str) -> Result<(), CustomError>;
 }

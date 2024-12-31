@@ -23,6 +23,7 @@ use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
+use crate::utils::error::CustomError;
 
 pub struct AuthFilter {}
 
@@ -97,7 +98,14 @@ where
         match opt_auth_header {
             Some(header) => match header.to_str() {
                 Ok(auth) => {
-                    let (username, password) = AuthFilter::extract_basic_auth(auth);
+                    let result_of_check = AuthFilter::extract_basic_auth(auth);
+                    if result_of_check.is_err() {
+                        return Box::pin(ok(req
+                            .error_response(ErrorUnauthorized("Unauthorized"))
+                            .map_into_right_body()));
+                    }
+
+                    let (username, password) = result_of_check.expect("Error extracting basic auth");
                     let found_user = User::find_by_username(username.as_str());
 
                     if found_user.is_err() {
@@ -105,25 +113,29 @@ where
                             .error_response(ErrorUnauthorized("Unauthorized"))
                             .map_into_right_body()));
                     }
-                    let unwrapped_user = found_user.unwrap();
+                    let unwrapped_user = found_user.expect("Error unwrapping user");
 
                     if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
                         if unwrapped_user.username.clone() == admin_username {
-                            return match ENVIRONMENT_SERVICE.password.is_some()
-                                && digest(password) == ENVIRONMENT_SERVICE.password.clone().unwrap()
-                            {
-                                true => {
-                                    req.extensions_mut().insert(unwrapped_user);
-                                    let service = Rc::clone(&self.service);
-                                    async move {
-                                        service.call(req).await.map(|res| res.map_into_left_body())
-                                    }
-                                    .boxed_local()
+                            return if let Some(password) = &ENVIRONMENT_SERVICE.password {
+                                if &digest(password) == password {
+                                        req.extensions_mut().insert(unwrapped_user);
+                                        let service = Rc::clone(&self.service);
+                                        async move {
+                                            service.call(req).await.map(|res| res.map_into_left_body())
+                                        }
+                                            .boxed_local()
                                 }
-                                false => Box::pin(ok(req
-                                    .error_response(ErrorUnauthorized("Unauthorized"))
-                                    .map_into_right_body())),
-                            };
+                                else {
+                                    Box::pin(ok(req
+                                        .error_response(ErrorUnauthorized("Unauthorized"))
+                                        .map_into_right_body()))
+                                }
+                            } else {
+                                Box::pin(ok(req
+                                        .error_response(ErrorUnauthorized("Unauthorized"))
+                                        .map_into_right_body()))
+                            }
                         }
                     }
 
@@ -149,76 +161,100 @@ where
     }
 
     fn handle_oidc_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let token_res = req.headers().get("Authorization").unwrap().to_str();
+        let token_res = match req.headers().get("Authorization") {
+            Some(token) => Ok(token.to_str()),
+            None => Err(ErrorUnauthorized("Unauthorized")),
+        };
+
         if token_res.is_err() {
             return Box::pin(ok(req
                 .error_response(ErrorUnauthorized("Unauthorized"))
                 .map_into_right_body()));
         }
-        let token = token_res.unwrap().replace("Bearer ", "");
 
-        let jwk = req.app_data::<web::Data<Option<Jwk>>>().cloned().unwrap();
-
-        // Create a DecodingKey from a PEM-encoded RSA string
-
-        let key = DecodingKey::from_jwk(&jwk.as_ref().clone().unwrap()).unwrap();
-        let mut validation = Validation::new(Algorithm::RS256);
-        validation.aud = Some(
-            req.app_data::<web::Data<HashSet<String>>>()
-                .unwrap()
-                .clone()
-                .into_inner()
-                .deref()
-                .clone(),
-        );
-
-        match decode::<Value>(&token, &key, &validation) {
-            Ok(decoded) => {
-                let username = decoded
-                    .claims
-                    .get("preferred_username")
+        if let Ok(Ok(token)) = token_res {
+            let token = token.replace("Bearer ", "");
+            let jwk = req.app_data::<web::Data<Option<Jwk>>>().cloned().unwrap();
+            let key = DecodingKey::from_jwk(&jwk.as_ref().clone().unwrap()).unwrap();
+            let mut validation = Validation::new(Algorithm::RS256);
+            validation.aud = Some(
+                req.app_data::<web::Data<HashSet<String>>>()
                     .unwrap()
-                    .as_str()
-                    .unwrap();
-                let found_user = User::find_by_username(username);
-                let service = Rc::clone(&self.service);
+                    .clone()
+                    .into_inner()
+                    .deref()
+                    .clone(),
+            );
+            match decode::<Value>(&token, &key, &validation) {
+                Ok(decoded) => {
+                    let username = decoded
+                        .claims
+                        .get("preferred_username")
+                        .unwrap()
+                        .as_str()
+                        .unwrap();
+                    let found_user = User::find_by_username(username);
+                    let service = Rc::clone(&self.service);
 
-                match found_user {
-                    Ok(user) => {
-                        req.extensions_mut().insert(user);
-                        async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                            .boxed_local()
-                    }
-                    Err(_) => {
-                        // User is authenticated so we can onboard him if he is new
-                        let user = User::insert_user(&mut User {
-                            id: 0,
-                            username: decoded
+                    match found_user {
+                        Ok(user) => {
+                            req.extensions_mut().insert(user);
+                            async move { service.call(req).await.map(|res| res.map_into_left_body()) }
+                                .boxed_local()
+                        }
+                        Err(_) => {
+                            let preferred_username_claim = decoded
                                 .claims
-                                .get("preferred_username")
-                                .unwrap()
-                                .as_str()
-                                .unwrap()
-                                .to_string(),
-                            role: "user".to_string(),
-                            password: None,
-                            explicit_consent: false,
-                            created_at: chrono::Utc::now().naive_utc(),
-                            api_key: None,
-                        })
-                        .expect("Error inserting user");
-                        req.extensions_mut().insert(user);
-                        async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                            .boxed_local()
+                                .get("preferred_username");
+
+                            if preferred_username_claim.is_none() {
+                                return Box::pin(ok(req
+                                    .error_response(ErrorForbidden("Forbidden"))
+                                    .map_into_right_body()));
+                            }
+
+                            let content = preferred_username_claim.expect("Preferred username \
+                            claim is \
+                            none").as_str();
+
+                            if content.is_none() {
+                                return Box::pin(ok(req
+                                    .error_response(ErrorForbidden("Forbidden"))
+                                    .map_into_right_body()));
+                            }
+
+                            let preferred_username = content.expect("Preferred username is none");
+
+                            // User is authenticated so we can onboard him if he is new
+                            let user = User::insert_user(&mut User {
+                                id: 0,
+                                username: preferred_username.to_string(),
+                                role: "user".to_string(),
+                                password: None,
+                                explicit_consent: false,
+                                created_at: chrono::Utc::now().naive_utc(),
+                                api_key: None,
+                            })
+                                .expect("Error inserting user");
+                            req.extensions_mut().insert(user);
+                            async move { service.call(req).await.map(|res| res.map_into_left_body()) }
+                                .boxed_local()
+                        }
                     }
                 }
-            }
-            Err(e) => {
-                info!("Error decoding token: {:?}", e);
+                Err(e)=>{
+                    info!("Error decoding token: {:?}", e);
+                    Box::pin(ok(req
+                        .error_response(ErrorForbidden("Forbidden"))
+                        .map_into_right_body()))
+                }
+        }
+        } else {
+            // Create a DecodingKey from a PEM-encoded RSA string
+             info!("Error decoding token");
                 Box::pin(ok(req
                     .error_response(ErrorForbidden("Forbidden"))
                     .map_into_right_body()))
-            }
         }
     }
 
@@ -230,7 +266,17 @@ where
     }
 
     fn handle_proxy_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
+        let config = &ENVIRONMENT_SERVICE.reverse_proxy_config;
+
+        if config.is_none() {
+            info!("Reverse proxy is enabled but no config is provided");
+            return Box::pin(ok(req
+                .error_response(ErrorForbidden("Forbidden"))
+                .map_into_right_body()));
+        }
+
+        let config = config.clone().expect("Reverse proxy config is not set");
+
 
         let header_val = req.headers().get(config.header_name);
 
@@ -287,21 +333,21 @@ where
 }
 
 impl AuthFilter {
-    pub fn extract_basic_auth(auth: &str) -> (String, String) {
+    pub fn extract_basic_auth(auth: &str) -> Result<(String, String), CustomError> {
         let auth = auth.to_string();
         let auth = auth.split(' ').collect::<Vec<&str>>();
         let auth = auth[1];
-        let auth = general_purpose::STANDARD.decode(auth).unwrap();
+        let auth = general_purpose::STANDARD.decode(auth).map_err(|_| CustomError::Forbidden)?;
         let auth = String::from_utf8(auth).unwrap();
         let auth = auth.split(':').collect::<Vec<&str>>();
         let username = auth[0];
         let password = auth[1];
-        (username.to_string(), password.to_string())
+        Ok((username.to_string(), password.to_string()))
     }
 
-    pub fn basic_auth_login(rq: String) -> (String, String) {
-        let (u, p) = Self::extract_basic_auth(rq.as_str());
+    pub fn basic_auth_login(rq: String) -> Result<(String, String), CustomError> {
+        let (u, p) = Self::extract_basic_auth(rq.as_str())?;
 
-        (u.to_string(), p.to_string())
+        Ok((u.to_string(), p.to_string()))
     }
 }

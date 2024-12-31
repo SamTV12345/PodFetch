@@ -15,7 +15,7 @@ pub async fn login(
     rq: HttpRequest,
 ) -> Result<HttpResponse, CustomError> {
     // If cookie is already set, return it
-    if let Some(cookie) = rq.clone().cookie("sessionid") {
+    if let Some(cookie) = rq.cookie("sessionid") {
         let session = cookie.value();
         let opt_session = Session::find_by_session_id(session);
         if let Ok(unwrapped_session) = opt_session {
@@ -87,7 +87,7 @@ fn handle_gpodder_basic_auth(
     let authorization = opt_authorization.unwrap().to_str().unwrap();
 
     let unwrapped_username = username.into_inner();
-    let (username_basic, password) = AuthFilter::basic_auth_login(authorization.to_string());
+    let (username_basic, password) = AuthFilter::basic_auth_login(authorization.to_string())?;
     if username_basic != unwrapped_username {
         return Err(CustomError::Forbidden);
     }

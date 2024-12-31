@@ -17,9 +17,9 @@ pub async fn post_device(
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
-            let username = query.clone().0;
-            let deviceid = query.clone().1;
-            if flag.username != username {
+            let username = &query.0;
+            let deviceid = &query.1;
+            if &flag.username != username {
                 return Err(CustomError::Forbidden);
             }
 
@@ -46,10 +46,11 @@ pub async fn get_devices_of_user(
 ) -> Result<HttpResponse, CustomError> {
     match opt_flag {
         Some(flag) => {
-            if flag.username != query.clone() {
+            let user_query = query.into_inner();
+            if flag.username != user_query {
                 return Err(CustomError::Forbidden);
             }
-            let devices = DeviceService::query_by_username(query.clone())?;
+            let devices = DeviceService::query_by_username(&user_query)?;
 
             let dtos = devices
                 .iter()

@@ -22,7 +22,7 @@ impl DeviceRepository for DeviceRepositoryImpl {
             .map(|device_entity: DeviceEntity| device_entity.into()))
     }
 
-    fn get_devices_of_user(username_to_find: String) -> Result<Vec<Device>, CustomError> {
+    fn get_devices_of_user(username_to_find: &str) -> Result<Vec<Device>, CustomError> {
         devices
             .filter(username.eq(username_to_find))
             .load::<DeviceEntity>(&mut get_connection())

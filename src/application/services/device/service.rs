@@ -15,7 +15,7 @@ impl CreateUseCase for DeviceService {
 }
 
 impl QueryUseCase for DeviceService {
-    fn query_by_username(username: String) -> Result<Vec<Device>, CustomError> {
+    fn query_by_username(username: &str) -> Result<Vec<Device>, CustomError> {
         DeviceRepositoryImpl::get_devices_of_user(username)
     }
 }
