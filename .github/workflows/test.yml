@@ -34,5 +34,7 @@ jobs:
         run: |
           touch ./static/index.html
       - name: Run cargo test
+        env:
+          GH_ACTION: true
         run: cargo test
 

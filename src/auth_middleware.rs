@@ -317,8 +317,10 @@ mod test {
     #[cfg(test)]
     #[ctor::dtor]
     fn stop() {
-        if let Ok(mut container) =  CONTAINER.write() {
-            *container = None
+        if std::env::var("GH_ACTION").is_err() {
+            if let Ok(mut container) =  CONTAINER.write() {
+                *container = None
+            }
         }
     }
 
