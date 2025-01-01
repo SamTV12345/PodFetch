@@ -317,8 +317,9 @@ mod test {
     #[cfg(test)]
     #[ctor::dtor]
     fn stop() {
-        let mut conatiner = CONTAINER.write().unwrap();
-        *conatiner = None
+        if let Ok(mut container) =  CONTAINER.write() {
+            *container = None
+        }
     }
 
     #[test]
