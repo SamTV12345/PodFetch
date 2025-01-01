@@ -145,25 +145,15 @@ impl AuthFilter {
         match opt_auth_header {
             Some(header) => match header.to_str() {
                 Ok(auth) => {
-                    let result_of_check = AuthFilter::extract_basic_auth(auth);
-                    if result_of_check.is_err() {
-                        return Err(CustomError::Forbidden);
-                    }
+                    let (user, password) = AuthFilter::extract_basic_auth(auth)?;
 
-                    let (username, password) =
-                        result_of_check.expect("Error extracting basic auth");
-                    let found_user = User::find_by_username(username.as_str());
+                    let found_user = User::find_by_username(&user).map_err(|_|CustomError::Forbidden)?;
 
-                    if found_user.is_err() {
-                        return Err(CustomError::Forbidden);
-                    }
-                    let unwrapped_user = found_user.expect("Error unwrapping user");
-
-                    if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
-                        if unwrapped_user.username.clone() == admin_username {
+                    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
+                        if &found_user.username == admin_username {
                             return if let Some(env_password) = &ENVIRONMENT_SERVICE.password {
                                 if &digest(password) == env_password {
-                                    Ok(unwrapped_user)
+                                    Ok(found_user)
                                 } else {
                                     Err(CustomError::Forbidden)
                                 }
@@ -173,8 +163,12 @@ impl AuthFilter {
                         }
                     }
 
-                    if unwrapped_user.password.clone().unwrap() == digest(password) {
-                        Ok(unwrapped_user)
+                    if let Some(password_from_user) = &found_user.password {
+                        if password_from_user == &digest(password) {
+                            Ok(found_user)
+                        } else {
+                            Err(CustomError::Forbidden)
+                        }
                     } else {
                         Err(CustomError::Forbidden)
                     }
@@ -195,8 +189,16 @@ impl AuthFilter {
         }?;
 
         let token = token_res.replace("Bearer ", "");
-        let jwk = req.app_data::<web::Data<Option<Jwk>>>().cloned().unwrap();
-        let key = DecodingKey::from_jwk(&jwk.as_ref().clone().unwrap()).unwrap();
+        let jwk = match req.app_data::<web::Data<Option<Jwk>>>() {
+            Some(jwk) => {
+                match jwk.get_ref() {
+                    Some(jwk) => Ok(jwk),
+                    None => Err(CustomError::Forbidden),
+                }
+            },
+            None => Err(CustomError::Forbidden),
+        }?;
+        let key = DecodingKey::from_jwk(jwk).unwrap();
         let mut validation = Validation::new(Algorithm::RS256);
         validation.aud = Some(
             req.app_data::<web::Data<HashSet<String>>>()
@@ -291,38 +293,20 @@ impl AuthFilter {
 #[cfg(test)]
 mod test {
     
-    use std::sync::{LazyLock, RwLock};
+    
     
     use actix_web::http::header::ContentType;
-    use actix_web::{test};
+    use actix_web::test;
     
     use serial_test::serial;
-    use testcontainers::{Container};
-    use testcontainers_modules::postgres::Postgres;
+    
+    
     use crate::auth_middleware::{AuthFilter};
+    
     use crate::service::environment_service::{ReverseProxyConfig};
-    use crate::test_utils::test::{clear_users, setup_container};
+    use crate::test_utils::test::{clear_users, create_random_user};
 
-    static CONTAINER: LazyLock<RwLock<Option<Container<Postgres>>>> = LazyLock::new(||RwLock::new
-        (None));
 
-    #[cfg(test)]
-    #[ctor::ctor]
-    fn init() {
-        let container = setup_container();
-        let mut conatiner = CONTAINER.write().unwrap();
-        *conatiner = Some(container);
-    }
-
-    #[cfg(test)]
-    #[ctor::dtor]
-    fn stop() {
-        if std::env::var("GH_ACTION").is_err() {
-            if let Ok(mut container) =  CONTAINER.write() {
-                *container = None
-            }
-        }
-    }
 
     #[test]
     async fn test_basic_auth_login() {
@@ -394,5 +378,68 @@ mod test {
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
 
         assert!(result.is_ok());
+    }
+
+    #[actix_web::test]
+    #[serial]
+    async fn test_basic_auth_no_header() {
+        clear_users();
+
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .to_srv_request();
+        let result = AuthFilter::handle_basic_auth_internal(&req);
+
+        assert!(result.is_err());
+    }
+
+    #[actix_web::test]
+    #[serial]
+    async fn test_basic_auth_header_no_user() {
+        clear_users();
+
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .insert_header(("Authorization", "Bearer dGVzdDp0ZXN0"))
+            .to_srv_request();
+        let result = AuthFilter::handle_basic_auth_internal(&req);
+
+        assert!(result.is_err());
+    }
+
+    #[actix_web::test]
+    #[serial]
+    async fn test_basic_auth_header_other_user() {
+        // given
+        clear_users();
+        create_random_user().insert_user().unwrap();
+
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .insert_header(("Authorization", "Bearer dGVzdDp0ZXN0"))
+            .to_srv_request();
+        // when
+        let result = AuthFilter::handle_basic_auth_internal(&req);
+
+        // then
+        assert!(result.is_err());
+    }
+
+    #[actix_web::test]
+    #[serial]
+    async fn test_basic_auth_header_correct_user_wrong_password() {
+        // given
+        clear_users();
+        create_random_user().insert_user().unwrap();
+
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .insert_header(("Authorization", "Bearer dGVzdHVzZXI6dGVzdA=="))
+            .to_srv_request();
+        // when
+        let result = AuthFilter::handle_basic_auth_internal(&req);
+
+        // then
+        assert!(result.is_err());
     }
 }

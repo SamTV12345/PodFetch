@@ -54,17 +54,17 @@ pub struct UserWithAPiKey {
 impl User {
     pub fn new(
         id: i32,
-        username: String,
+        username: impl Into<String>,
         role: Role,
-        password: Option<String>,
+        password: Option<impl Into<String>>,
         created_at: NaiveDateTime,
         explicit_consent: bool,
     ) -> Self {
         User {
             id,
-            username,
+            username: username.into(),
             role: role.to_string(),
-            password,
+            password: password.map(|p| p.into()),
             created_at,
             explicit_consent,
             api_key: None,
