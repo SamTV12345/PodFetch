@@ -93,25 +93,35 @@ where
     S::Future: 'static,
 {
     fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let opt_auth_header = req.headers().get("Authorization");
+        let result = Self::handle_basic_auth_internal(&req);
 
+        match result {
+            Ok(user) => {
+                req.extensions_mut().insert(user);
+                let service = Rc::clone(&self.service);
+                async move { service.call(req).await.map(|res| res.map_into_left_body()) }
+                    .boxed_local()
+            }
+            Err(e) => Box::pin(ok(req.error_response(e).map_into_right_body())),
+        }
+    }
+
+    fn handle_basic_auth_internal(req: &ServiceRequest) -> Result<User, CustomError> {
+        let opt_auth_header = req.headers().get("Authorization");
         match opt_auth_header {
             Some(header) => match header.to_str() {
                 Ok(auth) => {
                     let result_of_check = AuthFilter::extract_basic_auth(auth);
                     if result_of_check.is_err() {
-                        return Box::pin(ok(req
-                            .error_response(ErrorUnauthorized("Unauthorized"))
-                            .map_into_right_body()));
+                        return Err(CustomError::Forbidden);
                     }
 
                     let (username, password) = result_of_check.expect("Error extracting basic auth");
                     let found_user = User::find_by_username(username.as_str());
 
                     if found_user.is_err() {
-                        return Box::pin(ok(req
-                            .error_response(ErrorUnauthorized("Unauthorized"))
-                            .map_into_right_body()));
+                        return Err(CustomError::Forbidden);
+
                     }
                     let unwrapped_user = found_user.expect("Error unwrapping user");
 
@@ -119,44 +129,28 @@ where
                         if unwrapped_user.username.clone() == admin_username {
                             return if let Some(env_password) = &ENVIRONMENT_SERVICE.password {
                                 if &digest(password) == env_password {
-                                        req.extensions_mut().insert(unwrapped_user);
-                                        let service = Rc::clone(&self.service);
-                                        async move {
-                                            service.call(req).await.map(|res| res.map_into_left_body())
-                                        }
-                                            .boxed_local()
+                                    Ok(unwrapped_user)
                                 }
                                 else {
-                                    Box::pin(ok(req
-                                        .error_response(ErrorUnauthorized("Unauthorized"))
-                                        .map_into_right_body()))
+                                    Err(CustomError::Forbidden)
                                 }
                             } else {
-                                Box::pin(ok(req
-                                        .error_response(ErrorUnauthorized("Unauthorized"))
-                                        .map_into_right_body()))
+                                Err(CustomError::Forbidden)
                             }
                         }
                     }
 
                     if unwrapped_user.password.clone().unwrap() == digest(password) {
-                        req.extensions_mut().insert(unwrapped_user);
-                        let service = Rc::clone(&self.service);
-                        async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                            .boxed_local()
+                        Ok(unwrapped_user)
                     } else {
-                        Box::pin(ok(req
-                            .error_response(ErrorUnauthorized("Unauthorized"))
-                            .map_into_right_body()))
+                        Err(CustomError::Forbidden)
                     }
                 }
-                Err(_) => Box::pin(ok(req
-                    .error_response(ErrorUnauthorized("Unauthorized"))
-                    .map_into_right_body())),
+                Err(_) =>  Err(CustomError::Forbidden)
+
             },
-            None => Box::pin(ok(req
-                .error_response(ErrorUnauthorized("Unauthorized"))
-                .map_into_right_body())),
+            None => Err(CustomError::Forbidden)
+
         }
     }
 
@@ -265,6 +259,7 @@ where
         async move { service.call(req).await.map(|res| res.map_into_left_body()) }.boxed_local()
     }
 
+
     fn handle_proxy_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
         let config = &ENVIRONMENT_SERVICE.reverse_proxy_config;
 
@@ -297,7 +292,7 @@ where
                         }
                         Err(_) => {
                             if config.auto_sign_up {
-                                let user = User::insert_user(&mut User {
+                                let user =  User {
                                     id: 0,
                                     username: token.to_string(),
                                     role: "user".to_string(),
@@ -305,7 +300,7 @@ where
                                     explicit_consent: false,
                                     created_at: chrono::Utc::now().naive_utc(),
                                     api_key: None,
-                                })
+                                }.insert_user()
                                 .expect("Error inserting user");
                                 req.extensions_mut().insert(user);
                                 return async move {
