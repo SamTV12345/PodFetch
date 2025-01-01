@@ -117,8 +117,8 @@ where
 
                     if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
                         if unwrapped_user.username.clone() == admin_username {
-                            return if let Some(password) = &ENVIRONMENT_SERVICE.password {
-                                if &digest(password) == password {
+                            return if let Some(env_password) = &ENVIRONMENT_SERVICE.password {
+                                if &digest(password) == env_password {
                                         req.extensions_mut().insert(unwrapped_user);
                                         let service = Rc::clone(&self.service);
                                         async move {
