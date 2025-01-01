@@ -102,6 +102,7 @@ mod exception;
 mod gpodder;
 pub mod mutex;
 pub mod utils;
+mod test_utils;
 
 type DbPool = Pool<ConnectionManager<DBType>>;
 
@@ -188,25 +189,7 @@ async fn main() -> std::io::Result<()> {
         exit(0)
     }
 
-    let mut conn = get_connection();
-    let conn = conn.deref_mut();
-
-    match conn {
-        DBType::Postgresql(ref mut conn) => {
-            let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
-
-            if res_migration.is_err() {
-                panic!("Could not run migrations: {}", res_migration.err().unwrap());
-            }
-        }
-        DBType::Sqlite(ref mut conn) => {
-            let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
-
-            if res_migration.is_err() {
-                panic!("Could not run migrations: {}", res_migration.err().unwrap());
-            }
-        }
-    }
+    run_migrations();
 
     check_server_config();
 
@@ -363,6 +346,28 @@ async fn main() -> std::io::Result<()> {
     .run();
     try_join!(http_server, async move { chat_server.await.unwrap() })?;
     Ok(())
+}
+
+pub fn run_migrations() {
+    let mut conn = get_connection();
+    let conn = conn.deref_mut();
+
+    match conn {
+        DBType::Postgresql(ref mut conn) => {
+            let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
+
+            if res_migration.is_err() {
+                panic!("Could not run migrations: {}", res_migration.err().unwrap());
+            }
+        }
+        DBType::Sqlite(ref mut conn) => {
+            let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
+
+            if res_migration.is_err() {
+                panic!("Could not run migrations: {}", res_migration.err().unwrap());
+            }
+        }
+    }
 }
 
 pub fn get_api_config() -> Scope {

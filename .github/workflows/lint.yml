@@ -15,7 +15,7 @@ jobs:
       - run: sudo apt install git
         name: Install git
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
       - name: Set up cargo cache
@@ -33,8 +33,6 @@ jobs:
       - name: Add required index.html
         run: |
           touch ./static/index.html
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
 

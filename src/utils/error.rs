@@ -10,6 +10,8 @@ pub enum CustomError {
     NotFound,
     #[error("You are forbidden to access requested file.")]
     Forbidden,
+    #[error("You are not authorized to access this resource. {0}")]
+    UnAuthorized(String),
     #[error("Bad Request: {0}")]
     BadRequest(String),
     #[error("The following error occurred: {0}")]
@@ -28,6 +30,7 @@ impl CustomError {
             Self::DatabaseError(_) => "DatabaseError".to_string(),
             Self::Conflict(e) => e.to_string(),
             Self::BadRequest(e) => e.to_string(),
+            Self::UnAuthorized(_) => "UnAuthorized".to_string(),
         }
     }
 }
@@ -41,6 +44,7 @@ impl ResponseError for CustomError {
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::UnAuthorized(_) => StatusCode::UNAUTHORIZED,
         }
     }
 
