@@ -33,7 +33,6 @@ jobs:
       - name: Add required index.html
         run: |
           touch ./static/index.html
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - name: Run cargo test
+        run: cargo test
 
