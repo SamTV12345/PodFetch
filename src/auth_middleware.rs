@@ -3,12 +3,10 @@ use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
-
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use actix::fut::ok;
 use actix_web::body::{EitherBody, MessageBody};
-use actix_web::error::{ErrorForbidden, ErrorUnauthorized};
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     web, Error, HttpMessage,
@@ -16,6 +14,7 @@ use actix_web::{
 use base64::engine::general_purpose;
 use base64::Engine;
 
+use crate::utils::error::CustomError;
 use futures_util::future::{LocalBoxFuture, Ready};
 use futures_util::FutureExt;
 use jsonwebtoken::jwk::Jwk;
@@ -23,7 +22,7 @@ use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
-use crate::utils::error::CustomError;
+use crate::service::environment_service::ReverseProxyConfig;
 
 pub struct AuthFilter {}
 
@@ -36,6 +35,13 @@ impl AuthFilter {
 #[derive(Default)]
 pub struct AuthFilterMiddleware<S> {
     service: Rc<S>,
+}
+
+enum AuthType {
+    Basic,
+    Oidc,
+    Proxy,
+    None,
 }
 
 impl<S, B> Transform<S, ServiceRequest> for AuthFilter
@@ -71,14 +77,14 @@ where
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         if ENVIRONMENT_SERVICE.http_basic {
-            self.handle_basic_auth(req)
+            self.handle_auth(req, AuthType::Basic)
         } else if ENVIRONMENT_SERVICE.oidc_configured {
-            self.handle_oidc_auth(req)
+            self.handle_auth(req, AuthType::Oidc)
         } else if ENVIRONMENT_SERVICE.reverse_proxy {
-            self.handle_proxy_auth(req)
+            self.handle_auth(req, AuthType::Proxy)
         } else {
             // It can only be no auth
-            self.handle_no_auth(req)
+            self.handle_auth(req, AuthType::None)
         }
     }
 }
@@ -92,9 +98,14 @@ where
     S: 'static + Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
 {
-    fn handle_basic_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let result = Self::handle_basic_auth_internal(&req);
-
+    fn handle_auth(&self, req: ServiceRequest, auth_type: AuthType) -> MyFuture<B, Error> {
+        let result = match auth_type {
+            AuthType::Basic => AuthFilter::handle_basic_auth_internal(&req),
+            AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(&req),
+            AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(&req, &ENVIRONMENT_SERVICE
+                .reverse_proxy_config.clone().unwrap()),
+            AuthType::None => Ok(User::create_standard_admin_user()),
+        };
         match result {
             Ok(user) => {
                 req.extensions_mut().insert(user);
@@ -105,226 +116,6 @@ where
             Err(e) => Box::pin(ok(req.error_response(e).map_into_right_body())),
         }
     }
-
-    fn handle_basic_auth_internal(req: &ServiceRequest) -> Result<User, CustomError> {
-        let opt_auth_header = req.headers().get("Authorization");
-        match opt_auth_header {
-            Some(header) => match header.to_str() {
-                Ok(auth) => {
-                    let result_of_check = AuthFilter::extract_basic_auth(auth);
-                    if result_of_check.is_err() {
-                        return Err(CustomError::Forbidden);
-                    }
-
-                    let (username, password) = result_of_check.expect("Error extracting basic auth");
-                    let found_user = User::find_by_username(username.as_str());
-
-                    if found_user.is_err() {
-                        return Err(CustomError::Forbidden);
-
-                    }
-                    let unwrapped_user = found_user.expect("Error unwrapping user");
-
-                    if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
-                        if unwrapped_user.username.clone() == admin_username {
-                            return if let Some(env_password) = &ENVIRONMENT_SERVICE.password {
-                                if &digest(password) == env_password {
-                                    Ok(unwrapped_user)
-                                }
-                                else {
-                                    Err(CustomError::Forbidden)
-                                }
-                            } else {
-                                Err(CustomError::Forbidden)
-                            }
-                        }
-                    }
-
-                    if unwrapped_user.password.clone().unwrap() == digest(password) {
-                        Ok(unwrapped_user)
-                    } else {
-                        Err(CustomError::Forbidden)
-                    }
-                }
-                Err(_) =>  Err(CustomError::Forbidden)
-
-            },
-            None => Err(CustomError::Forbidden)
-
-        }
-    }
-
-    fn handle_oidc_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let token_res = match req.headers().get("Authorization") {
-            Some(token) => Ok(token.to_str()),
-            None => Err(ErrorUnauthorized("Unauthorized")),
-        };
-
-        if token_res.is_err() {
-            return Box::pin(ok(req
-                .error_response(ErrorUnauthorized("Unauthorized"))
-                .map_into_right_body()));
-        }
-
-        if let Ok(Ok(token)) = token_res {
-            let token = token.replace("Bearer ", "");
-            let jwk = req.app_data::<web::Data<Option<Jwk>>>().cloned().unwrap();
-            let key = DecodingKey::from_jwk(&jwk.as_ref().clone().unwrap()).unwrap();
-            let mut validation = Validation::new(Algorithm::RS256);
-            validation.aud = Some(
-                req.app_data::<web::Data<HashSet<String>>>()
-                    .unwrap()
-                    .clone()
-                    .into_inner()
-                    .deref()
-                    .clone(),
-            );
-            match decode::<Value>(&token, &key, &validation) {
-                Ok(decoded) => {
-                    let username = decoded
-                        .claims
-                        .get("preferred_username")
-                        .unwrap()
-                        .as_str()
-                        .unwrap();
-                    let found_user = User::find_by_username(username);
-                    let service = Rc::clone(&self.service);
-
-                    match found_user {
-                        Ok(user) => {
-                            req.extensions_mut().insert(user);
-                            async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                                .boxed_local()
-                        }
-                        Err(_) => {
-                            let preferred_username_claim = decoded
-                                .claims
-                                .get("preferred_username");
-
-                            if preferred_username_claim.is_none() {
-                                return Box::pin(ok(req
-                                    .error_response(ErrorForbidden("Forbidden"))
-                                    .map_into_right_body()));
-                            }
-
-                            let content = preferred_username_claim.expect("Preferred username \
-                            claim is \
-                            none").as_str();
-
-                            if content.is_none() {
-                                return Box::pin(ok(req
-                                    .error_response(ErrorForbidden("Forbidden"))
-                                    .map_into_right_body()));
-                            }
-
-                            let preferred_username = content.expect("Preferred username is none");
-
-                            // User is authenticated so we can onboard him if he is new
-                            let user = User::insert_user(&mut User {
-                                id: 0,
-                                username: preferred_username.to_string(),
-                                role: "user".to_string(),
-                                password: None,
-                                explicit_consent: false,
-                                created_at: chrono::Utc::now().naive_utc(),
-                                api_key: None,
-                            })
-                                .expect("Error inserting user");
-                            req.extensions_mut().insert(user);
-                            async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                                .boxed_local()
-                        }
-                    }
-                }
-                Err(e)=>{
-                    info!("Error decoding token: {:?}", e);
-                    Box::pin(ok(req
-                        .error_response(ErrorForbidden("Forbidden"))
-                        .map_into_right_body()))
-                }
-        }
-        } else {
-            // Create a DecodingKey from a PEM-encoded RSA string
-             info!("Error decoding token");
-                Box::pin(ok(req
-                    .error_response(ErrorForbidden("Forbidden"))
-                    .map_into_right_body()))
-        }
-    }
-
-    fn handle_no_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let user = User::create_standard_admin_user();
-        req.extensions_mut().insert(user);
-        let service = Rc::clone(&self.service);
-        async move { service.call(req).await.map(|res| res.map_into_left_body()) }.boxed_local()
-    }
-
-
-    fn handle_proxy_auth(&self, req: ServiceRequest) -> MyFuture<B, Error> {
-        let config = &ENVIRONMENT_SERVICE.reverse_proxy_config;
-
-        if config.is_none() {
-            info!("Reverse proxy is enabled but no config is provided");
-            return Box::pin(ok(req
-                .error_response(ErrorForbidden("Forbidden"))
-                .map_into_right_body()));
-        }
-
-        let config = config.clone().expect("Reverse proxy config is not set");
-
-
-        let header_val = req.headers().get(config.header_name);
-
-        if let Some(header_val) = header_val {
-            let token_res = header_val.to_str();
-            return match token_res {
-                Ok(token) => {
-                    let found_user = User::find_by_username(token);
-                    let service = Rc::clone(&self.service);
-
-                    return match found_user {
-                        Ok(user) => {
-                            req.extensions_mut().insert(user);
-                            return async move {
-                                service.call(req).await.map(|res| res.map_into_left_body())
-                            }
-                            .boxed_local();
-                        }
-                        Err(_) => {
-                            if config.auto_sign_up {
-                                let user =  User {
-                                    id: 0,
-                                    username: token.to_string(),
-                                    role: "user".to_string(),
-                                    password: None,
-                                    explicit_consent: false,
-                                    created_at: chrono::Utc::now().naive_utc(),
-                                    api_key: None,
-                                }.insert_user()
-                                .expect("Error inserting user");
-                                req.extensions_mut().insert(user);
-                                return async move {
-                                    service.call(req).await.map(|res| res.map_into_left_body())
-                                }
-                                .boxed_local();
-                            } else {
-                                Box::pin(ok(req
-                                    .error_response(ErrorForbidden("Forbidden"))
-                                    .map_into_right_body()))
-                            }
-                        }
-                    };
-                }
-                Err(_) => Box::pin(ok(req
-                    .error_response(ErrorUnauthorized("Unauthorized"))
-                    .map_into_right_body())),
-            };
-        }
-
-        Box::pin(ok(req
-            .error_response(ErrorUnauthorized("Unauthorized"))
-            .map_into_right_body()))
-    }
 }
 
 impl AuthFilter {
@@ -332,7 +123,9 @@ impl AuthFilter {
         let auth = auth.to_string();
         let auth = auth.split(' ').collect::<Vec<&str>>();
         let auth = auth[1];
-        let auth = general_purpose::STANDARD.decode(auth).map_err(|_| CustomError::Forbidden)?;
+        let auth = general_purpose::STANDARD
+            .decode(auth)
+            .map_err(|_| CustomError::Forbidden)?;
         let auth = String::from_utf8(auth).unwrap();
         let auth = auth.split(':').collect::<Vec<&str>>();
         let username = auth[0];
@@ -345,17 +138,193 @@ impl AuthFilter {
 
         Ok((u.to_string(), p.to_string()))
     }
-}
 
+
+    fn handle_basic_auth_internal(req: &ServiceRequest) -> Result<User, CustomError> {
+        let opt_auth_header = req.headers().get("Authorization");
+        match opt_auth_header {
+            Some(header) => match header.to_str() {
+                Ok(auth) => {
+                    let result_of_check = AuthFilter::extract_basic_auth(auth);
+                    if result_of_check.is_err() {
+                        return Err(CustomError::Forbidden);
+                    }
+
+                    let (username, password) =
+                        result_of_check.expect("Error extracting basic auth");
+                    let found_user = User::find_by_username(username.as_str());
+
+                    if found_user.is_err() {
+                        return Err(CustomError::Forbidden);
+                    }
+                    let unwrapped_user = found_user.expect("Error unwrapping user");
+
+                    if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
+                        if unwrapped_user.username.clone() == admin_username {
+                            return if let Some(env_password) = &ENVIRONMENT_SERVICE.password {
+                                if &digest(password) == env_password {
+                                    Ok(unwrapped_user)
+                                } else {
+                                    Err(CustomError::Forbidden)
+                                }
+                            } else {
+                                Err(CustomError::Forbidden)
+                            };
+                        }
+                    }
+
+                    if unwrapped_user.password.clone().unwrap() == digest(password) {
+                        Ok(unwrapped_user)
+                    } else {
+                        Err(CustomError::Forbidden)
+                    }
+                }
+                Err(_) => Err(CustomError::Forbidden),
+            },
+            None => Err(CustomError::Forbidden),
+        }
+    }
+
+    fn handle_oidc_auth_internal(req: &ServiceRequest) -> Result<User, CustomError> {
+        let token_res = match req.headers().get("Authorization") {
+            Some(token) => match token.to_str() {
+                Ok(token) => Ok(token),
+                Err(_) => Err(CustomError::Forbidden),
+            },
+            None => Err(CustomError::UnAuthorized("Unauthorized".to_string())),
+        }?;
+
+        let token = token_res.replace("Bearer ", "");
+        let jwk = req.app_data::<web::Data<Option<Jwk>>>().cloned().unwrap();
+        let key = DecodingKey::from_jwk(&jwk.as_ref().clone().unwrap()).unwrap();
+        let mut validation = Validation::new(Algorithm::RS256);
+        validation.aud = Some(
+            req.app_data::<web::Data<HashSet<String>>>()
+                .unwrap()
+                .clone()
+                .into_inner()
+                .deref()
+                .clone(),
+        );
+
+        let decoded_token = match decode::<Value>(&token, &key, &validation) {
+            Ok(decoded) => Ok(decoded),
+            Err(_) => Err(CustomError::Forbidden),
+        }?;
+        let username = decoded_token
+            .claims
+            .get("preferred_username")
+            .unwrap()
+            .as_str()
+            .unwrap();
+        let found_user = User::find_by_username(username);
+
+        match found_user {
+            Ok(user) => Ok(user),
+            Err(_) => {
+                let preferred_username_claim = match decoded_token.claims.get
+                ("preferred_username") {
+                    Some(claim) => {
+                        match claim.as_str() {
+                            Some(content) => Ok(content),
+                            None => Err(CustomError::Forbidden),
+                        }
+                    },
+                    None => Err(CustomError::Forbidden),
+                }?;
+
+                // User is authenticated so we can onboard him if he is new
+                let user = User {
+                    id: 0,
+                    username: preferred_username_claim.to_string(),
+                    role: "user".to_string(),
+                    password: None,
+                    explicit_consent: false,
+                    created_at: chrono::Utc::now().naive_utc(),
+                    api_key: None,
+                }
+                    .insert_user()?;
+                Ok(user)
+            }
+        }
+    }
+
+    fn handle_proxy_auth_internal(req: &ServiceRequest, reverse_proxy_config:
+    &ReverseProxyConfig) -> Result<User, CustomError> {
+        let header_val = match req.headers().get(reverse_proxy_config.header_name.to_string()) {
+            Some(header) => Ok(header),
+            None => {
+                info!("Reverse proxy is enabled but no header is provided");
+                return Err(CustomError::Forbidden);
+            }
+        }?;
+        let token_res = match header_val.to_str() {
+            Ok(token) => Ok(token),
+            Err(_) => Err(CustomError::Forbidden),
+        }?;
+        let found_user = User::find_by_username(token_res);
+
+        match found_user {
+            Ok(user) => Ok(user),
+            Err(_) => {
+                if reverse_proxy_config.auto_sign_up {
+                    let user = User {
+                        id: 0,
+                        username: token_res.to_string(),
+                        role: "user".to_string(),
+                        password: None,
+                        explicit_consent: false,
+                        created_at: chrono::Utc::now().naive_utc(),
+                        api_key: None,
+                    }
+                        .insert_user()
+                        .expect("Error inserting user");
+                    Ok(user)
+                } else {
+                    Err(CustomError::Forbidden)
+                }
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
-    use crate::auth_middleware::AuthFilter;
+    
+    use std::sync::{LazyLock, RwLock};
+    
+    use actix_web::http::header::ContentType;
+    use actix_web::{test};
+    
+    use serial_test::serial;
+    use testcontainers::{Container};
+    use testcontainers_modules::postgres::Postgres;
+    use crate::auth_middleware::{AuthFilter};
+    use crate::service::environment_service::{ReverseProxyConfig};
+    use crate::test_utils::test::{clear_users, setup_container};
+
+    static CONTAINER: LazyLock<RwLock<Option<Container<Postgres>>>> = LazyLock::new(||RwLock::new
+        (None));
+
+    #[cfg(test)]
+    #[ctor::ctor]
+    fn init() {
+        let container = setup_container();
+        let mut conatiner = CONTAINER.write().unwrap();
+        *conatiner = Some(container);
+    }
+
+    #[cfg(test)]
+    #[ctor::dtor]
+    fn stop() {
+        let mut conatiner = CONTAINER.write().unwrap();
+        *conatiner = None
+    }
 
     #[test]
-    fn test_basic_auth_login() {
+    async fn test_basic_auth_login() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdDp0ZXN0");
-        assert_eq!(result.is_err(), false);
+        assert!(result.is_ok());
         let (u, p) = result.unwrap();
         assert_eq!(u, "test");
         assert_eq!(p, "test");
@@ -363,11 +332,64 @@ mod test {
 
 
     #[test]
-    fn test_basic_auth_login_with_special_characters() {
+    async fn test_basic_auth_login_with_special_characters() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdCTDvMOWOnRlc3Q=");
-        assert_eq!(result.is_err(), false);
+        assert!(result.is_ok());
         let (u, p) = result.unwrap();
         assert_eq!(u, "test$üÖ");
         assert_eq!(p, "test");
+    }
+
+    #[actix_web::test]
+    #[serial]
+    async fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
+        clear_users();
+        let rv_config = ReverseProxyConfig {
+            header_name: "X-Auth".to_string(),
+            auto_sign_up: true,
+        };
+
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .to_srv_request();
+        let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
+
+        assert!(result.is_err());
+    }
+
+    #[actix_web::test]
+    #[serial]
+    async fn test_proxy_auth_with_header_in_request_auto_sign_up() {
+        clear_users();
+        let rv_config = ReverseProxyConfig {
+            header_name: "X-Auth".to_string(),
+            auto_sign_up: false,
+        };
+
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .insert_header(("X-Auth", "test"))
+            .to_srv_request();
+        let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
+
+        assert!(result.is_err());
+    }
+
+    #[actix_web::test]
+    #[serial]
+    async fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
+        clear_users();
+        let rv_config = ReverseProxyConfig {
+            header_name: "X-Auth".to_string(),
+            auto_sign_up: true,
+        };
+
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .insert_header(("X-Auth", "test"))
+            .to_srv_request();
+        let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
+
+        assert!(result.is_ok());
     }
 }

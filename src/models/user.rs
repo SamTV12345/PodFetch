@@ -91,14 +91,11 @@ impl User {
         }
     }
 
-    pub fn insert_user(&mut self) -> Result<User, Error> {
+    pub fn insert_user(&mut self) -> Result<User, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         if let Some(res) = ENVIRONMENT_SERVICE.username.clone() {
             if res == self.username {
-                return Err(Error::new(
-                    std::io::ErrorKind::Other,
-                    "Username already exists",
-                ));
+                return Err(CustomError::Forbidden);
             }
         }
 
@@ -332,3 +329,4 @@ impl User {
         }
     }
 }
+
