@@ -117,8 +117,8 @@ where
 
                     if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
                         if unwrapped_user.username.clone() == admin_username {
-                            return if let Some(password) = &ENVIRONMENT_SERVICE.password {
-                                if &digest(password) == password {
+                            return if let Some(env_password) = &ENVIRONMENT_SERVICE.password {
+                                if &digest(password) == env_password {
                                         req.extensions_mut().insert(unwrapped_user);
                                         let service = Rc::clone(&self.service);
                                         async move {
@@ -345,9 +345,34 @@ impl AuthFilter {
         Ok((username.to_string(), password.to_string()))
     }
 
-    pub fn basic_auth_login(rq: String) -> Result<(String, String), CustomError> {
-        let (u, p) = Self::extract_basic_auth(rq.as_str())?;
+    pub fn basic_auth_login(rq: &str) -> Result<(String, String), CustomError> {
+        let (u, p) = Self::extract_basic_auth(rq)?;
 
         Ok((u.to_string(), p.to_string()))
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use crate::auth_middleware::AuthFilter;
+
+    #[test]
+    fn test_basic_auth_login() {
+        let result = AuthFilter::extract_basic_auth("Bearer dGVzdDp0ZXN0");
+        assert_eq!(result.is_err(), false);
+        let (u, p) = result.unwrap();
+        assert_eq!(u, "test");
+        assert_eq!(p, "test");
+    }
+
+
+    #[test]
+    fn test_basic_auth_login_with_special_characters() {
+        let result = AuthFilter::extract_basic_auth("Bearer dGVzdCTDvMOWOnRlc3Q=");
+        assert_eq!(result.is_err(), false);
+        let (u, p) = result.unwrap();
+        assert_eq!(u, "test$üÖ");
+        assert_eq!(p, "test");
     }
 }

@@ -87,7 +87,7 @@ fn handle_gpodder_basic_auth(
     let authorization = opt_authorization.unwrap().to_str().unwrap();
 
     let unwrapped_username = username.into_inner();
-    let (username_basic, password) = AuthFilter::basic_auth_login(authorization.to_string())?;
+    let (username_basic, password) = AuthFilter::basic_auth_login(authorization)?;
     if username_basic != unwrapped_username {
         return Err(CustomError::Forbidden);
     }
