@@ -145,6 +145,7 @@
   "remove": "Entfernen",
   "standard-podcast-format": "Standard-Podcastformat",
   "onlyFavored": "Nur favorisierte Podcasts",
+  "onlyFavoredEpisodes": "Nur favorisierte Episoden",
   "available-episodes": "Verfügbare Episoden",
 
   "days-to-keep-explanation": "Gibt die Anzahl an Tage wieder, die ein Podcast aufbewahrt, d.h., auf dem Server gespeichert wird. Diese Einstellung ist nur aktiv, wenn die automatische Bereinigung aktiviert ist oder auf Bereinigung jetzt ausführen geklickt wird.",

@@ -16,6 +16,7 @@ use diesel::RunQueryDsl;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 pub struct Playlist {
@@ -141,8 +142,9 @@ impl Playlist {
         let item = item
             .iter()
             .map(|(_, y, z)| PodcastEpisodeWithHistory {
-                podcast_episode: <(PodcastEpisode, Option<User>) as Into<PodcastEpisodeDto>>::into(
-                    (y.clone(), Some(user.clone())),
+                podcast_episode: <(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>) as
+                Into<PodcastEpisodeDto>>::into(
+                    (y.clone(), Some(user.clone()), None),
                 ),
                 podcast_history_item: z.clone(),
             })

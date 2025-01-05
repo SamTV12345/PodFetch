@@ -119,6 +119,22 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             })
                             setSelectedEpisodes(mappedEpisodes)
                         }}>check</span>
+                        <span className={"material-symbols-outlined text-[--fg-color] " + (episode.podcastEpisode.favored && 'filled')}
+                              onClick={() => {
+                                  axios.put(  '/podcast/' + episode.podcastEpisode.id + '/episodes/favor', {
+                                      favored: !episode.podcastEpisode.favored
+                                  })
+                                      .then(() => {
+                                            const mappedEpisodes = selectedEpisodes.map(s => {
+                                                if (s.podcastEpisode.episode_id === episode.podcastEpisode.episode_id) {
+                                                    s.podcastEpisode.favored = !episode.podcastEpisode.favored
+                                                }
+                                                return s
+                                            })
+                                            setSelectedEpisodes(mappedEpisodes)
+                                        })
+                              }}
+                        >favorite</span>
                     </span>
                 </div>
 

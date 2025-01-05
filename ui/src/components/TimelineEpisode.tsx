@@ -13,10 +13,11 @@ type TimelineEpisodeProps = {
     totalLength: number,
     timeLineEpisodes: TimelineHATEOASModel,
     notListened: boolean,
-    podcastHistoryItem?: Episode
+    podcastHistoryItem?: Episode,
+    favoredEpisodes: boolean
 }
 
-export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podcastHistoryItem, notListened, index, timeLineEpisodes }) => {
+export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podcastHistoryItem, notListened, index, timeLineEpisodes, favoredEpisodes }) => {
     const addTimelineEpisodes = useCommon(state => state.addTimelineEpisodes)
 
     return (
@@ -30,7 +31,8 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podca
                         params:{
                             lastTimestamp: podcastEpisode.podcast_episode.date_of_recording,
                             favoredOnly: useCommon.getState().filters?.onlyFavored,
-                            notListened: notListened
+                            notListened: notListened,
+                            favoredEpisodes
                         }
                     })
                         .then((response: AxiosResponse<TimelineHATEOASModel>) => {

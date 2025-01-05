@@ -5,6 +5,7 @@ use chrono::NaiveDateTime;
 use std::borrow::Cow;
 use std::path::PathBuf;
 use utoipa::ToSchema;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastEpisodeDto {
@@ -24,10 +25,11 @@ pub struct PodcastEpisodeDto {
     pub(crate) guid: String,
     pub(crate) deleted: bool,
     pub(crate) episode_numbering_processed: bool,
+    pub favored: Option<bool>
 }
 
-impl From<(PodcastEpisode, Option<User>)> for PodcastEpisodeDto {
-    fn from(value: (PodcastEpisode, Option<User>)) -> Self {
+impl From<(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>)> for PodcastEpisodeDto {
+    fn from(value: (PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>)) -> Self {
         PodcastEpisodeDto {
             id: value.0.id,
             podcast_id: value.0.podcast_id,
@@ -45,12 +47,13 @@ impl From<(PodcastEpisode, Option<User>)> for PodcastEpisodeDto {
             guid: value.0.guid,
             deleted: value.0.deleted,
             episode_numbering_processed: value.0.episode_numbering_processed,
+            favored: value.2.map(|f| f.favorite)
         }
     }
 }
 
-impl From<(PodcastEpisode, Option<String>)> for PodcastEpisodeDto {
-    fn from(value: (PodcastEpisode, Option<String>)) -> Self {
+impl From<(PodcastEpisode, Option<String>, Option<FavoritePodcastEpisode>)> for PodcastEpisodeDto {
+    fn from(value: (PodcastEpisode, Option<String>, Option<FavoritePodcastEpisode>)) -> Self {
         PodcastEpisodeDto {
             id: value.0.id,
             podcast_id: value.0.podcast_id,
@@ -76,6 +79,7 @@ impl From<(PodcastEpisode, Option<String>)> for PodcastEpisodeDto {
             guid: value.0.guid,
             deleted: value.0.deleted,
             episode_numbering_processed: value.0.episode_numbering_processed,
+            favored: value.2.map(|f| f.favorite)
         }
     }
 }

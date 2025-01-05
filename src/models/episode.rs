@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
 use utoipa::ToSchema;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[derive(
     Serialize,
@@ -203,6 +204,7 @@ impl Episode {
         use crate::adapters::persistence::dbconfig::schema::episodes::username as e_username;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::guid as pguid;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+
         use crate::adapters::persistence::dbconfig::schema::podcasts as podcast_table;
         use diesel::JoinOnDsl;
 
@@ -235,7 +237,8 @@ impl Episode {
                     .eq_any(subquery),
             )
             .filter(episodes1.field(ep_dsl::action).eq("play"))
-            .load::<(PodcastEpisode, Episode, Podcast)>(&mut get_connection())
+            .load::<(PodcastEpisode,  Episode, Podcast)>(&mut
+                get_connection())
             .map_err(map_db_error)?;
 
         let mapped_watched_episodes = query
@@ -250,7 +253,7 @@ impl Episode {
                 watched_time: e.clone().1.position.unwrap(),
                 date: e.clone().1.timestamp,
                 total_time: e.clone().0.total_time,
-                podcast_episode: (e.0.clone(), Some(user).cloned()).into(),
+                podcast_episode: (e.0.clone(), Some(user).cloned(), None::<FavoritePodcastEpisode>).into(),
                 podcast: e.2.clone().into(),
             })
             .collect();

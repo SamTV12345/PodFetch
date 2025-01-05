@@ -8,6 +8,7 @@ use rand::random;
 use std::collections::{HashMap, HashSet};
 use std::io;
 use tokio::sync::{mpsc, oneshot};
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 type RoomId = String;
 pub type ConnId = usize;
@@ -80,7 +81,7 @@ impl From<(Podcast, Vec<PodcastEpisode>)> for PodcastEpisodesAdded {
             podcast_episodes: value
                 .1
                 .into_iter()
-                .map(|episode| (episode, None::<User>).into())
+                .map(|episode| (episode, None::<User>, None::<FavoritePodcastEpisode>).into())
                 .collect(),
             podcast: value.0.clone().into(),
             type_of: PodcastType::AddPodcastEpisodes,
@@ -353,7 +354,7 @@ impl ChatServerHandle {
         podcast: &Podcast,
     ) {
         let podcast_episode: PodcastEpisodeDto =
-            (podcast_episode.clone(), None::<User>).clone().into();
+            (podcast_episode.clone(), None::<User>, None::<FavoritePodcastEpisode>).clone().into();
         let podcast = podcast.clone().into();
         self.send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
@@ -397,7 +398,7 @@ impl ChatServerHandle {
         self.send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastEpisodeDeleteMesage {
-                podcast_episode: PodcastEpisodeDto::from((podcast_episode.clone(), None::<User>)),
+                podcast_episode: PodcastEpisodeDto::from((podcast_episode.clone(), None::<User>, None::<FavoritePodcastEpisode>)),
                 type_of: PodcastType::DeletePodcastEpisode,
                 message: "Deleted podcast episode locally".to_string(),
             })

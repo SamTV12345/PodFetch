@@ -27,6 +27,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    favorite_podcast_episodes (username, episode_id) {
+        username -> Text,
+        episode_id -> Integer,
+        favorite -> Bool,
+    }
+}
+
+diesel::table! {
     favorites (username, podcast_id) {
         username -> Text,
         podcast_id -> Integer,
@@ -208,6 +216,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(favorite_podcast_episodes -> podcast_episodes (episode_id));
 diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(playlist_items -> playlists (playlist_id));
 diesel::joinable!(playlist_items -> podcast_episodes (episode));
@@ -218,6 +227,7 @@ diesel::joinable!(tags_podcasts -> tags (tag_id));
 diesel::allow_tables_to_appear_in_same_query!(
     devices,
     episodes,
+    favorite_podcast_episodes,
     favorites,
     filters,
     invites,

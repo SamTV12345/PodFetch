@@ -19,6 +19,7 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -85,7 +86,7 @@ pub async fn get_rss_feed(
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes
         .into_iter()
-        .map(|c| (c, api_key.clone()).into())
+        .map(|c| (c, api_key.clone(), None::<FavoritePodcastEpisode>).into())
         .collect();
 
     let feed_url = add_api_key_to_url(
@@ -183,7 +184,7 @@ pub async fn get_rss_feed_for_podcast(
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?
             .into_iter()
-            .map(|c| (c, None::<String>).into())
+            .map(|c| (c, None::<String>, None::<FavoritePodcastEpisode>).into())
             .collect();
 
     let mut itunes_owner = get_itunes_owner("", "");
