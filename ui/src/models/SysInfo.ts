@@ -39,6 +39,7 @@ export interface ConfigModel {
     podindexConfigured: boolean,
     rssFeed: string
     serverUrl: string,
+    wsUrl: string,
     basicAuth: string,
     oidcConfigured: boolean,
     oidcConfig?: {

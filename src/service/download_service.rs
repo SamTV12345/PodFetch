@@ -122,7 +122,7 @@ impl DownloadService {
             conn,
         )?;
         io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
-        let result = Self::handle_metadata_insertion(&paths, &podcast_episode, &podcast);
+        let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Err(err) = result {
             log::error!("Error handling metadata insertion: {:?}", err);
         }

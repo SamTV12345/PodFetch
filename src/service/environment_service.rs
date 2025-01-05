@@ -25,6 +25,7 @@ pub struct OidcConfig {
 #[derive(Clone)]
 pub struct EnvironmentService {
     pub server_url: String,
+    pub ws_url: String,
     pub polling_interval: u32,
     pub podindex_api_key: String,
     pub podindex_api_secret: String,
@@ -82,14 +83,30 @@ impl EnvironmentService {
     pub fn new() -> EnvironmentService {
         let oidc_configured = Self::handle_oidc();
 
-        let mut server_url = match std::env::var("DEV") {
-            Ok(_) => "http://localhost:5173".to_string(),
-            Err(_) => var(SERVER_URL).unwrap_or("http://localhost:8000".to_string()),
+        let server_url = match var("DEV") {
+            Ok(_) => "http://localhost:5173/".to_string(),
+            Err(_) => var(SERVER_URL)
+                .map(|s| if s.ends_with('/') { s } else { s + "/" })
+                .unwrap_or("http://localhost:8000".to_string()),
         };
-        // Add trailing slash if not present
-        if !server_url.ends_with('/') {
-            server_url += "/"
-        }
+
+        let ws_url = match var("DEV") {
+            Ok(_) => "http://localhost:8000/ws".to_string(),
+            Err(_) => var(SERVER_URL)
+                .map(|mut s| {
+                    s = match s.starts_with("https") {
+                        true => s.replace("https", "wss"),
+                        false => s.replace("http", "ws"),
+                    };
+                    if s.ends_with('/') {
+                        s + "ws"
+                    } else {
+                        s + "/ws"
+                    }
+                })
+                .unwrap_or("http://localhost:8000/ws".to_string()),
+        };
+
         let mut opt_sub_dir = var(SUB_DIRECTORY)
             .map_err(|_| None::<String>)
             .map(Some)
@@ -134,6 +151,7 @@ impl EnvironmentService {
 
         EnvironmentService {
             server_url: server_url.clone(),
+            ws_url,
             polling_interval: var(POLLING_INTERVAL)
                 .map(|v| {
                     v.parse::<u32>()
@@ -248,6 +266,7 @@ impl EnvironmentService {
             basic_auth: self.http_basic,
             oidc_configured: self.oidc_configured,
             oidc_config: self.oidc_config.clone(),
+            ws_url: self.ws_url.clone(),
         }
     }
 

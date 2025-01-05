@@ -1,8 +1,7 @@
 use crate::constants::inner_constants::{
-    PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, MAIN_ROOM,
+    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES,
     TELEGRAM_API_ENABLED,
 };
-use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
@@ -10,12 +9,10 @@ use crate::service::file_service::FileService;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
 
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::episode::Episode;
 use crate::models::notification::Notification;
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -46,9 +43,8 @@ impl PodcastEpisodeService {
         match PodcastEpisode::check_if_downloaded(&podcast_episode.url) {
             Ok(true) => {}
             Ok(false) => {
-                let podcast_inserted =
-                    Self::perform_download(&podcast_episode_cloned, &podcast)?;
-                if let Some(mut lobby) = lobby {
+                let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
+                if let Some(lobby) = lobby {
                     lobby.broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
                 }
 

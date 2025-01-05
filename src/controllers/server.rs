@@ -1,46 +1,45 @@
-use crate::constants::inner_constants::{PodcastType, MAIN_ROOM};
-use rand::random;
-use std::collections::{HashMap, HashSet};
-use std::io;
-use tokio::sync::{mpsc, oneshot};
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::constants::inner_constants::{PodcastType, MAIN_ROOM};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
+use rand::random;
+use std::collections::{HashMap, HashSet};
+use std::io;
+use tokio::sync::{mpsc, oneshot};
 
 type RoomId = String;
 pub type ConnId = usize;
 
 pub type Msg = String;
 
-
 #[derive(Serialize)]
 pub struct PodcastEpisodeOfflineAvailableMessage {
     message: String,
     podcast: PodcastDto,
     type_of: PodcastType,
-    podcast_episode: PodcastEpisodeDto
+    podcast_episode: PodcastEpisodeDto,
 }
 
 #[derive(Serialize)]
 pub struct PodcastRefreshedMessage {
     type_of: PodcastType,
     message: String,
-    podcast: PodcastDto
+    podcast: PodcastDto,
 }
 
 #[derive(Serialize)]
 pub struct OpmlErrorMessage {
     type_of: PodcastType,
-    message: String
+    message: String,
 }
 
 #[derive(Serialize)]
 pub struct PodcastEpisodeDeleteMesage {
     podcast_episode: PodcastEpisodeDto,
     type_of: PodcastType,
-    message: String
+    message: String,
 }
 
 #[derive(Serialize)]
@@ -48,21 +47,21 @@ pub struct PodcastEpisodesAdded {
     type_of: PodcastType,
     message: String,
     podcast: PodcastDto,
-    podcast_episodes: Vec<PodcastEpisodeDto>
+    podcast_episodes: Vec<PodcastEpisodeDto>,
 }
 
 #[derive(Serialize)]
 pub struct OpmlAddedMessage {
     type_of: PodcastType,
     message: String,
-    podcast: PodcastDto
+    podcast: PodcastDto,
 }
 
 #[derive(Serialize)]
 pub struct PodcastAddedMessage {
     type_of: PodcastType,
     message: String,
-    podcast: PodcastDto
+    podcast: PodcastDto,
 }
 
 impl From<Podcast> for OpmlAddedMessage {
@@ -70,7 +69,7 @@ impl From<Podcast> for OpmlAddedMessage {
         OpmlAddedMessage {
             type_of: PodcastType::OpmlAdded,
             message: format!("Podcast {} has been added", podcast.name),
-            podcast: podcast.into()
+            podcast: podcast.into(),
         }
     }
 }
@@ -78,7 +77,10 @@ impl From<Podcast> for OpmlAddedMessage {
 impl From<(Podcast, Vec<PodcastEpisode>)> for PodcastEpisodesAdded {
     fn from(value: (Podcast, Vec<PodcastEpisode>)) -> Self {
         Self {
-            podcast_episodes: value.1.into_iter().map(|episode| (episode, None::<User>).into())
+            podcast_episodes: value
+                .1
+                .into_iter()
+                .map(|episode| (episode, None::<User>).into())
                 .collect(),
             podcast: value.0.clone().into(),
             type_of: PodcastType::AddPodcastEpisodes,
@@ -87,29 +89,24 @@ impl From<(Podcast, Vec<PodcastEpisode>)> for PodcastEpisodesAdded {
     }
 }
 
-
 impl From<String> for OpmlErrorMessage {
     fn from(message: String) -> Self {
         OpmlErrorMessage {
             type_of: PodcastType::OpmlErrored,
-            message
+            message,
         }
     }
 }
-
 
 impl From<Podcast> for PodcastAddedMessage {
     fn from(value: Podcast) -> Self {
         PodcastAddedMessage {
             type_of: PodcastType::AddPodcast,
             message: format!("Podcast {} has been added", value.name),
-            podcast: value.into()
+            podcast: value.into(),
         }
     }
 }
-
-
-
 
 /// A command received by the [`ChatServer`].
 #[derive(Debug)]
@@ -317,21 +314,6 @@ impl ChatServerHandle {
         res_rx.await.unwrap()
     }
 
-    async fn send_broadcast(&self, room_id: RoomId, msg: impl Into<Msg>) {
-        let (res_tx, res_rx) = oneshot::channel();
-
-        self.cmd_tx
-            .send(Command::Broadcast {
-                msg: msg.into(),
-                room: room_id,
-                res_tx: Some(res_tx),
-            })
-            .unwrap();
-
-        // unwrap: chat server does not drop our response channel
-        res_rx.await.unwrap();
-    }
-
     fn send_broadcast_sync(&self, room_id: RoomId, msg: impl Into<Msg>) {
         self.cmd_tx
             .send(Command::Broadcast {
@@ -365,23 +347,23 @@ impl ChatServerHandle {
         self.cmd_tx.send(Command::Disconnect { conn }).unwrap();
     }
 
-    pub fn broadcast_podcast_episode_offline_available(&self, podcast_episode: &PodcastEpisode,
-                                                       podcast:
-    &Podcast) {
-        let podcast_episode: PodcastEpisodeDto = (podcast_episode.clone(), None::<User>).clone().into();
+    pub fn broadcast_podcast_episode_offline_available(
+        &self,
+        podcast_episode: &PodcastEpisode,
+        podcast: &Podcast,
+    ) {
+        let podcast_episode: PodcastEpisodeDto =
+            (podcast_episode.clone(), None::<User>).clone().into();
         let podcast = podcast.clone().into();
         self.send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastEpisodeOfflineAvailableMessage {
-                message: format!(
-                    "Episode {} is now available offline",
-                    podcast_episode.name
-                ),
+                message: format!("Episode {} is now available offline", podcast_episode.name),
                 podcast,
                 type_of: PodcastType::AddPodcastEpisode,
                 podcast_episode,
             })
-                .unwrap(),
+            .unwrap(),
         );
     }
 
@@ -393,7 +375,7 @@ impl ChatServerHandle {
                 message: format!("Podcast {} has been refreshed", podcast.name),
                 podcast: podcast.clone().into(),
             })
-                .unwrap(),
+            .unwrap(),
         );
     }
 
@@ -417,9 +399,9 @@ impl ChatServerHandle {
             serde_json::to_string(&PodcastEpisodeDeleteMesage {
                 podcast_episode: PodcastEpisodeDto::from((podcast_episode.clone(), None::<User>)),
                 type_of: PodcastType::DeletePodcastEpisode,
-                message: format!("Deleted podcast episode locally"),
+                message: "Deleted podcast episode locally".to_string(),
             })
-                .unwrap(),
+            .unwrap(),
         );
     }
 
@@ -430,7 +412,11 @@ impl ChatServerHandle {
         );
     }
 
-    pub fn broadcast_added_podcast_episodes(&self, podcast: Podcast, episodes: Vec<PodcastEpisode>) {
+    pub fn broadcast_added_podcast_episodes(
+        &self,
+        podcast: Podcast,
+        episodes: Vec<PodcastEpisode>,
+    ) {
         self.send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastEpisodesAdded::from((podcast, episodes))).unwrap(),
