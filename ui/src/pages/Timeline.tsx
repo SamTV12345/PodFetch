@@ -104,6 +104,7 @@ export const Timeline = () => {
                             timelineLength={timeLineEpisodes.data.length}
                             timeLineEpisodes={timeLineEpisodes}
                             totalLength={timeLineEpisodes.totalElements}
+                            favoredEpisodes={notFavored}
                         />
                     </Fragment>
                 ))}

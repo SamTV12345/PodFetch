@@ -22,7 +22,8 @@ export const Homepage = () => {
         axios.get<TimelineHATEOASModel>('/podcasts/timeline', {
             params: {
                 favoredOnly: false,
-                notListened: false
+                notListened: false,
+                favoredEpisodes: false
             }
         })
             .then((response) => {

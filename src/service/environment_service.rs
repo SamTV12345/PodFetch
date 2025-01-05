@@ -8,9 +8,9 @@ use crate::constants::inner_constants::{
 };
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use regex::Regex;
 use std::env;
 use std::env::var;
+use url::Url;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -112,12 +112,11 @@ impl EnvironmentService {
             .map(Some)
             .unwrap_or(None);
         if opt_sub_dir.is_none() {
-            let re = Regex::new(r"^http[s]?://[^/]+(/.*)?$").unwrap();
-            let directory = re.captures(&server_url).unwrap().get(1).unwrap().as_str();
-            if directory.ends_with('/') {
-                opt_sub_dir = Some(directory[0..directory.len() - 1].to_string());
+            let url = Url::parse(&server_url).expect("Invalid server url");
+            if url.path().ends_with('/') {
+                opt_sub_dir = Some(url.path()[0..url.path().len() - 1].to_string());
             } else {
-                opt_sub_dir = Some(directory.to_string());
+                opt_sub_dir = Some(url.path().to_string());
             }
         }
 
