@@ -130,7 +130,11 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
             {/* Title and Add button */}
             <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-4 mb-10">
                 <div className="flex gap-2 items-center">
-                    <Heading1>{t('all-subscriptions')}</Heading1>
+                    {
+                        onlyFavorites ?
+                            <Heading1>{t('favorites')}</Heading1> :
+                        <Heading1>{t('all-subscriptions')}</Heading1>
+                    }
 
                     <span
                         className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
