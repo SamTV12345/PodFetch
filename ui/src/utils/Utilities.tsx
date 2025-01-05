@@ -58,29 +58,11 @@ export const isJsonString = (str: string) => {
     return true;
 }
 
-export const preparePath = (path: string | undefined) => {
-    if (path === undefined) return ""
-
-    let pathToReturn = window.location.href.substring(0, window.location.href.indexOf('ui/')) + path.replaceAll(' ', '%20').replaceAll('#', '%23')
-
-    if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)){
-        if (pathToReturn.includes('?')) {
-            pathToReturn += '&'
-        }
-        else {
-            pathToReturn += '?'
-        }
-        pathToReturn += 'apiKey=' + useCommon.getState().loggedInUser?.apiKey
-    }
-
-    return pathToReturn
-}
-
 export const preparePodcastEpisode = (episode: PodcastEpisode, response: Episode) => {
     return {
         ...episode,
-        local_url: preparePath(episode.local_url),
-        local_image_url: preparePath(episode.local_image_url),
+        local_url: episode.local_url,
+        local_image_url: episode.local_image_url,
         time: response&&response.position?response.position: 0
     }
 }

@@ -1,8 +1,6 @@
 import { FC} from 'react'
 import axios, { AxiosResponse } from 'axios'
-import {preparePath } from '../utils/Utilities'
 import {Podcast, PodcastEpisode} from '../store/CommonSlice'
-import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 import {Episode} from "../models/Episode";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 
@@ -11,30 +9,6 @@ type EpisodeCardProps = {
     podcastEpisode: PodcastEpisode,
     totalTime?: number,
     watchedTime?: number
-}
-
-const isPodcastWatchedEpisodeModel = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode): podcast is PodcastWatchedEpisodeModel => {
-    return (podcast as PodcastWatchedEpisodeModel).watchedTime !== undefined;
-}
-
-export const selectPodcastImage = (podcast: PodcastWatchedEpisodeModel|PodcastEpisode) => {
-    if (isPodcastWatchedEpisodeModel(podcast)){
-        if(podcast.podcastEpisode.local_image_url.length>1){
-            return preparePath(podcast.podcastEpisode.local_image_url)
-        }
-        else{
-            return podcast.podcastEpisode.image_url
-        }
-    }
-    else{
-        if(podcast.local_image_url.trim().length>1){
-            return preparePath(podcast.local_image_url)
-        }
-        else{
-            return podcast.image_url
-        }
-    }
-
 }
 
 export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, totalTime, watchedTime }) => {

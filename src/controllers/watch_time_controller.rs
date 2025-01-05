@@ -32,9 +32,9 @@ tag="watchtime"
 pub async fn get_last_watched(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    let designated_username = requester.username.clone();
+    let designated_user = requester.into_inner();
 
-    let mut episodes = Episode::get_last_watched_episodes(designated_username)?;
+    let mut episodes = Episode::get_last_watched_episodes(&designated_user)?;
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
     Ok(HttpResponse::Ok().json(episodes))
 }

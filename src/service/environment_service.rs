@@ -82,7 +82,15 @@ impl EnvironmentService {
 
     pub fn new() -> EnvironmentService {
         let oidc_configured = Self::handle_oidc();
-        let mut server_url = var(SERVER_URL).unwrap_or("http://localhost:8000".to_string());
+
+        let mut server_url = match std::env::var("DEV") {
+            Ok(_) => {
+                "http://localhost:5173".to_string()
+            }
+            Err(_) => {
+                var(SERVER_URL).unwrap_or("http://localhost:8000".to_string())
+            }
+        };
         // Add trailing slash if not present
         if !server_url.ends_with('/') {
             server_url += "/"

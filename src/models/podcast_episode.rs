@@ -239,7 +239,7 @@ impl PodcastEpisode {
     pub fn get_podcast_episodes_of_podcast(
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
-        user: User,
+        user: &User,
     ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes as phistory;
         use crate::adapters::persistence::dbconfig::schema::episodes::guid as eguid;
@@ -251,7 +251,7 @@ impl PodcastEpisode {
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(phistory_username).eq(user.username))
+            .filter(ph2.field(phistory_username).eq(&user.username))
             .filter(ph2.field(eguid).eq(ph1.field(eguid)))
             .group_by(ph2.field(eguid));
 

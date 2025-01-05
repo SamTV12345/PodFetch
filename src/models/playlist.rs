@@ -128,19 +128,21 @@ impl Playlist {
         });
 
         let items =
-            PlaylistItem::get_playlist_items_by_playlist_id(inserted_playlist.id.clone(), user)?;
-        let playlist_dto_returned = inserted_playlist.to_playlist_dto(items);
+            PlaylistItem::get_playlist_items_by_playlist_id(inserted_playlist.id.clone(), &user)?;
+        let playlist_dto_returned = inserted_playlist.to_playlist_dto(items, user);
         Ok(playlist_dto_returned)
     }
 
     fn to_playlist_dto(
         &self,
         item: Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>,
+        user: User
     ) -> PlaylistDto {
         let item = item
             .iter()
             .map(|(_, y, z)| PodcastEpisodeWithHistory {
-                podcast_episode: <PodcastEpisode as Into<PodcastEpisodeDto>>::into(y.clone()),
+                podcast_episode: <(PodcastEpisode, Option<User>) as
+                Into<PodcastEpisodeDto>>::into((y.clone(), Some(user.clone()))),
                 podcast_history_item: z.clone(),
             })
             .collect::<Vec<PodcastEpisodeWithHistory>>();
@@ -208,9 +210,10 @@ impl Playlist {
         if playlist.user_id != user.id {
             return Err(CustomError::Forbidden);
         }
-        let items_in_playlist = PlaylistItem::get_playlist_items_by_playlist_id(playlist_id, user)?;
+        let items_in_playlist = PlaylistItem::get_playlist_items_by_playlist_id(playlist_id,
+                                                                                &user)?;
 
-        Ok(playlist.to_playlist_dto(items_in_playlist))
+        Ok(playlist.to_playlist_dto(items_in_playlist, user))
     }
 
     pub fn delete_playlist_by_id(playlist_id: String, user_id1: i32) -> Result<(), CustomError> {

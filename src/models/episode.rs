@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
 use utoipa::ToSchema;
+use crate::models::user::User;
 
 #[derive(
     Serialize,
@@ -195,7 +196,7 @@ impl Episode {
     }
 
     pub fn get_last_watched_episodes(
-        username_to_find: String,
+        user: &User,
     ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::guid as eguid;
@@ -207,6 +208,7 @@ impl Episode {
 
         let (episodes1, episodes2) = diesel::alias!(episodes as p1, episodes as p2);
 
+        let username_to_find = user.username.clone();
         // Always get the latest available
         let subquery = episodes2
             .select(diesel::dsl::max(episodes2.field(ep_dsl::timestamp)))
@@ -248,7 +250,7 @@ impl Episode {
                 watched_time: e.clone().1.position.unwrap(),
                 date: e.clone().1.timestamp,
                 total_time: e.clone().0.total_time,
-                podcast_episode: e.0.clone().into(),
+                podcast_episode: (e.0.clone(), Some(user).cloned()).into(),
                 podcast: e.2.clone().into(),
             })
             .collect();

@@ -81,13 +81,14 @@ pub async fn get_rss_feed(
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };
 
-    let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes.into_iter().map(|c|c
+    let api_key = api_key.map(|c| c.api_key.to_string());
+
+    let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes.into_iter().map(|c|(c,
+                                                                                              api_key.clone())
         .into())
         .collect();
 
-    let server_url = ENVIRONMENT_SERVICE.get_server_url();
-    let feed_url = add_api_key_to_url(format!("{}{}", &server_url, &"rss"), &api_key);
-
+    let feed_url = add_api_key_to_url(format!("{}{}", &ENVIRONMENT_SERVICE.server_url, &"rss"), &api_key);
     let itunes_owner = get_itunes_owner("Podfetch", "dev@podfetch.com");
     let category = get_category("Technology".to_string());
     let itunes_ext = ITunesChannelExtensionBuilder::default()
@@ -100,7 +101,7 @@ pub async fn get_rss_feed(
         .summary(Some("Your local rss feed for your podcasts".to_string()))
         .build();
 
-    let items = get_podcast_items_rss(&downloaded_episodes, &api_key);
+    let items = get_podcast_items_rss(&downloaded_episodes);
 
     let channel_builder = ChannelBuilder::default()
         .language("en".to_string())
@@ -116,12 +117,12 @@ pub async fn get_rss_feed(
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
-fn add_api_key_to_url(url: String, api_key: &Option<Query<RSSAPiKey>>) -> String {
+fn add_api_key_to_url(url: String, api_key: &Option<String>) -> String {
     if let Some(ref api_key) = api_key {
         if url.contains('?') {
-            return format!("{}&apiKey={}", url, api_key.api_key);
+            return format!("{}&apiKey={}", url, api_key);
         }
-        return format!("{}?apiKey={}", url, api_key.api_key);
+        return format!("{}?apiKey={}", url, api_key);
     }
     url
 }
@@ -130,7 +131,7 @@ fn generate_itunes_extension_conditionally(
     mut itunes_ext: ITunesChannelExtension,
     mut channel_builder: ChannelBuilder,
     podcast: Option<Podcast>,
-    api_key: &Option<Query<RSSAPiKey>>,
+    api_key: &Option<String>,
 ) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
@@ -173,12 +174,12 @@ pub async fn get_rss_feed_for_podcast(
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
         }
     }
-
+    let api_key = api_key.map(|c| c.api_key.clone());
     let podcast = Podcast::get_podcast(*id)?;
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?.into_iter
-        ().map(|c|c.into()).collect();
+        ().map(|c|(c, None::<String>).into()).collect();
 
     let mut itunes_owner = get_itunes_owner("", "");
 
@@ -217,7 +218,7 @@ pub async fn get_rss_feed_for_podcast(
         .summary(podcast.summary.clone())
         .build();
 
-    let items = get_podcast_items_rss(&downloaded_episodes, &api_key);
+    let items = get_podcast_items_rss(&downloaded_episodes);
     let channel_builder = ChannelBuilder::default()
         .language(podcast.clone().language)
         .categories(categories)
@@ -242,14 +243,11 @@ pub async fn get_rss_feed_for_podcast(
 
 fn get_podcast_items_rss(
     downloaded_episodes: &[PodcastEpisodeDto],
-    api_key: &Option<Query<RSSAPiKey>>,
 ) -> Vec<Item> {
     downloaded_episodes
         .iter()
         .map(|episode| {
-            let mut episode = episode.clone();
-            episode.local_url = add_api_key_to_url(episode.local_url.clone(), api_key);
-            episode.local_image_url = add_api_key_to_url(episode.local_image_url.clone(), api_key);
+            let episode = episode.clone();
 
             let enclosure = EnclosureBuilder::default()
                 .url(episode.local_url.clone())

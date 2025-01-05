@@ -27,6 +27,7 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
+use crate::models::user::User;
 
 pub struct PodcastService;
 
@@ -181,7 +182,7 @@ impl PodcastService {
                             podcast_episodes: Option::from(
                                 inserted_podcasts
                                     .into_iter()
-                                    .map(|p| p.into())
+                                    .map(|p| (p, None::<User>).into())
                                     .collect::<Vec<PodcastEpisodeDto>>(),
                             ),
                         })
