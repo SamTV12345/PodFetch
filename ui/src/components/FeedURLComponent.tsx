@@ -13,13 +13,14 @@ type FeedURLFormData = {
 export const FeedURLComponent: FC = () => {
     const { t } = useTranslation()
 
-    const { register, watch, handleSubmit, formState: {} } = useForm<FeedURLFormData>({
+    const { register, handleSubmit, formState: {
+        isDirty, isValid
+    } } = useForm<FeedURLFormData>({
         defaultValues: {
             feedUrl: ''
         }
     })
 
-    const feedUrlWatched = watch('feedUrl')
 
     const onSubmit = (data: FeedURLFormData) => {
         axios.post(  '/podcast/feed', {
@@ -36,7 +37,7 @@ export const FeedURLComponent: FC = () => {
             })} placeholder={t('rss-feed-url')!}
             className={"bg-[--input-bg-color] w-full px-4 py-2 rounded-lg text-sm text-[--input-fg-color] placeholder:text-[--input-fg-color-disabled]"} />
 
-            <CustomButtonPrimary disabled={feedUrlWatched.trim().length === 0} type="submit">{t('add')}</CustomButtonPrimary>
+            <CustomButtonPrimary disabled={!isDirty || !isValid} type="submit">{t('add')}</CustomButtonPrimary>
         </form>
     )
 }
