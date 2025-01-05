@@ -15,10 +15,11 @@ import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 type PodcastDetailItemProps = {
     episode: EpisodesWithOptionalTimeline,
     index: number,
-    episodesLength: number
+    episodesLength: number,
+    onlyUnplayed: boolean
 }
 
-export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength }) => {
+export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength, onlyUnplayed}) => {
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
@@ -180,7 +181,8 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
                     axios.get(  '/podcast/' + params.id + '/episodes',{
                         params: {
-                            last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1].podcastEpisode.date_of_recording
+                            last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1].podcastEpisode.date_of_recording,
+                            only_unlistened: onlyUnplayed
                         }
                     })
                         .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {

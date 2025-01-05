@@ -23,9 +23,8 @@ use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
     last_podcast_episode: Option<String>,
+    only_unlistened: Option<bool>,
 }
-
-impl OptionalId {}
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -54,6 +53,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
         id_num,
         last_podcast_episode.last_podcast_episode,
+        last_podcast_episode.only_unlistened,
         &user,
     )?;
     let mapped_podcasts = res
