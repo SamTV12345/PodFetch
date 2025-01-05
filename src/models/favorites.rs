@@ -57,11 +57,7 @@ impl Favorite {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username;
 
         let res = f_db
-            .filter(
-                podcast_id
-                    .eq(podcast_id_1)
-                    .and(username.eq(username_1)),
-            )
+            .filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1)))
             .first::<Favorite>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;

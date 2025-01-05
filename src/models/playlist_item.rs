@@ -80,7 +80,7 @@ impl PlaylistItem {
 
     pub fn get_playlist_items_by_playlist_id(
         playlist_id_1: String,
-        user: User,
+        user: &User,
     ) -> Result<Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes as episode_item;
         use crate::adapters::persistence::dbconfig::schema::episodes::episode as phistory_episode_id;
@@ -95,7 +95,7 @@ impl PlaylistItem {
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
             .filter(ph2.field(phistory_episode_id).eq(epid))
-            .filter(ph2.field(phistory_username).eq(user.username))
+            .filter(ph2.field(phistory_username).eq(&user.username))
             .group_by(ph2.field(phistory_episode_id));
 
         playlist_items

@@ -49,7 +49,7 @@ impl PodcastEpisodeService {
             Ok(false) => {
                 let podcast_inserted =
                     Self::perform_download(&podcast_episode_cloned, podcast_cloned)?;
-                let mapped_dto: PodcastEpisodeDto = podcast_inserted.into();
+                let mapped_dto: PodcastEpisodeDto = (podcast_inserted, None::<User>).into();
                 if let Some(lobby) = lobby {
                     let podcast: PodcastDto = podcast.clone().into();
                     lobby.send_broadcast_sync(
@@ -479,7 +479,7 @@ impl PodcastEpisodeService {
     pub fn get_podcast_episodes_of_podcast(
         id_num: i32,
         last_id: Option<String>,
-        user: User,
+        user: &User,
     ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
         PodcastEpisode::get_podcast_episodes_of_podcast(id_num, last_id, user)
     }

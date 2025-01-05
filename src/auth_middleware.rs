@@ -1,8 +1,3 @@
-use std::collections::HashSet;
-use std::future::Future;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::rc::Rc;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use actix::fut::ok;
@@ -13,7 +8,13 @@ use actix_web::{
 };
 use base64::engine::general_purpose;
 use base64::Engine;
+use std::collections::HashSet;
+use std::future::Future;
+use std::ops::Deref;
+use std::pin::Pin;
+use std::rc::Rc;
 
+use crate::service::environment_service::ReverseProxyConfig;
 use crate::utils::error::CustomError;
 use futures_util::future::{LocalBoxFuture, Ready};
 use futures_util::FutureExt;
@@ -22,7 +23,6 @@ use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
-use crate::service::environment_service::ReverseProxyConfig;
 
 pub struct AuthFilter {}
 
@@ -102,8 +102,10 @@ where
         let result = match auth_type {
             AuthType::Basic => AuthFilter::handle_basic_auth_internal(&req),
             AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(&req),
-            AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(&req, &ENVIRONMENT_SERVICE
-                .reverse_proxy_config.clone().unwrap()),
+            AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
+                &req,
+                &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
+            ),
             AuthType::None => Ok(User::create_standard_admin_user()),
         };
         match result {
@@ -139,7 +141,6 @@ impl AuthFilter {
         Ok((u.to_string(), p.to_string()))
     }
 
-
     fn handle_basic_auth_internal(req: &ServiceRequest) -> Result<User, CustomError> {
         let opt_auth_header = req.headers().get("Authorization");
         match opt_auth_header {
@@ -147,7 +148,8 @@ impl AuthFilter {
                 Ok(auth) => {
                     let (user, password) = AuthFilter::extract_basic_auth(auth)?;
 
-                    let found_user = User::find_by_username(&user).map_err(|_|CustomError::Forbidden)?;
+                    let found_user =
+                        User::find_by_username(&user).map_err(|_| CustomError::Forbidden)?;
 
                     if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
                         if &found_user.username == admin_username {
@@ -190,11 +192,9 @@ impl AuthFilter {
 
         let token = token_res.replace("Bearer ", "");
         let jwk = match req.app_data::<web::Data<Option<Jwk>>>() {
-            Some(jwk) => {
-                match jwk.get_ref() {
-                    Some(jwk) => Ok(jwk),
-                    None => Err(CustomError::Forbidden),
-                }
+            Some(jwk) => match jwk.get_ref() {
+                Some(jwk) => Ok(jwk),
+                None => Err(CustomError::Forbidden),
             },
             None => Err(CustomError::Forbidden),
         }?;
@@ -224,13 +224,11 @@ impl AuthFilter {
         match found_user {
             Ok(user) => Ok(user),
             Err(_) => {
-                let preferred_username_claim = match decoded_token.claims.get
-                ("preferred_username") {
-                    Some(claim) => {
-                        match claim.as_str() {
-                            Some(content) => Ok(content),
-                            None => Err(CustomError::Forbidden),
-                        }
+                let preferred_username_claim = match decoded_token.claims.get("preferred_username")
+                {
+                    Some(claim) => match claim.as_str() {
+                        Some(content) => Ok(content),
+                        None => Err(CustomError::Forbidden),
                     },
                     None => Err(CustomError::Forbidden),
                 }?;
@@ -245,15 +243,20 @@ impl AuthFilter {
                     created_at: chrono::Utc::now().naive_utc(),
                     api_key: None,
                 }
-                    .insert_user()?;
+                .insert_user()?;
                 Ok(user)
             }
         }
     }
 
-    fn handle_proxy_auth_internal(req: &ServiceRequest, reverse_proxy_config:
-    &ReverseProxyConfig) -> Result<User, CustomError> {
-        let header_val = match req.headers().get(reverse_proxy_config.header_name.to_string()) {
+    fn handle_proxy_auth_internal(
+        req: &ServiceRequest,
+        reverse_proxy_config: &ReverseProxyConfig,
+    ) -> Result<User, CustomError> {
+        let header_val = match req
+            .headers()
+            .get(reverse_proxy_config.header_name.to_string())
+        {
             Some(header) => Ok(header),
             None => {
                 info!("Reverse proxy is enabled but no header is provided");
@@ -279,8 +282,8 @@ impl AuthFilter {
                         created_at: chrono::Utc::now().naive_utc(),
                         api_key: None,
                     }
-                        .insert_user()
-                        .expect("Error inserting user");
+                    .insert_user()
+                    .expect("Error inserting user");
                     Ok(user)
                 } else {
                     Err(CustomError::Forbidden)
@@ -292,21 +295,16 @@ impl AuthFilter {
 
 #[cfg(test)]
 mod test {
-    
-    
-    
+
     use actix_web::http::header::ContentType;
     use actix_web::test;
-    
+
     use serial_test::serial;
-    
-    
-    use crate::auth_middleware::{AuthFilter};
-    
-    use crate::service::environment_service::{ReverseProxyConfig};
+
+    use crate::auth_middleware::AuthFilter;
+
+    use crate::service::environment_service::ReverseProxyConfig;
     use crate::test_utils::test::{clear_users, create_random_user};
-
-
 
     #[test]
     async fn test_basic_auth_login() {
@@ -316,7 +314,6 @@ mod test {
         assert_eq!(u, "test");
         assert_eq!(p, "test");
     }
-
 
     #[test]
     async fn test_basic_auth_login_with_special_characters() {

@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import axios from 'axios'
-import {  preparePath, removeHTML } from '../utils/Utilities'
+import {  removeHTML } from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
@@ -55,9 +55,7 @@ export const PodcastInfoModal = () => {
                     {/* Save icon */}
                     <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
                         if (selectedPodcastEpisode) {
-                            selectedPodcastEpisode.status == 'D'
-                            ? download(preparePath(selectedPodcastEpisode.local_url), selectedPodcastEpisode?.name + '.mp3')
-                            : download(selectedPodcastEpisode?.url, selectedPodcastEpisode?.name)
+                            download(selectedPodcastEpisode.local_url, selectedPodcastEpisode.name + ".mp3")
                         }
                     }}>save</span>
 

@@ -69,9 +69,7 @@ responses(
 tag="playlist"
 )]
 #[get("/playlist")]
-pub async fn get_all_playlists(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn get_all_playlists(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     Playlist::get_playlists(requester.into_inner().id)
         .map(|playlists| HttpResponse::Ok().json(playlists))
 }

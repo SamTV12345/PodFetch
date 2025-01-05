@@ -7,6 +7,7 @@ use crate::models::filter::Filter;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
@@ -26,7 +27,7 @@ pub struct TimelineItem {
 
 impl TimelineItem {
     pub fn get_timeline(
-        username_to_search: String,
+        user: User,
         favored_only: TimelineQueryParams,
     ) -> Result<TimelineItem, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
@@ -44,13 +45,15 @@ impl TimelineItem {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::guid as pguid;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
 
-        Filter::save_decision_for_timeline(username_to_search.clone(), favored_only.favored_only);
+        let username_to_search = &user.username;
+
+        Filter::save_decision_for_timeline(username_to_search, favored_only.favored_only);
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(phi_username).eq(username_to_search.clone()))
+            .filter(ph2.field(phi_username).eq(&username_to_search))
             .group_by(ph2.field(ehid));
 
         let part_query = podcast_episodes
@@ -59,22 +62,17 @@ impl TimelineItem {
             .filter(
                 ph1.field(phistory_date)
                     .nullable()
-                    .eq_any(subquery.clone())
+                    .eq_any(subquery)
                     .or(ph1.field(phistory_date).is_null()),
             )
-            .left_join(
-                favorites.on(f_username
-                    .eq(username_to_search.clone())
-                    .and(f_podcast_id.eq(pid))),
-            );
+            .left_join(favorites.on(f_username.eq(&username_to_search).and(f_podcast_id.eq(pid))));
 
         let mut query = part_query
-            .clone()
             .order(date_of_recording.desc())
             .limit(20)
             .into_boxed();
 
-        let mut total_count = part_query.clone().count().into_boxed();
+        let mut total_count = part_query.count().into_boxed();
 
         match favored_only.favored_only {
             true => {
@@ -82,9 +80,9 @@ impl TimelineItem {
                     query = query.filter(date_of_recording.lt(last_id.clone()));
                 }
 
-                query = query.filter(f_username.eq(username_to_search.clone()));
+                query = query.filter(f_username.eq(&username_to_search));
                 query = query.filter(favored.eq(true));
-                total_count = total_count.filter(f_username.eq(username_to_search.clone()));
+                total_count = total_count.filter(f_username.eq(&username_to_search));
             }
             false => {
                 if let Some(last_id) = favored_only.last_timestamp {
@@ -94,7 +92,7 @@ impl TimelineItem {
         }
 
         if favored_only.not_listened {
-            query = query.filter(ph1.field(phistory_date).nullable().ne_all(subquery.clone()));
+            query = query.filter(ph1.field(phistory_date).nullable().ne_all(subquery));
             total_count = total_count.filter(ph1.field(phistory_date).nullable().ne_all(subquery));
         }
         let results = total_count
@@ -108,7 +106,7 @@ impl TimelineItem {
             .into_iter()
             .map(|(podcast_episode, podcast, history, favorite)| {
                 (
-                    PodcastEpisodeDto::from(podcast_episode),
+                    PodcastEpisodeDto::from((podcast_episode, Some(user.clone()))),
                     PodcastDto::from(podcast),
                     history,
                     favorite,

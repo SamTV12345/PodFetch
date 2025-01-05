@@ -10,7 +10,7 @@ use crate::utils::do_retry::do_retry;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::time::opt_or_empty_string;
 use crate::DBType as DbConnection;
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, FixedOffset, NaiveDateTime, ParseResult, Utc};
 use diesel::dsl::{max, sql};
 use diesel::prelude::{Identifiable, Queryable, QueryableByName, Selectable};
 use diesel::query_source::Alias;
@@ -181,29 +181,22 @@ impl PodcastEpisode {
         let mut inserted_date = "".to_string();
 
         if let Some(date) = &item.pub_date {
-            let parsed_date = DateTime::parse_from_rfc2822(date);
-
-            match parsed_date {
-                Ok(date) => {
-                    let conv_date = date.with_timezone(&Utc);
-                    inserted_date = conv_date.to_rfc3339()
-                }
-                Err(_) => {
-                    // Sometimes it occurs that day of the week and date are wrong. This just
-                    // takes the date and parses it
-                    let date_without_weekday = date[5..].to_string();
-                    DateTime::parse_from_str(
-                        &date_without_weekday,
-                        "%d %b %Y \
+            fn parse_naive(timestring: &str) -> ParseResult<DateTime<FixedOffset>> {
+                let date_without_weekday = &timestring[5..];
+                DateTime::parse_from_str(
+                    date_without_weekday,
+                    "%d %b %Y \
                     %H:%M:%S %z",
-                    )
-                    .map(|date| {
-                        let conv_date = date.with_timezone(&Utc);
-                        inserted_date = conv_date.to_rfc3339()
-                    })
-                    .expect("Error parsing date");
-                }
+                )
             }
+
+            let parsed_date = DateTime::parse_from_rfc2822(date).unwrap_or(
+                DateTime::parse_from_rfc3339(date).unwrap_or(
+                    parse_naive(date)
+                        .unwrap_or(DateTime::parse_from_rfc3339("2021-01-01T00:00:00Z").unwrap()),
+                ),
+            );
+            inserted_date = parsed_date.with_timezone(&Utc).to_rfc3339();
         }
 
         let inserted_image_url: String = match optional_image {
@@ -239,7 +232,7 @@ impl PodcastEpisode {
     pub fn get_podcast_episodes_of_podcast(
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
-        user: User,
+        user: &User,
     ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes as phistory;
         use crate::adapters::persistence::dbconfig::schema::episodes::guid as eguid;
@@ -251,7 +244,7 @@ impl PodcastEpisode {
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(phistory_username).eq(user.username))
+            .filter(ph2.field(phistory_username).eq(&user.username))
             .filter(ph2.field(eguid).eq(ph1.field(eguid)))
             .group_by(ph2.field(eguid));
 

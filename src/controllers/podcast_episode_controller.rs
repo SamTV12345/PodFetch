@@ -50,15 +50,17 @@ pub async fn find_all_podcast_episodes_of_podcast(
 ) -> Result<HttpResponse, CustomError> {
     let last_podcast_episode = last_podcast_episode.into_inner();
     let id_num = from_str(&id).unwrap();
+    let user = requester.into_inner();
+
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
         id_num,
         last_podcast_episode.last_podcast_episode,
-        requester.into_inner(),
+        &user,
     )?;
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast| {
-            let mapped_podcast_episode: PodcastEpisodeDto = podcast.0.into();
+            let mapped_podcast_episode: PodcastEpisodeDto = (podcast.0, Some(user.clone())).into();
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast.1,
@@ -114,10 +116,7 @@ pub async fn get_timeline(
     requester: web::ReqData<User>,
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
-    let res = TimelineItem::get_timeline(
-        requester.username.clone(),
-        favored_only.into_inner(),
-    )?;
+    let res = TimelineItem::get_timeline(requester.into_inner(), favored_only.into_inner())?;
 
     let mapped_timeline = res
         .data
@@ -192,7 +191,9 @@ pub async fn delete_podcast_episode_locally(
     }
 
     let delted_podcast_episode: PodcastEpisodeDto =
-        PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner())?.into();
+        PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner())
+            .map(|p| (p, None::<User>))?
+            .into();
     lobby
         .send_broadcast(
             MAIN_ROOM.to_string(),

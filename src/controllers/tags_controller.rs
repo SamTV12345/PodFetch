@@ -65,10 +65,8 @@ pub async fn delete_tag(
     tag_id: web::Path<String>,
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    let opt_tag = Tag::get_tag_by_id_and_username(
-        &tag_id.into_inner(),
-        &requester.username.clone(),
-    )?;
+    let opt_tag =
+        Tag::get_tag_by_id_and_username(&tag_id.into_inner(), &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             TagsPodcast::delete_tag_podcasts(&tag.id)?;
@@ -91,10 +89,8 @@ pub async fn update_tag(
     tag_create: Json<TagCreate>,
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
-    let opt_tag = Tag::get_tag_by_id_and_username(
-        &tag_id.into_inner(),
-        &requester.username.clone(),
-    )?;
+    let opt_tag =
+        Tag::get_tag_by_id_and_username(&tag_id.into_inner(), &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             let updated_tag = Tag::update_tag(

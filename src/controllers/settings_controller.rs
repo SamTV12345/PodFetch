@@ -18,9 +18,7 @@ responses(
 tag="podcast_episodes"
 )]
 #[get("/settings")]
-pub async fn get_settings(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn get_settings(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
@@ -57,9 +55,7 @@ responses(
 tag="settings"
 )]
 #[put("/settings/runcleanup")]
-pub async fn run_cleanup(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn run_cleanup(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }
@@ -161,9 +157,9 @@ fn add_podcasts(
                     podcast.id
                 );
 
-                    if let Some(api_key) = &requester.api_key {
-                        local_url = format!("{}?apiKey={}", local_url, api_key);
-                    }
+                if let Some(api_key) = &requester.api_key {
+                    local_url = format!("{}?apiKey={}", local_url, api_key);
+                }
 
                 outline.add_attribute("xmlUrl", &local_url)
             }
