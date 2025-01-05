@@ -2,6 +2,7 @@ use crate::controllers::web_socket::chat_ws;
 
 use crate::models::podcasts::Podcast;
 
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::user::User;
@@ -18,7 +19,6 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 
 #[utoipa::path(
 context_path = "/api/v1",
@@ -83,12 +83,15 @@ pub async fn get_rss_feed(
 
     let api_key = api_key.map(|c| c.api_key.to_string());
 
-    let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes.into_iter().map(|c|(c,
-                                                                                              api_key.clone())
-        .into())
+    let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes
+        .into_iter()
+        .map(|c| (c, api_key.clone()).into())
         .collect();
 
-    let feed_url = add_api_key_to_url(format!("{}{}", &ENVIRONMENT_SERVICE.server_url, &"rss"), &api_key);
+    let feed_url = add_api_key_to_url(
+        format!("{}{}", &ENVIRONMENT_SERVICE.server_url, &"rss"),
+        &api_key,
+    );
     let itunes_owner = get_itunes_owner("Podfetch", "dev@podfetch.com");
     let category = get_category("Technology".to_string());
     let itunes_ext = ITunesChannelExtensionBuilder::default()
@@ -178,8 +181,10 @@ pub async fn get_rss_feed_for_podcast(
     let podcast = Podcast::get_podcast(*id)?;
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
-        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?.into_iter
-        ().map(|c|(c, None::<String>).into()).collect();
+        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?
+            .into_iter()
+            .map(|c| (c, None::<String>).into())
+            .collect();
 
     let mut itunes_owner = get_itunes_owner("", "");
 
@@ -241,9 +246,7 @@ pub async fn get_rss_feed_for_podcast(
     Ok(HttpResponse::Ok().body(channel.to_string()))
 }
 
-fn get_podcast_items_rss(
-    downloaded_episodes: &[PodcastEpisodeDto],
-) -> Vec<Item> {
+fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item> {
     downloaded_episodes
         .iter()
         .map(|episode| {

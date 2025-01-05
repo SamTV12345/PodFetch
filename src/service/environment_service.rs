@@ -64,7 +64,6 @@ impl Default for EnvironmentService {
 }
 
 impl EnvironmentService {
-
     fn handle_oidc() -> Option<OidcConfig> {
         let oidc_configured = is_env_var_present_and_true(OIDC_AUTH);
         if oidc_configured {
@@ -84,12 +83,8 @@ impl EnvironmentService {
         let oidc_configured = Self::handle_oidc();
 
         let mut server_url = match std::env::var("DEV") {
-            Ok(_) => {
-                "http://localhost:5173".to_string()
-            }
-            Err(_) => {
-                var(SERVER_URL).unwrap_or("http://localhost:8000".to_string())
-            }
+            Ok(_) => "http://localhost:5173".to_string(),
+            Err(_) => var(SERVER_URL).unwrap_or("http://localhost:8000".to_string()),
         };
         // Add trailing slash if not present
         if !server_url.ends_with('/') {
@@ -140,8 +135,11 @@ impl EnvironmentService {
         EnvironmentService {
             server_url: server_url.clone(),
             polling_interval: var(POLLING_INTERVAL)
-                .map(|v| v.parse::<u32>().map_err(|_|POLLING_INTERVAL_DEFAULT)
-                    .unwrap_or(POLLING_INTERVAL_DEFAULT))
+                .map(|v| {
+                    v.parse::<u32>()
+                        .map_err(|_| POLLING_INTERVAL_DEFAULT)
+                        .unwrap_or(POLLING_INTERVAL_DEFAULT)
+                })
                 .unwrap_or(POLLING_INTERVAL_DEFAULT),
             podindex_api_key: var(PODINDEX_API_KEY).unwrap_or("".to_string()),
             podindex_api_secret: var(PODINDEX_API_SECRET).unwrap_or("".to_string()),
@@ -173,19 +171,26 @@ impl EnvironmentService {
             let telegram_bot_token = match var(TELEGRAM_BOT_TOKEN) {
                 Ok(token) => Some(token),
                 Err(_) => None,
-            }.map_or_else(|| {
-                log::error!("Telegram bot token not configured");
-                std::process::exit(1);
-            }, |v| v);
-
+            }
+            .map_or_else(
+                || {
+                    log::error!("Telegram bot token not configured");
+                    std::process::exit(1);
+                },
+                |v| v,
+            );
 
             let telegram_chat_id = match var(TELEGRAM_BOT_CHAT_ID) {
                 Ok(chat_id) => Some(chat_id),
                 Err(_) => None,
-            }.map_or_else(|| {
-                log::error!("Telegram chat id not configured");
-                std::process::exit(1);
-            }, |v| v);
+            }
+            .map_or_else(
+                || {
+                    log::error!("Telegram chat id not configured");
+                    std::process::exit(1);
+                },
+                |v| v,
+            );
 
             Some(TelegramConfig {
                 telegram_bot_token,

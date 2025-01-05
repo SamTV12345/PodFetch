@@ -101,8 +101,8 @@ mod domain;
 mod exception;
 mod gpodder;
 pub mod mutex;
-pub mod utils;
 mod test_utils;
+pub mod utils;
 
 type DbPool = Pool<ConnectionManager<DBType>>;
 

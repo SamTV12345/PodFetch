@@ -29,9 +29,7 @@ responses(
 tag="watchtime"
 )]
 #[get("/podcast/episode/lastwatched")]
-pub async fn get_last_watched(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn get_last_watched(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     let designated_user = requester.into_inner();
 
     let mut episodes = Episode::get_last_watched_episodes(&designated_user)?;

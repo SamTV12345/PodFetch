@@ -8,6 +8,7 @@ use crate::models::misc_models::{
 };
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
@@ -23,7 +24,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
 use utoipa::ToSchema;
-use crate::models::user::User;
 
 #[derive(
     Serialize,

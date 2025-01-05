@@ -136,13 +136,14 @@ impl Playlist {
     fn to_playlist_dto(
         &self,
         item: Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>,
-        user: User
+        user: User,
     ) -> PlaylistDto {
         let item = item
             .iter()
             .map(|(_, y, z)| PodcastEpisodeWithHistory {
-                podcast_episode: <(PodcastEpisode, Option<User>) as
-                Into<PodcastEpisodeDto>>::into((y.clone(), Some(user.clone()))),
+                podcast_episode: <(PodcastEpisode, Option<User>) as Into<PodcastEpisodeDto>>::into(
+                    (y.clone(), Some(user.clone())),
+                ),
                 podcast_history_item: z.clone(),
             })
             .collect::<Vec<PodcastEpisodeWithHistory>>();
@@ -210,8 +211,8 @@ impl Playlist {
         if playlist.user_id != user.id {
             return Err(CustomError::Forbidden);
         }
-        let items_in_playlist = PlaylistItem::get_playlist_items_by_playlist_id(playlist_id,
-                                                                                &user)?;
+        let items_in_playlist =
+            PlaylistItem::get_playlist_items_by_playlist_id(playlist_id, &user)?;
 
         Ok(playlist.to_playlist_dto(items_in_playlist, user))
     }

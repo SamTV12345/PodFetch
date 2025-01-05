@@ -55,9 +55,7 @@ responses(
 tag="podcasts"
 )]
 #[get("/podcasts/filter")]
-pub async fn get_filter(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn get_filter(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     let filter = Filter::get_filter_by_username(&requester.username).await?;
     Ok(HttpResponse::Ok().json(filter))
 }
@@ -79,8 +77,7 @@ pub async fn search_podcasts(
     let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
     let tag = query.tag;
 
-    let opt_filter =
-        Filter::get_filter_by_username(&requester.username).await?;
+    let opt_filter = Filter::get_filter_by_username(&requester.username).await?;
 
     let only_favored = match opt_filter {
         Some(filter) => filter.only_favored,
@@ -157,9 +154,7 @@ responses(
 tag="podcasts"
 )]
 #[get("/podcasts")]
-pub async fn find_all_podcasts(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn find_all_podcasts(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     let username = &requester.username;
 
     let podcasts = PodcastService::get_podcasts(username)?;

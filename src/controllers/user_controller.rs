@@ -203,9 +203,7 @@ responses(
 tag="info"
 )]
 #[get("/invites")]
-pub async fn get_invites(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+pub async fn get_invites(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
         return Err(CustomError::Forbidden);
     }

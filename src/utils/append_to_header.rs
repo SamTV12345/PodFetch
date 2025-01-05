@@ -1,10 +1,8 @@
-use std::process::exit;
-use std::sync::LazyLock;
 use base64::engine::general_purpose;
 use base64::Engine;
 use regex::Regex;
-
-
+use std::process::exit;
+use std::sync::LazyLock;
 
 static BASIC_AUTH_COND_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     let com_regex = Regex::new(r".*//([^/?#\s]+)@.*");

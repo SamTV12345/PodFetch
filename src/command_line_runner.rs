@@ -134,9 +134,9 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         user
                     );
 
-
                     if ask_for_confirmation().is_ok() {
-                        user.password = Some(digest(user.password.expect("Error digesting password")));
+                        user.password =
+                            Some(digest(user.password.expect("Error digesting password")));
                         if User::insert_user(&mut user).is_ok() {
                             println!("User succesfully created")
                         }
@@ -145,12 +145,10 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 }
                 "generate" => {
                     let arg = match args.next() {
-                        Some(arg)=>{
-                            arg
-                        },
-                        None=>{
+                        Some(arg) => arg,
+                        None => {
                             error!("Command not found");
-                            return Err(CustomError::BadRequest("Command not found".to_string()))
+                            return Err(CustomError::BadRequest("Command not found".to_string()));
                         }
                     };
 
@@ -158,17 +156,20 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         "apiKey" => {
                             User::find_all_users(conn).iter().for_each(|u| {
                                 log::info!("Updating api key of user {}", &u.username);
-                                User::update_api_key_of_user(&u.username, uuid::Uuid::new_v4()
-                                    .to_string()).expect("Error updating api key")
+                                User::update_api_key_of_user(
+                                    &u.username,
+                                    uuid::Uuid::new_v4().to_string(),
+                                )
+                                .expect("Error updating api key")
                             });
                             Ok(())
-                        },
+                        }
                         _ => {
                             error!("Command not found");
                             Err(CustomError::BadRequest("Command not found".to_string()))
                         }
                     }
-                },
+                }
                 "remove" => {
                     let mut username = String::new();
                     // remove user

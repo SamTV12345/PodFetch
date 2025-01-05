@@ -116,10 +116,7 @@ pub async fn get_timeline(
     requester: web::ReqData<User>,
     favored_only: Query<TimelineQueryParams>,
 ) -> Result<HttpResponse, CustomError> {
-    let res = TimelineItem::get_timeline(
-        requester.into_inner(),
-        favored_only.into_inner(),
-    )?;
+    let res = TimelineItem::get_timeline(requester.into_inner(), favored_only.into_inner())?;
 
     let mapped_timeline = res
         .data
@@ -194,9 +191,9 @@ pub async fn delete_podcast_episode_locally(
     }
 
     let delted_podcast_episode: PodcastEpisodeDto =
-        PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner()).map(|p|(p,
-                                                                                        None::<User>))
-            ?.into();
+        PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner())
+            .map(|p| (p, None::<User>))?
+            .into();
     lobby
         .send_broadcast(
             MAIN_ROOM.to_string(),

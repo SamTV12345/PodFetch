@@ -7,11 +7,11 @@ use crate::models::filter::Filter;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::models::user::User;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use crate::models::user::User;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -65,11 +65,7 @@ impl TimelineItem {
                     .eq_any(subquery)
                     .or(ph1.field(phistory_date).is_null()),
             )
-            .left_join(
-                favorites.on(f_username
-                    .eq(&username_to_search)
-                    .and(f_podcast_id.eq(pid))),
-            );
+            .left_join(favorites.on(f_username.eq(&username_to_search).and(f_podcast_id.eq(pid))));
 
         let mut query = part_query
             .order(date_of_recording.desc())
