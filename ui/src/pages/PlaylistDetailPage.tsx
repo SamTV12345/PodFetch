@@ -64,7 +64,7 @@ export const PlaylistDetailPage = ()=>{
         <PodcastInfoModal/>
         <PodcastEpisodeAlreadyPlayed/>
         {selectedPlaylist.items.map((episode, index) => {
-            return <PodcastDetailItem episode={episode} key={episode.podcastEpisode.id} index={index} episodesLength={selectedPlaylist.items.length}/>
+            return <PodcastDetailItem onlyUnplayed={false} episode={episode} key={episode.podcastEpisode.id} index={index} episodesLength={selectedPlaylist.items.length}/>
         })}
     </div>
 }
