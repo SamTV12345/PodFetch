@@ -1,5 +1,5 @@
 use crate::constants::inner_constants::{
-    PodcastType, BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, MAIN_ROOM,
+    BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE,
     OIDC_AUTH,
 };
 use crate::models::dto_models::PodcastFavorUpdateModel;
@@ -24,7 +24,6 @@ use std::thread;
 use tokio::task::spawn_blocking;
 
 use crate::models::filter::Filter;
-use crate::models::messages::BroadcastMessage;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
@@ -401,18 +400,7 @@ pub async fn refresh_all_podcasts(
     thread::spawn(move || {
         for podcast in podcasts {
             PodcastService::refresh_podcast(podcast.clone(), lobby.clone()).unwrap();
-            let podcast_dto: PodcastDto = podcast.clone().into();
-            lobby.send_broadcast_sync(
-                MAIN_ROOM.parse().unwrap(),
-                serde_json::to_string(&BroadcastMessage {
-                    podcast_episode: None,
-                    type_of: PodcastType::RefreshPodcast,
-                    message: format!("Refreshed podcast: {}", &podcast.name),
-                    podcast: Option::from(podcast_dto),
-                    podcast_episodes: None,
-                })
-                .unwrap(),
-            );
+            lobby.broadcast_podcast_refreshed(&podcast);
         }
     });
     Ok(HttpResponse::Ok().into())
@@ -526,19 +514,7 @@ async fn insert_outline(podcast: Outline, lobby: Data<ChatServerHandle>, mut rng
 
     let feed_response = get_http_client().get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
-        lobby
-            .send_broadcast(
-                MAIN_ROOM.parse().unwrap(),
-                serde_json::to_string(&BroadcastMessage {
-                    type_of: PodcastType::OpmlErrored,
-                    message: feed_response.err().unwrap().to_string(),
-                    podcast: None,
-                    podcast_episodes: None,
-                    podcast_episode: None,
-                })
-                .unwrap(),
-            )
-            .await;
+        lobby.broadcast_opml_error(feed_response.err().unwrap().to_string());
         return;
     }
     let content = feed_response.unwrap().bytes().await.unwrap();
@@ -571,51 +547,15 @@ async fn insert_outline(podcast: Outline, lobby: Data<ChatServerHandle>, mut rng
             .await;
             match inserted_podcast {
                 Ok(podcast) => {
-                    let _ = lobby
-                        .send_broadcast(
-                            MAIN_ROOM.parse().unwrap(),
-                            serde_json::to_string(&BroadcastMessage {
-                                type_of: PodcastType::OpmlAdded,
-                                message: "Refreshed podcasts".to_string(),
-                                podcast: Option::from(<Podcast as Into<PodcastDto>>::into(podcast)),
-                                podcast_episodes: None,
-                                podcast_episode: None,
-                            })
-                            .unwrap(),
-                        )
-                        .await;
+                    lobby.broadcast_opml_added(&podcast);
                 }
                 Err(e) => {
-                    let _ = lobby
-                        .send_broadcast(
-                            MAIN_ROOM.parse().unwrap(),
-                            serde_json::to_string(&BroadcastMessage {
-                                type_of: PodcastType::OpmlErrored,
-                                message: e.to_string(),
-                                podcast: None,
-                                podcast_episodes: None,
-                                podcast_episode: None,
-                            })
-                            .unwrap(),
-                        )
-                        .await;
+                    lobby.broadcast_opml_error(e.to_string());
                 }
             }
         }
         Err(e) => {
-            let _ = lobby
-                .send_broadcast(
-                    MAIN_ROOM.parse().unwrap(),
-                    serde_json::to_string(&BroadcastMessage {
-                        type_of: PodcastType::OpmlErrored,
-                        message: e.to_string(),
-                        podcast: None,
-                        podcast_episodes: None,
-                        podcast_episode: None,
-                    })
-                    .unwrap(),
-                )
-                .await;
+            lobby.broadcast_opml_error(e.to_string());
         }
     }
 }

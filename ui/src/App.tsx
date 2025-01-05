@@ -198,7 +198,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
     let ws:  WebSocket
     useEffect(() => {
         if (config && !ws) {
-            ws = new WebSocket(configWSUrl(config?.serverUrl!))
+            ws = new WebSocket(config?.wsUrl)
             setSocket(ws)
         }
     }, [config])

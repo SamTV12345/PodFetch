@@ -1,8 +1,7 @@
 use crate::constants::inner_constants::{
-    PodcastType, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, MAIN_ROOM,
+    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES,
     TELEGRAM_API_ENABLED,
 };
-use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
@@ -10,12 +9,10 @@ use crate::service::file_service::FileService;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
 
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::episode::Episode;
 use crate::models::notification::Notification;
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::user::User;
 use crate::mutex::LockResultExt;
@@ -42,30 +39,13 @@ impl PodcastEpisodeService {
         lobby: Option<web::Data<ChatServerHandle>>,
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
-        let podcast_cloned = podcast.clone();
 
         match PodcastEpisode::check_if_downloaded(&podcast_episode.url) {
             Ok(true) => {}
             Ok(false) => {
-                let podcast_inserted =
-                    Self::perform_download(&podcast_episode_cloned, podcast_cloned)?;
-                let mapped_dto: PodcastEpisodeDto = (podcast_inserted, None::<User>).into();
+                let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
                 if let Some(lobby) = lobby {
-                    let podcast: PodcastDto = podcast.clone().into();
-                    lobby.send_broadcast_sync(
-                        MAIN_ROOM.parse().unwrap(),
-                        serde_json::to_string(&BroadcastMessage {
-                            message: format!(
-                                "Episode {} is now available offline",
-                                podcast_episode.name
-                            ),
-                            podcast: Option::from(podcast),
-                            type_of: PodcastType::AddPodcastEpisode,
-                            podcast_episode: Some(mapped_dto),
-                            podcast_episodes: None,
-                        })
-                        .unwrap(),
-                    );
+                    lobby.broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
                 }
 
                 if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
@@ -82,7 +62,7 @@ impl PodcastEpisodeService {
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
-        podcast_cloned: Podcast,
+        podcast_cloned: &Podcast,
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;

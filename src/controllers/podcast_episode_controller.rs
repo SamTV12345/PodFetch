@@ -1,8 +1,6 @@
-use crate::constants::inner_constants::{PodcastType, MAIN_ROOM};
 use crate::db::TimelineItem;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
-use crate::models::messages::BroadcastMessage;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
@@ -162,7 +160,7 @@ pub async fn download_podcast_episodes_of_podcast(
         let res = PodcastEpisode::get_podcast_episode_by_id(&id.into_inner()).unwrap();
         if let Some(podcast_episode) = res {
             let podcast = Podcast::get_podcast(podcast_episode.podcast_id).unwrap();
-            PodcastEpisodeService::perform_download(&podcast_episode.clone(), podcast).unwrap();
+            PodcastEpisodeService::perform_download(&podcast_episode.clone(), &podcast).unwrap();
             PodcastEpisode::update_deleted(&podcast_episode.clone().episode_id, false).unwrap();
         }
     });
@@ -190,23 +188,10 @@ pub async fn delete_podcast_episode_locally(
         return Err(CustomError::Forbidden);
     }
 
-    let delted_podcast_episode: PodcastEpisodeDto =
-        PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner())
-            .map(|p| (p, None::<User>))?
-            .into();
-    lobby
-        .send_broadcast(
-            MAIN_ROOM.to_string(),
-            serde_json::to_string(&BroadcastMessage {
-                podcast_episode: Some(delted_podcast_episode),
-                podcast_episodes: None,
-                type_of: PodcastType::DeletePodcastEpisode,
-                podcast: None,
-                message: "Deleted podcast episode locally".to_string(),
-            })
-            .unwrap(),
-        )
-        .await;
+    let delted_podcast_episode =
+        PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner())?;
+
+    lobby.broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
 
     Ok(HttpResponse::NoContent().finish())
 }

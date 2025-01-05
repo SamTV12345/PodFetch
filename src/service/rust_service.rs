@@ -1,20 +1,17 @@
 use crate::constants::inner_constants::{
-    PodcastType, COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL, MAIN_ROOM,
+    COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL,
 };
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 
-use crate::models::messages::BroadcastMessage;
 use crate::models::misc_models::PodcastInsertModel;
 
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorites::Favorite;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::models::tag::Tag;
-use crate::models::user::User;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
@@ -151,42 +148,18 @@ impl PodcastService {
             &podcast_insert.id.clone().to_string(),
         )
         .await;
-        let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id).unwrap();
-        lobby
-            .send_broadcast(
-                MAIN_ROOM.parse().unwrap(),
-                serde_json::to_string(&BroadcastMessage {
-                    podcast_episode: None,
-                    type_of: PodcastType::AddPodcast,
-                    message: format!("Added podcast: {}", inserted_podcast.name),
-                    podcast: podcast.clone().map(|p| p.into()),
-                    podcast_episodes: None,
-                })
-                .unwrap(),
-            )
-            .await;
+        let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id)?;
         match podcast {
             Some(podcast) => {
+                lobby.broadcast_podcast_downloaded(podcast.clone());
                 spawn_blocking(move || {
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
                     let inserted_podcasts =
                         PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
 
-                    lobby.send_broadcast_sync(
-                        MAIN_ROOM.parse().unwrap(),
-                        serde_json::to_string(&BroadcastMessage {
-                            podcast_episode: None,
-                            type_of: PodcastType::AddPodcastEpisodes,
-                            message: format!("Added podcast episodes: {}", podcast.name),
-                            podcast: Some(podcast.clone().into()),
-                            podcast_episodes: Option::from(
-                                inserted_podcasts
-                                    .into_iter()
-                                    .map(|p| (p, None::<User>).into())
-                                    .collect::<Vec<PodcastEpisodeDto>>(),
-                            ),
-                        })
-                        .unwrap(),
+                    lobby.broadcast_added_podcast_episodes(
+                        podcast.clone(),
+                        inserted_podcasts.clone(),
                     );
                     if let Err(e) = Self::schedule_episode_download(podcast, Some(lobby)) {
                         log::error!("Error scheduling episode download: {}", e);
