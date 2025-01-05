@@ -15,7 +15,7 @@ use diesel::dsl::{max, sql};
 use diesel::prelude::{Identifiable, Queryable, QueryableByName, Selectable};
 use diesel::query_source::Alias;
 use diesel::sql_types::{Bool, Integer, Nullable, Text, Timestamp};
-use diesel::{debug_query, AsChangeset, SqliteExpressionMethods};
+use diesel::AsChangeset;
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{
@@ -281,14 +281,12 @@ impl PodcastEpisode {
             if *only_unlistened {
                 podcast_query = podcast_query.filter(ph1.field(phistory_position).is_null().or(ph1
                     .field(phistory_total).ne(ph1.field(phistory_position))));
-            } else {
-
-            }
+            } 
         }
 
-        Ok(podcast_query
+        podcast_query
             .load::<(PodcastEpisode, Option<Episode>, Option<FavoritePodcastEpisode>)>(&mut get_connection())
-            .map_err(map_db_error)?)
+            .map_err(map_db_error)
     }
 
     pub fn get_last_n_podcast_episodes(
