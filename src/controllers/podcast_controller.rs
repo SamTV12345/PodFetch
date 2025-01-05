@@ -1,6 +1,5 @@
 use crate::constants::inner_constants::{
-    BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE,
-    OIDC_AUTH,
+    BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
 };
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};

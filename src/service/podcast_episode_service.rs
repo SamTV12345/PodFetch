@@ -1,4 +1,6 @@
-use crate::constants::inner_constants::{PodcastEpisodeWithFavorited, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, TELEGRAM_API_ENABLED};
+use crate::constants::inner_constants::{
+    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, TELEGRAM_API_ENABLED,
+};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
@@ -26,6 +28,7 @@ use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
+use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 
 pub struct PodcastEpisodeService;
 
@@ -470,9 +473,10 @@ impl PodcastEpisodeService {
     pub fn get_podcast_episodes_of_podcast(
         id_num: i32,
         last_id: Option<String>,
+        only_unlistened: Option<bool>,
         user: &User,
     ) -> PodcastEpisodeWithFavorited {
-        PodcastEpisode::get_podcast_episodes_of_podcast(id_num, last_id, user)
+        PodcastEpisode::get_podcast_episodes_of_podcast(id_num, last_id, only_unlistened, user)
     }
 
     pub fn get_podcast_episode_by_id(id_num: &str) -> Result<Option<PodcastEpisode>, CustomError> {

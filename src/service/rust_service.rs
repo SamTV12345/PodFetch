@@ -1,6 +1,4 @@
-use crate::constants::inner_constants::{
-    COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL,
-};
+use crate::constants::inner_constants::{COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
 

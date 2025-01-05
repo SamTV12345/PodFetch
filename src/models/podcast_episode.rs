@@ -234,6 +234,7 @@ impl PodcastEpisode {
     pub fn get_podcast_episodes_of_podcast(
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
+        only_unlistened: Option<bool>,
         user: &User,
     ) -> PodcastEpisodeWithFavorited {
         use crate::adapters::persistence::dbconfig::schema::episodes as phistory;
@@ -242,6 +243,8 @@ impl PodcastEpisode {
         use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::username
         as u_fav_episodes;
 
+        use crate::adapters::persistence::dbconfig::schema::episodes::position as phistory_position;
+        use crate::adapters::persistence::dbconfig::schema::episodes::total as phistory_total;
         use crate::adapters::persistence::dbconfig::schema::episodes::guid as eguid;
         use crate::adapters::persistence::dbconfig::schema::episodes::timestamp as phistory_date;
         use crate::adapters::persistence::dbconfig::schema::episodes::username as phistory_username;
@@ -255,47 +258,35 @@ impl PodcastEpisode {
             .filter(ph2.field(eguid).eq(ph1.field(eguid)))
             .group_by(ph2.field(eguid));
 
-        match last_id {
-            Some(last_id) => {
-                let podcasts_found = podcast_episodes
-                    .filter(podcast_id.eq(podcast_id_to_be_searched))
-                    .left_join(ph1.on(ph1.field(eguid).eq(guid.nullable())))
-                    .left_join(favorite_podcast_episodes.on(e_fav_episodes.eq(id).and
-                    (u_fav_episodes.eq(&user.username))))
-                    .filter(
-                        ph1.field(phistory_date)
-                            .nullable()
-                            .eq_any(subquery)
-                            .or(ph1.field(phistory_date).is_null()),
-                    )
-                    .filter(date_of_recording.lt(last_id))
-                    .order(date_of_recording.desc())
-                    .limit(75)
-                    .load::<(PodcastEpisode, Option<Episode>, Option<FavoritePodcastEpisode>)>(&mut
-                        get_connection())
-                    .map_err(map_db_error)?;
-                Ok(podcasts_found)
-            }
-            None => {
-                let podcasts_found = podcast_episodes
-                    .left_join(ph1.on(ph1.field(eguid).eq(guid.nullable())))
-                    .left_join(favorite_podcast_episodes.on(e_fav_episodes.eq(id).and
-                    (u_fav_episodes.eq(&user.username))))
-                    .filter(
-                        ph1.field(phistory_date)
-                            .nullable()
-                            .eq_any(subquery)
-                            .or(ph1.field(phistory_date).is_null()),
-                    )
-                    .filter(podcast_id.eq(podcast_id_to_be_searched))
-                    .order(date_of_recording.desc())
-                    .limit(75)
-                    .load::<(PodcastEpisode, Option<Episode>, Option<FavoritePodcastEpisode>)>(&mut get_connection())
-                    .expect("Error loading podcasts");
+        let mut podcast_query = podcast_episodes
+            .filter(podcast_id.eq(podcast_id_to_be_searched))
+            .left_join(ph1.on(ph1.field(eguid).eq(guid.nullable())))
+            .left_join(favorite_podcast_episodes.on(e_fav_episodes.eq(id).and
+            (u_fav_episodes.eq(&user.username))))
+            .filter(
+                ph1.field(phistory_date)
+                    .nullable()
+                    .eq_any(subquery)
+                    .or(ph1.field(phistory_date).is_null()),
+            )
+            .order(date_of_recording.desc())
+            .limit(75)
+            .into_boxed();
 
-                Ok(podcasts_found)
-            }
+        if let Some(last_id) = &last_id {
+            podcast_query = podcast_query.filter(date_of_recording.lt(last_id));
         }
+
+        if let Some(only_unlistened) = &only_unlistened {
+            if *only_unlistened {
+                podcast_query = podcast_query.filter(ph1.field(phistory_position).is_null().or(ph1
+                    .field(phistory_total).ne(ph1.field(phistory_position))));
+            } 
+        }
+
+        podcast_query
+            .load::<(PodcastEpisode, Option<Episode>, Option<FavoritePodcastEpisode>)>(&mut get_connection())
+            .map_err(map_db_error)
     }
 
     pub fn get_last_n_podcast_episodes(

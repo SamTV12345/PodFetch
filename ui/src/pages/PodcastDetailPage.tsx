@@ -29,16 +29,20 @@ export const PodcastDetailPage = () => {
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const [openSettingsMenu, setOpenSettingsMenu] = useState<boolean>(false)
+    const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
 
     useEffect(() => {
         if (params && !isNaN(parseFloat(params.id as string))) {
             setCurrentDetailedPodcastId(Number(params.id))
         }
-
         axios.get('/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
             setCurrentPodcast(response.data)
         }).then(() => {
-            axios.get('/podcast/' + params.id + '/episodes')
+            axios.get('/podcast/' + params.id + '/episodes', {
+                params: {
+                    only_unlistened: onlyUnplayed
+                }
+            })
                 .then((response: AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
                     setSelectedEpisodes(response.data)
 
@@ -51,7 +55,7 @@ export const PodcastDetailPage = () => {
                     }
                 })
         })
-    }, [])
+    }, [onlyUnplayed])
 
     useEffect(() => {
         if (currentPodcast?.summary) {
@@ -152,25 +156,32 @@ export const PodcastDetailPage = () => {
                     ">
                         <span className="block text-[--fg-secondary-color]">{currentPodcast.author}</span>
 
-                        {<div className="flex gap-2">
+                        <div className="flex gap-2">
                             {currentPodcast.keywords && currentPodcast.keywords?.split(',').map((keyword, index) => (
                                 <Chip key={"keyword"+index} index={index}>{keyword}</Chip>
                             ))}
-                        </div>}
+                        </div>
 
-                        <span className="grid grid-cols-1 md:grid-cols-2">
+                        <span className="grid grid-cols-2 md:grid-cols-3">
                         <button className="flex gap-4" rel="noopener noreferrer"
                                 onClick={() => window.open(prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id))}>
-                            <a rel="noopener noreferrer" className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
-                               target="_blank" href={prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id)}>rss_feed</a>
+                            <a rel="noopener noreferrer"
+                               className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                               target="_blank"
+                               href={prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id)}>rss_feed</a>
                             <span className="text-[--fg-color]">PodFetch</span>
                         </button>
 
-                        <button className="flex gap-4" rel="noopener noreferrer" onClick={() => window.open(currentPodcast.rssfeed)}>
+                        <button className="flex gap-4" rel="noopener noreferrer"
+                                onClick={() => window.open(currentPodcast.rssfeed)}>
                             <a className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
                                target="_blank" rel="noopener noreferrer" href={currentPodcast.rssfeed}>rss_feed</a>
                             <span className="text-[--fg-color]">{t('original-rss-feed')}</span>
                         </button>
+                            <div className="flex gap-4 justify-end">
+                                <Switcher checked={onlyUnplayed} setChecked={setOnlyUnplayed}/>
+                                <span className=" text-[--fg-color] mt-auto">{t('active')}</span>
+                            </div>
                             </span>
                     </div>
 
@@ -214,6 +225,7 @@ export const PodcastDetailPage = () => {
 
                     {selectedEpisodes.map((episode, index) => (
                         <PodcastDetailItem episode={episode} key={episode.podcastEpisode.id} index={index}
+                                           onlyUnplayed={onlyUnplayed}
                                            episodesLength={selectedEpisodes.length}/>
                     ))}
                 </div>
