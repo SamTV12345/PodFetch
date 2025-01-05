@@ -28,7 +28,7 @@ pub struct DownloadService {}
 impl DownloadService {
     pub fn download_podcast_episode(
         podcast_episode: PodcastEpisode,
-        podcast: Podcast,
+        podcast: &Podcast,
     ) -> Result<(), CustomError> {
         let client = ClientBuilder::new().build().unwrap();
         let conn = &mut get_connection();

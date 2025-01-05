@@ -42,30 +42,14 @@ impl PodcastEpisodeService {
         lobby: Option<web::Data<ChatServerHandle>>,
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
-        let podcast_cloned = podcast.clone();
 
         match PodcastEpisode::check_if_downloaded(&podcast_episode.url) {
             Ok(true) => {}
             Ok(false) => {
                 let podcast_inserted =
-                    Self::perform_download(&podcast_episode_cloned, podcast_cloned)?;
-                let mapped_dto: PodcastEpisodeDto = (podcast_inserted, None::<User>).into();
-                if let Some(lobby) = lobby {
-                    let podcast: PodcastDto = podcast.clone().into();
-                    lobby.send_broadcast_sync(
-                        MAIN_ROOM.parse().unwrap(),
-                        serde_json::to_string(&BroadcastMessage {
-                            message: format!(
-                                "Episode {} is now available offline",
-                                podcast_episode.name
-                            ),
-                            podcast: Option::from(podcast),
-                            type_of: PodcastType::AddPodcastEpisode,
-                            podcast_episode: Some(mapped_dto),
-                            podcast_episodes: None,
-                        })
-                        .unwrap(),
-                    );
+                    Self::perform_download(&podcast_episode_cloned, &podcast)?;
+                if let Some(mut lobby) = lobby {
+                    lobby.broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
                 }
 
                 if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
@@ -82,7 +66,7 @@ impl PodcastEpisodeService {
 
     pub fn perform_download(
         podcast_episode: &PodcastEpisode,
-        podcast_cloned: Podcast,
+        podcast_cloned: &Podcast,
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;

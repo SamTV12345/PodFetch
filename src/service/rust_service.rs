@@ -151,42 +151,18 @@ impl PodcastService {
             &podcast_insert.id.clone().to_string(),
         )
         .await;
-        let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id).unwrap();
-        lobby
-            .send_broadcast(
-                MAIN_ROOM.parse().unwrap(),
-                serde_json::to_string(&BroadcastMessage {
-                    podcast_episode: None,
-                    type_of: PodcastType::AddPodcast,
-                    message: format!("Added podcast: {}", inserted_podcast.name),
-                    podcast: podcast.clone().map(|p| p.into()),
-                    podcast_episodes: None,
-                })
-                .unwrap(),
-            )
-            .await;
+        let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id)?;
         match podcast {
             Some(podcast) => {
+                lobby.broadcast_podcast_downloaded(podcast.clone());
                 spawn_blocking(move || {
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
                     let inserted_podcasts =
                         PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
 
-                    lobby.send_broadcast_sync(
-                        MAIN_ROOM.parse().unwrap(),
-                        serde_json::to_string(&BroadcastMessage {
-                            podcast_episode: None,
-                            type_of: PodcastType::AddPodcastEpisodes,
-                            message: format!("Added podcast episodes: {}", podcast.name),
-                            podcast: Some(podcast.clone().into()),
-                            podcast_episodes: Option::from(
-                                inserted_podcasts
-                                    .into_iter()
-                                    .map(|p| (p, None::<User>).into())
-                                    .collect::<Vec<PodcastEpisodeDto>>(),
-                            ),
-                        })
-                        .unwrap(),
+                    lobby.broadcast_added_podcast_episodes(
+                        podcast.clone(),
+                        inserted_podcasts.clone(),
                     );
                     if let Err(e) = Self::schedule_episode_download(podcast, Some(lobby)) {
                         log::error!("Error scheduling episode download: {}", e);
