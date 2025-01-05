@@ -1,7 +1,4 @@
-use crate::constants::inner_constants::{
-    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES,
-    TELEGRAM_API_ENABLED,
-};
+use crate::constants::inner_constants::{PodcastEpisodeWithFavorited, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, TELEGRAM_API_ENABLED};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
@@ -11,7 +8,6 @@ use std::sync::{Arc, Mutex};
 
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::controllers::server::ChatServerHandle;
-use crate::models::episode::Episode;
 use crate::models::notification::Notification;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::user::User;
@@ -29,8 +25,10 @@ use regex::Regex;
 use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 pub struct PodcastEpisodeService;
+
 
 impl PodcastEpisodeService {
     pub fn download_podcast_episode_if_not_locally_available(
@@ -440,6 +438,19 @@ impl PodcastEpisodeService {
 
             log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
+                match FavoritePodcastEpisode::is_podcast_episode_liked_by_someone
+                    (old_podcast_episode
+                    .id) {
+                    Ok(true) => {
+                        continue;
+                    }
+                    Ok(false) => {}
+                    Err(e) => {
+                        log::error!("Error checking if podcast episode is liked.{}", e);
+                    }
+                }
+
+
                 let res = FileService::cleanup_old_episode(&old_podcast_episode);
 
                 match res {
@@ -460,7 +471,7 @@ impl PodcastEpisodeService {
         id_num: i32,
         last_id: Option<String>,
         user: &User,
-    ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
+    ) -> PodcastEpisodeWithFavorited {
         PodcastEpisode::get_podcast_episodes_of_podcast(id_num, last_id, user)
     }
 

@@ -1,7 +1,7 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::*;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::constants::inner_constants::DEFAULT_IMAGE_URL;
+use crate::constants::inner_constants::{PodcastEpisodeWithFavorited, DEFAULT_IMAGE_URL};
 use crate::models::episode::Episode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcasts::Podcast;
@@ -24,6 +24,8 @@ use diesel::{
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
+use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[derive(
     Queryable,
@@ -233,8 +235,13 @@ impl PodcastEpisode {
         podcast_id_to_be_searched: i32,
         last_id: Option<String>,
         user: &User,
-    ) -> Result<Vec<(PodcastEpisode, Option<Episode>)>, CustomError> {
+    ) -> PodcastEpisodeWithFavorited {
         use crate::adapters::persistence::dbconfig::schema::episodes as phistory;
+        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::episode_id
+        as e_fav_episodes;
+        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::username
+        as u_fav_episodes;
+
         use crate::adapters::persistence::dbconfig::schema::episodes::guid as eguid;
         use crate::adapters::persistence::dbconfig::schema::episodes::timestamp as phistory_date;
         use crate::adapters::persistence::dbconfig::schema::episodes::username as phistory_username;
@@ -253,6 +260,8 @@ impl PodcastEpisode {
                 let podcasts_found = podcast_episodes
                     .filter(podcast_id.eq(podcast_id_to_be_searched))
                     .left_join(ph1.on(ph1.field(eguid).eq(guid.nullable())))
+                    .left_join(favorite_podcast_episodes.on(e_fav_episodes.eq(id).and
+                    (u_fav_episodes.eq(&user.username))))
                     .filter(
                         ph1.field(phistory_date)
                             .nullable()
@@ -262,13 +271,16 @@ impl PodcastEpisode {
                     .filter(date_of_recording.lt(last_id))
                     .order(date_of_recording.desc())
                     .limit(75)
-                    .load::<(PodcastEpisode, Option<Episode>)>(&mut get_connection())
+                    .load::<(PodcastEpisode, Option<Episode>, Option<FavoritePodcastEpisode>)>(&mut
+                        get_connection())
                     .map_err(map_db_error)?;
                 Ok(podcasts_found)
             }
             None => {
                 let podcasts_found = podcast_episodes
                     .left_join(ph1.on(ph1.field(eguid).eq(guid.nullable())))
+                    .left_join(favorite_podcast_episodes.on(e_fav_episodes.eq(id).and
+                    (u_fav_episodes.eq(&user.username))))
                     .filter(
                         ph1.field(phistory_date)
                             .nullable()
@@ -278,7 +290,7 @@ impl PodcastEpisode {
                     .filter(podcast_id.eq(podcast_id_to_be_searched))
                     .order(date_of_recording.desc())
                     .limit(75)
-                    .load::<(PodcastEpisode, Option<Episode>)>(&mut get_connection())
+                    .load::<(PodcastEpisode, Option<Episode>, Option<FavoritePodcastEpisode>)>(&mut get_connection())
                     .expect("Error loading podcasts");
 
                 Ok(podcasts_found)

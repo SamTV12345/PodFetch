@@ -135,6 +135,7 @@
   "sort-by-title": "Sort by title",
   "number-of-podcasts-to-download": "Number of initial podcasts to download",
   "onlyFavored": "Only favorite podcasts",
+  "onlyFavoredEpisodes": "Only favorite episodes",
   "podcast-naming": "Naming Conventions",
   "rename-podcasts": "Rename podcasts",
   "use-existing-filenames": "Use existing filenames",

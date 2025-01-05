@@ -44,7 +44,8 @@ export type PodcastEpisode = {
     local_image_url:string,
     description: string,
     status: "D"|"N"|"P",
-    time?: number
+    time?: number,
+    favored?: boolean
 }
 
 type PodcastEpisodeWithPodcastWatchModel = {

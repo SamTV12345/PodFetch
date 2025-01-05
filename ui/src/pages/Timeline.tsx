@@ -15,6 +15,7 @@ export const Timeline = () => {
     const filter = useCommon(state => state.filters)
     const { t } = useTranslation()
     const [notListened, setNotListened] = useState(false)
+    const [notFavored, setFavored] = useState(false)
     const setFilters = useCommon(state => state.setFilters)
     const setTimelineEpisodes = useCommon(state => state.setTimeLineEpisodes)
 
@@ -35,14 +36,15 @@ export const Timeline = () => {
             axios.get('/podcasts/timeline', {
                 params: {
                     favoredOnly: favoredOnly === undefined ? false : favoredOnly,
-                    notListened: notListened
+                    notListened: notListened,
+                    favoredEpisodes: notFavored
                 }
             })
                 .then((c: AxiosResponse<TimelineHATEOASModel>) => {
                     setTimelineEpisodes(c.data)
                 })
         }
-    }, [filter,notListened])
+    }, [filter,notListened, notFavored])
 
     if(timeLineEpisodes === undefined){
         return <Loading/>
@@ -55,23 +57,30 @@ export const Timeline = () => {
                 <Heading1>{t('timeline')}</Heading1>
 
                 <div className="flex flex-row gap-5">
-                <div className="flex items-center gap-3">
-                    <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
 
-                    <Switcher checked={filter === undefined?true: filter.onlyFavored} setChecked={() => setFilters({
-                        ...filter as Filter,
-                        onlyFavored: !filter?.onlyFavored
-                    })}/>
-                </div>
-                <div className="flex items-center gap-3">
-                    <span className="text-xs text-[--fg-secondary-color]">{t('not-yet-played')}</span>
+                        <Switcher checked={filter === undefined ? true : filter.onlyFavored}
+                                  setChecked={() => setFilters({
+                                      ...filter as Filter,
+                                      onlyFavored: !filter?.onlyFavored
+                                  })}/>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-[--fg-secondary-color]">{t('not-yet-played')}</span>
 
-                    <Switcher checked={notListened} setChecked={() => setNotListened(!notListened)}/>
-                </div>
+                        <Switcher checked={notListened} setChecked={() => setNotListened(!notListened)}/>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavoredEpisodes')}</span>
+
+                        <Switcher checked={notFavored} setChecked={() => setFavored(!notFavored)}/>
+                    </div>
                 </div>
             </div>
 
-            <div className="relative grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12 pl-6">
+            <div
+                className="relative grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12 pl-6">
                 {timeLineEpisodes.data.map((e, index) => (
                     <Fragment key={e.podcast_episode.episode_id+index + "Parent"}>
                         {/* Section start */
