@@ -1183,9 +1183,9 @@ dependencies = [
 
 [[package]]
 name = "frankenstein"
-version = "0.37.0"
+version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "625fe4cc6dbfc88fe05ccc0cd03611d8db0e7a84936d5bdb4c8e7541817b3804"
+checksum = "9aa88d542953a3f252ade68b00c7cf8f63b3d30d4ebb415e4726640aaa084566"
 dependencies = [
  "bon",
  "macro_rules_attribute",
