@@ -39,12 +39,12 @@ pub const TELEGRAM_BOT_TOKEN: &str = "TELEGRAM_BOT_TOKEN";
 pub const TELEGRAM_BOT_CHAT_ID: &str = "TELEGRAM_BOT_CHAT_ID";
 pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";
 
-use crate::service::logging_service::init_logging;
-use utoipa::ToSchema;
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
+use crate::service::logging_service::init_logging;
 use crate::utils::error::CustomError;
+use utoipa::ToSchema;
 
 // User management roles
 #[derive(Serialize, Deserialize, Debug, PartialEq, ToSchema)]
@@ -155,5 +155,11 @@ pub const PODFETCH_PROXY_FOR_REQUESTS: &str = "PODFETCH_PROXY";
 pub const MAIN_ROOM: &str = "main";
 pub const CONNECTION_NUMBERS: &str = "DB_CONNECTIONS";
 
-pub type PodcastEpisodeWithFavorited = Result<Vec<(PodcastEpisode, Option<Episode>,
-                                                   Option<FavoritePodcastEpisode>)>, CustomError>;
+pub type PodcastEpisodeWithFavorited = Result<
+    Vec<(
+        PodcastEpisode,
+        Option<Episode>,
+        Option<FavoritePodcastEpisode>,
+    )>,
+    CustomError,
+>;

@@ -1,5 +1,6 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::{PodcastType, MAIN_ROOM};
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -8,7 +9,6 @@ use rand::random;
 use std::collections::{HashMap, HashSet};
 use std::io;
 use tokio::sync::{mpsc, oneshot};
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 type RoomId = String;
 pub type ConnId = usize;
@@ -353,8 +353,13 @@ impl ChatServerHandle {
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
     ) {
-        let podcast_episode: PodcastEpisodeDto =
-            (podcast_episode.clone(), None::<User>, None::<FavoritePodcastEpisode>).clone().into();
+        let podcast_episode: PodcastEpisodeDto = (
+            podcast_episode.clone(),
+            None::<User>,
+            None::<FavoritePodcastEpisode>,
+        )
+            .clone()
+            .into();
         let podcast = podcast.clone().into();
         self.send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
@@ -398,7 +403,11 @@ impl ChatServerHandle {
         self.send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastEpisodeDeleteMesage {
-                podcast_episode: PodcastEpisodeDto::from((podcast_episode.clone(), None::<User>, None::<FavoritePodcastEpisode>)),
+                podcast_episode: PodcastEpisodeDto::from((
+                    podcast_episode.clone(),
+                    None::<User>,
+                    None::<FavoritePodcastEpisode>,
+                )),
                 type_of: PodcastType::DeletePodcastEpisode,
                 message: "Deleted podcast episode locally".to_string(),
             })

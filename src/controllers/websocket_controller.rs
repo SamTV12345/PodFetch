@@ -5,6 +5,7 @@ use crate::models::podcasts::Podcast;
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::server::ChatServerHandle;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
@@ -19,7 +20,6 @@ use rss::{
     ItemBuilder,
 };
 use tokio::task::spawn_local;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[utoipa::path(
 context_path = "/api/v1",

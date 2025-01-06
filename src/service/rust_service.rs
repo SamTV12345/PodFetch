@@ -145,7 +145,7 @@ impl PodcastService {
             podcast_insert.image_url.clone().to_string(),
             &podcast_insert.id.clone().to_string(),
         )
-        .await;
+        .await?;
         let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id)?;
         match podcast {
             Some(podcast) => {

@@ -1,11 +1,11 @@
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes;
+use crate::models::user::User;
+use crate::utils::error::{map_db_error, CustomError};
+use diesel::ExpressionMethods;
+use diesel::QueryDsl;
 use diesel::{Insertable, OptionalExtension, Queryable, QueryableByName, RunQueryDsl};
 use utoipa::ToSchema;
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes;
-use diesel::QueryDsl;
-use crate::models::user::User;
-use diesel::ExpressionMethods;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 #[diesel(table_name=favorite_podcast_episodes)]
@@ -16,33 +16,36 @@ pub struct FavoritePodcastEpisode {
 }
 
 impl FavoritePodcastEpisode {
-    pub(crate) fn is_podcast_episode_liked_by_someone(episode_id_to_find: i32) -> Result<bool,
-        CustomError> {
+    pub(crate) fn is_podcast_episode_liked_by_someone(
+        episode_id_to_find: i32,
+    ) -> Result<bool, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::*;
 
-       favorite_podcast_episodes.filter(episode_id.eq(episode_id_to_find))
+        favorite_podcast_episodes
+            .filter(episode_id.eq(episode_id_to_find))
             .filter(favorite.eq(true))
             .first::<FavoritePodcastEpisode>(&mut get_connection())
             .optional()
             .map_err(map_db_error)
-           .map(|res| res.map(|res| res.favorite).unwrap_or(false))
+            .map(|res| res.map(|res| res.favorite).unwrap_or(false))
     }
 }
 
 impl FavoritePodcastEpisode {
-    pub(crate) fn like_podcast_episode(episode: i32, user: &User, favored: bool) -> Result<(),
-        CustomError> {
+    pub(crate) fn like_podcast_episode(
+        episode: i32,
+        user: &User,
+        favored: bool,
+    ) -> Result<(), CustomError> {
         let found_episode_id = Self::get_by_user_id_and_episode_id(&user.username, episode)?;
         match found_episode_id {
-            Some(_) => {
-                diesel::update(favorite_podcast_episodes::table)
-                    .filter(favorite_podcast_episodes::episode_id.eq(episode))
-                    .filter(favorite_podcast_episodes::username.eq(&user.username))
-                    .set(favorite_podcast_episodes::favorite.eq(favored))
-                    .execute(&mut get_connection())
-                    .map_err(map_db_error)
-                    .map(|_| ())
-            }
+            Some(_) => diesel::update(favorite_podcast_episodes::table)
+                .filter(favorite_podcast_episodes::episode_id.eq(episode))
+                .filter(favorite_podcast_episodes::username.eq(&user.username))
+                .set(favorite_podcast_episodes::favorite.eq(favored))
+                .execute(&mut get_connection())
+                .map_err(map_db_error)
+                .map(|_| ()),
             None => {
                 let new_favorite = FavoritePodcastEpisode::new(&user.username, episode, favored);
                 new_favorite.save()
@@ -69,7 +72,10 @@ impl FavoritePodcastEpisode {
         Ok(())
     }
 
-    pub fn get_by_user_id_and_episode_id(user_id_to_search: &str, episode_id_to_search: i32) -> Result<Option<Self>, CustomError> {
+    pub fn get_by_user_id_and_episode_id(
+        user_id_to_search: &str,
+        episode_id_to_search: i32,
+    ) -> Result<Option<Self>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::*;
         use diesel::ExpressionMethods;
         favorite_podcast_episodes
