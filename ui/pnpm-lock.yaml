@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@fontsource-variable/inter':
-        specifier: ^5.1.0
-        version: 5.1.0
+        specifier: ^5.1.1
+        version: 5.1.1
       '@fontsource/anton':
         specifier: ^5.1.0
         version: 5.1.0
@@ -642,8 +642,8 @@ packages:
   '@floating-ui/utils@0.2.2':
     resolution: {integrity: sha512-J4yDIIthosAsRZ5CPYP/jQvUAQtlZTTD/4suA08/FEnlxqW3sKS9iAhgsa9VYLZ6vDHn/ixJgIqRQPotoBjxIw==}
 
-  '@fontsource-variable/inter@5.1.0':
-    resolution: {integrity: sha512-Wj2dUGP0vUpxRGQTXQTCNJO+aLcFcQm+gUPXfj/aS877bQkEPBPv9JvZJpwdm2vzelt8NTZ+ausKlBCJjh2XIg==}
+  '@fontsource-variable/inter@5.1.1':
+    resolution: {integrity: sha512-OpXFTmiH6tHkYijMvQTycFKBLK4X+SRV6tet1m4YOUH7SzIIlMqDja+ocDtiCA72UthBH/vF+3ZtlMr2rN/wIw==}
 
   '@fontsource/anton@5.1.0':
     resolution: {integrity: sha512-joGHu1IQHBxPkYl2VutIZgyfdyERgzz1GWoSRnFBOcRvCz7XWT+3xnK/iGy7z4Z34HU/ZiWy1UORHJRdEFJiTA==}
@@ -3332,7 +3332,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.2': {}
 
-  '@fontsource-variable/inter@5.1.0': {}
+  '@fontsource-variable/inter@5.1.1': {}
 
   '@fontsource/anton@5.1.0': {}
 
