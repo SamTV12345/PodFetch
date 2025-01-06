@@ -53,7 +53,11 @@ use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
-use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_timeline, like_podcast_episode, retrieve_episode_sample_format};
+use crate::controllers::podcast_episode_controller::{
+    delete_podcast_episode_locally, download_podcast_episodes_of_podcast,
+    find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_timeline,
+    like_podcast_episode, retrieve_episode_sample_format,
+};
 use crate::controllers::server::ChatServer;
 use crate::controllers::settings_controller::{
     get_opml, get_settings, run_cleanup, update_name, update_settings,

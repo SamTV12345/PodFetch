@@ -12,12 +12,12 @@ use crate::models::misc_models::PodcastInsertModel;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
+use crate::service::download_service::DownloadService;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::{map_io_error, CustomError};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
-use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::RSSFeedParser;
 use crate::DBType as DbConnection;
 use regex::Regex;
@@ -92,22 +92,29 @@ impl FileService {
         }
     }
 
-    pub async fn download_podcast_image(podcast_path: &str, image_url: String, podcast_id: &str) {
-        let cloned_image_url = image_url.clone();
-        let image_suffix = spawn_blocking(move || {
-            let client = reqwest::blocking::Client::new();
-            determine_file_extension(&cloned_image_url.clone(), &client, FileType::Image)
-        })
-        .await
-        .unwrap();
+    pub async fn download_podcast_image(
+        podcast_path: &str,
+        image_url: String,
+        podcast_id: &str,
+    ) -> Result<(), CustomError> {
+        let image_url_cloned = image_url.clone();
+        let mut image_suffix = DownloadService::handle_suffix_response_async(
+            spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                determine_file_extension(&image_url_cloned, &client, FileType::Image)
+            })
+            .await
+            .unwrap(),
+            &image_url,
+        )
+        .await?;
 
-        let image_response = get_http_client().get(image_url).send().await.unwrap();
         let file_path =
-            PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix);
+            PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix.0);
         let mut image_out = std::fs::File::create(file_path.0.clone()).unwrap();
-        let bytes = image_response.bytes().await.unwrap();
-        image_out.write_all(&bytes).unwrap();
-        PodcastEpisode::update_podcast_image(podcast_id, &file_path.1).unwrap();
+        image_out.write_all(image_suffix.1.as_mut_slice()).unwrap();
+        PodcastEpisode::update_podcast_image(podcast_id, &file_path.1)?;
+        Ok(())
     }
 
     pub fn cleanup_old_episode(episode: &PodcastEpisode) -> Result<(), CustomError> {

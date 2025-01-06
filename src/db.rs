@@ -1,7 +1,9 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::models::episode::Episode;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
 use crate::models::podcast_dto::PodcastDto;
@@ -12,8 +14,6 @@ use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,18 +41,15 @@ impl TimelineItem {
         use crate::adapters::persistence::dbconfig::schema::episodes::guid as eguid;
         use crate::adapters::persistence::dbconfig::schema::episodes::timestamp as phistory_date;
         use crate::adapters::persistence::dbconfig::schema::episodes::username as phi_username;
+        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::episode_id as fpe_fav;
+        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::favorite as idpe_fav_liked;
+        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::username as idpe_fav;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::*;
-        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::episode_id
-        as fpe_fav;
-        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::username
-        as idpe_fav;
-        use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::favorite
-        as idpe_fav_liked;
         use crate::adapters::persistence::dbconfig::schema::favorites::podcast_id as f_podcast_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::username as f_username;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::guid as pguid;
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::id as e_p_id;
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::podcast_id as e_podcast_id;
 
         let username_to_search = &user.username;
 
@@ -67,7 +64,10 @@ impl TimelineItem {
 
         let part_query = podcast_episodes
             .inner_join(podcasts.on(e_podcast_id.eq(pid)))
-            .left_join(favorite_podcast_episodes.on(e_p_id.eq(fpe_fav).and(idpe_fav.eq(&username_to_search))))
+            .left_join(
+                favorite_podcast_episodes
+                    .on(e_p_id.eq(fpe_fav).and(idpe_fav.eq(&username_to_search))),
+            )
             .left_join(ph1.on(ph1.field(eguid).eq(pguid.nullable())))
             .filter(
                 ph1.field(phistory_date)
@@ -114,22 +114,25 @@ impl TimelineItem {
             .get_result::<i64>(&mut get_connection())
             .map_err(map_db_error)?;
         let result = query
-            .load::<(PodcastEpisode, Podcast,
-                     Option<FavoritePodcastEpisode>,
-                     Option<Episode>,
-                     Option<Favorite>)>(
-                &mut get_connection(),
-            )
+            .load::<(
+                PodcastEpisode,
+                Podcast,
+                Option<FavoritePodcastEpisode>,
+                Option<Episode>,
+                Option<Favorite>,
+            )>(&mut get_connection())
             .map_err(map_db_error)?
             .into_iter()
-            .map(|(podcast_episode,podcast, fav_episode,  history, favorite)| {
-                (
-                    PodcastEpisodeDto::from((podcast_episode, Some(user.clone()), fav_episode)),
-                    PodcastDto::from(podcast),
-                    history,
-                    favorite,
-                )
-            })
+            .map(
+                |(podcast_episode, podcast, fav_episode, history, favorite)| {
+                    (
+                        PodcastEpisodeDto::from((podcast_episode, Some(user.clone()), fav_episode)),
+                        PodcastDto::from(podcast),
+                        history,
+                        favorite,
+                    )
+                },
+            )
             .collect();
 
         Ok(TimelineItem {

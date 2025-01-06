@@ -14,11 +14,11 @@ use utoipa::ToSchema;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::server::ChatServerHandle;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -59,9 +59,8 @@ pub async fn find_all_podcast_episodes_of_podcast(
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast_inner| {
-            let mapped_podcast_episode: PodcastEpisodeDto = (podcast_inner.0, Some(user.clone()),
-                                                             podcast_inner.2)
-                .into();
+            let mapped_podcast_episode: PodcastEpisodeDto =
+                (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast_inner.1,
@@ -104,7 +103,7 @@ pub struct TimelineQueryParams {
     pub favored_only: bool,
     pub last_timestamp: Option<String>,
     pub not_listened: bool,
-    pub favored_episodes: bool
+    pub favored_episodes: bool,
 }
 
 #[utoipa::path(
@@ -141,7 +140,6 @@ pub async fn get_timeline(
     }))
 }
 
-
 #[derive(Deserialize, ToSchema)]
 pub struct FavoritePut {
     pub favored: bool,
@@ -157,16 +155,17 @@ pub struct FavoritePut {
     tag = "podcast_episodes"
 )]
 #[put("/podcast/{id}/episodes/favor")]
-pub async fn like_podcast_episode(id: web::Path<i32>,
-                                     requester: web::ReqData<User>,
-                                  fav: Json<FavoritePut>) -> Result<HttpResponse, CustomError> {
+pub async fn like_podcast_episode(
+    id: web::Path<i32>,
+    requester: web::ReqData<User>,
+    fav: Json<FavoritePut>,
+) -> Result<HttpResponse, CustomError> {
     let user = requester.into_inner();
     println!("User id is {}, Episode id is {}", user.id, id.clone());
     FavoritePodcastEpisode::like_podcast_episode(id.into_inner(), &user, fav.favored)?;
 
     Ok(HttpResponse::Ok().body(""))
 }
-
 
 /**
  * id is the episode id (uuid)
@@ -190,7 +189,8 @@ pub async fn download_podcast_episodes_of_podcast(
         let res = PodcastEpisode::get_podcast_episode_by_id(&id.into_inner()).unwrap();
         if let Some(podcast_episode) = res {
             let podcast_found = Podcast::get_podcast(podcast_episode.podcast_id).unwrap();
-            PodcastEpisodeService::perform_download(&podcast_episode.clone(), &podcast_found).unwrap();
+            PodcastEpisodeService::perform_download(&podcast_episode.clone(), &podcast_found)
+                .unwrap();
             PodcastEpisode::update_deleted(&podcast_episode.clone().episode_id, false).unwrap();
         }
     });

@@ -6,94 +6,102 @@ use std::fs::File;
 use reqwest::blocking::ClientBuilder;
 
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::constants::inner_constants::{
-    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, PODCAST_FILENAME, PODCAST_IMAGENAME,
-};
-use crate::get_default_image;
+use crate::constants::inner_constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use crate::utils::error::CustomError;
-use crate::utils::file_extension_determination::{determine_file_extension, FileType};
+use crate::utils::error::{map_io_error, map_reqwest_error, CustomError};
+use crate::utils::file_extension_determination::{
+    determine_file_extension, DetermineFileExtensionReturn, FileType,
+};
+use crate::utils::http_client::get_async_sync_client;
+use crate::utils::reqwest_client::get_sync_client;
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike, Version};
-use reqwest::header::{HeaderMap, HeaderValue};
 use std::io;
 use std::io::Read;
 
 pub struct DownloadService {}
 
 impl DownloadService {
+    pub fn handle_suffix_response(
+        dt: DetermineFileExtensionReturn,
+        podcast_episode_url: &str,
+    ) -> Result<(String, Vec<u8>), CustomError> {
+        match dt {
+            DetermineFileExtensionReturn::FileExtension(suffix, bytes) => Ok((suffix, bytes)),
+            DetermineFileExtensionReturn::String(suffix) => {
+                let resp = get_sync_client()
+                    .build()
+                    .map_err(map_reqwest_error)?
+                    .get(podcast_episode_url)
+                    .send()
+                    .map_err(map_reqwest_error)?
+                    .bytes()
+                    .map_err(map_reqwest_error)?
+                    .as_ref()
+                    .to_vec();
+                Ok((suffix, resp))
+            }
+        }
+    }
+
+    pub async fn handle_suffix_response_async(
+        dt: DetermineFileExtensionReturn,
+        podcast_episode_url: &str,
+    ) -> Result<(String, Vec<u8>), CustomError> {
+        match dt {
+            DetermineFileExtensionReturn::FileExtension(suffix, bytes) => Ok((suffix, bytes)),
+            DetermineFileExtensionReturn::String(suffix) => {
+                let resp = get_async_sync_client()
+                    .build()
+                    .map_err(map_reqwest_error)?
+                    .get(podcast_episode_url)
+                    .send()
+                    .await
+                    .map_err(map_reqwest_error)?
+                    .bytes()
+                    .await
+                    .map_err(map_reqwest_error)?
+                    .as_ref()
+                    .to_vec();
+                Ok((suffix, resp))
+            }
+        }
+    }
+
     pub fn download_podcast_episode(
         podcast_episode: PodcastEpisode,
         podcast: &Podcast,
     ) -> Result<(), CustomError> {
         let client = ClientBuilder::new().build().unwrap();
         let conn = &mut get_connection();
-        let suffix = determine_file_extension(&podcast_episode.url, &client, FileType::Audio);
+        let podcast_data = Self::handle_suffix_response(
+            determine_file_extension(&podcast_episode.url, &client, FileType::Audio),
+            &podcast_episode.url,
+        )?;
         let settings_in_db = Setting::get_settings()?.unwrap();
-        let image_suffix =
-            determine_file_extension(&podcast_episode.image_url, &client, FileType::Image);
-
-        let mut header_map = HeaderMap::new();
-        header_map.insert(
-            "User-Agent",
-            HeaderValue::from_str(COMMON_USER_AGENT).unwrap(),
-        );
-        add_basic_auth_headers_conditionally(podcast_episode.url.clone(), &mut header_map);
-        let mut resp = client
-            .get(podcast_episode.url.clone())
-            .headers(header_map.clone())
-            .send()
-            .unwrap();
-
-        let mut image_response;
-        match podcast_episode.image_url == DEFAULT_IMAGE_URL {
-            true => {
-                image_response = client
-                    .get(get_default_image())
-                    .headers(header_map)
-                    .send()
-                    .unwrap();
-            }
-            false => {
-                let err = client
-                    .get(podcast_episode.image_url.clone())
-                    .headers(header_map.clone())
-                    .send();
-                match err {
-                    Ok(response) => {
-                        image_response = response;
-                    }
-                    Err(e) => {
-                        log::error!("Error downloading image: {}", e);
-                        image_response = client
-                            .get(get_default_image())
-                            .headers(header_map)
-                            .send()
-                            .unwrap();
-                    }
-                }
-            }
-        }
+        let image_data = Self::handle_suffix_response(
+            determine_file_extension(&podcast_episode.image_url, &client, FileType::Image),
+            &podcast_episode.image_url,
+        )?;
 
         let paths = match settings_in_db.use_existing_filename {
             true => FilenameBuilder::default()
                 .with_podcast(podcast.clone())
-                .with_suffix(&suffix)
+                .with_suffix(&podcast_data.0)
                 .with_settings(settings_in_db)
                 .with_episode(podcast_episode.clone())?
                 .with_filename(PODCAST_FILENAME)
                 .with_image_filename(PODCAST_IMAGENAME)
-                .with_image_suffix(&image_suffix)
+                .with_image_suffix(&image_data.0)
                 .with_raw_directory()?
                 .build(conn)?,
             false => FilenameBuilder::default()
-                .with_suffix(&suffix)
+                .with_suffix(&podcast_data.0)
                 .with_settings(settings_in_db)
-                .with_image_suffix(&image_suffix)
+                .with_image_suffix(&image_data.0)
                 .with_episode(podcast_episode.clone())?
                 .with_podcast_directory(&podcast.directory_name)
                 .with_podcast(podcast.clone())
@@ -102,16 +110,20 @@ impl DownloadService {
                 .build(conn)?,
         };
 
-        let mut podcast_out = File::create(&paths.filename).unwrap();
-        let mut image_out = File::create(&paths.image_filename).unwrap();
+        let mut podcast_out = File::create(&paths.filename)
+            .map_err(|s| map_io_error(s, Some(paths.filename.clone())))?;
+        let mut image_out = File::create(&paths.image_filename)
+            .map_err(|s| map_io_error(s, Some(paths.filename.clone())))?;
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
-            let mut image_podcast = std::fs::File::create(&paths.image_filename).unwrap();
-            io::copy(&mut image_response, &mut image_podcast).expect("failed to copy content");
+            let mut image_podcast = File::create(&paths.image_filename).unwrap();
+            io::copy::<&[u8], File>(&mut image_data.1.as_ref(), &mut image_podcast)
+                .map_err(|s| map_io_error(s, Some(paths.image_filename.to_string())))?;
         }
 
-        io::copy(&mut resp, &mut podcast_out).expect("failed to copy content");
+        io::copy::<&[u8], File>(&mut podcast_data.1.as_ref(), &mut podcast_out)
+            .map_err(|s| map_io_error(s, Some(paths.filename.to_string())))?;
 
         PodcastEpisode::update_local_paths(
             &podcast_episode.episode_id,
@@ -121,7 +133,8 @@ impl DownloadService {
             &paths.filename,
             conn,
         )?;
-        io::copy(&mut image_response, &mut image_out).expect("failed to copy content");
+        io::copy::<&[u8], std::fs::File>(&mut image_data.1.as_ref(), &mut image_out)
+            .map_err(|s| map_io_error(s, Some(paths.image_filename.to_string())))?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Err(err) = result {
             log::error!("Error handling metadata insertion: {:?}", err);
@@ -137,26 +150,18 @@ impl DownloadService {
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
 
         match detected_file {
-            FileFormat::Mpeg12AudioLayer3 => {
+            FileFormat::Mpeg12AudioLayer3
+            | FileFormat::Mpeg12AudioLayer2
+            | FileFormat::AppleItunesAudio
+            | FileFormat::Id3v2
+            | FileFormat::WaveformAudio => {
                 let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
                     log::error!("Error updating metadata: {:?}", err);
                 }
             }
-            FileFormat::AppleItunesAudio => {
-                let result_of_itunes = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
-                if let Some(err) = result_of_itunes.err() {
-                    log::error!("Error updating metadata: {:?}", err);
-                }
-            }
-            FileFormat::Id3v2 => {
-                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
-                if let Some(err) = result_of_update.err() {
-                    log::error!("Error updating metadata: {:?}", err);
-                }
-            }
-            FileFormat::WaveformAudio => {
-                let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
+            FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio => {
+                let result_of_update = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
                     log::error!("Error updating metadata: {:?}", err);
                 }

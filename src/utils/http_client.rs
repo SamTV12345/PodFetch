@@ -1,10 +1,9 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::constants::inner_constants::{COMMON_USER_AGENT, ENVIRONMENT_SERVICE};
+use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{Client, Proxy};
-use std::sync::{LazyLock, OnceLock};
+use std::sync::OnceLock;
 
 static HTTP_CLIENT: OnceLock<Client> = OnceLock::new();
-
-pub static HTTP_CLIENT_WITH_HEADERS: LazyLock<Client> = LazyLock::new(Client::new);
 
 pub fn get_http_client() -> Client {
     HTTP_CLIENT
@@ -14,6 +13,11 @@ pub fn get_http_client() -> Client {
 
 pub fn get_async_sync_client() -> reqwest::ClientBuilder {
     let mut res = reqwest::ClientBuilder::new();
+    let mut header_map = HeaderMap::new();
+    header_map.insert(
+        "User-Agent",
+        HeaderValue::from_str(COMMON_USER_AGENT).unwrap(),
+    );
 
     if let Some(unwrapped_proxy) = ENVIRONMENT_SERVICE.proxy_url.clone() {
         let proxy = Proxy::all(unwrapped_proxy);
@@ -27,5 +31,5 @@ pub fn get_async_sync_client() -> reqwest::ClientBuilder {
         }
     }
 
-    res
+    res.default_headers(header_map)
 }

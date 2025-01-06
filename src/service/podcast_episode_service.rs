@@ -9,7 +9,9 @@ use std::io::Error;
 use std::sync::{Arc, Mutex};
 
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 use crate::controllers::server::ChatServerHandle;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::notification::Notification;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::user::User;
@@ -27,11 +29,8 @@ use regex::Regex;
 use reqwest::header::{HeaderMap, ACCEPT};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 
 pub struct PodcastEpisodeService;
-
 
 impl PodcastEpisodeService {
     pub fn download_podcast_episode_if_not_locally_available(
@@ -441,9 +440,9 @@ impl PodcastEpisodeService {
 
             log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
-                match FavoritePodcastEpisode::is_podcast_episode_liked_by_someone
-                    (old_podcast_episode
-                    .id) {
+                match FavoritePodcastEpisode::is_podcast_episode_liked_by_someone(
+                    old_podcast_episode.id,
+                ) {
                     Ok(true) => {
                         continue;
                     }
@@ -452,7 +451,6 @@ impl PodcastEpisodeService {
                         log::error!("Error checking if podcast episode is liked.{}", e);
                     }
                 }
-
 
                 let res = FileService::cleanup_old_episode(&old_podcast_episode);
 
