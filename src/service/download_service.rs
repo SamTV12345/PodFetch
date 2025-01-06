@@ -15,6 +15,7 @@ use crate::utils::error::{map_io_error, map_reqwest_error, CustomError};
 use crate::utils::file_extension_determination::{
     determine_file_extension, DetermineFileExtensionReturn, FileType,
 };
+use crate::utils::http_client::get_async_sync_client;
 use crate::utils::reqwest_client::get_sync_client;
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike, Version};
@@ -38,6 +39,30 @@ impl DownloadService {
                     .send()
                     .map_err(map_reqwest_error)?
                     .bytes()
+                    .map_err(map_reqwest_error)?
+                    .as_ref()
+                    .to_vec();
+                Ok((suffix, resp))
+            }
+        }
+    }
+
+    pub async fn handle_suffix_response_async(
+        dt: DetermineFileExtensionReturn,
+        podcast_episode_url: &str,
+    ) -> Result<(String, Vec<u8>), CustomError> {
+        match dt {
+            DetermineFileExtensionReturn::FileExtension(suffix, bytes) => Ok((suffix, bytes)),
+            DetermineFileExtensionReturn::String(suffix) => {
+                let resp = get_async_sync_client()
+                    .build()
+                    .map_err(map_reqwest_error)?
+                    .get(podcast_episode_url)
+                    .send()
+                    .await
+                    .map_err(map_reqwest_error)?
+                    .bytes()
+                    .await
                     .map_err(map_reqwest_error)?
                     .as_ref()
                     .to_vec();
@@ -85,17 +110,19 @@ impl DownloadService {
                 .build(conn)?,
         };
 
-        let mut podcast_out = File::create(&paths.filename).unwrap();
-        let mut image_out = File::create(&paths.image_filename).unwrap();
+        let mut podcast_out = File::create(&paths.filename)
+            .map_err(|s| map_io_error(s, Some(paths.filename.clone())))?;
+        let mut image_out = File::create(&paths.image_filename)
+            .map_err(|s| map_io_error(s, Some(paths.filename.clone())))?;
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
             let mut image_podcast = File::create(&paths.image_filename).unwrap();
-            io::copy::<&[u8], std::fs::File>(&mut image_data.1.as_ref(), &mut image_podcast)
+            io::copy::<&[u8], File>(&mut image_data.1.as_ref(), &mut image_podcast)
                 .map_err(|s| map_io_error(s, Some(paths.image_filename.to_string())))?;
         }
 
-        io::copy::<&[u8], std::fs::File>(&mut podcast_data.1.as_ref(), &mut podcast_out)
+        io::copy::<&[u8], File>(&mut podcast_data.1.as_ref(), &mut podcast_out)
             .map_err(|s| map_io_error(s, Some(paths.filename.to_string())))?;
 
         PodcastEpisode::update_local_paths(
