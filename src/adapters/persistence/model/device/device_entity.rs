@@ -1,10 +1,6 @@
 use crate::adapters::persistence::dbconfig::schema::devices;
 use crate::domain::models::device::model::Device;
-use crate::gpodder::device::dto::device_post::DevicePost;
-use crate::{execute_with_conn, DBType as DbConnection};
-use diesel::ExpressionMethods;
-use diesel::QueryDsl;
-use diesel::{Insertable, Queryable, QueryableByName, RunQueryDsl};
+use diesel::{Insertable, Queryable, QueryableByName};
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
@@ -39,42 +35,5 @@ impl From<DeviceEntity> for Device {
             deviceid: val.deviceid,
             username: val.username,
         }
-    }
-}
-
-impl DeviceEntity {
-    pub fn new(device_post: DevicePost, device_id: String, username: String) -> DeviceEntity {
-        DeviceEntity {
-            id: None,
-            deviceid: device_id,
-            kind: device_post.kind,
-            name: device_post.caption,
-            username,
-        }
-    }
-
-    #[allow(clippy::redundant_closure_call)]
-    pub fn save(&self) -> Result<DeviceEntity, diesel::result::Error> {
-        use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
-
-        execute_with_conn!(|conn| diesel::insert_into(devices).values(self).get_result(conn));
-    }
-
-    pub fn get_devices_of_user(
-        conn: &mut DbConnection,
-        username_to_insert: String,
-    ) -> Result<Vec<DeviceEntity>, diesel::result::Error> {
-        use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
-        devices
-            .filter(username.eq(username_to_insert))
-            .load::<DeviceEntity>(conn)
-    }
-
-    pub fn delete_by_username(
-        username1: &str,
-        conn: &mut DbConnection,
-    ) -> Result<usize, diesel::result::Error> {
-        use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
-        diesel::delete(devices.filter(username.eq(username1))).execute(conn)
     }
 }

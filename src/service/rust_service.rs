@@ -13,7 +13,7 @@ use crate::models::tag::Tag;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
-use crate::utils::error::{map_reqwest_error, CustomError};
+use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::http_client::get_http_client;
 use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -69,7 +69,7 @@ impl PodcastService {
 
         if status.is_client_error() || status.is_server_error() {
             log::error!("Error searching for podcast: {}", possible_json);
-            Err(CustomError::BadRequest(possible_json))
+            Err(CustomErrorInner::BadRequest(possible_json).into())
         } else {
             let res_of_search = serde_json::from_str(&possible_json);
 
@@ -123,10 +123,10 @@ impl PodcastService {
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(&podcast_insert.feed_url.clone());
         if opt_podcast.is_some() {
-            return Err(CustomError::Conflict(format!(
+            return Err(CustomErrorInner::Conflict(format!(
                 "Podcast with feed url {} already exists",
                 podcast_insert.feed_url
-            )));
+            )).into());
         }
 
         let podcast_directory_created =
@@ -203,7 +203,7 @@ impl PodcastService {
             }
             None => {
                 log::error!("Error getting settings");
-                Err(CustomError::Unknown)
+                Err(CustomErrorInner::Unknown.into())
             }
         }
     }

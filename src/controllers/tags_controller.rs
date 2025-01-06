@@ -3,7 +3,7 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use actix_web::web::Json;
 use actix_web::{delete, get, post, put, web, HttpResponse};
 use utoipa::ToSchema;
@@ -73,7 +73,7 @@ pub async fn delete_tag(
             Tag::delete_tag(&tag.id)?;
             Ok(HttpResponse::Ok().finish())
         }
-        None => Err(CustomError::NotFound),
+        None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
@@ -101,7 +101,7 @@ pub async fn update_tag(
             )?;
             Ok(HttpResponse::Ok().json(updated_tag))
         }
-        None => Err(CustomError::NotFound),
+        None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
@@ -123,7 +123,7 @@ pub async fn add_podcast_to_tag(
             let podcast = TagsPodcast::add_podcast_to_tag(tag.id.clone(), podcast_id)?;
             Ok(HttpResponse::Ok().json(podcast))
         }
-        None => Err(CustomError::NotFound),
+        None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
@@ -146,6 +146,6 @@ pub async fn delete_podcast_from_tag(
             TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(podcast_id, &tag.id)?;
             Ok(HttpResponse::Ok().finish())
         }
-        None => Err(CustomError::NotFound),
+        None => Err(CustomErrorInner::NotFound.into()),
     }
 }

@@ -5,7 +5,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use actix_web::web::{Data, Json, Query};
 use actix_web::{delete, get, post, put};
 use actix_web::{web, HttpResponse};
@@ -83,7 +83,7 @@ pub async fn get_available_podcasts_not_in_webview(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let found_episodes = Episode::find_episodes_not_in_webview()?;
 
@@ -182,7 +182,7 @@ pub async fn download_podcast_episodes_of_podcast(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     thread::spawn(move || {
@@ -215,7 +215,7 @@ pub async fn delete_podcast_episode_locally(
     lobby: Data<ChatServerHandle>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let delted_podcast_episode =
@@ -274,6 +274,6 @@ pub async fn retrieve_episode_sample_format(
 
     match result {
         Ok(v) => Ok(HttpResponse::Ok().json(v)),
-        Err(e) => Err(CustomError::BadRequest(e.to_string())),
+        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
     }
 }

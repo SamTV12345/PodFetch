@@ -19,7 +19,7 @@ use crate::mutex::LockResultExt;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
 use actix_web::web;
@@ -242,10 +242,10 @@ impl PodcastEpisodeService {
                     returned_data_from_podcast_insert.content,
                     e
                 );
-                Err(CustomError::BadRequest(format!(
+                Err(CustomErrorInner::BadRequest(format!(
                     "Error parsing podcast {} with cause {:?}",
                     podcast.name, e
-                )))
+                )).into())
             }
         }
     }
@@ -518,7 +518,7 @@ impl PodcastEpisodeService {
     ) -> Result<PodcastEpisode, CustomError> {
         let episode = PodcastEpisode::get_podcast_episode_by_id(episode_id)?;
         if episode.is_none() {
-            return Err(CustomError::NotFound);
+            return Err(CustomErrorInner::NotFound.into());
         }
 
         match episode {
@@ -528,7 +528,7 @@ impl PodcastEpisodeService {
                 PodcastEpisode::update_deleted(episode_id, true)?;
                 Ok(episode)
             }
-            None => Err(CustomError::NotFound),
+            None => Err(CustomErrorInner::NotFound.into()),
         }
     }
 
