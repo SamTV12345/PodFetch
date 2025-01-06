@@ -4,7 +4,7 @@ use actix_web::{get, post};
 
 use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::session::Session;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp;
 use chrono::DateTime;
 
@@ -38,7 +38,7 @@ pub async fn get_episode_actions(
         Some(flag) => {
             let username = username.clone();
             if flag.username != username.clone() {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
 
             let since_date = DateTime::from_timestamp(since.since, 0).map(|v| v.naive_utc());
@@ -62,7 +62,7 @@ pub async fn get_episode_actions(
                 timestamp: get_current_timestamp(),
             }))
         }
-        None => Err(CustomError::Forbidden),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 

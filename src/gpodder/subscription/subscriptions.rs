@@ -1,6 +1,6 @@
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp;
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse};
@@ -33,7 +33,7 @@ pub async fn get_subscriptions(
             let username = paths.clone().0;
             let deviceid = paths.clone().1;
             if flag.username != username.clone() {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
 
             let res = SubscriptionChangesToClient::get_device_subscriptions(
@@ -48,7 +48,7 @@ pub async fn get_subscriptions(
                 Err(_) => Ok(HttpResponse::InternalServerError().finish()),
             }
         }
-        None => Err(CustomError::Forbidden),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
@@ -63,7 +63,7 @@ pub async fn upload_subscription_changes(
             let username = paths.clone().0;
             let deviceid = paths.clone().1;
             if flag.username != username.clone() {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
             SubscriptionChangesToClient::update_subscriptions(&deviceid, &username, upload_request)
                 .await
@@ -74,6 +74,6 @@ pub async fn upload_subscription_changes(
                 timestamp: get_current_timestamp(),
             }))
         }
-        None => Err(CustomError::Forbidden),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
 }

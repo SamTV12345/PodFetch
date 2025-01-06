@@ -4,7 +4,7 @@ use crate::constants::inner_constants::{
     Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME,
 };
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use crate::DBType as DbConnection;
 use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
@@ -87,7 +87,7 @@ impl User {
         if let Some(user) = opt_user {
             Ok(user)
         } else {
-            Err(CustomError::NotFound)
+            Err(CustomErrorInner::NotFound.into())
         }
     }
 
@@ -95,7 +95,7 @@ impl User {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         if let Some(res) = ENVIRONMENT_SERVICE.username.clone() {
             if res == self.username {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
         }
 
@@ -223,7 +223,7 @@ impl User {
             if found_user.role.ne(&Role::Admin.to_string())
                 && found_user.role.ne(&Role::Uploader.to_string())
             {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
         }
         Ok(None)
@@ -234,11 +234,11 @@ impl User {
             let found_user = User::find_by_username(username_unwrapped)?;
 
             if found_user.role != Role::Admin.to_string() {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
             return Ok(());
         }
-        Err(CustomError::Forbidden)
+        Err(CustomErrorInner::Forbidden.into())
     }
 
     pub fn delete_by_username(
@@ -272,7 +272,7 @@ impl User {
             .optional()
             .map_err(map_db_error)?;
         if user.is_none() {
-            return Err(CustomError::NotFound);
+            return Err(CustomErrorInner::NotFound.into());
         }
         Ok(user.unwrap())
     }

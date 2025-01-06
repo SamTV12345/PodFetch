@@ -2,7 +2,7 @@ use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::user::User;
 
 use crate::service::user_management_service::UserManagementService;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use actix_web::web::{Json, Path};
 use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 
@@ -91,7 +91,7 @@ pub async fn get_user(
     }
 
     if !user.is_admin() || user.username != username {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let user = User::find_by_username(&username.clone())?;
@@ -112,7 +112,7 @@ pub async fn update_role(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let mut user_to_update = User::find_by_username(&username)?;
 
@@ -134,15 +134,15 @@ pub async fn update_user(
     let username = username.into_inner();
     let old_username = &user.clone().username;
     if old_username != &username {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let mut user = User::find_by_username(&username)?;
 
     if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
         if admin_username == user.username {
-            return Err(CustomError::Conflict(
+            return Err(CustomErrorInner::Conflict(
                 "Cannot update admin user".to_string(),
-            ));
+            ).into());
         }
     }
 
@@ -150,15 +150,15 @@ pub async fn update_user(
         // Check if this username is already taken
         let new_username_res = User::find_by_username(&user_update.username);
         if new_username_res.is_ok() {
-            return Err(CustomError::Conflict("Username already taken".to_string()));
+            return Err(CustomErrorInner::Conflict("Username already taken".to_string()).into());
         }
         user.username = user_update.username.to_string();
     }
     if let Some(password) = user_update.password.clone() {
         if password.trim().len() < 8 {
-            return Err(CustomError::BadRequest(
+            return Err(CustomErrorInner::BadRequest(
                 "Password must be at least 8 characters long".to_string(),
-            ));
+            ).into());
         }
         user.password = Some(sha256::digest(password.trim()));
     }
@@ -205,7 +205,7 @@ tag="info"
 #[get("/invites")]
 pub async fn get_invites(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let invites = UserManagementService::get_invites()?;
@@ -239,7 +239,7 @@ pub async fn delete_user(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let user_to_delete = User::find_by_username(&username)?;

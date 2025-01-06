@@ -4,7 +4,7 @@ use crate::models::file_path::FilenameBuilderReturn;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use diesel::{
     AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl,
 };
@@ -93,7 +93,7 @@ impl PodcastSetting {
             PodcastEpisode::get_episodes_by_podcast_id(setting_to_insert.podcast_id)?;
         let podcast = Podcast::get_podcast(setting_to_insert.podcast_id);
         if podcast.is_err() {
-            return Err(CustomError::Conflict("Podcast not found".to_string()));
+            return Err(CustomErrorInner::Conflict("Podcast not found".to_string()).into());
         }
         let podcast = podcast?;
         for e in available_episodes {

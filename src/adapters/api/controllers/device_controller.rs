@@ -5,7 +5,7 @@ use crate::application::usecases::devices::create_use_case::CreateUseCase;
 use crate::application::usecases::devices::query_use_case::QueryUseCase;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use actix_web::{get, post};
 use actix_web::{web, HttpResponse};
 
@@ -20,7 +20,7 @@ pub async fn post_device(
             let username = &query.0;
             let deviceid = &query.1;
             if &flag.username != username {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
 
             let device_create = DeviceCreate {
@@ -35,7 +35,7 @@ pub async fn post_device(
 
             Ok(HttpResponse::Ok().json(result))
         }
-        None => Err(CustomError::Forbidden),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
@@ -48,7 +48,7 @@ pub async fn get_devices_of_user(
         Some(flag) => {
             let user_query = query.into_inner();
             if flag.username != user_query {
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
             let devices = DeviceService::query_by_username(&user_query)?;
 
@@ -58,6 +58,6 @@ pub async fn get_devices_of_user(
                 .collect::<Vec<DeviceResponse>>();
             Ok(HttpResponse::Ok().json(dtos))
         }
-        None => Err(CustomError::Forbidden),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
 }

@@ -4,7 +4,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use sha256::digest;
 
 pub struct UserManagementService {}
@@ -44,9 +44,9 @@ impl UserManagementService {
                 match invite {
                     Some(invite) => {
                         if invite.accepted_at.is_some() {
-                            return Err(CustomError::Conflict(
+                            return Err(CustomErrorInner::Conflict(
                                 "Invite already accepted".to_string(),
-                            ));
+                            ).into());
                         }
 
                         let mut actual_user = User::new(
@@ -71,19 +71,19 @@ impl UserManagementService {
                                         "The following error occured when inserting a user {}",
                                         e
                                     );
-                                    Err(CustomError::Unknown)
+                                    Err(CustomErrorInner::Unknown.into())
                                 }
                             }
                         } else {
-                            Err(CustomError::Conflict("Password is not valid".to_string()))
+                            Err(CustomErrorInner::Conflict("Password is not valid".to_string()).into())
                         }
                     }
-                    None => Err(CustomError::NotFound),
+                    None => Err(CustomErrorInner::NotFound.into()),
                 }
             }
             Err(e) => {
                 log::error!("The following error occured when finding an invite {}", e);
-                Err(CustomError::NotFound)
+                Err(CustomErrorInner::NotFound.into())
             }
         }
     }
@@ -100,7 +100,7 @@ impl UserManagementService {
             );
             return Ok(invite);
         }
-        Err(CustomError::Forbidden)
+        Err(CustomErrorInner::Forbidden.into())
     }
 
     pub fn delete_user(user: User) -> Result<usize, CustomError> {
@@ -114,14 +114,14 @@ impl UserManagementService {
                     Ok(_) => {}
                     Err(e) => {
                         log::error!("The following error occured when updating a user {}", e);
-                        return Err(CustomError::Unknown);
+                        return Err(CustomErrorInner::Unknown.into());
                     }
                 }
                 Ok(user)
             }
             Err(e) => {
                 log::error!("The following error occured when updating a user {}", e);
-                Err(CustomError::Unknown)
+                Err(CustomErrorInner::Unknown.into())
             }
         }
     }
@@ -132,7 +132,7 @@ impl UserManagementService {
             Some(invite) => {
                 Ok(ENVIRONMENT_SERVICE.server_url.to_string() + "ui/invite/" + &invite.id)
             }
-            None => Err(CustomError::NotFound),
+            None => Err(CustomErrorInner::NotFound.into()),
         }
     }
 
@@ -142,11 +142,12 @@ impl UserManagementService {
         match invite {
             Some(invite) => {
                 if invite.accepted_at.is_some() {
-                    return Err(CustomError::Conflict("Invite already accepted".to_string()));
+                    return Err(CustomErrorInner::Conflict("Invite already accepted".to_string())
+                                   .into());
                 }
                 Ok(invite)
             }
-            None => Err(CustomError::NotFound),
+            None => Err(CustomErrorInner::NotFound.into()),
         }
     }
 
@@ -155,14 +156,14 @@ impl UserManagementService {
             Ok(invites) => Ok(invites),
             Err(e) => {
                 log::error!("The following error occured when finding an invite {}", e);
-                Err(CustomError::NotFound)
+                Err(CustomErrorInner::NotFound.into())
             }
         }
     }
 
     pub fn get_users(requester: User) -> Result<Vec<UserWithoutPassword>, CustomError> {
         if !Self::may_onboard_user(requester) {
-            return Err(CustomError::Forbidden);
+            return Err(CustomErrorInner::Forbidden.into());
         }
 
         Ok(User::find_all_users(&mut get_connection()))
@@ -175,7 +176,7 @@ impl UserManagementService {
                 Invite::delete_invite(invite.id)?;
                 Ok(())
             }
-            None => Err(CustomError::NotFound),
+            None => Err(CustomErrorInner::NotFound.into()),
         }
     }
 }

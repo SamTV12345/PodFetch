@@ -10,7 +10,7 @@ use crate::models::misc_models::{
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
 use diesel::query_dsl::methods::DistinctDsl;
@@ -355,7 +355,7 @@ impl Episode {
             .map_err(map_db_error)?;
 
         if found_episode.clone().is_none() {
-            return Err(CustomError::NotFound);
+            return Err(CustomErrorInner::NotFound.into());
         }
         let found_episode = found_episode.unwrap();
 
@@ -366,7 +366,7 @@ impl Episode {
             .map_err(map_db_error)?;
 
         if podcast.is_none() {
-            return Err(CustomError::NotFound);
+            return Err(CustomErrorInner::NotFound.into());
         }
 
         use rand::Rng;

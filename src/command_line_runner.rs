@@ -11,7 +11,7 @@ use crate::models::subscription::Subscription;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp_str;
 use log::error;
 use rpassword::read_password;
@@ -112,7 +112,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 }
                 _ => {
                     println!("Unknown command");
-                    Err(CustomError::BadRequest("Unknown command".to_string()))
+                    Err(CustomErrorInner::BadRequest("Unknown command".to_string()).into())
                 }
             }
         }
@@ -148,7 +148,8 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         Some(arg) => arg,
                         None => {
                             error!("Command not found");
-                            return Err(CustomError::BadRequest("Command not found".to_string()));
+                            return Err(CustomErrorInner::BadRequest("Command not found".to_string
+                            ()).into());
                         }
                     };
 
@@ -166,7 +167,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         }
                         _ => {
                             error!("Command not found");
-                            Err(CustomError::BadRequest("Command not found".to_string()))
+                            Err(CustomErrorInner::BadRequest("Command not found".to_string()).into())
                         }
                     }
                 }

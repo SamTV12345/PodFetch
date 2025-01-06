@@ -16,7 +16,7 @@ use diesel::{
     delete, insert_into, BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl,
 };
 
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 #[derive(
     Queryable, Identifiable, QueryableByName, Selectable, Debug, PartialEq, Clone, Default,
 )]
@@ -101,7 +101,7 @@ impl Podcast {
 
         match found_podcast {
             Some(podcast) => Ok(podcast),
-            None => Err(CustomError::NotFound),
+            None => Err(CustomErrorInner::NotFound.into()),
         }
     }
 

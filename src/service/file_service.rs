@@ -15,7 +15,7 @@ use crate::models::settings::Setting;
 use crate::service::download_service::DownloadService;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
-use crate::utils::error::{map_io_error, CustomError};
+use crate::utils::error::{map_io_error, CustomError, CustomErrorInner};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
 use crate::utils::rss_feed_parser::RSSFeedParser;
@@ -238,7 +238,7 @@ pub fn perform_podcast_variable_replacement(
         Ok(res) => Ok(sanitizer.sanitize(res)),
         Err(err) => {
             log::error!("Error formatting podcast title: {}", err);
-            Err(CustomError::Conflict(err.to_string()))
+            Err(CustomErrorInner::Conflict(err.to_string()).into())
         }
     }
 }
@@ -318,7 +318,7 @@ pub fn perform_episode_variable_replacement(
         Ok(res) => Ok(res.to_string()),
         Err(err) => {
             log::error!("Error formatting episode title: {}", err);
-            Err(CustomError::Conflict(err.to_string()))
+            Err(CustomErrorInner::Conflict(err.to_string()).into())
         }
     }
 }

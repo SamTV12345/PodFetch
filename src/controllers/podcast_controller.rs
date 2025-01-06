@@ -173,7 +173,7 @@ pub async fn find_podcast(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let (type_of, podcast) = podcast_col.into_inner();
@@ -193,7 +193,7 @@ pub async fn find_podcast(
 
             Ok(HttpResponse::Ok().json(PodcastService::find_podcast_on_podindex(&podcast).await?))
         }
-        Err(_) => Err(CustomError::BadRequest("Invalid search type".to_string())),
+        Err(_) => Err(CustomErrorInner::BadRequest("Invalid search type".to_string()).into()),
     }
 }
 
@@ -211,7 +211,7 @@ pub async fn add_podcast(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let query: Vec<(&str, String)> = vec![
@@ -257,7 +257,7 @@ pub async fn add_podcast_by_feed(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let mut header_map = HeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
@@ -311,7 +311,7 @@ pub async fn import_podcasts_from_opml(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let document = OPML::from_str(&opml.content).unwrap();
 
@@ -343,13 +343,13 @@ pub async fn add_podcast_from_podindex(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-        return Err(CustomError::BadRequest(
+        return Err(CustomErrorInner::BadRequest(
             "Podindex is not configured".to_string(),
-        ));
+        ).into());
     }
 
     spawn_blocking(move || match start_download_podindex(id.track_id, lobby) {
@@ -392,7 +392,7 @@ pub async fn refresh_all_podcasts(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let podcasts = Podcast::get_all_podcasts()?;
@@ -418,7 +418,7 @@ pub async fn download_podcast(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
@@ -490,7 +490,7 @@ pub async fn update_active_podcast(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
@@ -572,7 +572,7 @@ use crate::models::settings::Setting;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 
-use crate::utils::error::{map_reqwest_error, CustomError};
+use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
 
@@ -595,7 +595,7 @@ pub async fn delete_podcast(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let podcast = Podcast::get_podcast(*id).expect(
@@ -717,7 +717,7 @@ pub async fn update_podcast_settings(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let id_num = id.into_inner();
@@ -734,7 +734,7 @@ pub async fn get_podcast_settings(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let id_num = id.into_inner();
@@ -773,6 +773,6 @@ pub async fn retrieve_podcast_sample_format(
 
     match result {
         Ok(v) => Ok(HttpResponse::Ok().json(v)),
-        Err(e) => Err(CustomError::BadRequest(e.to_string())),
+        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
     }
 }

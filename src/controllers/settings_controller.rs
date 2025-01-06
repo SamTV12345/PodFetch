@@ -20,12 +20,12 @@ tag="podcast_episodes"
 #[get("/settings")]
 pub async fn get_settings(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let settings = Setting::get_settings()?;
     match settings {
         Some(settings) => Ok(HttpResponse::Ok().json(settings)),
-        None => Err(CustomError::NotFound),
+        None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
@@ -42,7 +42,7 @@ pub async fn update_settings(
     requester: ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let settings = SettingsService::update_settings(settings.into_inner())?;
     Ok(HttpResponse::Ok().json(settings))
@@ -57,7 +57,7 @@ tag="settings"
 #[put("/settings/runcleanup")]
 pub async fn run_cleanup(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
     let settings = SettingsService::get_settings()?;
     match settings {
@@ -67,7 +67,7 @@ pub async fn run_cleanup(requester: web::ReqData<User>) -> Result<HttpResponse, 
         }
         None => {
             log::error!("Error getting settings");
-            Err(CustomError::Unknown)
+            Err(CustomErrorInner::Unknown.into())
         }
     }
 }
@@ -106,7 +106,7 @@ pub async fn get_opml(
     ))
     .map_err(|e| {
         log::error!("Error adding podcasts to opml: {}", e);
-        CustomError::Unknown
+        CustomErrorInner::Unknown
     })?;
 
     xml.set_root_element(opml);
@@ -183,7 +183,7 @@ pub async fn update_name(
     requester: web::ReqData<User>,
 ) -> Result<HttpResponse, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let settings = SettingsService::update_name(update_information.into_inner())?;
@@ -191,7 +191,7 @@ pub async fn update_name(
 }
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 
 #[derive(Deserialize, Clone, ToSchema)]

@@ -41,7 +41,7 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
     }))
 }
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::error::{map_io_extra_error, CustomError};
+use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -163,14 +163,14 @@ pub async fn login(auth: web::Json<LoginRequest>) -> Result<HttpResponse, Custom
 
     if db_user.password.is_none() {
         log::warn!("Login failed for user {}", auth.0.username);
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     if db_user.password.unwrap() == digested_password {
         return Ok(HttpResponse::Ok().json("Login successful"));
     }
     log::warn!("Login failed for user {}", auth.0.username);
-    Err(CustomError::Forbidden)
+    Err(CustomErrorInner::Forbidden.into())
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]

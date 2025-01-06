@@ -3,7 +3,7 @@ use crate::models::session::Session;
 use crate::models::user::User;
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use actix_web::post;
 use actix_web::{web, HttpRequest, HttpResponse};
 use awc::cookie::{Cookie, SameSite};
@@ -40,7 +40,7 @@ fn handle_proxy_auth(rq: HttpRequest, username: String) -> Result<HttpResponse, 
             // Block if auth and user is different
             if auth_val != username {
                 log::error!("Error: Username and auth header are different");
-                return Err(CustomError::Forbidden);
+                return Err(CustomErrorInner::Forbidden.into());
             }
 
             match User::find_by_username(auth_val) {
@@ -65,12 +65,12 @@ fn handle_proxy_auth(rq: HttpRequest, username: String) -> Result<HttpResponse, 
                         handle_proxy_auth(rq, username.clone())
                     } else {
                         log::error!("Error finding user by username: {}", e);
-                        Err(CustomError::Forbidden)
+                        Err(CustomErrorInner::Forbidden.into())
                     }
                 }
             }
         }
-        None => Err(CustomError::Forbidden),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
@@ -81,7 +81,7 @@ fn handle_gpodder_basic_auth(
     let opt_authorization = rq.headers().get("Authorization");
 
     if opt_authorization.is_none() {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     let authorization = opt_authorization.unwrap().to_str().unwrap();
@@ -89,16 +89,16 @@ fn handle_gpodder_basic_auth(
     let unwrapped_username = username.into_inner();
     let (username_basic, password) = AuthFilter::basic_auth_login(authorization)?;
     if username_basic != unwrapped_username {
-        return Err(CustomError::Forbidden);
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
     if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
         if admin_username == &unwrapped_username {
-            return Err(CustomError::Conflict(
+            return Err(CustomErrorInner::Conflict(
                 "The user you are trying to login is equal to the admin user. Please\
                  use another user to login."
                     .to_string(),
-            ));
+            ).into());
         }
     }
 
@@ -111,10 +111,10 @@ fn handle_gpodder_basic_auth(
                 let user_cookie = create_session_cookie(session);
                 Ok(HttpResponse::Ok().cookie(user_cookie).finish())
             } else {
-                Err(CustomError::Forbidden)
+                Err(CustomErrorInner::Forbidden.into())
             }
         }
-        None => Err(CustomError::Forbidden),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
