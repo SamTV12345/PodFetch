@@ -76,5 +76,5 @@ testcontainers-modules = { version = "0.11.4", features = ["postgres","blocking"
 ctor = "0.2.9"
 
 [profile.release]
-strip = true  # Automatically strip symbols from the binary.
+strip = false  # Automatically strip symbols from the binary.
 lto = "thin"
