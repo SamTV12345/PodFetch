@@ -24,7 +24,7 @@ impl Display for BacktraceError {
 
 impl From<CustomErrorInner> for BacktraceError {
     fn from(inner: CustomErrorInner) -> Self {
-        let backtrace = Box::new(Backtrace::capture());
+        let backtrace = Box::new(Backtrace::force_capture());
         Self { inner, backtrace }
     }
 }
@@ -59,7 +59,7 @@ pub struct DynBacktraceError {
 
 impl<E: Error + Send + Sync + 'static> From<E> for DynBacktraceError {
     fn from(inner: E) -> Self {
-        let backtrace = Box::new(Backtrace::capture());
+        let backtrace = Box::new(Backtrace::force_capture());
         Self {
             inner: Box::new(inner),
             backtrace,
