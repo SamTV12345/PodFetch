@@ -55,7 +55,7 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
     }, [minute])
 
     if (audioplayerRef === undefined || audioplayerRef.current === undefined || metadata === undefined) {
-        return <div>test</div>
+        return <div></div>
     }
 
     const endWrapperPosition = (e: React.MouseEvent<HTMLDivElement>) => {

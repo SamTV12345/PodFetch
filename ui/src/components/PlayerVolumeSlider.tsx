@@ -3,6 +3,8 @@ import * as Slider from '@radix-ui/react-slider'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { VolumeIcon } from '../icons/VolumeIcon'
+import { useKeyDown } from '../hooks/useKeyDown'
+import { VOLUME_STEP } from '../utils/Utilities';
 
 type PlayerVolumeSliderProps = {
     refItem: RefObject<HTMLAudioElement|null>,
@@ -12,6 +14,22 @@ type PlayerVolumeSliderProps = {
 export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ refItem, audioAmplifier }) => {
     const volume = useAudioPlayer(state => state.volume)
     const setVolume = useAudioPlayer(state => state.setVolume)
+
+    useKeyDown(() => {
+        if (refItem.current) {
+            const newVolume = Math.max(0, volume - VOLUME_STEP)
+            setVolume(newVolume)
+            audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
+        }
+    }, ['ArrowDown'], false)
+
+    useKeyDown(() => {
+        if (refItem.current) {
+            const newVolume = Math.min(300, volume + VOLUME_STEP)
+            setVolume(newVolume)
+            audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
+        }
+    }, ['ArrowUp'], false)
 
     return (
         <div className="flex items-center gap-2 w-40 sm:w-full sm:px-0">

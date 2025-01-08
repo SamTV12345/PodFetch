@@ -32,6 +32,7 @@ TimeAgo.addLocale(es)
 TimeAgo.addLocale(fr)
 
 export const SKIPPED_TIME = 30
+export const VOLUME_STEP = 5
 let timeago = new TimeAgo('en-US')
 
 
