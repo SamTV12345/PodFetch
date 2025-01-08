@@ -11,6 +11,9 @@ use crate::utils::environment_variables::is_env_var_present_and_true;
 use std::env;
 use std::env::var;
 use url::Url;
+use crate::adapters::file::file_handler::{FileHandler};
+use crate::adapters::file::local_file_handler::LocalFileHandler;
+use crate::adapters::file::s3_file_handler::S3Handler;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -22,7 +25,6 @@ pub struct OidcConfig {
     pub jwks_uri: String,
 }
 
-#[derive(Clone)]
 pub struct EnvironmentService {
     pub server_url: String,
     pub ws_url: String,
@@ -44,6 +46,7 @@ pub struct EnvironmentService {
     pub proxy_url: Option<String>,
     pub conn_number: i16,
     pub api_key_admin: Option<String>,
+    pub default_file_handler: Box<dyn FileHandler>
 }
 
 #[derive(Clone)]
@@ -56,12 +59,6 @@ pub struct ReverseProxyConfig {
 pub struct TelegramConfig {
     pub telegram_bot_token: String,
     pub telegram_chat_id: String,
-}
-
-impl Default for EnvironmentService {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl EnvironmentService {
@@ -180,6 +177,19 @@ impl EnvironmentService {
                 .parse::<i16>()
                 .unwrap_or(10),
             api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None),
+            default_file_handler: Self::handle_default_file_handler(),
+        }
+    }
+
+
+
+    fn handle_default_file_handler() -> Box<dyn FileHandler> {
+        match var("FILE_HANDLER") {
+            Ok(handler) => match handler.as_str() {
+                "s3" => Box::new(S3Handler::new()) as Box<dyn FileHandler>,
+                _ => Box::new(LocalFileHandler::new()) as Box<dyn FileHandler>,
+            },
+            Err(_) => Box::new(LocalFileHandler::new()) as Box<dyn FileHandler>,
         }
     }
 

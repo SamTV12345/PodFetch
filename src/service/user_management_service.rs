@@ -130,7 +130,8 @@ impl UserManagementService {
         let invite = Invite::find_invite(invite_id)?;
         match invite {
             Some(invite) => {
-                Ok(ENVIRONMENT_SERVICE.server_url.to_string() + "ui/invite/" + &invite.id)
+                Ok(format!("{}{}{}",ENVIRONMENT_SERVICE.server_url, "ui/invite/",
+                    &invite.id))
             }
             None => Err(CustomErrorInner::NotFound.into()),
         }

@@ -1,11 +1,11 @@
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::DBType as DbConnection;
-use std::path::Path;
-
+use crate::adapters::file::file_handler::FileRequest;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_io_error, CustomError};
+use crate::utils::error::CustomError;
 
 pub struct PathService {}
 
@@ -45,19 +45,20 @@ impl PathService {
         _conn: &mut DbConnection,
     ) -> Result<String, CustomError> {
         let mut i = 0;
-        if !Path::new(&base_path).exists() {
-            std::fs::create_dir(base_path)
-                .map_err(|v| map_io_error(v, Some(base_path.to_string())))?;
+        let dir_exists = ENVIRONMENT_SERVICE.default_file_handler.path_exists(base_path,
+                                                                           FileRequest::Directory);
+        if !dir_exists {
+            ENVIRONMENT_SERVICE.default_file_handler.create_dir(base_path)?;
             return Ok(base_path.to_string());
         }
 
-        while Path::new(&format!("{}-{}", base_path, i)).exists() {
+        while ENVIRONMENT_SERVICE.default_file_handler.path_exists(&format!("{}-{}", base_path,
+                                                                            i), FileRequest::NoopS3) {
             i += 1;
         }
         let final_path = format!("{}-{}", base_path, i);
-        // This is save to insert because this directory does not exist
-        std::fs::create_dir(&final_path)
-            .map_err(|v| map_io_error(v, Some(base_path.to_string())))?;
+        // This is safe to insert because this directory does not exist
+        ENVIRONMENT_SERVICE.default_file_handler.create_dir(&final_path)?;
         Ok(final_path)
     }
 }

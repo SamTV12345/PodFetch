@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::models::podcasts::Podcast;
-use std::io::{Error, Write};
 
 use std::path::Path;
 use std::str::FromStr;
@@ -15,7 +14,7 @@ use crate::models::settings::Setting;
 use crate::service::download_service::DownloadService;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
-use crate::utils::error::{map_io_error, CustomError, CustomErrorInner};
+use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::file_extension_determination::{determine_file_extension, FileType};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
 use crate::utils::rss_feed_parser::RSSFeedParser;
@@ -23,6 +22,8 @@ use crate::DBType as DbConnection;
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
+use crate::adapters::file::file_handler::FileRequest;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[derive(Clone)]
 pub struct FileService {}
@@ -46,9 +47,11 @@ impl FileService {
         false
     }
 
-    pub fn create_podcast_root_directory_exists() -> Result<(), Error> {
-        if !Path::new("podcasts").exists() {
-            return std::fs::create_dir("podcasts");
+    pub fn create_podcast_root_directory_exists() -> Result<(), CustomError> {
+
+        if !ENVIRONMENT_SERVICE.default_file_handler.path_exists("podcasts",
+                                                                 crate::adapters::file::file_handler::FileRequest::Directory) {
+            return ENVIRONMENT_SERVICE.default_file_handler.create_dir("podcasts");
         }
 
         Ok(())
@@ -61,9 +64,10 @@ impl FileService {
         let escaped_title =
             prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
         let escaped_path = format!("podcasts/{}", escaped_title);
-        if !Path::new(&escaped_path).exists() {
-            std::fs::create_dir(escaped_path.clone())
-                .map_err(|err| map_io_error(err, Some(escaped_path.clone())))?;
+
+        if !ENVIRONMENT_SERVICE.default_file_handler.path_exists(&escaped_path,
+                                                                 FileRequest::Directory) {
+            ENVIRONMENT_SERVICE.default_file_handler.create_dir(&escaped_path)?;
             Ok(escaped_path)
         } else {
             // Check if this is a new podcast with the same name as an old one
@@ -83,9 +87,8 @@ impl FileService {
                         i += 1;
                     }
                     // This is save to insert because this directory does not exist
-                    std::fs::create_dir(format!("podcasts/{}-{}", escaped_title, i)).map_err(
-                        |err| map_io_error(err, Some(format!("podcasts/{}-{}", escaped_title, i))),
-                    )?;
+                    ENVIRONMENT_SERVICE.default_file_handler.create_dir(&format!
+                    ("podcasts/{}-{}", escaped_title, i))?;
                     Ok(format!("podcasts/{}-{}", escaped_title, i))
                 }
             }
@@ -111,8 +114,10 @@ impl FileService {
 
         let file_path =
             PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix.0);
-        let mut image_out = std::fs::File::create(file_path.0.clone()).unwrap();
-        image_out.write_all(image_suffix.1.as_mut_slice()).unwrap();
+        ENVIRONMENT_SERVICE.default_file_handler.write_file(
+            &file_path.0,
+            image_suffix.1.as_mut_slice(),
+        )?;
         PodcastEpisode::update_podcast_image(podcast_id, &file_path.1)?;
         Ok(())
     }
@@ -121,25 +126,23 @@ impl FileService {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
 
         fn check_if_file_exists(file_path: &str) -> bool {
-            std::fs::exists(file_path).unwrap()
+            ENVIRONMENT_SERVICE.default_file_handler.path_exists(file_path, FileRequest::File)
         }
         if let Some(episode_path) = episode.file_episode_path.clone() {
             if check_if_file_exists(&episode_path) {
-                std::fs::remove_file(episode_path)
-                    .map_err(|e| map_io_error(e, episode.file_episode_path.clone()))?;
+                ENVIRONMENT_SERVICE.default_file_handler.remove_file(&episode_path)?;
             }
         }
         if let Some(image_path) = episode.file_image_path.clone() {
             if check_if_file_exists(&image_path) {
-                std::fs::remove_file(image_path)
-                    .map_err(|e| map_io_error(e, episode.file_image_path.clone()))?;
+                ENVIRONMENT_SERVICE.default_file_handler.remove_file(&image_path)?;
             }
         }
         Ok(())
     }
 
     pub fn delete_podcast_files(podcast_dir: &str) {
-        std::fs::remove_dir_all(podcast_dir).expect("Error deleting podcast directory");
+        ENVIRONMENT_SERVICE.default_file_handler.remove_dir(podcast_dir).unwrap();
     }
 }
 

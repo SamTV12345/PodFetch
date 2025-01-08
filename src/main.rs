@@ -154,8 +154,10 @@ async fn index() -> actix_web::Result<Markup> {
                     title {"Podfetch"};
                     link rel="icon" type="image/png" href="/ui/favicon.ico";
                     link rel="manifest" href=(manifest_json_location);
-                    script type="module" crossorigin src=(dir.clone() + "assets/" + js_file) {};
-                    link rel="stylesheet" href=(dir.clone() + "assets/"+ css_file);
+                    script type="module" crossorigin src=(format!("{}{}{}",dir.clone(),
+                        "assets/",js_file))
+                    {};
+                    link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",css_file));
                 }
             body {
             div id="root" {};

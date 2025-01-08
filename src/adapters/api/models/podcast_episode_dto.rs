@@ -108,12 +108,14 @@ pub fn map_file_url_with_api_key(
                 .map(|c| urlencoding::encode(c.as_os_str().to_str().unwrap()))
                 .collect::<Vec<Cow<str>>>()
                 .join("/");
-            url_encoded = ENVIRONMENT_SERVICE.server_url.to_owned() + &url_encoded;
+            let urlencoded = url_encoded.clone();
+            url_encoded = ENVIRONMENT_SERVICE.server_url.to_owned();
+            url_encoded.push_str(&urlencoded);
 
             match ENVIRONMENT_SERVICE.any_auth_enabled {
                 true => match &api_key {
                     None => url_encoded,
-                    Some(api_key) => url_encoded + "?apiKey=" + api_key,
+                    Some(api_key) => format!("{}{}{}",url_encoded, "?apiKey=", api_key),
                 },
                 false => url_encoded,
             }
@@ -130,14 +132,14 @@ pub fn map_file_url(url: &Option<String>, remote_url: &str, user: &Option<User>)
                 .map(|c| urlencoding::encode(c.as_os_str().to_str().unwrap()))
                 .collect::<Vec<Cow<str>>>()
                 .join("/");
-            url_encoded = ENVIRONMENT_SERVICE.server_url.to_owned() + &url_encoded;
+            url_encoded = format!("{}{}", ENVIRONMENT_SERVICE.server_url, url_encoded);
 
             match ENVIRONMENT_SERVICE.any_auth_enabled {
                 true => match &user {
                     None => url_encoded,
                     Some(user) => match &user.api_key {
                         None => url_encoded,
-                        Some(key) => url_encoded + "?apiKey=" + key,
+                        Some(key) => format!("{}{}{}", url_encoded, "?apiKey=", key)
                     },
                 },
                 false => url_encoded,

@@ -5,7 +5,7 @@ use std::ops::{Deref, DerefMut};
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use log::error;
-
+use s3::error::S3Error;
 use thiserror::Error;
 
 
@@ -141,7 +141,7 @@ impl ResponseError for CustomError {
         let status_code = self.status_code();
         let error_response = ErrorResponse {
             code: status_code.as_u16(),
-            message: self.to_string(),
+            message: self.inner.to_string(),
             error: self.inner.name(),
         };
         HttpResponse::build(status_code).json(error_response)
@@ -200,6 +200,11 @@ pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
         std::io::ErrorKind::PermissionDenied => CustomError::from(CustomErrorInner::Forbidden),
         _ => CustomError::from(CustomErrorInner::Unknown),
     }
+}
+
+pub fn map_s3_error(error: S3Error) -> CustomError {
+    log::info!("S3 error: {}", error);
+    CustomErrorInner::Unknown.into()
 }
 
 pub fn map_io_extra_error(e: fs_extra::error::Error, path: Option<String>) -> CustomError {

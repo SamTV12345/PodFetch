@@ -6,12 +6,12 @@ use std::fs::File;
 use reqwest::blocking::ClientBuilder;
 
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::constants::inner_constants::{PODCAST_FILENAME, PODCAST_IMAGENAME};
+use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_io_error, map_reqwest_error, CustomError, CustomErrorInner};
+use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::file_extension_determination::{
     determine_file_extension, DetermineFileExtensionReturn, FileType,
 };
@@ -19,7 +19,6 @@ use crate::utils::http_client::get_async_sync_client;
 use crate::utils::reqwest_client::get_sync_client;
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike, Version};
-use std::io;
 use std::io::Read;
 
 pub struct DownloadService {}
@@ -77,12 +76,12 @@ impl DownloadService {
     ) -> Result<(), CustomError> {
         let client = ClientBuilder::new().build().unwrap();
         let conn = &mut get_connection();
-        let podcast_data = Self::handle_suffix_response(
+        let mut podcast_data = Self::handle_suffix_response(
             determine_file_extension(&podcast_episode.url, &client, FileType::Audio),
             &podcast_episode.url,
         )?;
         let settings_in_db = Setting::get_settings()?.unwrap();
-        let image_data = Self::handle_suffix_response(
+        let mut image_data = Self::handle_suffix_response(
             determine_file_extension(&podcast_episode.image_url, &client, FileType::Image),
             &podcast_episode.image_url,
         )?;
@@ -110,20 +109,18 @@ impl DownloadService {
                 .build(conn)?,
         };
 
-        let mut podcast_out = File::create(&paths.filename)
-            .map_err(|s| map_io_error(s, Some(paths.filename.clone())))?;
-        let mut image_out = File::create(&paths.image_filename)
-            .map_err(|s| map_io_error(s, Some(paths.filename.clone())))?;
-
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
-            let mut image_podcast = File::create(&paths.image_filename).unwrap();
-            io::copy::<&[u8], File>(&mut image_data.1.as_ref(), &mut image_podcast)
-                .map_err(|s| map_io_error(s, Some(paths.image_filename.to_string())))?;
+            ENVIRONMENT_SERVICE.default_file_handler.write_file(
+                &paths.image_filename,
+                image_data.1.as_mut_slice(),
+            )?;
         }
 
-        io::copy::<&[u8], File>(&mut podcast_data.1.as_ref(), &mut podcast_out)
-            .map_err(|s| map_io_error(s, Some(paths.filename.to_string())))?;
+        ENVIRONMENT_SERVICE.default_file_handler.write_file(
+            &paths.filename,
+            podcast_data.1.as_mut_slice(),
+        )?;
 
         PodcastEpisode::update_local_paths(
             &podcast_episode.episode_id,
@@ -133,8 +130,10 @@ impl DownloadService {
             &paths.filename,
             conn,
         )?;
-        io::copy::<&[u8], std::fs::File>(&mut image_data.1.as_ref(), &mut image_out)
-            .map_err(|s| map_io_error(s, Some(paths.image_filename.to_string())))?;
+        ENVIRONMENT_SERVICE.default_file_handler.write_file(
+            &paths.image_filename,
+             image_data.1.as_mut_slice(),
+        )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Err(err) = result {
             log::error!("Error handling metadata insertion: {:?}", err);
