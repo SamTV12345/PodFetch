@@ -10,12 +10,16 @@ export const EpisodeSearchModal = () => {
 
     useCtrlPressed(() => {
         setOpen(!open)
-
-        document.getElementById('search-input')!.focus()
+        if (open) {
+            document.getElementById('search-input')!.blur()
+        } else {
+            document.getElementById('search-input')!.focus()
+        }
     }, ['f'])
 
     useKeyDown(() => {
         setOpen(false)
+        document.getElementById('search-input')!.blur()
     }, ['Escape'])
 
     return createPortal(

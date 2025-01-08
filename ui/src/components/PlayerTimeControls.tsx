@@ -8,6 +8,7 @@ import useAudioPlayer from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
 import axios, {AxiosResponse} from "axios";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import { useKeyDown } from '../hooks/useKeyDown'
 import useCommon from "../store/CommonSlice";
 import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import {Episode} from "../models/Episode";
@@ -127,16 +128,34 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         setPlaybackRate(SPEED_STEPS[currentIndex + 1])
     }
 
+    const seekForward = () => {
+        if (refItem === undefined || refItem.current === undefined || refItem.current === null) return
+
+        if (refItem.current.currentTime + SKIPPED_TIME < refItem.current.duration) {
+            refItem.current.currentTime += SKIPPED_TIME
+        }
+    }
+
+    const seekBackward = () => {
+        if (refItem === undefined || refItem.current === undefined || refItem.current === null) return
+
+        if (refItem.current.currentTime - SKIPPED_TIME > 0 ) {
+            refItem.current.currentTime -= SKIPPED_TIME
+        } else {
+            refItem.current.currentTime = 0
+        }
+    }
+
+    useKeyDown(seekBackward, ['j', 'ArrowLeft'], false)
+
+    useKeyDown(seekForward, ['l', 'ArrowRight'], false)
+
+    useKeyDown(handleButton, ['k', ' '], false)
+
     return (
         <div className="flex items-center justify-center gap-6">
             {/* Skip back */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => {
-                if (refItem.current === undefined || refItem.current === null) return
-
-                if (refItem.current.currentTime - SKIPPED_TIME > 0 ) {
-                    refItem.current.currentTime -= SKIPPED_TIME
-                }
-            }}>replay_30</span>
+            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => seekBackward()}>replay_30</span>
 
             {/* Previous */}
             <span className="material-symbols-outlined filled cursor-pointer text-3xl lg:text-4xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90" onClick={() => skipToPreviousEpisode()}>skip_previous</span>
@@ -153,13 +172,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
             <span className="material-symbols-outlined filled cursor-pointer text-3xl lg:text-4xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90" onClick={() => skipToNextEpisode()}>skip_next</span>
 
             {/* Skip forward */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => {
-                if (refItem.current === undefined || refItem.current === null) return
-
-                if (refItem.current.currentTime + SKIPPED_TIME < refItem.current.duration) {
-                    refItem.current.currentTime += SKIPPED_TIME
-                }
-            }}>forward_30</span>
+            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => seekForward()}>forward_30</span>
 
             {/* Speed fixed width to prevent layout shift when value changes */}
             <span className="cursor-pointer text-sm text-[--fg-color] hover:text-[--fg-color-hover] w-8" onClick={() => changeSpeed()}>{speed}x</span>
