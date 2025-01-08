@@ -66,6 +66,7 @@ file-format = "0.26.0"
 maud = { version = "*", features = ["actix-web"] }
 url = "2.5.4"
 rust-s3 = { version = "0.35.1", features = ["blocking", "fail-on-err"] }
+async-trait = "0.1.85"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.68"

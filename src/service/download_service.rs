@@ -20,6 +20,7 @@ use crate::utils::reqwest_client::get_sync_client;
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike, Version};
 use std::io::Read;
+use crate::adapters::file::file_handler::FileHandlerType;
 
 pub struct DownloadService {}
 
@@ -146,6 +147,11 @@ impl DownloadService {
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
     ) -> Result<(), CustomError> {
+        if ENVIRONMENT_SERVICE.default_file_handler.get_type() == FileHandlerType::S3 {
+            return Ok(());
+        }
+
+
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
 
         match detected_file {

@@ -1,6 +1,8 @@
 use std::fs::File;
+use std::future::Future;
 use std::io;
-use crate::adapters::file::file_handler::{FileHandler, FileRequest};
+use std::pin::Pin;
+use crate::adapters::file::file_handler::{FileHandler, FileHandlerType, FileRequest};
 use crate::utils::error::{map_io_error, CustomError};
 
 #[derive(Clone)]
@@ -41,5 +43,17 @@ impl FileHandler for LocalFileHandler {
 
     fn remove_file(&self, path: &str) -> Result<(), CustomError> {
         std::fs::remove_file(path).map_err(|e|map_io_error(e, Some(path.to_string())))
+    }
+
+    fn write_file_async<'a>(&'a self, path: &'a str, content: &'a mut [u8]) -> Pin<Box<dyn
+    Future<Output =
+    Result<(),
+        CustomError>> + 'a>> {
+        Box::pin(async {self.write_file(path, content)})
+    }
+
+
+    fn get_type(&self) -> FileHandlerType {
+        FileHandlerType::Local
     }
 }

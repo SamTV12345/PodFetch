@@ -114,10 +114,10 @@ impl FileService {
 
         let file_path =
             PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix.0);
-        ENVIRONMENT_SERVICE.default_file_handler.write_file(
+        ENVIRONMENT_SERVICE.default_file_handler.write_file_async(
             &file_path.0,
             image_suffix.1.as_mut_slice(),
-        )?;
+        ).await?;
         PodcastEpisode::update_podcast_image(podcast_id, &file_path.1)?;
         Ok(())
     }

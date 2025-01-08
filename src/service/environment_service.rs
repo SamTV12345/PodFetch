@@ -186,8 +186,14 @@ impl EnvironmentService {
     fn handle_default_file_handler() -> Box<dyn FileHandler> {
         match var("FILE_HANDLER") {
             Ok(handler) => match handler.as_str() {
-                "s3" => Box::new(S3Handler::new()) as Box<dyn FileHandler>,
-                _ => Box::new(LocalFileHandler::new()) as Box<dyn FileHandler>,
+                "s3" => {
+                    log::info!("Using S3 file handler");
+                    Box::new(S3Handler::new()) as Box<dyn FileHandler>
+                },
+                _ => {
+                    log::info!("Using local file handler");
+                    Box::new(LocalFileHandler::new()) as Box<dyn FileHandler>
+                },
             },
             Err(_) => Box::new(LocalFileHandler::new()) as Box<dyn FileHandler>,
         }
