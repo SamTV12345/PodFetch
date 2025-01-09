@@ -141,7 +141,7 @@ impl ResponseError for CustomError {
         let status_code = self.status_code();
         let error_response = ErrorResponse {
             code: status_code.as_u16(),
-            message: self.to_string(),
+            message: self.inner.to_string(),
             error: self.inner.name(),
         };
         HttpResponse::build(status_code).json(error_response)
