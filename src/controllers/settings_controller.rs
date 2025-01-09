@@ -90,6 +90,12 @@ pub async fn get_opml(
     requester: ReqData<User>,
     type_of: Path<Mode>,
 ) -> Result<HttpResponse, CustomError> {
+    if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
+        return Err(CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into
+        ());
+    }
+
+
     let podcasts_found = Podcast::get_all_podcasts()?;
 
     let mut xml = XMLBuilder::new()
