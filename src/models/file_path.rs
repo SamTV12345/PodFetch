@@ -22,14 +22,11 @@ pub struct FilenameBuilder {
 
 pub struct FilenameBuilderReturn {
     pub filename: String,
-    pub image_filename: String
+    pub image_filename: String,
 }
 
 impl FilenameBuilderReturn {
-    pub fn new(
-        filename: String,
-        image_filename: String,
-    ) -> Self {
+    pub fn new(filename: String, image_filename: String) -> Self {
         FilenameBuilderReturn {
             filename,
             image_filename,
@@ -96,31 +93,25 @@ impl FilenameBuilder {
     pub fn build(self, conn: &mut DbConnection) -> Result<FilenameBuilderReturn, CustomError> {
         match self.raw_filename {
             true => match self.settings.direct_paths {
-                true => {
-                    self.create_direct_path_dirs()
-                }
+                true => self.create_direct_path_dirs(),
                 false => {
                     let resulting_directory = self
                         .clone()
                         .create_podcast_episode_dir(self.directory.clone(), conn)?;
 
-                    let file_paths =
-                        self.create_path_dirs(resulting_directory)?;
+                    let file_paths = self.create_path_dirs(resulting_directory)?;
                     Ok(file_paths)
                 }
             },
             false => match self.settings.direct_paths {
-                true => {
-                    self.create_direct_path_dirs()
-                }
+                true => self.create_direct_path_dirs(),
                 false => {
                     let resulting_directory = self.clone().create_podcast_episode_dir(
                         format!("{}/{}", self.directory.clone(), self.episode.clone()),
                         conn,
                     )?;
 
-                    let file_paths =
-                        self.create_path_dirs(resulting_directory)?;
+                    let file_paths = self.create_path_dirs(resulting_directory)?;
                     Ok(file_paths)
                 }
             },
@@ -147,9 +138,7 @@ impl FilenameBuilder {
         ))
     }
 
-    fn create_direct_path_dirs(
-        self,
-    ) -> Result<FilenameBuilderReturn, CustomError> {
+    fn create_direct_path_dirs(self) -> Result<FilenameBuilderReturn, CustomError> {
         Ok(FilenameBuilderReturn::new(
             format!(
                 "{}/{}.{}",

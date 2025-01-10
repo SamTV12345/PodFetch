@@ -5,7 +5,7 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix_files::{Files, NamedFile};
+use actix_files::NamedFile;
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{Condition, Logger};
@@ -89,7 +89,6 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::utils::error::CustomError;
 use crate::utils::http_client::get_http_client;
-use crate::utils::podcast_key_checker::check_podcast_request;
 
 mod config;
 
@@ -382,20 +381,6 @@ fn config(cfg: &mut web::ServiceConfig) {
         .service(login)
         .service(get_public_config)
         .service(get_private_api());
-}
-
-fn get_podcast_serving() -> Scope<
-    impl ServiceFactory<
-        ServiceRequest,
-        Config = (),
-        Response = ServiceResponse,
-        Error = actix_web::Error,
-        InitError = (),
-    >,
-> {
-    web::scope("/podcasts")
-        .wrap_fn(check_podcast_request)
-        .service(Files::new("/", "podcasts").disable_content_disposition())
 }
 
 fn get_private_api() -> Scope<

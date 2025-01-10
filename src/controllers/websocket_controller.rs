@@ -8,7 +8,7 @@ use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use actix_web::web::Query;
 use actix_web::{get, web, Error, HttpRequest, HttpResponse};
 use rss::extension::itunes::{
@@ -65,15 +65,16 @@ pub async fn get_rss_feed(
 
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
-        if api_key.is_none() {
-            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
-        }
-        let api_key = api_key.as_ref().unwrap().api_key.to_string();
+        let api_key = match &api_key {
+            Some(q) => Ok::<&Query<RSSAPiKey>, CustomError>(q),
+            None => Err(CustomErrorInner::Forbidden.into()),
+        }?;
+        let api_key = &api_key.api_key;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
         if !&api_key_exists {
-            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+            return Err(CustomErrorInner::Forbidden.into());
         }
     }
 
@@ -167,15 +168,16 @@ pub async fn get_rss_feed_for_podcast(
 
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
-        if api_key.is_none() {
-            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
-        }
-        let api_key = api_key.as_ref().unwrap().api_key.to_string();
+        let api_key = match &api_key {
+            Some(q) => Ok::<&Query<RSSAPiKey>, CustomError>(q),
+            None => Err(CustomErrorInner::Forbidden.into()),
+        }?;
+        let api_key = &api_key.api_key;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
-        if !api_key_exists {
-            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+        if !&api_key_exists {
+            return Err(CustomErrorInner::Forbidden.into());
         }
     }
     let api_key = api_key.map(|c| c.api_key.clone());

@@ -46,7 +46,8 @@ impl UserManagementService {
                         if invite.accepted_at.is_some() {
                             return Err(CustomErrorInner::Conflict(
                                 "Invite already accepted".to_string(),
-                            ).into());
+                            )
+                            .into());
                         }
 
                         let mut actual_user = User::new(
@@ -75,7 +76,10 @@ impl UserManagementService {
                                 }
                             }
                         } else {
-                            Err(CustomErrorInner::Conflict("Password is not valid".to_string()).into())
+                            Err(
+                                CustomErrorInner::Conflict("Password is not valid".to_string())
+                                    .into(),
+                            )
                         }
                     }
                     None => Err(CustomErrorInner::NotFound.into()),
@@ -129,10 +133,10 @@ impl UserManagementService {
     pub fn get_invite_link(invite_id: String) -> Result<String, CustomError> {
         let invite = Invite::find_invite(invite_id)?;
         match invite {
-            Some(invite) => {
-                Ok(format!("{}{}{}",ENVIRONMENT_SERVICE.server_url, "ui/invite/",
-                    &invite.id))
-            }
+            Some(invite) => Ok(format!(
+                "{}{}{}",
+                ENVIRONMENT_SERVICE.server_url, "ui/invite/", &invite.id
+            )),
             None => Err(CustomErrorInner::NotFound.into()),
         }
     }
@@ -143,8 +147,9 @@ impl UserManagementService {
         match invite {
             Some(invite) => {
                 if invite.accepted_at.is_some() {
-                    return Err(CustomErrorInner::Conflict("Invite already accepted".to_string())
-                                   .into());
+                    return Err(
+                        CustomErrorInner::Conflict("Invite already accepted".to_string()).into(),
+                    );
                 }
                 Ok(invite)
             }

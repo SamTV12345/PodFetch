@@ -115,7 +115,7 @@ pub fn map_file_url_with_api_key(
             match ENVIRONMENT_SERVICE.any_auth_enabled {
                 true => match &api_key {
                     None => url_encoded,
-                    Some(api_key) => format!("{}{}{}",url_encoded, "?apiKey=", api_key),
+                    Some(api_key) => format!("{}{}{}", url_encoded, "?apiKey=", api_key),
                 },
                 false => url_encoded,
             }
@@ -139,7 +139,7 @@ pub fn map_file_url(url: &Option<String>, remote_url: &str, user: &Option<User>)
                     None => url_encoded,
                     Some(user) => match &user.api_key {
                         None => url_encoded,
-                        Some(key) => format!("{}{}{}", url_encoded, "?apiKey=", key)
+                        Some(key) => format!("{}{}{}", url_encoded, "?apiKey=", key),
                     },
                 },
                 false => url_encoded,

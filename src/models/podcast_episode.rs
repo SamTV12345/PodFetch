@@ -1,8 +1,11 @@
+use crate::adapters::file::file_handler::FileHandlerType;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::adapters::persistence::dbconfig::schema::*;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::constants::inner_constants::{PodcastEpisodeWithFavorited, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::{
+    PodcastEpisodeWithFavorited, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE,
+};
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::playlist_item::PlaylistItem;
@@ -26,7 +29,6 @@ use diesel::{
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
-use crate::adapters::file::file_handler::FileHandlerType;
 
 #[derive(
     Queryable,
@@ -78,13 +80,25 @@ pub struct PodcastEpisode {
 }
 
 impl PodcastEpisode {
+    pub(crate) fn get_podcast_episodes_by_url(
+        p0: &str,
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+        podcast_episodes
+            .filter(file_episode_path.eq(p0).or(file_image_path.eq(p0)))
+            .first::<PodcastEpisode>(&mut get_connection())
+            .optional()
+            .map_err(map_db_error)
+    }
+}
+
+impl PodcastEpisode {
     pub(crate) fn is_downloaded(&self) -> bool {
         self.download_location.is_some()
     }
 }
 
 impl PodcastEpisode {
-
     pub fn get_podcast_episode_by_internal_id(
         conn: &mut DbConnection,
         podcast_episode_id_to_be_found: i32,
@@ -359,10 +373,9 @@ impl PodcastEpisode {
 
     pub fn update_podcast_image(id: &str, image_url: &str) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::directory_id;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::download_location as podcast_download_location;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::image_url as image_url_column;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
-        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::download_location as
-        podcast_download_location;
 
         let result = dsl_podcast
             .filter(directory_id.eq(id))
@@ -372,9 +385,12 @@ impl PodcastEpisode {
         match result {
             Some(..) => {
                 diesel::update(dsl_podcast.filter(directory_id.eq(id)))
-                    .set((image_url_column.eq(image_url),
-                          podcast_download_location.eq(ENVIRONMENT_SERVICE.default_file_handler.get_type()
-                            .to_string())
+                    .set((
+                        image_url_column.eq(image_url),
+                        podcast_download_location.eq(ENVIRONMENT_SERVICE
+                            .default_file_handler
+                            .get_type()
+                            .to_string()),
                     ))
                     .execute(&mut get_connection())
                     .map_err(map_db_error)?;
@@ -386,9 +402,9 @@ impl PodcastEpisode {
         }
     }
 
-
-    pub fn is_downloaded_eq() ->
-                              IsNotNull<crate::adapters::persistence::dbconfig::schema::podcast_episodes::download_location> {
+    pub fn is_downloaded_eq() -> IsNotNull<
+        crate::adapters::persistence::dbconfig::schema::podcast_episodes::download_location,
+    > {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::download_location;
 
         download_location.is_not_null()
@@ -404,21 +420,21 @@ impl PodcastEpisode {
             .filter(podcast_episode_url.eq(download_episode_url))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-        .map_err(map_db_error)?;
+            .map_err(map_db_error)?;
         Ok(result.is_some())
     }
 
     pub fn update_podcast_episode_status(
         download_url_of_episode: &str,
-        download_location_to_set: Option<FileHandlerType>
+        download_location_to_set: Option<FileHandlerType>,
     ) -> Result<PodcastEpisode, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
 
         let updated_podcast =
             diesel::update(podcast_episodes.filter(url.eq(download_url_of_episode)))
                 .set((
-                    download_location.eq::<Option<String>>(download_location_to_set.map
-                    (|d|d.to_string())),
+                    download_location
+                        .eq::<Option<String>>(download_location_to_set.map(|d| d.to_string())),
                     download_time.eq(Utc::now().naive_utc()),
                 ))
                 .get_result::<PodcastEpisode>(&mut get_connection())

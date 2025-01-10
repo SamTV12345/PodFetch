@@ -148,8 +148,10 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         Some(arg) => arg,
                         None => {
                             error!("Command not found");
-                            return Err(CustomErrorInner::BadRequest("Command not found".to_string
-                            ()).into());
+                            return Err(CustomErrorInner::BadRequest(
+                                "Command not found".to_string(),
+                            )
+                            .into());
                         }
                     };
 
@@ -167,7 +169,10 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         }
                         _ => {
                             error!("Command not found");
-                            Err(CustomErrorInner::BadRequest("Command not found".to_string()).into())
+                            Err(
+                                CustomErrorInner::BadRequest("Command not found".to_string())
+                                    .into(),
+                            )
                         }
                     }
                 }

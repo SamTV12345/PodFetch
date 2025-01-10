@@ -22,10 +22,7 @@ pub fn add_basic_auth_headers_conditionally(
                 let b64_auth = general_purpose::STANDARD.encode(auth.as_str());
                 let mut bearer = "Basic ".to_owned();
                 bearer.push_str(&b64_auth);
-                header_map.append(
-                    "Authorization",
-                    bearer.parse().unwrap(),
-                );
+                header_map.append("Authorization", bearer.parse().unwrap());
             }
         }
     }

@@ -5,6 +5,7 @@ use std::fs::File;
 
 use reqwest::blocking::ClientBuilder;
 
+use crate::adapters::file::file_handler::FileHandlerType;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
@@ -20,7 +21,6 @@ use crate::utils::reqwest_client::get_sync_client;
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike, Version};
 use std::io::Read;
-use crate::adapters::file::file_handler::FileHandlerType;
 
 pub struct DownloadService {}
 
@@ -112,16 +112,14 @@ impl DownloadService {
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
-            ENVIRONMENT_SERVICE.default_file_handler.write_file(
-                &paths.image_filename,
-                image_data.1.as_mut_slice(),
-            )?;
+            ENVIRONMENT_SERVICE
+                .default_file_handler
+                .write_file(&paths.image_filename, image_data.1.as_mut_slice())?;
         }
 
-        ENVIRONMENT_SERVICE.default_file_handler.write_file(
-            &paths.filename,
-            podcast_data.1.as_mut_slice(),
-        )?;
+        ENVIRONMENT_SERVICE
+            .default_file_handler
+            .write_file(&paths.filename, podcast_data.1.as_mut_slice())?;
 
         PodcastEpisode::update_local_paths(
             &podcast_episode.episode_id,
@@ -129,10 +127,9 @@ impl DownloadService {
             &paths.filename,
             conn,
         )?;
-        ENVIRONMENT_SERVICE.default_file_handler.write_file(
-            &paths.image_filename,
-             image_data.1.as_mut_slice(),
-        )?;
+        ENVIRONMENT_SERVICE
+            .default_file_handler
+            .write_file(&paths.image_filename, image_data.1.as_mut_slice())?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Err(err) = result {
             log::error!("Error handling metadata insertion: {:?}", err);
@@ -148,7 +145,6 @@ impl DownloadService {
         if ENVIRONMENT_SERVICE.default_file_handler.get_type() == FileHandlerType::S3 {
             return Ok(());
         }
-
 
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
 
@@ -171,9 +167,9 @@ impl DownloadService {
             }
             _ => {
                 log::error!("File format not supported: {:?}", detected_file);
-                return Err(CustomErrorInner::Conflict(
-                    "File format not supported".to_string(),
-                ).into());
+                return Err(
+                    CustomErrorInner::Conflict("File format not supported".to_string()).into(),
+                );
             }
         }
         Ok(())
@@ -330,7 +326,7 @@ impl DownloadService {
             }
             Err(e) => {
                 log::error!("Error reading metadata: {:?}", e);
-                let err:CustomError = CustomErrorInner::Conflict(e.to_string()).into();
+                let err: CustomError = CustomErrorInner::Conflict(e.to_string()).into();
                 Err(err)
             }
         }

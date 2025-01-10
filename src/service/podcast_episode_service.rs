@@ -66,10 +66,10 @@ impl PodcastEpisodeService {
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
-        let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url,
-                                                                    Some(ENVIRONMENT_SERVICE
-                                                                        .default_file_handler
-                                                                        .get_type()))?;
+        let podcast = PodcastEpisode::update_podcast_episode_status(
+            &podcast_episode.url,
+            Some(ENVIRONMENT_SERVICE.default_file_handler.get_type()),
+        )?;
         let notification = Notification {
             id: 0,
             message: podcast_episode.name.to_string(),
@@ -248,7 +248,8 @@ impl PodcastEpisodeService {
                 Err(CustomErrorInner::BadRequest(format!(
                     "Error parsing podcast {} with cause {:?}",
                     podcast.name, e
-                )).into())
+                ))
+                .into())
             }
         }
     }

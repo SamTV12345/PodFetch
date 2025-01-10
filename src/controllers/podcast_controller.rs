@@ -347,9 +347,7 @@ pub async fn add_podcast_from_podindex(
     }
 
     if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-        return Err(CustomErrorInner::BadRequest(
-            "Podindex is not configured".to_string(),
-        ).into());
+        return Err(CustomErrorInner::BadRequest("Podindex is not configured".to_string()).into());
     }
 
     spawn_blocking(move || match start_download_podindex(id.track_id, lobby) {
@@ -643,7 +641,7 @@ pub(crate) async fn proxy_podcast(
         }
         let api_key = query.unwrap().0;
 
-        let api_key_exists = User::check_if_api_key_exists(api_key.api_key.to_string());
+        let api_key_exists = User::check_if_api_key_exists(&api_key.api_key);
 
         if !api_key_exists {
             return Ok(HttpResponse::Unauthorized().body("Unauthorized"));

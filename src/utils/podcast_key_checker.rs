@@ -1,45 +1,86 @@
-use crate::constants::inner_constants::{BASIC_AUTH, OIDC_AUTH};
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use crate::utils::environment_variables::is_env_var_present_and_true;
-use actix_web::dev::{Service, ServiceRequest};
-use actix_web::error::ErrorUnauthorized;
-use actix_web::Error;
-use futures_util::FutureExt;
-use std::collections::HashMap;
+use crate::utils::error::{CustomError, CustomErrorInner};
+use actix_web::body::MessageBody;
+use actix_web::dev::{ServiceRequest, ServiceResponse};
+use actix_web::middleware::Next;
+use actix_web::web::Query;
+use actix_web::{Error, HttpMessage};
 
-pub fn check_podcast_request<S, B>(
-    req: ServiceRequest,
-    srv: &S,
-) -> impl futures::Future<Output = Result<S::Response, Error>>
-where
-    S: Service<ServiceRequest, Response = actix_web::dev::ServiceResponse<B>, Error = Error>,
-    S::Future: 'static,
-{
-    let is_auth_enabled =
-        is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
+pub enum PodcastOrPodcastEpisodeResource {
+    Podcast(Podcast),
+    PodcastEpisode(PodcastEpisode),
+}
 
-    if is_auth_enabled {
-        let mut hash = HashMap::new();
-        let query = req.query_string();
+pub async fn check_permissions_for_files(
+    mut req: ServiceRequest,
+    next: Next<impl MessageBody>,
+) -> Result<ServiceResponse<impl MessageBody>, Error> {
+    let request = req
+        .extract::<Query<Option<RSSAPiKey>>>()
+        .await?
+        .into_inner()
+        .map(|rss_api_key| rss_api_key.api_key);
+    let extracted_podcast = check_auth(&req, request)?;
+    req.extensions_mut().insert(extracted_podcast);
+    next.call(req).await
+}
 
-        if query.trim().is_empty() {
-            return async { Err(ErrorUnauthorized("Unauthorized")) }.boxed_local();
-        }
-
-        query.split('&').for_each(|v| {
-            let mut split = v.split('=');
-            hash.insert(split.next().unwrap(), split.next().unwrap());
-        });
-        let api_key = hash.get("apiKey");
-
-        if api_key.is_none() {
-            return async { Err(ErrorUnauthorized("Unauthorized")) }.boxed_local();
-        }
-
-        let api_key_exists = User::check_if_api_key_exists(api_key.unwrap().to_string());
-        if !api_key_exists {
-            return async { Err(ErrorUnauthorized("Unauthorized")) }.boxed_local();
+fn retrieve_podcast_or_podcast_episode(
+    path: &str,
+) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
+    let podcast_episode = PodcastEpisode::get_podcast_episodes_by_url(path)?;
+    match podcast_episode {
+        Some(podcast_episode) => Ok(PodcastOrPodcastEpisodeResource::PodcastEpisode(
+            podcast_episode,
+        )),
+        None => {
+            let podcast = Podcast::find_by_path(path)?;
+            match podcast {
+                Some(podcast) => Ok(PodcastOrPodcastEpisodeResource::Podcast(podcast)),
+                None => Err(CustomErrorInner::NotFound.into()),
+            }
         }
     }
-    Box::pin(srv.call(req))
+}
+
+fn check_auth(
+    req: &ServiceRequest,
+    api_key: Option<String>,
+) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
+    match ENVIRONMENT_SERVICE.any_auth_enabled {
+        true => {
+            let api_key = &match api_key {
+                Some(api_key) => api_key,
+                None => {
+                    return Err(CustomErrorInner::BadRequest(
+                        "No query parameters found".to_string(),
+                    )
+                    .into())
+                }
+            };
+
+            let api_key_exists = User::check_if_api_key_exists(api_key);
+
+            if !api_key_exists {
+                return Err(CustomErrorInner::Forbidden.into());
+            }
+
+            let requested_path = req
+                .path()
+                .to_string()
+                .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
+            retrieve_podcast_or_podcast_episode(&requested_path)
+        }
+        false => {
+            let requested_path = req
+                .path()
+                .to_string()
+                .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
+            retrieve_podcast_or_podcast_episode(&requested_path)
+        }
+    }
 }

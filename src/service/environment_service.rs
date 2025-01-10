@@ -1,3 +1,6 @@
+use crate::adapters::file::file_handler::FileHandler;
+use crate::adapters::file::local_file_handler::LocalFileHandler;
+use crate::adapters::file::s3_file_handler::S3Handler;
 use crate::constants::inner_constants::{
     API_KEY, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE,
     GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS,
@@ -11,9 +14,6 @@ use crate::utils::environment_variables::is_env_var_present_and_true;
 use std::env;
 use std::env::var;
 use url::Url;
-use crate::adapters::file::file_handler::{FileHandler};
-use crate::adapters::file::local_file_handler::LocalFileHandler;
-use crate::adapters::file::s3_file_handler::S3Handler;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -46,7 +46,7 @@ pub struct EnvironmentService {
     pub proxy_url: Option<String>,
     pub conn_number: i16,
     pub api_key_admin: Option<String>,
-    pub default_file_handler: Box<dyn FileHandler>
+    pub default_file_handler: Box<dyn FileHandler>,
 }
 
 #[derive(Clone)]
@@ -181,19 +181,17 @@ impl EnvironmentService {
         }
     }
 
-
-
     fn handle_default_file_handler() -> Box<dyn FileHandler> {
         match var("FILE_HANDLER") {
             Ok(handler) => match handler.as_str() {
                 "s3" => {
                     log::info!("Using S3 file handler");
                     Box::new(S3Handler::new()) as Box<dyn FileHandler>
-                },
+                }
                 _ => {
                     log::info!("Using local file handler");
                     Box::new(LocalFileHandler::new()) as Box<dyn FileHandler>
-                },
+                }
             },
             Err(_) => Box::new(LocalFileHandler::new()) as Box<dyn FileHandler>,
         }

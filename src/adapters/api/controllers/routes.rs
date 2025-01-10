@@ -1,6 +1,7 @@
 use crate::adapters::api::controllers::device_controller::{get_devices_of_user, post_device};
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::api_doc::ApiDoc;
+use crate::controllers::file_hosting::{get_podcast_serving, get_s3_podcast_serving};
 use crate::controllers::manifest_controller::get_manifest;
 use crate::controllers::podcast_controller::proxy_podcast;
 use crate::controllers::websocket_controller::{
@@ -9,7 +10,7 @@ use crate::controllers::websocket_controller::{
 use crate::gpodder::auth::authentication::login;
 use crate::gpodder::parametrization::get_client_parametrization;
 use crate::gpodder::subscription::subscriptions::{get_subscriptions, upload_subscription_changes};
-use crate::{get_api_config, get_podcast_serving, get_ui_config};
+use crate::{get_api_config, get_ui_config};
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::web::redirect;
@@ -30,6 +31,7 @@ pub fn global_routes() -> Scope {
         .service(proxy_podcast)
         .service(get_ui_config())
         .service(get_podcast_serving())
+        .service(get_s3_podcast_serving())
         .service(redirect("/swagger-ui", "/swagger-ui/"))
         .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
         .service(redirect("/", "./ui/"))

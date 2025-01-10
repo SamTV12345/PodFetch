@@ -27,7 +27,11 @@ pub struct PodcastDto {
 impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
     fn from(value: (Podcast, Option<Favorite>, Vec<Tag>)) -> Self {
         let favorite = value.1.is_some() && value.1.clone().unwrap().favored;
-        let image_url = format!("{}{}",ENVIRONMENT_SERVICE.get_server_url(), value.0.image_url);
+        let image_url = format!(
+            "{}{}",
+            ENVIRONMENT_SERVICE.get_server_url(),
+            value.0.image_url
+        );
 
         PodcastDto {
             id: value.0.id,
@@ -53,8 +57,11 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
 // Used when we don't need the other information
 impl From<Podcast> for PodcastDto {
     fn from(value: Podcast) -> Self {
-
-        let image_url = format!("{}{}",ENVIRONMENT_SERVICE.get_server_url(), value.image_url);
+        let image_url = format!(
+            "{}{}",
+            ENVIRONMENT_SERVICE.get_server_url(),
+            value.image_url
+        );
         PodcastDto {
             id: value.id,
             name: value.name.clone(),

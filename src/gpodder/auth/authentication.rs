@@ -98,7 +98,8 @@ fn handle_gpodder_basic_auth(
                 "The user you are trying to login is equal to the admin user. Please\
                  use another user to login."
                     .to_string(),
-            ).into());
+            )
+            .into());
         }
     }
 

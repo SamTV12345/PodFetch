@@ -63,6 +63,15 @@ impl Podcast {
             .expect("Error loading podcast by rss feed url")
     }
 
+    pub fn find_by_path(path: &str) -> Result<Option<Podcast>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
+        podcasts
+            .filter(image_url.eq(path))
+            .first::<Podcast>(&mut get_connection())
+            .optional()
+            .map_err(map_db_error)
+    }
+
     pub fn get_podcasts(u: &str) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
