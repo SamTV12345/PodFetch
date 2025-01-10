@@ -2,7 +2,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::adapters::persistence::dbconfig::schema::*;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::constants::inner_constants::{PodcastEpisodeWithFavorited, DEFAULT_IMAGE_URL};
+use crate::constants::inner_constants::{PodcastEpisodeWithFavorited, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::playlist_item::PlaylistItem;
@@ -361,6 +361,8 @@ impl PodcastEpisode {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::directory_id;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::image_url as image_url_column;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::download_location as
+        podcast_download_location;
 
         let result = dsl_podcast
             .filter(directory_id.eq(id))
@@ -370,7 +372,10 @@ impl PodcastEpisode {
         match result {
             Some(..) => {
                 diesel::update(dsl_podcast.filter(directory_id.eq(id)))
-                    .set(image_url_column.eq(image_url))
+                    .set((image_url_column.eq(image_url),
+                          podcast_download_location.eq(ENVIRONMENT_SERVICE.default_file_handler.get_type()
+                            .to_string())
+                    ))
                     .execute(&mut get_connection())
                     .map_err(map_db_error)?;
                 Ok(())
