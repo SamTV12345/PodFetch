@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::future::Future;
 use std::pin::Pin;
 use async_trait::async_trait;
@@ -22,6 +23,25 @@ pub trait FileHandler: Sync + Send {
 pub enum FileHandlerType {
     Local,
     S3
+}
+
+impl Display for FileHandlerType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileHandlerType::Local => write!(f, "Local"),
+            FileHandlerType::S3 => write!(f, "S3")
+        }
+    }
+}
+
+impl From<&str> for FileHandlerType {
+    fn from(value: &str) -> Self {
+        match value {
+            "Local" => FileHandlerType::Local,
+            "S3" => FileHandlerType::S3,
+            _ => panic!("Invalid FileHandlerType")
+        }
+    }
 }
 
 

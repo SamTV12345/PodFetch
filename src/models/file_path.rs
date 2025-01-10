@@ -3,10 +3,8 @@ use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
 use crate::service::path_service::PathService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
 use crate::DBType as DbConnection;
-use substring::Substring;
 
 #[derive(Default, Clone, Debug)]
 pub struct FilenameBuilder {
@@ -24,23 +22,17 @@ pub struct FilenameBuilder {
 
 pub struct FilenameBuilderReturn {
     pub filename: String,
-    pub image_filename: String,
-    pub local_file_url: String,
-    pub local_image_url: String,
+    pub image_filename: String
 }
 
 impl FilenameBuilderReturn {
     pub fn new(
         filename: String,
         image_filename: String,
-        local_file_url: String,
-        local_image_url: String,
     ) -> Self {
         FilenameBuilderReturn {
             filename,
             image_filename,
-            local_file_url,
-            local_image_url,
         }
     }
 }
@@ -102,67 +94,33 @@ impl FilenameBuilder {
     }
 
     pub fn build(self, conn: &mut DbConnection) -> Result<FilenameBuilderReturn, CustomError> {
-        let image_last_slash = self.podcast.image_url.rfind('/').unwrap();
-        let binding_substring_for_base_url = self.podcast.image_url.clone();
-        let base_url = binding_substring_for_base_url.substring(0, image_last_slash);
-
         match self.raw_filename {
             true => match self.settings.direct_paths {
                 true => {
-                    let episode_to_encode = format!("/{}", self.episode.clone());
-                    let encoded_episode_url =
-                        PodcastEpisodeService::map_to_local_url(&episode_to_encode);
-                    let resulting_link = format!(
-                        "{base_url}/{episode_url}.{suffix}",
-                        base_url = base_url,
-                        episode_url = encoded_episode_url,
-                        suffix = self.suffix.clone()
-                    );
-                    self.create_direct_path_dirs(resulting_link)
+                    self.create_direct_path_dirs()
                 }
                 false => {
                     let resulting_directory = self
                         .clone()
                         .create_podcast_episode_dir(self.directory.clone(), conn)?;
 
-                    let mut file_paths =
-                        self.create_path_dirs(resulting_directory, base_url.to_string())?;
-                    file_paths.local_file_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_file_url);
-                    file_paths.local_image_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_image_url);
+                    let file_paths =
+                        self.create_path_dirs(resulting_directory)?;
                     Ok(file_paths)
                 }
             },
             false => match self.settings.direct_paths {
                 true => {
-                    let episode_to_encode = format!("/{}", self.episode.clone());
-                    let encoded_episode_url =
-                        PodcastEpisodeService::map_to_local_url(&episode_to_encode);
-                    let resulting_link = format!(
-                        "{base_url}{episode_url}",
-                        base_url = base_url,
-                        episode_url = encoded_episode_url
-                    );
-                    self.create_direct_path_dirs(resulting_link)
+                    self.create_direct_path_dirs()
                 }
                 false => {
-                    let sub_episode_path = format!("/{}", self.episode.clone());
                     let resulting_directory = self.clone().create_podcast_episode_dir(
                         format!("{}/{}", self.directory.clone(), self.episode.clone()),
                         conn,
                     )?;
-                    let resulting_link = format!(
-                        "{base_url}{}",
-                        PodcastEpisodeService::map_to_local_url(&sub_episode_path)
-                    );
 
-                    let mut file_paths =
-                        self.create_path_dirs(resulting_directory, resulting_link)?;
-                    file_paths.local_file_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_file_url);
-                    file_paths.local_image_url =
-                        PodcastEpisodeService::map_to_local_url(&file_paths.local_image_url);
+                    let file_paths =
+                        self.create_path_dirs(resulting_directory)?;
                     Ok(file_paths)
                 }
             },
@@ -172,7 +130,6 @@ impl FilenameBuilder {
     fn create_path_dirs(
         self,
         resulting_directory: String,
-        resulting_link: String,
     ) -> Result<FilenameBuilderReturn, CustomError> {
         Ok(FilenameBuilderReturn::new(
             format!(
@@ -184,18 +141,6 @@ impl FilenameBuilder {
             format!(
                 "{}/{}.{}",
                 resulting_directory,
-                self.image_filename.clone(),
-                self.image_suffix.clone()
-            ),
-            format!(
-                "{}/{}.{}",
-                resulting_link,
-                self.filename.clone(),
-                self.suffix.clone()
-            ),
-            format!(
-                "{}/{}.{}",
-                resulting_link,
                 self.image_filename.clone(),
                 self.image_suffix.clone()
             ),
@@ -204,7 +149,6 @@ impl FilenameBuilder {
 
     fn create_direct_path_dirs(
         self,
-        resulting_link: String,
     ) -> Result<FilenameBuilderReturn, CustomError> {
         Ok(FilenameBuilderReturn::new(
             format!(
@@ -219,8 +163,6 @@ impl FilenameBuilder {
                 self.episode.clone(),
                 self.image_suffix.clone()
             ),
-            format!("{}.{}", resulting_link.clone(), self.suffix),
-            format!("{}.{}", resulting_link, self.image_suffix),
         ))
     }
 

@@ -66,7 +66,10 @@ impl PodcastEpisodeService {
     ) -> Result<PodcastEpisode, CustomError> {
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
         DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
-        let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url, "D")?;
+        let podcast = PodcastEpisode::update_podcast_episode_status(&podcast_episode.url,
+                                                                    Some(ENVIRONMENT_SERVICE
+                                                                        .default_file_handler
+                                                                        .get_type()))?;
         let notification = Notification {
             id: 0,
             message: podcast_episode.name.to_string(),
@@ -456,7 +459,7 @@ impl PodcastEpisodeService {
 
                 match res {
                     Ok(_) => {
-                        PodcastEpisode::update_download_status_of_episode(
+                        PodcastEpisode::remove_download_status_of_episode(
                             old_podcast_episode.clone().id,
                         );
                     }
@@ -524,7 +527,7 @@ impl PodcastEpisodeService {
         match episode {
             Some(episode) => {
                 FileService::cleanup_old_episode(&episode)?;
-                PodcastEpisode::update_download_status_of_episode(episode.id);
+                PodcastEpisode::remove_download_status_of_episode(episode.id);
                 PodcastEpisode::update_deleted(episode_id, true)?;
                 Ok(episode)
             }

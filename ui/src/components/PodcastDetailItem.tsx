@@ -73,12 +73,12 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
 
                     <span className="flex gap-5">
                     <span title={t('download-to-server') as string} className={`material-symbols-outlined text-[--fg-icon-color]
-                     ${episode.podcastEpisode.status === 'D' ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
+                     ${episode.podcastEpisode.status ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
                         // Prevent icon click from triggering info modal
                         e.stopPropagation()
 
                         // Prevent another download if already downloaded
-                        if (episode.podcastEpisode.status === 'D') {
+                        if (episode.podcastEpisode.status) {
                             return
                         }
 

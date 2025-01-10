@@ -125,8 +125,6 @@ impl DownloadService {
 
         PodcastEpisode::update_local_paths(
             &podcast_episode.episode_id,
-            &paths.local_image_url,
-            &paths.local_file_url,
             &paths.image_filename,
             &paths.filename,
             conn,

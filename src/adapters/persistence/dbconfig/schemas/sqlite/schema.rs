@@ -99,16 +99,14 @@ diesel::table! {
         date_of_recording -> Text,
         image_url -> Text,
         total_time -> Integer,
-        local_url -> Text,
-        local_image_url -> Text,
         description -> Text,
-        status -> Text,
         download_time -> Nullable<Timestamp>,
         guid -> Text,
         deleted -> Bool,
         file_episode_path -> Nullable<Text>,
         file_image_path -> Nullable<Text>,
         episode_numbering_processed -> Bool,
+        download_location -> Nullable<Text>,
     }
 }
 
@@ -147,6 +145,7 @@ diesel::table! {
         active -> Bool,
         original_image_url -> Text,
         directory_name -> Text,
+        download_location -> Nullable<Text>,
     }
 }
 

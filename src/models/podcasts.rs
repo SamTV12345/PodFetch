@@ -49,6 +49,8 @@ pub struct Podcast {
     pub original_image_url: String,
     #[diesel(sql_type = Text)]
     pub directory_name: String,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub download_location: Option<String>,
 }
 
 impl Podcast {

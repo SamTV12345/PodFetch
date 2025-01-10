@@ -60,7 +60,7 @@ export const PodcastInfoModal = () => {
                     }}>save</span>
 
                     {/* Delete icon */}
-                    {selectedPodcastEpisode?.status === 'D' &&
+                    {selectedPodcastEpisode?.status &&
                         <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer text-[--danger-fg-color] hover:text-[--danger-fg-color-hover]" title={t('delete') as string}>delete</span>
                     }
                 </div>

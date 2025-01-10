@@ -13,7 +13,7 @@ use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::time::opt_or_empty_string;
 use crate::DBType as DbConnection;
 use chrono::{DateTime, Duration, FixedOffset, NaiveDateTime, ParseResult, Utc};
-use diesel::dsl::{max, sql};
+use diesel::dsl::{max, sql, IsNotNull};
 use diesel::prelude::{Identifiable, Queryable, QueryableByName, Selectable};
 use diesel::query_source::Alias;
 use diesel::sql_types::{Bool, Integer, Nullable, Text, Timestamp};
@@ -26,6 +26,7 @@ use diesel::{
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
+use crate::adapters::file::file_handler::FileHandlerType;
 
 #[derive(
     Queryable,
@@ -59,13 +60,7 @@ pub struct PodcastEpisode {
     #[diesel(sql_type = Integer)]
     pub total_time: i32,
     #[diesel(sql_type = Text)]
-    pub(crate) local_url: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) local_image_url: String,
-    #[diesel(sql_type = Text)]
     pub(crate) description: String,
-    #[diesel(sql_type = Text)]
-    pub(crate) status: String,
     #[diesel(sql_type = Nullable<Timestamp>)]
     pub(crate) download_time: Option<NaiveDateTime>,
     #[diesel(sql_type = Text)]
@@ -78,12 +73,17 @@ pub struct PodcastEpisode {
     pub(crate) file_image_path: Option<String>,
     #[diesel(sql_type = Bool)]
     pub(crate) episode_numbering_processed: bool,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub(crate) download_location: Option<String>,
 }
 
 impl PodcastEpisode {
-    pub fn is_downloaded(&self) -> bool {
-        self.status == "D"
+    pub(crate) fn is_downloaded(&self) -> bool {
+        self.download_location.is_some()
     }
+}
+
+impl PodcastEpisode {
 
     pub fn get_podcast_episode_by_internal_id(
         conn: &mut DbConnection,
@@ -311,8 +311,6 @@ impl PodcastEpisode {
 
     pub fn update_local_paths(
         episode_id: &str,
-        image_url: &str,
-        local_download_url: &str,
         file_image_path: &str,
         file_episode_path: &str,
         conn: &mut DbConnection,
@@ -320,8 +318,6 @@ impl PodcastEpisode {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::episode_id as episode_id_column;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::file_episode_path as file_episode_path_column;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::file_image_path as file_image_path_column;
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::local_image_url as local_image_url_column;
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
 
         let result = podcast_episodes
@@ -334,8 +330,6 @@ impl PodcastEpisode {
             diesel::update(podcast_episodes)
                 .filter(episode_id_column.eq(episode_id))
                 .set((
-                    local_image_url_column.eq(image_url),
-                    local_url_column.eq(local_download_url),
                     file_episode_path_column.eq(file_episode_path),
                     file_image_path_column.eq(file_image_path),
                 ))
@@ -387,39 +381,39 @@ impl PodcastEpisode {
         }
     }
 
+
+    pub fn is_downloaded_eq() ->
+                              IsNotNull<crate::adapters::persistence::dbconfig::schema::podcast_episodes::download_location> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::download_location;
+
+        download_location.is_not_null()
+    }
+
     pub fn check_if_downloaded(download_episode_url: &str) -> Result<bool, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::local_url as local_url_column;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
+
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::url as podcast_episode_url;
+
         let result = dsl_podcast_episodes
-            .filter(local_url_column.is_not_null())
+            .filter(Self::is_downloaded_eq())
             .filter(podcast_episode_url.eq(download_episode_url))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .expect("Error loading podcast episode by id");
-        match result {
-            Some(podcast_episode) => match podcast_episode.status.as_str() {
-                "N" => Ok(false),
-                "D" => Ok(true),
-                "P" => Ok(false),
-                _ => Ok(false),
-            },
-            None => {
-                panic!("Podcast episode not found");
-            }
-        }
+        .map_err(map_db_error)?;
+        Ok(result.is_some())
     }
 
     pub fn update_podcast_episode_status(
         download_url_of_episode: &str,
-        status_to_insert: &str,
+        download_location_to_set: Option<FileHandlerType>
     ) -> Result<PodcastEpisode, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
 
         let updated_podcast =
             diesel::update(podcast_episodes.filter(url.eq(download_url_of_episode)))
                 .set((
-                    status.eq(status_to_insert),
+                    download_location.eq::<Option<String>>(download_location_to_set.map
+                    (|d|d.to_string())),
                     download_time.eq(Utc::now().naive_utc()),
                 ))
                 .get_result::<PodcastEpisode>(&mut get_connection())
@@ -448,15 +442,13 @@ impl PodcastEpisode {
             .expect("Error loading podcast episode by id")
     }
 
-    pub fn update_download_status_of_episode(id_to_find: i32) {
+    pub fn remove_download_status_of_episode(id_to_find: i32) {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
         do_retry(|| {
             diesel::update(podcast_episodes.filter(id.eq(id_to_find)))
                 .set((
-                    status.eq("N"),
+                    download_location.eq(sql("NULL")),
                     download_time.eq(sql("NULL")),
-                    local_url.eq(""),
-                    local_image_url.eq(""),
                     file_episode_path.eq(sql("NULL")),
                     file_image_path.eq(sql("NULL")),
                 ))

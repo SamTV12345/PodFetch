@@ -7,7 +7,7 @@ import useAudioPlayer from "../store/AudioPlayerSlice";
 
 export const handlePlayofEpisode = (response: AxiosResponse<Episode>, episode: EpisodesWithOptionalTimeline)=>{
     const handlePlayIfDownloaded = ()=>{
-        episode.podcastEpisode.status === 'D'
+        episode.podcastEpisode.status
             ? useAudioPlayer.getState().setCurrentPodcastEpisode(preparePodcastEpisode(episode.podcastEpisode, response.data))
             : useAudioPlayer.getState().setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(episode.podcastEpisode, response.data))
         useAudioPlayer.getState().currentPodcast && useAudioPlayer.getState().setCurrentPodcast(useAudioPlayer.getState().currentPodcast!)

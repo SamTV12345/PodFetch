@@ -245,16 +245,14 @@ pub async fn retrieve_episode_sample_format(
         date_of_recording: "2023-12-24".to_string(),
         image_url: "http://podigee.com/rss/123/image".to_string(),
         total_time: 1200,
-        local_url: "http://localhost:8912/podcasts/123".to_string(),
-        local_image_url: "http://localhost:8912/podcasts/123/image".to_string(),
         description: "My description".to_string(),
-        status: "D".to_string(),
         download_time: None,
         guid: "081923123".to_string(),
         deleted: false,
         file_episode_path: None,
         file_image_path: None,
         episode_numbering_processed: false,
+        download_location: None,
     };
     let settings = Setting {
         id: 0,
