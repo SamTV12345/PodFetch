@@ -184,7 +184,7 @@ pub async fn get_rss_feed_for_podcast(
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?
             .into_iter()
-            .map(|c| (c, None::<String>, None::<FavoritePodcastEpisode>).into())
+            .map(|c| (c, api_key.clone(), None::<FavoritePodcastEpisode>).into())
             .collect();
 
     let mut itunes_owner = get_itunes_owner("", "");
