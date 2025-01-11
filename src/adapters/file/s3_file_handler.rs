@@ -126,6 +126,12 @@ impl FileHandler for S3Handler {
         let resp = Self::get_bucket()?
             .head_object_blocking(Self::prepare_path_resolution(path))
             .map_err(map_s3_error)?;
+        println!("{:?}",Self::get_url_for_file(
+            &resp.clone()
+                .0
+                .e_tag
+                .ok_or::<CustomError>(CustomErrorInner::NotFound.into())?,
+        ));
         Ok(Self::get_url_for_file(
             &resp
                 .0

@@ -9,6 +9,7 @@ use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::middleware::Next;
 use actix_web::web::Query;
 use actix_web::{Error, HttpMessage};
+use substring::Substring;
 
 pub enum PodcastOrPodcastEpisodeResource {
     Podcast(Podcast),
@@ -20,10 +21,9 @@ pub async fn check_permissions_for_files(
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     let request = req
-        .extract::<Query<Option<RSSAPiKey>>>()
+        .extract::<Option<Query<RSSAPiKey>>>()
         .await?
-        .into_inner()
-        .map(|rss_api_key| rss_api_key.api_key);
+        .map(|rss_api_key| rss_api_key.api_key.to_string());
     let extracted_podcast = check_auth(&req, request)?;
     req.extensions_mut().insert(extracted_podcast);
     next.call(req).await
@@ -31,14 +31,16 @@ pub async fn check_permissions_for_files(
 
 fn retrieve_podcast_or_podcast_episode(
     path: &str,
+    encoded_path: &str
 ) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
+    println!("Finding by path {}", path);
     let podcast_episode = PodcastEpisode::get_podcast_episodes_by_url(path)?;
     match podcast_episode {
         Some(podcast_episode) => Ok(PodcastOrPodcastEpisodeResource::PodcastEpisode(
             podcast_episode,
         )),
         None => {
-            let podcast = Podcast::find_by_path(path)?;
+            let podcast = Podcast::find_by_path(encoded_path)?;
             match podcast {
                 Some(podcast) => Ok(PodcastOrPodcastEpisodeResource::Podcast(podcast)),
                 None => Err(CustomErrorInner::NotFound.into()),
@@ -73,14 +75,24 @@ fn check_auth(
                 .path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
-            retrieve_podcast_or_podcast_episode(&requested_path)
+            let requested_path = requested_path.substring(1, requested_path.len());
+            let decoded_path = urlencoding::decode(requested_path).map_err(|_| {
+                CustomErrorInner::BadRequest("Error while decoding URL".to_string())
+            })?;
+            let decoded_path = decoded_path.as_ref();
+            retrieve_podcast_or_podcast_episode(decoded_path, requested_path)
         }
         false => {
             let requested_path = req
                 .path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
-            retrieve_podcast_or_podcast_episode(&requested_path)
+            let requested_path = requested_path.substring(1, requested_path.len());
+            let decoded_path = urlencoding::decode(requested_path).map_err(|_| {
+                CustomErrorInner::BadRequest("Error while decoding URL".to_string())
+            })?;
+            let decoded_path = decoded_path.as_ref();
+            retrieve_podcast_or_podcast_episode(decoded_path, requested_path)
         }
     }
 }
