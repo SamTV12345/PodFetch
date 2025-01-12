@@ -281,7 +281,7 @@ impl User {
         self.role.eq(&Role::Admin.to_string())
     }
 
-    pub fn find_by_api_key(api_key_to_find: String) -> Result<Option<User>, CustomError> {
+    pub fn find_by_api_key(api_key_to_find: &str) -> Result<Option<User>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
 
         users
@@ -305,7 +305,7 @@ impl User {
         Ok(())
     }
 
-    pub fn check_if_api_key_exists(api_key_to_find: String) -> bool {
+    pub fn check_if_api_key_exists(api_key_to_find: &str) -> bool {
         if api_key_to_find.is_empty() {
             return false;
         }

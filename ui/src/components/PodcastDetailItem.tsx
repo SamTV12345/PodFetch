@@ -55,7 +55,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 items-center group cursor-pointer mb-12
             ">
                 {/* Thumbnail */}
-                <img src={prependAPIKeyOnAuthEnabled(episode.podcastEpisode.image_url)} alt={episode.podcastEpisode.name} className="
+                <img src={episode.podcastEpisode.local_image_url} alt={episode.podcastEpisode.name} className="
                     hidden xs:block
                     col-start-1 col-end-2 row-start-1 row-end-4
                     self-center rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]
@@ -73,12 +73,12 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
 
                     <span className="flex gap-5">
                     <span title={t('download-to-server') as string} className={`material-symbols-outlined text-[--fg-icon-color]
-                     ${episode.podcastEpisode.status === 'D' ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
+                     ${episode.podcastEpisode.status ? 'cursor-auto filled' : 'cursor-pointer hover:text-[--fg-icon-color-hover]'}`} onClick={(e)=>{
                         // Prevent icon click from triggering info modal
                         e.stopPropagation()
 
                         // Prevent another download if already downloaded
-                        if (episode.podcastEpisode.status === 'D') {
+                        if (episode.podcastEpisode.status) {
                             return
                         }
 

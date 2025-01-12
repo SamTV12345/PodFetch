@@ -102,8 +102,6 @@ impl PodcastSetting {
                 let file_name_builder = FilenameBuilderReturn::new(
                     f_e.file_episode_path.unwrap(),
                     f_e.file_image_path.unwrap(),
-                    f_e.local_url,
-                    f_e.local_image_url,
                 );
                 let result = DownloadService::handle_metadata_insertion(
                     &file_name_builder,

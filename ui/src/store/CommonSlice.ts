@@ -43,7 +43,7 @@ export type PodcastEpisode = {
     local_url: string,
     local_image_url:string,
     description: string,
-    status: "D"|"N"|"P",
+    status: boolean,
     time?: number,
     favored?: boolean
 }
@@ -186,7 +186,7 @@ const useCommon = create<CommonProps>((set, get) => ({
         if(selectedEpisodes){
             set({selectedEpisodes: selectedEpisodes.map((episode) => {
                     if(episode.podcastEpisode.episode_id === episode_id) {
-                        episode.podcastEpisode.status = 'D'
+                        episode.podcastEpisode.status = true
                     }
                     return episode
                 })})

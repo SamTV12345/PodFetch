@@ -1,13 +1,19 @@
+use crate::adapters::file::file_handler::FileHandlerType;
 use crate::constants::inner_constants::{
     API_KEY, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE,
-    GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS,
-    OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY,
-    PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY,
-    REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, SERVER_URL, SUB_DIRECTORY,
-    TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME,
+    DEFAULT_PODFETCH_FOLDER, FILE_HANDLER, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY,
+    OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_FOLDER,
+    PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL,
+    POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER,
+    S3_ACCESS_KEY, S3_PROFILE, S3_REGION, S3_SECRET_KEY, S3_SECURITY_TOKEN, S3_SESSION_TOKEN,
+    S3_URL, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID,
+    TELEGRAM_BOT_TOKEN, USERNAME,
 };
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
+use s3::creds::Credentials;
+use s3::error::S3Error;
+use s3::{Bucket, Region};
 use std::env;
 use std::env::var;
 use url::Url;
@@ -22,7 +28,6 @@ pub struct OidcConfig {
     pub jwks_uri: String,
 }
 
-#[derive(Clone)]
 pub struct EnvironmentService {
     pub server_url: String,
     pub ws_url: String,
@@ -44,6 +49,54 @@ pub struct EnvironmentService {
     pub proxy_url: Option<String>,
     pub conn_number: i16,
     pub api_key_admin: Option<String>,
+    pub default_file_handler: FileHandlerType,
+    pub default_podfetch_folder: String,
+    pub s3_config: S3Config,
+}
+
+#[derive(Clone)]
+pub struct S3Config {
+    pub access_key: String,
+    pub secret_key: String,
+    pub security_token: Option<String>,
+    pub session_token: Option<String>,
+    pub profile: Option<String>,
+    pub region: String,
+    pub endpoint: String,
+    pub bucket: String,
+}
+
+impl From<&S3Config> for Region {
+    fn from(val: &S3Config) -> Self {
+        Region::Custom {
+            region: val.region.clone(),
+            endpoint: val.endpoint.clone(),
+        }
+    }
+}
+
+impl S3Config {
+    pub fn convert_to_string(self, id: &str) -> String {
+        format!("/{}/{}", self.bucket, id)
+    }
+}
+
+impl From<&S3Config> for Result<Box<Bucket>, S3Error> {
+    fn from(val: &S3Config) -> Self {
+        Bucket::new(val.bucket.as_str(), val.into(), val.into())
+    }
+}
+
+impl From<&S3Config> for Credentials {
+    fn from(val: &S3Config) -> Self {
+        Credentials {
+            access_key: Some(val.access_key.clone()),
+            secret_key: Some(val.secret_key.clone()),
+            security_token: val.security_token.clone(),
+            session_token: val.session_token.clone(),
+            expiration: None,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -56,12 +109,6 @@ pub struct ReverseProxyConfig {
 pub struct TelegramConfig {
     pub telegram_bot_token: String,
     pub telegram_chat_id: String,
-}
-
-impl Default for EnvironmentService {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl EnvironmentService {
@@ -148,6 +195,8 @@ impl EnvironmentService {
             None
         };
 
+        let handler = Self::handle_default_file_handler();
+
         EnvironmentService {
             server_url: server_url.clone(),
             ws_url,
@@ -180,7 +229,53 @@ impl EnvironmentService {
                 .parse::<i16>()
                 .unwrap_or(10),
             api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None),
+            default_file_handler: handler.0,
+            s3_config: handler.1,
+            default_podfetch_folder: var(PODFETCH_FOLDER)
+                .unwrap_or(DEFAULT_PODFETCH_FOLDER.to_string()),
         }
+    }
+
+    fn handle_default_file_handler() -> (FileHandlerType, S3Config) {
+        match var(FILE_HANDLER) {
+            Ok(handler) => match handler.as_str() {
+                "s3" => {
+                    log::info!("Using S3 file handler");
+                    (FileHandlerType::S3, Self::capture_s3_config())
+                }
+                _ => {
+                    log::info!("Using local file handler");
+                    (FileHandlerType::Local, Self::capture_s3_config())
+                }
+            },
+            Err(_) => (FileHandlerType::Local, Self::capture_s3_config()),
+        }
+    }
+
+    fn capture_s3_config() -> S3Config {
+        let mut endpoint = Self::variable_or_default(S3_URL, "http://localhost:9000");
+        if endpoint.ends_with('/') {
+            endpoint = endpoint[0..endpoint.len() - 1].to_string();
+        }
+
+        S3Config {
+            region: Self::variable_or_default(S3_REGION, "eu-central-1"),
+            access_key: Self::variable_or_default(S3_ACCESS_KEY, ""),
+            secret_key: Self::variable_or_default(S3_SECRET_KEY, ""),
+            endpoint,
+            profile: Self::variable_or_option(S3_PROFILE),
+            bucket: Self::variable_or_default(PODFETCH_FOLDER, "podcasts"),
+            security_token: Self::variable_or_option(S3_SECURITY_TOKEN),
+            session_token: Self::variable_or_option(S3_SESSION_TOKEN),
+        }
+    }
+
+    fn variable_or_default(var_name: &str, default: &str) -> String {
+        var(var_name).unwrap_or(default.to_string())
+    }
+
+    fn variable_or_option(var_name: &str) -> Option<String> {
+        var(var_name).ok()
     }
 
     fn handle_telegram_config() -> Option<TelegramConfig> {

@@ -1,6 +1,7 @@
 # Summary
 
 - [Introduction](./Introduction.md)
+- [S3](./S3.md)
 - [Installation](./Installation.md)
 - [Authorization](./AUTH.md)
 - [UI Walkthrough](./UIWalkthrough.md)

@@ -31,9 +31,18 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
     sys.refresh_all();
     sys.refresh_cpu_all();
 
-    const PATH: &str = "podcasts";
     let podcast_byte_size =
-        get_size(PATH).map_err(|e| map_io_extra_error(e, Some(PATH.to_string())))?;
+        get_size(&ENVIRONMENT_SERVICE.default_podfetch_folder).map_err(|e| {
+            map_io_extra_error(
+                e,
+                Some(
+                    ENVIRONMENT_SERVICE
+                        .default_podfetch_folder
+                        .to_string()
+                        .to_string(),
+                ),
+            )
+        })?;
     Ok(HttpResponse::Ok().json(SysExtraInfo {
         system: sys.into(),
         disks: sim_disks,

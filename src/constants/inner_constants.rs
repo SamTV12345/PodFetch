@@ -38,6 +38,9 @@ pub struct PartialSettings {
 pub const TELEGRAM_BOT_TOKEN: &str = "TELEGRAM_BOT_TOKEN";
 pub const TELEGRAM_BOT_CHAT_ID: &str = "TELEGRAM_BOT_CHAT_ID";
 pub const TELEGRAM_API_ENABLED: &str = "TELEGRAM_API_ENABLED";
+pub const PODFETCH_FOLDER: &str = "PODFETCH_FOLDER";
+pub const DEFAULT_PODFETCH_FOLDER: &str = "podcasts";
+pub const FILE_HANDLER: &str = "FILE_HANDLER";
 
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -163,3 +166,12 @@ pub type PodcastEpisodeWithFavorited = Result<
     )>,
     CustomError,
 >;
+
+// S3 configuration
+pub const S3_URL: &str = "S3_URL";
+pub const S3_REGION: &str = "S3_REGION";
+pub const S3_ACCESS_KEY: &str = "S3_ACCESS_KEY";
+pub const S3_SECRET_KEY: &str = "S3_SECRET_KEY";
+pub const S3_PROFILE: &str = "S3_PROFILE";
+pub const S3_SECURITY_TOKEN: &str = "S3_SECURITY_TOKEN";
+pub const S3_SESSION_TOKEN: &str = "S3_SESSION_TOKEN";

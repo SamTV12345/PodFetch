@@ -73,7 +73,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         axios.get(  "/podcast/episode/" + nextEpisode.episode_id)
             .then((response: AxiosResponse<Episode>) => {
                 setCurrentPodcastEpisode(nextEpisode)
-                nextEpisode.status === 'D'
+                nextEpisode.status
                     ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data))
                     : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data))
                 refItem.current!.src = episodes[index].podcastEpisode.local_url

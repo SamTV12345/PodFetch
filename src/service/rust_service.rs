@@ -90,10 +90,10 @@ impl PodcastService {
         lobby: Data<ChatServerHandle>,
     ) -> Result<Podcast, CustomError> {
         let resp = get_http_client()
-            .get(
-                "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id=".to_owned()
-                    + &id.to_string(),
-            )
+            .get(format!(
+                "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id={}",
+                &id.to_string()
+            ))
             .headers(Self::compute_podindex_header())
             .send()
             .await
@@ -126,7 +126,8 @@ impl PodcastService {
             return Err(CustomErrorInner::Conflict(format!(
                 "Podcast with feed url {} already exists",
                 podcast_insert.feed_url
-            )).into());
+            ))
+            .into());
         }
 
         let podcast_directory_created =
@@ -239,9 +240,12 @@ impl PodcastService {
             .unwrap()
             .as_secs();
         let mut headers = HeaderMap::new();
-        let non_hashed_string = ENVIRONMENT_SERVICE.podindex_api_key.clone().to_owned()
-            + &*ENVIRONMENT_SERVICE.podindex_api_secret.clone()
-            + &seconds.to_string();
+        let non_hashed_string = format!(
+            "{}{}{}",
+            ENVIRONMENT_SERVICE.podindex_api_key.clone(),
+            &*ENVIRONMENT_SERVICE.podindex_api_secret.clone(),
+            &seconds.to_string()
+        );
         let mut hasher = Sha1::new();
 
         hasher.update(non_hashed_string);

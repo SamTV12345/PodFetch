@@ -142,7 +142,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                             if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
                                 const foundDownload = JSON.parse(JSON.stringify(p)) as EpisodesWithOptionalTimeline
 
-                                foundDownload.podcastEpisode.status = 'D'
+                                foundDownload.podcastEpisode.status = true
                                 foundDownload.podcastEpisode.url = downloadedPodcastEpisode.url
                                 foundDownload.podcastEpisode.local_url = downloadedPodcastEpisode.local_url
                                 foundDownload.podcastEpisode.image_url = downloadedPodcastEpisode.image_url
@@ -161,7 +161,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                         if (e.podcastEpisode.episode_id === parsed.podcast_episode.episode_id) {
                             const clonedPodcast = Object.assign({}, parsed.podcast_episode)
 
-                            clonedPodcast.status = 'N'
+                            clonedPodcast.status = false
 
                             return {
                                 podcastEpisode: clonedPodcast

@@ -1,5 +1,6 @@
 pub mod api_doc;
 pub mod controller_utils;
+pub mod file_hosting;
 pub mod manifest_controller;
 pub mod notification_controller;
 pub mod playlist_controller;

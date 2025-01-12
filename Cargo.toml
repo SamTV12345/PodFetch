@@ -28,7 +28,7 @@ libsqlite3-sys = {version = "0.30.1", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.2", optional = true}
 diesel_migrations = "2.2.0"
 actix-files = "0.6.6"
-actix-web = {version="4.9.0", features=["rustls"]}
+actix-web = {version="4.9.0", features=["rustls", "http2"]}
 jsonwebtoken = {version="9.3.0"}
 log = "0.4.22"
 futures-util = "0.3.31"
@@ -65,6 +65,8 @@ mp4ameta = "0.11.0"
 file-format = "0.26.0"
 maud = { version = "*", features = ["actix-web"] }
 url = "2.5.4"
+rust-s3 = { version = "0.35.1", features = ["blocking", "fail-on-err"] }
+async-trait = "0.1.85"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.68"

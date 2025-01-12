@@ -1,3 +1,5 @@
+use crate::adapters::file::file_handler::FileHandlerType;
+use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
@@ -27,12 +29,31 @@ pub struct PodcastDto {
 impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
     fn from(value: (Podcast, Option<Favorite>, Vec<Tag>)) -> Self {
         let favorite = value.1.is_some() && value.1.clone().unwrap().favored;
+
+        let image_url =
+            match FileHandlerType::from(value.0.download_location.clone().unwrap().as_str()) {
+                FileHandlerType::Local => {
+                    format!(
+                        "{}{}",
+                        ENVIRONMENT_SERVICE.get_server_url(),
+                        value.0.image_url
+                    )
+                }
+                FileHandlerType::S3 => {
+                    format!(
+                        "{}/{}",
+                        S3_BUCKET_CONFIG.endpoint.clone(),
+                        &value.0.image_url
+                    )
+                }
+            };
+
         PodcastDto {
             id: value.0.id,
             name: value.0.name.clone(),
             directory_id: value.0.directory_id.clone(),
             rssfeed: value.0.rssfeed.clone(),
-            image_url: ENVIRONMENT_SERVICE.get_server_url() + &value.0.image_url.clone(),
+            image_url,
             language: value.0.language.clone(),
             keywords: value.0.keywords.clone(),
             summary: value.0.summary.clone(),
@@ -51,12 +72,17 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
 // Used when we don't need the other information
 impl From<Podcast> for PodcastDto {
     fn from(value: Podcast) -> Self {
+        let image_url = format!(
+            "{}{}",
+            ENVIRONMENT_SERVICE.get_server_url(),
+            value.image_url
+        );
         PodcastDto {
             id: value.id,
             name: value.name.clone(),
             directory_id: value.directory_id.clone(),
             rssfeed: value.rssfeed.clone(),
-            image_url: ENVIRONMENT_SERVICE.get_server_url() + &value.image_url.clone(),
+            image_url,
             language: value.language.clone(),
             keywords: value.keywords.clone(),
             summary: value.summary.clone(),

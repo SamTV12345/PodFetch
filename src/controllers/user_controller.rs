@@ -140,9 +140,7 @@ pub async fn update_user(
 
     if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
         if admin_username == user.username {
-            return Err(CustomErrorInner::Conflict(
-                "Cannot update admin user".to_string(),
-            ).into());
+            return Err(CustomErrorInner::Conflict("Cannot update admin user".to_string()).into());
         }
     }
 
@@ -158,7 +156,8 @@ pub async fn update_user(
         if password.trim().len() < 8 {
             return Err(CustomErrorInner::BadRequest(
                 "Password must be at least 8 characters long".to_string(),
-            ).into());
+            )
+            .into());
         }
         user.password = Some(sha256::digest(password.trim()));
     }

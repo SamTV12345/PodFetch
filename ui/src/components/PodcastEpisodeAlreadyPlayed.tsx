@@ -68,7 +68,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                             position: 0
                         }
 
-                        selectedPodcastEpisode.podcastEpisode.podcastEpisode.status === 'D'
+                        selectedPodcastEpisode.podcastEpisode.podcastEpisode.status
                             ? setCurrentPodcastEpisode(preparePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,
                                 watchedModel ))
                             : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,

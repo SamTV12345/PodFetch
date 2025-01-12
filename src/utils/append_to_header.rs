@@ -20,10 +20,9 @@ pub fn add_basic_auth_headers_conditionally(
         if let Some(captures) = BASIC_AUTH_COND_REGEX.captures(&url) {
             if let Some(auth) = captures.get(1) {
                 let b64_auth = general_purpose::STANDARD.encode(auth.as_str());
-                header_map.append(
-                    "Authorization",
-                    ("Basic ".to_owned() + &b64_auth).parse().unwrap(),
-                );
+                let mut bearer = "Basic ".to_owned();
+                bearer.push_str(&b64_auth);
+                header_map.append("Authorization", bearer.parse().unwrap());
             }
         }
     }

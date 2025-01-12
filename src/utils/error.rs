@@ -1,13 +1,12 @@
+use actix_web::http::StatusCode;
+use actix_web::{HttpResponse, ResponseError};
+use log::error;
+use s3::error::S3Error;
 use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
-use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, ResponseError};
-use log::error;
-
 use thiserror::Error;
-
 
 pub struct BacktraceError {
     pub inner: CustomErrorInner,
@@ -123,7 +122,6 @@ impl Error for BacktraceError {
 
 pub(crate) type CustomError = BacktraceError;
 
-
 impl ResponseError for CustomError {
     fn status_code(&self) -> StatusCode {
         match self.inner {
@@ -150,10 +148,13 @@ impl ResponseError for CustomError {
 
 impl Drop for CustomError {
     fn drop(&mut self) {
-        error!("Error {}: {} with error", self.inner.to_string(),self.backtrace);
+        error!(
+            "Error {}: {} with error",
+            self.inner.to_string(),
+            self.backtrace
+        );
     }
 }
-
 
 #[derive(Error, Debug)]
 pub enum CustomErrorInner {
@@ -187,8 +188,6 @@ impl CustomErrorInner {
     }
 }
 
-
-
 pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
     error!(
         "IO error: {} for path {}",
@@ -200,6 +199,11 @@ pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
         std::io::ErrorKind::PermissionDenied => CustomError::from(CustomErrorInner::Forbidden),
         _ => CustomError::from(CustomErrorInner::Unknown),
     }
+}
+
+pub fn map_s3_error(error: S3Error) -> CustomError {
+    log::info!("S3 error: {}", error);
+    CustomErrorInner::Unknown.into()
 }
 
 pub fn map_io_extra_error(e: fs_extra::error::Error, path: Option<String>) -> CustomError {
@@ -215,7 +219,9 @@ pub fn map_db_error(e: diesel::result::Error) -> CustomError {
     error!("Database error: {}", e);
     match e {
         diesel::result::Error::InvalidCString(_) => CustomError::from(CustomErrorInner::NotFound),
-        diesel::result::Error::DatabaseError(_, _) => CustomError::from(CustomErrorInner::DatabaseError(e)),
+        diesel::result::Error::DatabaseError(_, _) => {
+            CustomError::from(CustomErrorInner::DatabaseError(e))
+        }
         _ => CustomError::from(CustomErrorInner::Unknown),
     }
 }
@@ -241,8 +247,7 @@ struct ErrorResponse {
 #[cfg(test)]
 mod tests {
     use crate::utils::error::{map_db_error, map_io_error, CustomErrorInner};
-    
-    
+
     use diesel::result::Error;
     use std::io::ErrorKind;
 
@@ -250,7 +255,9 @@ mod tests {
     fn test_map_io_error() {
         let io_error = std::io::Error::new(ErrorKind::NotFound, "File not found");
         let custom_error = map_io_error(io_error, None);
-        assert!(custom_error.to_string().contains("Requested file was not found"));
+        assert!(custom_error
+            .to_string()
+            .contains("Requested file was not found"));
     }
 
     #[test]
