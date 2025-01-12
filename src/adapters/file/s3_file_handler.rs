@@ -1,5 +1,5 @@
-use crate::adapters::file::file_handler::{FileHandler, FileHandlerType, FileRequest};
-use crate::utils::error::{map_s3_error, CustomError, CustomErrorInner};
+use crate::adapters::file::file_handler::{FileHandler, FileRequest};
+use crate::utils::error::{map_s3_error, CustomError};
 use futures_util::TryFutureExt;
 use std::future::Future;
 use std::pin::Pin;
@@ -7,27 +7,14 @@ use std::sync::LazyLock;
 
 #[derive(Clone)]
 pub struct S3Handler;
-use s3::creds::Credentials;
-use s3::{Bucket, BucketConfiguration, Region};
 
-static S3_BUCKET_CRED: LazyLock<Credentials> = LazyLock::new(|| {
-    Credentials::new(
-        Some("HDwQbjpdwvLd12Bte7ZJ"),
-        Some("EKkufAzs1yCeYVs2NLbdEBiqmlw1zHBLJaNOMT5L"),
-        None,
-        None,
-        None,
-    )
-    .unwrap()
-});
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::service::environment_service::S3Config;
+use s3::error::S3Error;
+use s3::{Bucket, BucketConfiguration};
 
-impl S3Handler {
-    pub fn new() -> Self {
-        S3Handler
-    }
-}
-
-static BUCKET_NAME: &str = "podcasts";
+pub static S3_BUCKET_CONFIG: LazyLock<S3Config> =
+    LazyLock::new(|| ENVIRONMENT_SERVICE.s3_config.clone().unwrap());
 
 impl S3Handler {
     async fn handle_write_async(path: &str, content: &mut [u8]) -> Result<(), CustomError> {
@@ -40,15 +27,10 @@ impl S3Handler {
     }
 
     fn create_bucket() -> Result<(), CustomError> {
-        let region = Region::Custom {
-            region: "eu-central-1".to_owned(),
-            endpoint: "http://localhost:9000".to_owned(),
-        };
-
         Bucket::create_with_path_style_blocking(
-            BUCKET_NAME,
-            region,
-            S3_BUCKET_CRED.clone(),
+            &S3_BUCKET_CONFIG.bucket,
+            (&*S3_BUCKET_CONFIG).into(),
+            (&*S3_BUCKET_CONFIG).into(),
             BucketConfiguration::default(),
         )
         .map_err(map_s3_error)?;
@@ -56,15 +38,10 @@ impl S3Handler {
     }
 
     async fn create_bucket_async() -> Result<(), CustomError> {
-        let region = Region::Custom {
-            region: "eu-central-1".to_owned(),
-            endpoint: "http://localhost:9000".to_owned(),
-        };
-
         Bucket::create_with_path_style(
-            BUCKET_NAME,
-            region,
-            S3_BUCKET_CRED.clone(),
+            &S3_BUCKET_CONFIG.bucket,
+            (&*S3_BUCKET_CONFIG).into(),
+            (&*S3_BUCKET_CONFIG).into(),
             BucketConfiguration::default(),
         )
         .map_err(map_s3_error)
@@ -73,13 +50,9 @@ impl S3Handler {
     }
 
     async fn get_bucket_async() -> Result<Box<Bucket>, CustomError> {
-        let region = Region::Custom {
-            region: "eu-central-1".to_owned(),
-            endpoint: "http://localhost:9000".to_owned(),
-        };
-
-        let bucket = Bucket::new(BUCKET_NAME, region.clone(), S3_BUCKET_CRED.clone())
-            .map_err(map_s3_error)?;
+        let bucket: Box<Bucket> =
+            <&S3Config as Into<Result<Box<Bucket>, S3Error>>>::into(&S3_BUCKET_CONFIG)
+                .map_err(map_s3_error)?;
         if !bucket
             .exists()
             .await
@@ -93,13 +66,9 @@ impl S3Handler {
     }
 
     fn get_bucket() -> Result<Box<Bucket>, CustomError> {
-        let region = Region::Custom {
-            region: "eu-central-1".to_owned(),
-            endpoint: "http://localhost:9000".to_owned(),
-        };
-
-        let bucket = Bucket::new(BUCKET_NAME, region.clone(), S3_BUCKET_CRED.clone())
-            .map_err(map_s3_error)?;
+        let bucket: Box<Bucket> =
+            <&S3Config as Into<Result<Box<Bucket>, S3Error>>>::into(&S3_BUCKET_CONFIG)
+                .map_err(map_s3_error)?;
 
         if !bucket
             .exists_blocking()
@@ -113,7 +82,7 @@ impl S3Handler {
     }
 
     fn get_url_for_file(id: &str) -> String {
-        format!("http://localhost:9000/{}/{}", BUCKET_NAME, id)
+        S3_BUCKET_CONFIG.clone().convert_to_string(id)
     }
 
     fn prepare_path_resolution(str: &str) -> String {
@@ -122,25 +91,16 @@ impl S3Handler {
 }
 
 impl FileHandler for S3Handler {
-    fn read_file(&self, path: &str) -> Result<String, CustomError> {
+    fn read_file(path: &str) -> Result<String, CustomError> {
+        println!("Reading file {}", path);
         let resp = Self::get_bucket()?
             .head_object_blocking(Self::prepare_path_resolution(path))
             .map_err(map_s3_error)?;
-        println!("{:?}",Self::get_url_for_file(
-            &resp.clone()
-                .0
-                .e_tag
-                .ok_or::<CustomError>(CustomErrorInner::NotFound.into())?,
-        ));
-        Ok(Self::get_url_for_file(
-            &resp
-                .0
-                .e_tag
-                .ok_or::<CustomError>(CustomErrorInner::NotFound.into())?,
-        ))
+        println!("Response {:?}", resp.0.e_tag);
+        Ok(Self::get_url_for_file(&resp.0.e_tag.unwrap()))
     }
 
-    fn write_file(&self, path: &str, content: &mut [u8]) -> Result<(), CustomError> {
+    fn write_file(path: &str, content: &mut [u8]) -> Result<(), CustomError> {
         Self::get_bucket()?
             .put_object_blocking(Self::prepare_path_resolution(path), content)
             .map_err(map_s3_error)?;
@@ -148,7 +108,6 @@ impl FileHandler for S3Handler {
     }
 
     fn write_file_async<'a>(
-        &'a self,
         path: &'a str,
         content: &'a mut [u8],
     ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + 'a>> {
@@ -157,14 +116,14 @@ impl FileHandler for S3Handler {
         })
     }
 
-    fn create_dir(&self, _: &str) -> Result<(), CustomError> {
+    fn create_dir(_: &str) -> Result<(), CustomError> {
         Ok(())
     }
 
-    fn path_exists(&self, path: &str, req: FileRequest) -> bool {
+    fn path_exists(path: &str, req: FileRequest) -> bool {
         match req {
             FileRequest::Directory => true,
-            FileRequest::File => self.read_file(path).is_ok(),
+            FileRequest::File => Self::read_file(path).is_ok(),
             FileRequest::NoopS3 => {
                 // Some Podfetch internals check if a path already exists before writing. This is
                 // to prevent an infinite loop as s3 doesn't have a concept of directories
@@ -173,18 +132,14 @@ impl FileHandler for S3Handler {
         }
     }
 
-    fn remove_dir(&self, _: &str) -> Result<(), CustomError> {
+    fn remove_dir(_: &str) -> Result<(), CustomError> {
         Ok(())
     }
 
-    fn remove_file(&self, path: &str) -> Result<(), CustomError> {
+    fn remove_file(path: &str) -> Result<(), CustomError> {
         Self::get_bucket()?
             .delete_object_blocking(path)
             .map_err(map_s3_error)?;
         Ok(())
-    }
-
-    fn get_type(&self) -> FileHandlerType {
-        FileHandlerType::S3
     }
 }

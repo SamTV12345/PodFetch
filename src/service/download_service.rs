@@ -5,6 +5,7 @@ use std::fs::File;
 
 use reqwest::blocking::ClientBuilder;
 
+use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::FileHandlerType;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME};
@@ -112,14 +113,18 @@ impl DownloadService {
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
-            ENVIRONMENT_SERVICE
-                .default_file_handler
-                .write_file(&paths.image_filename, image_data.1.as_mut_slice())?;
+            FileHandleWrapper::write_file(
+                &paths.image_filename,
+                image_data.1.as_mut_slice(),
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
         }
 
-        ENVIRONMENT_SERVICE
-            .default_file_handler
-            .write_file(&paths.filename, podcast_data.1.as_mut_slice())?;
+        FileHandleWrapper::write_file(
+            &paths.filename,
+            podcast_data.1.as_mut_slice(),
+            &ENVIRONMENT_SERVICE.default_file_handler,
+        )?;
 
         PodcastEpisode::update_local_paths(
             &podcast_episode.episode_id,
@@ -127,9 +132,11 @@ impl DownloadService {
             &paths.filename,
             conn,
         )?;
-        ENVIRONMENT_SERVICE
-            .default_file_handler
-            .write_file(&paths.image_filename, image_data.1.as_mut_slice())?;
+        FileHandleWrapper::write_file(
+            &paths.image_filename,
+            image_data.1.as_mut_slice(),
+            &ENVIRONMENT_SERVICE.default_file_handler,
+        )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Err(err) = result {
             log::error!("Error handling metadata insertion: {:?}", err);
@@ -142,7 +149,7 @@ impl DownloadService {
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
     ) -> Result<(), CustomError> {
-        if ENVIRONMENT_SERVICE.default_file_handler.get_type() == FileHandlerType::S3 {
+        if ENVIRONMENT_SERVICE.default_file_handler == FileHandlerType::S3 {
             return Ok(());
         }
 

@@ -19,7 +19,6 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use tokio::task::block_in_place;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OptionalId {
@@ -220,8 +219,9 @@ pub async fn delete_podcast_episode_locally(
     }
 
     let delted_podcast_episode =
-        web::block(||PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner
-        ())).await.unwrap()?;
+        web::block(|| PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner()))
+            .await
+            .unwrap()?;
 
     lobby.broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
 

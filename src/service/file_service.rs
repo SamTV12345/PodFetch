@@ -5,7 +5,8 @@ use crate::models::podcasts::Podcast;
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::adapters::file::file_handler::FileRequest;
+use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
+use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::settings_controller::ReplacementStrategy;
@@ -48,13 +49,15 @@ impl FileService {
     }
 
     pub fn create_podcast_root_directory_exists() -> Result<(), CustomError> {
-        if !ENVIRONMENT_SERVICE.default_file_handler.path_exists(
-            "podcasts",
-            crate::adapters::file::file_handler::FileRequest::Directory,
+        if !FileHandleWrapper::path_exists(
+            &ENVIRONMENT_SERVICE.default_podfetch_folder.to_string(),
+            FileRequest::Directory,
+            &ENVIRONMENT_SERVICE.default_file_handler,
         ) {
-            return ENVIRONMENT_SERVICE
-                .default_file_handler
-                .create_dir("podcasts");
+            return FileHandleWrapper::create_dir(
+                &ENVIRONMENT_SERVICE.default_podfetch_folder.to_string(),
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            );
         }
 
         Ok(())
@@ -68,13 +71,15 @@ impl FileService {
             prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
         let escaped_path = format!("podcasts/{}", escaped_title);
 
-        if !ENVIRONMENT_SERVICE
-            .default_file_handler
-            .path_exists(&escaped_path, FileRequest::Directory)
-        {
-            ENVIRONMENT_SERVICE
-                .default_file_handler
-                .create_dir(&escaped_path)?;
+        if !FileHandleWrapper::path_exists(
+            &escaped_path,
+            FileRequest::Directory,
+            &ENVIRONMENT_SERVICE.default_file_handler,
+        ) {
+            FileHandleWrapper::create_dir(
+                &escaped_path,
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
             Ok(escaped_path)
         } else {
             // Check if this is a new podcast with the same name as an old one
@@ -94,9 +99,10 @@ impl FileService {
                         i += 1;
                     }
                     // This is save to insert because this directory does not exist
-                    ENVIRONMENT_SERVICE
-                        .default_file_handler
-                        .create_dir(&format!("podcasts/{}-{}", escaped_title, i))?;
+                    FileHandleWrapper::create_dir(
+                        &format!("podcasts/{}-{}", escaped_title, i),
+                        &ENVIRONMENT_SERVICE.default_file_handler,
+                    )?;
                     Ok(format!("podcasts/{}-{}", escaped_title, i))
                 }
             }
@@ -122,10 +128,12 @@ impl FileService {
 
         let file_path =
             PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix.0);
-        ENVIRONMENT_SERVICE
-            .default_file_handler
-            .write_file_async(&file_path.0, image_suffix.1.as_mut_slice())
-            .await?;
+        FileHandleWrapper::write_file_async(
+            &file_path.0,
+            image_suffix.1.as_mut_slice(),
+            &ENVIRONMENT_SERVICE.default_file_handler,
+        )
+        .await?;
         PodcastEpisode::update_podcast_image(podcast_id, &file_path.1)?;
         Ok(())
     }
@@ -133,33 +141,32 @@ impl FileService {
     pub fn cleanup_old_episode(episode: &PodcastEpisode) -> Result<(), CustomError> {
         log::info!("Cleaning up old episode: {}", episode.episode_id);
 
-        fn check_if_file_exists(file_path: &str) -> bool {
-            ENVIRONMENT_SERVICE
-                .default_file_handler
-                .path_exists(file_path, FileRequest::File)
+        fn check_if_file_exists(file_path: &str, file_type: &FileHandlerType) -> bool {
+            FileHandleWrapper::path_exists(file_path, FileRequest::File, file_type)
         }
         if let Some(episode_path) = episode.file_episode_path.clone() {
-            if check_if_file_exists(&episode_path) {
-                ENVIRONMENT_SERVICE
-                    .default_file_handler
-                    .remove_file(&episode_path)?;
+            let download_location =
+                FileHandlerType::from(episode.download_location.clone().unwrap().as_str());
+            if check_if_file_exists(&episode_path, &download_location) {
+                FileHandleWrapper::remove_file(&episode_path, &download_location)?;
             }
         }
         if let Some(image_path) = episode.file_image_path.clone() {
-            if check_if_file_exists(&image_path) {
-                ENVIRONMENT_SERVICE
-                    .default_file_handler
-                    .remove_file(&image_path)?;
+            let file_type =
+                FileHandlerType::from(episode.download_location.clone().unwrap().as_str());
+            if check_if_file_exists(&image_path, &file_type) {
+                FileHandleWrapper::remove_file(&image_path, &file_type)?;
             }
         }
         Ok(())
     }
 
-    pub fn delete_podcast_files(podcast_dir: &str) {
-        ENVIRONMENT_SERVICE
-            .default_file_handler
-            .remove_dir(podcast_dir)
-            .unwrap();
+    pub fn delete_podcast_files(podcast_dir: &str, podcast: &Podcast) {
+        FileHandleWrapper::remove_dir(
+            podcast_dir,
+            &FileHandlerType::from(podcast.download_location.clone()),
+        )
+        .unwrap();
     }
 }
 

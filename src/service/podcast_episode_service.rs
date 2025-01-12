@@ -68,7 +68,7 @@ impl PodcastEpisodeService {
         DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
         let podcast = PodcastEpisode::update_podcast_episode_status(
             &podcast_episode.url,
-            Some(ENVIRONMENT_SERVICE.default_file_handler.get_type()),
+            Some(ENVIRONMENT_SERVICE.default_file_handler.clone()),
         )?;
         let notification = Notification {
             id: 0,

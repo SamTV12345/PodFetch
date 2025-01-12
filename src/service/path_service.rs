@@ -1,5 +1,5 @@
-use crate::adapters::file::file_handler::FileRequest;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
+use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
@@ -45,27 +45,32 @@ impl PathService {
         _conn: &mut DbConnection,
     ) -> Result<String, CustomError> {
         let mut i = 0;
-        let dir_exists = ENVIRONMENT_SERVICE
-            .default_file_handler
-            .path_exists(base_path, FileRequest::Directory);
+        let dir_exists = FileHandleWrapper::path_exists(
+            base_path,
+            FileRequest::Directory,
+            &FileHandlerType::from(_podcast.download_location.clone()),
+        );
         if !dir_exists {
-            ENVIRONMENT_SERVICE
-                .default_file_handler
-                .create_dir(base_path)?;
+            FileHandleWrapper::create_dir(
+                base_path,
+                &FileHandlerType::from(_podcast.download_location.clone()),
+            )?;
             return Ok(base_path.to_string());
         }
 
-        while ENVIRONMENT_SERVICE
-            .default_file_handler
-            .path_exists(&format!("{}-{}", base_path, i), FileRequest::NoopS3)
-        {
+        while FileHandleWrapper::path_exists(
+            &format!("{}-{}", base_path, i),
+            FileRequest::NoopS3,
+            &FileHandlerType::from(_podcast.download_location.clone()),
+        ) {
             i += 1;
         }
         let final_path = format!("{}-{}", base_path, i);
         // This is safe to insert because this directory does not exist
-        ENVIRONMENT_SERVICE
-            .default_file_handler
-            .create_dir(&final_path)?;
+        FileHandleWrapper::create_dir(
+            &final_path,
+            &FileHandlerType::from(_podcast.download_location.clone()),
+        )?;
         Ok(final_path)
     }
 }

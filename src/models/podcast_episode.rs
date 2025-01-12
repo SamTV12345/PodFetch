@@ -387,10 +387,8 @@ impl PodcastEpisode {
                 diesel::update(dsl_podcast.filter(directory_id.eq(id)))
                     .set((
                         image_url_column.eq(image_url),
-                        podcast_download_location.eq(ENVIRONMENT_SERVICE
-                            .default_file_handler
-                            .get_type()
-                            .to_string()),
+                        podcast_download_location
+                            .eq(ENVIRONMENT_SERVICE.default_file_handler.to_string()),
                     ))
                     .execute(&mut get_connection())
                     .map_err(map_db_error)?;
