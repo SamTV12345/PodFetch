@@ -161,11 +161,8 @@ impl FileService {
         Ok(())
     }
 
-    pub fn delete_podcast_files(podcast_dir: &str, podcast: &Podcast) {
-        FileHandleWrapper::remove_dir(
-            podcast_dir,
-            &FileHandlerType::from(podcast.download_location.clone()),
-        )
+    pub fn delete_podcast_files(podcast: &Podcast) {
+        FileHandleWrapper::remove_dir(podcast)
         .unwrap();
     }
 }

@@ -6,7 +6,7 @@ use std::fs::File;
 use reqwest::blocking::ClientBuilder;
 
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
-use crate::adapters::file::file_handler::FileHandlerType;
+use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
@@ -22,6 +22,7 @@ use crate::utils::reqwest_client::get_sync_client;
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike, Version};
 use std::io::Read;
+use std::path::PathBuf;
 
 pub struct DownloadService {}
 
@@ -110,6 +111,20 @@ impl DownloadService {
                 .with_filename(PODCAST_FILENAME)
                 .build(conn)?,
         };
+
+        if !FileHandleWrapper::path_exists(&podcast.directory_name,FileRequest::Directory,
+                                           &ENVIRONMENT_SERVICE.default_file_handler) {
+            FileHandleWrapper::create_dir(&podcast.directory_name, &ENVIRONMENT_SERVICE.default_file_handler)?;
+        }
+
+
+        if let Some(p) = PathBuf::from(&paths.filename).parent() {
+            if !FileHandleWrapper::path_exists(p.to_str().unwrap(), FileRequest::Directory,
+                                               &ENVIRONMENT_SERVICE.default_file_handler) {
+                FileHandleWrapper::create_dir(p.to_str().unwrap(), &ENVIRONMENT_SERVICE
+                    .default_file_handler)?;
+            }
+        }
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {

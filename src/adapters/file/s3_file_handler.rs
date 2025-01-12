@@ -14,7 +14,7 @@ use s3::error::S3Error;
 use s3::{Bucket, BucketConfiguration};
 
 pub static S3_BUCKET_CONFIG: LazyLock<S3Config> =
-    LazyLock::new(|| ENVIRONMENT_SERVICE.s3_config.clone().unwrap());
+    LazyLock::new(|| ENVIRONMENT_SERVICE.s3_config.clone());
 
 impl S3Handler {
     async fn handle_write_async(path: &str, content: &mut [u8]) -> Result<(), CustomError> {

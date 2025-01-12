@@ -51,7 +51,7 @@ pub struct EnvironmentService {
     pub api_key_admin: Option<String>,
     pub default_file_handler: FileHandlerType,
     pub default_podfetch_folder: String,
-    pub s3_config: Option<S3Config>,
+    pub s3_config: S3Config,
 }
 
 #[derive(Clone)]
@@ -236,19 +236,19 @@ impl EnvironmentService {
         }
     }
 
-    fn handle_default_file_handler() -> (FileHandlerType, Option<S3Config>) {
+    fn handle_default_file_handler() -> (FileHandlerType, S3Config) {
         match var(FILE_HANDLER) {
             Ok(handler) => match handler.as_str() {
                 "s3" => {
                     log::info!("Using S3 file handler");
-                    (FileHandlerType::S3, Some(Self::capture_s3_config()))
+                    (FileHandlerType::S3, Self::capture_s3_config())
                 }
                 _ => {
                     log::info!("Using local file handler");
-                    (FileHandlerType::Local, None)
+                    (FileHandlerType::Local, Self::capture_s3_config())
                 }
             },
-            Err(_) => (FileHandlerType::Local, None),
+            Err(_) => (FileHandlerType::Local, Self::capture_s3_config()),
         }
     }
 
@@ -260,8 +260,8 @@ impl EnvironmentService {
 
         S3Config {
             region: Self::variable_or_default(S3_REGION, "eu-central-1"),
-            access_key: Self::variable_or_throw(S3_ACCESS_KEY),
-            secret_key: Self::variable_or_throw(S3_SECRET_KEY),
+            access_key: Self::variable_or_default(S3_ACCESS_KEY, ""),
+            secret_key: Self::variable_or_default(S3_SECRET_KEY, ""),
             endpoint,
             profile: Self::variable_or_option(S3_PROFILE),
             bucket: Self::variable_or_default(PODFETCH_FOLDER, "podcasts"),
@@ -272,10 +272,6 @@ impl EnvironmentService {
 
     fn variable_or_default(var_name: &str, default: &str) -> String {
         var(var_name).unwrap_or(default.to_string())
-    }
-
-    fn variable_or_throw(var_name: &str) -> String {
-        var(var_name).unwrap_or_else(|_| panic!("{} not configured", var_name))
     }
 
     fn variable_or_option(var_name: &str) -> Option<String> {

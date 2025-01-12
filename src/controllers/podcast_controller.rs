@@ -601,7 +601,7 @@ pub async fn delete_podcast(
         finding podcast",
     );
     if data.delete_files {
-        FileService::delete_podcast_files(&podcast.directory_name, &podcast);
+        web::block(move ||FileService::delete_podcast_files(&podcast)).await.expect("Error deleting files");
     }
     Episode::delete_watchtime(*id)?;
     PodcastEpisode::delete_episodes_of_podcast(*id)?;

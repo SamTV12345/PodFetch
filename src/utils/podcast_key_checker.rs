@@ -35,7 +35,6 @@ fn retrieve_podcast_or_podcast_episode(
     path: &str,
     encoded_path: &str,
 ) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
-    println!("Finding by path {}", path);
     let podcast_episode = PodcastEpisode::get_podcast_episodes_by_url(path)?;
     match podcast_episode {
         Some(podcast_episode) => {
