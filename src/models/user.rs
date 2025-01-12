@@ -284,6 +284,12 @@ impl User {
     pub fn find_by_api_key(api_key_to_find: &str) -> Result<Option<User>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
 
+        if let Some(res) = ENVIRONMENT_SERVICE.api_key_admin.clone() {
+            if !res.is_empty() && res == api_key_to_find {
+                return Ok(Some(User::create_admin_user()));
+            }
+        }
+
         users
             .filter(api_key.eq(api_key_to_find))
             .first::<User>(&mut get_connection())

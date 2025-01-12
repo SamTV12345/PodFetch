@@ -1,10 +1,11 @@
-use actix_web::{post, web, HttpResponse};
+use actix_web::{post, web, HttpRequest, HttpResponse};
+use sha256::digest;
 use uuid::Uuid;
 use crate::adapters::audiobookshelf::models::login::{AudioBookShelfPermissions, AudioBookShelfUser, AudioBookshelfServerSettings, LoginResponse};
 use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::models::user::User;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 
 #[derive(Deserialize)]
 pub struct LoginData {
@@ -16,10 +17,32 @@ pub struct LoginData {
 pub async fn login_audiobookshelf(data: web::Json<LoginData>) -> Result<HttpResponse, CustomError> {
     let mut user = User::find_by_username(&data.username)?;
 
+    match user.password {
+        Some(ref password)=>{
+            if digest(data.password.clone()) != *password {
+                return Err(CustomErrorInner::Forbidden.into())
+            }
+        },
+        _ => return Err(CustomErrorInner::Forbidden.into())
+    }
+
     if user.api_key.is_none() {
         user.api_key = Some(Uuid::new_v4().to_string());
         User::update_user(&user)?;
     }
+
+    generate_response(&user).map(|response| HttpResponse::Ok().json(response))
+}
+
+#[post("/api/authorize")]
+pub async fn login_audiobookshelf_redundant(req: HttpRequest) -> Result<HttpResponse,
+    CustomError> {
+    let authorization_header = req.headers().get("Authorization").ok_or
+    (CustomErrorInner::Forbidden)?.to_str().map_err(|_| CustomErrorInner::Forbidden)?;
+    let auth_vec = authorization_header.split_whitespace().collect::<Vec<&str>>();
+    let token = auth_vec.get(1).ok_or(CustomErrorInner::Forbidden)?;
+
+    let user = User::find_by_api_key(token)?.ok_or(CustomErrorInner::Forbidden)?;
 
     generate_response(&user).map(|response| HttpResponse::Ok().json(response))
 }
@@ -75,8 +98,8 @@ fn get_user_config(user: &User) -> AudioBookShelfUser {
     AudioBookShelfUser {
         id: user.id.to_string(),
         username: user.username.to_string(),
-        r#type: user.role.to_string(),
-        token: user.api_key.clone().unwrap().to_string(),
+        r#type: "root".to_string(),
+        token: user.api_key.clone().unwrap(),
         // TODO add data here
         media_progress: vec![],
         series_hide_from_continue_listening: vec![],

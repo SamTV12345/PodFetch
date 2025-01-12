@@ -1,6 +1,7 @@
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
     pub user: AudioBookShelfUser,
     pub user_default_library_id: Option<String>,
@@ -9,6 +10,7 @@ pub struct LoginResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct AudioBookShelfUser {
     pub(crate) id: String,
     pub(crate)username: String,
@@ -27,6 +29,7 @@ pub struct AudioBookShelfUser {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct AudioBookShelfPermissions {
     pub download: bool,
     pub update: bool,
@@ -38,6 +41,7 @@ pub struct AudioBookShelfPermissions {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct MediaProgress {
     pub id: String,
     pub library_item_id: String,
@@ -53,6 +57,7 @@ pub struct MediaProgress {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct AudioBookshelfServerSettings {
     pub id: String,
     pub scanner_finds_covers: bool,
