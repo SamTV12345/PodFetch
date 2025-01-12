@@ -252,7 +252,7 @@ impl User {
         Ok(())
     }
 
-    pub fn update_user(user: User) -> Result<User, CustomError> {
+    pub fn update_user(user: &User) -> Result<User, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         diesel::update(users.filter(id.eq(user.clone().id)))
             .set(user)

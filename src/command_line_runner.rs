@@ -420,19 +420,19 @@ fn do_user_update(mut user: User) {
                 "Enter the new role [user,\
             uploader or admin]",
             ));
-            User::update_user(user).expect("Error updating role");
+            User::update_user(&user).expect("Error updating role");
             println!("Role updated");
         }
         "password" => {
             let mut password = retry_read_secret("Enter the new password");
             password = digest(password);
             user.password = Some(password);
-            User::update_user(user).expect("Error updating password");
+            User::update_user(&user).expect("Error updating password");
             println!("Password updated");
         }
         "consent" => {
             user.explicit_consent = !user.explicit_consent;
-            User::update_user(user).expect("Error switching consent");
+            User::update_user(&user).expect("Error switching consent");
             println!("Consent preference switched");
         }
         _ => {

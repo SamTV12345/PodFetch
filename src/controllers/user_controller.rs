@@ -166,7 +166,7 @@ pub async fn update_user(
         user.api_key = Some(api_key);
     }
 
-    let user = User::update_user(user)?;
+    let user = User::update_user(&user)?;
 
     Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
 }

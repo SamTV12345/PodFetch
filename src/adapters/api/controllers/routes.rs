@@ -17,6 +17,7 @@ use actix_web::web::redirect;
 use actix_web::{web, Error, Scope};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use crate::adapters::api::controllers::audiobookshelf_routes::add_audiobookshelf_routes;
 
 pub fn global_routes() -> Scope {
     let base_path = ENVIRONMENT_SERVICE
@@ -27,6 +28,7 @@ pub fn global_routes() -> Scope {
     let service = get_api_config();
 
     web::scope(&base_path)
+        .configure(add_audiobookshelf_routes)
         .service(get_client_parametrization)
         .service(proxy_podcast)
         .service(get_ui_config())
