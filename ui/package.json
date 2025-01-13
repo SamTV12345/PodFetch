@@ -46,7 +46,7 @@
     "react-i18next": "^15.1.4",
     "react-icons": "^5.4.0",
     "react-oidc-context": "^2.4.0",
-    "react-router-dom": "^7.0.2",
+    "react-router-dom": "^7.1.1",
     "react-waypoint": "^10.3.0",
     "sanitize-html": "^2.14.0",
     "uuid": "^11.0.3",
