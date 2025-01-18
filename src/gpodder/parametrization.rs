@@ -1,7 +1,6 @@
-use actix_web::get;
-
-use actix_web::{HttpResponse, Responder};
-
+use axum::response::Response;
+use axum::{Json, Router};
+use axum::routing::get;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[derive(Serialize, Deserialize)]
@@ -18,8 +17,7 @@ pub struct BaseURL {
     base_url: String,
 }
 
-#[get("/clientconfig.json")]
-pub async fn get_client_parametrization() -> impl Responder {
+pub async fn get_client_parametrization() -> Json<ClientParametrization> {
     let answer = ClientParametrization {
         mygpo_feedservice: BaseURL {
             base_url: ENVIRONMENT_SERVICE.server_url.clone(),
@@ -30,5 +28,9 @@ pub async fn get_client_parametrization() -> impl Responder {
         update_timeout: 604800,
     };
 
-    HttpResponse::Ok().json(answer)
+    Json(answer)
+}
+
+pub fn get_client_parametrization_router() -> impl Into<Router> {
+    Router::new().route("/clientconfig.json", get(get_client_parametrization))
 }

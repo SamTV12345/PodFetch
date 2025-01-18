@@ -9,6 +9,10 @@ use actix_web::middleware::Next;
 use actix_web::web::Query;
 use actix_web::{Error, HttpMessage};
 use awc::body::BoxBody;
+use axum::extract::{Query, Request};
+use axum::middleware::Next;
+use axum::RequestExt;
+use axum::response::Response;
 use substring::Substring;
 
 #[derive(Debug, Clone)]
@@ -18,17 +22,17 @@ pub enum PodcastOrPodcastEpisodeResource {
 }
 
 pub async fn check_permissions_for_files(
-    mut req: ServiceRequest,
-    next: Next<BoxBody>,
-) -> Result<ServiceResponse<BoxBody>, Error> {
+    mut req: Request,
+    next: Next,
+) -> Result<Response, CustomError> {
     let request = req
-        .extract::<Option<Query<RSSAPiKey>>>()
+        .extract::<Option<Query<RSSAPiKey>>,_>()
         .await?
         .map(|rss_api_key| rss_api_key.api_key.to_string());
     let extracted_podcast = check_auth(&req, request)?;
 
     req.extensions_mut().insert(extracted_podcast);
-    next.call(req).await
+    Ok(next.run(req).await)
 }
 
 fn retrieve_podcast_or_podcast_episode(

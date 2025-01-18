@@ -5,12 +5,7 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde_json;
 
-use actix_files::NamedFile;
-use actix_web::body::{BoxBody, EitherBody};
-use actix_web::dev::{fn_service, ServiceFactory, ServiceRequest, ServiceResponse};
-use actix_web::middleware::{Condition, Logger};
-use actix_web::web::{redirect, Data};
-use actix_web::{web, App, HttpResponse, HttpServer, Scope};
+
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
 use jsonwebtoken::jwk::{
@@ -28,8 +23,14 @@ use std::process::exit;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{env, thread};
+use std::fmt::format;
+use axum::response::Redirect;
+use axum::Router;
+use axum::routing::get;
 use tokio::{spawn, try_join};
-
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
 mod controllers;
 use crate::adapters::api::controllers::routes::{get_gpodder_api, global_routes};
 use crate::adapters::persistence::dbconfig::db::get_connection;
@@ -40,6 +41,9 @@ use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
 use crate::controllers::notification_controller::{
     dismiss_notifications, get_unread_notifications,
 };
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_scalar::{Scalar, Servable};
+use utoipa_swagger_ui::SwaggerUi;
 use crate::controllers::playlist_controller::{
     add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
     get_playlist_by_id, update_playlist,
@@ -72,6 +76,7 @@ use crate::controllers::user_controller::{
 };
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
 pub use controllers::controller_utils::*;
+use crate::controllers::api_doc::ApiDoc;
 
 mod constants;
 mod db;
@@ -127,7 +132,7 @@ fn fix_links(content: &str) -> String {
 
 pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
-async fn index() -> actix_web::Result<Markup> {
+async fn index() -> Markup {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
         let manifest_json_location =
@@ -170,10 +175,10 @@ async fn index() -> actix_web::Result<Markup> {
         html
     });
 
-    Ok(html.clone())
+    html.clone()
 }
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     println!(
         "Debug file located at {}",
@@ -331,21 +336,24 @@ async fn main() -> std::io::Result<()> {
         .clone()
         .unwrap_or("/".to_string());
 
-    let http_server = HttpServer::new(move || {
-        App::new()
-            .app_data(Data::new(server_tx.clone()))
-            .app_data(Data::new(key_param.clone()))
-            .app_data(Data::new(jwk.clone()))
-            .app_data(Data::new(hash.clone()))
-            .service(redirect("/", sub_dir.clone() + "/ui/"))
-            .service(get_gpodder_api())
-            .service(global_routes())
-            .wrap(Condition::new(cfg!(debug_assertions), Logger::default()))
-    })
-    .workers(4)
-    .bind(("0.0.0.0", 8000))?
-    .run();
-    try_join!(http_server, async move { chat_server.await.unwrap() })?;
+    let ui_dir = format!("{}/ui", sub_dir);
+
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .route("/", get(Redirect::to(&ui_dir)))
+        .split_for_parts();
+    let router = router
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
+        .merge(Redoc::with_url("/redoc", api.clone()))
+        // There is no need to create `RapiDoc::with_openapi` because the OpenApi is served
+        // via SwaggerUi instead we only make rapidoc to point to the existing doc.
+        .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
+        // Alternative to above
+        // .merge(RapiDoc::with_openapi("/api-docs/openapi2.json", api).path("/rapidoc"))
+        .merge(Scalar::with_url("/scalar", api));
+
+    // run our app with hyper, listening globally on port 3000
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
+    axum::serve(listener, router).await.unwrap();
     Ok(())
 }
 

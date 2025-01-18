@@ -1,11 +1,11 @@
-use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, ResponseError};
 use log::error;
 use s3::error::S3Error;
 use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
 pub struct BacktraceError {
@@ -122,27 +122,31 @@ impl Error for BacktraceError {
 
 pub(crate) type CustomError = BacktraceError;
 
-impl ResponseError for CustomError {
-    fn status_code(&self) -> StatusCode {
-        match self.inner {
+impl IntoResponse  for CustomError {
+    fn into_response(self) -> Response {
+        let status = match self.inner {
             CustomErrorInner::NotFound => StatusCode::NOT_FOUND,
             CustomErrorInner::Forbidden => StatusCode::FORBIDDEN,
             CustomErrorInner::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
             CustomErrorInner::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            CustomErrorInner::Conflict(..) => StatusCode::CONFLICT,
-            CustomErrorInner::BadRequest(..) => StatusCode::BAD_REQUEST,
-            CustomErrorInner::UnAuthorized(..) => StatusCode::UNAUTHORIZED,
-        }
-    }
+            CustomErrorInner::Conflict(e) => StatusCode::CONFLICT,
+            CustomErrorInner::BadRequest(e) => StatusCode::BAD_REQUEST,
+            CustomErrorInner::UnAuthorized(e) => StatusCode::UNAUTHORIZED,
+        };
 
-    fn error_response(&self) -> HttpResponse {
+        (status, self.error_response()).into_response()
+    }
+}
+
+
+impl CustomError {
+    fn error_response(&self) -> ErrorResponse {
         let status_code = self.status_code();
-        let error_response = ErrorResponse {
+        ErrorResponse {
             code: status_code.as_u16(),
             message: self.inner.to_string(),
             error: self.inner.name(),
-        };
-        HttpResponse::build(status_code).json(error_response)
+        }
     }
 }
 

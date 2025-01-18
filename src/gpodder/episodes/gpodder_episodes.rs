@@ -1,7 +1,6 @@
-use actix_web::{web, HttpResponse};
-
-use actix_web::{get, post};
-
+use axum::{Extension, Json, Router};
+use axum::extract::{Path, Query};
+use axum::routing::{get, post};
 use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::session::Session;
 use crate::utils::error::{CustomError, CustomErrorInner};
@@ -28,12 +27,11 @@ pub struct EpisodeSinceRequest {
     aggregate: Option<String>,
 }
 
-#[get("/episodes/{username}.json")]
 pub async fn get_episode_actions(
-    username: web::Path<String>,
-    opt_flag: Option<web::ReqData<Session>>,
-    since: web::Query<EpisodeSinceRequest>,
-) -> Result<HttpResponse, CustomError> {
+    username: Path<String>,
+    opt_flag: Option<Extension<Session>>,
+    since: Query<EpisodeSinceRequest>,
+) -> Result<Json<EpisodeActionResponse>, CustomError> {
     match opt_flag {
         Some(flag) => {
             let username = username.clone();
@@ -57,7 +55,7 @@ pub async fn get_episode_actions(
                 });
             }
 
-            Ok(HttpResponse::Ok().json(EpisodeActionResponse {
+            Ok(Json(EpisodeActionResponse {
                 actions,
                 timestamp: get_current_timestamp(),
             }))
@@ -66,27 +64,33 @@ pub async fn get_episode_actions(
     }
 }
 
-#[post("/episodes/{username}.json")]
+
 pub async fn upload_episode_actions(
-    username: web::Path<String>,
-    podcast_episode: web::Json<Vec<EpisodeDto>>,
-    opt_flag: Option<web::ReqData<Session>>,
-) -> Result<HttpResponse, CustomError> {
+    username: Path<String>,
+    podcast_episode: Json<Vec<EpisodeDto>>,
+    opt_flag: Option<Extension<Session>>,
+) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     match opt_flag {
         Some(flag) => {
             if flag.username != username.clone() {
-                return Ok(HttpResponse::Unauthorized().finish());
+                return Err(CustomErrorInner::Forbidden.into());
             }
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
                 let episode = Episode::convert_to_episode(episode, username.clone());
                 inserted_episodes.push(Episode::insert_episode(&episode.clone()).unwrap());
             });
-            Ok(HttpResponse::Ok().json(EpisodeActionPostResponse {
+            Ok(Json(EpisodeActionPostResponse {
                 update_urls: vec![],
                 timestamp: get_current_timestamp(),
             }))
         }
-        None => Ok(HttpResponse::Unauthorized().finish()),
+        None => Err(CustomErrorInner::Forbidden.into()),
     }
+}
+
+pub fn gpodder_episodes_router() -> Router {
+    Router::new()
+        .route("/episodes/{username}.json", get(get_episode_actions))
+        .route("/episodes/{username}.json", post(upload_episode_actions))
 }
