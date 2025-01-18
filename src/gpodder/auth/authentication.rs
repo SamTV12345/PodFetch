@@ -1,36 +1,40 @@
+use awc::cookie::CookieBuilder;
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::post;
-use actix_web::{web, HttpRequest, HttpResponse};
-use awc::cookie::{Cookie, SameSite};
+use axum::extract::Path;
+use axum::http::{Request, StatusCode};
+use axum::response::Response;
+use axum_extra::extract::cookie::{Cookie, SameSite};
+use axum_extra::extract::CookieJar;
 use sha256::digest;
 
-#[post("/auth/{username}/login.json")]
 pub async fn login(
-    username: web::Path<String>,
-    rq: HttpRequest,
-) -> Result<HttpResponse, CustomError> {
+    Path(username): Path<String>,
+    jar: CookieJar,
+    req: Request<()>
+) -> Result<(CookieJar, StatusCode), CustomError> {
     // If cookie is already set, return it
-    if let Some(cookie) = rq.cookie("sessionid") {
+    if let Some(cookie) = jar.get("sessionid") {
         let session = cookie.value();
         let opt_session = Session::find_by_session_id(session);
         if let Ok(unwrapped_session) = opt_session {
             let user_cookie = create_session_cookie(unwrapped_session);
-            return Ok(HttpResponse::Ok().cookie(user_cookie).finish());
+            return Ok((user_cookie, StatusCode::OK));
         }
     }
 
     match ENVIRONMENT_SERVICE.reverse_proxy {
-        true => handle_proxy_auth(rq, username.into_inner()),
-        false => handle_gpodder_basic_auth(rq, username),
+        true => handle_proxy_auth(req, &username),
+        false => handle_gpodder_basic_auth(req, &username),
     }
 }
 
-fn handle_proxy_auth(rq: HttpRequest, username: String) -> Result<HttpResponse, CustomError> {
+fn handle_proxy_auth(rq: Request<()>, username: &str) -> Result<(CookieJar, StatusCode),
+    CustomError> {
     let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
     match opt_authorization {
@@ -48,7 +52,7 @@ fn handle_proxy_auth(rq: HttpRequest, username: String) -> Result<HttpResponse, 
                     let session = Session::new(user.username);
                     Session::insert_session(&session)?;
                     let user_cookie = create_session_cookie(session);
-                    Ok(HttpResponse::Ok().cookie(user_cookie).finish())
+                    Ok((user_cookie, StatusCode::OK))
                 }
                 Err(e) => {
                     if config.auto_sign_up {
@@ -75,9 +79,9 @@ fn handle_proxy_auth(rq: HttpRequest, username: String) -> Result<HttpResponse, 
 }
 
 fn handle_gpodder_basic_auth(
-    rq: HttpRequest,
-    username: web::Path<String>,
-) -> Result<HttpResponse, CustomError> {
+    rq: Request<()>,
+    username: &str,
+) -> Result<(CookieJar, StatusCode), CustomError> {
     let opt_authorization = rq.headers().get("Authorization");
 
     if opt_authorization.is_none() {
@@ -86,14 +90,13 @@ fn handle_gpodder_basic_auth(
 
     let authorization = opt_authorization.unwrap().to_str().unwrap();
 
-    let unwrapped_username = username.into_inner();
     let (username_basic, password) = AuthFilter::basic_auth_login(authorization)?;
-    if username_basic != unwrapped_username {
+    if username_basic != username {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
     if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
-        if admin_username == &unwrapped_username {
+        if admin_username == &username {
             return Err(CustomErrorInner::Conflict(
                 "The user you are trying to login is equal to the admin user. Please\
                  use another user to login."
@@ -103,14 +106,14 @@ fn handle_gpodder_basic_auth(
         }
     }
 
-    let user = User::find_by_username(&unwrapped_username)?;
+    let user = User::find_by_username(&username)?;
     match user.password {
         Some(p) => {
             if p == digest(password) {
                 let session = Session::new(user.username);
                 Session::insert_session(&session).expect("Error inserting session");
                 let user_cookie = create_session_cookie(session);
-                Ok(HttpResponse::Ok().cookie(user_cookie).finish())
+                Ok((user_cookie, StatusCode::OK))
             } else {
                 Err(CustomErrorInner::Forbidden.into())
             }
@@ -119,14 +122,14 @@ fn handle_gpodder_basic_auth(
     }
 }
 
-fn create_session_cookie(session: Session) -> Cookie<'static> {
-    let user_cookie = Cookie::build("sessionid", session.session_id)
+fn create_session_cookie(session: Session) -> CookieJar {
+
+    CookieJar::new().add(
+    Cookie::build(("sessionid", session.session_id))
         .http_only(true)
         .secure(false)
         .same_site(SameSite::Strict)
-        .path("/api")
-        .finish();
-    user_cookie
+        .path("/api"))
 }
 
 #[cfg(test)]
@@ -138,6 +141,8 @@ mod tests {
     fn test_create_session_cookie() {
         let session = Session::new("test".to_string());
         let cookie = create_session_cookie(session.clone());
+
+        let cookie = cookie.get("sessionid").unwrap();
 
         assert_eq!(cookie.name(), "sessionid");
         assert_eq!(cookie.value(), session.session_id);

@@ -1,3 +1,6 @@
+use axum::{Extension, Json, Router};
+use axum::extract::Path;
+use axum::routing::{get, post};
 use crate::adapters::api::models::device::device_create::DeviceCreate;
 use crate::adapters::api::models::device::device_response::DeviceResponse;
 use crate::application::services::device::service::DeviceService;
@@ -6,19 +9,17 @@ use crate::application::usecases::devices::query_use_case::QueryUseCase;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::{get, post};
-use actix_web::{web, HttpResponse};
 
-#[post("/devices/{username}/{deviceid}.json")]
+
 pub async fn post_device(
-    query: web::Path<(String, String)>,
-    device_post: web::Json<DevicePost>,
-    opt_flag: Option<web::ReqData<Session>>,
-) -> Result<HttpResponse, CustomError> {
+    query: Path<(String, String)>,
+    device_post: Json<DevicePost>,
+    opt_flag: Option<Extension<Session>>,
+) -> Result<Json<DeviceResponse>, CustomError> {
     match opt_flag {
         Some(flag) => {
-            let username = &query.0;
-            let deviceid = &query.1;
+            let username = &query.0.0;
+            let deviceid = &query.0.1;
             if &flag.username != username {
                 return Err(CustomErrorInner::Forbidden.into());
             }
@@ -33,20 +34,19 @@ pub async fn post_device(
             let device = DeviceService::create(device_create.into())?;
             let result = DeviceResponse::from(&device);
 
-            Ok(HttpResponse::Ok().json(result))
+            Ok(Json(result))
         }
         None => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
-#[get("/devices/{username}.json")]
 pub async fn get_devices_of_user(
-    query: web::Path<String>,
-    opt_flag: Option<web::ReqData<Session>>,
-) -> Result<HttpResponse, CustomError> {
+    query: Path<String>,
+    opt_flag: Option<Extension<Session>>,
+) -> Result<Json<Vec<DeviceResponse>>, CustomError> {
     match opt_flag {
         Some(flag) => {
-            let user_query = query.into_inner();
+            let user_query = query.0;
             if flag.username != user_query {
                 return Err(CustomErrorInner::Forbidden.into());
             }
@@ -56,8 +56,14 @@ pub async fn get_devices_of_user(
                 .iter()
                 .map(DeviceResponse::from)
                 .collect::<Vec<DeviceResponse>>();
-            Ok(HttpResponse::Ok().json(dtos))
+            Ok(Json(dtos))
         }
         None => Err(CustomErrorInner::Forbidden.into()),
     }
+}
+
+pub fn get_device_router() -> Router {
+    Router::new()
+        .route("/devices/{username}.json", get(get_devices_of_user))
+        .route("/devices/{username}/{deviceid}.json", post(post_device))
 }

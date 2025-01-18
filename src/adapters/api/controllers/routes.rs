@@ -1,3 +1,8 @@
+use std::convert::Infallible;
+use axum::middleware::from_fn;
+use axum::Router;
+use axum::routing::post;
+use axum::{http::{StatusCode}};
 use crate::adapters::api::controllers::device_controller::{get_devices_of_user, post_device};
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::api_doc::ApiDoc;
@@ -41,27 +46,23 @@ pub fn global_routes() -> Scope {
         .service(get_rss_feed_for_podcast)
 }
 
-pub fn get_gpodder_api() -> Scope {
+pub fn get_gpodder_api() -> Router {
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
-        web::scope("/api/2")
+        Router::new()
+            .route("/auth/{username}/login.json", post(login))
             .service(login)
             .service(get_authenticated_gpodder())
     } else {
-        web::scope("/api/2")
+        Router::new()
+            .layer(from_fn(|_| async {
+                log::error!("Gpodder integration is disabled!!");
+                StatusCode::NOT_FOUND}))
     }
 }
 
-fn get_authenticated_gpodder() -> Scope<
-    impl ServiceFactory<
-        ServiceRequest,
-        Config = (),
-        Response = ServiceResponse<EitherBody<BoxBody>>,
-        Error = Error,
-        InitError = (),
-    >,
-> {
-    web::scope("")
-        .wrap(crate::gpodder::session_middleware::CookieFilter::new())
+fn get_authenticated_gpodder() -> impl Into<Router> {
+    Router::new()
+        .layer(crate::gpodder::session_middleware::CookieFilter::new())
         .service(post_device)
         .service(get_devices_of_user)
         .service(get_subscriptions)

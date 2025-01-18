@@ -1,6 +1,7 @@
+use axum::{Json, Router};
+use axum::routing::get;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::CustomError;
-use actix_web::{get, HttpResponse};
 
 #[derive(Serialize)]
 pub struct Icon {
@@ -21,8 +22,8 @@ pub struct Manifest {
     pub orientation: String,
 }
 
-#[get("manifest.json")]
-pub async fn get_manifest() -> Result<HttpResponse, CustomError> {
+
+pub async fn get_manifest() -> Result<Json<Manifest>, CustomError> {
     let mut icons = Vec::new();
     let icon = Icon {
         src: ENVIRONMENT_SERVICE.server_url.to_string() + "ui/logo.png",
@@ -41,5 +42,9 @@ pub async fn get_manifest() -> Result<HttpResponse, CustomError> {
         display: "fullscreen".to_string(),
         background_color: "#ffffff".to_string(),
     };
-    Ok(HttpResponse::Ok().json(manifest))
+    Ok(Json(manifest))
+}
+
+pub fn get_manifest_router() -> impl Into<Router> {
+    Router::new().route("/manifest.json", get(get_manifest))
 }

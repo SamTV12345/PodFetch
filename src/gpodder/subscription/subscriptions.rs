@@ -1,9 +1,12 @@
+use awc::http::StatusCode;
+use axum::{Extension, Json, Router};
+use axum::extract::{Path, Query};
+use axum::http::Response;
+use axum::routing::{get, post};
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp;
-use actix_web::{get, post};
-use actix_web::{web, HttpResponse};
 
 #[derive(Deserialize, Serialize)]
 pub struct SubscriptionRetrieveRequest {
@@ -22,12 +25,11 @@ pub struct SubscriptionPostResponse {
     pub update_urls: Vec<Vec<String>>,
 }
 
-#[get("/subscriptions/{username}/{deviceid}.json")]
 pub async fn get_subscriptions(
-    paths: web::Path<(String, String)>,
-    opt_flag: Option<web::ReqData<Session>>,
-    query: web::Query<SubscriptionRetrieveRequest>,
-) -> Result<HttpResponse, CustomError> {
+    paths: Path<(String, String)>,
+    opt_flag: Option<Extension<Session>>,
+    query: Query<SubscriptionRetrieveRequest>,
+) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
     match opt_flag {
         Some(flag) => {
             let username = paths.clone().0;
@@ -44,25 +46,24 @@ pub async fn get_subscriptions(
                 .await;
 
             match res {
-                Ok(res) => Ok(HttpResponse::Ok().json(res)),
-                Err(_) => Ok(HttpResponse::InternalServerError().finish()),
+                Ok(res) => Ok(Json(res)),
+                Err(_) => Err(CustomErrorInner::Forbidden.into()),
             }
         }
         None => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
-#[get("/subscriptions/{username}.json")]
 pub async fn get_subscriptions_all(
-    paths: web::Path<String>,
-    opt_flag: Option<web::ReqData<Session>>,
-    query: web::Query<SubscriptionRetrieveRequest>,
-) -> Result<HttpResponse, CustomError> {
+    Path(paths): Path<String>,
+    opt_flag: Option<Extension<Session>>,
+    query: Query<SubscriptionRetrieveRequest>,
+) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
     let flag_username = match opt_flag {
-        Some(flag) => flag.into_inner().username,
+        Some(flag) => flag.0.username,
         None => return Err(CustomErrorInner::Forbidden.into()),
     };
-    if flag_username != paths.into_inner().as_str() {
+    if flag_username != paths.as_str() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
@@ -70,18 +71,17 @@ pub async fn get_subscriptions_all(
         .await;
 
     match res {
-        Ok(res) => Ok(HttpResponse::Ok().json(res)),
-        Err(_) => Ok(HttpResponse::InternalServerError().finish()),
+        Ok(res) => Ok(Json(res)),
+        Err(_) => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
 
-#[post("/subscriptions/{username}/{deviceid}.json")]
-    pub async fn upload_subscription_changes(
-        upload_request: web::Json<SubscriptionUpdateRequest>,
-        opt_flag: Option<web::ReqData<Session>>,
-        paths: web::Path<(String, String)>,
-    ) -> Result<HttpResponse, CustomError> {
+pub async fn upload_subscription_changes(
+        upload_request: Json<SubscriptionUpdateRequest>,
+        opt_flag: Option<Extension<Session>>,
+        paths: Path<(String, String)>,
+    ) -> Result<Json<SubscriptionPostResponse>, CustomError> {
         match opt_flag {
             Some(flag) => {
                 let username = paths.clone().0;
@@ -93,11 +93,19 @@ pub async fn get_subscriptions_all(
                     .await
                     .unwrap();
 
-                Ok(HttpResponse::Ok().json(SubscriptionPostResponse {
+                Ok(Json(SubscriptionPostResponse {
                     update_urls: vec![],
                     timestamp: get_current_timestamp(),
                 }))
             }
             None => Err(CustomErrorInner::Forbidden.into()),
         }
-    }
+}
+
+
+pub fn get_subscription_router() -> Router {
+    Router::new()
+        .route("/subscriptions/{username}/{deviceid}.json", post(upload_subscription_changes))
+        .route("/subscriptions/{username}.json", get(get_subscriptions_all))
+        .route("/subscriptions/{username}/{deviceid}.json", get(get_subscriptions))
+}

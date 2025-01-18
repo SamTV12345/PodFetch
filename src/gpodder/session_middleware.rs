@@ -1,67 +1,50 @@
+use std::future::Future;
+use std::pin::Pin;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::models::session::Session;
-use actix::fut::ok;
-use actix_web::body::{EitherBody, MessageBody};
-use actix_web::error::{ErrorForbidden, ErrorUnauthorized};
-use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpMessage,
-};
+use axum_extra::extract::cookie::CookieJar;
+
 use diesel::ExpressionMethods;
 use diesel::{OptionalExtension, QueryDsl, RunQueryDsl};
-use futures_util::future::{LocalBoxFuture, Ready};
-use futures_util::FutureExt;
-use std::rc::Rc;
+use std::task::{Context, Poll};
+use axum::handler::Handler;
+use axum::http;
+use axum::{
+    response::Response,
+    extract::Request,
+};
+use tower::{Layer, MakeService, Service};
+use crate::utils::error::{CustomErrorInner};
 
 pub struct CookieFilter {}
 
-impl CookieFilter {
-    pub fn new() -> Self {
-        CookieFilter {}
+impl<S> Layer<S> for CookieFilter {
+    type Service = MyMiddleware<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        MyMiddleware { inner }
     }
 }
 
-pub struct CookieFilterMiddleware<S> {
-    service: Rc<S>,
+#[derive(Clone)]
+struct MyMiddleware<S> {
+    inner: S,
 }
 
-impl<S, B> Transform<S, ServiceRequest> for CookieFilter
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<EitherBody<B>>;
-    type Error = Error;
-    type Transform = CookieFilterMiddleware<S>;
-    type InitError = ();
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S> {
+    type Response = Response<Vec<u8>>;
+    type Error = http::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-    fn new_transform(&self, service: S) -> Self::Future {
-        ok(CookieFilterMiddleware {
-            service: Rc::new(service),
-        })
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
     }
-}
 
-impl<S, B> Service<ServiceRequest> for CookieFilterMiddleware<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<EitherBody<B>>;
-    type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    forward_ready!(service);
-
-    fn call(&self, req: ServiceRequest) -> Self::Future {
-        let cookie = req.cookie("sessionid");
+    fn call(&mut self, mut req: Request<Vec<u8>>) -> Self::Future {
+        let jar = CookieJar::from_headers(req.headers());
+        let cookie = jar.get("sessionid");
         if cookie.is_none() {
-            return Box::pin(ok(req
-                .error_response(ErrorUnauthorized("Unauthorized"))
-                .map_into_right_body()));
+            return Box::pin(Err(CustomErrorInner::Forbidden.into()));
         }
         let binding = cookie.unwrap();
         let extracted_cookie = binding.value();
@@ -73,14 +56,16 @@ where
             .optional()
             .expect("Error connecting to database");
         if session.is_none() {
-            return Box::pin(ok(req
-                .error_response(ErrorForbidden("Forbidden"))
-                .map_into_right_body()));
+            return Box::pin(Err(CustomErrorInner::Forbidden.into()));
         }
 
-        let service = Rc::clone(&self.service);
-
         req.extensions_mut().insert(session.unwrap());
-        async move { service.call(req).await.map(|res| res.map_into_left_body()) }.boxed_local()
+        let future = self.inner.call(req);
+
+
+        Box::pin(async move {
+            let response: Response = future.await?;
+            Ok(response)
+        })
     }
 }
