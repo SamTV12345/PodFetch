@@ -41,7 +41,7 @@ pub async fn get_subscriptions(
                 &username,
                 query.since,
             )
-            .await;
+                .await;
 
             match res {
                 Ok(res) => Ok(HttpResponse::Ok().json(res)),
@@ -52,28 +52,52 @@ pub async fn get_subscriptions(
     }
 }
 
-#[post("/subscriptions/{username}/{deviceid}.json")]
-pub async fn upload_subscription_changes(
-    upload_request: web::Json<SubscriptionUpdateRequest>,
+#[get("/subscriptions/{username}.json")]
+pub async fn get_subscriptions_all(
+    paths: web::Path<String>,
     opt_flag: Option<web::ReqData<Session>>,
-    paths: web::Path<(String, String)>,
+    query: web::Query<SubscriptionRetrieveRequest>,
 ) -> Result<HttpResponse, CustomError> {
-    match opt_flag {
-        Some(flag) => {
-            let username = paths.clone().0;
-            let deviceid = paths.clone().1;
-            if flag.username != username.clone() {
-                return Err(CustomErrorInner::Forbidden.into());
-            }
-            SubscriptionChangesToClient::update_subscriptions(&deviceid, &username, upload_request)
-                .await
-                .unwrap();
+    let flag_username = match opt_flag {
+        Some(flag) => flag.into_inner().username,
+        None => return Err(CustomErrorInner::Forbidden.into()),
+    };
+    if flag_username != paths.into_inner().as_str() {
+        return Err(CustomErrorInner::Forbidden.into());
+    }
 
-            Ok(HttpResponse::Ok().json(SubscriptionPostResponse {
-                update_urls: vec![],
-                timestamp: get_current_timestamp(),
-            }))
-        }
-        None => Err(CustomErrorInner::Forbidden.into()),
+    let res = SubscriptionChangesToClient::get_user_subscriptions(&flag_username, query.since)
+        .await;
+
+    match res {
+        Ok(res) => Ok(HttpResponse::Ok().json(res)),
+        Err(_) => Ok(HttpResponse::InternalServerError().finish()),
     }
 }
+
+
+#[post("/subscriptions/{username}/{deviceid}.json")]
+    pub async fn upload_subscription_changes(
+        upload_request: web::Json<SubscriptionUpdateRequest>,
+        opt_flag: Option<web::ReqData<Session>>,
+        paths: web::Path<(String, String)>,
+    ) -> Result<HttpResponse, CustomError> {
+        match opt_flag {
+            Some(flag) => {
+                let username = paths.clone().0;
+                let deviceid = paths.clone().1;
+                if flag.username != username.clone() {
+                    return Err(CustomErrorInner::Forbidden.into());
+                }
+                SubscriptionChangesToClient::update_subscriptions(&deviceid, &username, upload_request)
+                    .await
+                    .unwrap();
+
+                Ok(HttpResponse::Ok().json(SubscriptionPostResponse {
+                    update_urls: vec![],
+                    timestamp: get_current_timestamp(),
+                }))
+            }
+            None => Err(CustomErrorInner::Forbidden.into()),
+        }
+    }

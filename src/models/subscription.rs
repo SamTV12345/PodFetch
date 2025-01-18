@@ -14,6 +14,7 @@ use diesel::OptionalExtension;
 use diesel::{AsChangeset, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::utils::error::{map_db_error, CustomError};
 
 #[derive(
     Debug,
@@ -87,6 +88,36 @@ impl SubscriptionChangesToClient {
             )
             .load::<Subscription>(&mut get_connection())
             .expect("Error retrieving changed subscriptions");
+
+        let (deleted_subscriptions, created_subscriptions): (Vec<Subscription>, Vec<Subscription>) =
+            res.into_iter().partition(|c| c.deleted.is_some());
+
+        Ok(SubscriptionChangesToClient {
+            add: created_subscriptions
+                .into_iter()
+                .map(|c| c.podcast)
+                .collect(),
+            remove: deleted_subscriptions
+                .into_iter()
+                .map(|c| c.podcast)
+                .collect(),
+            timestamp: get_current_timestamp(),
+        })
+    }
+
+
+    pub async fn get_user_subscriptions(username: &str,since: i32) ->
+                                                                   Result<SubscriptionChangesToClient, CustomError> {
+        let since = DateTime::from_timestamp(since as i64, 0)
+            .map(|v| v.naive_utc())
+            .unwrap();
+        let res: Vec<Subscription> = subscriptions::table
+            .filter(subscriptions::username.eq(username))
+            .filter(
+                subscriptions::created.gt(since),
+            )
+            .load::<Subscription>(&mut get_connection())
+            .map_err(map_db_error)?;
 
         let (deleted_subscriptions, created_subscriptions): (Vec<Subscription>, Vec<Subscription>) =
             res.into_iter().partition(|c| c.deleted.is_some());
