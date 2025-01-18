@@ -4,7 +4,7 @@ use std::fmt::Formatter;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-pub static ITUNES_URL: &str = "https://itunes.apple.com/search?term=";
+pub static ITUNES_URL: &str = "https://itunes.apple.com/search";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum PodcastType {
