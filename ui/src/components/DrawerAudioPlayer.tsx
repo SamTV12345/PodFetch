@@ -1,10 +1,12 @@
-import { FC, RefObject, useEffect } from 'react'
+import {FC, RefObject, useEffect, useState} from 'react'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PlayerTimeControls } from './PlayerTimeControls'
 import { PlayerEpisodeInfo } from './PlayerEpisodeInfo'
 import { PlayerProgressBar } from './PlayerProgressBar'
 import { PlayerVolumeSlider } from './PlayerVolumeSlider'
 import useAudioPlayer from "../store/AudioPlayerSlice";
+import axios, {AxiosResponse} from "axios";
+import {Podcast} from "../store/CommonSlice";
 
 type DrawerAudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement|null>,
@@ -13,14 +15,19 @@ type DrawerAudioPlayerProps = {
 
 export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
     const playing = useAudioPlayer(state => state.isPlaying)
-    const podcast = useAudioPlayer(state => state.currentPodcast)
     const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+    const [podcast, setPodcast] = useState<Podcast>()
 
     useEffect(() => {
         if (podcastEpisode && playing) {
             refItem.current?.play()
         }
     }, [podcastEpisode, playing])
+
+    useEffect(() => {
+        axios.get(`/podcast/${podcastEpisode?.podcast_id}`)
+            .then((resp: AxiosResponse<Podcast>)=>setPodcast(resp.data))
+    }, [podcastEpisode]);
 
     return (
         <div className="
