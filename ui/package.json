@@ -18,7 +18,7 @@
     "@fontsource/anton": "^5.1.0",
     "@fontsource/poppins": "^5.1.1",
     "@fontsource/roboto": "^5.0.14",
-    "@fortawesome/fontawesome-free": "^6.7.1",
+    "@fortawesome/fontawesome-free": "^6.7.2",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-context-menu": "^2.2.4",
     "@radix-ui/react-dialog": "^1.1.3",
