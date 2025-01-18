@@ -9,7 +9,7 @@ use crate::controllers::websocket_controller::{
 };
 use crate::gpodder::auth::authentication::login;
 use crate::gpodder::parametrization::get_client_parametrization;
-use crate::gpodder::subscription::subscriptions::{get_subscriptions, upload_subscription_changes};
+use crate::gpodder::subscription::subscriptions::{get_subscriptions, get_subscriptions_all, upload_subscription_changes};
 use crate::{get_api_config, get_ui_config};
 use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
@@ -65,6 +65,7 @@ fn get_authenticated_gpodder() -> Scope<
         .service(post_device)
         .service(get_devices_of_user)
         .service(get_subscriptions)
+        .service(get_subscriptions_all)
         .service(upload_subscription_changes)
         .service(crate::gpodder::episodes::gpodder_episodes::get_episode_actions)
         .service(crate::gpodder::episodes::gpodder_episodes::upload_episode_actions)
