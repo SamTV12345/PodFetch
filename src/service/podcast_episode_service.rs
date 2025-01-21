@@ -7,7 +7,7 @@ use crate::service::download_service::DownloadService;
 use crate::service::file_service::FileService;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
-
+use axum::extract::State;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 use crate::controllers::server::ChatServerHandle;
@@ -22,7 +22,6 @@ use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
-use actix_web::web;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
 use regex::Regex;
@@ -36,7 +35,7 @@ impl PodcastEpisodeService {
     pub fn download_podcast_episode_if_not_locally_available(
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
-        lobby: Option<web::Data<ChatServerHandle>>,
+        lobby: Option<ChatServerHandle>,
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
 

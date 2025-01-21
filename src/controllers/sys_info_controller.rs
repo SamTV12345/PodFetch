@@ -1,8 +1,9 @@
+use axum::{Json, Router};
+use axum::routing::{get, post};
 use crate::models::user::User;
 
-use actix_web::{get, post};
-use actix_web::{web, HttpResponse, Responder};
 use fs_extra::dir::get_size;
+use reqwest::StatusCode;
 use sha256::digest;
 
 use sysinfo::{Disk, Disks, System};
@@ -12,14 +13,15 @@ pub mod built_info {
 }
 
 #[utoipa::path(
+get,
+path="/sys/info",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the system information",
 body = SysExtraInfo)),
 tag="sys"
 )]
-#[get("/sys/info")]
-pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
+pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
     let mut sys = System::new();
     let disks = Disks::new_with_refreshed_list();
 
@@ -43,7 +45,7 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
                 ),
             )
         })?;
-    Ok(HttpResponse::Ok().json(SysExtraInfo {
+    Ok(Json(SysExtraInfo {
         system: sys.into(),
         disks: sim_disks,
         podcast_directory: podcast_byte_size,
@@ -52,6 +54,7 @@ pub async fn get_sys_info() -> Result<HttpResponse, CustomError> {
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner};
 use utoipa::ToSchema;
+use crate::models::settings::ConfigModel;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {
@@ -134,19 +137,23 @@ impl From<&Disk> for SimplifiedDisk {
 }
 
 #[utoipa::path(
+get,
+path="/sys/config",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the environment configuration",
 body=SysExtraInfo)),
 tag="sys"
 )]
-#[get("/sys/config")]
-pub async fn get_public_config() -> impl Responder {
+
+pub async fn get_public_config() -> Json<ConfigModel> {
     let config = ENVIRONMENT_SERVICE.get_config();
-    HttpResponse::Ok().json(config)
+    Json(config)
 }
 
 #[utoipa::path(
+post,
+path="/login",
 context_path="/api/v1",
 request_body=LoginRequest,
 responses(
@@ -154,8 +161,7 @@ responses(
 body=String)),
 tag="sys"
 )]
-#[post("/login")]
-pub async fn login(auth: web::Json<LoginRequest>) -> Result<HttpResponse, CustomError> {
+pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
 
     let digested_password = digest(auth.0.password);
@@ -163,7 +169,7 @@ pub async fn login(auth: web::Json<LoginRequest>) -> Result<HttpResponse, Custom
         if admin_username == &auth.0.username {
             if let Some(admin_password) = &ENVIRONMENT_SERVICE.password {
                 if admin_password == &digested_password {
-                    return Ok(HttpResponse::Ok().json("Login successful"));
+                    return Ok(StatusCode::OK);
                 }
             }
         }
@@ -176,7 +182,7 @@ pub async fn login(auth: web::Json<LoginRequest>) -> Result<HttpResponse, Custom
     }
 
     if db_user.password.unwrap() == digested_password {
-        return Ok(HttpResponse::Ok().json("Login successful"));
+        return Ok(StatusCode::OK);
     }
     log::warn!("Login failed for user {}", auth.0.username);
     Err(CustomErrorInner::Forbidden.into())
@@ -199,13 +205,14 @@ pub struct VersionInfo {
 }
 
 #[utoipa::path(
+get,
+path="/info",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the info of the server")),
 tag="info"
 )]
-#[get("/info")]
-pub async fn get_info() -> impl Responder {
+pub async fn get_info() -> Json<VersionInfo> {
     let version = VersionInfo {
         commit: env!("GIT_EXACT_TAG"),
         version: env!("VW_VERSION"),
@@ -214,5 +221,13 @@ pub async fn get_info() -> impl Responder {
         time: built_info::BUILT_TIME_UTC,
         os: built_info::CFG_OS,
     };
-    HttpResponse::Ok().json(version)
+    Json(version)
+}
+
+pub fn get_sys_info_router() -> Router {
+    Router::new()
+        .route("/sys/info", get(get_sys_info))
+        .route("/sys/config", get(get_public_config))
+        .route("/login", post(login))
+        .route("/info", get(get_info))
 }

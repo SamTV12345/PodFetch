@@ -24,10 +24,15 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use std::{env, thread};
 use std::fmt::format;
-use axum::response::Redirect;
+use axum::extract::Request;
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::Router;
-use axum::routing::get;
-use tokio::{spawn, try_join};
+use axum::routing::{get, post};
+use file_format::FileFormat;
+use socketioxide::SocketIoBuilder;
+use tokio::{fs, spawn, try_join};
+use tower::ServiceExt;
+use tower_http::services::{ServeDir, ServeFile};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
@@ -38,45 +43,27 @@ use crate::adapters::persistence::dbconfig::DBType;
 use crate::auth_middleware::AuthFilter;
 use crate::command_line_runner::start_command_line;
 use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
-use crate::controllers::notification_controller::{
-    dismiss_notifications, get_unread_notifications,
-};
+use crate::controllers::notification_controller::{dismiss_notifications, get_notification_router, get_unread_notifications};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 use utoipa_swagger_ui::SwaggerUi;
-use crate::controllers::playlist_controller::{
-    add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists,
-    get_playlist_by_id, update_playlist,
-};
-use crate::controllers::podcast_controller::{
-    add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast,
-    find_podcast_by_id, get_filter, get_podcast_settings, refresh_all_podcasts,
-    retrieve_podcast_sample_format, search_podcasts, update_podcast_settings,
-};
+use crate::controllers::playlist_controller::{add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists, get_playlist_by_id, get_playlist_router, update_playlist};
+use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_router, get_podcast_settings, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
 use crate::controllers::podcast_controller::{
     add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
-use crate::controllers::podcast_episode_controller::{
-    delete_podcast_episode_locally, download_podcast_episodes_of_podcast,
-    find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_timeline,
-    like_podcast_episode, retrieve_episode_sample_format,
-};
+use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_podcast_episode_router, get_timeline, like_podcast_episode, retrieve_episode_sample_format};
 use crate::controllers::server::ChatServer;
-use crate::controllers::settings_controller::{
-    get_opml, get_settings, run_cleanup, update_name, update_settings,
-};
-use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, login};
-use crate::controllers::tags_controller::{
-    add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, insert_tag, update_tag,
-};
-use crate::controllers::user_controller::{
-    create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user,
-    get_users, onboard_user, update_role, update_user,
-};
-use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, log_watchtime};
+use crate::controllers::settings_controller::{get_opml, get_settings, get_settings_router, run_cleanup, update_name, update_settings};
+use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, get_sys_info_router, login};
+use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, get_tags_router, insert_tag, update_tag};
+use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_user_router, get_users, onboard_user, update_role, update_user};
+use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, get_watchtime_router, log_watchtime};
 pub use controllers::controller_utils::*;
 use crate::controllers::api_doc::ApiDoc;
+use crate::controllers::manifest_controller::get_manifest_router;
+use crate::controllers::websocket_controller::get_websocket_router;
 
 mod constants;
 mod db;
@@ -92,7 +79,7 @@ use crate::service::file_service::FileService;
 
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::http_client::get_http_client;
 
 mod config;
@@ -337,9 +324,11 @@ async fn main() -> std::io::Result<()> {
         .unwrap_or("/".to_string());
 
     let ui_dir = format!("{}/ui", sub_dir);
+    let (layer, io) = SocketIoBuilder::new().build_layer();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(Redirect::to(&ui_dir)))
+        .layer(layer)
         .split_for_parts();
     let router = router
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
@@ -353,6 +342,8 @@ async fn main() -> std::io::Result<()> {
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
+
+
     axum::serve(listener, router).await.unwrap();
     Ok(())
 }
@@ -379,131 +370,76 @@ pub fn run_migrations() {
     }
 }
 
-pub fn get_api_config() -> Scope {
-    web::scope("/api/v1").configure(config)
+pub fn get_api_config() -> Router {
+    Router::new()
+        .nest("/api/v1", Router::new().merge(config()))
+
 }
 
-fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_invite)
-        .service(onboard_user)
-        .service(login)
-        .service(get_public_config)
-        .service(get_private_api());
+fn config() -> Router {
+    Router::new()
+        .route("/users/invites/{invite_id}", get(get_invite))
+        .route("/users", post(onboard_user))
+        .route("/login", post(login))
+        .route("/sys/config", get(get_public_config))
+        .merge(get_private_api())
 }
 
-fn get_private_api() -> Scope<
-    impl ServiceFactory<
-        ServiceRequest,
-        Config = (),
-        Response = ServiceResponse<EitherBody<BoxBody>>,
-        Error = actix_web::Error,
-        InitError = (),
-    >,
-> {
-    let middleware = AuthFilter::new();
-
-    web::scope("")
-        .wrap(middleware)
-        .service(delete_playlist_item)
-        .service(update_name)
-        .service(get_filter)
-        .service(search_podcasts)
-        .service(add_podcast_by_feed)
-        .service(refresh_all_podcasts)
-        .service(get_info)
-        .service(get_timeline)
-        .service(get_available_podcasts_not_in_webview)
-        .configure(config_secure_user_management)
-        .service(find_podcast)
-        .service(add_podcast)
-        .service(find_all_podcasts)
-        .service(find_all_podcast_episodes_of_podcast)
-        .service(find_podcast_by_id)
-        .service(log_watchtime)
-        .service(get_last_watched)
-        .service(get_watchtime)
-        .service(get_unread_notifications)
-        .service(dismiss_notifications)
-        .service(download_podcast)
-        .service(query_for_podcast)
-        .service(download_podcast_episodes_of_podcast)
-        .service(get_sys_info)
-        .service(get_favored_podcasts)
-        .service(favorite_podcast)
-        .service(get_settings)
-        .service(update_settings)
-        .service(update_active_podcast)
-        .service(import_podcasts_from_opml)
-        .service(run_cleanup)
-        .service(add_podcast_from_podindex)
-        .service(delete_podcast)
-        .service(get_opml)
-        .service(add_playlist)
-        .service(update_playlist)
-        .service(get_all_playlists)
-        .service(get_playlist_by_id)
-        .service(delete_playlist_by_id)
-        .service(delete_podcast_episode_locally)
-        .service(insert_tag)
-        .service(delete_tag)
-        .service(update_tag)
-        .service(get_tags)
-        .service(add_podcast_to_tag)
-        .service(delete_podcast_from_tag)
-        .service(retrieve_episode_sample_format)
-        .service(retrieve_podcast_sample_format)
-        .service(update_podcast_settings)
-        .service(get_podcast_settings)
-        .service(like_podcast_episode)
+fn get_private_api() -> Router {
+    Router::new()
+        .merge(get_playlist_router())
+        .merge(get_podcast_router())
+        .merge(get_sys_info_router())
+        .merge(get_watchtime_router())
+        .merge(get_manifest_router())
+        .merge(get_notification_router())
+        .merge(get_podcast_episode_router())
+        .merge(get_settings_router())
+        .merge(get_sys_info_router())
+        .merge(get_tags_router())
+        .merge(get_user_router())
+        .merge(get_websocket_router())
 }
 
-pub fn config_secure_user_management(cfg: &mut web::ServiceConfig) {
+pub fn config_secure_user_management() -> Router {
     if ENVIRONMENT_SERVICE.any_auth_enabled {
         cfg.service(get_secure_user_management());
     }
 }
 
-pub fn get_ui_config() -> Scope {
-    web::scope("/ui")
-        .service(redirect("", "./"))
-        .route("/index.html", web::get().to(index))
-        .route("/{path:[^.]*}", web::get().to(index))
-        .default_service(fn_service(|req: ServiceRequest| async {
-            let (req, _) = req.into_parts();
-            let path = req.path();
 
-            let test = Regex::new(r"/ui/(.*)").unwrap();
-            let rs = test.captures(path).unwrap().get(1).unwrap().as_str();
-            let file = NamedFile::open_async(format!("{}/{}", "./static", rs)).await?;
-            let mut content = String::new();
+async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError> {
+    let (req_parts, _) = req.into_parts();
+    let path = req_parts.uri.path();
 
-            let type_of = file.content_type().to_string();
-            let res = file.file().read_to_string(&mut content);
+    let test = Regex::new(r"/ui/(.*)").unwrap();
+    let rs = test.captures(path).unwrap().get(1).unwrap().as_str();
+    let file_path = format!("{}/{}", "./static", rs);
 
-            match res {
-                Ok(_) => {}
-                Err(_) => return Ok(ServiceResponse::new(req.clone(), file.into_response(&req))),
-            }
-            if type_of.contains(CSS) || type_of.contains(JS) {
-                content = fix_links(&content)
-            }
-            let res = HttpResponse::Ok().content_type(type_of).body(content);
-            Ok(ServiceResponse::new(req, res))
-        }))
+    let type_of = match FileFormat::from_file(&file_path) {
+        Ok(e)=>Ok(e.media_type()),
+        Err(_)=>Err(CustomErrorInner::NotFound.into())
+    }?;
+
+    let mut content = match fs::read_to_string(file_path).await {
+        Ok(e)=>Ok(e),
+        Err(_)=>return Err(CustomErrorInner::NotFound.into())
+    }?;
+
+    if type_of.contains(CSS) || type_of.contains(JS) {
+        content = fix_links(&content)
+    }
+    let res = Response::builder().header("Content-Type", type_of).body(content).unwrap();
+    Ok(res)
 }
 
-pub fn get_secure_user_management() -> Scope {
-    web::scope("/users")
-        .service(create_invite)
-        .service(get_invites)
-        .service(get_user)
-        .service(get_users)
-        .service(update_role)
-        .service(delete_user)
-        .service(delete_invite)
-        .service(get_invite_link)
-        .service(update_user)
+pub fn get_ui_config() -> Router {
+    Router::new().nest("/ui", Router::new()
+        .route("/index.html", get(index))
+        .route("/{path:[^.]*}", get(index))
+        .fallback(handle_ui_access))
 }
+
 
 pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     let settings = Setting::get_settings()?;

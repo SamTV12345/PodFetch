@@ -1,10 +1,9 @@
 use crate::gpodder::subscription::subscriptions::SubscriptionUpdateRequest;
-use actix_web::web;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use std::io::Error;
-
+use axum::Json;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::subscriptions;
 use crate::utils::time::get_current_timestamp;
@@ -138,7 +137,7 @@ impl SubscriptionChangesToClient {
     pub async fn update_subscriptions(
         device_id: &str,
         username: &str,
-        upload_request: web::Json<SubscriptionUpdateRequest>,
+        upload_request: Json<SubscriptionUpdateRequest>,
     ) -> Result<Vec<Vec<String>>, Error> {
         use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl as dsl_types;
         use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::subscriptions;

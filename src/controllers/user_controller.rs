@@ -1,10 +1,12 @@
+use axum::extract::Path;
+use axum::{Extension, Json, Router};
+use axum::routing::{delete, get, post, put};
+use reqwest::StatusCode;
 use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
-use crate::models::user::User;
+use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
 
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::web::{Json, Path};
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 
 use utoipa::ToSchema;
 
@@ -39,17 +41,17 @@ pub struct UserCoreUpdateModel {
 }
 
 #[utoipa::path(
+post,
+path="/users/",
 context_path="/api/v1",
 request_body = UserOnboardingModel,
 responses(
 (status = 200, description = "Creates a user (admin)")),
 tag="info"
 )]
-#[post("/users/")]
 pub async fn onboard_user(
-    user_onboarding: web::Json<UserOnboardingModel>,
-) -> Result<HttpResponse, CustomError> {
-    let user_to_onboard = user_onboarding.into_inner();
+    Json(user_to_onboard): Json<UserOnboardingModel>,
+) -> Result<Json<UserWithoutPassword>, CustomError> {
 
     let res = UserManagementService::onboard_user(
         user_to_onboard.username,
@@ -57,60 +59,63 @@ pub async fn onboard_user(
         user_to_onboard.invite_id,
     )?;
 
-    Ok(HttpResponse::Ok().json(User::map_to_dto(res)))
+    Ok(Json(User::map_to_dto(res)))
 }
 
 #[utoipa::path(
+get,
+path="",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all users", body= Vec<UserOnboardingModel>)),
 tag="info"
 )]
-#[get("")]
-pub async fn get_users(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
-    let res = UserManagementService::get_users(requester.into_inner())?;
+pub async fn get_users(Extension(requester): Extension<User>) ->
+                                                              Result<Json<Vec<UserWithoutPassword>>,
+    CustomError> {
+    let res = UserManagementService::get_users(requester)?;
 
-    Ok(HttpResponse::Ok().json(res))
+    Ok(Json(res))
 }
 
 #[utoipa::path(
+get,
+path = "/{username}",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets a user by username", body = Option<User>)),
 tag="info"
 )]
-#[get("/{username}")]
 pub async fn get_user(
-    username: Path<String>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
-    let user = requester.into_inner();
-    let username = username.into_inner();
-    if user.username == username || username == "me" {
-        return Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)));
+    Path(username): Path<String>,
+    Extension(requester): Extension<User>,
+) -> Result<Json<UserWithAPiKey>, CustomError> {
+    if username == requester.username || username == "me" {
+        return Ok(Json(User::map_to_api_dto(requester)));
     }
 
-    if !user.is_admin() || user.username != username {
+    if !requester.is_admin() || requester.username != username {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
     let user = User::find_by_username(&username.clone())?;
-    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
+    Ok(Json(User::map_to_api_dto(user)))
 }
 
 #[utoipa::path(
+put,
+path="/{username}/role",
 context_path="/api/v1",
 request_body = UserOnboardingModel,
 responses(
 (status = 200, description = "Updates the role of a user", body = Option<User>)),
 tag="info"
 )]
-#[put("/{username}/role")]
 pub async fn update_role(
-    role: web::Json<UserRoleUpdateModel>,
-    username: web::Path<String>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    role: Json<UserRoleUpdateModel>,
+    Path(username): Path<String>,
+    requester: Extension<User>,
+) -> Result<Json<UserWithoutPassword>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -122,16 +127,23 @@ pub async fn update_role(
 
     let res = UserManagementService::update_user(user_to_update)?;
 
-    Ok(HttpResponse::Ok().json(res))
+    Ok(Json(res))
 }
 
-#[put("/{username}")]
+#[utoipa::path(
+put,
+path="/{username}",
+context_path="/api/v1",
+request_body=InvitePostModel,
+responses(
+(status = 200, description = "Creates an invite", body = UserWithAPiKey,)),
+tag="info"
+)]
 pub async fn update_user(
-    user: web::ReqData<User>,
-    username: Path<String>,
+    Extension(user): Extension<User>,
+    Path(username): Path<String>,
     user_update: Json<UserCoreUpdateModel>,
-) -> Result<HttpResponse, CustomError> {
-    let username = username.into_inner();
+) -> Result<Json<UserWithAPiKey>, CustomError> {
     let old_username = &user.clone().username;
     if old_username != &username {
         return Err(CustomErrorInner::Forbidden.into());
@@ -162,128 +174,148 @@ pub async fn update_user(
         user.password = Some(sha256::digest(password.trim()));
     }
 
-    if let Some(api_key) = user_update.into_inner().api_key {
-        user.api_key = Some(api_key);
+    if let Some(api_key) = &user_update.api_key {
+        user.api_key = Some(api_key.clone());
     }
 
     let user = User::update_user(user)?;
 
-    Ok(HttpResponse::Ok().json(User::map_to_api_dto(user)))
+    Ok(Json(User::map_to_api_dto(user)))
 }
 
 use crate::models::invite::Invite;
 #[utoipa::path(
+post,
+path="/invites",
 context_path="/api/v1",
 request_body=InvitePostModel,
 responses(
 (status = 200, description = "Creates an invite", body = Invite,)),
 tag="info"
 )]
-#[post("/invites")]
 pub async fn create_invite(
-    invite: web::Json<InvitePostModel>,
-    requester: web::ReqData<User>,
-) -> impl Responder {
-    let invite = invite.into_inner();
-
+    Json(invite): Json<InvitePostModel>,
+    Extension(requester): Extension<User>,
+) -> Result<Json<Invite>, CustomError> {
     let created_invite = UserManagementService::create_invite(
         invite.role,
         invite.explicit_consent,
-        requester.into_inner(),
-    )
-    .expect("Error creating invite");
-    HttpResponse::Ok().json(created_invite)
+        requester,
+    )?;
+    Ok(Json(created_invite))
 }
 
 #[utoipa::path(
+get,
+path="/invites",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all invites", body = Vec<Invite>)),
 tag="info"
 )]
-#[get("/invites")]
-pub async fn get_invites(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+pub async fn get_invites(Extension(requester): Extension<User>) -> Result<Json<Vec<Invite>>,
+    CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
     let invites = UserManagementService::get_invites()?;
 
-    Ok(HttpResponse::Ok().json(invites))
+    Ok(Json(invites))
 }
 
 #[utoipa::path(
+get,
+path="/users/invites/{invite_id}",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets a specific invite", body = Option<Invite>)),
 tag="info"
 )]
-#[get("/users/invites/{invite_id}")]
-pub async fn get_invite(invite_id: web::Path<String>) -> Result<HttpResponse, CustomError> {
-    match UserManagementService::get_invite(invite_id.into_inner()) {
-        Ok(invite) => Ok(HttpResponse::Ok().json(invite)),
-        Err(e) => Ok(HttpResponse::BadRequest().body(e.to_string())),
+pub async fn get_invite(Path(invite_id): Path<String>) -> Result<Json<Invite>, CustomError> {
+    match UserManagementService::get_invite(invite_id) {
+        Ok(invite) => Ok(Json(invite)),
+        Err(e) => Err(e),
     }
 }
 
 #[utoipa::path(
+delete,
+path="/{username}",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Deletes a user by username")),
 tag="info"
 )]
-#[delete("/{username}")]
 pub async fn delete_user(
-    username: Path<String>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(username): Path<String>,
+    Extension(requester): Extension<User>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
     let user_to_delete = User::find_by_username(&username)?;
     match UserManagementService::delete_user(user_to_delete) {
-        Ok(_) => Ok(HttpResponse::Ok().into()),
+        Ok(_) => Ok(StatusCode::OK),
         Err(e) => Err(e),
     }
 }
 
 #[utoipa::path(
+get,
+path="/invites/{invite_id}/link",
 context_path="/api/v1",
 tag="info",
 responses(
 (status = 200, description = "Gets an invite by id", body = Option<Invite>)))]
-#[get("/invites/{invite_id}/link")]
 pub async fn get_invite_link(
-    invite_id: Path<String>,
-    requester: web::ReqData<User>,
-) -> impl Responder {
+    Path(invite_id): Path<String>,
+    requester: Extension<User>,
+) -> Result<String, CustomError> {
     if !requester.is_admin() {
-        return HttpResponse::Forbidden().body("You are not authorized to perform this action");
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
-    match UserManagementService::get_invite_link(invite_id.into_inner()) {
-        Ok(invite) => HttpResponse::Ok().json(invite),
-        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+    match UserManagementService::get_invite_link(invite_id) {
+        Ok(invite) => Ok(invite),
+        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
     }
 }
 
 #[utoipa::path(
+get,
+path="/invites/{invite_id}",
 context_path="/api/v1",
 tag="info",
 responses(
 (status = 200, description = "Deletes an invite by id")))]
-#[delete("/invites/{invite_id}")]
 pub async fn delete_invite(
-    invite_id: web::Path<String>,
-    requester: web::ReqData<User>,
-) -> impl Responder {
+    invite_id: Path<String>,
+    requester: Extension<User>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
-        return HttpResponse::Forbidden().body("You are not authorized to perform this action");
+        return Err(CustomErrorInner::Forbidden.into());
     }
 
-    match UserManagementService::delete_invite(invite_id.into_inner()) {
-        Ok(_) => HttpResponse::Ok().into(),
-        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+    match UserManagementService::delete_invite(invite_id.0) {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
     }
+}
+
+
+pub fn get_user_router() -> Router {
+    Router::new()
+        .nest("/users", Router::new()
+
+            .route("/{username}", get(get_user))
+            .route("/{username}/role", put(update_role))
+            .route("/{username}", delete(delete_user))
+            .route("/{username}", put(update_user))
+        )
+        .route("/invites/{invite_id}", delete(delete_invite))
+        .route("/invites/{invite_id}/link", get(get_invite_link))
+        .route("/invites", post(create_invite))
+        .route("/invites", get(get_invites))
 }

@@ -13,7 +13,7 @@ use crate::controllers::websocket_controller::{
     get_rss_feed, get_rss_feed_for_podcast, start_connection,
 };
 use crate::gpodder::auth::authentication::login;
-use crate::gpodder::parametrization::get_client_parametrization;
+use crate::gpodder::parametrization::{get_client_parametrization, get_client_parametrization_router};
 use crate::gpodder::subscription::subscriptions::{get_subscriptions, get_subscriptions_all, upload_subscription_changes};
 use crate::{get_api_config, get_ui_config};
 use actix_web::body::{BoxBody, EitherBody};
@@ -23,7 +23,7 @@ use actix_web::{web, Error, Scope};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-pub fn global_routes() -> Scope {
+pub fn global_routes() -> Router {
     let base_path = ENVIRONMENT_SERVICE
         .sub_directory
         .clone()
@@ -31,6 +31,9 @@ pub fn global_routes() -> Scope {
     let openapi = ApiDoc::openapi();
     let service = get_api_config();
 
+    Router::new()
+        .nest(&base_path, Router::new()
+            .merge(get_client_parametrization_router()))
     web::scope(&base_path)
         .service(get_client_parametrization)
         .service(proxy_podcast)

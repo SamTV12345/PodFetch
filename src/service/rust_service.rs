@@ -15,13 +15,13 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
 use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::http_client::get_http_client;
-use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde::Serialize;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
+use axum::extract::State;
 use tokio::task::spawn_blocking;
 
 pub struct PodcastService;
@@ -87,7 +87,7 @@ impl PodcastService {
 
     pub async fn insert_podcast_from_podindex(
         id: i32,
-        lobby: Data<ChatServerHandle>,
+        lobby: ChatServerHandle,
     ) -> Result<Podcast, CustomError> {
         let resp = get_http_client()
             .get(format!(
@@ -118,7 +118,7 @@ impl PodcastService {
 
     pub async fn handle_insert_of_podcast(
         podcast_insert: PodcastInsertModel,
-        lobby: Data<ChatServerHandle>,
+        lobby: ChatServerHandle,
         channel: Option<Channel>,
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(&podcast_insert.feed_url.clone());
@@ -176,7 +176,7 @@ impl PodcastService {
 
     pub fn schedule_episode_download(
         podcast: Podcast,
-        lobby: Option<Data<ChatServerHandle>>,
+        lobby: Option<ChatServerHandle>,
     ) -> Result<(), CustomError> {
         let settings = Setting::get_settings()?;
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
@@ -211,7 +211,7 @@ impl PodcastService {
 
     pub fn refresh_podcast(
         podcast: Podcast,
-        lobby: Data<ChatServerHandle>,
+        lobby: ChatServerHandle,
     ) -> Result<(), CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
         PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
@@ -286,7 +286,7 @@ impl PodcastService {
         latest_pub: OrderOption,
         designated_username: String,
         tag: Option<String>,
-    ) -> Result<Vec<impl Serialize>, CustomError> {
+    ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
             Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?;
         let mut podcast_dto_vec: Vec<PodcastDto> = Vec::new();

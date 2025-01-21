@@ -1,15 +1,11 @@
+use axum::extract::{Query, Request};
+use axum::http::StatusCode;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::dev::{ServiceRequest, ServiceResponse};
-use actix_web::middleware::Next;
-use actix_web::web::Query;
-use actix_web::{Error, HttpMessage};
-use awc::body::BoxBody;
-use axum::extract::{Query, Request};
 use axum::middleware::Next;
 use axum::RequestExt;
 use axum::response::Response;
@@ -22,12 +18,11 @@ pub enum PodcastOrPodcastEpisodeResource {
 }
 
 pub async fn check_permissions_for_files(
+    query: Query<Option<RSSAPiKey>>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, CustomError> {
-    let request = req
-        .extract::<Option<Query<RSSAPiKey>>,_>()
-        .await?
+    let request = query.0
         .map(|rss_api_key| rss_api_key.api_key.to_string());
     let extracted_podcast = check_auth(&req, request)?;
 
@@ -71,7 +66,7 @@ fn retrieve_podcast_or_podcast_episode(
 }
 
 fn check_auth(
-    req: &ServiceRequest,
+    req: &Request,
     api_key: Option<String>,
 ) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
     match ENVIRONMENT_SERVICE.any_auth_enabled {

@@ -124,7 +124,7 @@ pub(crate) type CustomError = BacktraceError;
 
 impl IntoResponse  for CustomError {
     fn into_response(self) -> Response {
-        let status = match self.inner {
+        let status = match &self.inner {
             CustomErrorInner::NotFound => StatusCode::NOT_FOUND,
             CustomErrorInner::Forbidden => StatusCode::FORBIDDEN,
             CustomErrorInner::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
@@ -134,7 +134,7 @@ impl IntoResponse  for CustomError {
             CustomErrorInner::UnAuthorized(e) => StatusCode::UNAUTHORIZED,
         };
 
-        (status, self.error_response()).into_response()
+        (status, self.error_response().message).into_response()
     }
 }
 

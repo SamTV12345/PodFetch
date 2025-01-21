@@ -16,7 +16,6 @@ postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", 
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
 
 [dependencies]
-awc =  {version="3.5.1", features = ["rustls"]}
 rpassword = "7.3.1"
 reqwest = { version = "0.12.11", features = ["stream", "json","blocking"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
@@ -71,6 +70,9 @@ utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 axum-extra={version = "0.10.0", features = ["cookie"]}
+axum-test = "17.1.0"
+socketioxide = "0.16.0"
+
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.68"
 
