@@ -79,3 +79,7 @@ ctor = "0.2.9"
 
 [profile.release]
 debug = true
+
+# disable debug symbols for all packages except this one
+[profile.release.package."*"]
+debug = false
