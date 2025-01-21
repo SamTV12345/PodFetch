@@ -16,7 +16,13 @@ use axum::{
 use tower::{Layer, MakeService, Service};
 use crate::utils::error::{CustomErrorInner};
 
-pub struct CookieFilter {}
+pub struct CookieFilter;
+
+impl CookieFilter {
+    pub fn new() -> Self {
+        Self
+    }
+}
 
 impl<S> Layer<S> for CookieFilter {
     type Service = MyMiddleware<S>;

@@ -169,7 +169,6 @@ impl DownloadService {
         }
 
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
-
         match detected_file {
             FileFormat::Mpeg12AudioLayer3
             | FileFormat::Mpeg12AudioLayer2
