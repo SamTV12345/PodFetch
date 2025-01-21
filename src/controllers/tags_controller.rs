@@ -1,4 +1,4 @@
-use axum::{Extension, Json, Router};
+use axum::{debug_handler, Extension, Json, Router};
 use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post, put};
@@ -33,8 +33,8 @@ body = TagCreate)),
 tag="tags"
 )]
 pub async fn insert_tag(
-    tag_create: Json<TagCreate>,
-    requester: Extension<User>,
+    Extension(requester): Extension<User>,
+    Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
     let new_tag = Tag::new(
         tag_create.name.clone(),
@@ -91,9 +91,9 @@ responses(
 tag="tags"
 )]
 pub async fn update_tag(
-    tag_id: Path<String>,
-    tag_create: Json<TagCreate>,
+    Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
+    Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
     let opt_tag =
         Tag::get_tag_by_id_and_username(&tag_id, &requester.username)?;

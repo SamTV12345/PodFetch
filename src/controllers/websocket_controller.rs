@@ -38,15 +38,15 @@ responses(
 (status = 200, description = "Gets the complete rss feed"))
 , tag = "info")]
 pub async fn get_rss_feed(
-    query: Option<Query<RSSQuery>>,
-    api_key: Option<Query<RSSAPiKey>>,
+    Query(query): Query<Option<RSSQuery>>,
+    Query(api_key): Query<Option<RSSAPiKey>>,
 ) -> Result<String, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
 
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
-            Some(q) => Ok::<&Query<RSSAPiKey>, CustomError>(q),
+            Some(q) => Ok(q),
             None => Err(CustomErrorInner::Forbidden.into()),
         }?;
         let api_key = &api_key.api_key;

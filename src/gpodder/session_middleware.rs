@@ -14,7 +14,7 @@ use axum::{
     extract::Request,
 };
 use tower::{Layer, MakeService, Service};
-use crate::utils::error::{CustomErrorInner};
+use crate::utils::error::{CustomError, CustomErrorInner};
 
 pub struct CookieFilter;
 
@@ -39,7 +39,7 @@ struct MyMiddleware<S> {
 
 impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S> {
     type Response = Response<Vec<u8>>;
-    type Error = http::Error;
+    type Error = CustomError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -50,7 +50,7 @@ impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S> {
         let jar = CookieJar::from_headers(req.headers());
         let cookie = jar.get("sessionid");
         if cookie.is_none() {
-            return Box::pin(Err(CustomErrorInner::Forbidden.into()));
+            return Box::pin(async {Err(CustomErrorInner::Forbidden.into())});
         }
         let binding = cookie.unwrap();
         let extracted_cookie = binding.value();
@@ -62,7 +62,7 @@ impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S> {
             .optional()
             .expect("Error connecting to database");
         if session.is_none() {
-            return Box::pin(Err(CustomErrorInner::Forbidden.into()));
+            return Box::pin(async {Err(CustomErrorInner::Forbidden.into())});
         }
 
         req.extensions_mut().insert(session.unwrap());

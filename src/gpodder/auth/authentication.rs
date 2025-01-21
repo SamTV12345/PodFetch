@@ -1,4 +1,3 @@
-use awc::cookie::CookieBuilder;
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;

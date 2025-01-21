@@ -40,7 +40,7 @@ pub struct UserWithoutPassword {
     pub explicit_consent: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserWithAPiKey {
     pub id: i32,

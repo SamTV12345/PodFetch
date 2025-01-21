@@ -10,16 +10,17 @@ use serde_json::from_str;
 use utoipa::ToSchema;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use axum::{Extension, Json, Router};
+use axum::{debug_handler, Extension, Json, Router};
 use axum::extract::{Path, Query, State};
+use axum::response::IntoResponse;
 use axum::routing::{delete, get, post, put};
 use reqwest::StatusCode;
+use crate::controllers::server::ChatServerHandle;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -188,10 +189,11 @@ responses(
 (status = 200, description = "Starts the download of a given podcast episode")),
 tag = "podcast_episodes"
 )]
+#[debug_handler]
 pub async fn download_podcast_episodes_of_podcast(
-    Path(id): Path<String>,
     Extension(requester): Extension<User>,
-) -> Result<impl Into<String>, CustomError> {
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -224,7 +226,6 @@ tag = "podcast_episodes"
 pub async fn delete_podcast_episode_locally(
     id: Path<String>,
     requester: Extension<User>,
-    State(lobby): State<ChatServerHandle>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -236,12 +237,12 @@ pub async fn delete_podcast_episode_locally(
             .await
             .unwrap()?;
 
-    lobby.broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
+    ChatServerHandle::broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct EpisodeFormatDto {
     pub content: String,
 }
@@ -304,5 +305,4 @@ pub fn get_podcast_episode_router() -> Router {
         .route("/podcast/{id}/episodes/download", put(download_podcast_episodes_of_podcast))
         .route("/episodes/{id}/download", delete(delete_podcast_episode_locally))
         .route("/episodes/formatting", post(retrieve_episode_sample_format))
-        .with_state()
 }

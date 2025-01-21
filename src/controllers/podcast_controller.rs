@@ -218,9 +218,8 @@ responses(
 tag="podcasts"
 )]
 pub async fn add_podcast(
-    track_id: Json<PodcastAddModel>,
-    State(lobby): State<ChatServerHandle>,
     requester: Extension<User>,
+    track_id: Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -249,7 +248,6 @@ pub async fn add_podcast(
                 .unwrap(),
             image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
         },
-        lobby,
         None,
     )
     .await?;
@@ -265,9 +263,8 @@ responses(
 tag="podcasts"
 )]
 pub async fn add_podcast_by_feed(
-    Json(rss_feed): Json<PodcastRSSAddModel>,
-    State(lobby): State<ChatServerHandle>,
     Extension(requester): Extension<User>,
+    Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -300,7 +297,6 @@ pub async fn add_podcast_by_feed(
                     .map(|i| i.url)
                     .unwrap_or(get_default_image()),
             },
-            lobby,
             Some(channel),
         )
         .await?
@@ -320,9 +316,8 @@ responses(
 tag="podcasts"
 )]
 pub async fn import_podcasts_from_opml(
-    Json(opml): Json<OpmlModel>,
-    State(lobby): State<ChatServerHandle>,
     requester: Extension<User>,
+    Json(opml): Json<OpmlModel>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -331,11 +326,10 @@ pub async fn import_podcasts_from_opml(
 
     spawn_blocking(move || {
         for outline in document.body.outlines {
-            let moved_lobby = lobby.clone();
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 let rng = rand::thread_rng();
-                rt.block_on(insert_outline(outline.clone(), moved_lobby, rng.clone()));
+                rt.block_on(insert_outline(outline.clone(), rng.clone()));
             });
         }
     });
@@ -353,9 +347,8 @@ responses(
 tag="podcasts"
 )]
 pub async fn add_podcast_from_podindex(
-    Json(id): Json<PodcastAddModel>,
-    State(lobby): State<ChatServerHandle>,
     Extension(requester): Extension<User>,
+    Json(id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -365,7 +358,7 @@ pub async fn add_podcast_from_podindex(
         return Err(CustomErrorInner::BadRequest("Podindex is not configured".to_string()).into());
     }
 
-    spawn_blocking(move || match start_download_podindex(id.track_id, lobby) {
+    spawn_blocking(move || match start_download_podindex(id.track_id) {
         Ok(_) => {}
         Err(e) => {
             log::error!("Error: {}", e)
@@ -374,11 +367,11 @@ pub async fn add_podcast_from_podindex(
     Ok(StatusCode::OK)
 }
 
-fn start_download_podindex(id: i32, State(lobby): ChatServerHandle) -> Result<Podcast,
+fn start_download_podindex(id: i32) -> Result<Podcast,
     CustomError> {
     let rt = Runtime::new().unwrap();
 
-    rt.block_on(async { PodcastService::insert_podcast_from_podindex(id, lobby).await })
+    rt.block_on(async { PodcastService::insert_podcast_from_podindex(id).await })
 }
 
 #[utoipa::path(
@@ -404,7 +397,6 @@ responses(
 tag="podcasts"
 )]
 pub async fn refresh_all_podcasts(
-    State(lobby): State<ChatServerHandle>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
@@ -414,8 +406,8 @@ pub async fn refresh_all_podcasts(
     let podcasts = Podcast::get_all_podcasts()?;
     thread::spawn(move || {
         for podcast in podcasts {
-            PodcastService::refresh_podcast(podcast.clone(), lobby.clone()).unwrap();
-            lobby.broadcast_podcast_refreshed(&podcast);
+            PodcastService::refresh_podcast(podcast.clone()).unwrap();
+            ChatServerHandle::broadcast_podcast_refreshed(&podcast);
         }
     });
     Ok(StatusCode::OK)
@@ -430,9 +422,8 @@ responses(
 tag="podcasts"
 )]
 pub async fn download_podcast(
-    Path(id): Path<String>,
-    State(lobby): State<ChatServerHandle>,
     Extension(requester): Extension<User>,
+    Path(id): Path<String>,
 ) -> Result<impl Into<String>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -441,7 +432,7 @@ pub async fn download_podcast(
     let id_num = from_str::<i32>(&id).unwrap();
     let podcast = PodcastService::get_podcast_by_id(id_num);
     thread::spawn(move || {
-        match PodcastService::refresh_podcast(podcast.clone(), lobby.clone()) {
+        match PodcastService::refresh_podcast(podcast.clone()) {
             Ok(_) => {
                 log::info!("Succesfully refreshed podcast.");
             }
@@ -450,7 +441,7 @@ pub async fn download_podcast(
             }
         }
 
-        let download = PodcastService::schedule_episode_download(podcast.clone(), Some(lobby));
+        let download = PodcastService::schedule_episode_download(podcast.clone());
 
         if download.is_err() {
             log::error!("Error downloading podcast: {}", download.err().unwrap());
@@ -470,8 +461,8 @@ responses(
 tag="podcasts"
 )]
 pub async fn favorite_podcast(
-    update_model: Json<PodcastFavorUpdateModel>,
     requester: Extension<User>,
+    update_model: Json<PodcastFavorUpdateModel>,
 ) -> Result<StatusCode, CustomError> {
     PodcastService::update_favor_podcast(
         update_model.id,
@@ -519,10 +510,10 @@ pub async fn update_active_podcast(
 }
 
 #[async_recursion(?Send)]
-async fn insert_outline(podcast: Outline, lobby: ChatServerHandle, mut rng: ThreadRng) {
+async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
     if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
-            insert_outline(outline_nested, lobby.clone(), rng.clone()).await;
+            insert_outline(outline_nested, rng.clone()).await;
         }
         return;
     }
@@ -533,7 +524,7 @@ async fn insert_outline(podcast: Outline, lobby: ChatServerHandle, mut rng: Thre
 
     let feed_response = get_http_client().get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
-        lobby.broadcast_opml_error(feed_response.err().unwrap().to_string());
+        ChatServerHandle::broadcast_opml_error(feed_response.err().unwrap().to_string());
         return;
     }
     let content = feed_response.unwrap().bytes().await.unwrap();
@@ -560,21 +551,20 @@ async fn insert_outline(podcast: Outline, lobby: ChatServerHandle, mut rng: Thre
                     id: rng.gen::<i32>(),
                     image_url,
                 },
-                lobby.clone(),
                 Some(channel),
             )
             .await;
             match inserted_podcast {
                 Ok(podcast) => {
-                    lobby.broadcast_opml_added(&podcast);
+                    ChatServerHandle::broadcast_opml_added(&podcast);
                 }
                 Err(e) => {
-                    lobby.broadcast_opml_error(e.to_string());
+                    ChatServerHandle::broadcast_opml_error(e.to_string());
                 }
             }
         }
         Err(e) => {
-            lobby.broadcast_opml_error(e.to_string());
+            ChatServerHandle::broadcast_opml_error(e.to_string());
         }
     }
 }
@@ -610,9 +600,9 @@ responses(
 tag="podcasts"
 )]
 pub async fn delete_podcast(
-    Json(data): Json<DeletePodcast>,
     Path(id): Path<i32>,
     Extension(requester): Extension<User>,
+    Json(data): Json<DeletePodcast>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -704,8 +694,8 @@ pub(crate) async fn proxy_podcast(
 )]
 pub async fn update_podcast_settings(
     Path(id_num): Path<i32>,
-    Json(mut settings): Json<PodcastSetting>,
     Extension(requester): Extension<User>,
+    Json(mut settings): Json<PodcastSetting>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());

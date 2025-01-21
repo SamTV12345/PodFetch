@@ -54,8 +54,8 @@ tag="playlist"
 )]
 pub async fn update_playlist(
     Extension(requester): Extension<User>,
-    Json(playlist): Json<PlaylistDtoPost>,
     Path(playlist_id): Path<String>,
+    Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
 
     let res = Playlist::update_playlist(playlist, playlist_id.clone(), requester)?;
