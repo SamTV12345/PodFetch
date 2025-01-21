@@ -23,8 +23,9 @@ use std::str::FromStr;
 
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
-    // This needs to be nth(1) because the first argument is the binary name
     let conn = &mut get_connection();
+    // Skip first argument
+    args.next();
     let arg = match args.next() {
         Some(arg) => arg,
         None => {
@@ -32,6 +33,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
             exit(1);
         }
     };
+
     match arg.as_str() {
         "help" | "--help" => {
             println!(
