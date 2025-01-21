@@ -62,7 +62,7 @@ maud = { version = "*", features = ["axum"] }
 url = "2.5.4"
 rust-s3 = { version = "0.35.1", features = ["blocking", "fail-on-err"] }
 async-trait = "0.1.85"
-axum = "0.8.1"
+axum = { version = "0.8.1", features = ["macros"] }
 tower-http = { version = "0.6.1", features = ["fs"] }
 tower = { version = "0.5.2", features = ["util"] }
 utoipa-axum = { version = "0.2.0" }

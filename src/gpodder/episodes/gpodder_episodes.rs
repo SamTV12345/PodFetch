@@ -1,4 +1,4 @@
-use axum::{Extension, Json, Router};
+use axum::{debug_handler, Extension, Json, Router};
 use axum::extract::{Path, Query};
 use axum::routing::{get, post};
 use crate::models::episode::{Episode, EpisodeDto};
@@ -28,9 +28,9 @@ pub struct EpisodeSinceRequest {
 }
 
 pub async fn get_episode_actions(
-    username: Path<String>,
-    opt_flag: Option<Extension<Session>>,
-    since: Query<EpisodeSinceRequest>,
+    Extension(opt_flag): Extension<Option<Session>>,
+    Query(since): Query<EpisodeSinceRequest>,
+    Path(username): Path<String>,
 ) -> Result<Json<EpisodeActionResponse>, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -67,8 +67,8 @@ pub async fn get_episode_actions(
 
 pub async fn upload_episode_actions(
     username: Path<String>,
-    podcast_episode: Json<Vec<EpisodeDto>>,
-    opt_flag: Option<Extension<Session>>,
+    Extension(opt_flag): Extension<Option<Session>>,
+    Json(podcast_episode): Json<Vec<EpisodeDto>>,
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     match opt_flag {
         Some(flag) => {

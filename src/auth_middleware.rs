@@ -12,7 +12,7 @@ use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::RequestExt;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use crate::service::environment_service::ReverseProxyConfig;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use futures_util::future::{BoxFuture, LocalBoxFuture, Ready};
@@ -81,23 +81,31 @@ pub async fn handle_auth(
     State(jwk): State<Option<Jwk>>,
     State(audience): State<HashSet<String>>,
     mut request: Request,
-    next: Next) {
+    next: Next) -> Result<impl IntoResponse, CustomError> {
     if ENVIRONMENT_SERVICE.http_basic {
-        handle_auth_internal(&mut request, AuthType::Basic, jwk, audience)
+        let user = handle_auth_internal(&mut request, AuthType::Basic, jwk, audience)?;
+        request.extensions_mut().insert(user);
+        Ok(next.run(request).await)
     } else if ENVIRONMENT_SERVICE.oidc_configured {
-        handle_auth_internal(&mut request, AuthType::Oidc, jwk, audience)
+        let user = handle_auth_internal(&mut request, AuthType::Oidc, jwk, audience)?;
+        request.extensions_mut().insert(user);
+        Ok(next.run(request).await)
     } else if ENVIRONMENT_SERVICE.reverse_proxy {
-        handle_auth_internal(&mut request, AuthType::Proxy, jwk, audience)
+        let user = handle_auth_internal(&mut request, AuthType::Proxy, jwk, audience)?;
+        request.extensions_mut().insert(user);
+        Ok(next.run(request).await)
     } else {
         // It can only be no auth
-        handle_auth_internal(&mut request, AuthType::None, jwk, audience)
+        let user = handle_auth_internal(&mut request, AuthType::None, jwk, audience)?;
+        request.extensions_mut().insert(user);
+        Ok(next.run(request).await)
     }
 }
 
 
 fn handle_auth_internal(req: &mut Request, auth_type: AuthType, jwk: Option<Jwk>, audience:
-HashSet<String>) {
-    let result = match auth_type {
+HashSet<String>) -> Result<User, CustomError> {
+    match auth_type {
         AuthType::Basic => AuthFilter::handle_basic_auth_internal(&req),
         AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req, jwk, audience),
         AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
@@ -105,7 +113,7 @@ HashSet<String>) {
             &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
         ),
         AuthType::None => Ok(User::create_standard_admin_user()),
-    };
+    }
 }
 
 

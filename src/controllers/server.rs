@@ -142,13 +142,12 @@ pub struct ChatServerHandle;
 
 impl ChatServerHandle {
 
-    fn send_broadcast_sync(&self, room_id: RoomId, msg: impl Into<Msg>) {
+    fn send_broadcast_sync(room_id: RoomId, msg: impl Into<Msg>) {
         block_on(SOCKET_IO_LAYER.get().unwrap().to(&room_id).emit("message", &msg.into()))
             .unwrap();
     }
 
     pub fn broadcast_podcast_episode_offline_available(
-        &self,
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
     ) {
@@ -160,7 +159,7 @@ impl ChatServerHandle {
             .clone()
             .into();
         let podcast = podcast.clone().into();
-        self.send_broadcast_sync(
+        Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastEpisodeOfflineAvailableMessage {
                 message: format!("Episode {} is now available offline", podcast_episode.name),
@@ -172,8 +171,8 @@ impl ChatServerHandle {
         );
     }
 
-    pub fn broadcast_podcast_refreshed(&self, podcast: &Podcast) {
-        self.send_broadcast_sync(
+    pub fn broadcast_podcast_refreshed(podcast: &Podcast) {
+        Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastRefreshedMessage {
                 type_of: PodcastType::RefreshPodcast,
@@ -184,22 +183,22 @@ impl ChatServerHandle {
         );
     }
 
-    pub fn broadcast_opml_error(&self, message: String) {
-        self.send_broadcast_sync(
+    pub fn broadcast_opml_error(message: String) {
+        Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&OpmlErrorMessage::from(message)).unwrap(),
         )
     }
 
-    pub fn broadcast_opml_added(&self, podcast: &Podcast) {
-        self.send_broadcast_sync(
+    pub fn broadcast_opml_added(podcast: &Podcast) {
+        Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&OpmlAddedMessage::from(podcast.clone())).unwrap(),
         );
     }
 
-    pub fn broadcast_podcast_episode_deleted_locally(&self, podcast_episode: &PodcastEpisode) {
-        self.send_broadcast_sync(
+    pub fn broadcast_podcast_episode_deleted_locally(podcast_episode: &PodcastEpisode) {
+        Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastEpisodeDeleteMesage {
                 podcast_episode: PodcastEpisodeDto::from((
@@ -214,19 +213,18 @@ impl ChatServerHandle {
         );
     }
 
-    pub fn broadcast_podcast_downloaded(&self, podcast: Podcast) {
-        self.send_broadcast_sync(
+    pub fn broadcast_podcast_downloaded(podcast: Podcast) {
+        Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastAddedMessage::from(podcast)).unwrap(),
         );
     }
 
     pub fn broadcast_added_podcast_episodes(
-        &self,
         podcast: Podcast,
         episodes: Vec<PodcastEpisode>,
     ) {
-        self.send_broadcast_sync(
+        Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             serde_json::to_string(&PodcastEpisodesAdded::from((podcast, episodes))).unwrap(),
         );

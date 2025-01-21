@@ -1,5 +1,5 @@
 use axum::extract::{Query, Request};
-use axum::http::StatusCode;
+use axum::http::{StatusCode, Uri};
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -24,7 +24,7 @@ pub async fn check_permissions_for_files(
 ) -> Result<Response, CustomError> {
     let request = query.0
         .map(|rss_api_key| rss_api_key.api_key.to_string());
-    let extracted_podcast = check_auth(&req, request)?;
+    let extracted_podcast = check_auth(req.uri().clone(), request)?;
 
     req.extensions_mut().insert(extracted_podcast);
     Ok(next.run(req).await)
@@ -66,7 +66,7 @@ fn retrieve_podcast_or_podcast_episode(
 }
 
 fn check_auth(
-    req: &Request,
+    uri: Uri,
     api_key: Option<String>,
 ) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
     match ENVIRONMENT_SERVICE.any_auth_enabled {
@@ -86,9 +86,7 @@ fn check_auth(
             if !api_key_exists {
                 return Err(CustomErrorInner::Forbidden.into());
             }
-
-            let requested_path = req
-                .path()
+            let requested_path = uri.path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
             let requested_path = requested_path.substring(1, requested_path.len());
@@ -99,8 +97,7 @@ fn check_auth(
             retrieve_podcast_or_podcast_episode(decoded_path, requested_path)
         }
         false => {
-            let requested_path = req
-                .path()
+            let requested_path = uri.path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
             let requested_path = requested_path.substring(1, requested_path.len());

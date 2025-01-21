@@ -141,9 +141,17 @@ impl IntoResponse  for CustomError {
 
 impl CustomError {
     fn error_response(&self) -> ErrorResponse {
-        let status_code = self.status_code();
+        let status_code = match &self.inner {
+            CustomErrorInner::NotFound => {404}
+            CustomErrorInner::Forbidden => {403}
+            CustomErrorInner::UnAuthorized(_) => {401}
+            CustomErrorInner::BadRequest(_) => {404}
+            CustomErrorInner::Conflict(_) => {409}
+            CustomErrorInner::Unknown => {500}
+            CustomErrorInner::DatabaseError(_) => {500}
+        };
         ErrorResponse {
-            code: status_code.as_u16(),
+            code: status_code as u16,
             message: self.inner.to_string(),
             error: self.inner.name(),
         }

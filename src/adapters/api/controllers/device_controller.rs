@@ -1,4 +1,4 @@
-use axum::{Extension, Json, Router};
+use axum::{debug_handler, Extension, Json, Router};
 use axum::extract::Path;
 use axum::routing::{get, post};
 use crate::adapters::api::models::device::device_create::DeviceCreate;
@@ -10,11 +10,10 @@ use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
 use crate::utils::error::{CustomError, CustomErrorInner};
 
-
 pub async fn post_device(
     query: Path<(String, String)>,
-    device_post: Json<DevicePost>,
-    opt_flag: Option<Extension<Session>>,
+    Extension(opt_flag): Extension<Option<Session>>,
+    Json(device_post): Json<DevicePost>,
 ) -> Result<Json<DeviceResponse>, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -40,13 +39,14 @@ pub async fn post_device(
     }
 }
 
+#[debug_handler]
 pub async fn get_devices_of_user(
-    query: Path<String>,
-    opt_flag: Option<Extension<Session>>,
+    Path(query): Path<String>,
+    Extension(opt_flag): Extension<Option<Session>>,
 ) -> Result<Json<Vec<DeviceResponse>>, CustomError> {
     match opt_flag {
         Some(flag) => {
-            let user_query = query.0;
+            let user_query = query;
             if flag.username != user_query {
                 return Err(CustomErrorInner::Forbidden.into());
             }

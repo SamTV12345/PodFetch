@@ -17,11 +17,11 @@ responses(
 tag="watchtime"
 )]
 pub async fn log_watchtime(
-    podcast_watch: Json<PodcastWatchedPostModel>,
-    requester: Extension<User>,
+    Extension(requester): Extension<User>,
+    Json(podcast_watch): Json<PodcastWatchedPostModel>,
 ) -> Result<StatusCode, CustomError> {
-    let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
-    Episode::log_watchtime(podcast_watch.0, requester.username.clone())?;
+    let podcast_episode_id = podcast_watch.podcast_episode_id.clone();
+    Episode::log_watchtime(podcast_watch, requester.username.clone())?;
     log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
     Ok(StatusCode::OK)
 }

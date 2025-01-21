@@ -87,7 +87,6 @@ impl PodcastService {
 
     pub async fn insert_podcast_from_podindex(
         id: i32,
-        lobby: ChatServerHandle,
     ) -> Result<Podcast, CustomError> {
         let resp = get_http_client()
             .get(format!(
@@ -110,7 +109,6 @@ impl PodcastService {
                 feed_url: unwrap_string(&podcast["feed"]["url"]),
                 image_url: unwrap_string(&podcast["feed"]["image"]),
             },
-            lobby,
             None,
         )
         .await
@@ -118,7 +116,6 @@ impl PodcastService {
 
     pub async fn handle_insert_of_podcast(
         podcast_insert: PodcastInsertModel,
-        lobby: ChatServerHandle,
         channel: Option<Channel>,
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(&podcast_insert.feed_url.clone());
@@ -150,17 +147,17 @@ impl PodcastService {
         let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id)?;
         match podcast {
             Some(podcast) => {
-                lobby.broadcast_podcast_downloaded(podcast.clone());
+                ChatServerHandle::broadcast_podcast_downloaded(podcast.clone());
                 spawn_blocking(move || {
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
                     let inserted_podcasts =
                         PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
 
-                    lobby.broadcast_added_podcast_episodes(
+                    ChatServerHandle::broadcast_added_podcast_episodes(
                         podcast.clone(),
                         inserted_podcasts.clone(),
                     );
-                    if let Err(e) = Self::schedule_episode_download(podcast, Some(lobby)) {
+                    if let Err(e) = Self::schedule_episode_download(podcast) {
                         log::error!("Error scheduling episode download: {}", e);
                     }
                 })
@@ -176,7 +173,6 @@ impl PodcastService {
 
     pub fn schedule_episode_download(
         podcast: Podcast,
-        lobby: Option<ChatServerHandle>,
     ) -> Result<(), CustomError> {
         let settings = Setting::get_settings()?;
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
@@ -211,11 +207,10 @@ impl PodcastService {
 
     pub fn refresh_podcast(
         podcast: Podcast,
-        lobby: ChatServerHandle,
     ) -> Result<(), CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
         PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
-        Self::schedule_episode_download(podcast.clone(), Some(lobby.clone()))
+        Self::schedule_episode_download(podcast.clone())
     }
 
     pub fn update_favor_podcast(id: i32, x: bool, username: &str) -> Result<(), CustomError> {

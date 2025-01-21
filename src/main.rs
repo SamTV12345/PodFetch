@@ -35,7 +35,7 @@ use tower::ServiceExt;
 use tower_http::services::{ServeDir, ServeFile};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
-use utoipa_redoc::{Redoc, Servable};
+use utoipa_redoc::{Redoc, Servable as RServable};
 mod controllers;
 use crate::adapters::api::controllers::routes::{get_gpodder_api, global_routes};
 use crate::adapters::persistence::dbconfig::db::get_connection;
@@ -54,14 +54,12 @@ use crate::controllers::podcast_controller::{
     import_podcasts_from_opml, query_for_podcast, update_active_podcast,
 };
 use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_podcast_episode_router, get_timeline, like_podcast_episode, retrieve_episode_sample_format};
-use crate::controllers::server::ChatServer;
 use crate::controllers::settings_controller::{get_opml, get_settings, get_settings_router, run_cleanup, update_name, update_settings};
 use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, get_sys_info_router, login};
 use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, get_tags_router, insert_tag, update_tag};
 use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_user_router, get_users, onboard_user, update_role, update_user};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, get_watchtime_router, log_watchtime};
 pub use controllers::controller_utils::*;
-use crate::controllers::api_doc::ApiDoc;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::websocket_controller::get_websocket_router;
 
@@ -106,7 +104,7 @@ pub fn run_poll() -> Result<(), CustomError> {
         if podcast.active {
             let podcast_clone = podcast.clone();
             PodcastEpisodeService::insert_podcast_episodes(podcast)?;
-            PodcastService::schedule_episode_download(podcast_clone, None)?;
+            PodcastService::schedule_episode_download(podcast_clone)?;
         }
     }
     Ok(())
@@ -187,10 +185,6 @@ async fn main() -> std::io::Result<()> {
     check_server_config();
 
     //services
-
-    let (chat_server, server_tx) = ChatServer::new();
-
-    let chat_server = spawn(chat_server.run());
 
     match FileService::create_podcast_root_directory_exists() {
         Ok(_) => {}
@@ -326,7 +320,7 @@ async fn main() -> std::io::Result<()> {
     let ui_dir = format!("{}/ui", sub_dir);
     let (layer, io) = SocketIoBuilder::new().build_layer();
 
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let (router, api) = OpenApiRouter::new()
         .route("/", get(Redirect::to(&ui_dir)))
         .layer(layer)
         .split_for_parts();
@@ -399,12 +393,6 @@ fn get_private_api() -> Router {
         .merge(get_tags_router())
         .merge(get_user_router())
         .merge(get_websocket_router())
-}
-
-pub fn config_secure_user_management() -> Router {
-    if ENVIRONMENT_SERVICE.any_auth_enabled {
-        cfg.service(get_secure_user_management());
-    }
 }
 
 

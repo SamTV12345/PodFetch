@@ -1,5 +1,5 @@
 use axum::extract::Path;
-use axum::{Extension, Json, Router};
+use axum::{debug_handler, Extension, Json, Router};
 use axum::routing::{delete, get, post, put};
 use reqwest::StatusCode;
 use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
@@ -111,10 +111,11 @@ responses(
 (status = 200, description = "Updates the role of a user", body = Option<User>)),
 tag="info"
 )]
+
 pub async fn update_role(
-    role: Json<UserRoleUpdateModel>,
     Path(username): Path<String>,
-    requester: Extension<User>,
+    Extension(requester): Extension<User>,
+    Json(role): Json<UserRoleUpdateModel>,
 ) -> Result<Json<UserWithoutPassword>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -194,8 +195,8 @@ responses(
 tag="info"
 )]
 pub async fn create_invite(
-    Json(invite): Json<InvitePostModel>,
     Extension(requester): Extension<User>,
+    Json(invite): Json<InvitePostModel>,
 ) -> Result<Json<Invite>, CustomError> {
     let created_invite = UserManagementService::create_invite(
         invite.role,

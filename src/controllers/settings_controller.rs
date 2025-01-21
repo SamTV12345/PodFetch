@@ -41,8 +41,8 @@ responses(
 tag="settings"
 )]
 pub async fn update_settings(
-    Json(settings): Json<Setting>,
     Extension(requester): Extension<User>,
+    Json(settings): Json<Setting>
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -191,8 +191,8 @@ tag="podcasts",
 request_body=UpdateNameSettings
 )]
 pub async fn update_name(
-    Json(update_information): Json<UpdateNameSettings>,
     Extension(requester): Extension<User>,
+    Json(update_information): Json<UpdateNameSettings>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());

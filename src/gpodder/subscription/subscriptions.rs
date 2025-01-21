@@ -1,5 +1,4 @@
-use awc::http::StatusCode;
-use axum::{Extension, Json, Router};
+use axum::{debug_handler, Extension, Json, Router};
 use axum::extract::{Path, Query};
 use axum::http::Response;
 use axum::routing::{get, post};
@@ -25,10 +24,11 @@ pub struct SubscriptionPostResponse {
     pub update_urls: Vec<Vec<String>>,
 }
 
+#[debug_handler]
 pub async fn get_subscriptions(
-    paths: Path<(String, String)>,
-    opt_flag: Option<Extension<Session>>,
-    query: Query<SubscriptionRetrieveRequest>,
+    Path(paths): Path<(String, String)>,
+    Extension(opt_flag): Extension<Option<Session>>,
+    Query(query): Query<SubscriptionRetrieveRequest>,
 ) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
     match opt_flag {
         Some(flag) => {
@@ -56,11 +56,11 @@ pub async fn get_subscriptions(
 
 pub async fn get_subscriptions_all(
     Path(paths): Path<String>,
-    opt_flag: Option<Extension<Session>>,
-    query: Query<SubscriptionRetrieveRequest>,
+    Extension(opt_flag): Extension<Option<Session>>,
+    Query(query): Query<SubscriptionRetrieveRequest>,
 ) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
     let flag_username = match opt_flag {
-        Some(flag) => flag.0.username,
+        Some(flag) => flag.username,
         None => return Err(CustomErrorInner::Forbidden.into()),
     };
     if flag_username != paths.as_str() {
@@ -78,10 +78,10 @@ pub async fn get_subscriptions_all(
 
 
 pub async fn upload_subscription_changes(
-        upload_request: Json<SubscriptionUpdateRequest>,
-        opt_flag: Option<Extension<Session>>,
+        Extension(opt_flag): Extension<Option<Session>>,
         paths: Path<(String, String)>,
-    ) -> Result<Json<SubscriptionPostResponse>, CustomError> {
+        upload_request: Json<SubscriptionUpdateRequest>,
+) -> Result<Json<SubscriptionPostResponse>, CustomError> {
         match opt_flag {
             Some(flag) => {
                 let username = paths.clone().0;
