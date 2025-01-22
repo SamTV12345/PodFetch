@@ -19,6 +19,7 @@ use axum::{debug_handler, Extension, Json, Router};
 use axum::body::{Body, BodyDataStream};
 use axum::extract::{Path, Query, State};
 use axum::http::{Request, Response, StatusCode};
+use axum::response::IntoResponse;
 use axum::routing::{delete, get, post, put};
 use futures::executor::block_on;
 use tokio::task::spawn_blocking;
@@ -32,6 +33,7 @@ use crate::models::user::User;
 use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use futures_util::StreamExt;
+use r2d2_postgres::postgres::Client;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
@@ -425,7 +427,7 @@ tag="podcasts"
 pub async fn download_podcast(
     Extension(requester): Extension<User>,
     Path(id): Path<String>,
-) -> Result<impl Into<String>, CustomError> {
+) -> Result<impl IntoResponse, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -639,10 +641,10 @@ tag="podcasts"
 pub(crate) async fn proxy_podcast(
     Query(params): Query<Params>,
     Query(api_key): Query<Option<RSSAPiKey>>,
-    rq: Request<BodyDataStream>,
+    req: axum::extract::Request
 ) -> Result<Body, CustomError> {
-    let body_stream = rq.clone().into_body();
-    let reqwest_body = reqwest::Body::wrap_stream(body_stream);
+    let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
+    let mut headers = req.headers_mut();
 
     let is_auth_enabled =
         is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
@@ -665,26 +667,20 @@ pub(crate) async fn proxy_podcast(
         return Err(CustomErrorInner::NotFound.into());
     }
     let episode = opt_res.unwrap();
-    let mut header_map = HeaderMap::new();
-    for (header, value) in rq.headers().clone().iter() {
-        if header == "host" || header == "referer" || header == "sec-fetch-site" || header == "sec-fetch-mode" {
-            continue;
-        }
-        header_map.insert(header.clone(), value.clone());
+    for (header) in vec!["host", "referer", "sec-fetch-site"] {
+        headers.remove(header);
     }
 
-    add_basic_auth_headers_conditionally(episode.url.clone(), &mut header_map);
+    add_basic_auth_headers_conditionally(episode.url.clone(), headers);
+
+    let reqwest_to_make = reqwest::Request::try_from(req).expect("http::Uri to url::Url conversion \
+    failed");
+
 
     let client = reqwest::Client::new();
-    let res = client
-        .request(rq.method().clone(), &episode.url)
-        .headers(header_map)
-        .body::<>(reqwest_body)
-        .send()
-        .await
-        .map_err(|e| CustomErrorInner::Unknown)?;
+    let resp = client.execute(reqwest_to_make).await.unwrap();
 
-    let stream = res.bytes_stream();
+    let stream = resp.bytes_stream();
     Ok(Body::from_stream(stream))
 }
 

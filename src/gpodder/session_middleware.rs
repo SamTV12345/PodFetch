@@ -1,3 +1,4 @@
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use crate::adapters::persistence::dbconfig::db::get_connection;
@@ -38,20 +39,20 @@ struct MyMiddleware<S> {
     inner: S,
 }
 
-impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S>
+impl<S, Request> Service<Request> for MyMiddleware<S>
 where
-    S: Service<Request<Vec<u8>>, Response = Response<Vec<u8>>>,
-
+    S: Service<Request>,
+    Request: fmt::Debug,
 {
-    type Response = Response<Vec<u8>>;
-    type Error = CustomError;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = S::Future;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, mut req: Request<Vec<u8>>) -> Self::Future {
+    fn call(&mut self, mut req: Request) -> Self::Future {
         let jar = CookieJar::from_headers(req.headers());
         let cookie = jar.get("sessionid");
         if cookie.is_none() {

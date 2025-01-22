@@ -24,22 +24,6 @@ use serde_json::Value;
 use sha256::digest;
 use tower::{Layer, Service};
 
-pub struct AuthFilter {}
-
-impl <S> Layer<S> for AuthFilter {
-    type Service = AuthFilterMiddleware<S>;
-
-    fn layer(&self, service: S) -> Self::Service {
-        AuthFilterMiddleware {
-            inner: Rc::new(service),
-        }
-    }
-}
-
-#[derive(Default)]
-pub struct AuthFilterMiddleware<S> {
-    inner: Rc<S>,
-}
 
 enum AuthType {
     Basic,
@@ -48,34 +32,7 @@ enum AuthType {
     None,
 }
 
-impl<S> Service<Request> for AuthFilterMiddleware<S>
-where
-    S: Service<Request, Response = Response> + Send + 'static,
-    S::Future: Send + 'static,
-{
-    type Response = S::Response;
-    type Error = S::Error;
-    // `BoxFuture` is a type alias for `Pin<Box<dyn Future + Send + 'a>>`
-    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, req: Request) -> Self::Future {
-        if ENVIRONMENT_SERVICE.http_basic {
-            self.handle_auth(req, AuthType::Basic)
-        } else if ENVIRONMENT_SERVICE.oidc_configured {
-            self.handle_auth(req, AuthType::Oidc)
-        } else if ENVIRONMENT_SERVICE.reverse_proxy {
-            self.handle_auth(req, AuthType::Proxy)
-        } else {
-            // It can only be no auth
-            self.handle_auth(req, AuthType::None)
-        }
-    }
-}
-
+pub struct AuthFilter;
 
 pub async fn handle_auth(
     State(jwk): State<Option<Jwk>>,
@@ -190,13 +147,10 @@ impl AuthFilter {
 
         let token = token_res.replace("Bearer ", "");
         let jwk = match jwk {
-            Some(jwk) => match jwk {
-                Some(jwk) => Ok(jwk),
-                None => Err(CustomError::from(CustomErrorInner::Forbidden)),
-            },
+            Some(jwk)  => Ok(jwk),
             None => Err(CustomError::from(CustomErrorInner::Forbidden)),
         }?;
-        let key = DecodingKey::from_jwk(jwk).unwrap();
+        let key = DecodingKey::from_jwk(&jwk).unwrap();
         let mut validation = Validation::new(Algorithm::RS256);
         validation.aud = Some(
             audience
