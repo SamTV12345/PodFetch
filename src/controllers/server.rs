@@ -143,7 +143,7 @@ pub struct ChatServerHandle;
 impl ChatServerHandle {
 
     fn send_broadcast_sync(room_id: RoomId, msg: impl Into<Msg>) {
-        block_on(SOCKET_IO_LAYER.get().unwrap().to(&room_id).emit("message", &msg.into()))
+        block_on(SOCKET_IO_LAYER.get().unwrap().to(room_id.to_string()).emit("message", &msg.into()))
             .unwrap();
     }
 

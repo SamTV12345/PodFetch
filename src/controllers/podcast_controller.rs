@@ -15,8 +15,8 @@ use rand::Rng;
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::thread;
-use axum::{Extension, Json, Router};
-use axum::body::Body;
+use axum::{debug_handler, Extension, Json, Router};
+use axum::body::{Body, BodyDataStream};
 use axum::extract::{Path, Query, State};
 use axum::http::{Request, Response, StatusCode};
 use axum::routing::{delete, get, post, put};
@@ -217,9 +217,10 @@ responses(
 (status = 200, description = "Adds a podcast to the database.")),
 tag="podcasts"
 )]
+#[debug_handler]
 pub async fn add_podcast(
-    requester: Extension<User>,
-    track_id: Json<PodcastAddModel>,
+    Extension(requester): Extension<User>,
+    Json(track_id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -638,8 +639,11 @@ tag="podcasts"
 pub(crate) async fn proxy_podcast(
     Query(params): Query<Params>,
     Query(api_key): Query<Option<RSSAPiKey>>,
-    rq: Request<axum::body::Body>,
+    rq: Request<BodyDataStream>,
 ) -> Result<Body, CustomError> {
+    let body_stream = rq.clone().into_body();
+    let reqwest_body = reqwest::Body::wrap_stream(body_stream);
+
     let is_auth_enabled =
         is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
 
@@ -662,7 +666,7 @@ pub(crate) async fn proxy_podcast(
     }
     let episode = opt_res.unwrap();
     let mut header_map = HeaderMap::new();
-    for (header, value) in rq.headers().iter() {
+    for (header, value) in rq.headers().clone().iter() {
         if header == "host" || header == "referer" || header == "sec-fetch-site" || header == "sec-fetch-mode" {
             continue;
         }
@@ -675,7 +679,7 @@ pub(crate) async fn proxy_podcast(
     let res = client
         .request(rq.method().clone(), &episode.url)
         .headers(header_map)
-        .body(rq.body())
+        .body::<>(reqwest_body)
         .send()
         .await
         .map_err(|e| CustomErrorInner::Unknown)?;

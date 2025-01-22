@@ -110,7 +110,7 @@ impl FileHandler for S3Handler {
     fn write_file_async<'a>(
         path: &'a str,
         content: &'a mut [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + Send + 'a>> {
         Box::pin(async {
             Self::handle_write_async(&Self::prepare_path_resolution(path), content).await
         })

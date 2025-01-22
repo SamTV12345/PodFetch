@@ -26,7 +26,7 @@ use std::{env, thread};
 use std::fmt::format;
 use axum::extract::Request;
 use axum::response::{IntoResponse, Redirect, Response};
-use axum::Router;
+use axum::{debug_handler, Router};
 use axum::routing::{get, post};
 use file_format::FileFormat;
 use socketioxide::SocketIoBuilder;
@@ -117,7 +117,8 @@ fn fix_links(content: &str) -> String {
 
 pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
-async fn index() -> Markup {
+#[debug_handler]
+async fn index() -> Result<String, CustomError> {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
         let manifest_json_location =
@@ -160,7 +161,7 @@ async fn index() -> Markup {
         html
     });
 
-    html.clone()
+    Ok(html.0.to_string())
 }
 
 #[tokio::main]
@@ -405,12 +406,12 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
     let file_path = format!("{}/{}", "./static", rs);
 
     let type_of = match FileFormat::from_file(&file_path) {
-        Ok(e)=>Ok(e.media_type()),
+        Ok(e)=>Ok::<String, CustomError>(e.media_type().to_string()),
         Err(_)=>Err(CustomErrorInner::NotFound.into())
     }?;
 
     let mut content = match fs::read_to_string(file_path).await {
-        Ok(e)=>Ok(e),
+        Ok(e)=>Ok::<String, CustomError>(e),
         Err(_)=>return Err(CustomErrorInner::NotFound.into())
     }?;
 

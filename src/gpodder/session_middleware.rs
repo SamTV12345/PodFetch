@@ -16,6 +16,7 @@ use axum::{
 use tower::{Layer, MakeService, Service};
 use crate::utils::error::{CustomError, CustomErrorInner};
 
+#[derive(Clone)]
 pub struct CookieFilter;
 
 impl CookieFilter {
@@ -37,7 +38,11 @@ struct MyMiddleware<S> {
     inner: S,
 }
 
-impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S> {
+impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S>
+where
+    S: Service<Request<Vec<u8>>, Response = Response<Vec<u8>>>,
+
+{
     type Response = Response<Vec<u8>>;
     type Error = CustomError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
@@ -70,7 +75,7 @@ impl<S> Service<Request<Vec<u8>>> for MyMiddleware<S> {
 
 
         Box::pin(async move {
-            let response: Response = future.await?;
+            let response: Response<Vec<u8>> = future.await?;
             Ok(response)
         })
     }
