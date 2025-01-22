@@ -49,5 +49,5 @@ pub fn get_gpodder_api() -> Router {
 fn get_authenticated_gpodder() -> impl Into<Router> {
 
     Router::new()
-        .layer(CookieFilter::)
+        .layer(CookieFilter::new())
 }
