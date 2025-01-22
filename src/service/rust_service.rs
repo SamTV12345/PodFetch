@@ -189,7 +189,6 @@ impl PodcastService {
                             PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
                                     podcast_episode,
                                     podcast.clone(),
-                                    lobby.clone(),
                                 ){
                                 log::error!("Error downloading podcast episode: {}", e);
                             }

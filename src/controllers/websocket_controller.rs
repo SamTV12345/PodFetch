@@ -46,7 +46,7 @@ pub async fn get_rss_feed(
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
-            Some(q) => Ok(q),
+            Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
             None => Err(CustomErrorInner::Forbidden.into()),
         }?;
         let api_key = &api_key.api_key;
@@ -143,14 +143,14 @@ responses(
 , tag = "info")]
 pub async fn get_rss_feed_for_podcast(
     Path(id): Path<i32>,
-    api_key: Option<Query<RSSAPiKey>>,
+    Query(api_key): Query<Option<RSSAPiKey>>,
 ) -> Result<String, CustomError> {
     let server_url = ENVIRONMENT_SERVICE.server_url.clone();
 
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
-            Some(q) => Ok::<&Query<RSSAPiKey>, CustomError>(q),
+            Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
             None => Err(CustomErrorInner::Forbidden.into()),
         }?;
         let api_key = &api_key.api_key;

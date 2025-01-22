@@ -24,7 +24,7 @@ impl FileHandleWrapper {
         path: &'a str,
         content: &'a mut [u8],
         download_location: &FileHandlerType,
-    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + Send + 'a>> {
         match download_location {
             FileHandlerType::Local => LocalFileHandler::write_file_async(path, content),
             FileHandlerType::S3 => S3Handler::write_file_async(path, content),

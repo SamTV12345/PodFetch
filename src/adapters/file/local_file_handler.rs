@@ -41,7 +41,7 @@ impl FileHandler for LocalFileHandler {
     fn write_file_async<'a>(
         path: &'a str,
         content: &'a mut [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + 'a>> {
-        Box::pin(async { LocalFileHandler::write_file(path, content) })
+    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + Send + 'a>> {
+        Box::pin(async move { LocalFileHandler::write_file(path, content) })
     }
 }

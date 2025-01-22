@@ -12,7 +12,7 @@ pub trait FileHandler: Sync + Send {
     fn write_file_async<'a>(
         path: &'a str,
         content: &'a mut [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + 'a>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), CustomError>> + Send + 'a>>;
     fn create_dir(path: &str) -> Result<(), CustomError>;
     fn path_exists(path: &str, req: FileRequest) -> bool;
     fn remove_dir(path: &str) -> Result<(), CustomError>;

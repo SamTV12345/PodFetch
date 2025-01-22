@@ -1,3 +1,4 @@
+use axum::debug_handler;
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;
@@ -11,10 +12,11 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::CookieJar;
 use sha256::digest;
 
+#[debug_handler]
 pub async fn login(
     Path(username): Path<String>,
     jar: CookieJar,
-    req: Request<()>
+    req: axum::extract::Request<()>,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     // If cookie is already set, return it
     if let Some(cookie) = jar.get("sessionid") {
