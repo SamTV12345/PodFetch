@@ -61,6 +61,7 @@ use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_fro
 use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_user_router, get_users, onboard_user, update_role, update_user};
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, get_watchtime_router, log_watchtime};
 pub use controllers::controller_utils::*;
+use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::server::SOCKET_IO_LAYER;
 use crate::controllers::websocket_controller::get_websocket_router;
@@ -119,7 +120,6 @@ fn fix_links(content: &str) -> String {
 
 pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
-#[debug_handler]
 async fn index() -> Result<String, CustomError> {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
@@ -373,6 +373,7 @@ pub fn run_migrations() {
 
 pub fn get_api_config() -> Router {
     Router::new()
+        .merge(podcast_serving())
         .merge(get_manifest_router())
         .nest("/api/v1", Router::new().merge(config()))
 
