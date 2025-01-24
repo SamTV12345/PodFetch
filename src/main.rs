@@ -37,7 +37,7 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable as RServable};
 mod controllers;
-use crate::adapters::api::controllers::routes::{get_gpodder_api, global_routes};
+use crate::adapters::api::controllers::routes::{global_routes};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
 use crate::auth_middleware::AuthFilter;
