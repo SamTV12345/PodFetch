@@ -27,6 +27,7 @@ use std::fmt::format;
 use axum::extract::Request;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::{debug_handler, Router};
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum::routing::{get, post};
 use file_format::FileFormat;
 use socketioxide::SocketIoBuilder;
@@ -40,9 +41,9 @@ mod controllers;
 use crate::adapters::api::controllers::routes::{global_routes};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::auth_middleware::AuthFilter;
+use crate::auth_middleware::{handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth, AuthFilter};
 use crate::command_line_runner::start_command_line;
-use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS};
+use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS, MAIN_ROOM};
 use crate::controllers::notification_controller::{dismiss_notifications, get_notification_router, get_unread_notifications};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
@@ -61,6 +62,7 @@ use crate::controllers::user_controller::{create_invite, delete_invite, delete_u
 use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, get_watchtime_router, log_watchtime};
 pub use controllers::controller_utils::*;
 use crate::controllers::manifest_controller::get_manifest_router;
+use crate::controllers::server::SOCKET_IO_LAYER;
 use crate::controllers::websocket_controller::get_websocket_router;
 
 mod constants;
@@ -320,12 +322,15 @@ async fn main() -> std::io::Result<()> {
 
     let ui_dir = format!("{}/ui", sub_dir);
     let (layer, io) = SocketIoBuilder::new().build_layer();
+    io.ns("/", ||{});
+    io.ns("/".to_owned() +MAIN_ROOM, ||{});
+    SOCKET_IO_LAYER.get_or_init(|| io);
 
     let (router, api) = OpenApiRouter::new()
         .route("/", get(Redirect::to(&ui_dir)))
-        .layer(layer)
         .split_for_parts();
     let router = router
+        .merge(global_routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
         .merge(Redoc::with_url("/redoc", api.clone()))
         // There is no need to create `RapiDoc::with_openapi` because the OpenApi is served
@@ -333,7 +338,8 @@ async fn main() -> std::io::Result<()> {
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
         // Alternative to above
         // .merge(RapiDoc::with_openapi("/api-docs/openapi2.json", api).path("/rapidoc"))
-        .merge(Scalar::with_url("/scalar", api));
+        .merge(Scalar::with_url("/scalar", api))
+        .layer(layer);
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
@@ -367,6 +373,7 @@ pub fn run_migrations() {
 
 pub fn get_api_config() -> Router {
     Router::new()
+        .merge(get_manifest_router())
         .nest("/api/v1", Router::new().merge(config()))
 
 }
@@ -375,25 +382,33 @@ fn config() -> Router {
     Router::new()
         .route("/users/invites/{invite_id}", get(get_invite))
         .route("/users", post(onboard_user))
-        .route("/login", post(login))
         .route("/sys/config", get(get_public_config))
+        .route("/login", post(login))
         .merge(get_private_api())
 }
 
 fn get_private_api() -> Router {
-    Router::new()
+    let router = Router::new()
         .merge(get_playlist_router())
         .merge(get_podcast_router())
         .merge(get_sys_info_router())
         .merge(get_watchtime_router())
-        .merge(get_manifest_router())
         .merge(get_notification_router())
         .merge(get_podcast_episode_router())
         .merge(get_settings_router())
-        .merge(get_sys_info_router())
         .merge(get_tags_router())
         .merge(get_user_router())
-        .merge(get_websocket_router())
+        .merge(get_websocket_router());
+
+    if ENVIRONMENT_SERVICE.http_basic {
+        router.layer(from_fn(handle_basic_auth))
+    } else if ENVIRONMENT_SERVICE.oidc_configured {
+        router.layer(from_fn(handle_oidc_auth))
+    } else if ENVIRONMENT_SERVICE.reverse_proxy {
+        router.layer(from_fn(handle_proxy_auth))
+    } else {
+        router.layer(from_fn(handle_no_auth))
+    }
 }
 
 

@@ -26,9 +26,21 @@ pub fn global_routes() -> Router {
         .unwrap_or("/".to_string());
     let service = get_api_config();
 
-    Router::new()
-        .nest(&base_path, Router::new()
-            .merge(get_client_parametrization_router()))
+    match base_path == "" {
+        true=>{
+            Router::new()
+                    .merge(get_client_parametrization_router())
+                    .merge(service)
+        }
+        false=>{
+            Router::new()
+                .nest(&base_path, Router::new()
+                    .merge(get_client_parametrization_router())
+                    .merge(service))
+        }
+    }
+
+
         //.merge(get_gpodder_api())
 }
 

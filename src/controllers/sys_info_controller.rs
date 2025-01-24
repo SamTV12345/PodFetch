@@ -227,7 +227,6 @@ pub async fn get_info() -> Json<VersionInfo> {
 pub fn get_sys_info_router() -> Router {
     Router::new()
         .route("/sys/info", get(get_sys_info))
-        .route("/sys/config", get(get_public_config))
-        .route("/login", post(login))
+
         .route("/info", get(get_info))
 }

@@ -278,6 +278,6 @@ pub fn get_settings_router() -> Router {
         .route("/settings", get(get_settings))
         .route("/settings", put(update_settings))
         .route("/settings/runcleanup", put(run_cleanup))
-        .route("/settings/opml/:type_of", get(get_opml))
+        .route("/settings/opml/{type_of}", get(get_opml))
         .route("/settings/name", put(update_name))
 }
