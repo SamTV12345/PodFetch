@@ -212,7 +212,7 @@ pub async fn find_podcast(
 
 #[utoipa::path(
 post,
-path="/podcast/itunes",
+path="/podcasts/itunes",
 context_path="/api/v1",
 request_body=PodcastAddModel,
 responses(
@@ -259,7 +259,7 @@ pub async fn add_podcast(
 
 #[utoipa::path(
 post,
-path="/podcast/feed",
+path="/podcasts/feed",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Adds a podcast by its feed url",body=PodcastDto)),
@@ -311,7 +311,7 @@ pub async fn add_podcast_by_feed(
 
 #[utoipa::path(
 post,
-path="/podcast/opml",
+path="/podcasts/opml",
 context_path="/api/v1",
 request_body=OpmlModel,
 responses(
@@ -342,7 +342,7 @@ pub async fn import_podcasts_from_opml(
 
 #[utoipa::path(
 post,
-path="/podcast/podindex",
+path="/podcasts/podindex",
 context_path="/api/v1",
 request_body=PodcastAddModel,
 responses(
@@ -393,7 +393,7 @@ pub async fn query_for_podcast(podcast: Path<String>) -> Result<Json<Vec<Podcast
 
 #[utoipa::path(
 post,
-path="/podcast/all",
+path="/podcasts/all",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Refreshes all podcasts")),
@@ -418,7 +418,7 @@ pub async fn refresh_all_podcasts(
 
 #[utoipa::path(
 post,
-path="/podcast/{id}/refresh",
+path="/podcasts/{id}/refresh",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Refreshes a podcast episode")),
@@ -456,7 +456,7 @@ pub async fn download_podcast(
 
 #[utoipa::path(
 put,
-path="/podcast/favored",
+path="/podcasts/favored",
 context_path="/api/v1",
 request_body=PodcastFavorUpdateModel,
 responses(
@@ -492,7 +492,7 @@ pub async fn get_favored_podcasts(
 
 #[utoipa::path(
 put,
-path="/podcast/{id}/active",
+path="/podcasts/{id}/active",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Updates the active state of a podcast. If inactive the podcast \
@@ -595,7 +595,7 @@ pub struct DeletePodcast {
 
 #[utoipa::path(
 delete,
-path="/podcast/{id}",
+path="/podcasts/{id}",
 context_path="/api/v1",
 request_body=DeletePodcast,
 responses(
@@ -781,18 +781,19 @@ pub fn get_podcast_router() -> Router {
                 .route("/podcasts/{id}", get(find_podcast_by_id))
                 .route("/podcasts", get(find_all_podcasts))
                 .route("/podcasts/{type_of}/{podcast}/search", get(find_podcast))
-                .route("/podcast/itunes", post(add_podcast))
-                .route("/podcast/feed", post(add_podcast_by_feed))
-                .route("/podcast/opml", post(import_podcasts_from_opml))
-                .route("/podcast/podindex", post(add_podcast_from_podindex))
+                .route("/podcasts/itunes", post(add_podcast))
+                .route("/podcasts/feed", post(add_podcast_by_feed))
+                .route("/podcasts/opml", post(import_podcasts_from_opml))
+                .route("/podcasts/podindex", post(add_podcast_from_podindex))
                 .route("/podcasts/favored", get(get_favored_podcasts))
-                .route("/podcast/all", post(refresh_all_podcasts))
-                .route("/podcast/{id}/refresh", post(download_podcast))
-                .route("/podcast/favored", put(favorite_podcast))
-                .route("/podcast/{id}/active", put(update_active_podcast))
-                .route("/podcast/{id}", delete(delete_podcast))
+                .route("/podcasts/all", post(refresh_all_podcasts))
+                .route("/podcasts/{id}/refresh", post(download_podcast))
+                .route("/podcasts/favored", put(favorite_podcast))
+                .route("/podcasts/{id}/active", put(update_active_podcast))
+                .route("/podcasts/{id}", delete(delete_podcast))
                 .route("/proxy/podcast", get(proxy_podcast))
-                .route("/podcasts/{id}/settings", get(update_podcast_settings))
+                .route("/podcasts/{id}/settings", put(update_podcast_settings))
+                .route("/podcasts/{id}/settings", get(get_podcast_settings))
                 .route("/podcasts/formatting", post(retrieve_podcast_sample_format))
                 .route("/podcasts/{id}/query", get(query_for_podcast))
 }

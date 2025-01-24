@@ -82,7 +82,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             return
                         }
 
-                        axios.put(  "/podcast/" + episode.podcastEpisode.episode_id + "/episodes/download")
+                        axios.put(  "/podcasts/" + episode.podcastEpisode.episode_id + "/episodes/download")
                             .then(()=>{
                                 enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
                                 setEpisodeDownloaded(episode.podcastEpisode.episode_id)
@@ -122,7 +122,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         }}>check</span>
                         <span className={"material-symbols-outlined text-[--fg-color] " + (episode.podcastEpisode.favored && 'filled')}
                               onClick={() => {
-                                  axios.put(  '/podcast/' + episode.podcastEpisode.id + '/episodes/favor', {
+                                  axios.put(  '/podcasts/' + episode.podcastEpisode.id + '/episodes/favor', {
                                       favored: !episode.podcastEpisode.favored
                                   })
                                       .then(() => {
@@ -169,7 +169,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
 
-                    axios.get(  '/podcast/episode/' + episode.podcastEpisode.episode_id)
+                    axios.get(  '/podcasts/episode/' + episode.podcastEpisode.episode_id)
                         .then((response: AxiosResponse<Episode>) => {
                             handlePlayofEpisode(response, episode)
                         })
@@ -179,7 +179,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
             {/* Infinite scroll */
             index === (episodesLength - 5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    axios.get(  '/podcast/' + params.id + '/episodes',{
+                    axios.get(  '/podcasts/' + params.id + '/episodes',{
                         params: {
                             last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1].podcastEpisode.date_of_recording,
                             only_unlistened: onlyUnplayed

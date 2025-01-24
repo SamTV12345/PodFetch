@@ -23,7 +23,7 @@ export const FeedURLComponent: FC = () => {
 
 
     const onSubmit = (data: FeedURLFormData) => {
-        axios.post(  '/podcast/feed', {
+        axios.post(  '/podcasts/feed', {
             rssFeedUrl: data.feedUrl
         }).then((v: AxiosResponse<Podcast>) => {
             handleAddPodcast(v.status, v.data.name, t)

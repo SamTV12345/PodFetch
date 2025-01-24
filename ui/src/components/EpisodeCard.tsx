@@ -15,7 +15,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
 
     return (
         <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
-            axios.get(  '/podcast/episode/' + podcastEpisode.episode_id)
+            axios.get(  '/podcasts/episode/' + podcastEpisode.episode_id)
                 .then((response: AxiosResponse<Episode>) => {
                     handlePlayofEpisode(response, {
                         podcastEpisode: podcastEpisode,

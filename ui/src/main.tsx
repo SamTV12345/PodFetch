@@ -41,6 +41,7 @@ const AuthWrapper: FC<PropsWithChildren> = ({ children }) => {
 
     useEffect(() => {
         axios.defaults.baseURL = apiURL
+        axios.defaults.headers.common['Content-Type'] = 'application/json'
         axios.get('/sys/config').then((v: AxiosResponse<ConfigModel>) => {
             setConfigModel(v.data)
         })

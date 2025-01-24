@@ -32,7 +32,7 @@ export const PlaylistDetailPage = ()=>{
                             return
                         }
                         const nextEpisode = selectedPlaylist!.items[currentIndex+1]
-                        axios.get("/podcast/episode/" + nextEpisode.podcastEpisode.episode_id)
+                        axios.get("/podcasts/episode/" + nextEpisode.podcastEpisode.episode_id)
                             .then((response: AxiosResponse<Episode>) => {
                                 nextEpisode.podcastEpisode.status
                                     ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data))

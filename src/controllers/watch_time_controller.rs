@@ -10,7 +10,7 @@ use crate::utils::error::{CustomError, CustomErrorInner};
 
 #[utoipa::path(
 post,
-path="/podcast/episode",
+path="/podcasts/episode",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Logs a watchtime request.")),
@@ -28,7 +28,7 @@ pub async fn log_watchtime(
 
 #[utoipa::path(
 get,
-path="/podcast/episode/lastwatched",
+path="/podcasts/episode/lastwatched",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the last watched podcast episodes.")),
@@ -45,7 +45,7 @@ pub async fn get_last_watched(Extension(requester): Extension<User>) ->
 
 #[utoipa::path(
 get,
-path="/podcast/episode/{id}",
+path="/podcasts/episode/{id}",
 context_path="/api/v1",
 responses(
 (status = 200, description = "Gets watchtime by id.")),
@@ -64,7 +64,7 @@ pub async fn get_watchtime(
 
 pub fn get_watchtime_router() -> Router {
     Router::new()
-        .route("/podcast/episode", post(log_watchtime))
-        .route("/podcast/episode/lastwatched", get(get_last_watched))
-        .route("/podcast/episode/{id}", get(get_watchtime))
+        .route("/podcasts/episode", post(log_watchtime))
+        .route("/podcasts/episode/lastwatched", get(get_last_watched))
+        .route("/podcasts/episode/{id}", get(get_watchtime))
 }

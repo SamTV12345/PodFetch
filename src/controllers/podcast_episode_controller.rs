@@ -38,7 +38,7 @@ pub struct PodcastEpisodeWithHistory {
 
 #[utoipa::path(
 get,
-path="/podcast/{id}/episodes",
+path="/podcasts/{id}/episodes",
 context_path = "/api/v1",
 responses(
 (status = 200, description = "Finds all podcast episodes of a given podcast id.", body =
@@ -82,7 +82,7 @@ pub struct TimeLinePodcastEpisode {
 
 #[utoipa::path(
     get,
-    path="/podcast/available/gpodder",
+    path="/podcasts/available/gpodder",
     context_path = "/api/v1",
     responses(
 (status = 200, description = "Finds all podcast not in webview", body =
@@ -161,7 +161,7 @@ pub struct FavoritePut {
  */
 #[utoipa::path(
 put,
-path="/podcast/{id}/episodes/favor",
+path="/podcasts/{id}/episodes/favor",
     context_path = "/api/v1",
     responses(
 (status = 200, description = "Likes a given podcast episode.", body=FavoritePut)),
@@ -183,7 +183,7 @@ pub async fn like_podcast_episode(
  */
 #[utoipa::path(
 put,
-path="/podcast/{id}/episodes/download",
+path="/podcasts/{id}/episodes/download",
 context_path = "/api/v1",
 responses(
 (status = 200, description = "Starts the download of a given podcast episode")),
@@ -298,11 +298,11 @@ pub async fn retrieve_episode_sample_format(
 
 pub fn get_podcast_episode_router() -> Router {
     Router::new()
-        .route("/podcast/{id}/episodes", get(find_all_podcast_episodes_of_podcast))
-        .route("/podcast/available/gpodder", get(get_available_podcasts_not_in_webview))
+        .route("/podcasts/{id}/episodes", get(find_all_podcast_episodes_of_podcast))
+        .route("/podcasts/available/gpodder", get(get_available_podcasts_not_in_webview))
         .route("/podcasts/timeline", get(get_timeline))
-        .route("/podcast/{id}/episodes/favor", put(like_podcast_episode))
-        .route("/podcast/{id}/episodes/download", put(download_podcast_episodes_of_podcast))
+        .route("/podcasts/{id}/episodes/favor", put(like_podcast_episode))
+        .route("/podcasts/{id}/episodes/download", put(download_podcast_episodes_of_podcast))
         .route("/episodes/{id}/download", delete(delete_podcast_episode_locally))
         .route("/episodes/formatting", post(retrieve_episode_sample_format))
 }
