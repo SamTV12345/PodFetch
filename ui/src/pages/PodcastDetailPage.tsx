@@ -35,10 +35,10 @@ export const PodcastDetailPage = () => {
         if (params && !isNaN(parseFloat(params.id as string))) {
             setCurrentDetailedPodcastId(Number(params.id))
         }
-        axios.get('/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
+        axios.get('/podcasts/' + params.id).then((response: AxiosResponse<Podcast>) => {
             setCurrentPodcast(response.data)
         }).then(() => {
-            axios.get('/podcast/' + params.id + '/episodes', {
+            axios.get('/podcasts/' + params.id + '/episodes', {
                 params: {
                     only_unlistened: onlyUnplayed
                 }
@@ -134,7 +134,7 @@ export const PodcastDetailPage = () => {
                         <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
                             onClick={() => {
-                                axios.post('/podcast/' + params.id + '/refresh')
+                                axios.post('/podcasts/' + params.id + '/refresh')
                                     .then(() => {
                                         console.log('Refreshed')
                                     })
@@ -196,7 +196,7 @@ export const PodcastDetailPage = () => {
                         <span className="text-xs text-[--fg-secondary-color]">{t('active')}</span>
 
                         <Switcher checked={currentPodcast.active} setChecked={() => {
-                            axios.put('/podcast/' + params.id + '/active')
+                            axios.put('/podcasts/' + params.id + '/active')
                                 .then(() => {
                                     setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active})
                                 })

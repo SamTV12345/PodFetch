@@ -11,7 +11,7 @@ export const configWSUrl = (url: string) => {
     return url.replace("https", "wss") + wsEndpoint
 }
 export const logCurrentPlaybackTime = (episodeId: string, timeInSeconds: number) => {
-    axios.post("/podcast/episode", {
+    axios.post("/podcasts/episode", {
         podcastEpisodeId: episodeId,
         time: Number(timeInSeconds.toFixed(0))
     })

@@ -25,7 +25,7 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAm
     }, [podcastEpisode, playing])
 
     useEffect(() => {
-        axios.get(`/podcast/${podcastEpisode?.podcast_id}`)
+        axios.get(`/podcasts/${podcastEpisode?.podcast_id}`)
             .then((resp: AxiosResponse<Podcast>)=>setPodcast(resp.data))
     }, [podcastEpisode]);
 

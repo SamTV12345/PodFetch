@@ -66,7 +66,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     }, [filters])
 
     const refreshAllPodcasts = () => {
-        axios.post('/podcast/all')
+        axios.post('/podcasts/all')
     }
 
 

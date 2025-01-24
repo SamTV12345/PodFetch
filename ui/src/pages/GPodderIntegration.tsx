@@ -18,7 +18,7 @@ export const GPodderIntegration = ()=> {
 
 
     useEffect(() => {
-        axios.get('/podcast/available/gpodder')
+        axios.get('/podcasts/available/gpodder')
             .then((res: AxiosResponse<GPodderIntegrationItem[]>) => {
                 setGPodderOnlyPodcasts(res.data)
             })
@@ -27,7 +27,7 @@ export const GPodderIntegration = ()=> {
 
     const addPodcast = (feedUrl: string)=>{
         setGPodderOnlyPodcasts(gpodderOnlyPodcasts.filter(p=>p.podcast!=feedUrl))
-        axios.post(  '/podcast/feed', {
+        axios.post(  '/podcasts/feed', {
             rssFeedUrl: feedUrl
         }).then((v: AxiosResponse<Podcast>) => {
             handleAddPodcast(v.status, v.data.name, t)

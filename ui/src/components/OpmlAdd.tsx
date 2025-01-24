@@ -52,7 +52,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 
         setPodcastsToUpload(count)
 
-        axios.post(  '/podcast/opml', {
+        axios.post(  '/podcasts/opml', {
             content: files[0].content
         })
     }

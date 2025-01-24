@@ -70,7 +70,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         if (refItem === undefined || refItem.current === undefined|| refItem.current === null) return
 
         const nextEpisode = episodes[index].podcastEpisode
-        axios.get(  "/podcast/episode/" + nextEpisode.episode_id)
+        axios.get(  "/podcasts/episode/" + nextEpisode.episode_id)
             .then((response: AxiosResponse<Episode>) => {
                 setCurrentPodcastEpisode(nextEpisode)
                 nextEpisode.status

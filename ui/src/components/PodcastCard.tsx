@@ -27,7 +27,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
     const setPodcasts = useCommon(state=>state.setPodcasts)
     const podcasts = useCommon(state=>state.podcasts)
     const likePodcast = () => {
-        axios.put('/podcast/favored', {
+        axios.put('/podcasts/favored', {
             id: podcast.id,
             favored: !podcast.favorites
         })

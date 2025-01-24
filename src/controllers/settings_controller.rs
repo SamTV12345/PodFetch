@@ -20,7 +20,8 @@ responses(
 (status = 200, description = "Gets the current settings")),
 tag="podcast_episodes"
 )]
-pub async fn get_settings(requester: Extension<User>) -> Result<Json<Setting>, CustomError> {
+pub async fn get_settings(Extension(requester): Extension<User>) -> Result<Json<Setting>,
+    CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }

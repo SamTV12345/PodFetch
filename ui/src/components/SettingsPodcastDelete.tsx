@@ -27,7 +27,7 @@ export const SettingsPodcastDelete: FC = () => {
 
     const deletePodcast = (withFiles: boolean) => {
         selectedPodcasts.forEach(p=>{
-            axios.delete( '/podcast/' + p.id, { data: { delete_files: withFiles }})
+            axios.delete( '/podcasts/' + p.id, { data: { delete_files: withFiles }})
                 .then(() => {
                     enqueueSnackbar(t('podcast-deleted', { name: p.name }), { variant: 'success' })
                     podcastDeleted(p.id)

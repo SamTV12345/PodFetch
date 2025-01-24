@@ -30,7 +30,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     const setModalOpen = useModal(state => state.setOpenModal)
 
     const addPodcast = (podcast: AddPostPostModel) => {
-        axios.post(  '/podcast/' + selectedSearchType, podcast)
+        axios.post(  '/podcasts/' + selectedSearchType, podcast)
             .then((err: any) => {
                 setModalOpen(false)
                 err.response.status && handleAddPodcast(err.response.status,
