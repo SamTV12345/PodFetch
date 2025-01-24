@@ -1,3 +1,4 @@
+use std::cell::LazyCell;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use base64::engine::general_purpose;
@@ -7,23 +8,25 @@ use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
+use std::sync::LazyLock;
 use std::task::{Context, Poll};
 use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::RequestExt;
 use axum::response::{IntoResponse, Response};
+use diesel::row::NamedRow;
 use crate::service::environment_service::ReverseProxyConfig;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use futures_util::future::{BoxFuture, LocalBoxFuture, Ready};
-use futures_util::FutureExt;
+use futures_util::{FutureExt, SinkExt};
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
 use tower::{Layer, Service};
-
+use crate::utils::reqwest_client::get_sync_client;
 
 enum AuthType {
     Basic,
@@ -34,37 +37,48 @@ enum AuthType {
 
 pub struct AuthFilter;
 
-pub async fn handle_auth(
-    State(jwk): State<Option<Jwk>>,
-    State(audience): State<HashSet<String>>,
+
+pub async fn handle_basic_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Basic)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+static JWKS: LazyLock<Jwk> = LazyLock::new(||{
+   let sync_client = get_sync_client().build().unwrap();
+    let jwks = sync_client.get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri).send().unwrap().json::<Jwk>().unwrap();
+    jwks
+});
+
+pub async fn handle_oidc_auth(
     mut request: Request,
-    next: Next) -> Result<impl IntoResponse, CustomError> {
-    if ENVIRONMENT_SERVICE.http_basic {
-        let user = handle_auth_internal(&mut request, AuthType::Basic, jwk, audience)?;
-        request.extensions_mut().insert(user);
-        Ok(next.run(request).await)
-    } else if ENVIRONMENT_SERVICE.oidc_configured {
-        let user = handle_auth_internal(&mut request, AuthType::Oidc, jwk, audience)?;
-        request.extensions_mut().insert(user);
-        Ok(next.run(request).await)
-    } else if ENVIRONMENT_SERVICE.reverse_proxy {
-        let user = handle_auth_internal(&mut request, AuthType::Proxy, jwk, audience)?;
-        request.extensions_mut().insert(user);
-        Ok(next.run(request).await)
-    } else {
-        // It can only be no auth
-        let user = handle_auth_internal(&mut request, AuthType::None, jwk, audience)?;
-        request.extensions_mut().insert(user);
-        Ok(next.run(request).await)
-    }
+    next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Oidc)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+pub async fn handle_proxy_auth(
+    mut request: Request,
+    next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Proxy)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+pub async fn handle_no_auth(
+    mut request: Request,
+    next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::None)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
 }
 
 
-fn handle_auth_internal(req: &mut Request, auth_type: AuthType, jwk: Option<Jwk>, audience:
-HashSet<String>) -> Result<User, CustomError> {
+fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
     match auth_type {
         AuthType::Basic => AuthFilter::handle_basic_auth_internal(&req),
-        AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req, jwk, audience),
+        AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req),
         AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
             &req,
             &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
@@ -135,7 +149,7 @@ impl AuthFilter {
         }
     }
 
-    fn handle_oidc_auth_internal(req: &mut Request, jwk: Option<Jwk>, audience: HashSet<String>) ->
+    fn handle_oidc_auth_internal(req: &mut Request) ->
                                                                                      Result<User, CustomError> {
         let token_res = match req.headers().get("Authorization") {
             Some(token) => match token.to_str() {
@@ -146,15 +160,11 @@ impl AuthFilter {
         }?;
 
         let token = token_res.replace("Bearer ", "");
-        let jwk = match jwk {
-            Some(jwk)  => Ok(jwk),
-            None => Err(CustomError::from(CustomErrorInner::Forbidden)),
-        }?;
-        let key = DecodingKey::from_jwk(&jwk).unwrap();
+        let key = DecodingKey::from_jwk(&JWKS).unwrap();
         let mut validation = Validation::new(Algorithm::RS256);
-        validation.aud = Some(
-            audience
-        );
+        let mut aud_hashset = HashSet::new();
+        aud_hashset.insert(ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().client_id.to_string());
+        validation.aud = Some(aud_hashset);
 
         let decoded_token = match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => Ok(decoded),

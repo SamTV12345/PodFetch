@@ -132,7 +132,7 @@ enum Command {
     },
 }
 
-static SOCKET_IO_LAYER: OnceLock<SocketIo> = OnceLock::new();
+pub static SOCKET_IO_LAYER: OnceLock<SocketIo> = OnceLock::new();
 
 /// Handle and command sender for chat server.
 ///

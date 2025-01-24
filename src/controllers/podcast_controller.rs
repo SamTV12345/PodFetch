@@ -793,7 +793,6 @@ pub fn get_podcast_router() -> Router {
                 .route("/podcast/{id}", delete(delete_podcast))
                 .route("/proxy/podcast", get(proxy_podcast))
                 .route("/podcasts/{id}/settings", get(update_podcast_settings))
-                .route("/podcasts/{id}/settings", get(get_podcast_settings))
                 .route("/podcasts/formatting", post(retrieve_podcast_sample_format))
                 .route("/podcasts/{id}/query", get(query_for_podcast))
 }
