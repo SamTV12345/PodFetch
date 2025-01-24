@@ -17,7 +17,7 @@ use crate::gpodder::subscription::subscriptions::{get_subscriptions, get_subscri
 use crate::{get_api_config, get_ui_config};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use crate::gpodder::session_middleware::CookieFilter;
+use crate::gpodder::session_middleware::handle_cookie_session;
 
 pub fn global_routes() -> Router {
     let base_path = ENVIRONMENT_SERVICE
@@ -29,10 +29,10 @@ pub fn global_routes() -> Router {
     Router::new()
         .nest(&base_path, Router::new()
             .merge(get_client_parametrization_router()))
-        .merge(get_gpodder_api())
+        //.merge(get_gpodder_api())
 }
 
-pub fn get_gpodder_api() -> Router {
+/*pub fn get_gpodder_api() -> Router {
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
         Router::new()
             .route("/auth/{username}/login.json", post(login))
@@ -44,10 +44,10 @@ pub fn get_gpodder_api() -> Router {
                 StatusCode::NOT_FOUND
             }))
     }
-}
+}*/
 
-fn get_authenticated_gpodder() -> impl Into<Router> {
+fn get_authenticated_gpodder() -> Router {
 
     Router::new()
-        .layer(CookieFilter::new())
+        .layer(from_fn(handle_cookie_session))
 }

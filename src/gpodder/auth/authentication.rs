@@ -16,7 +16,7 @@ use sha256::digest;
 pub async fn login(
     Path(username): Path<String>,
     jar: CookieJar,
-    req: axum::extract::Request<()>,
+    req: axum::extract::Request,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     // If cookie is already set, return it
     if let Some(cookie) = jar.get("sessionid") {
@@ -34,7 +34,7 @@ pub async fn login(
     }
 }
 
-fn handle_proxy_auth(rq: Request<()>, username: &str) -> Result<(CookieJar, StatusCode),
+fn handle_proxy_auth(rq: axum::extract::Request, username: &str) -> Result<(CookieJar, StatusCode),
     CustomError> {
     let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
@@ -80,7 +80,7 @@ fn handle_proxy_auth(rq: Request<()>, username: &str) -> Result<(CookieJar, Stat
 }
 
 fn handle_gpodder_basic_auth(
-    rq: Request<()>,
+    rq: axum::extract::Request,
     username: &str,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     let opt_authorization = rq.headers().get("Authorization");

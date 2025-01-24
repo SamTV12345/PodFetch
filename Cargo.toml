@@ -58,7 +58,7 @@ urlencoding="2.1.3"
 id3 = "1.16.0"
 mp4ameta = "0.11.0"
 file-format = "0.26.0"
-maud = { version = "*", features = ["axum"] }
+maud = { version = "*", features = ["axum","axum-core"] }
 url = "2.5.4"
 rust-s3 = { version = "0.35.1", features = ["blocking", "fail-on-err"] }
 async-trait = "0.1.85"
@@ -75,6 +75,7 @@ socketioxide = "0.16.0"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.68"
+
 
 [dev-dependencies]
 serial_test = {version="3.2.0"}

@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -14,70 +15,40 @@ use axum::{
     response::Response,
     extract::Request,
 };
+use axum::body::Body;
+use axum::middleware::Next;
+use axum::response::IntoResponse;
 use tower::{Layer, MakeService, Service};
-use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 
-#[derive(Clone)]
-pub struct CookieFilter;
 
-impl CookieFilter {
-    pub fn new() -> Self {
-        Self
+pub async fn handle_cookie_session(
+    mut req: Request,
+    next: Next
+) -> Result<impl IntoResponse, CustomError> {
+    let jar = CookieJar::from_headers(req.headers());
+    let cookie = jar.get("sessionid");
+    if cookie.is_none() {
+        let inner_error = CustomErrorInner::Forbidden;
+        let error: CustomError = inner_error.into();
+        return Err(error.into());
     }
-}
+    let binding = cookie.unwrap();
+    let extracted_cookie = binding.value();
 
-impl<S> Layer<S> for CookieFilter {
-    type Service = MyMiddleware<S>;
-
-    fn layer(&self, inner: S) -> Self::Service {
-        MyMiddleware { inner }
-    }
-}
-
-#[derive(Clone)]
-struct MyMiddleware<S> {
-    inner: S,
-}
-
-impl<S, Request> Service<Request> for MyMiddleware<S>
-where
-    S: Service<Request>,
-    Request: fmt::Debug,
-{
-    type Response = S::Response;
-    type Error = S::Error;
-    type Future = S::Future;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
+    use crate::adapters::persistence::dbconfig::schema::sessions::dsl::*;
+    let session = sessions
+        .filter(session_id.eq(extracted_cookie))
+        .first::<Session>(&mut get_connection())
+        .optional()
+        .map_err(map_db_error).map_err(|e|<CustomError as Into<Infallible>>::into(e))?;
+    if session.is_none() {
+        let inner_error = CustomErrorInner::Forbidden;
+        let error: CustomError = inner_error.into();
+        return Err(error.into());
     }
 
-    fn call(&mut self, mut req: Request) -> Self::Future {
-        let jar = CookieJar::from_headers(req.headers());
-        let cookie = jar.get("sessionid");
-        if cookie.is_none() {
-            return Box::pin(async {Err(CustomErrorInner::Forbidden.into())});
-        }
-        let binding = cookie.unwrap();
-        let extracted_cookie = binding.value();
+    req.extensions_mut().insert(session.unwrap());
 
-        use crate::adapters::persistence::dbconfig::schema::sessions::dsl::*;
-        let session = sessions
-            .filter(session_id.eq(extracted_cookie))
-            .first::<Session>(&mut get_connection())
-            .optional()
-            .expect("Error connecting to database");
-        if session.is_none() {
-            return Box::pin(async {Err(CustomErrorInner::Forbidden.into())});
-        }
-
-        req.extensions_mut().insert(session.unwrap());
-        let future = self.inner.call(req);
-
-
-        Box::pin(async move {
-            let response: Response<Vec<u8>> = future.await?;
-            Ok(response)
-        })
-    }
+    Ok(next.run(req).await)
 }

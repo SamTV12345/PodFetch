@@ -1,6 +1,7 @@
 use log::error;
 use s3::error::S3Error;
 use std::backtrace::Backtrace;
+use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
@@ -8,12 +9,12 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
-pub struct BacktraceError {
+pub struct CustomError {
     pub inner: CustomErrorInner,
     pub backtrace: Box<Backtrace>,
 }
 
-impl Display for BacktraceError {
+impl Display for CustomError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Initial error: {:}", self.inner)?;
         writeln!(f, "Error context:")?;
@@ -21,7 +22,14 @@ impl Display for BacktraceError {
     }
 }
 
-impl From<CustomErrorInner> for BacktraceError {
+
+impl Into<Infallible> for CustomError {
+    fn into(self) -> Infallible {
+        panic!("{}", self)
+    }
+}
+
+impl From<CustomErrorInner> for CustomError {
     fn from(inner: CustomErrorInner) -> Self {
         let backtrace = Box::new(Backtrace::force_capture());
         Self { inner, backtrace }
@@ -36,7 +44,7 @@ pub trait ResultExt: Sized {
     fn expect_or_backtrace(self, msg: &str) -> Self::T;
 }
 
-impl<T> ResultExt for Result<T, BacktraceError> {
+impl<T> ResultExt for Result<T, CustomError> {
     type T = T;
     fn expect_or_backtrace(self, msg: &str) -> T {
         match self {
@@ -87,6 +95,12 @@ impl Display for DynBacktraceError {
     }
 }
 
+impl From<Infallible> for CustomError {
+    fn from(_: Infallible) -> Self {
+        CustomErrorInner::Unknown.into()
+    }
+}
+
 impl Debug for DynBacktraceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Self as Display>::fmt(self, f)
@@ -108,19 +122,18 @@ impl ResultExt for Result<(), DynBacktraceError> {
     }
 }
 
-impl Debug for BacktraceError {
+impl Debug for CustomError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Self as Display>::fmt(self, f)
     }
 }
 
-impl Error for BacktraceError {
+impl Error for CustomError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.inner)
     }
 }
 
-pub(crate) type CustomError = BacktraceError;
 
 impl IntoResponse  for CustomError {
     fn into_response(self) -> Response {
