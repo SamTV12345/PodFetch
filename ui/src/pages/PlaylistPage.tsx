@@ -1,12 +1,11 @@
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
-import axios, {AxiosResponse} from "axios";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
 import usePlaylist from "../store/PlaylistSlice";
 import {useEffect} from "react";
-import {PlaylistDto} from "../models/Playlist";
 import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
 import {useNavigate} from "react-router-dom";
+import {client} from "../utils/http";
 
 export const PlaylistPage = ()=>{
     const {t} = useTranslation()
@@ -18,9 +17,7 @@ export const PlaylistPage = ()=>{
 
     useEffect(()=>{
         if (playlist.length ===0){
-            axios.get("/playlist").then((response:AxiosResponse<PlaylistDto[]>)=>{
-               setPlaylist(response.data)
-            })
+            client.GET("/api/v1/playlist").then((resp)=>setPlaylist(resp.data!))
         }
     },[])
 
@@ -29,7 +26,7 @@ export const PlaylistPage = ()=>{
            <CreatePlaylistModal/>
 
             <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={()=>{
-               setCurrentPlaylistToEdit({name: '',items:[],id: -1} as PlaylistDto)
+               setCurrentPlaylistToEdit({name: '',items:[],id: String(-1)})
                 setCreatePlaylistOpen(true)
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
@@ -56,11 +53,17 @@ export const PlaylistPage = ()=>{
                                 {i.name}
                                 <button className="flex ml-2" onClick={(e)=>{
                                     e.preventDefault()
-
-                                    axios.get("/playlist/"+i.id).then((response:AxiosResponse<PlaylistDto>)=> {
-                                        setCurrentPlaylistToEdit(response.data)
-                                        setCreatePlaylistOpen(true)
+                                    client.GET("/api/v1/playlist/{playlist_id}", {
+                                        params: {
+                                            path: {
+                                                playlist_id: String(i.id!)
+                                            }
+                                        }
                                     })
+                                        .then((response)=>{
+                                            setCurrentPlaylistToEdit(response.data!)
+                                            setCreatePlaylistOpen(true)
+                                        })
                                 }} title={t('change-role')}>
                                     <span className="material-symbols-outlined text-[--fg-color] hover:text-stone-600">edit</span>
                                 </button>
@@ -79,7 +82,13 @@ export const PlaylistPage = ()=>{
                                 </button>
                                 <button className="flex float-right text-red-700 hover:text-red-500" onClick={(e)=>{
                                     e.preventDefault()
-                                    axios.delete("/playlist/"+i.id).then(()=>{
+                                    client.DELETE("/api/v1/playlist/{playlist_id}", {
+                                        params: {
+                                            path: {
+                                                playlist_id: String(i.id!)
+                                            }
+                                        }
+                                    }).then(()=>{
                                         enqueueSnackbar(t('invite-deleted'), {variant: "success"})
                                         setPlaylist(playlist.filter(v=>v.id !== i.id))
                                     })

@@ -10,6 +10,7 @@ use crate::application::usecases::devices::query_use_case::QueryUseCase;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::utils::gpodder_trimmer::trim_from_path;
 
 #[utoipa::path(
     post,
@@ -29,13 +30,13 @@ pub async fn post_device(
     match opt_flag {
         Some(flag) => {
             let username = &query.0.0;
-            let deviceid = &query.0.1;
+            let deviceid = trim_from_path(&query.0.1);
             if &flag.username != username {
                 return Err(CustomErrorInner::Forbidden.into());
             }
 
             let device_create = DeviceCreate {
-                id: deviceid.clone(),
+                id: deviceid.to_string(),
                 username: username.clone(),
                 type_: device_post.kind.clone(),
                 caption: device_post.caption.clone(),
@@ -62,13 +63,14 @@ pub async fn get_devices_of_user(
     Path(query): Path<String>,
     Extension(opt_flag): Extension<Option<Session>>,
 ) -> Result<Json<Vec<DeviceResponse>>, CustomError> {
+    let query = trim_from_path(&query);
     match opt_flag {
         Some(flag) => {
             let user_query = query;
             if flag.username != user_query {
                 return Err(CustomErrorInner::Forbidden.into());
             }
-            let devices = DeviceService::query_by_username(&user_query)?;
+            let devices = DeviceService::query_by_username(user_query)?;
 
             let dtos = devices
                 .iter()

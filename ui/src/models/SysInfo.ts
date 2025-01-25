@@ -1,6 +1,5 @@
 import {CPUModel} from "./CPUModel";
 import {SysUser} from "./SysUser";
-import {DiskModel} from "./DiskModel";
 
 export interface SysInfo {
     IS_SUPPORTED: boolean,

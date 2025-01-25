@@ -7,7 +7,7 @@ use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use serde_json::from_str;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -24,7 +24,7 @@ use utoipa_axum::routes;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 pub struct OptionalId {
     last_podcast_episode: Option<String>,
     only_unlistened: Option<bool>,
@@ -40,9 +40,10 @@ pub struct PodcastEpisodeWithHistory {
 #[utoipa::path(
 get,
 path="/podcasts/{id}/episodes",
+params(OptionalId),
 responses(
 (status = 200, description = "Finds all podcast episodes of a given podcast id.", body =
-[PodcastEpisode])),
+[PodcastEpisodeWithHistory])),
 tag = "podcast_episodes"
 )]
 pub async fn find_all_podcast_episodes_of_podcast(
@@ -72,7 +73,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     Ok(Json(mapped_podcasts))
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct TimeLinePodcastEpisode {
     podcast_episode: PodcastEpisodeDto,
     podcast: PodcastDto,
@@ -85,8 +86,8 @@ pub struct TimeLinePodcastEpisode {
     path="/podcasts/available/gpodder",
     responses(
 (status = 200, description = "Finds all podcast not in webview", body =
-[PodcastEpisode])),
-    tag = "podcast_episodes"
+[GPodderAvailablePodcasts])),
+    tag = "gpodder"
 )]
 pub async fn get_available_podcasts_not_in_webview(
     Extension(requester): Extension<User>,
@@ -99,14 +100,14 @@ pub async fn get_available_podcasts_not_in_webview(
     Ok(Json(found_episodes))
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeLinePodcastItem {
     data: Vec<TimeLinePodcastEpisode>,
     total_elements: i64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineQueryParams {
     pub favored_only: bool,
@@ -118,8 +119,9 @@ pub struct TimelineQueryParams {
 #[utoipa::path(
 get,
 path="/podcasts/timeline",
+params(TimelineQueryParams),
 responses(
-(status = 200, description = "Gets the current timeline of the user")),
+(status = 200, description = "Gets the current timeline of the user", body = TimeLinePodcastItem)),
 tag = "podcasts"
 )]
 pub async fn get_timeline(

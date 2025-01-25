@@ -80,7 +80,7 @@ pub async fn get_all_playlists(Extension(requester): Extension<User>) ->
 get,
 path="/playlist/{playlist_id}",
 responses(
-(status = 200, description = "Gets a specific playlist of a user")),
+(status = 200, description = "Gets a specific playlist of a user", body = PlaylistDto)),
 tag="playlist"
 )]
 pub async fn get_playlist_by_id(

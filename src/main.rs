@@ -8,16 +8,11 @@ extern crate serde_json;
 
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
-use jsonwebtoken::jwk::{
-    AlgorithmParameters, CommonParameters, Jwk, KeyAlgorithm, RSAKeyParameters, RSAKeyType,
-};
 use log::info;
 use maud::{html, Markup};
 use r2d2::Pool;
 use regex::Regex;
-use std::collections::HashSet;
 use std::env::args;
-use std::io::Read;
 use std::ops::DerefMut;
 use std::process::exit;
 use std::sync::OnceLock;
@@ -63,7 +58,6 @@ mod constants;
 mod db;
 mod models;
 mod service;
-use crate::models::oidc_model::{CustomJwk, CustomJwkSet};
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
 use crate::models::settings::Setting;
@@ -74,7 +68,6 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::http_client::get_http_client;
 
 mod config;
 
@@ -243,70 +236,6 @@ async fn main() -> std::io::Result<()> {
             thread::sleep(Duration::from_millis(1000));
         }
     });
-
-    let key_param: Option<RSAKeyParameters>;
-    let mut hash = HashSet::new();
-    let jwk: Option<Jwk>;
-
-    match ENVIRONMENT_SERVICE.oidc_config.clone() {
-        Some(jwk_config) => {
-            let resp = get_http_client()
-                .get(&jwk_config.jwks_uri)
-                .send()
-                .await
-                .unwrap()
-                .json::<CustomJwkSet>()
-                .await;
-
-            match resp {
-                Ok(res) => {
-                    let oidc = res
-                        .clone()
-                        .keys
-                        .into_iter()
-                        .filter(|x| x.alg.eq(&"RS256"))
-                        .collect::<Vec<CustomJwk>>()
-                        .first()
-                        .cloned();
-
-                    if oidc.is_none() {
-                        panic!("No RS256 key found in JWKS")
-                    }
-
-                    key_param = Some(RSAKeyParameters {
-                        e: oidc.clone().unwrap().e,
-                        n: oidc.unwrap().n.clone(),
-                        key_type: RSAKeyType::RSA,
-                    });
-
-                    jwk = Some(Jwk {
-                        common: CommonParameters {
-                            public_key_use: None,
-                            key_id: None,
-                            x509_url: None,
-                            x509_chain: None,
-                            x509_sha1_fingerprint: None,
-                            key_operations: None,
-                            key_algorithm: Some(KeyAlgorithm::RS256),
-                            x509_sha256_fingerprint: None,
-                        },
-                        algorithm: AlgorithmParameters::RSA(key_param.clone().unwrap()),
-                    });
-                }
-                Err(_) => {
-                    panic!("Error downloading OIDC")
-                }
-            }
-        }
-        _ => {
-            key_param = None;
-            jwk = None;
-        }
-    }
-
-    if let Some(oidc_config) = ENVIRONMENT_SERVICE.oidc_config.clone() {
-        hash.insert(oidc_config.client_id);
-    }
 
     let sub_dir = ENVIRONMENT_SERVICE
         .sub_directory

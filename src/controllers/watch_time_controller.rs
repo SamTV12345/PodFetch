@@ -3,6 +3,7 @@ use axum::extract::Path;
 use axum::routing::{get, post};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use crate::models::episode::Episode;
 use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use crate::models::user::User;
@@ -30,7 +31,7 @@ pub async fn log_watchtime(
 get,
 path="/podcasts/episode/lastwatched",
 responses(
-(status = 200, description = "Gets the last watched podcast episodes.")),
+(status = 200, description = "Gets the last watched podcast episodes.", body= Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>)),
 tag="watchtime"
 )]
 pub async fn get_last_watched(Extension(requester): Extension<User>) ->
@@ -62,7 +63,7 @@ pub async fn get_watchtime(
 
 pub fn get_watchtime_router() -> OpenApiRouter {
     OpenApiRouter::new()
-        .route("/podcasts/episode", post(log_watchtime))
-        .route("/podcasts/episode/lastwatched", get(get_last_watched))
-        .route("/podcasts/episode/{id}", get(get_watchtime))
+        .routes(routes!(log_watchtime))
+        .routes(routes!(get_last_watched))
+        .routes(routes!(get_watchtime))
 }

@@ -6,6 +6,7 @@ use utoipa_axum::routes;
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::utils::gpodder_trimmer::trim_from_path;
 use crate::utils::time::get_current_timestamp;
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -43,13 +44,13 @@ pub async fn get_subscriptions(
     match opt_flag {
         Some(flag) => {
             let username = paths.clone().0;
-            let deviceid = paths.clone().1;
+            let deviceid = trim_from_path(&paths.1);
             if flag.username != username.clone() {
                 return Err(CustomErrorInner::Forbidden.into());
             }
 
             let res = SubscriptionChangesToClient::get_device_subscriptions(
-                &deviceid,
+                deviceid,
                 &username,
                 query.since,
             )
@@ -75,15 +76,16 @@ pub async fn get_subscriptions(
     tag="gpodder"
 )]
 pub async fn get_subscriptions_all(
-    Path(paths): Path<String>,
+    Path(username): Path<String>,
     Extension(opt_flag): Extension<Option<Session>>,
     Query(query): Query<SubscriptionRetrieveRequest>,
 ) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
+    let username = trim_from_path(&username);
     let flag_username = match opt_flag {
         Some(flag) => flag.username,
         None => return Err(CustomErrorInner::Forbidden.into()),
     };
-    if flag_username != paths.as_str() {
+    if flag_username != username {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
@@ -114,11 +116,11 @@ pub async fn upload_subscription_changes(
         match opt_flag {
             Some(flag) => {
                 let username = paths.clone().0;
-                let deviceid = paths.clone().1;
+                let deviceid = trim_from_path(&paths.1);
                 if flag.username != username.clone() {
                     return Err(CustomErrorInner::Forbidden.into());
                 }
-                SubscriptionChangesToClient::update_subscriptions(&deviceid, &username, upload_request)
+                SubscriptionChangesToClient::update_subscriptions(deviceid, &username, upload_request)
                     .await
                     .unwrap();
 

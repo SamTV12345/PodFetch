@@ -11,9 +11,11 @@ import useCommon from "../store/CommonSlice";
 import {Episode} from "../models/Episode";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
+import {components} from "../../schema";
+import {client} from "../utils/http";
 
 type PodcastDetailItemProps = {
-    episode: EpisodesWithOptionalTimeline,
+    episode: components["schemas"]["PodcastEpisodeWithHistory"],
     index: number,
     episodesLength: number,
     onlyUnplayed: boolean
@@ -28,7 +30,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         if(!episode.podcastHistoryItem){
             return -1
         }
-        return Math.round(episode.podcastHistoryItem.position*100/episode.podcastEpisode.total_time)
+        return Math.round(episode.podcastHistoryItem.position!*100/episode.podcastEpisode.total_time)
     }, [episode.podcastHistoryItem?.position])
     const addPodcastEpisodes = useCommon(state => state.addPodcastEpisodes)
     const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
@@ -101,7 +103,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                                     } else {
                                         s.podcastHistoryItem = {
                                             action: "",
-                                            clean_url: "",
                                             device: "",
                                             episode: "",
                                             guid: "",
@@ -168,11 +169,15 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 `} key={episode.podcastEpisode.episode_id + 'icon'} onClick={(e) => {
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
-
-                    axios.get(  '/podcasts/episode/' + episode.podcastEpisode.episode_id)
-                        .then((response: AxiosResponse<Episode>) => {
-                            handlePlayofEpisode(response, episode)
-                        })
+                    client.GET("/api/v1/podcasts/episode/{id}", {
+                        params: {
+                            path: {
+                                id: episode.podcastEpisode.episode_id
+                            }
+                        }
+                    }).then((resp)=>{
+                        handlePlayofEpisode(resp.data!, episode)
+                    })
                 }}>play_circle</span>
             </div>
 
@@ -181,7 +186,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
                     axios.get(  '/podcasts/' + params.id + '/episodes',{
                         params: {
-                            last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1].podcastEpisode.date_of_recording,
+                            last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1]!.podcastEpisode.date_of_recording,
                             only_unlistened: onlyUnplayed
                         }
                     })

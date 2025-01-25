@@ -142,9 +142,9 @@ impl IntoResponse  for CustomError {
             CustomErrorInner::Forbidden => StatusCode::FORBIDDEN,
             CustomErrorInner::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
             CustomErrorInner::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            CustomErrorInner::Conflict(e) => StatusCode::CONFLICT,
-            CustomErrorInner::BadRequest(e) => StatusCode::BAD_REQUEST,
-            CustomErrorInner::UnAuthorized(e) => StatusCode::UNAUTHORIZED,
+            CustomErrorInner::Conflict(_) => StatusCode::CONFLICT,
+            CustomErrorInner::BadRequest(_) => StatusCode::BAD_REQUEST,
+            CustomErrorInner::UnAuthorized(_) => StatusCode::UNAUTHORIZED,
         };
 
         (status, self.error_response().message).into_response()

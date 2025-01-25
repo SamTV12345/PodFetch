@@ -1,11 +1,12 @@
 import {FC, Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import useCommon, { Podcast} from '../store/CommonSlice'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import useModal from "../store/ModalSlice";
 import {CustomCheckbox} from "./CustomCheckbox";
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 export const SettingsPodcastDelete: FC = () => {
     const podcasts = useCommon(state => state.podcasts)
@@ -14,24 +15,32 @@ export const SettingsPodcastDelete: FC = () => {
     const setConfirmModalData  = useCommon(state => state.setConfirmModalData)
     const setPodcasts = useCommon(state => state.setPodcasts)
     const podcastDeleted = useCommon(state => state.podcastDeleted)
-    const [selectedPodcasts, setSelectedPodcasts] = useState<Podcast[]>([])
+    const [selectedPodcasts, setSelectedPodcasts] = useState<components["schemas"]["PodcastDto"][]>([])
 
     useEffect(() => {
         if (podcasts.length === 0) {
-            axios.get('/podcasts')
-                .then((v) => {
-                    setPodcasts(v.data)
+            client.GET("/api/v1/podcasts")
+                .then(v=>{
+                    setPodcasts(v.data!)
                 })
         }
     }, [])
 
     const deletePodcast = (withFiles: boolean) => {
         selectedPodcasts.forEach(p=>{
-            axios.delete( '/podcasts/' + p.id, { data: { delete_files: withFiles }})
-                .then(() => {
-                    enqueueSnackbar(t('podcast-deleted', { name: p.name }), { variant: 'success' })
-                    podcastDeleted(p.id)
-                })
+            client.DELETE("/api/v1/podcasts/{id}", {
+                body: {
+                    delete_files: withFiles
+                },
+                params: {
+                    path: {
+                        id: p.id
+                    }
+                }
+            }).then(() => {
+                enqueueSnackbar(t('podcast-deleted', { name: p.name }), { variant: 'success' })
+                podcastDeleted(p.id)
+            })
         })
 
     }

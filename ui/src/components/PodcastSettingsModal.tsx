@@ -3,8 +3,6 @@ import {FC, useEffect, useMemo, useState} from "react";
 import {Switcher} from "./Switcher";
 import useCommon, {Podcast} from "../store/CommonSlice";
 import useAudioPlayer from "../store/AudioPlayerSlice";
-import axios from "axios";
-import {PodcastSettingsUpdate} from "../models/PodcastSettingsUpdate";
 import {PodcastSetting} from "../models/PodcastSetting";
 import {CustomButtonSecondary} from "./CustomButtonSecondary";
 import {useTranslation} from "react-i18next";
@@ -12,11 +10,13 @@ import {SettingsInfoIcon} from "./SettingsInfoIcon";
 import {CustomInput} from "./CustomInput";
 import {CustomSelect} from "./CustomSelect";
 import {options} from "./SettingsNaming";
+import {components} from "../../schema";
+import { client } from '../utils/http';
 
 type PodcastSettingsModalProps = {
     open: boolean,
     setOpen: (open: boolean) => void,
-    podcast: Podcast
+    podcast: components["schemas"]["PodcastDto"]
 }
 
 export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open, podcast})=>{
@@ -30,10 +30,15 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
     }, [podcastSettings, loaded])
 
 
-    console.log(podcast)
 
     useEffect(() => {
-        axios.get<PodcastSetting>("/podcasts/"+podcast.id+"/settings").then((res) => {
+        client.GET("/api/v1/podcasts/{id}/settings", {
+            params: {
+                path: {
+                    id: podcast.id
+                }
+            }
+        }).then((res)=>{
             if (res != null) {
                 setPodcastSettings(res.data)
             }
@@ -44,9 +49,14 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
 
     useEffect(() => {
         if (loaded && !open && podcastSettings) {
-            axios.put("/podcasts/"+podcast.id+"/settings", {
-                ...podcastSettings,
-            } satisfies PodcastSetting)
+            client.PUT("/api/v1/podcasts/{id}/settings", {
+                body: podcastSettings,
+                params: {
+                    path: {
+                        id: podcast.id
+                    }
+                }
+            })
         }
     }, [loaded, open, podcastSettings]);
 
@@ -69,14 +79,13 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                     <div className={`grid grid-cols-3 gap-5 ${!isSettingsEnabled && 'opacity-50'}`}>
                         <h2 className="text-[--fg-color] col-span-2">{t('episode-numbering')}</h2>
                         <Switcher className="justify-self-end" disabled={!isSettingsEnabled}
-                                  checked={podcast.episode_numbering}
+                                  checked={podcastSettings!.episodeNumbering}
                                   setChecked={(checked) => {
-                                      setCurrentPodcast({...podcast, episode_numbering: checked})
-                                      updatePodcastArray({...podcast, episode_numbering: checked})
+                                      setPodcastSettings({...podcastSettings!, episodeNumbering: checked})
                                   }}/>
                         <label className="mr-6 text-[--fg-color]" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
                         <CustomButtonSecondary disabled={!isSettingsEnabled} onClick={() => {
-                            axios.put(`/settings/${podcast.id}/runcleanup`)
+                            client.PUT("/api/v1/settings/runcleanup")
                         }}>{t('run-cleanup')}</CustomButtonSecondary>
                         <Switcher disabled={!isSettingsEnabled}
                                   checked={podcastSettings ? podcastSettings.autoCleanup : false}
@@ -136,7 +145,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                               replacementStrategy: v
                                           })
                                       }}
-                                      value={podcastSettings ? podcastSettings!.replacementStrategy : options[0].value}/>
+                                      value={podcastSettings ? podcastSettings!.replacementStrategy : options[0]!.value}/>
                         <label htmlFor="number-of-podcasts-to-download"
                                className="flex gap-1 col-span-2 text-[--fg-color]">{t('number-of-podcasts-to-download')}
                             <SettingsInfoIcon
@@ -163,7 +172,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                         autoCleanupDays: 0,
                                         replaceInvalidCharacters: false,
                                         useExistingFilename: false,
-                                        replacementStrategy: options[0].value,
+                                        replacementStrategy: options[0]!.value,
                                         episodeFormat: "{}",
                                         podcastFormat: "{}",
                                         directPaths: false,

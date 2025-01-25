@@ -21,11 +21,12 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
+use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
 
 pub struct PodcastService;
 
 impl PodcastService {
-    pub async fn find_podcast(podcast: &str) -> Value {
+    pub async fn find_podcast(podcast: &str) -> ItunesWrapper {
         let query = vec![("term", podcast), ("entity", "podcast")];
         let result = get_http_client()
             .get(ITUNES_URL)
@@ -47,7 +48,7 @@ impl PodcastService {
         }
     }
 
-    pub async fn find_podcast_on_podindex(podcast: &str) -> Result<Value, CustomError> {
+    pub async fn find_podcast_on_podindex(podcast: &str) -> Result<PodindexResponse, CustomError> {
         let headers = Self::compute_podindex_header();
 
         let query = vec![("q", podcast)];

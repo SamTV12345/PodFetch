@@ -30,16 +30,25 @@ use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use futures_util::StreamExt;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastSearchModel {
     order: Option<OrderCriteria>,
     title: Option<String>,
     order_option: Option<OrderOption>,
+    favored_only: bool,
+    tag: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct PodcastSearchModelUtoipa {
+    order: Option<String>,
+    title: Option<String>,
+    order_option: Option<String>,
     favored_only: bool,
     tag: Option<String>,
 }
@@ -63,17 +72,19 @@ pub async fn get_filter(Extension(requester): Extension<User>) -> Result<Json<Fi
 #[utoipa::path(
 get,
 path="/podcasts/search",
+params(PodcastSearchModelUtoipa),
 responses(
 (status = 200, description = "Gets the podcasts matching the searching criteria",body=
 Vec<PodcastDto>)),
 tag="podcasts"
 )]
 pub async fn search_podcasts(
-    Query(query): Query<PodcastSearchModel>,
+    Query(query): Query<PodcastSearchModelUtoipa>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let _order = query.order.unwrap_or(OrderCriteria::Asc);
-    let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    let _order = query.order.map(|o|o.into()).unwrap_or(OrderCriteria::Asc);
+    let _latest_pub = query.order_option.map(|o|OrderOption::from_string(o)).unwrap_or
+    (OrderOption::Title);
     let tag = query.tag;
 
     let opt_filter = Filter::get_filter_by_username(&requester.username).await?;
@@ -127,7 +138,7 @@ pub async fn search_podcasts(
 get,
 path="/podcasts/{id}",
 responses(
-(status = 200, description = "Find a podcast by its collection id", body = [PodcastDto])
+(status = 200, description = "Find a podcast by its collection id", body = PodcastDto)
 ),
 tag="podcasts"
 )]
@@ -160,20 +171,20 @@ pub async fn find_all_podcasts(requester: Extension<User>) -> Result<Json<Vec<Po
 
     Ok(Json(podcasts))
 }
-use crate::models::itunes_models::ItunesModel;
+use crate::models::itunes_models::{ItunesModel, PodcastSearchReturn};
 
 #[utoipa::path(
 get,
 path="/podcasts/{type_of}/{podcast}/search",
 responses(
-(status = 200, description = "Finds a podcast from the itunes url.", body = [ItunesModel])
+(status = 200, description = "Finds a podcast from the itunes url.", body = PodcastSearchReturn)
 ),
 tag="podcasts"
 )]
 pub async fn find_podcast(
     Path(podcast_col): Path<(i32, String)>,
     Extension(requester): Extension<User>,
-) -> Result<Json<Value>, CustomError> {
+) -> Result<Json<PodcastSearchReturn>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -186,7 +197,7 @@ pub async fn find_podcast(
                 log::debug!("Searching for podcast: {}", podcast);
                 res = PodcastService::find_podcast(&podcast).await;
             }
-            Ok(Json(res))
+            Ok(Json(PodcastSearchReturn::Itunes(res)))
         }
         Ok(Podindex) => {
             if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
@@ -194,7 +205,8 @@ pub async fn find_podcast(
                     .into());
             }
 
-            Ok(Json(PodcastService::find_podcast_on_podindex(&podcast).await?))
+            Ok(Json(PodcastSearchReturn::Podindex(PodcastService::find_podcast_on_podindex
+                (&podcast).await?)))
         }
         Err(_) => Err(CustomErrorInner::BadRequest("Invalid search type".to_string()).into()),
     }
@@ -249,6 +261,7 @@ pub async fn add_podcast(
 #[utoipa::path(
 post,
 path="/podcasts/feed",
+request_body = PodcastRSSAddModel,
 responses(
 (status = 200, description = "Adds a podcast by its feed url",body=PodcastDto)),
 tag="podcasts"
@@ -553,7 +566,7 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
 }
 use crate::models::episode::Episode;
 use crate::models::tag::Tag;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;

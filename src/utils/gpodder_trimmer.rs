@@ -1,5 +1,5 @@
 pub fn trim_from_path(path_segment_with_extension: &str) -> &str {
-    let path_segment = path_segment_with_extension.split('.').next().unwrap_or("");
+    let path_segment = path_segment_with_extension.split('.').next().unwrap_or(path_segment_with_extension);
     path_segment
 }
 

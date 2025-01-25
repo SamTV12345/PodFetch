@@ -29,7 +29,7 @@ post,
 path="/tags",
 responses(
 (status = 200, description = "Creates a new tag",
-body = TagCreate)),
+body = Tag)),
 tag="tags"
 )]
 pub async fn insert_tag(

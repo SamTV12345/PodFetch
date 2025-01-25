@@ -17,7 +17,7 @@ use axum::extract::Request;
 use utoipa::ToSchema;
 
 #[derive(
-    Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset,
+    Serialize, Deserialize, Queryable, Insertable, Clone, PartialEq, Debug, AsChangeset,
 )]
 #[serde(rename_all = "camelCase")]
 pub struct User {
@@ -30,7 +30,7 @@ pub struct User {
     pub api_key: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserWithoutPassword {
     pub id: i32,
