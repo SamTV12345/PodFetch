@@ -6,16 +6,14 @@ use crate::service::settings_service::SettingsService;
 use chrono::Local;
 use std::fmt::Display;
 use std::str::FromStr;
-use axum::{Extension, Json, Router};
+use axum::{Extension, Json};
 use axum::extract::Path;
-use axum::routing::{get, put};
 use reqwest::StatusCode;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[utoipa::path(
 get,
 path="/settings",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the current settings")),
 tag="podcast_episodes"
@@ -35,7 +33,6 @@ pub async fn get_settings(Extension(requester): Extension<User>) -> Result<Json<
 #[utoipa::path(
 put,
 path="/settings",
-context_path="/api/v1",
 request_body=Setting,
 responses(
 (status = 200, description = "Updates the current settings")),
@@ -55,7 +52,6 @@ pub async fn update_settings(
 #[utoipa::path(
 put,
 path="/settings/runcleanup",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Runs a cleanup of old episodes")),
 tag="settings"
@@ -87,10 +83,9 @@ pub enum Mode {
 #[utoipa::path(
 get,
 path="/settings/opml/{type_of}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the podcasts in opml format")),
-tag="podcasts"
+tag="settings"
 )]
 pub async fn get_opml(
     Extension(requester): Extension<User>,
@@ -185,10 +180,9 @@ fn add_podcasts(
 #[utoipa::path(
 put,
 path="/settings/name",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Updates the name settings")),
-tag="podcasts",
+tag="settings",
 request_body=UpdateNameSettings
 )]
 pub async fn update_name(
@@ -206,6 +200,8 @@ pub async fn update_name(
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -274,11 +270,11 @@ impl FromStr for ReplacementStrategy {
 }
 
 
-pub fn get_settings_router() -> Router {
-    Router::new()
-        .route("/settings", get(get_settings))
-        .route("/settings", put(update_settings))
-        .route("/settings/runcleanup", put(run_cleanup))
-        .route("/settings/opml/{type_of}", get(get_opml))
-        .route("/settings/name", put(update_name))
+pub fn get_settings_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_settings))
+        .routes(routes!(update_settings))
+        .routes(routes!(run_cleanup))
+        .routes(routes!(get_opml))
+        .routes(routes!(update_name))
 }

@@ -23,43 +23,36 @@ use std::process::exit;
 use std::sync::OnceLock;
 use std::time::Duration;
 use std::{env, thread};
-use std::fmt::format;
 use axum::extract::Request;
 use axum::response::{IntoResponse, Redirect, Response};
-use axum::{debug_handler, Router};
-use axum::middleware::{from_fn, from_fn_with_state};
-use axum::routing::{get, post};
+use axum::Router;
+use axum::middleware::from_fn;
+use axum::routing::get;
 use file_format::FileFormat;
 use socketioxide::SocketIoBuilder;
-use tokio::{fs, spawn, try_join};
-use tower::ServiceExt;
-use tower_http::services::{ServeDir, ServeFile};
-use utoipa::OpenApi;
+use tokio::fs;
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable as RServable};
 mod controllers;
 use crate::adapters::api::controllers::routes::{global_routes};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::auth_middleware::{handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth, AuthFilter};
+use crate::auth_middleware::{handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth};
 use crate::command_line_runner::start_command_line;
 use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS, MAIN_ROOM};
-use crate::controllers::notification_controller::{dismiss_notifications, get_notification_router, get_unread_notifications};
+use crate::controllers::notification_controller::get_notification_router;
 use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use utoipa_scalar::{Scalar, Servable};
 use utoipa_swagger_ui::SwaggerUi;
-use crate::controllers::playlist_controller::{add_playlist, delete_playlist_by_id, delete_playlist_item, get_all_playlists, get_playlist_by_id, get_playlist_router, update_playlist};
-use crate::controllers::podcast_controller::{add_podcast, add_podcast_by_feed, delete_podcast, find_all_podcasts, find_podcast, find_podcast_by_id, get_filter, get_podcast_router, get_podcast_settings, refresh_all_podcasts, retrieve_podcast_sample_format, search_podcasts, update_podcast_settings};
-use crate::controllers::podcast_controller::{
-    add_podcast_from_podindex, download_podcast, favorite_podcast, get_favored_podcasts,
-    import_podcasts_from_opml, query_for_podcast, update_active_podcast,
-};
-use crate::controllers::podcast_episode_controller::{delete_podcast_episode_locally, download_podcast_episodes_of_podcast, find_all_podcast_episodes_of_podcast, get_available_podcasts_not_in_webview, get_podcast_episode_router, get_timeline, like_podcast_episode, retrieve_episode_sample_format};
-use crate::controllers::settings_controller::{get_opml, get_settings, get_settings_router, run_cleanup, update_name, update_settings};
-use crate::controllers::sys_info_controller::{get_info, get_public_config, get_sys_info, get_sys_info_router, login};
-use crate::controllers::tags_controller::{add_podcast_to_tag, delete_podcast_from_tag, delete_tag, get_tags, get_tags_router, insert_tag, update_tag};
-use crate::controllers::user_controller::{create_invite, delete_invite, delete_user, get_invite, get_invite_link, get_invites, get_user, get_user_router, get_users, onboard_user, update_role, update_user};
-use crate::controllers::watch_time_controller::{get_last_watched, get_watchtime, get_watchtime_router, log_watchtime};
+use crate::controllers::playlist_controller::get_playlist_router;
+use crate::controllers::podcast_controller::get_podcast_router;
+use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
+use crate::controllers::settings_controller::get_settings_router;
+use crate::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
+use crate::controllers::tags_controller::get_tags_router;
+use crate::controllers::user_controller::{get_invite, get_user_router, onboard_user};
+use crate::controllers::watch_time_controller::get_watchtime_router;
 pub use controllers::controller_utils::*;
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
@@ -327,10 +320,10 @@ async fn main() -> std::io::Result<()> {
     SOCKET_IO_LAYER.get_or_init(|| io);
 
     let (router, api) = OpenApiRouter::new()
+        .merge(global_routes())
         .route("/", get(Redirect::to(&ui_dir)))
         .split_for_parts();
     let router = router
-        .merge(global_routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
         .merge(Redoc::with_url("/redoc", api.clone()))
         // There is no need to create `RapiDoc::with_openapi` because the OpenApi is served
@@ -371,25 +364,29 @@ pub fn run_migrations() {
     }
 }
 
-pub fn get_api_config() -> Router {
-    Router::new()
+pub fn get_api_config() -> OpenApiRouter {
+    OpenApiRouter::new()
         .merge(podcast_serving())
         .merge(get_manifest_router())
-        .nest("/api/v1", Router::new().merge(config()))
+        .nest("/api/v1", OpenApiRouter::new().merge(config()))
 
 }
 
-fn config() -> Router {
-    Router::new()
-        .route("/users/invites/{invite_id}", get(get_invite))
-        .route("/users", post(onboard_user))
-        .route("/sys/config", get(get_public_config))
-        .route("/login", post(login))
+fn config() -> OpenApiRouter {
+    use crate::controllers::user_controller::__path_get_invite;
+    use crate::controllers::user_controller::__path_onboard_user;
+    use crate::controllers::sys_info_controller::__path_get_public_config;
+    use crate::controllers::sys_info_controller::__path_login;
+    OpenApiRouter::new()
+        .routes(routes!(get_invite))
+        .routes(routes!(onboard_user))
+        .routes(routes!(get_public_config))
+        .routes(routes!(login))
         .merge(get_private_api())
 }
 
-fn get_private_api() -> Router {
-    let router = Router::new()
+fn get_private_api() -> OpenApiRouter {
+    let router = OpenApiRouter::new()
         .merge(get_playlist_router())
         .merge(get_podcast_router())
         .merge(get_sys_info_router())

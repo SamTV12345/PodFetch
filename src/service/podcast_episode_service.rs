@@ -7,7 +7,6 @@ use crate::service::download_service::DownloadService;
 use crate::service::file_service::FileService;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
-use axum::extract::State;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 use crate::controllers::server::ChatServerHandle;

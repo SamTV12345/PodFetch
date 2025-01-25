@@ -1,6 +1,6 @@
-use axum::response::Response;
-use axum::{Json, Router};
+use axum::Json;
 use axum::routing::get;
+use utoipa_axum::router::OpenApiRouter;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 
 #[derive(Serialize, Deserialize)]
@@ -31,6 +31,6 @@ pub async fn get_client_parametrization() -> Json<ClientParametrization> {
     Json(answer)
 }
 
-pub fn get_client_parametrization_router() -> impl Into<Router> {
-    Router::new().route("/clientconfig.json", get(get_client_parametrization))
+pub fn get_client_parametrization_router() -> OpenApiRouter {
+    OpenApiRouter::new().route("/clientconfig.json", get(get_client_parametrization))
 }

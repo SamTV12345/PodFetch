@@ -1,6 +1,5 @@
 use axum::extract::Path;
-use axum::{debug_handler, Extension, Json, Router};
-use axum::routing::{delete, get, post, put};
+use axum::{Extension, Json};
 use reqwest::StatusCode;
 use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
@@ -9,6 +8,8 @@ use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{CustomError, CustomErrorInner};
 
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -43,11 +44,10 @@ pub struct UserCoreUpdateModel {
 #[utoipa::path(
 post,
 path="/users/",
-context_path="/api/v1",
 request_body = UserOnboardingModel,
 responses(
 (status = 200, description = "Creates a user (admin)")),
-tag="info"
+tag="user"
 )]
 pub async fn onboard_user(
     Json(user_to_onboard): Json<UserOnboardingModel>,
@@ -65,7 +65,6 @@ pub async fn onboard_user(
 #[utoipa::path(
 get,
 path="",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all users", body= Vec<UserOnboardingModel>)),
 tag="info"
@@ -81,10 +80,9 @@ pub async fn get_users(Extension(requester): Extension<User>) ->
 #[utoipa::path(
 get,
 path = "/{username}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets a user by username", body = Option<User>)),
-tag="info"
+tag="user"
 )]
 pub async fn get_user(
     Path(username): Path<String>,
@@ -105,11 +103,10 @@ pub async fn get_user(
 #[utoipa::path(
 put,
 path="/{username}/role",
-context_path="/api/v1",
 request_body = UserOnboardingModel,
 responses(
 (status = 200, description = "Updates the role of a user", body = Option<User>)),
-tag="info"
+tag="user"
 )]
 
 pub async fn update_role(
@@ -134,11 +131,10 @@ pub async fn update_role(
 #[utoipa::path(
 put,
 path="/{username}",
-context_path="/api/v1",
 request_body=InvitePostModel,
 responses(
 (status = 200, description = "Creates an invite", body = UserWithAPiKey,)),
-tag="info"
+tag="user"
 )]
 pub async fn update_user(
     Extension(user): Extension<User>,
@@ -188,11 +184,10 @@ use crate::models::invite::Invite;
 #[utoipa::path(
 post,
 path="/invites",
-context_path="/api/v1",
 request_body=InvitePostModel,
 responses(
 (status = 200, description = "Creates an invite", body = Invite,)),
-tag="info"
+tag="invite"
 )]
 pub async fn create_invite(
     Extension(requester): Extension<User>,
@@ -209,10 +204,9 @@ pub async fn create_invite(
 #[utoipa::path(
 get,
 path="/invites",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all invites", body = Vec<Invite>)),
-tag="info"
+tag="invite"
 )]
 pub async fn get_invites(Extension(requester): Extension<User>) -> Result<Json<Vec<Invite>>,
     CustomError> {
@@ -228,10 +222,9 @@ pub async fn get_invites(Extension(requester): Extension<User>) -> Result<Json<V
 #[utoipa::path(
 get,
 path="/users/invites/{invite_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets a specific invite", body = Option<Invite>)),
-tag="info"
+tag="user"
 )]
 pub async fn get_invite(Path(invite_id): Path<String>) -> Result<Json<Invite>, CustomError> {
     match UserManagementService::get_invite(invite_id) {
@@ -243,10 +236,9 @@ pub async fn get_invite(Path(invite_id): Path<String>) -> Result<Json<Invite>, C
 #[utoipa::path(
 delete,
 path="/{username}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Deletes a user by username")),
-tag="info"
+tag="user"
 )]
 pub async fn delete_user(
     Path(username): Path<String>,
@@ -266,8 +258,7 @@ pub async fn delete_user(
 #[utoipa::path(
 get,
 path="/invites/{invite_id}/link",
-context_path="/api/v1",
-tag="info",
+tag="invite",
 responses(
 (status = 200, description = "Gets an invite by id", body = Option<Invite>)))]
 pub async fn get_invite_link(
@@ -287,8 +278,7 @@ pub async fn get_invite_link(
 #[utoipa::path(
 get,
 path="/invites/{invite_id}",
-context_path="/api/v1",
-tag="info",
+tag="invite",
 responses(
 (status = 200, description = "Deletes an invite by id")))]
 pub async fn delete_invite(
@@ -306,17 +296,17 @@ pub async fn delete_invite(
 }
 
 
-pub fn get_user_router() -> Router {
-    Router::new()
-        .nest("/users", Router::new()
+pub fn get_user_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .nest("/users", OpenApiRouter::new()
 
-            .route("/{username}", get(get_user))
-            .route("/{username}/role", put(update_role))
-            .route("/{username}", delete(delete_user))
-            .route("/{username}", put(update_user))
+            .routes(routes!(get_user))
+            .routes(routes!(update_role))
+            .routes(routes!(delete_user))
+            .routes(routes!(update_user))
         )
-        .route("/invites/{invite_id}", delete(delete_invite))
-        .route("/invites/{invite_id}/link", get(get_invite_link))
-        .route("/invites", post(create_invite))
-        .route("/invites", get(get_invites))
+        .routes(routes!(delete_invite))
+        .routes(routes!(get_invite_link))
+        .routes(routes!(create_invite))
+        .routes(routes!(get_invites))
 }

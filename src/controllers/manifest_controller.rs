@@ -1,5 +1,6 @@
-use axum::{Json, Router};
+use axum::Json;
 use axum::routing::get;
+use utoipa_axum::router::OpenApiRouter;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::CustomError;
 
@@ -45,6 +46,6 @@ pub async fn get_manifest() -> Result<Json<Manifest>, CustomError> {
     Ok(Json(manifest))
 }
 
-pub fn get_manifest_router() -> impl Into<Router> {
-    Router::new().route("/manifest.json", get(get_manifest))
+pub fn get_manifest_router() -> OpenApiRouter {
+    OpenApiRouter::new().route("/manifest.json", get(get_manifest))
 }

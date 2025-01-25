@@ -5,13 +5,10 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use rand::random;
-use std::collections::{HashMap, HashSet};
-use std::io;
 use std::sync::OnceLock;
 use futures::executor::block_on;
 use socketioxide::SocketIo;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 type RoomId = String;
 pub type ConnId = usize;

@@ -23,9 +23,9 @@ impl Display for CustomError {
 }
 
 
-impl Into<Infallible> for CustomError {
-    fn into(self) -> Infallible {
-        panic!("{}", self)
+impl From<CustomError> for Infallible {
+    fn from(val: CustomError) -> Self {
+        panic!("{}", val)
     }
 }
 

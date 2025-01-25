@@ -1,31 +1,22 @@
-use std::cell::LazyCell;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use base64::engine::general_purpose;
 use base64::Engine;
 use std::collections::HashSet;
-use std::future::Future;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::rc::Rc;
 use std::sync::LazyLock;
-use std::task::{Context, Poll};
-use axum::extract::{Request, State};
+use axum::extract::Request;
 use axum::http::HeaderValue;
 use axum::middleware::Next;
-use axum::RequestExt;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use diesel::row::NamedRow;
 use crate::service::environment_service::ReverseProxyConfig;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use futures_util::future::{BoxFuture, LocalBoxFuture, Ready};
-use futures_util::{FutureExt, SinkExt};
+use futures_util::SinkExt;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
-use tower::{Layer, Service};
 use crate::utils::reqwest_client::get_sync_client;
 
 enum AuthType {
@@ -46,8 +37,8 @@ pub async fn handle_basic_auth(mut request: Request, next: Next) -> Result<Respo
 
 static JWKS: LazyLock<Jwk> = LazyLock::new(||{
    let sync_client = get_sync_client().build().unwrap();
-    let jwks = sync_client.get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri).send().unwrap().json::<Jwk>().unwrap();
-    jwks
+    
+    sync_client.get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri).send().unwrap().json::<Jwk>().unwrap()
 });
 
 pub async fn handle_oidc_auth(
@@ -77,10 +68,10 @@ pub async fn handle_no_auth(
 
 fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
     match auth_type {
-        AuthType::Basic => AuthFilter::handle_basic_auth_internal(&req),
+        AuthType::Basic => AuthFilter::handle_basic_auth_internal(req),
         AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req),
         AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
-            &req,
+            req,
             &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
         ),
         AuthType::None => Ok(User::create_standard_admin_user()),
@@ -253,8 +244,8 @@ impl AuthFilter {
 #[cfg(test)]
 mod test {
     use axum::extract::Request;
-    use axum::Router;
-    use axum_test::TestRequest;
+    
+    
     use serial_test::serial;
 
     use crate::auth_middleware::AuthFilter;
@@ -263,7 +254,7 @@ mod test {
     use crate::test_utils::test::{clear_users, create_random_user};
 
     #[test]
-    async fn test_basic_auth_login() {
+    fn test_basic_auth_login() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdDp0ZXN0");
         assert!(result.is_ok());
         let (u, p) = result.unwrap();
@@ -272,7 +263,7 @@ mod test {
     }
 
     #[test]
-    async fn test_basic_auth_login_with_special_characters() {
+    fn test_basic_auth_login_with_special_characters() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdCTDvMOWOnRlc3Q=");
         assert!(result.is_ok());
         let (u, p) = result.unwrap();
@@ -282,7 +273,7 @@ mod test {
 
     #[serial]
     #[test]
-    async fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
+    fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
         clear_users();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
@@ -297,7 +288,7 @@ mod test {
 
     #[serial]
     #[test]
-    async fn test_proxy_auth_with_header_in_request_auto_sign_up() {
+    fn test_proxy_auth_with_header_in_request_auto_sign_up() {
         clear_users();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
@@ -313,7 +304,7 @@ mod test {
 
     #[serial]
     #[test]
-    async fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
+    fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
         clear_users();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
@@ -330,7 +321,7 @@ mod test {
 
     #[serial]
     #[test]
-    async fn test_basic_auth_no_header() {
+    fn test_basic_auth_no_header() {
         clear_users();
 
         let req = Request::builder().header("Content-Type", "text/plain")
@@ -342,7 +333,7 @@ mod test {
 
     #[serial]
     #[test]
-    async fn test_basic_auth_header_no_user() {
+    fn test_basic_auth_header_no_user() {
         clear_users();
 
         let req = Request::builder().header("Content-Type", "text/plain")
@@ -355,7 +346,7 @@ mod test {
 
     #[serial]
     #[test]
-    async fn test_basic_auth_header_other_user() {
+    fn test_basic_auth_header_other_user() {
         // given
         clear_users();
         create_random_user().insert_user().unwrap();
@@ -373,7 +364,7 @@ mod test {
 
     #[serial]
     #[test]
-    async fn test_basic_auth_header_correct_user_wrong_password() {
+    fn test_basic_auth_header_correct_user_wrong_password() {
         // given
         clear_users();
         create_random_user().insert_user().unwrap();

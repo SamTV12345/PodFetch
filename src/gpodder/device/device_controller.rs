@@ -1,6 +1,7 @@
-use axum::{debug_handler, Extension, Json, Router};
+use axum::{Extension, Json};
 use axum::extract::Path;
-use axum::routing::{get, post};
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use crate::adapters::api::models::device::device_create::DeviceCreate;
 use crate::adapters::api::models::device::device_response::DeviceResponse;
 use crate::application::services::device::service::DeviceService;
@@ -10,6 +11,16 @@ use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
 use crate::utils::error::{CustomError, CustomErrorInner};
 
+#[utoipa::path(
+    post,
+    path="/devices/{username}/{deviceid}",
+    request_body=DevicePost,
+    responses(
+        (status = 200, description = "Creates a new device."),
+        (status = 403, description = "Forbidden.")
+    ),
+    tag="gpodder"
+)]
 pub async fn post_device(
     query: Path<(String, String)>,
     Extension(opt_flag): Extension<Option<Session>>,
@@ -39,7 +50,14 @@ pub async fn post_device(
     }
 }
 
-#[debug_handler]
+#[utoipa::path(
+    get,
+    path="/devices/{username}",
+    responses(
+        (status = 200, description = "Gets all devices of a user.", body = [DeviceResponse])
+    ),
+    tag="devices"
+)]
 pub async fn get_devices_of_user(
     Path(query): Path<String>,
     Extension(opt_flag): Extension<Option<Session>>,
@@ -62,8 +80,8 @@ pub async fn get_devices_of_user(
     }
 }
 
-pub fn get_device_router() -> Router {
-    Router::new()
-        .route("/devices/{username}.json", get(get_devices_of_user))
-        .route("/devices/{username}/{deviceid}.json", post(post_device))
+pub fn get_device_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_devices_of_user))
+        .routes(routes!(post_device))
 }

@@ -1,4 +1,3 @@
-use axum::debug_handler;
 use crate::auth_middleware::AuthFilter;
 use crate::models::session::Session;
 use crate::models::user::User;
@@ -6,13 +5,19 @@ use crate::models::user::User;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::extract::Path;
-use axum::http::{Request, StatusCode};
-use axum::response::Response;
+use axum::http::StatusCode;
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::CookieJar;
 use sha256::digest;
 
-#[debug_handler]
+
+#[utoipa::path(
+post,
+path="/auth/{username}/login.json",
+responses(
+(status = 200, description = "Logs in the user and returns a session cookie.")),
+tag="gpodder"
+)]
 pub async fn login(
     Path(username): Path<String>,
     jar: CookieJar,
@@ -67,7 +72,7 @@ fn handle_proxy_auth(rq: axum::extract::Request, username: &str) -> Result<(Cook
                             api_key: None,
                         })
                         .expect("Error inserting user on auto registering");
-                        handle_proxy_auth(rq, username.clone())
+                        handle_proxy_auth(rq, username)
                     } else {
                         log::error!("Error finding user by username: {}", e);
                         Err(CustomErrorInner::Forbidden.into())
@@ -97,7 +102,7 @@ fn handle_gpodder_basic_auth(
     }
 
     if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
-        if admin_username == &username {
+        if admin_username == username {
             return Err(CustomErrorInner::Conflict(
                 "The user you are trying to login is equal to the admin user. Please\
                  use another user to login."
@@ -107,7 +112,7 @@ fn handle_gpodder_basic_auth(
         }
     }
 
-    let user = User::find_by_username(&username)?;
+    let user = User::find_by_username(username)?;
     match user.password {
         Some(p) => {
             if p == digest(password) {

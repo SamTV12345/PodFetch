@@ -1,11 +1,12 @@
-use axum::{debug_handler, Extension, Json, Router};
+use axum::{Extension, Json};
 use axum::extract::{Path, Query};
-use axum::routing::{get, post};
 use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::session::Session;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp;
 use chrono::DateTime;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeActionResponse {
@@ -27,11 +28,21 @@ pub struct EpisodeSinceRequest {
     aggregate: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path="/episodes/{username}",
+    responses(
+        (status = 200, description = "Gets the episode actions of a user."),
+        (status = 403, description = "Forbidden"),
+    ),
+    tag="gpodder"
+)]
 pub async fn get_episode_actions(
     Extension(opt_flag): Extension<Option<Session>>,
     Query(since): Query<EpisodeSinceRequest>,
     Path(username): Path<String>,
 ) -> Result<Json<EpisodeActionResponse>, CustomError> {
+
     match opt_flag {
         Some(flag) => {
             let username = username.clone();
@@ -64,7 +75,17 @@ pub async fn get_episode_actions(
     }
 }
 
-
+#[
+    utoipa::path(
+        post,
+        path="/episodes/{username}",
+        responses(
+            (status = 200, description = "Uploads episode actions."),
+            (status = 403, description = "Forbidden"),
+        ),
+        tag="gpodder"
+    )
+]
 pub async fn upload_episode_actions(
     username: Path<String>,
     Extension(opt_flag): Extension<Option<Session>>,
@@ -89,8 +110,8 @@ pub async fn upload_episode_actions(
     }
 }
 
-pub fn gpodder_episodes_router() -> Router {
-    Router::new()
-        .route("/episodes/{username}.json", get(get_episode_actions))
-        .route("/episodes/{username}.json", post(upload_episode_actions))
+pub fn get_gpodder_episodes_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_episode_actions))
+        .routes(routes!(upload_episode_actions))
 }

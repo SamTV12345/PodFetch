@@ -1,4 +1,4 @@
-use axum::{Json, Router};
+use axum::Json;
 use axum::routing::{get, put};
 use reqwest::StatusCode;
 use crate::models::notification::Notification;
@@ -6,12 +6,11 @@ use crate::service::notification_service::NotificationService;
 use crate::utils::error::CustomError;
 
 use utoipa::ToSchema;
-
+use utoipa_axum::router::OpenApiRouter;
 
 #[utoipa::path(
 get,
 path="/notifications/unread",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all unread notifications.",body= Vec<Notification>)),
 tag="notifications"
@@ -29,7 +28,6 @@ pub struct NotificationId {
 #[utoipa::path(
 put,
 path="/notifications/dismiss",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Dismisses a notification")),
 tag="notifications"
@@ -41,8 +39,8 @@ pub async fn dismiss_notifications(
     Ok(StatusCode::OK)
 }
 
-pub fn get_notification_router() -> Router {
-    Router::new()
+pub fn get_notification_router() -> OpenApiRouter {
+    OpenApiRouter::new()
         .route("/notifications/unread", get(get_unread_notifications))
         .route("/notifications/dismiss", put(dismiss_notifications))
 }
