@@ -17,11 +17,9 @@ use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::http_client::get_http_client;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
-use serde::Serialize;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
-use axum::extract::State;
 use tokio::task::spawn_blocking;
 
 pub struct PodcastService;

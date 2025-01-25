@@ -1,12 +1,13 @@
-use axum::{Extension, Json, Router};
+use axum::{Extension, Json};
 use axum::extract::Path;
-use axum::routing::{delete, get, post, put};
 use reqwest::StatusCode;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::models::playlist::Playlist;
 use crate::models::user::User;
 use crate::utils::error::CustomError;
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct PlaylistDtoPost {
@@ -29,7 +30,6 @@ pub struct PlaylistDto {
 #[utoipa::path(
 post,
 path="/playlist",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Adds a new playlist for the user",body= PlaylistDtoPost)),
 tag="playlist"
@@ -47,7 +47,6 @@ pub async fn add_playlist(
 #[utoipa::path(
 put,
 path="/playlist/{playlist_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Updates a playlist of the user",body= PlaylistDtoPost)),
 tag="playlist"
@@ -66,7 +65,6 @@ pub async fn update_playlist(
 #[utoipa::path(
 get,
 path="/playlist",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all playlists of the user")),
 tag="playlist"
@@ -75,13 +73,12 @@ pub async fn get_all_playlists(Extension(requester): Extension<User>) ->
                                                                       Result<Json<Vec<Playlist>>,
     CustomError> {
     Playlist::get_playlists(requester.id)
-        .map(|playlists| Json(playlists))
+        .map(Json)
 }
 
 #[utoipa::path(
 get,
 path="/playlist/{playlist_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets a specific playlist of a user")),
 tag="playlist"
@@ -100,7 +97,6 @@ pub async fn get_playlist_by_id(
 #[utoipa::path(
 delete,
 path="/playlist/{playlist_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Deletes a specific playlist of a user")),
 tag="playlist"
@@ -117,7 +113,6 @@ pub async fn delete_playlist_by_id(
 #[utoipa::path(
 delete,
 path="/playlist/{playlist_id}/episode/{episode_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Deletes a specific playlist item of a user")),
 tag="playlist"
@@ -131,13 +126,12 @@ pub async fn delete_playlist_item(
     Ok(StatusCode::OK)
 }
 
-pub fn get_playlist_router() -> Router {
-    use axum::Router;
-    Router::new()
-        .route("/playlist", get(get_all_playlists))
-        .route("/playlist", post(add_playlist))
-        .route("/playlist/{playlist_id}", get(get_playlist_by_id))
-        .route("/playlist/{playlist_id}", put(update_playlist))
-        .route("/playlist/{playlist_id}", delete(delete_playlist_by_id))
-        .route("/playlist/{playlist_id}/episode/{episode_id}", delete(delete_playlist_item))
+pub fn get_playlist_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_all_playlists))
+        .routes(routes!(add_playlist))
+        .routes(routes!(get_playlist_by_id))
+        .routes(routes!(update_playlist))
+        .routes(routes!(delete_playlist_by_id))
+        .routes(routes!(delete_playlist_item))
 }

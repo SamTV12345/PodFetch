@@ -1,5 +1,5 @@
 use axum::extract::{Query, Request};
-use axum::http::{StatusCode, Uri};
+use axum::http::Uri;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -7,7 +7,6 @@ use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::middleware::Next;
-use axum::RequestExt;
 use axum::response::Response;
 use substring::Substring;
 

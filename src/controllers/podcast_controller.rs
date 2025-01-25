@@ -15,13 +15,11 @@ use rand::Rng;
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::thread;
-use axum::{debug_handler, Extension, Json, Router};
-use axum::body::{Body, BodyDataStream};
-use axum::extract::{Path, Query, State};
-use axum::http::{Request, Response, StatusCode};
+use axum::{debug_handler, Extension, Json};
+use axum::body::Body;
+use axum::extract::{Path, Query};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{delete, get, post, put};
-use futures::executor::block_on;
 use tokio::task::spawn_blocking;
 
 use crate::models::filter::Filter;
@@ -33,11 +31,8 @@ use crate::models::user::User;
 use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use futures_util::StreamExt;
-use r2d2_postgres::postgres::Client;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -52,7 +47,6 @@ pub struct PodcastSearchModel {
 #[utoipa::path(
 get,
 path="/podcasts/filter",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the user specific filter.",body= Option<Filter>)),
 tag="podcasts"
@@ -69,7 +63,6 @@ pub async fn get_filter(Extension(requester): Extension<User>) -> Result<Json<Fi
 #[utoipa::path(
 get,
 path="/podcasts/search",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the podcasts matching the searching criteria",body=
 Vec<PodcastDto>)),
@@ -133,7 +126,6 @@ pub async fn search_podcasts(
 #[utoipa::path(
 get,
 path="/podcasts/{id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Find a podcast by its collection id", body = [PodcastDto])
 ),
@@ -156,7 +148,6 @@ pub async fn find_podcast_by_id(
 #[utoipa::path(
 get,
 path="/podcasts",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all stored podcasts as a list", body = [PodcastDto])
 ),
@@ -174,7 +165,6 @@ use crate::models::itunes_models::ItunesModel;
 #[utoipa::path(
 get,
 path="/podcasts/{type_of}/{podcast}/search",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Finds a podcast from the itunes url.", body = [ItunesModel])
 ),
@@ -213,7 +203,6 @@ pub async fn find_podcast(
 #[utoipa::path(
 post,
 path="/podcasts/itunes",
-context_path="/api/v1",
 request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podcast to the database.")),
@@ -260,7 +249,6 @@ pub async fn add_podcast(
 #[utoipa::path(
 post,
 path="/podcasts/feed",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Adds a podcast by its feed url",body=PodcastDto)),
 tag="podcasts"
@@ -312,7 +300,6 @@ pub async fn add_podcast_by_feed(
 #[utoipa::path(
 post,
 path="/podcasts/opml",
-context_path="/api/v1",
 request_body=OpmlModel,
 responses(
 (status = 200, description = "Adds all podcasts of an opml podcast list to the database.")),
@@ -343,7 +330,6 @@ pub async fn import_podcasts_from_opml(
 #[utoipa::path(
 post,
 path="/podcasts/podindex",
-context_path="/api/v1",
 request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podindex podcast to the database")),
@@ -380,7 +366,6 @@ fn start_download_podindex(id: i32) -> Result<Podcast,
 #[utoipa::path(
 get,
 path="/podcasts/{podcast}/query",
-context_path="/api/v1",
 params(("podcast", description="The podcast episode query parameter.")),
 responses(
 (status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisode>)),
@@ -394,7 +379,6 @@ pub async fn query_for_podcast(podcast: Path<String>) -> Result<Json<Vec<Podcast
 #[utoipa::path(
 post,
 path="/podcasts/all",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Refreshes all podcasts")),
 tag="podcasts"
@@ -419,7 +403,6 @@ pub async fn refresh_all_podcasts(
 #[utoipa::path(
 post,
 path="/podcasts/{id}/refresh",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Refreshes a podcast episode")),
 tag="podcasts"
@@ -457,7 +440,6 @@ pub async fn download_podcast(
 #[utoipa::path(
 put,
 path="/podcasts/favored",
-context_path="/api/v1",
 request_body=PodcastFavorUpdateModel,
 responses(
 (status = 200, description = "Updates favoring a podcast.", body=String)),
@@ -478,7 +460,6 @@ pub async fn favorite_podcast(
 #[utoipa::path(
 get,
 path="/podcasts/favored",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Finds all favored podcasts.")),
 tag="podcasts"
@@ -493,7 +474,6 @@ pub async fn get_favored_podcasts(
 #[utoipa::path(
 put,
 path="/podcasts/{id}/active",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Updates the active state of a podcast. If inactive the podcast \
 will not be refreshed automatically.")),
@@ -574,6 +554,8 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
 use crate::models::episode::Episode;
 use crate::models::tag::Tag;
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
@@ -596,7 +578,6 @@ pub struct DeletePodcast {
 #[utoipa::path(
 delete,
 path="/podcasts/{id}",
-context_path="/api/v1",
 request_body=DeletePodcast,
 responses(
 (status = 200, description = "Deletes a podcast by id")),
@@ -632,7 +613,6 @@ pub struct Params {
 #[utoipa::path(
 get,
 path="/proxy/podcast",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Proxies a podcast so people can stream podcasts from the remote \
 server")),
@@ -644,7 +624,7 @@ pub(crate) async fn proxy_podcast(
     req: axum::extract::Request
 ) -> Result<Body, CustomError> {
     let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
-    let mut headers = req.headers_mut();
+    let headers = req.headers_mut();
 
     let is_auth_enabled =
         is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
@@ -667,7 +647,7 @@ pub(crate) async fn proxy_podcast(
         return Err(CustomErrorInner::NotFound.into());
     }
     let episode = opt_res.unwrap();
-    for (header) in vec!["host", "referer", "sec-fetch-site"] {
+    for header in ["host", "referer", "sec-fetch-site"] {
         headers.remove(header);
     }
 
@@ -685,9 +665,8 @@ pub(crate) async fn proxy_podcast(
 }
 
 #[utoipa::path(
-    get,
+    put,
     path="/podcasts/{id}/settings",
-    context_path="/api/v1",
     responses(
 (status = 200, description = "Updates the settings of a podcast by id")),
     tag="podcasts"
@@ -709,7 +688,6 @@ pub async fn update_podcast_settings(
 #[utoipa::path(
     get,
     path="/podcasts/{id}/settings",
-    context_path="/api/v1",
     responses(
 (status = 200, description = "Gets the settings of a podcast by id")),
     tag="podcasts"
@@ -736,7 +714,6 @@ pub async fn get_podcast_settings(
 #[utoipa::path(
     post,
     path="/podcasts/formatting",
-    context_path="/api/v1",
     responses(
 (status = 200, description = "Retrieve the podcast sample format")),
     tag="podcasts"
@@ -774,26 +751,26 @@ pub async fn retrieve_podcast_sample_format(
     }
 }
 
-pub fn get_podcast_router() -> Router {
-    Router::new()
-                .route("/podcasts/filter", get(get_filter))
-                .route("/podcasts/search", get(search_podcasts))
-                .route("/podcasts/{id}", get(find_podcast_by_id))
-                .route("/podcasts", get(find_all_podcasts))
-                .route("/podcasts/{type_of}/{podcast}/search", get(find_podcast))
-                .route("/podcasts/itunes", post(add_podcast))
-                .route("/podcasts/feed", post(add_podcast_by_feed))
-                .route("/podcasts/opml", post(import_podcasts_from_opml))
-                .route("/podcasts/podindex", post(add_podcast_from_podindex))
-                .route("/podcasts/favored", get(get_favored_podcasts))
-                .route("/podcasts/all", post(refresh_all_podcasts))
-                .route("/podcasts/{id}/refresh", post(download_podcast))
-                .route("/podcasts/favored", put(favorite_podcast))
-                .route("/podcasts/{id}/active", put(update_active_podcast))
-                .route("/podcasts/{id}", delete(delete_podcast))
-                .route("/proxy/podcast", get(proxy_podcast))
-                .route("/podcasts/{id}/settings", put(update_podcast_settings))
-                .route("/podcasts/{id}/settings", get(get_podcast_settings))
-                .route("/podcasts/formatting", post(retrieve_podcast_sample_format))
-                .route("/podcasts/{id}/query", get(query_for_podcast))
+pub fn get_podcast_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+                .routes(routes!(get_filter))
+        .routes(routes!(search_podcasts))
+        .routes(routes!(find_podcast_by_id))
+        .routes(routes!(find_all_podcasts))
+        .routes(routes!(find_podcast))
+        .routes(routes!(add_podcast))
+        .routes(routes!(add_podcast_by_feed))
+        .routes(routes!(import_podcasts_from_opml))
+        .routes(routes!(add_podcast_from_podindex))
+        .routes(routes!(get_favored_podcasts))
+        .routes(routes!(refresh_all_podcasts))
+        .routes(routes!(download_podcast))
+        .routes(routes!(favorite_podcast))
+        .routes(routes!(update_active_podcast))
+        .routes(routes!(delete_podcast))
+        .routes(routes!(proxy_podcast))
+        .routes(routes!(update_podcast_settings))
+        .routes(routes!(get_podcast_settings))
+        .routes(routes!(retrieve_podcast_sample_format))
+        .routes(routes!(query_for_podcast))
 }

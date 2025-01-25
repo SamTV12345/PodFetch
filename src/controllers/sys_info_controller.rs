@@ -1,5 +1,5 @@
-use axum::{Json, Router};
-use axum::routing::{get, post};
+use axum::Json;
+use axum::routing::get;
 use crate::models::user::User;
 
 use fs_extra::dir::get_size;
@@ -15,7 +15,6 @@ pub mod built_info {
 #[utoipa::path(
 get,
 path="/sys/info",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the system information",
 body = SysExtraInfo)),
@@ -54,6 +53,7 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner};
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
 use crate::models::settings::ConfigModel;
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -139,7 +139,6 @@ impl From<&Disk> for SimplifiedDisk {
 #[utoipa::path(
 get,
 path="/sys/config",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the environment configuration",
 body=SysExtraInfo)),
@@ -154,7 +153,6 @@ pub async fn get_public_config() -> Json<ConfigModel> {
 #[utoipa::path(
 post,
 path="/login",
-context_path="/api/v1",
 request_body=LoginRequest,
 responses(
 (status = 200, description = "Performs a login if basic auth is enabled",
@@ -207,7 +205,6 @@ pub struct VersionInfo {
 #[utoipa::path(
 get,
 path="/info",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets the info of the server")),
 tag="info"
@@ -224,8 +221,8 @@ pub async fn get_info() -> Json<VersionInfo> {
     Json(version)
 }
 
-pub fn get_sys_info_router() -> Router {
-    Router::new()
+pub fn get_sys_info_router() -> OpenApiRouter {
+    OpenApiRouter::new()
         .route("/sys/info", get(get_sys_info))
 
         .route("/info", get(get_info))

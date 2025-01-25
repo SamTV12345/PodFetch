@@ -1,7 +1,6 @@
-use axum::{debug_handler, Extension, Json, Router};
+use axum::{Extension, Json};
 use axum::extract::Path;
 use axum::http::StatusCode;
-use axum::routing::{delete, get, post, put};
 use crate::models::color::Color;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;
@@ -9,6 +8,8 @@ use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct TagCreate {
@@ -26,7 +27,6 @@ pub struct TagWithPodcast {
 #[utoipa::path(
 post,
 path="/tags",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Creates a new tag",
 body = TagCreate)),
@@ -42,13 +42,12 @@ pub async fn insert_tag(
         tag_create.color.to_string(),
         requester.username.clone(),
     );
-    new_tag.insert_tag().map(|tag| Json(tag))
+    new_tag.insert_tag().map(Json)
 }
 
 #[utoipa::path(
 get,
 path="/tags",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Gets all tags of a user", body=Vec<Tag>)),
 tag="tags"
@@ -61,7 +60,6 @@ pub async fn get_tags(requester: Extension<User>) -> Result<Json<Vec<Tag>>, Cust
 #[utoipa::path(
 delete,
 path="/tags/{tag_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Deletes a tag by id")),
 tag="tags"
@@ -85,7 +83,6 @@ pub async fn delete_tag(
 #[utoipa::path(
 put,
 path="/tags/{tag_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Updates a tag by id")),
 tag="tags"
@@ -114,7 +111,6 @@ pub async fn update_tag(
 #[utoipa::path(
 post,
 path="/tags/{tag_id}/{podcast_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Adds a podcast to a tag", body=TagsPodcast)),
 tag="tags"
@@ -137,7 +133,6 @@ pub async fn add_podcast_to_tag(
 #[utoipa::path(
 delete,
 path="/tags/{tag_id}/{podcast_id}",
-context_path="/api/v1",
 responses(
 (status = 200, description = "Deletes a podcast from a tag")),
 tag="tags"
@@ -159,12 +154,12 @@ pub async fn delete_podcast_from_tag(
 }
 
 
-pub fn get_tags_router() -> Router {
-    Router::new()
-        .route("/tags", post(insert_tag))
-        .route("/tags", get(get_tags))
-        .route("/tags/{tag_id}", delete(delete_tag))
-        .route("/tags/{tag_id}", put(update_tag))
-        .route("/tags/{tag_id}/{podcast_id}", post(add_podcast_to_tag))
-        .route("/tags/{tag_id}/{podcast_id}", delete(delete_podcast_from_tag))
+pub fn get_tags_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(insert_tag))
+        .routes(routes!(get_tags))
+        .routes(routes!(delete_tag))
+        .routes(routes!(update_tag))
+        .routes(routes!(add_podcast_to_tag))
+        .routes(routes!(delete_podcast_from_tag))
 }

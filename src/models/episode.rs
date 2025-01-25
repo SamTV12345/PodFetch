@@ -440,7 +440,7 @@ impl Episode {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct EpisodeDto {
     pub podcast: String,
     pub episode: String,
@@ -453,7 +453,7 @@ pub struct EpisodeDto {
     pub device: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[derive(PartialEq, Clone)]
 pub enum EpisodeAction {

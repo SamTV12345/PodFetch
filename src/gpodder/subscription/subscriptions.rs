@@ -1,18 +1,19 @@
-use axum::{debug_handler, Extension, Json, Router};
+use axum::{Extension, Json};
 use axum::extract::{Path, Query};
-use axum::http::Response;
-use axum::routing::{get, post};
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct SubscriptionRetrieveRequest {
     pub since: i32,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, ToSchema)]
 pub struct SubscriptionUpdateRequest {
     pub add: Vec<String>,
     pub remove: Vec<String>,
@@ -24,7 +25,16 @@ pub struct SubscriptionPostResponse {
     pub update_urls: Vec<Vec<String>>,
 }
 
-#[debug_handler]
+#[utoipa::path(
+    get,
+    path="/subscriptions/{username}/{deviceid}",
+    request_body=SubscriptionRetrieveRequest,
+    responses(
+        (status = 200, description = "Gets all subscriptions for a device"),
+        (status = 403, description = "Forbidden")
+    ),
+    tag="gpodder"
+)]
 pub async fn get_subscriptions(
     Path(paths): Path<(String, String)>,
     Extension(opt_flag): Extension<Option<Session>>,
@@ -54,6 +64,16 @@ pub async fn get_subscriptions(
     }
 }
 
+#[utoipa::path(
+    get,
+    path="/subscriptions/{username}",
+    request_body=SubscriptionRetrieveRequest,
+    responses(
+        (status = 200, description = "Gets all subscriptions"),
+        (status = 403, description = "Forbidden")
+    ),
+    tag="gpodder"
+)]
 pub async fn get_subscriptions_all(
     Path(paths): Path<String>,
     Extension(opt_flag): Extension<Option<Session>>,
@@ -76,7 +96,16 @@ pub async fn get_subscriptions_all(
     }
 }
 
-
+#[utoipa::path(
+    post,
+    path="/subscriptions/{username}/{deviceid}",
+    request_body=SubscriptionUpdateRequest,
+    responses(
+        (status = 200, description = "Uploads subscription changes"),
+        (status = 403, description = "Forbidden")
+    ),
+    tag="gpodder"
+)]
 pub async fn upload_subscription_changes(
         Extension(opt_flag): Extension<Option<Session>>,
         paths: Path<(String, String)>,
@@ -103,9 +132,9 @@ pub async fn upload_subscription_changes(
 }
 
 
-pub fn get_subscription_router() -> Router {
-    Router::new()
-        .route("/subscriptions/{username}/{deviceid}.json", post(upload_subscription_changes))
-        .route("/subscriptions/{username}.json", get(get_subscriptions_all))
-        .route("/subscriptions/{username}/{deviceid}.json", get(get_subscriptions))
+pub fn get_subscription_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(upload_subscription_changes))
+        .routes(routes!(get_subscriptions_all))
+        .routes(routes!(get_subscriptions))
 }

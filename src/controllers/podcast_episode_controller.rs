@@ -15,11 +15,12 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
-use axum::{debug_handler, Extension, Json, Router};
-use axum::extract::{Path, Query, State};
+use axum::{debug_handler, Extension, Json};
+use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
-use axum::routing::{delete, get, post, put};
 use reqwest::StatusCode;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use crate::controllers::server::ChatServerHandle;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 
@@ -39,7 +40,6 @@ pub struct PodcastEpisodeWithHistory {
 #[utoipa::path(
 get,
 path="/podcasts/{id}/episodes",
-context_path = "/api/v1",
 responses(
 (status = 200, description = "Finds all podcast episodes of a given podcast id.", body =
 [PodcastEpisode])),
@@ -83,7 +83,6 @@ pub struct TimeLinePodcastEpisode {
 #[utoipa::path(
     get,
     path="/podcasts/available/gpodder",
-    context_path = "/api/v1",
     responses(
 (status = 200, description = "Finds all podcast not in webview", body =
 [PodcastEpisode])),
@@ -119,7 +118,6 @@ pub struct TimelineQueryParams {
 #[utoipa::path(
 get,
 path="/podcasts/timeline",
-context_path = "/api/v1",
 responses(
 (status = 200, description = "Gets the current timeline of the user")),
 tag = "podcasts"
@@ -162,7 +160,6 @@ pub struct FavoritePut {
 #[utoipa::path(
 put,
 path="/podcasts/{id}/episodes/favor",
-    context_path = "/api/v1",
     responses(
 (status = 200, description = "Likes a given podcast episode.", body=FavoritePut)),
     tag = "podcast_episodes"
@@ -184,7 +181,6 @@ pub async fn like_podcast_episode(
 #[utoipa::path(
 put,
 path="/podcasts/{id}/episodes/download",
-context_path = "/api/v1",
 responses(
 (status = 200, description = "Starts the download of a given podcast episode")),
 tag = "podcast_episodes"
@@ -217,7 +213,6 @@ pub async fn download_podcast_episodes_of_podcast(
 #[utoipa::path(
 delete,
 path="/episodes/{id}/download",
-context_path = "/api/v1",
 responses(
 (status = 204, description = "Removes the download of a given podcast episode. This very episode \
 won't be included in further checks/downloads unless done by user.")),
@@ -250,7 +245,6 @@ pub struct EpisodeFormatDto {
 #[utoipa::path(
     post,
     path="/episodes/formatting",
-    context_path = "/api/v1",
     responses(
 (status = 204, description = "Retrieve episode sample format")),
     tag = "podcast_episodes"
@@ -296,13 +290,13 @@ pub async fn retrieve_episode_sample_format(
     Ok(result)
 }
 
-pub fn get_podcast_episode_router() -> Router {
-    Router::new()
-        .route("/podcasts/{id}/episodes", get(find_all_podcast_episodes_of_podcast))
-        .route("/podcasts/available/gpodder", get(get_available_podcasts_not_in_webview))
-        .route("/podcasts/timeline", get(get_timeline))
-        .route("/podcasts/{id}/episodes/favor", put(like_podcast_episode))
-        .route("/podcasts/{id}/episodes/download", put(download_podcast_episodes_of_podcast))
-        .route("/episodes/{id}/download", delete(delete_podcast_episode_locally))
-        .route("/episodes/formatting", post(retrieve_episode_sample_format))
+pub fn get_podcast_episode_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(find_all_podcast_episodes_of_podcast))
+        .routes(routes!(get_available_podcasts_not_in_webview))
+        .routes(routes!(get_timeline))
+        .routes(routes!(like_podcast_episode))
+        .routes(routes!(download_podcast_episodes_of_podcast))
+        .routes(routes!(delete_podcast_episode_locally))
+        .routes(routes!(retrieve_episode_sample_format))
 }

@@ -1,65 +1,43 @@
-use std::convert::Infallible;
-use axum::middleware::from_fn;
-use axum::Router;
-use axum::routing::post;
-use axum::{http::{StatusCode}};
-use tower::Layer;
-use crate::adapters::api::controllers::device_controller::{get_devices_of_user, post_device};
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::manifest_controller::get_manifest;
-use crate::controllers::podcast_controller::proxy_podcast;
-use crate::controllers::websocket_controller::{
-    get_rss_feed, get_rss_feed_for_podcast,
-};
 use crate::gpodder::auth::authentication::login;
-use crate::gpodder::parametrization::{get_client_parametrization, get_client_parametrization_router};
-use crate::gpodder::subscription::subscriptions::{get_subscriptions, get_subscriptions_all, upload_subscription_changes};
-use crate::{get_api_config, get_ui_config};
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
-use crate::gpodder::session_middleware::handle_cookie_session;
+use crate::gpodder::parametrization::{get_client_parametrization_router};
+use crate::{get_api_config};
+use crate::gpodder::device::device_controller::get_device_router;
+use crate::gpodder::episodes::gpodder_episodes::get_gpodder_episodes_router;
+use crate::gpodder::subscription::subscriptions::get_subscription_router;
 
-pub fn global_routes() -> Router {
+pub fn global_routes() -> OpenApiRouter {
     let base_path = ENVIRONMENT_SERVICE
         .sub_directory
         .clone()
         .unwrap_or("/".to_string());
     let service = get_api_config();
 
-    match base_path == "" {
+    let mut router = match base_path.is_empty() {
         true=>{
-            Router::new()
+            OpenApiRouter::new()
                     .merge(get_client_parametrization_router())
                     .merge(service)
         }
         false=>{
-            Router::new()
-                .nest(&base_path, Router::new()
+            OpenApiRouter::new()
+                .nest(&base_path, OpenApiRouter::new()
                     .merge(get_client_parametrization_router())
                     .merge(service))
         }
-    }
+    };
 
-
-        //.merge(get_gpodder_api())
-}
-
-/*pub fn get_gpodder_api() -> Router {
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
-        Router::new()
-            .route("/auth/{username}/login.json", post(login))
-            .merge(get_authenticated_gpodder())
-    } else {
-        Router::new()
-            .layer(from_fn(|_, _| async {
-                log::error!("Gpodder integration is disabled!!");
-                StatusCode::NOT_FOUND
-            }))
+        use crate::gpodder::auth::authentication::__path_login;
+        router = router.nest("/api/2",OpenApiRouter::new()
+            .routes(routes!(login))
+            .merge(get_subscription_router())
+            .merge(get_device_router())
+            .merge(get_gpodder_episodes_router())
+            //.layer(from_fn(handle_cookie_session))
+        );
     }
-}*/
-
-fn get_authenticated_gpodder() -> Router {
-
-    Router::new()
-        .layer(from_fn(handle_cookie_session))
+    router
 }

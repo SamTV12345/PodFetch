@@ -1,6 +1,7 @@
+use utoipa::ToSchema;
 use crate::domain::models::device::model::Device;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct DeviceResponse {
     id: String,
     caption: String,

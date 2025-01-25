@@ -1,11 +1,8 @@
 use axum::extract::{Path, Query};
-use axum::Router;
-use axum::routing::get;
 use crate::models::podcasts::Podcast;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -18,6 +15,8 @@ use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Deserialize, Serialize)]
 pub struct RSSQuery {
@@ -33,10 +32,9 @@ pub struct RSSAPiKey {
 #[utoipa::path(
 get,
 path="/rss",
-context_path = "/api/v1",
 responses(
 (status = 200, description = "Gets the complete rss feed"))
-, tag = "info")]
+, tag = "rss")]
 pub async fn get_rss_feed(
     Query(query): Query<Option<RSSQuery>>,
     Query(api_key): Query<Option<RSSAPiKey>>,
@@ -137,10 +135,9 @@ fn generate_itunes_extension_conditionally(
 #[utoipa::path(
 get,
 path="/rss/{id}",
-context_path = "/api/v1",
 responses(
 (status = 200, description = "Gets a specific rss feed"))
-, tag = "info")]
+, tag = "rss")]
 pub async fn get_rss_feed_for_podcast(
     Path(id): Path<i32>,
     Query(api_key): Query<Option<RSSAPiKey>>,
@@ -285,8 +282,8 @@ fn get_itunes_owner(name: &str, email: &str) -> ITunesOwner {
         .build()
 }
 
-pub fn get_websocket_router() -> Router {
-    Router::new()
-        .route("/rss", get(get_rss_feed))
-        .route("/rss/{id}", get(get_rss_feed_for_podcast))
+pub fn get_websocket_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_rss_feed))
+        .routes(routes!(get_rss_feed_for_podcast))
 }
