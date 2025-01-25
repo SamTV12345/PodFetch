@@ -7,6 +7,7 @@ use crate::utils::time::get_current_timestamp;
 use chrono::DateTime;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use crate::utils::gpodder_trimmer::trim_from_path;
 
 #[derive(Serialize, Deserialize)]
 pub struct EpisodeActionResponse {
@@ -42,17 +43,16 @@ pub async fn get_episode_actions(
     Query(since): Query<EpisodeSinceRequest>,
     Path(username): Path<String>,
 ) -> Result<Json<EpisodeActionResponse>, CustomError> {
-
+    let username = trim_from_path(&username);
     match opt_flag {
         Some(flag) => {
-            let username = username.clone();
-            if flag.username != username.clone() {
+            if flag.username != username {
                 return Err(CustomErrorInner::Forbidden.into());
             }
 
             let since_date = DateTime::from_timestamp(since.since, 0).map(|v| v.naive_utc());
             let mut actions = Episode::get_actions_by_username(
-                username.clone(),
+                username,
                 since_date,
                 since.device.clone(),
                 since.aggregate.clone(),
@@ -87,18 +87,19 @@ pub async fn get_episode_actions(
     )
 ]
 pub async fn upload_episode_actions(
-    username: Path<String>,
+    Path(username): Path<String>,
     Extension(opt_flag): Extension<Option<Session>>,
     Json(podcast_episode): Json<Vec<EpisodeDto>>,
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
+    let username = trim_from_path(&username);
     match opt_flag {
         Some(flag) => {
-            if flag.username != username.clone() {
+            if flag.username != username {
                 return Err(CustomErrorInner::Forbidden.into());
             }
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
-                let episode = Episode::convert_to_episode(episode, username.clone());
+                let episode = Episode::convert_to_episode(episode, username.to_string());
                 inserted_episodes.push(Episode::insert_episode(&episode.clone()).unwrap());
             });
             Ok(Json(EpisodeActionPostResponse {

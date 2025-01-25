@@ -1,5 +1,8 @@
-import {Podcast, PodcastEpisode} from "./CommonSlice";
 import {create} from "zustand";
+import {components} from "../../schema";
+
+
+
 
 type AudioMetadata = {
     currentTime: number,
@@ -9,17 +12,17 @@ type AudioMetadata = {
 
 type AudioPlayerProps = {
     isPlaying: boolean,
-    currentPodcastEpisode: PodcastEpisode|undefined,
-    currentPodcast: Podcast|undefined,
+    currentPodcastEpisode: components["schemas"]["PodcastEpisodeDto"]|undefined,
+    currentPodcast: components["schemas"]["PodcastDto"]|undefined,
     metadata: AudioMetadata|undefined,
     volume: number,
     playBackRate: number,
     setPlaying: (isPlaying: boolean) => void,
-    setCurrentPodcastEpisode: (currentPodcastEpisode: PodcastEpisode) => void,
+    setCurrentPodcastEpisode: (currentPodcastEpisode: components["schemas"]["PodcastEpisodeDto"]) => void,
     setMetadata: (metadata: AudioMetadata) => void,
     setCurrentTimeUpdate: (currentTime: number) => void,
     setCurrentTimeUpdatePercentage: (percentage: number) => void,
-    setCurrentPodcast: (currentPodcast: Podcast) => void,
+    setCurrentPodcast: (currentPodcast: components["schemas"]["PodcastDto"]) => void,
     setVolume: (volume: number) => void,
     setPlayBackRate: (playBackRate: number) => void
 }
@@ -33,7 +36,7 @@ const useAudioPlayer = create<AudioPlayerProps>()((set, get) => ({
     volume: 100,
     playBackRate: 1,
     setPlaying: (isPlaying: boolean) => set({isPlaying}),
-    setCurrentPodcastEpisode: (currentPodcastEpisode: PodcastEpisode) => set({currentPodcastEpisode}),
+    setCurrentPodcastEpisode: (currentPodcastEpisode: components["schemas"]["PodcastEpisodeDto"]) => set({currentPodcastEpisode}),
     setMetadata: (metadata: AudioMetadata) => set({metadata}),
     setCurrentTimeUpdate: (currentTime: number) => {
         const metadata = get().metadata
@@ -47,7 +50,7 @@ const useAudioPlayer = create<AudioPlayerProps>()((set, get) => ({
             set({metadata: {...metadata, percentage, currentTime: (percentage/100)*metadata.duration}})
         }
     },
-    setCurrentPodcast: (currentPodcast: Podcast) => set({currentPodcast}),
+    setCurrentPodcast: (currentPodcast: components["schemas"]["PodcastDto"]) => set({currentPodcast}),
     setVolume: (volume: number) => set({volume}),
     setPlayBackRate: (playBackRate: number) => set({playBackRate})
 }))

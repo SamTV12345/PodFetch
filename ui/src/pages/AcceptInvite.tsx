@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import { formatTime } from '../utils/Utilities'
 import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
@@ -10,12 +9,14 @@ import { CustomInput } from '../components/CustomInput'
 import { Heading2 } from '../components/Heading2'
 import { Loading } from '../components/Loading'
 import { LoginData } from './Login'
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 export const AcceptInvite = () => {
     const { control, handleSubmit, formState: {} } = useForm<LoginData>()
     const navigate = useNavigate()
     const params = useParams()
-    const [invite, setInvite] = useState<Invite>()
+    const [invite, setInvite] = useState<components["schemas"]["Invite"]>()
     const [errored, setErrored] = useState<boolean>(false)
     const { t } = useTranslation()
 
@@ -29,13 +30,18 @@ export const AcceptInvite = () => {
     }
 
     useEffect(() => {
-        axios.get(  '/users/invites/' + params.id)
-            .then((res) => {
-                setInvite(res.data)
-            })
-            .catch(() => {
+        client.GET("/api/v1/invites/{invite_id}", {
+            params: {
+                path: {
+                    invite_id: params.id!
+                }
+            }
+        }).then((resp)=>{
+            setInvite(resp.data!)
+            if (!resp.response.ok) {
                 setErrored(true)
-            })
+            }
+        })
     }, [])
 
     if (!invite && !errored) {
@@ -43,10 +49,12 @@ export const AcceptInvite = () => {
     }
 
     const onSubmit: SubmitHandler<LoginData> = (data) => {
-        axios.post(  '/users/', {
-            username: data.username,
-            password: data.password,
-            inviteId: params.id
+        client.POST("/api/v1/users/", {
+            body: {
+                username: data.username,
+                password: data.password,
+                inviteId: params.id!
+            }
         }).then(() => {
             enqueueSnackbar(t('account-created'), { variant: 'success' })
             navigate('/')
@@ -85,7 +93,7 @@ export const AcceptInvite = () => {
                             {t('explicit-content')}
                         </dt>
                         <dd className="text-sm text-[--fg-secondary-color]">
-                            {invite.explicitContent ? t('yes') : t('no')}
+                            {invite.explicitConsent ? t('yes') : t('no')}
                         </dd>
                     </div>
                     <div>

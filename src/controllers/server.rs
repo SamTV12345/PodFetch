@@ -8,10 +8,8 @@ use crate::models::user::User;
 use std::sync::OnceLock;
 use futures::executor::block_on;
 use socketioxide::SocketIo;
-use tokio::sync::mpsc;
 
 type RoomId = String;
-pub type ConnId = usize;
 
 pub type Msg = String;
 
@@ -107,26 +105,6 @@ impl From<Podcast> for PodcastAddedMessage {
             podcast: value.into(),
         }
     }
-}
-
-/// A command received by the [`ChatServer`].
-#[derive(Debug)]
-enum Command {
-    Broadcast {
-        room: RoomId,
-        msg: Msg,
-    },
-    Connect {
-        conn_tx: mpsc::UnboundedSender<Msg>,
-    },
-
-    Disconnect {
-        conn: ConnId,
-    },
-    Message {
-        msg: Msg,
-        conn: ConnId,
-    },
 }
 
 pub static SOCKET_IO_LAYER: OnceLock<SocketIo> = OnceLock::new();

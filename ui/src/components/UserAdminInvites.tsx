@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { useSnackbar } from 'notistack'
 import useCommon from '../store/CommonSlice'
 import {formatTime } from '../utils/Utilities'
@@ -11,6 +10,7 @@ import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
 import copy from 'copy-text-to-clipboard'
+import {client} from "../utils/http";
 
 export type Invite = {
     id: string,
@@ -76,13 +76,12 @@ export const UserAdminInvites = () => {
     }, [invites, selectedInviteType])
 
     useEffect(() => {
-        axios.get(  '/users/invites')
-            .then(v => {
-                setInvites(v.data)
-                setError(false)
-            }).catch(() => {
-                setError(true)
-            })
+        client.GET("/api/v1/invites").then((v)=>{
+            setInvites(v.data!)
+            setError(false)
+        }).catch(()=>{
+            setError(true)
+        })
     }, [])
 
     if (error === undefined) {
@@ -140,11 +139,16 @@ export const UserAdminInvites = () => {
                             <tr className="border-b border-[--border-color]" key={i.id}>
                                 <td className="pr-2 py-4">
                                     <button className="text-left text-[--fg-color] hover:text-[--fg-color-hover]" onClick={() => {
-                                        axios.get(  '/users/invites/' + i.id + '/link')
-                                            .then(v => {
-                                                copy(v.data)
-                                                enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000, variant: 'success'})
-                                            })
+                                        client.GET("/api/v1/invites/{invite_id}/link", {
+                                            params: {
+                                                path: {
+                                                    invite_id: i.id
+                                                }
+                                            }
+                                        }).then((v)=>{
+                                            copy(v.data!)
+                                            enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000, variant: 'success'})
+                                        })
                                     }} title={t('copy-link')}>
                                         {i.id}
                                         <span className="material-symbols-outlined align-middle ml-1">link</span>
@@ -168,10 +172,15 @@ export const UserAdminInvites = () => {
                                 </td>
                                 <td className="pl-2 py-4">
                                     <button className="flex items-center float-right text-[--danger-fg-color] hover:text-[--danger-fg-color-hover]" onClick={() => {
-                                        axios.delete(  '/users/invites/' + i.id)
-                                            .then(() => {
-                                                enqueueSnackbar(t('invite-deleted'), { variant: 'success' })
-                                                setInvites(invites.filter(v => v.id !== i.id))
+                                        client.DELETE("/api/v1/invites/{invite_id}", {
+                                            params: {
+                                                path: {
+                                                    invite_id: i.id
+                                                }
+                                            }
+                                        }).then(() => {
+                                            enqueueSnackbar(t('invite-deleted'), { variant: 'success' })
+                                            setInvites(invites.filter(v => v.id !== i.id))
                                         })
                                     }}>
                                         <span className="material-symbols-outlined mr-1">delete</span>

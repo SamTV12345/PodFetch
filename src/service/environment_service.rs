@@ -17,8 +17,9 @@ use s3::{Bucket, Region};
 use std::env;
 use std::env::var;
 use url::Url;
+use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OidcConfig {
     pub authority: String,

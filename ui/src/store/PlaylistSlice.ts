@@ -1,15 +1,15 @@
-import {PlaylistDto} from "../models/Playlist";
 import {create} from "zustand";
+import {components} from "../../schema";
 
 interface PlaylistState {
-    playlist: PlaylistDto[],
+    playlist: components["schemas"]["PlaylistDto"][],
     createPlaylistOpen: boolean,
-    currentPlaylistToEdit: PlaylistDto|undefined,
-    selectedPlaylist: PlaylistDto|undefined,
-    setPlaylist: (playlist: PlaylistDto[]) => void,
+    currentPlaylistToEdit: components["schemas"]["PlaylistDto"]|undefined,
+    selectedPlaylist: components["schemas"]["PlaylistDto"]|undefined,
+    setPlaylist: (playlist: components["schemas"]["PlaylistDto"][]) => void,
     setCreatePlaylistOpen: (createPlaylistOpen: boolean) => void,
-    setCurrentPlaylistToEdit: (currentPlaylistToEdit: PlaylistDto) => void,
-    setSelectedPlaylist: (selectedPlaylist: PlaylistDto) => void
+    setCurrentPlaylistToEdit: (currentPlaylistToEdit: components["schemas"]["PlaylistDto"]) => void,
+    setSelectedPlaylist: (selectedPlaylist: components["schemas"]["PlaylistDto"]) => void
 }
 
 
@@ -18,10 +18,10 @@ const usePlaylist = create<PlaylistState>((set, get) => ({
     createPlaylistOpen: false,
     selectedPlaylist: undefined,
     currentPlaylistToEdit: undefined,
-    setPlaylist: (playlist: PlaylistDto[]) => set({playlist}),
+    setPlaylist: (playlist: components["schemas"]["PlaylistDto"][]) => set({playlist}),
     setCreatePlaylistOpen: (createPlaylistOpen: boolean) => set({createPlaylistOpen}),
-    setSelectedPlaylist: (selectedPlaylist: PlaylistDto) => set({selectedPlaylist}),
-    setCurrentPlaylistToEdit: (currentPlaylistToEdit: PlaylistDto) => set({currentPlaylistToEdit})
+    setSelectedPlaylist: (selectedPlaylist: components["schemas"]["PlaylistDto"]) => set({selectedPlaylist}),
+    setCurrentPlaylistToEdit: (currentPlaylistToEdit: components["schemas"]["PlaylistDto"]) => set({currentPlaylistToEdit})
 }))
 
 export default usePlaylist

@@ -1,10 +1,11 @@
-import axios, {AxiosResponse} from "axios";
 import {Setting} from "../models/Setting";
 import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {Podcast} from "../store/CommonSlice";
 import {handleAddPodcast} from "../utils/ErrorSnackBarResponses";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 type GPodderIntegrationItem = {
     device: string,
@@ -13,24 +14,25 @@ type GPodderIntegrationItem = {
 
 
 export const GPodderIntegration = ()=> {
-    const [gpodderOnlyPodcasts, setGPodderOnlyPodcasts] = useState<GPodderIntegrationItem[]>([])
+    const [gpodderOnlyPodcasts, setGPodderOnlyPodcasts] = useState<components["schemas"]["GPodderAvailablePodcasts"][]>([])
     const {t} = useTranslation()
 
 
     useEffect(() => {
-        axios.get('/podcasts/available/gpodder')
-            .then((res: AxiosResponse<GPodderIntegrationItem[]>) => {
-                setGPodderOnlyPodcasts(res.data)
-            })
+        client.GET("/api/v1/podcasts/available/gpodder").then((gpitem)=>{
+           setGPodderOnlyPodcasts(gpitem.data!);
+        })
     }, []);
 
 
     const addPodcast = (feedUrl: string)=>{
         setGPodderOnlyPodcasts(gpodderOnlyPodcasts.filter(p=>p.podcast!=feedUrl))
-        axios.post(  '/podcasts/feed', {
-            rssFeedUrl: feedUrl
-        }).then((v: AxiosResponse<Podcast>) => {
-            handleAddPodcast(v.status, v.data.name, t)
+        client.POST(  "/api/v1/podcasts/feed", {
+            body: {
+                rssFeedUrl: feedUrl
+            }
+        }).then((v) => {
+            handleAddPodcast(v.response.status, v.data!.name, t)
         })
     }
 

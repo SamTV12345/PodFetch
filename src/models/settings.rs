@@ -37,7 +37,7 @@ pub struct Setting {
     pub direct_paths: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigModel {
     pub podindex_configured: bool,

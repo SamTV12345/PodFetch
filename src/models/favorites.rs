@@ -12,6 +12,7 @@ use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(
     Queryable,
@@ -24,6 +25,7 @@ use serde::{Deserialize, Serialize};
     Insertable,
     Clone,
     AsChangeset,
+    ToSchema
 )]
 #[diesel(belongs_to(Podcast, foreign_key = podcast_id))]
 #[diesel(belongs_to(User, foreign_key = username))]

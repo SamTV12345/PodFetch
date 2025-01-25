@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import useCommon from '../store/CommonSlice'
 import App from '../App'
 import { AudioComponents } from '../components/AudioComponents'
@@ -21,10 +20,14 @@ export const Root = () => {
         const res = test.split(':')
 
         auth_local && setLoginData({ password: res[1], username: res[0] })
-        axios.defaults.headers.common['Authorization'] = 'Basic ' + auth_local
+        useCommon.getState().setHeaders({ Authorization: 'Basic ' + auth_local })
     }
+    const isAuth = useCommon(state=>state.isAuthenticated)
 
     useEffect(() => {
+        if (isAuth) {
+            return
+        }
         if (configModel) {
             if (configModel.basicAuth) {
                 const auth_local =  localStorage.getItem('auth')
@@ -37,15 +40,15 @@ export const Root = () => {
                 } else if (auth_session && !auth) {
                     extractLoginData(auth_session)
                 } else if (auth) {
-                    axios.defaults.headers.common['Authorization'] = 'Basic ' + btoa(auth.username + ':' + auth.password)
+                    useCommon.getState().setHeaders({ Authorization: 'Basic ' + btoa(auth.username + ':' + auth.password) })
                 }
-            } else if (configModel.oidcConfig && !axios.defaults.headers.common['Authorization']){
+            } else if (configModel.oidcConfig && !isAuth){
                 navigate('/login')
             }
         }
-    }, [configModel])
+    }, [configModel, isAuth])
 
-    if (!configModel || (configModel.basicAuth && !axios.defaults.headers.common['Authorization'] || (configModel.oidcConfigured && !axios.defaults.headers.common['Authorization']))) {
+    if (!configModel || (configModel.basicAuth && !isAuth || (configModel.oidcConfigured && !isAuth))) {
         return <Loading />
     }
 

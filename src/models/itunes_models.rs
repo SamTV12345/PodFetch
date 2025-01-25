@@ -1,7 +1,48 @@
 use utoipa::ToSchema;
 
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct ItunesWrapper {
+    result_count: i32,
+    results: Vec<ItunesModel>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PodindexResponse {
+    pub status: bool,
+    pub feeds: Vec<Feed>
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub enum PodcastSearchReturn {
+    Itunes(ItunesWrapper),
+    Podindex(PodindexResponse),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Feed {
+    id: i32,
+    podcast_guid: String,
+    title: String,
+    url: String,
+    original_url: String,
+    link: String,
+    description: String,
+    author: String,
+    owner_name: String,
+    image: String,
+    artwork: String,
+    last_update_time: i32,
+    last_crawl_time: i32,
+    last_parse_time: i32,
+    last_good_http_status_time: i32,
+    explicit: bool
+}
+
+
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
 pub struct ItunesModel {
     pub artist_id: Option<i64>,
     pub description: Option<String>,
@@ -37,11 +78,4 @@ pub struct ItunesModel {
     pub track_time_millis: i64,
     pub genre_ids: Vec<String>,
     pub genres: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ResponseModel {
-    pub result_count: i32,
-    pub results: Vec<ItunesModel>,
 }

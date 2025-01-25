@@ -26,14 +26,14 @@ pub struct InvitePostModel {
     explicit_consent: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserRoleUpdateModel {
     role: Role,
     explicit_consent: bool,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserCoreUpdateModel {
     pub username: String,
@@ -46,7 +46,7 @@ post,
 path="/users/",
 request_body = UserOnboardingModel,
 responses(
-(status = 200, description = "Creates a user (admin)")),
+(status = 200, description = "Creates a user (admin)", body = UserWithoutPassword)),
 tag="user"
 )]
 pub async fn onboard_user(
@@ -66,7 +66,7 @@ pub async fn onboard_user(
 get,
 path="",
 responses(
-(status = 200, description = "Gets all users", body= Vec<UserOnboardingModel>)),
+(status = 200, description = "Gets all users", body= Vec<UserWithoutPassword>)),
 tag="info"
 )]
 pub async fn get_users(Extension(requester): Extension<User>) ->
@@ -81,7 +81,7 @@ pub async fn get_users(Extension(requester): Extension<User>) ->
 get,
 path = "/{username}",
 responses(
-(status = 200, description = "Gets a user by username", body = Option<User>)),
+(status = 200, description = "Gets a user by username", body = Option<UserWithAPiKey>)),
 tag="user"
 )]
 pub async fn get_user(
@@ -103,9 +103,9 @@ pub async fn get_user(
 #[utoipa::path(
 put,
 path="/{username}/role",
-request_body = UserOnboardingModel,
+request_body = UserRoleUpdateModel,
 responses(
-(status = 200, description = "Updates the role of a user", body = Option<User>)),
+(status = 200, description = "Updates the role of a user", body = Option<UserWithoutPassword>)),
 tag="user"
 )]
 
@@ -131,7 +131,7 @@ pub async fn update_role(
 #[utoipa::path(
 put,
 path="/{username}",
-request_body=InvitePostModel,
+request_body=UserCoreUpdateModel,
 responses(
 (status = 200, description = "Creates an invite", body = UserWithAPiKey,)),
 tag="user"
@@ -221,7 +221,7 @@ pub async fn get_invites(Extension(requester): Extension<User>) -> Result<Json<V
 
 #[utoipa::path(
 get,
-path="/users/invites/{invite_id}",
+path="/invites/{invite_id}",
 responses(
 (status = 200, description = "Gets a specific invite", body = Option<Invite>)),
 tag="user"
@@ -260,7 +260,7 @@ get,
 path="/invites/{invite_id}/link",
 tag="invite",
 responses(
-(status = 200, description = "Gets an invite by id", body = Option<Invite>)))]
+(status = 200, description = "Gets an invite by id", body = Option<String>)))]
 pub async fn get_invite_link(
     Path(invite_id): Path<String>,
     requester: Extension<User>,
@@ -276,7 +276,7 @@ pub async fn get_invite_link(
 }
 
 #[utoipa::path(
-get,
+delete,
 path="/invites/{invite_id}",
 tag="invite",
 responses(
@@ -299,7 +299,7 @@ pub async fn delete_invite(
 pub fn get_user_router() -> OpenApiRouter {
     OpenApiRouter::new()
         .nest("/users", OpenApiRouter::new()
-
+            .routes(routes!(get_users))
             .routes(routes!(get_user))
             .routes(routes!(update_role))
             .routes(routes!(delete_user))

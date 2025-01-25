@@ -7,6 +7,7 @@ use crate::utils::error::CustomError;
 
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[utoipa::path(
 get,
@@ -41,6 +42,6 @@ pub async fn dismiss_notifications(
 
 pub fn get_notification_router() -> OpenApiRouter {
     OpenApiRouter::new()
-        .route("/notifications/unread", get(get_unread_notifications))
-        .route("/notifications/dismiss", put(dismiss_notifications))
+        .routes(routes!(get_unread_notifications))
+        .routes(routes!(dismiss_notifications))
 }

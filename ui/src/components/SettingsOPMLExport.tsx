@@ -1,20 +1,22 @@
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import 'material-symbols/outlined.css'
+import {client} from "../utils/http";
 
 export const SettingsOPMLExport: FC = () => {
     const { t } = useTranslation()
 
     const downloadOPML = (exportType: string) => {
-        axios({
-            url:  '/settings/opml/' + exportType,
-            method: 'GET',
-            responseType: 'blob'
+        client.GET("/api/v1/settings/opml/{type_of}", {
+            params: {
+                path: {
+                    type_of: exportType
+                }
+            }
         }).then((response) => {
             // create file link in browser's memory
-            const href = URL.createObjectURL(response.data)
+            const href = URL.createObjectURL(response.data! as unknown as Blob)
 
             // create "a" HTML element with href to file & click
             const link = document.createElement('a')

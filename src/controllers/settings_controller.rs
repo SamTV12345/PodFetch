@@ -80,16 +80,26 @@ pub enum Mode {
     Online,
 }
 
+impl From<String> for Mode {
+    fn from(val: String) -> Self {
+        match val.as_str() {
+            "local" => Mode::Local,
+            "online" => Mode::Online,
+            _ => Mode::Local,
+        }
+    }
+}
+
 #[utoipa::path(
 get,
 path="/settings/opml/{type_of}",
 responses(
-(status = 200, description = "Gets the podcasts in opml format")),
+(status = 200, description = "Gets the podcasts in opml format", body = Vec<u8>)),
 tag="settings"
 )]
 pub async fn get_opml(
     Extension(requester): Extension<User>,
-    Path(type_of): Path<Mode>,
+    Path(type_of): Path<String>,
 ) -> Result<Vec<u8>, CustomError> {
     if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
         return Err(CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into
@@ -108,7 +118,7 @@ pub async fn get_opml(
     opml.add_child(add_header()).expect("TODO: panic message");
     opml.add_child(add_podcasts(
         podcasts_found,
-        type_of,
+        Mode::from(type_of),
         &requester,
     ))
     .map_err(|e| {
@@ -181,7 +191,7 @@ fn add_podcasts(
 put,
 path="/settings/name",
 responses(
-(status = 200, description = "Updates the name settings")),
+(status = 200, description = "Updates the name settings", body = Setting)),
 tag="settings",
 request_body=UpdateNameSettings
 )]

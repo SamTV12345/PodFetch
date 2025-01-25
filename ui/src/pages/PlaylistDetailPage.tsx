@@ -2,15 +2,13 @@ import {Heading2} from "../components/Heading2";
 import {PodcastDetailItem} from "../components/PodcastDetailItem";
 import {useTranslation} from "react-i18next";
 import {useParams} from "react-router-dom";
-import axios, {AxiosResponse} from "axios";
 import {prepareOnlinePodcastEpisode, preparePodcastEpisode} from "../utils/Utilities";
-import {PlaylistDto} from "../models/Playlist";
 import usePlaylist from "../store/PlaylistSlice";
 import {useEffect} from "react";
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {PodcastInfoModal} from "../components/PodcastInfoModal";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
-import {Episode} from "../models/Episode";
+import {client} from "../utils/http";
 
 export const PlaylistDetailPage = ()=>{
     const {t} = useTranslation()
@@ -25,37 +23,55 @@ export const PlaylistDetailPage = ()=>{
     useEffect(() => {
         if(metadata){
             if(metadata.percentage>99){
-                axios.delete("/playlist/"+params.id+"/episode/"+current_podcast_episode!.id)
-                    .then(()=>{
-                        const currentIndex = selectedPlaylist!.items.findIndex(i=>i.podcastEpisode.id===current_podcast_episode!.id)
-                        if(currentIndex === selectedPlaylist!.items.length-1){
-                            return
+                client.DELETE("/api/v1/playlist/{playlist_id}/episode/{episode_id}", {
+                    params: {
+                        path: {
+                            playlist_id: params.id!,
+                            episode_id: current_podcast_episode!.id
                         }
-                        const nextEpisode = selectedPlaylist!.items[currentIndex+1]
-                        axios.get("/podcasts/episode/" + nextEpisode.podcastEpisode.episode_id)
-                            .then((response: AxiosResponse<Episode>) => {
-                                nextEpisode.podcastEpisode.status
-                                    ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data))
-                                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data))
+                    }
+                }).then(()=>{
+                    const currentIndex = selectedPlaylist!.items.findIndex(i=>i.podcastEpisode.id===current_podcast_episode!.id)
+                    if(currentIndex === selectedPlaylist!.items.length-1){
+                        return
+                    }
+                    const nextEpisode = selectedPlaylist!.items[currentIndex+1]!
+                    client.GET("/api/v1/podcasts/episode/{id}", {
+                        params: {
+                            path: {
+                                id: String(nextEpisode.podcastEpisode.id)
+                            }
+                        }
+                    })
+                        .then((response) => {
+                            nextEpisode.podcastEpisode.status
+                                ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
+                                : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
 
-                               setPlaying(true)
-                            })
+                            setPlaying(true)
+                        })
 
-                   setSelectedPlaylist({
+                    setSelectedPlaylist({
                         id: selectedPlaylist!.id,
                         name: selectedPlaylist!.name,
                         items: selectedPlaylist!.items.filter(i=>i.podcastEpisode.id!==current_podcast_episode!.id)
                     })
                 })
+
             }
         }
     }, [metadata])
 
 
     useEffect(()=>{
-            axios.get("/playlist/"+params.id)
-                .then((response:AxiosResponse<PlaylistDto>)=>{
-                setSelectedPlaylist(response.data)
+        client.GET("/api/v1/playlist/{playlist_id}", {
+            params: {
+                path: {
+                    playlist_id: String(params.id)
+                }
+            }
+        }).then((response)=>{
+            setSelectedPlaylist(response.data!)
         })
     },[])
 

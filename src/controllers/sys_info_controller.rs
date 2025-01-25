@@ -54,6 +54,7 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use crate::models::settings::ConfigModel;
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -141,7 +142,7 @@ get,
 path="/sys/config",
 responses(
 (status = 200, description = "Gets the environment configuration",
-body=SysExtraInfo)),
+body=ConfigModel)),
 tag="sys"
 )]
 
@@ -223,7 +224,6 @@ pub async fn get_info() -> Json<VersionInfo> {
 
 pub fn get_sys_info_router() -> OpenApiRouter {
     OpenApiRouter::new()
-        .route("/sys/info", get(get_sys_info))
-
-        .route("/info", get(get_info))
+        .routes(routes!(get_sys_info))
+        .routes(routes!(get_info))
 }

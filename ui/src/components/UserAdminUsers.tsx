@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { useSnackbar } from 'notistack'
 import useCommon from '../store/CommonSlice'
 import { formatTime} from '../utils/Utilities'
@@ -10,6 +9,7 @@ import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
+import {client} from "../utils/http";
 
 export const UserAdminUsers = () => {
     const setSelectedUser = useCommon(state => state.setSelectedUser)
@@ -21,20 +21,26 @@ export const UserAdminUsers = () => {
     const setModalOpen = useModal(state => state.setOpenModal)
 
     useEffect(() => {
-        axios.get( '/users')
-            .then(c => {
-                setUsers(c.data)
+        client.GET("/api/v1/users")
+            .then((resp)=>{
+                setUsers(resp.data!)
                 setError(false)
-            })
-            .catch(() => setError(true))
+            }).catch(()=>{
+            setError(true)
+        })
     }, [])
 
     const deleteUser = (user: User) => {
-        axios.delete(  '/users/' + user.username)
-            .then(() => {
-                enqueueSnackbar(t('user-deleted'), { variant: 'success' })
-                setUsers(users.filter(u => u.username !== user.username))
-            })
+        client.DELETE("/api/v1/users/{username}", {
+            params: {
+                path: {
+                    username: user.username
+                }
+            }
+        }).then(() => {
+            enqueueSnackbar(t('user-deleted'), { variant: 'success' })
+            setUsers(users.filter(u => u.username !== user.username))
+        })
     }
 
     if (error === undefined) {
