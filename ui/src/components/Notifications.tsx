@@ -1,13 +1,12 @@
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import { removeHTML} from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Notification } from '../models/Notification'
 import 'material-symbols/outlined.css'
-import sanitizeHtml from "sanitize-html";
+import {client} from "../utils/http";
 
 
 const NotificationFormatter = (notification: Notification) => {
@@ -38,10 +37,13 @@ export const Notifications: FC = () => {
     )
 
     const dismissNotification = (notification: Notification) => {
-        axios.put(  '/notifications/dismiss', { id: notification.id })
-            .then(() => {
-                removeNotification(notification.id)
-            })
+        client.PUT("/api/v1/notifications/dismiss", {
+            body: {
+                id: notification.id
+            }
+        }).then(() => {
+            removeNotification(notification.id)
+        })
     }
 
     const DisplayNotification = () => {

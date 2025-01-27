@@ -2,7 +2,6 @@ import {FC, Fragment, useMemo} from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
-import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
 import {formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import 'material-symbols/outlined.css'
@@ -184,14 +183,19 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
             {/* Infinite scroll */
             index === (episodesLength - 5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    axios.get(  '/podcasts/' + params.id + '/episodes',{
+                    client.GET("/api/v1/podcasts/{id}/episodes", {
                         params: {
-                            last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1]!.podcastEpisode.date_of_recording,
-                            only_unlistened: onlyUnplayed
+                            path: {
+                                id: params.id!,
+                            },
+                            query: {
+                                last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1]!.podcastEpisode.date_of_recording,
+                                only_unlistened: onlyUnplayed
+                            }
                         }
                     })
-                        .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
-                            addPodcastEpisodes(response.data)
+                        .then((response) => {
+                            addPodcastEpisodes(response.data!)
                         })
                 }} />
             }

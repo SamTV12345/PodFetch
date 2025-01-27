@@ -1,4 +1,5 @@
 import {Podcast, PodcastEpisode} from "../../store/CommonSlice";
+import {components} from "../../../schema";
 
 export interface BroadcastMesage {
     type_of: string,
@@ -8,24 +9,24 @@ export interface BroadcastMesage {
 }
 
 export interface PodcastAdded extends BroadcastMesage {
-    podcast: Podcast
+    podcast: components["schemas"]["PodcastDto"]
 }
 
 export interface PodcastRefreshed extends BroadcastMesage {
-    podcast: Podcast
+    podcast: components["schemas"]["PodcastDto"]
 }
 export interface PodcastEpisodeAdded extends BroadcastMesage, PodcastAdded {
-    podcast_episode: PodcastEpisode
+    podcast_episode: components["schemas"]["PodcastEpisodeDto"]
 }
 
 export interface PodcastEpisodeDeleted extends BroadcastMesage, PodcastAdded {
-    podcast_episode: PodcastEpisode
+    podcast_episode: components["schemas"]["PodcastEpisodeDto"]
 }
 
 export interface PodcastEpisodeAdded extends BroadcastMesage {
-    podcast_episode: PodcastEpisode
+    podcast_episode: components["schemas"]["PodcastEpisodeDto"]
 }
 
 export interface PodcastEpisodesAdded extends BroadcastMesage, PodcastAdded {
-    podcast_episodes: PodcastEpisode[]
+    podcast_episodes: components["schemas"]["PodcastEpisodeDto"][]
 }

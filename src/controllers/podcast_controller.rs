@@ -32,6 +32,7 @@ use crate::service::file_service::{perform_podcast_variable_replacement, FileSer
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
+use tokio_stream::StreamExt;
 
 #[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -381,10 +382,13 @@ get,
 path="/podcasts/{podcast}/query",
 params(("podcast", description="The podcast episode query parameter.")),
 responses(
-(status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisode>)),
+(status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisodeDto>)),
 tag="podcasts",)]
-pub async fn query_for_podcast(podcast: Path<String>) -> Result<Json<Vec<PodcastEpisode>>, CustomError> {
-    let res = PodcastEpisodeService::query_for_podcast(&podcast)?;
+pub async fn query_for_podcast(podcast: Path<String>) -> Result<Json<Vec<PodcastEpisodeDto>>,
+    CustomError> {
+    let res = PodcastEpisodeService::query_for_podcast(&podcast)?.into_iter().map(|p|(p, None::<User>,
+                                                                                  None::<FavoritePodcastEpisode>).into())
+        .collect::<Vec<PodcastEpisodeDto>>();
 
     Ok(Json(res))
 }
@@ -569,9 +573,11 @@ use crate::models::tag::Tag;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;

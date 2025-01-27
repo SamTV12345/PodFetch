@@ -1,9 +1,9 @@
 import { FC, RefObject, useEffect } from 'react'
-import axios, { AxiosResponse } from 'axios'
 import useOnMount from '../hooks/useOnMount'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
+import { client } from '../utils/http'
 
 type HiddenAudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement|null>,
@@ -20,18 +20,27 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
         if (podcastEpisode && refItem && refItem.current) {
             refItem.current.load()
 
-            if (podcastEpisode.time === undefined) {
+            if (podcastEpisode.podcastHistoryItem!.position === undefined) {
                 // fetch time from server
-                axios.get(  '/podcasts/episode/' + podcastEpisode.episode_id)
-                    .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                        setCurrentPodcastEpisode({
-                            ...podcastEpisode,
-                            time: response.data.position
-                        })
-                        refItem.current!.currentTime = podcastEpisode.time!
+
+                client.GET("/api/v1/podcasts/episode/{id}", {
+                    params: {
+                        path:{
+                            id: podcastEpisode.podcastEpisode.episode_id
+                        }
+                    }
+                }).then((response) => {
+                    setCurrentPodcastEpisode({
+                        ...podcastEpisode,
+                    podcastHistoryItem: {
+                      ...response.data!
+                    },
                     })
+                    refItem.current!.currentTime = podcastEpisode.podcastHistoryItem?.position!
+                })
+
             } else {
-                refItem.current!.currentTime = podcastEpisode.time
+                refItem.current!.currentTime = podcastEpisode.podcastHistoryItem?.position!
             }
 
             refItem.current.play()
@@ -50,7 +59,7 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
         <audio
             ref={refItem}
             crossOrigin="anonymous"
-            src={podcastEpisode?.local_url}
+            src={podcastEpisode?.podcastEpisode.local_url}
             id={'hiddenaudio'}
             onTimeUpdate={(e) => {
                setCurrentTimeUpdate(e.currentTarget.currentTime)
@@ -67,14 +76,20 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
                     // Firefox doesn't load the entire file before playing
                     // causing a changing duration, but the onLoadedMetadata event
                     // is only called once rendering the progressbar useless
-                     axios.get('/podcasts/episode/' + podcastEpisode!.episode_id)
-                       .then((response: AxiosResponse<PodcastWatchedModel>) => {
-                           setMetadata({
-                               currentTime: e.currentTarget.currentTime,
-                               duration: response.data.total,
-                               percentage: 0
-                           })
-                       })
+                    client.GET("/api/v1/podcasts/episode/{id}", {
+                        params: {
+                            path: {
+                                id: podcastEpisode!.podcastEpisode.episode_id
+                            }
+                        }
+                    }).then((response) => {
+                        setMetadata({
+                            currentTime: e.currentTarget.currentTime,
+                            duration: response.data!.total!,
+                            percentage: 0
+                        })
+                    })
+
                 }
             }}
         />

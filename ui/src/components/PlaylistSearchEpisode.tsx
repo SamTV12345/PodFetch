@@ -3,6 +3,7 @@ import {DragEvent, useState} from "react";
 import {PodcastEpisode} from "../store/CommonSlice";
 import {useTranslation} from "react-i18next";
 import usePlaylist from "../store/PlaylistSlice";
+import {components} from "../../schema";
 
 
 
@@ -11,7 +12,7 @@ export const PlaylistSearchEpisode = ()=>{
     const {t} = useTranslation()
     const currentPlayListToEdit = usePlaylist(state => state.currentPlaylistToEdit)
     const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
-    const handleDragStart = (dragItem: PodcastEpisode, index: number, event: DragEvent<HTMLTableRowElement> )=>{
+    const handleDragStart = (dragItem: components["schemas"]["PodcastEpisodeDto"], index: number, event: DragEvent<HTMLTableRowElement> )=>{
         event.dataTransfer.setData("text/plain", index.toString())
         setItemCurrentlyDragged(dragItem)
     }
@@ -48,7 +49,7 @@ export const PlaylistSearchEpisode = ()=>{
                     const dragIndex = parseInt(e.dataTransfer.getData("text/plain"))
 
                     const newItems = [...currentPlayListToEdit!.items]
-                    const dragItem = newItems[dragIndex]
+                    const dragItem = newItems[dragIndex]!
                     newItems.splice(dragIndex, 1)
                     newItems.splice(dropIndex, 0, dragItem)
                     setCurrentPlaylistToEdit({

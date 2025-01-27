@@ -1,9 +1,8 @@
 import { FC, PropsWithChildren, Suspense, useEffect, useState } from 'react'
 import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import useCommon, {LoggedInUser} from './store/CommonSlice'
+import useCommon from './store/CommonSlice'
 import useOpmlImport from './store/opmlImportSlice'
 import {decodeHTMLEntities, isJsonString} from './utils/Utilities'
 import {
@@ -42,6 +41,8 @@ import {UserManagementPage} from "./pages/UserManagement";
 import {configWSUrl} from "./utils/navigationUtils";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
+import {components} from "../schema";
+import {client} from "./utils/http";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -137,7 +138,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                             }])
                         }
 
-                        let podcastUpdated:EpisodesWithOptionalTimeline[] = useCommon.getState().selectedEpisodes
+                        let podcastUpdated = useCommon.getState().selectedEpisodes
                             .map(p => {
                             if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
                                 const foundDownload = JSON.parse(JSON.stringify(p)) as EpisodesWithOptionalTimeline
@@ -152,7 +153,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                             }
 
                             return p
-                        })
+                        }) satisfies  components["schemas"]["PodcastEpisodeWithHistory"][]
 
                         setSelectedEpisodes(podcastUpdated)
                     }
@@ -205,16 +206,21 @@ const App: FC<PropsWithChildren> = ({ children }) => {
 
     useEffect(() => {
         if (config?.basicAuth||config?.oidcConfigured||config?.reverseProxy){
-            axios.get('/users/me')
-                .then((c:AxiosResponse<LoggedInUser>)=>useCommon.getState().setLoggedInUser(c.data))
+            client.GET("/api/v1/users/{username}", {
+                params: {
+                    path: {
+                        username: "me"
+                    }
+                }
+            }).then((c)=>useCommon.getState().setLoggedInUser(c.data!))
                 .catch(() => enqueueSnackbar(t('not-admin'), { variant: 'error' }))
         }
     }, []);
 
     const getNotifications = () => {
-        axios.get(  '/notifications/unread')
-            .then((response: AxiosResponse<Notification[]>) => {
-                setNotifications(response.data)
+        client.GET("/api/v1/notifications/unread")
+            .then((response) => {
+                setNotifications(response.data!)
             })
     }
 

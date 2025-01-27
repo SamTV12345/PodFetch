@@ -61,13 +61,16 @@ export const isJsonString = (str: string) => {
 
 export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response: components["schemas"]["EpisodeDto"]) => {
     return {
-        ...episode,
-        local_url: episode.local_url,
-        local_image_url: episode.local_image_url,
-        time: response&&response.position?response.position: 0
-    } satisfies components["schemas"]["PodcastEpisodeDto"] & {
-        time: number
-    }
+        podcastEpisode: {
+          ...episode,
+            local_url: episode.local_url,
+            local_image_url: episode.local_image_url,
+        },
+        podcastHistoryItem: {
+            ...response,
+            position: response&&response.position?response.position: 0
+        }
+    } satisfies components["schemas"]["PodcastEpisodeWithHistory"]
 }
 
 
