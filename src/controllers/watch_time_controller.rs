@@ -47,7 +47,7 @@ pub async fn get_last_watched(Extension(requester): Extension<User>) ->
 get,
 path="/podcasts/episode/{id}",
 responses(
-(status = 200, description = "Gets watchtime by id.")),
+(status = 200, description = "Gets watchtime by id.", body=Episode)),
 tag="watchtime"
 )]
 pub async fn get_watchtime(

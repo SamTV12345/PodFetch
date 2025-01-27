@@ -31,7 +31,7 @@ pub struct PlaylistDto {
 post,
 path="/playlist",
 responses(
-(status = 200, description = "Adds a new playlist for the user",body= PlaylistDtoPost)),
+(status = 200, description = "Adds a new playlist for the user",body= PlaylistDto)),
 tag="playlist"
 )]
 pub async fn add_playlist(
@@ -48,7 +48,7 @@ pub async fn add_playlist(
 put,
 path="/playlist/{playlist_id}",
 responses(
-(status = 200, description = "Updates a playlist of the user",body= PlaylistDtoPost)),
+(status = 200, description = "Updates a playlist of the user",body= PlaylistDto)),
 tag="playlist"
 )]
 pub async fn update_playlist(
@@ -66,7 +66,7 @@ pub async fn update_playlist(
 get,
 path="/playlist",
 responses(
-(status = 200, description = "Gets all playlists of the user")),
+(status = 200, description = "Gets all playlists of the user", body=Vec<Playlist>)),
 tag="playlist"
 )]
 pub async fn get_all_playlists(Extension(requester): Extension<User>) ->
