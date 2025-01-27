@@ -14,7 +14,7 @@ import {client} from "../utils/http";
 import {components} from "../../schema";
 
 type SettingsProps = {
-    intialSettings: components["schemas"]["UpdateNameSettings"]
+    intialSettings: components["schemas"]["Setting"]
 }
 
 export const options = [
@@ -33,7 +33,7 @@ export const options = [
 ]
 
 export const SettingsNaming: FC = () => {
-    const [settings, setSettings] = useState<components["schemas"]["UpdateNameSettings"]>()
+    const [settings, setSettings] = useState<components["schemas"]["Setting"]>()
 
     /* Fetch existing settings */
     useEffect(() => {
@@ -59,7 +59,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     const { control, formState: {}, handleSubmit, watch}
         = useForm<components["schemas"]["UpdateNameSettings"]>({
         defaultValues: {
-            replacementStrategy: intialSettings.replacementStrategy,
+            replacementStrategy: intialSettings.replacementStrategy as any,
             episodeFormat: intialSettings.episodeFormat,
             replaceInvalidCharacters: intialSettings.replaceInvalidCharacters,
             useExistingFilename: intialSettings.useExistingFilename,

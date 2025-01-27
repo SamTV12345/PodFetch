@@ -1,6 +1,5 @@
 import { FC, PropsWithChildren, useEffect } from 'react'
 import { useAuth } from 'react-oidc-context'
-import axios from 'axios'
 import useOnMount from '../hooks/useOnMount'
 import useCommon from "../store/CommonSlice";
 

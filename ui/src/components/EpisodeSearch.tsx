@@ -1,16 +1,17 @@
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios, { AxiosResponse } from 'axios'
 import { PodcastEpisode } from '../store/CommonSlice'
 import {formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import { EmptyResultIcon } from '../icons/EmptyResultIcon'
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 type EpisodeSearchProps = {
     classNameResults?: string,
-    onClickResult?: (e:PodcastEpisode) => void,
+    onClickResult?: (e: components["schemas"]["PodcastEpisode"]) => void,
     resultsMaxHeight?: string,
     showBlankState?: boolean
 }
@@ -20,18 +21,23 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                                                           showBlankState = true }) => {
     const [searching, setSearching] = useState<boolean>()
     const [searchName, setSearchName] = useState<string>('')
-    const [searchResults, setSearchResults] = useState<PodcastEpisode[]>([])
+    const [searchResults, setSearchResults] = useState<components["schemas"]["PodcastEpisode"][]>([])
     const { t } = useTranslation()
 
     const performSearch = () => {
         if (searchName.trim().length > 0) {
             setSearching(true)
 
-            axios.get(  '/podcasts/' + searchName + '/query')
-                .then((v: AxiosResponse<PodcastEpisode[]>) => {
-                    setSearchResults(v.data)
-                    setSearching(false)
-                })
+            client.GET("/api/v1/podcasts/{podcast}/query", {
+                params: {
+                    path: {
+                        podcast: searchName
+                    }
+                }
+            }).then((v) => {
+                setSearchResults(v.data!)
+                setSearching(false)
+            })
         }
     }
 

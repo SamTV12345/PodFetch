@@ -9,6 +9,7 @@ import useAudioPlayer from "../store/AudioPlayerSlice";
 import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Episode} from "../models/Episode";
+import {components} from "../../schema";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
     const infoModalOpen = useCommon(state => state.podcastAlreadyPlayed)
@@ -63,7 +64,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                             return
                         }
 
-                        const watchedModel:Episode = {
+                        const watchedModel: components["schemas"]["EpisodeDto"] = {
                         ...selectedPodcastEpisode.podcastWatchModel,
                             position: 0
                         }

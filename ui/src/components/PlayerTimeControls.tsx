@@ -6,13 +6,10 @@ import {
 } from '../utils/Utilities'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
-import axios, {AxiosResponse} from "axios";
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import { useKeyDown } from '../hooks/useKeyDown'
 import useCommon from "../store/CommonSlice";
-import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
-import {Episode} from "../models/Episode";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
+import {client} from "../utils/http";
 
 type PlayerTimeControlsProps = {
     refItem: RefObject<HTMLAudioElement|null>
@@ -48,8 +45,8 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
 
     useEffect(() => {
         refItem.current!.onended = () => {
-            logCurrentPlaybackTime(useAudioPlayer.getState().currentPodcastEpisode!.episode_id,
-                useAudioPlayer.getState().currentPodcastEpisode!.total_time)
+            logCurrentPlaybackTime(useAudioPlayer.getState().currentPodcastEpisode!.podcastEpisode.episode_id,
+                useAudioPlayer.getState().currentPodcastEpisode!.podcastEpisode.total_time)
         }
     }, []);
 
@@ -57,7 +54,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const skipToNextEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
-        const index = episodes.findIndex(e => e.podcastEpisode.id === currentPodcastEpisode.id)
+        const index = episodes.findIndex(e => e.podcastEpisode.id === currentPodcastEpisode.podcastEpisode.id)
 
         if (index === -1) return
 
@@ -69,19 +66,24 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const switchToEpisodes = (index: number) => {
         if (refItem === undefined || refItem.current === undefined|| refItem.current === null) return
 
-        const nextEpisode = episodes[index].podcastEpisode
-        axios.get(  "/podcasts/episode/" + nextEpisode.episode_id)
-            .then((response: AxiosResponse<Episode>) => {
-                setCurrentPodcastEpisode(nextEpisode)
-                nextEpisode.status
-                    ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data))
-                    : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data))
-                refItem.current!.src = episodes[index].podcastEpisode.local_url
-                refItem.current!.load()
-                refItem.current?.play()
-                setPlaying(true)
-            })
+        const nextEpisode = episodes[index]!
 
+        client.GET("/api/v1/podcasts/episode/{id}", {
+            params: {
+                path: {
+                    id: nextEpisode.podcastEpisode.episode_id
+                }
+            }
+        }) .then((response) => {
+            setCurrentPodcastEpisode(nextEpisode)
+            nextEpisode.podcastEpisode.status
+                ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data!))
+                : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data!))
+            refItem.current!.src = episodes[index]!.podcastEpisode.local_url
+            refItem.current!.load()
+            refItem.current?.play()
+            setPlaying(true)
+        })
     }
 
     const handleButton = () => {
@@ -92,16 +94,16 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
             refItem.current.play()
         } else {
             if (time && currentPodcastEpisode) {
-                logCurrentPlaybackTime(currentPodcastEpisode.episode_id, time)
-                const mappedEpisodes:EpisodesWithOptionalTimeline[] = selectedEpisodes.map(e=>{
-                    if(e.podcastEpisode.episode_id === currentPodcastEpisode.episode_id){
+                logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, time)
+                const mappedEpisodes = selectedEpisodes.map(e=>{
+                    if(e.podcastEpisode.episode_id === currentPodcastEpisode.podcastEpisode.episode_id){
                         return {
                             ...e,
                            podcastHistoryItem:{
                                  ...e.podcastHistoryItem!,
                                position: time
                            }
-                        } satisfies EpisodesWithOptionalTimeline
+                        }
                     }
                     return e
                 })
@@ -119,13 +121,13 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         const currentIndex = SPEED_STEPS.indexOf(speed)
 
         if (currentIndex === SPEED_STEPS.length - 1) {
-            refItem.current.playbackRate = SPEED_STEPS[0]
-            setPlaybackRate(SPEED_STEPS[0])
+            refItem.current.playbackRate = SPEED_STEPS[0]!
+            setPlaybackRate(SPEED_STEPS[0]!)
             return
         }
 
-        refItem.current.playbackRate = SPEED_STEPS[currentIndex + 1]
-        setPlaybackRate(SPEED_STEPS[currentIndex + 1])
+        refItem.current.playbackRate = SPEED_STEPS[currentIndex + 1]!
+        setPlaybackRate(SPEED_STEPS[currentIndex + 1]!)
     }
 
     const seekForward = () => {

@@ -60,7 +60,7 @@ interface CommonProps {
     sidebarCollapsed: boolean,
     podcasts:   components["schemas"]["PodcastDto"][],
     searchedPodcasts: AgnosticPodcastDataModel[]|undefined,
-    notifications: Notification[],
+    notifications: components["schemas"]["Notification"][],
     infoModalPodcast: components["schemas"]["PodcastEpisodeDto"]|undefined,
     infoModalPodcastOpen: boolean,
     podcastAlreadyPlayed: boolean,
@@ -85,7 +85,7 @@ interface CommonProps {
     updateLikePodcast: (id: number) => void,
     setSelectedEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => void,
     setSearchedPodcasts: (searchedPodcasts: AgnosticPodcastDataModel[]) => void,
-    setNotifications: (notifications: Notification[]) => void,
+    setNotifications: (notifications: components["schemas"]["Notification"][]) => void,
     removeNotification: (id: number) => void,
     setInfoModalPodcast: (infoModalPodcast: components["schemas"]["PodcastEpisodeDto"]) => void,
     setInfoModalPodcastOpen: (infoModalPodcastOpen: boolean) => void,
@@ -164,7 +164,7 @@ const useCommon = create<CommonProps>((set, get) => ({
     },
     setSelectedEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => set({selectedEpisodes}),
     setSearchedPodcasts: (searchedPodcasts: AgnosticPodcastDataModel[]) => set({searchedPodcasts}),
-    setNotifications: (notifications: Notification[]) => set({notifications}),
+    setNotifications: (notifications) => set({notifications}),
     removeNotification: (id: number) => {
         const notifications = get().notifications
         if(notifications){

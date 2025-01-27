@@ -1,10 +1,11 @@
 import { FC } from 'react'
 import useCommon, { Podcast, PodcastEpisode} from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
+import {components} from "../../schema";
 
 type PlayerEpisodeInfoProps = {
-    podcastEpisode?: PodcastEpisode,
-    podcast?: Podcast | undefined
+    podcastEpisode?: components["schemas"]["PodcastEpisodeDto"],
+    podcast?: components["schemas"]["PodcastDto"] | undefined
 }
 
 export const PlayerEpisodeInfo: FC<PlayerEpisodeInfoProps> = ({ podcastEpisode, podcast }) => {
