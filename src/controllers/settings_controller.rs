@@ -15,7 +15,7 @@ use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 get,
 path="/settings",
 responses(
-(status = 200, description = "Gets the current settings")),
+(status = 200, description = "Gets the current settings", body=Setting)),
 tag="podcast_episodes"
 )]
 pub async fn get_settings(Extension(requester): Extension<User>) -> Result<Json<Setting>,
@@ -35,7 +35,7 @@ put,
 path="/settings",
 request_body=Setting,
 responses(
-(status = 200, description = "Updates the current settings")),
+(status = 200, description = "Updates the current settings", body = Setting)),
 tag="settings"
 )]
 pub async fn update_settings(
