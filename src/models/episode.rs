@@ -440,7 +440,7 @@ impl Episode {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EpisodeDto {
     pub podcast: String,
     pub episode: String,

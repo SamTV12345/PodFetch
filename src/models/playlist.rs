@@ -146,7 +146,7 @@ impl Playlist {
                     <(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>) as Into<
                         PodcastEpisodeDto,
                     >>::into((y.clone(), Some(user.clone()), None)),
-                podcast_history_item: z.clone(),
+                podcast_history_item: z.clone().map(|e| e.convert_to_episode_dto()),
             })
             .collect::<Vec<PodcastEpisodeWithHistory>>();
 

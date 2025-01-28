@@ -1,6 +1,4 @@
-import { FC} from 'react'
-import {Podcast, PodcastEpisode} from '../store/CommonSlice'
-import {Episode} from "../models/Episode";
+import {FC} from 'react'
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {client} from "../utils/http";
 import {components} from "../../schema";
@@ -22,10 +20,8 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
                         id: podcastEpisode.episode_id
                     }
                 }
-            }).then(resp=>handlePlayofEpisode(resp.data!, {
-                podcastEpisode: podcastEpisode,
-                podcastHistoryItem: resp.data
-            }))
+            }).then(resp => handlePlayofEpisode(podcastEpisode, resp.data!))
+                .catch(() => handlePlayofEpisode(podcastEpisode, undefined))
         }}>
 
             {/* Thumbnail */}

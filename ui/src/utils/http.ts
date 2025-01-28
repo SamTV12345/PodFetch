@@ -23,7 +23,6 @@ const authMiddleware: Middleware = {
             headers.Authorization = "Basic " + sessionStorage.getItem("auth")
         }
         Object.entries(headers).forEach(([key, value]) => {
-            console.log(value, key)
             request.headers.set(key, value)
         })
         return request;
@@ -31,7 +30,7 @@ const authMiddleware: Middleware = {
     async onResponse({ response }) {
 
         if (!response.ok) {
-            throw new Error("Request failed: " + response.body === null? response.statusText: response.body!.toString() );
+            throw new Error("Request failed: " + response.body === null? response.statusText: await response.text() );
         }
 
         return response;
