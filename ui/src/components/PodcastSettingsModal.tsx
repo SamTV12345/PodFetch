@@ -61,7 +61,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
     }, [loaded, open, podcastSettings]);
 
 
-    console.log("Translation is", t('colon-replacement-explanation'))
+    console.log(podcastSettings)
     return <Dialog.Root open={open}>
         <Dialog.Portal>
         <Dialog.Overlay onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden z-30 transition-opacity opacity-100" />
@@ -79,8 +79,8 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                     <div className={`grid grid-cols-3 gap-5 ${!isSettingsEnabled && 'opacity-50'}`}>
                         <h2 className="text-[--fg-color] col-span-2">{t('episode-numbering')}</h2>
                         <Switcher className="justify-self-end" disabled={!isSettingsEnabled}
-                                  checked={podcastSettings!.episodeNumbering}
-                                  setChecked={(checked) => {
+                                  checked={podcastSettings?.episodeNumbering}
+                                  onChange={(checked) => {
                                       setPodcastSettings({...podcastSettings!, episodeNumbering: checked})
                                   }}/>
                         <label className="mr-6 text-[--fg-color]" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
@@ -90,7 +90,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                         <Switcher disabled={!isSettingsEnabled}
                                   checked={podcastSettings ? podcastSettings.autoCleanup : false}
                                   className="xs:justify-self-end" id="auto-cleanup"
-                                  setChecked={() => {
+                                  onChange={() => {
                                       setPodcastSettings({
                                           ...podcastSettings!,
                                           autoCleanup: !podcastSettings!.autoCleanup
@@ -113,7 +113,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                         <Switcher disabled={!isSettingsEnabled}
                                   checked={podcastSettings ? podcastSettings.autoUpdate : false}
                                   className="xs:justify-self-end" id="auto-update"
-                                  setChecked={() => {
+                                  onChange={() => {
                                       setPodcastSettings({
                                           ...podcastSettings!,
                                           autoUpdate: !podcastSettings?.autoUpdate
@@ -127,7 +127,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                         <Switcher disabled={!isSettingsEnabled}
                                   checked={podcastSettings ? podcastSettings.autoDownload : false}
                                   className="xs:justify-self-end" id="auto-download"
-                                  setChecked={() => {
+                                  onChange={() => {
                                       setPodcastSettings({
                                           ...podcastSettings!,
                                           autoDownload: !podcastSettings?.autoDownload
@@ -161,7 +161,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                         <Switcher
                             checked={podcastSettings ? podcastSettings.activated : false}
                             className="xs:justify-self-end" id="activate"
-                            setChecked={() => {
+                            onChange={() => {
                                 if (!podcastSettings && loaded) {
                                     setPodcastSettings({
                                         podcastId: podcast.id,

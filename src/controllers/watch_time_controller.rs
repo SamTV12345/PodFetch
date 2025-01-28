@@ -4,7 +4,7 @@ use axum::routing::{get, post};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use crate::models::episode::Episode;
+use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use crate::models::user::User;
 
@@ -47,17 +47,17 @@ pub async fn get_last_watched(Extension(requester): Extension<User>) ->
 get,
 path="/podcasts/episode/{id}",
 responses(
-(status = 200, description = "Gets watchtime by id.", body=Episode)),
+(status = 200, description = "Gets watchtime by id.", body=EpisodeDto)),
 tag="watchtime"
 )]
 pub async fn get_watchtime(
     Path(id): Path<String>,
     Extension(requester): Extension<User>,
-) -> Result<Json<Episode>, CustomError> {
+) -> Result<Json<EpisodeDto>, CustomError> {
     let watchtime = Episode::get_watchtime(id, requester.username)?;
     match watchtime {
         None => Err(CustomErrorInner::NotFound.into()),
-        Some(w) => Ok(Json(w)),
+        Some(w) => Ok(Json(w.convert_to_episode_dto())),
     }
 }
 

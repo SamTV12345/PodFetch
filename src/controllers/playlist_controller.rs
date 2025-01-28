@@ -66,13 +66,15 @@ pub async fn update_playlist(
 get,
 path="/playlist",
 responses(
-(status = 200, description = "Gets all playlists of the user", body=Vec<Playlist>)),
+(status = 200, description = "Gets all playlists of the user", body=Vec<PlaylistDto>)),
 tag="playlist"
 )]
 pub async fn get_all_playlists(Extension(requester): Extension<User>) ->
-                                                                      Result<Json<Vec<Playlist>>,
+                                                                      Result<Json<Vec<PlaylistDto>>,
     CustomError> {
     Playlist::get_playlists(requester.id)
+        .map(|p|p.iter().map(|p|Playlist::get_playlist_dto(p.id.clone(), p.clone(), requester
+            .clone())).collect::<Result<Vec<PlaylistDto>, CustomError>>().unwrap())
         .map(Json)
 }
 

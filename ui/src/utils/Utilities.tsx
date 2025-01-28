@@ -59,7 +59,7 @@ export const isJsonString = (str: string) => {
     return true;
 }
 
-export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response: components["schemas"]["EpisodeDto"]) => {
+export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response: components["schemas"]["EpisodeDto"]): components["schemas"]["PodcastEpisodeWithHistory"] => {
     return {
         podcastEpisode: {
           ...episode,
@@ -68,9 +68,9 @@ export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpi
         },
         podcastHistoryItem: {
             ...response,
-            position: response&&response.position?response.position: 0
+            position: response === null? 0: response.position?response.position: 0
         }
-    } satisfies components["schemas"]["PodcastEpisodeWithHistory"]
+    }
 }
 
 
@@ -88,7 +88,7 @@ export const prependAPIKeyOnAuthEnabled = (url: string)=>{
 }
 
 
-export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response: components["schemas"]["EpisodeDto"]) => {
+export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response: components["schemas"]["EpisodeDto"]) : components["schemas"]["PodcastEpisodeWithHistory"] => {
     let online_url_with_proxy = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?episodeId=' + episode.episode_id
 
     if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
@@ -102,12 +102,15 @@ export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["Podc
     }
 
     return {
-        ...episode,
-        local_url: online_url_with_proxy,
-        local_image_url: episode.image_url,
-        time: response&&response.position?response.position: 0
-    } satisfies components["schemas"]["PodcastEpisodeDto"] & {
-        time: number
+        podcastEpisode: {
+            ...episode,
+            local_url: online_url_with_proxy,
+            local_image_url: episode.local_image_url,
+        },
+        podcastHistoryItem: {
+            ...response,
+            position: response === null? 0: response.position?response.position: 0
+        }
     }
 }
 

@@ -13,12 +13,12 @@ interface CustomGaugeChartProps {
 function createGradient(ctx: CanvasRenderingContext2D, area: ChartArea, fill: string[]) {
     const gradient = ctx.createLinearGradient(area.left, 0, area.right, 0)
 
-    gradient.addColorStop(0, fill[0])
-    gradient.addColorStop(1, fill[1])
-  
+    gradient.addColorStop(0, fill[0]!)
+    gradient.addColorStop(1, fill[1]!)
+
     return gradient
 }
-  
+
 export const CustomGaugeChart: FC<CustomGaugeChartProps> = ({ fill, labels, labelUnit, max, value }) => {
     const chartRef = useRef<ChartJS<'doughnut'>>(null)
     const [chartData, setChartData] = useState<ChartData<'doughnut'>>({
@@ -76,7 +76,7 @@ export const CustomGaugeChart: FC<CustomGaugeChartProps> = ({ fill, labels, labe
                                 return label + ': ' + context.parsed.toFixed(2) + ' %'
                             } else {
                                 return label
-                            }                            
+                            }
                         }
                     }
                 }

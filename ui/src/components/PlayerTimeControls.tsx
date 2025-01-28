@@ -34,7 +34,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     const skipToPreviousEpisode = () => {
         if (currentPodcastEpisode === undefined) return
 
-        const index = episodes.findIndex(e => e.podcastEpisode.id === currentPodcastEpisode.id)
+        const index = episodes.findIndex(e => e.podcastEpisode.id === currentPodcastEpisode.podcastEpisode.id)
 
         if (index === -1) return
 
@@ -77,8 +77,8 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         }) .then((response) => {
             setCurrentPodcastEpisode(nextEpisode)
             nextEpisode.podcastEpisode.status
-                ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode, response.data!))
-                : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode, response.data!))
+                ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
+                : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
             refItem.current!.src = episodes[index]!.podcastEpisode.local_url
             refItem.current!.load()
             refItem.current?.play()

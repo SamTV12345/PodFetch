@@ -1156,12 +1156,6 @@ export interface components {
         OpmlModel: {
             content: string;
         };
-        Playlist: {
-            id: string;
-            name: string;
-            /** Format: int32 */
-            user_id: number;
-        };
         PlaylistDto: {
             id: string;
             items: components["schemas"]["PodcastEpisodeWithHistory"][];
@@ -1225,7 +1219,7 @@ export interface components {
         };
         PodcastEpisodeWithHistory: {
             podcastEpisode: components["schemas"]["PodcastEpisodeDto"];
-            podcastHistoryItem?: null | components["schemas"]["Episode"];
+            podcastHistoryItem?: null | components["schemas"]["EpisodeDto"];
         };
         PodcastFavorUpdateModel: {
             favored: boolean;
@@ -1419,26 +1413,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Logs in the user and returns a session cookie. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     get_devices_of_user: {
         parameters: {
             query?: never;
@@ -1895,7 +1869,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Playlist"][];
+                    "application/json": components["schemas"]["PlaylistDto"][];
                 };
             };
         };
@@ -2130,7 +2104,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Episode"];
+                    "application/json": components["schemas"]["EpisodeDto"];
                 };
             };
         };

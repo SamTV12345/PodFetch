@@ -83,11 +83,16 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             return
                         }
 
-                        axios.put(  "/podcasts/" + episode.podcastEpisode.episode_id + "/episodes/download")
-                            .then(()=>{
-                                enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
-                                setEpisodeDownloaded(episode.podcastEpisode.episode_id)
-                            })
+                        client.PUT("/api/v1/podcasts/{id}/episodes/download", {
+                            params: {
+                                path: {
+                                    id: episode.podcastEpisode.episode_id
+                                }
+                            }
+                        }).then(()=>{
+                            enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
+                            setEpisodeDownloaded(episode.podcastEpisode.episode_id)
+                        })
                     }}>cloud_download</span>
                         {/* Check icon */}
                         <span className="material-symbols-outlined text-[--fg-icon-color] active:scale-95" onClick={(e)=>{
@@ -101,15 +106,13 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                                         s.podcastHistoryItem.position = episode.podcastEpisode.total_time
                                     } else {
                                         s.podcastHistoryItem = {
-                                            action: "",
+                                            action: "new",
                                             device: "",
                                             episode: "",
                                             guid: "",
-                                            id: 0,
                                             podcast: "",
                                             started: 0,
                                             timestamp: "",
-                                            username: "",
                                             total: episode.podcastEpisode.total_time,
                                             position: episode.podcastEpisode.total_time
                                         }
@@ -122,8 +125,15 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         }}>check</span>
                         <span className={"material-symbols-outlined text-[--fg-color] " + (episode.podcastEpisode.favored && 'filled')}
                               onClick={() => {
-                                  axios.put(  '/podcasts/' + episode.podcastEpisode.id + '/episodes/favor', {
-                                      favored: !episode.podcastEpisode.favored
+                                  client.PUT(  "/api/v1/podcasts/{id}/episodes/favor", {
+                                      params: {
+                                          path: {
+                                                id: episode.podcastEpisode.id
+                                          }
+                                      },
+                                      body: {
+                                          favored: !episode.podcastEpisode.favored
+                                      }
                                   })
                                       .then(() => {
                                             const mappedEpisodes = selectedEpisodes.map(s => {
@@ -175,7 +185,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             }
                         }
                     }).then((resp)=>{
-                        handlePlayofEpisode(resp.data!, episode)
+                        handlePlayofEpisode(resp.data!, episode as any)
                     })
                 }}>play_circle</span>
             </div>

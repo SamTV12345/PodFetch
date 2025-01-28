@@ -48,26 +48,24 @@ export const CreatePlaylistModal = () => {
                     items: itemsMappedToIDs
                 }
             }).then((e)=>{
-                setPlaylist(playlists.map(p=>p.id===e.data.id?e.data:p))
+                const mapped = playlists.map(p=>p.id===e.data!.id?e.data!:p)
+                setPlaylist(mapped)
                 enqueueSnackbar(t('updated-playlist'), {variant: "success"})
             })
-
-            axios.put("/playlist/"+currentPlaylistToEdit.id, {
-
-            } satisfies PlaylistDtoPut)
 
             return
         }
 
-        if (currentPlaylistToEdit && currentPlaylistToEdit.id === -1) {
-            axios.post(  "/playlist", {
-                name: currentPlaylistToEdit.name,
-                items: itemsMappedToIDs
-            } satisfies PlaylistDtoPost)
-                .then((e:AxiosResponse<PlaylistDto>) => {
-                    setPlaylist([...playlists, e.data])
-                    enqueueSnackbar(t('created-playlist'), {variant: "success"})
-                })
+        if (currentPlaylistToEdit && currentPlaylistToEdit.id === "-1") {
+            client.POST("/api/v1/playlist", {
+                body: {
+                    name: currentPlaylistToEdit.name,
+                    items: itemsMappedToIDs
+                }
+            }).then((e)=>{
+                setPlaylist([...playlists, e.data!])
+                enqueueSnackbar(t('created-playlist'), {variant: "success"})
+            })
         }
     }
 

@@ -3,11 +3,11 @@ import createClient, {Middleware} from "openapi-fetch";
 export let apiURL: string
 export let uiURL: string
 if (window.location.pathname.startsWith("/ui")) {
-    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api/v1"
+    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port
 } else {
     //match everything before /ui
     const regex = /\/([^/]+)\/ui\//
-    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/" + regex.exec(window.location.href)![1] + "/api/v1"
+    apiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/" + regex.exec(window.location.href)![1]
 }
 uiURL = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/ui"
 
@@ -19,11 +19,23 @@ export const client = createClient<paths>({ baseUrl: apiURL });
 const authMiddleware: Middleware = {
     async onRequest({ request, options }) {
         const headers = useCommon.getState().headers
-        Object.entries(headers).forEach(([key,val]) => {
-            request.headers.set(key, val)
+        if (sessionStorage.getItem("auth") !== null) {
+            headers.Authorization = "Basic " + sessionStorage.getItem("auth")
+        }
+        Object.entries(headers).forEach(([key, value]) => {
+            console.log(value, key)
+            request.headers.set(key, value)
         })
         return request;
-    }
+    },
+    async onResponse({ response }) {
+
+        if (!response.ok) {
+            throw new Error("Request failed: " + response.body === null? response.statusText: response.body!.toString() );
+        }
+
+        return response;
+    },
 };
 
 client.use(authMiddleware)

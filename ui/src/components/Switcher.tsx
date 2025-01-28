@@ -1,21 +1,21 @@
-import { FC } from 'react'
+import React, { FC } from 'react'
 
 type SwitcherProps = {
-    checked: boolean,
+    checked?: boolean,
     className?: string,
     id?: string,
-    setChecked: (checked: boolean) => void,
+    onChange: (checked: boolean) => void,
     disabled?: boolean
 }
 
-export const Switcher: FC<SwitcherProps> = ({ checked, className = '', id, setChecked, disabled }) => {
+export const Switcher: FC<SwitcherProps> = ({ checked, className = '', id, onChange, disabled }) => {
     return (
         <div className={`relative inline-flex items-center cursor-pointer ${className}`} onClick={() => {
             if (disabled) return
-            setChecked(!checked)
+            onChange(!checked)
         }}>
             <input disabled={disabled} checked={checked} className="sr-only peer" id={id} onChange={() => {
-            setChecked(!checked)
+                onChange(!checked)
         }} type="checkbox" value="" />
 
             <div className={
