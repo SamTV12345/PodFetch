@@ -99,7 +99,6 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             // Prevent icon click from triggering info modal
                             e.stopPropagation()
                             logCurrentPlaybackTime(episode.podcastEpisode.episode_id, episode.podcastHistoryItem?.total || 0)
-                            console.log(episode)
                             const mappedEpisodes = selectedEpisodes.map(s=>{
                                 if (s.podcastEpisode.episode_id === episode.podcastEpisode.episode_id){
                                     if (s.podcastHistoryItem) {
@@ -185,7 +184,9 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             }
                         }
                     }).then((resp)=>{
-                        handlePlayofEpisode(resp.data!, episode as any)
+                        handlePlayofEpisode(episode.podcastEpisode, resp.data!,)
+                    }).catch(e=>{
+                        handlePlayofEpisode(episode.podcastEpisode, undefined)
                     })
                 }}>play_circle</span>
             </div>

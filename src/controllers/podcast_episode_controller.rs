@@ -1,5 +1,5 @@
 use crate::db::TimelineItem;
-use crate::models::episode::Episode;
+use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -34,7 +34,7 @@ pub struct OptionalId {
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeWithHistory {
     pub podcast_episode: PodcastEpisodeDto,
-    pub podcast_history_item: Option<Episode>,
+    pub podcast_history_item: Option<EpisodeDto>,
 }
 
 #[utoipa::path(
@@ -66,7 +66,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
                 (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
-                podcast_history_item: podcast_inner.1,
+                podcast_history_item: podcast_inner.1.map(|e|e.convert_to_episode_dto()),
             }
         })
         .collect::<Vec<PodcastEpisodeWithHistory>>();

@@ -39,7 +39,7 @@ export const PlaylistDetailPage = ()=>{
                     client.GET("/api/v1/podcasts/episode/{id}", {
                         params: {
                             path: {
-                                id: String(nextEpisode.podcastEpisode.id)
+                                id: nextEpisode.podcastEpisode.episode_id
                             }
                         }
                     })

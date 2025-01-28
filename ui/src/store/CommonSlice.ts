@@ -1,16 +1,9 @@
-import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
-import {Notification} from "../models/Notification";
-import {ConfigModel} from "../models/SysInfo";
 import {LoginData} from "../pages/Login";
 import {User} from "../models/User";
 import {ConfirmModalProps} from "../components/ConfirmModal";
-import {Invite} from "../components/UserAdminInvites";
-import {TimelineHATEOASModel} from "../models/TimeLineModel";
-import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {create} from "zustand";
-import {Episode} from "../models/Episode";
 import {components} from "../../schema";
+import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
 
 export type Podcast = {
     directory: string,
@@ -47,11 +40,6 @@ export type PodcastEpisode = {
     favored?: boolean
 }
 
-type PodcastEpisodeWithPodcastWatchModel = {
-    podcastEpisode: EpisodesWithOptionalTimeline,
-    podcastWatchModel: components["schemas"]["EpisodeDto"]
-}
-
 // Define a type for the slice state
 interface CommonProps {
     selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],
@@ -77,7 +65,7 @@ interface CommonProps {
     filters: components["schemas"]["Filter"]|undefined,
     infoHeading: string|undefined,
     infoText: string|undefined,
-    podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel|undefined,
+    podcastEpisodeAlreadyPlayed: components["schemas"]["PodcastEpisodeWithHistory"]|undefined,
     setSidebarCollapsed: (sidebarCollapsed: boolean) => void,
     setPodcasts: (podcasts: components["schemas"]["PodcastDto"][]) => void,
     tags: components["schemas"]["Tag"][],
@@ -108,7 +96,7 @@ interface CommonProps {
     setInfoHeading: (infoHeading: string) => void,
     setInfoText: (infoText: string) => void,
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => void,
-    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => void,
+    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: components["schemas"]["PodcastEpisodeWithHistory"]) => void,
     updatePodcast: (podcast: components["schemas"]["PodcastDto"]) => void,
     headers: Record<string,string>,
     setHeaders:(headers: Record<string,string>)=>void,
@@ -163,7 +151,7 @@ const useCommon = create<CommonProps>((set, get) => ({
         }
     },
     setSelectedEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => set({selectedEpisodes}),
-    setSearchedPodcasts: (searchedPodcasts: AgnosticPodcastDataModel[]) => set({searchedPodcasts}),
+    setSearchedPodcasts: (searchedPodcasts) => set({searchedPodcasts}),
     setNotifications: (notifications) => set({notifications}),
     removeNotification: (id: number) => {
         const notifications = get().notifications
@@ -219,7 +207,7 @@ const useCommon = create<CommonProps>((set, get) => ({
     setInfoHeading: (infoHeading: string) => set({infoHeading}),
     setInfoText: (infoText: string) => set({infoText}),
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => set({podcastAlreadyPlayed}),
-    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => set({podcastEpisodeAlreadyPlayed}),
+    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed) => set({podcastEpisodeAlreadyPlayed}),
     setLoggedInUser: (loggedInUser: components["schemas"]["UserWithoutPassword"]) => set({loggedInUser}),
     loggedInUser: undefined,
     tags: [],

@@ -61,7 +61,6 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
     }, [loaded, open, podcastSettings]);
 
 
-    console.log(podcastSettings)
     return <Dialog.Root open={open}>
         <Dialog.Portal>
         <Dialog.Overlay onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden z-30 transition-opacity opacity-100" />
