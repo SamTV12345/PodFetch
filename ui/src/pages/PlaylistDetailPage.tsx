@@ -27,11 +27,11 @@ export const PlaylistDetailPage = ()=>{
                     params: {
                         path: {
                             playlist_id: params.id!,
-                            episode_id: current_podcast_episode!.id
+                            episode_id: current_podcast_episode!.podcastEpisode.id
                         }
                     }
                 }).then(()=>{
-                    const currentIndex = selectedPlaylist!.items.findIndex(i=>i.podcastEpisode.id===current_podcast_episode!.id)
+                    const currentIndex = selectedPlaylist!.items.findIndex(i=>i.podcastEpisode.id===current_podcast_episode!.podcastEpisode.id)
                     if(currentIndex === selectedPlaylist!.items.length-1){
                         return
                     }
@@ -45,8 +45,8 @@ export const PlaylistDetailPage = ()=>{
                     })
                         .then((response) => {
                             nextEpisode.podcastEpisode.status
-                                ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
-                                : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
+                                ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data! as any))
+                                : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data! as any))
 
                             setPlaying(true)
                         })
@@ -54,7 +54,7 @@ export const PlaylistDetailPage = ()=>{
                     setSelectedPlaylist({
                         id: selectedPlaylist!.id,
                         name: selectedPlaylist!.name,
-                        items: selectedPlaylist!.items.filter(i=>i.podcastEpisode.id!==current_podcast_episode!.id)
+                        items: selectedPlaylist!.items.filter(i=>i.podcastEpisode.id!==current_podcast_episode!.podcastEpisode.id)
                     })
                 })
 

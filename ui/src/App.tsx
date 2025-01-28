@@ -38,7 +38,6 @@ import {SettingsPodcastDelete} from "./components/SettingsPodcastDelete";
 import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
-import {configWSUrl} from "./utils/navigationUtils";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
 import {components} from "../schema";
@@ -141,7 +140,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                         let podcastUpdated = useCommon.getState().selectedEpisodes
                             .map(p => {
                             if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
-                                const foundDownload = JSON.parse(JSON.stringify(p)) as EpisodesWithOptionalTimeline
+                                const foundDownload = JSON.parse(JSON.stringify(p)) as components["schemas"]["PodcastEpisodeWithHistory"]
 
                                 foundDownload.podcastEpisode.status = true
                                 foundDownload.podcastEpisode.url = downloadedPodcastEpisode.url

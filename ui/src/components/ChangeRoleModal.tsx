@@ -71,7 +71,7 @@ export const ChangeRoleModal = () => {
             <div className="flex items-center gap-4 mb-6">
                 <label className="text-sm text-[--fg-color]" htmlFor="allow-explicit-content">{t('allow-explicit-content')}</label>
                 <Switcher checked={selectedUser?.explicitConsent || false} id="allow-explicit-content"
-                          setChecked={() => {setSelectedUser({ ...selectedUser!, explicitConsent: !selectedUser?.explicitConsent })}}/>
+                          onChange={() => {setSelectedUser({ ...selectedUser!, explicitConsent: !selectedUser?.explicitConsent })}}/>
             </div>
 
             <CustomButtonPrimary className="float-right" onClick={changeRole}>{t('change-role')}</CustomButtonPrimary>

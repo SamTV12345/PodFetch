@@ -35,17 +35,17 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
             ">
                 {/* Thumbnail and titles need special positioning to vertically align thumbnail with description */}
                 <div className="flex flex-col xs:flex-row items-center gap-4 md:block md:relative md:mb-10">
-                    <div className="aspect-square bg-center bg-cover md:mb-4 rounded-xl h-40 md:h-60 lg:h-80" style={{ backgroundImage: `url("${selectedPodcast?.local_image_url}")` }}></div>
+                    <div className="aspect-square bg-center bg-cover md:mb-4 rounded-xl h-40 md:h-60 lg:h-80" style={{ backgroundImage: `url("${selectedPodcast?.podcastEpisode.local_image_url}")` }}></div>
 
                     <div className="md:absolute text-center xs:text-left">
-                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl text-[--fg-color]">{selectedPodcast?.name}</span>
+                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl text-[--fg-color]">{selectedPodcast?.podcastEpisode.name}</span>
                         <span className="block lg:text-lg text-[--fg-color]">{currentPodcast && currentPodcast.name}</span>
                     </div>
                 </div>
 
                 {/* Description */}
                 <div className="md:max-h-60 lg:max-h-80 md:mb-10 overflow-y-auto xs:text-lg md:text-xl lg:text-2xl text-[--fg-color]"
-                     dangerouslySetInnerHTML={selectedPodcast?.description ? removeHTML(selectedPodcast.description) : { __html: '' }} />
+                     dangerouslySetInnerHTML={selectedPodcast?.podcastEpisode.description ? removeHTML(selectedPodcast.podcastEpisode.description) : { __html: '' }} />
             </div>
 
             {/* Player */}

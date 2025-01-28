@@ -192,7 +192,7 @@ export const PodcastDetailPage = () => {
                             <span className="text-[--fg-color]">{t('original-rss-feed')}</span>
                         </button>
                             <div className="flex gap-4 justify-end">
-                                <Switcher checked={onlyUnplayed} setChecked={setOnlyUnplayed}/>
+                                <Switcher checked={onlyUnplayed} onChange={setOnlyUnplayed}/>
                                 <span className=" text-[--fg-color] mt-auto">{t('active')}</span>
                             </div>
                             </span>
@@ -208,7 +208,7 @@ export const PodcastDetailPage = () => {
                     ">
                         <span className="text-xs text-[--fg-secondary-color]">{t('active')}</span>
 
-                        <Switcher checked={currentPodcast.active} setChecked={() => {
+                        <Switcher checked={currentPodcast.active} onChange={() => {
                             client.PUT("/api/v1/podcasts/{id}/active", {
                                 params: {
                                     path: {

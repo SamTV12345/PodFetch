@@ -19,8 +19,6 @@ import { Heading1 } from '../components/Heading1'
 import { PodcastCard } from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {PodcastTags} from "../models/PodcastTags";
-import {CustomDropdownMenu} from "../components/CustomDropdownMenu";
 import {client} from "../utils/http";
 
 interface PodcastsProps {
@@ -89,7 +87,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                 query: {
                     title: filters?.title,
                     order: filters?.ascending?Order.ASC:Order.DESC,
-                    orderOption: filters?.filter?.toUpperCase(),
+                    orderOption: filters?.filter,
                     favoredOnly: !!onlyFavorites,
                     tag: tag
                 }

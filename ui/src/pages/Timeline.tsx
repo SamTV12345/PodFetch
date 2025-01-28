@@ -58,7 +58,7 @@ export const Timeline = () => {
                         <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
 
                         <Switcher checked={filter === undefined ? true : filter.onlyFavored}
-                                  setChecked={() => setFilters({
+                                  onChange={() => setFilters({
                                       ...filter as Filter,
                                       onlyFavored: !filter?.onlyFavored
                                   })}/>
@@ -66,12 +66,12 @@ export const Timeline = () => {
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-[--fg-secondary-color]">{t('not-yet-played')}</span>
 
-                        <Switcher checked={notListened} setChecked={() => setNotListened(!notListened)}/>
+                        <Switcher checked={notListened} onChange={() => setNotListened(!notListened)}/>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavoredEpisodes')}</span>
 
-                        <Switcher checked={notFavored} setChecked={() => setFavored(!notFavored)}/>
+                        <Switcher checked={notFavored} onChange={() => setFavored(!notFavored)}/>
                     </div>
                 </div>
             </div>

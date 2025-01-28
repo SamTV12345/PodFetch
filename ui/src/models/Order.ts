@@ -4,6 +4,6 @@ export enum Order {
 }
 
 export enum OrderCriteria {
-    PUBLISHEDDATE="PUBLISHEDDATE",
-    TITLE="TITLE"
+    PUBLISHEDDATE="PublishedDate",
+    TITLE="Title"
 }

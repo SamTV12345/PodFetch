@@ -8,7 +8,7 @@ import {components} from "../../schema";
 
 
 export const PlaylistSearchEpisode = ()=>{
-    const [itemCurrentlyDragged,setItemCurrentlyDragged] = useState<PodcastEpisode>()
+    const [itemCurrentlyDragged,setItemCurrentlyDragged] = useState<components["schemas"]["PodcastEpisodeDto"]>()
     const {t} = useTranslation()
     const currentPlayListToEdit = usePlaylist(state => state.currentPlaylistToEdit)
     const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)

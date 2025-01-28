@@ -11,7 +11,7 @@ import {components} from "../../schema";
 
 type EpisodeSearchProps = {
     classNameResults?: string,
-    onClickResult?: (e: components["schemas"]["PodcastEpisode"]) => void,
+    onClickResult?: (e: components["schemas"]["PodcastEpisodeDto"]) => void,
     resultsMaxHeight?: string,
     showBlankState?: boolean
 }
@@ -21,7 +21,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                                                           showBlankState = true }) => {
     const [searching, setSearching] = useState<boolean>()
     const [searchName, setSearchName] = useState<string>('')
-    const [searchResults, setSearchResults] = useState<components["schemas"]["PodcastEpisode"][]>([])
+    const [searchResults, setSearchResults] = useState<components["schemas"]["PodcastEpisodeDto"][]>([])
     const { t } = useTranslation()
 
     const performSearch = () => {
