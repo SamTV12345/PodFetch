@@ -17,8 +17,8 @@ use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
 use axum::{debug_handler, Extension, Json};
 use axum::extract::{Path, Query};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use crate::controllers::server::ChatServerHandle;
@@ -187,11 +187,10 @@ responses(
 (status = 200, description = "Starts the download of a given podcast episode")),
 tag = "podcast_episodes"
 )]
-#[debug_handler]
 pub async fn download_podcast_episodes_of_podcast(
     Extension(requester): Extension<User>,
     Path(id): Path<String>,
-) -> Result<impl IntoResponse, CustomError> {
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -203,10 +202,11 @@ pub async fn download_podcast_episodes_of_podcast(
             PodcastEpisodeService::perform_download(&podcast_episode.clone(), &podcast_found)
                 .unwrap();
             PodcastEpisode::update_deleted(&podcast_episode.clone().episode_id, false).unwrap();
+            ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_episode, &podcast_found);
         }
     });
 
-    Ok("Download started")
+    Ok(StatusCode::from_u16(200).unwrap())
 }
 
 /**

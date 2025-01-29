@@ -7,15 +7,13 @@ use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use std::sync::OnceLock;
 use futures::executor::block_on;
+use serde::Serialize;
 use socketioxide::SocketIo;
 
 type RoomId = String;
 
-pub type Msg = String;
-
 #[derive(Serialize)]
 pub struct PodcastEpisodeOfflineAvailableMessage {
-    message: String,
     podcast: PodcastDto,
     type_of: PodcastType,
     podcast_episode: PodcastEpisodeDto,
@@ -117,8 +115,10 @@ pub struct ChatServerHandle;
 
 impl ChatServerHandle {
 
-    fn send_broadcast_sync(room_id: RoomId, msg: impl Into<Msg>) {
-        block_on(SOCKET_IO_LAYER.get().unwrap().to(room_id.to_string()).emit("message", &msg.into()))
+    fn send_broadcast_sync<T>(room_id: RoomId, msg: &T, event: impl AsRef<str>)
+    where T: ?Sized + Serialize {
+        let room_id = "/".to_owned()+room_id.as_str();
+        block_on(SOCKET_IO_LAYER.get().unwrap().of(room_id).unwrap().emit(event, &msg))
             .unwrap();
     }
 
@@ -136,46 +136,47 @@ impl ChatServerHandle {
         let podcast = podcast.clone().into();
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            serde_json::to_string(&PodcastEpisodeOfflineAvailableMessage {
-                message: format!("Episode {} is now available offline", podcast_episode.name),
+            &PodcastEpisodeOfflineAvailableMessage {
                 podcast,
                 type_of: PodcastType::AddPodcastEpisode,
                 podcast_episode,
-            })
-            .unwrap(),
+            },
+            "offlineAvailable",
         );
     }
 
     pub fn broadcast_podcast_refreshed(podcast: &Podcast) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            serde_json::to_string(&PodcastRefreshedMessage {
+            &PodcastRefreshedMessage {
                 type_of: PodcastType::RefreshPodcast,
                 message: format!("Podcast {} has been refreshed", podcast.name),
                 podcast: podcast.clone().into(),
-            })
-            .unwrap(),
+            },
+            "refreshedPodcast",
         );
     }
 
     pub fn broadcast_opml_error(message: String) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            serde_json::to_string(&OpmlErrorMessage::from(message)).unwrap(),
+            &OpmlErrorMessage::from(message),
+            "opmlError"
         )
     }
 
     pub fn broadcast_opml_added(podcast: &Podcast) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            serde_json::to_string(&OpmlAddedMessage::from(podcast.clone())).unwrap(),
+            &OpmlAddedMessage::from(podcast.clone()),
+            "opmlAdded"
         );
     }
 
     pub fn broadcast_podcast_episode_deleted_locally(podcast_episode: &PodcastEpisode) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            serde_json::to_string(&PodcastEpisodeDeleteMesage {
+            &PodcastEpisodeDeleteMesage {
                 podcast_episode: PodcastEpisodeDto::from((
                     podcast_episode.clone(),
                     None::<User>,
@@ -183,15 +184,16 @@ impl ChatServerHandle {
                 )),
                 type_of: PodcastType::DeletePodcastEpisode,
                 message: "Deleted podcast episode locally".to_string(),
-            })
-            .unwrap(),
+            },
+            "deletedPodcastEpisodeLocally",
         );
     }
 
     pub fn broadcast_podcast_downloaded(podcast: Podcast) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            serde_json::to_string(&PodcastAddedMessage::from(podcast)).unwrap(),
+            &PodcastAddedMessage::from(podcast),
+            "addedPodcast",
         );
     }
 
@@ -201,7 +203,8 @@ impl ChatServerHandle {
     ) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            serde_json::to_string(&PodcastEpisodesAdded::from((podcast, episodes))).unwrap(),
+            &PodcastEpisodesAdded::from((podcast, episodes)),
+            "addedEpisodes",
         );
     }
 }

@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
 import { removeHTML} from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
-import { Notification } from '../models/Notification'
 import 'material-symbols/outlined.css'
 import {client} from "../utils/http";
 import {components} from "../../schema";
