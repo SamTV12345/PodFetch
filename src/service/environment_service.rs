@@ -139,7 +139,7 @@ impl EnvironmentService {
         };
 
         let ws_url = match var("DEV") {
-            Ok(_) => "http://localhost:8000/ws".to_string(),
+            Ok(_) => "http://localhost:8000/socket.io/".to_string(),
             Err(_) => var(SERVER_URL)
                 .map(|mut s| {
                     s = match s.starts_with("https") {
@@ -147,12 +147,12 @@ impl EnvironmentService {
                         false => s.replace("http", "ws"),
                     };
                     if s.ends_with('/') {
-                        s + "ws"
+                        s + "socket.io"
                     } else {
-                        s + "/ws"
+                        s + "/socket.io"
                     }
                 })
-                .unwrap_or("http://localhost:8000/ws".to_string()),
+                .unwrap_or("http://localhost:8000/socket.io/".to_string()),
         };
 
         let mut opt_sub_dir = var(SUB_DIRECTORY)

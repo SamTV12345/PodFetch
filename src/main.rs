@@ -24,6 +24,7 @@ use axum::Router;
 use axum::middleware::from_fn;
 use axum::routing::get;
 use file_format::FileFormat;
+use socketioxide::extract::SocketRef;
 use socketioxide::SocketIoBuilder;
 use tokio::fs;
 use utoipa_rapidoc::RapiDoc;
@@ -244,8 +245,12 @@ async fn main() -> std::io::Result<()> {
 
     let ui_dir = format!("{}/ui", sub_dir);
     let (layer, io) = SocketIoBuilder::new().build_layer();
-    io.ns("/", ||{});
-    io.ns("/".to_owned() +MAIN_ROOM, ||{});
+    io.ns("/", |socket: SocketRef|{
+        log::info!("Socket connected {}", socket.id);
+    });
+    io.ns("/".to_owned() +MAIN_ROOM, ||{
+        info!("Socket connected to main room");
+    });
     SOCKET_IO_LAYER.get_or_init(|| io);
 
     let (router, api) = OpenApiRouter::new()

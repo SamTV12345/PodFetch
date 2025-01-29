@@ -5,6 +5,8 @@ import {create} from "zustand";
 import {components} from "../../schema";
 import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
 import {addHeader} from "../utils/http";
+import io, {Socket} from "socket.io-client";
+import {ClientToServerEvents, ServerToClientEvents} from "../models/socketioEvents";
 
 export type Podcast = {
     directory: string,
@@ -101,7 +103,8 @@ interface CommonProps {
     updatePodcast: (podcast: components["schemas"]["PodcastDto"]) => void,
     headers: Record<string,string>,
     setHeaders:(headers: Record<string,string>)=>void,
-    isAuthenticated: boolean
+    isAuthenticated: boolean,
+    socketIo: Socket<ServerToClientEvents, ClientToServerEvents> | undefined
 }
 
 const useCommon = create<CommonProps>((set, get) => ({
@@ -174,7 +177,13 @@ const useCommon = create<CommonProps>((set, get) => ({
         }
     },
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => set({detailedAudioPlayerOpen}),
-    setConfigModel: (configModel: components["schemas"]["ConfigModel"]) => set({configModel}),
+    setConfigModel: (configModel: components["schemas"]["ConfigModel"]) => {
+        set({configModel, socketIo: io(new URL(configModel.wsUrl).host + "/main", {
+                transports: ['websocket'],
+                path: new URL(configModel.wsUrl).pathname,
+                hostname: new URL(configModel.wsUrl).host,
+            })})
+    },
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => set({currentDetailedPodcastId}),
     addPodcast: (podcast: components["schemas"]["PodcastDto"]) => {
         set({podcasts: [...get().podcasts, podcast]})
@@ -218,7 +227,6 @@ const useCommon = create<CommonProps>((set, get) => ({
     },
     isAuthenticated: false,
     setHeaders:(headers)=>{
-        console.log("Setting headers ", headers)
 
         set({...get().headers, ...headers})
         if (headers["Authorization"]) {
@@ -226,7 +234,8 @@ const useCommon = create<CommonProps>((set, get) => ({
             set({isAuthenticated: true})
 
         }
-    }
+    },
+    socketIo: undefined
 }))
 
 export default useCommon
