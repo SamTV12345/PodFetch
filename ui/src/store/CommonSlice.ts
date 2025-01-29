@@ -4,6 +4,7 @@ import {ConfirmModalProps} from "../components/ConfirmModal";
 import {create} from "zustand";
 import {components} from "../../schema";
 import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
+import {addHeader} from "../utils/http";
 
 export type Podcast = {
     directory: string,
@@ -217,10 +218,13 @@ const useCommon = create<CommonProps>((set, get) => ({
     },
     isAuthenticated: false,
     setHeaders:(headers)=>{
+        console.log("Setting headers ", headers)
 
         set({...get().headers, ...headers})
         if (headers["Authorization"]) {
+            addHeader("Authorization", headers["Authorization"])
             set({isAuthenticated: true})
+
         }
     }
 }))

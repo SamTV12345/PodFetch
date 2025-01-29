@@ -54,6 +54,8 @@ export const Login = () => {
             useCommon.getState().setHeaders({ Authorization: 'Basic ' + basicAuthString })
 
             setTimeout(() => navigate('/'), 100)
+        }).catch((e)=>{
+            setAlert(e.toString())
         })
     }
 
