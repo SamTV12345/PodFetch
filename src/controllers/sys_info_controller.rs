@@ -1,5 +1,4 @@
 use axum::Json;
-use axum::routing::get;
 use crate::models::user::User;
 
 use fs_extra::dir::get_size;

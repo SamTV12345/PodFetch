@@ -1,5 +1,5 @@
 use std::fmt::{Display, Formatter};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub enum OrderCriteria {

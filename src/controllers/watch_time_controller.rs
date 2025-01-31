@@ -1,6 +1,5 @@
 use axum::{Extension, Json};
 use axum::extract::Path;
-use axum::routing::{get, post};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
