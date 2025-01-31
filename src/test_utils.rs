@@ -2,34 +2,20 @@
 pub mod test {
     use crate::constants::inner_constants::Role;
     use crate::models::user::User;
-    use crate::run_migrations;
     use chrono::Utc;
     use diesel::RunQueryDsl;
     use sha256::digest;
-    use std::sync::{LazyLock, RwLock};
+    
+    use axum::Router;
     use testcontainers::runners::SyncRunner;
     use testcontainers::Container;
     use testcontainers_modules::postgres::Postgres;
+    use crate::commands::startup::handle_config_for_server_startup;
 
-    static CONTAINER: LazyLock<RwLock<Option<Container<Postgres>>>> =
-        LazyLock::new(|| RwLock::new(None));
-
-    #[cfg(test)]
-    #[ctor::ctor]
-    fn init() {
+    pub fn init() -> (Container<Postgres>, Router) {
         let container = setup_container();
-        let mut conatiner = CONTAINER.write().unwrap();
-        *conatiner = Some(container);
-    }
-
-    #[cfg(test)]
-    #[ctor::dtor]
-    fn stop() {
-        if std::env::var("GH_ACTION").is_err() {
-            if let Ok(mut container) = CONTAINER.write() {
-                *container = None
-            }
-        }
+        let router = handle_config_for_server_startup();
+        (container, router)
     }
 
     pub fn setup_container() -> Container<Postgres> {
@@ -38,7 +24,6 @@ pub mod test {
         let connection_string =
             &format!("postgres://postgres:postgres@127.0.0.1:{host_port}/postgres",);
         std::env::set_var("DATABASE_URL", connection_string);
-        run_migrations();
         container
     }
 

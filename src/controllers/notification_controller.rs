@@ -1,5 +1,4 @@
 use axum::Json;
-use axum::routing::{get, put};
 use reqwest::StatusCode;
 use crate::models::notification::Notification;
 use crate::service::notification_service::NotificationService;

@@ -32,7 +32,6 @@ use crate::service::file_service::{perform_podcast_variable_replacement, FileSer
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
-use tokio_stream::StreamExt;
 
 #[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -84,7 +83,7 @@ pub async fn search_podcasts(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let _order = query.order.map(|o|o.into()).unwrap_or(OrderCriteria::Asc);
-    let _latest_pub = query.order_option.map(|o|OrderOption::from_string(o)).unwrap_or
+    let _latest_pub = query.order_option.map(OrderOption::from_string).unwrap_or
     (OrderOption::Title);
     let tag = query.tag;
 
@@ -172,7 +171,7 @@ pub async fn find_all_podcasts(requester: Extension<User>) -> Result<Json<Vec<Po
 
     Ok(Json(podcasts))
 }
-use crate::models::itunes_models::{ItunesModel, PodcastSearchReturn};
+use crate::models::itunes_models::PodcastSearchReturn;
 
 #[utoipa::path(
 get,
