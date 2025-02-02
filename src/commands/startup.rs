@@ -288,7 +288,7 @@ pub fn run_migrations() {
 }
 
 
-pub fn handle_config_for_server_startup() ->  Router {
+pub fn handle_config_for_server_startup() -> Router {
     run_migrations();
 
     check_server_config();
@@ -386,4 +386,18 @@ pub fn handle_config_for_server_startup() ->  Router {
         // .merge(RapiDoc::with_openapi("/api-docs/openapi2.json", api).path("/rapidoc"))
         .merge(Scalar::with_url("/scalar", api))
         .layer(layer)
+}
+
+
+#[cfg(test)]
+pub mod tests {
+    use axum_test::TestServer;
+    use crate::commands::startup::handle_config_for_server_startup;
+
+    pub fn handle_test_startup() -> TestServer {
+
+        let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
+        test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
+        test_server
+    }
 }

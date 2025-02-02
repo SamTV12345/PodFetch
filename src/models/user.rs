@@ -140,7 +140,7 @@ impl User {
             id: 9999,
             username: username.unwrap_or(STANDARD_USER.to_string()),
             role: Role::Admin.to_string(),
-            password,
+            password: password.map(sha256::digest),
             explicit_consent: true,
             created_at: Default::default(),
             api_key: ENVIRONMENT_SERVICE.api_key_admin.clone(),

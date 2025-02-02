@@ -12,6 +12,12 @@ pub mod tests {
         pub created_at: String
     }
 
+    impl Default for NotificationTestDataBuilder {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl NotificationTestDataBuilder {
         pub fn new() -> NotificationTestDataBuilder {
             NotificationTestDataBuilder {
