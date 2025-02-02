@@ -233,6 +233,7 @@ mod test {
     use serial_test::serial;
     use crate::auth_middleware::AuthFilter;
     use crate::commands::startup::handle_config_for_server_startup;
+    use crate::commands::startup::tests::handle_test_startup;
     use crate::service::environment_service::ReverseProxyConfig;
     use crate::test_utils::test::{ create_random_user, ContainerCommands, POSTGRES_CHANNEL};
 
@@ -275,6 +276,7 @@ mod test {
     #[serial]
     #[tokio::test]
     async fn test_proxy_auth_with_header_in_request_auto_sign_up() {
+        let _ = handle_test_startup();
         POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
 
         let rv_config = ReverseProxyConfig {

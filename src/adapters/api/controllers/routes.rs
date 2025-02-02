@@ -33,8 +33,9 @@ pub fn global_routes() -> OpenApiRouter {
 
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
         use crate::gpodder::auth::authentication::__path_login;
-        router = router.nest("/api/2",OpenApiRouter::new()
+        router = router
             .routes(routes!(login))
+            .nest("/api/2",OpenApiRouter::new()
             .merge(get_subscription_router())
             .merge(get_device_router())
             .merge(get_gpodder_episodes_router())

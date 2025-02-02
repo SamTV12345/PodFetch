@@ -13,7 +13,7 @@ use sha256::digest;
 
 #[utoipa::path(
 post,
-path="/auth/{username}/login.json",
+path="/api/2/auth/{username}/login.json",
 responses(
 (status = 200, description = "Logs in the user and returns a session cookie.")),
 tag="gpodder"
@@ -155,4 +155,28 @@ mod tests {
         assert_eq!(cookie.name(), "sessionid");
         assert_eq!(cookie.value(), session.session_id);
     }
+
+
+        use base64::Engine;
+        use base64::engine::general_purpose;
+        use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+
+        #[tokio::test]
+        #[serial]
+        async fn test_login() {
+            let mut server = handle_test_startup();
+            POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+            let mut user = UserTestDataBuilder::new().build();
+            user.insert_user().expect("TODO: panic message");
+            let encoded_auth = general_purpose::STANDARD.encode(format!("{}:{}", user.username, "password"));
+            server.clear_headers();
+            server.add_header("Authorization", format!("Basic {}", encoded_auth));
+
+            let response = server.post(&format!("/api/2/auth/{}/login.json", user.username)).await;
+            println!("{:?}", response);
+            assert!(response.status_code().is_success());
+            assert!(response.cookies().get("sessionid").is_some());
+        }
 }
