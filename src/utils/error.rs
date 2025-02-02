@@ -275,8 +275,10 @@ mod tests {
 
     use diesel::result::Error;
     use std::io::ErrorKind;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_map_io_error() {
         let io_error = std::io::Error::new(ErrorKind::NotFound, "File not found");
         let custom_error = map_io_error(io_error, None);
@@ -286,6 +288,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_map_db_error() {
         let db_error = Error::NotFound;
         let custom_error = map_db_error(db_error);
@@ -293,12 +296,14 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_custom_error() {
         let custom_error = CustomErrorInner::NotFound;
         assert_eq!(custom_error.to_string(), "Requested file was not found");
     }
 
     #[test]
+    #[serial]
     fn test_custom_conflict_message() {
         let custom_error = CustomErrorInner::Conflict("An error occured".to_string());
         assert_eq!(

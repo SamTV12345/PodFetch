@@ -143,6 +143,14 @@ pub const DEFAULT_DEVICE: &str = "webview";
 
 pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new(|| {
     init_logging();
+    #[cfg(test)]
+    {
+        let mut env = EnvironmentService::new();
+        env.database_url = "postgres://postgres:postgres@127.0.0.1:55002/postgres"
+            .to_string();
+        env
+    }
+    #[cfg(not(test))]
     EnvironmentService::new()
 });
 

@@ -405,6 +405,7 @@ fn remove_extension(filename: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::settings::Setting;
     use crate::service::file_service::{
@@ -414,6 +415,7 @@ mod tests {
     use crate::utils::rss_feed_parser::PodcastParsed;
 
     #[test]
+    #[serial]
     fn test_remove_file_suffix() {
         let filename = "test.mp3";
         let filename_without_suffix = super::remove_extension(filename);
@@ -421,6 +423,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_remove_file_suffix_long_name() {
         let filename = "testz398459345z!?234.mp3";
         let filename_without_suffix = super::remove_extension(filename);
@@ -428,6 +431,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn get_filename_of_url_test() {
         let url = "https://www.example.com/test.mp3";
         let filename = super::get_filename_of_url(url);
@@ -435,6 +439,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn get_filename_of_url_test_with_numbers() {
         let url = "https://www.example823459274892347.com234/mypodcast.mp3";
         let filename = super::get_filename_of_url(url);
@@ -442,6 +447,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_perform_replacement_dash_and_underscore() {
         let title = "test: test";
         let settings = Setting {
@@ -466,6 +472,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_perform_replacement_remove() {
         let title = "test: test";
         let settings = Setting {
@@ -490,6 +497,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_perform_replacement_replace_with_dash() {
         let title = "test: test";
         let settings = Setting {
@@ -514,6 +522,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_podcast_episode_replacement_guid() {
         let settings = Setting {
             id: 2,
@@ -554,6 +563,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_podcast_episode_replacement_title() {
         let settings = Setting {
             id: 2,
@@ -594,6 +604,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_podcast_episode_replacement_old_format() {
         let settings = Setting {
             id: 2,
@@ -634,6 +645,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     pub fn perform_podcast_variable_replacement_date_title() {
         let settings = Setting {
             id: 2,
@@ -663,6 +675,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     pub fn perform_podcast_variable_replacement_old_format() {
         let settings = Setting {
             id: 2,

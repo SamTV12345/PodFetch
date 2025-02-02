@@ -5,24 +5,19 @@ pub mod test {
     use chrono::Utc;
     use diesel::RunQueryDsl;
     use sha256::digest;
-    
-    use axum::Router;
-    use testcontainers::runners::SyncRunner;
-    use testcontainers::Container;
+    use testcontainers::{ContainerRequest, ImageExt};
+    use testcontainers::core::ContainerPort;
     use testcontainers_modules::postgres::Postgres;
-    use crate::commands::startup::handle_config_for_server_startup;
 
-    pub fn init() -> (Container<Postgres>, Router) {
+    pub fn init() -> ContainerRequest<Postgres> {
         let container = setup_container();
-        let router = handle_config_for_server_startup();
-        (container, router)
+        // Set frontend url
+        container
     }
 
-    pub fn setup_container() -> Container<Postgres> {
-        let container = Postgres::default().start().unwrap();
-        let host_port = container.get_host_port_ipv4(5432).unwrap();
-        let connection_string =
-            &format!("postgres://postgres:postgres@127.0.0.1:{host_port}/postgres",);
+    pub fn setup_container() -> ContainerRequest<Postgres> {
+        let container = Postgres::default().with_mapped_port(55002, ContainerPort::Tcp(5432));
+        let connection_string = "postgres://postgres:postgres@127.0.0.1:55002/postgres";
         std::env::set_var("DATABASE_URL", connection_string);
         container
     }

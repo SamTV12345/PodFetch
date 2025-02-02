@@ -140,10 +140,12 @@ fn create_session_cookie(session: Session) -> CookieJar {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use crate::gpodder::auth::authentication::create_session_cookie;
     use crate::models::session::Session;
 
     #[test]
+    #[serial]
     fn test_create_session_cookie() {
         let session = Session::new("test".to_string());
         let cookie = create_session_cookie(session.clone());

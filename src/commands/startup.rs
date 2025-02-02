@@ -56,6 +56,7 @@ use utoipa_scalar::Servable as UtoipaServable;
 pub type DbPool = Pool<ConnectionManager<DBType>>;
 use crate::embed_migrations;
 use crate::EmbeddedMigrations;
+
 import_database_config!();
 
 pub fn run_poll() -> Result<(), CustomError> {
@@ -167,7 +168,6 @@ pub fn check_server_config() {
 pub fn get_ui_config() -> OpenApiRouter {
     OpenApiRouter::new().nest("/ui", OpenApiRouter::new()
         .route("/index.html", get(index))
-        .route("/{path:[^.]*}", get(index))
         .fallback(handle_ui_access))
 }
 
@@ -195,6 +195,9 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
 
     let test = Regex::new(r"/ui/(.*)").unwrap();
     let rs = test.captures(path).unwrap().get(1).unwrap().as_str();
+    if rs.contains("..") {
+        return Err(CustomErrorInner::NotFound.into());
+    }
     let file_path = format!("{}/{}", "./static", rs);
 
     let type_of = match FileFormat::from_file(&file_path) {
@@ -204,7 +207,7 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
 
     let mut content = match fs::read_to_string(file_path).await {
         Ok(e)=>Ok::<String, CustomError>(e),
-        Err(_)=>return Err(CustomErrorInner::NotFound.into())
+        Err(_)=>Ok(fs::read_to_string("./static/index.html").await.unwrap())
     }?;
 
     if type_of.contains(CSS) || type_of.contains(JS) {

@@ -92,9 +92,11 @@ impl PodcastBuilder {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use crate::utils::podcast_builder::PodcastBuilder;
 
     #[test]
+    #[serial]
     fn test_raw_podcast_builder() {
         let podcast_builder = PodcastBuilder::new(1).build();
 
@@ -108,6 +110,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_only_description() {
         let podcast_builder = PodcastBuilder::new(2)
             .description("test".to_string())
@@ -123,6 +126,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_only_language() {
         let podcast_builder = PodcastBuilder::new(3)
             .language(Some("en".to_string()))
@@ -138,6 +142,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_only_keywords() {
         let keywords = vec![
             rss::extension::itunes::ITunesCategory {
@@ -161,6 +166,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_only_last_build_date() {
         let podcast_builder = PodcastBuilder::new(5)
             .last_build_date(Some("22.03.2023".to_string()))
@@ -176,6 +182,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_only_explicit() {
         let podcast_builder = PodcastBuilder::new(6)
             .explicit(Some("yes".to_string()))
@@ -191,6 +198,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_only_author() {
         let podcast_builder = PodcastBuilder::new(6)
             .author(Some("yes".to_string()))
@@ -206,6 +214,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_combined() {
         let podcast_builder = PodcastBuilder::new(7)
             .description("test".to_string())

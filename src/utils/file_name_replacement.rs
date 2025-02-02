@@ -129,6 +129,7 @@ impl Sanitizer {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use crate::utils::file_name_replacement::{Options, Sanitizer};
 
     // From https://github.com/parshap/node-sanitize-filename/blob/master/test.js
@@ -232,6 +233,7 @@ mod tests {
     ];
 
     #[test]
+    #[serial]
     fn it_works() {
         // sanitize
         let options = super::Options {

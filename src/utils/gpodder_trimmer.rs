@@ -5,9 +5,11 @@ pub fn trim_from_path(path_segment_with_extension: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use super::*;
 
     #[test]
+    #[serial]
     fn test_trim_from_path() {
         let path_segment_with_extension = "src/utils/podcast_builder.rs";
         let expected = "src/utils/podcast_builder";
@@ -16,6 +18,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_trim_from_path_username() {
         let path_segment_with_extension = "max.json";
         let expected = "max";

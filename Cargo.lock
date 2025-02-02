@@ -783,6 +783,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "deunicode"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
+
+[[package]]
 name = "diesel"
 version = "2.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1002,6 +1008,17 @@ dependencies = [
  "cfg-if",
  "home",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "fake"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aef603df4ba9adbca6a332db7da6f614f21eafefbaf8e087844e452fdec152d0"
+dependencies = [
+ "chrono",
+ "deunicode",
+ "rand",
 ]
 
 [[package]]
@@ -2295,10 +2312,12 @@ dependencies = [
  "chrono",
  "clokwerk",
  "ctor",
+ "derive_builder",
  "diesel",
  "diesel_migrations",
  "dotenv",
  "env_logger",
+ "fake",
  "file-format",
  "frankenstein",
  "fs_extra",

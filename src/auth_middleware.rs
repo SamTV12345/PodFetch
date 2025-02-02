@@ -245,13 +245,14 @@ mod test {
     
     
     use serial_test::serial;
-
+    use testcontainers::runners::AsyncRunner;
     use crate::auth_middleware::AuthFilter;
-
+    use crate::commands::startup::handle_config_for_server_startup;
     use crate::service::environment_service::ReverseProxyConfig;
-    use crate::test_utils::test::{clear_users, create_random_user};
+    use crate::test_utils::test::{clear_users, create_random_user, init};
 
     #[test]
+    #[serial]
     fn test_basic_auth_login() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdDp0ZXN0");
         assert!(result.is_ok());
@@ -261,6 +262,7 @@ mod test {
     }
 
     #[test]
+    #[serial]
     fn test_basic_auth_login_with_special_characters() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdCTDvMOWOnRlc3Q=");
         assert!(result.is_ok());
@@ -270,8 +272,11 @@ mod test {
     }
 
     #[serial]
-    #[test]
-    fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
+    #[tokio::test]
+    async fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
+        let container = init();
+        let _container = container.start().await.unwrap();
+        let _ = handle_config_for_server_startup();
         clear_users();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
@@ -285,8 +290,11 @@ mod test {
     }
 
     #[serial]
-    #[test]
-    fn test_proxy_auth_with_header_in_request_auto_sign_up() {
+    #[tokio::test]
+    async fn test_proxy_auth_with_header_in_request_auto_sign_up() {
+        let container = init();
+        let _container = container.start().await.unwrap();
+        let _ = handle_config_for_server_startup();
         clear_users();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
@@ -301,8 +309,11 @@ mod test {
     }
 
     #[serial]
-    #[test]
-    fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
+    #[tokio::test]
+    async fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
+        let container = init();
+        let _container = container.start().await.unwrap();
+        let _ = handle_config_for_server_startup();
         clear_users();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
@@ -318,8 +329,11 @@ mod test {
     }
 
     #[serial]
-    #[test]
-    fn test_basic_auth_no_header() {
+    #[tokio::test]
+    async fn test_basic_auth_no_header() {
+        let container = init();
+        let _container = container.start().await.unwrap();
+        let _ = handle_config_for_server_startup();
         clear_users();
 
         let req = Request::builder().header("Content-Type", "text/plain")
@@ -330,8 +344,11 @@ mod test {
     }
 
     #[serial]
-    #[test]
-    fn test_basic_auth_header_no_user() {
+    #[tokio::test]
+    async fn test_basic_auth_header_no_user() {
+        let container = init();
+        let _container = container.start().await.unwrap();
+        let _ = handle_config_for_server_startup();
         clear_users();
 
         let req = Request::builder().header("Content-Type", "text/plain")
@@ -343,9 +360,12 @@ mod test {
     }
 
     #[serial]
-    #[test]
-    fn test_basic_auth_header_other_user() {
+    #[tokio::test]
+    async fn test_basic_auth_header_other_user() {
         // given
+        let container = init();
+        let _container = container.start().await.unwrap();
+        let _ = handle_config_for_server_startup();
         clear_users();
         create_random_user().insert_user().unwrap();
 
@@ -361,9 +381,12 @@ mod test {
     }
 
     #[serial]
-    #[test]
-    fn test_basic_auth_header_correct_user_wrong_password() {
+    #[tokio::test]
+    async fn test_basic_auth_header_correct_user_wrong_password() {
         // given
+        let container = init();
+        let _container = container.start().await.unwrap();
+        let _ = handle_config_for_server_startup();
         clear_users();
         create_random_user().insert_user().unwrap();
 
