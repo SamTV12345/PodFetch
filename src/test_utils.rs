@@ -70,6 +70,8 @@ pub mod test {
                                         v: true,
                                         link: false,
                                     });
+                                    runner.block_on(docker.stop_container(&id, None)).expect
+                                    ("Error removing old containers");
                                     runner.block_on(docker.remove_container(&id, options)).expect
                                     ("Error removing old containers");
                                 }
