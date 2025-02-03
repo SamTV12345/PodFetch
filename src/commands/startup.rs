@@ -3,6 +3,7 @@ use std::process::exit;
 use std::sync::OnceLock;
 use std::thread;
 use std::time::Duration;
+use axum::body::Body;
 use axum::extract::Request;
 use axum::middleware::from_fn;
 use axum::response::{IntoResponse, Redirect, Response};
@@ -11,11 +12,9 @@ use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
 use diesel_migrations::MigrationHarness;
-use file_format::FileFormat;
 use log::info;
 use maud::{html, Markup};
 use r2d2::Pool;
-use regex::Regex;
 use socketioxide::extract::SocketRef;
 use socketioxide::SocketIoBuilder;
 use tokio::fs;
@@ -79,7 +78,13 @@ fn fix_links(content: &str) -> String {
 
 pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
-async fn index() -> Result<String, CustomError> {
+#[
+utoipa::path(
+get,
+path="/index.html",
+)
+]
+async fn index() -> Result<Response<String>, CustomError> {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
         let manifest_json_location =
@@ -122,7 +127,12 @@ async fn index() -> Result<String, CustomError> {
         html
     });
 
-    Ok(html.0.to_string())
+    let response = Response::builder()
+        .header("Content-Type", "text/html")
+        .status(200)
+        .body(html.0.to_string())
+        .unwrap();
+    Ok(response)
 }
 
 
@@ -166,8 +176,9 @@ pub fn check_server_config() {
 
 
 pub fn get_ui_config() -> OpenApiRouter {
-    OpenApiRouter::new().nest("/ui", OpenApiRouter::new()
-        .route("/index.html", get(index))
+    OpenApiRouter::new()
+        .nest("/ui/", OpenApiRouter::new()
+        .routes(routes!(index))
         .fallback(handle_ui_access))
 }
 
@@ -193,33 +204,38 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
     let (req_parts, _) = req.into_parts();
     let path = req_parts.uri.path();
 
-    let test = Regex::new(r"/ui/(.*)").unwrap();
-    let rs = test.captures(path).unwrap().get(1).unwrap().as_str();
-    if rs.contains("..") {
+    if path.contains("..") {
         return Err(CustomErrorInner::NotFound.into());
     }
-    let file_path = format!("{}/{}", "./static", rs);
+    let mut file_path = format!("{}{}", "./static", path);
 
-    let type_of = match FileFormat::from_file(&file_path) {
-        Ok(e)=>Ok::<String, CustomError>(e.media_type().to_string()),
-        Err(_)=>Err(CustomErrorInner::NotFound.into())
+    let mut content = match fs::read(&file_path).await {
+        Ok(e)=>Ok::<Vec<u8>, CustomError>(e),
+        Err(_)=>{
+            file_path = "./static/index.html".to_string();
+            Ok(fs::read("./static/index.html").await.unwrap())
+        }
     }?;
+    let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
 
-    let mut content = match fs::read_to_string(file_path).await {
-        Ok(e)=>Ok::<String, CustomError>(e),
-        Err(_)=>Ok(fs::read_to_string("./static/index.html").await.unwrap())
-    }?;
-
-    if type_of.contains(CSS) || type_of.contains(JS) {
-        content = fix_links(&content)
+    if content_type.to_string().contains(CSS) || content_type.to_string().contains(JS) {
+        let str_content = String::from_utf8(content).unwrap();
+        content = fix_links(&str_content).as_bytes().to_vec();
     }
-    let res = Response::builder().header("Content-Type", type_of).body(content).unwrap();
+
+    //let res = Response::builder().header("Content-Type", content_type.to_string()).body(content)
+    //    .unwrap();
+    let res = Response::builder()
+        .header("Content-Type", content_type.to_string())
+        .body(Body::from(content))
+        .unwrap();
     Ok(res)
 }
 
 
 pub fn get_api_config() -> OpenApiRouter {
     OpenApiRouter::new()
+        .merge(get_ui_config())
         .merge(podcast_serving())
         .merge(get_manifest_router())
         .nest("/api/v1", OpenApiRouter::new().merge(config()))
@@ -234,7 +250,6 @@ fn config() -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(get_invite))
         .routes(routes!(onboard_user))
-        .merge(get_ui_config())
         .routes(routes!(get_public_config))
         .routes(routes!(login))
         .merge(get_private_api())

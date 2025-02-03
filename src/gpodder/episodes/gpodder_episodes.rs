@@ -39,13 +39,11 @@ pub struct EpisodeSinceRequest {
     tag="gpodder"
 )]
 pub async fn get_episode_actions(
-    Extension(opt_flag): Extension<Option<Session>>,
+    Extension(flag): Extension<Session>,
     Query(since): Query<EpisodeSinceRequest>,
     Path(username): Path<String>,
 ) -> Result<Json<EpisodeActionResponse>, CustomError> {
     let username = trim_from_path(&username);
-    match opt_flag {
-        Some(flag) => {
             if flag.username != username {
                 return Err(CustomErrorInner::Forbidden.into());
             }
@@ -70,9 +68,6 @@ pub async fn get_episode_actions(
                 actions,
                 timestamp: get_current_timestamp(),
             }))
-        }
-        None => Err(CustomErrorInner::Forbidden.into()),
-    }
 }
 
 #[
@@ -88,12 +83,10 @@ pub async fn get_episode_actions(
 ]
 pub async fn upload_episode_actions(
     Path(username): Path<String>,
-    Extension(opt_flag): Extension<Option<Session>>,
+    Extension(flag): Extension<Session>,
     Json(podcast_episode): Json<Vec<EpisodeDto>>,
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     let username = trim_from_path(&username);
-    match opt_flag {
-        Some(flag) => {
             if flag.username != username {
                 return Err(CustomErrorInner::Forbidden.into());
             }
@@ -106,9 +99,6 @@ pub async fn upload_episode_actions(
                 update_urls: vec![],
                 timestamp: get_current_timestamp(),
             }))
-        }
-        None => Err(CustomErrorInner::Forbidden.into()),
-    }
 }
 
 pub fn get_gpodder_episodes_router() -> OpenApiRouter {

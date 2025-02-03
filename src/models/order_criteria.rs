@@ -45,9 +45,13 @@ impl Display for OrderOption {
 impl OrderOption {
     pub fn from_string(s: String) -> Self {
         match s.as_str() {
+            "PUBLISHEDDATE" => OrderOption::PublishedDate,
+            "TITLE" => OrderOption::Title,
             "PublishedDate" => OrderOption::PublishedDate,
             "Title" => OrderOption::Title,
-            _ => panic!("Invalid OrderOption"),
+            _ => {
+                panic!("Invalid OrderOption")
+            },
         }
     }
 }

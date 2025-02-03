@@ -10,7 +10,6 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::CookieJar;
 use sha256::digest;
 
-
 #[utoipa::path(
 post,
 path="/api/2/auth/{username}/login.json",
@@ -39,8 +38,10 @@ pub async fn login(
     }
 }
 
-fn handle_proxy_auth(rq: axum::extract::Request, username: &str) -> Result<(CookieJar, StatusCode),
-    CustomError> {
+fn handle_proxy_auth(
+    rq: axum::extract::Request,
+    username: &str,
+) -> Result<(CookieJar, StatusCode), CustomError> {
     let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
     match opt_authorization {
@@ -129,20 +130,20 @@ fn handle_gpodder_basic_auth(
 }
 
 fn create_session_cookie(session: Session) -> CookieJar {
-
     CookieJar::new().add(
-    Cookie::build(("sessionid", session.session_id))
-        .http_only(true)
-        .secure(false)
-        .same_site(SameSite::Strict)
-        .path("/api"))
+        Cookie::build(("sessionid", session.session_id))
+            .http_only(true)
+            .secure(false)
+            .same_site(SameSite::Strict)
+            .path("/api"),
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::gpodder::auth::authentication::create_session_cookie;
     use crate::models::session::Session;
+    use serial_test::serial;
 
     #[test]
     #[serial]
@@ -156,27 +157,58 @@ mod tests {
         assert_eq!(cookie.value(), session.session_id);
     }
 
-
-        use base64::Engine;
-        use base64::engine::general_purpose;
-        use crate::commands::startup::tests::handle_test_startup;
+    use crate::commands::startup::tests::handle_test_startup;
     use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use base64::engine::general_purpose;
+    use base64::Engine;
+    use crate::adapters::api::models::device::device_response::DeviceResponse;
+    use crate::utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
 
-        #[tokio::test]
-        #[serial]
-        async fn test_login() {
-            let mut server = handle_test_startup();
-            POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
-            let mut user = UserTestDataBuilder::new().build();
-            user.insert_user().expect("TODO: panic message");
-            let encoded_auth = general_purpose::STANDARD.encode(format!("{}:{}", user.username, "password"));
-            server.clear_headers();
-            server.add_header("Authorization", format!("Basic {}", encoded_auth));
+    #[tokio::test]
+    #[serial]
+    async fn test_login() {
+        let mut server = handle_test_startup();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
+        let mut user = UserTestDataBuilder::new().build();
+        user.insert_user().expect("TODO: panic message");
+        let encoded_auth =
+            general_purpose::STANDARD.encode(format!("{}:{}", user.username, "password"));
+        server.clear_headers();
+        server.add_header("Authorization", format!("Basic {}", encoded_auth));
 
-            let response = server.post(&format!("/api/2/auth/{}/login.json", user.username)).await;
-            println!("{:?}", response);
-            assert!(response.status_code().is_success());
-            assert!(response.cookies().get("sessionid").is_some());
-        }
+        let response = server
+            .post(&format!("/api/2/auth/{}/login.json", user.username))
+            .await;
+
+        assert!(response.status_code().is_success());
+        assert!(response.cookies().get("sessionid").is_some());
+
+        // get devices
+        let cookie_binding = response.cookies();
+        server.add_cookie(cookie_binding.get("sessionid").unwrap().clone());
+        let response = server
+            .get(&format!("/api/2/devices/{}", user.username))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        assert_eq!(response.json::<Vec<DeviceResponse>>().len(),0);
+
+        // create device
+        let device_post = DevicePostTestDataBuilder::new().build();
+        let created_response = server.post(&format!("/api/2/devices/{}/{}", user.username,
+                                                    device_post.caption))
+            .json(&device_post)
+            .await;
+        assert_eq!(created_response.status_code(), 200);
+
+        // get devices
+        let response = server
+            .get(&format!("/api/2/devices/{}", user.username))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        assert_eq!(response.json::<Vec<DeviceResponse>>().len(),1);
+    }
 }

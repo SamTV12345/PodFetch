@@ -1,13 +1,13 @@
-use axum::{Extension, Json};
-use axum::extract::{Path, Query};
-use utoipa::ToSchema;
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
 use crate::utils::time::get_current_timestamp;
+use axum::extract::{Path, Query};
+use axum::{Extension, Json};
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SubscriptionRetrieveRequest {
@@ -38,30 +38,22 @@ pub struct SubscriptionPostResponse {
 )]
 pub async fn get_subscriptions(
     Path(paths): Path<(String, String)>,
-    Extension(opt_flag): Extension<Option<Session>>,
+    Extension(flag): Extension<Session>,
     Query(query): Query<SubscriptionRetrieveRequest>,
 ) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
-    match opt_flag {
-        Some(flag) => {
-            let username = paths.clone().0;
-            let deviceid = trim_from_path(&paths.1);
-            if flag.username != username.clone() {
-                return Err(CustomErrorInner::Forbidden.into());
-            }
+    let username = paths.clone().0;
+    let deviceid = trim_from_path(&paths.1);
+    if flag.username != username.clone() {
+        return Err(CustomErrorInner::Forbidden.into());
+    }
 
-            let res = SubscriptionChangesToClient::get_device_subscriptions(
-                deviceid,
-                &username,
-                query.since,
-            )
-                .await;
+    let res =
+        SubscriptionChangesToClient::get_device_subscriptions(deviceid, &username, query.since)
+            .await;
 
-            match res {
-                Ok(res) => Ok(Json(res)),
-                Err(_) => Err(CustomErrorInner::Forbidden.into()),
-            }
-        }
-        None => Err(CustomErrorInner::Forbidden.into()),
+    match res {
+        Ok(res) => Ok(Json(res)),
+        Err(_) => Err(CustomErrorInner::Forbidden.into()),
     }
 }
 
@@ -77,20 +69,16 @@ pub async fn get_subscriptions(
 )]
 pub async fn get_subscriptions_all(
     Path(username): Path<String>,
-    Extension(opt_flag): Extension<Option<Session>>,
+    Extension(flag): Extension<Session>,
     Query(query): Query<SubscriptionRetrieveRequest>,
 ) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
     let username = trim_from_path(&username);
-    let flag_username = match opt_flag {
-        Some(flag) => flag.username,
-        None => return Err(CustomErrorInner::Forbidden.into()),
-    };
-    if flag_username != username {
+    if flag.username != username {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
-    let res = SubscriptionChangesToClient::get_user_subscriptions(&flag_username, query.since)
-        .await;
+    let res =
+        SubscriptionChangesToClient::get_user_subscriptions(&flag.username, query.since).await;
 
     match res {
         Ok(res) => Ok(Json(res)),
@@ -109,30 +97,24 @@ pub async fn get_subscriptions_all(
     tag="gpodder"
 )]
 pub async fn upload_subscription_changes(
-        Extension(opt_flag): Extension<Option<Session>>,
-        paths: Path<(String, String)>,
-        upload_request: Json<SubscriptionUpdateRequest>,
+    Extension(flag): Extension<Session>,
+    paths: Path<(String, String)>,
+    upload_request: Json<SubscriptionUpdateRequest>,
 ) -> Result<Json<SubscriptionPostResponse>, CustomError> {
-        match opt_flag {
-            Some(flag) => {
-                let username = paths.clone().0;
-                let deviceid = trim_from_path(&paths.1);
-                if flag.username != username.clone() {
-                    return Err(CustomErrorInner::Forbidden.into());
-                }
-                SubscriptionChangesToClient::update_subscriptions(deviceid, &username, upload_request)
-                    .await
-                    .unwrap();
+    let username = paths.clone().0;
+    let deviceid = trim_from_path(&paths.1);
+    if flag.username != username.clone() {
+        return Err(CustomErrorInner::Forbidden.into());
+    }
+    SubscriptionChangesToClient::update_subscriptions(deviceid, &username, upload_request)
+        .await
+        .unwrap();
 
-                Ok(Json(SubscriptionPostResponse {
-                    update_urls: vec![],
-                    timestamp: get_current_timestamp(),
-                }))
-            }
-            None => Err(CustomErrorInner::Forbidden.into()),
-        }
+    Ok(Json(SubscriptionPostResponse {
+        update_urls: vec![],
+        timestamp: get_current_timestamp(),
+    }))
 }
-
 
 pub fn get_subscription_router() -> OpenApiRouter {
     OpenApiRouter::new()

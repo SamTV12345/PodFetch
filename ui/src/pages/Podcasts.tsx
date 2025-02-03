@@ -1,22 +1,24 @@
 import {FC, useEffect, useMemo, useState} from 'react'
-import { useLocation } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { useDebounce } from '../utils/useDebounce'
+import {useLocation} from 'react-router-dom'
+import {useTranslation} from 'react-i18next'
+import {useDebounce} from '../utils/useDebounce'
 import {
     getFiltersDefault,
-    OrderCriteriaSortingType, TIME_ASCENDING, TIME_DESCENDING,
+    OrderCriteriaSortingType,
+    TIME_ASCENDING,
+    TIME_DESCENDING,
     TITLE_ASCENDING,
     TITLE_DESCENDING
 } from '../utils/Utilities'
-import useCommon, { Podcast,  } from '../store/CommonSlice'
-import { Order } from '../models/Order'
-import { Filter } from '../models/Filter'
-import { AddPodcastModal } from '../components/AddPodcastModal'
-import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
-import { CustomInput } from '../components/CustomInput'
+import useCommon from '../store/CommonSlice'
+import {Order} from '../models/Order'
+import {Filter} from '../models/Filter'
+import {AddPodcastModal} from '../components/AddPodcastModal'
+import {CustomButtonPrimary} from '../components/CustomButtonPrimary'
+import {CustomInput} from '../components/CustomInput'
 import {CustomSelect, Option} from '../components/CustomSelect'
-import { Heading1 } from '../components/Heading1'
-import { PodcastCard } from '../components/PodcastCard'
+import {Heading1} from '../components/Heading1'
+import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
 import {client} from "../utils/http";
@@ -100,7 +102,9 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     },500, [filters, tagsVal])
 
     useEffect(() => {
-        client.GET("/api/v1/podcasts/filter").then(c=> setFilters(c.data || getFiltersDefault()))
+        client.GET("/api/v1/podcasts/filter")
+            .then(c => setFilters(c.data || getFiltersDefault()))
+            .catch(() => setFilters(getFiltersDefault()))
     }, [location])
 
     return (

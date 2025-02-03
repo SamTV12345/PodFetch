@@ -22,7 +22,7 @@ export const Timeline = () => {
     useEffect(() => {
         !filter && client.GET("/api/v1/podcasts/filter").then(resp=>{
             setFilters(resp.data || getFiltersDefault())
-        })
+        }).catch(()=>setFilters(getFiltersDefault()))
     }, [])
 
     useEffect(() => {

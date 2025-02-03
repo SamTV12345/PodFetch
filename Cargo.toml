@@ -60,7 +60,7 @@ mp4ameta = "0.11.0"
 file-format = "0.26.0"
 maud = { version = "*", features = ["axum","axum-core"] }
 url = "2.5.4"
-rust-s3 = { version = "0.35.1", features = ["blocking", "fail-on-err"] }
+rust-s3 = { version = "0.36.0-beta.2", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
 async-trait = "0.1.85"
 axum = { version = "0.8.1", features = ["macros","http2"] }
 tower-http = { version = "0.6.1", features = ["fs"] }
@@ -72,6 +72,7 @@ utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 axum-extra={version = "0.10.0", features = ["cookie"]}
 axum-test = "17.1.0"
 socketioxide = "0.16.0"
+mime_guess = "2.0.5"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.68"
