@@ -2,11 +2,12 @@ import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AddTypes } from '../models/AddTypes'
 import { ConfigModel } from '../models/SysInfo'
+import {components} from "../../schema";
 
 type AddHeaderProps = {
     selectedSearchType: AddTypes;
     setSelectedSearchType: (type: AddTypes) => void,
-    configModel: ConfigModel|undefined
+    configModel: components["schemas"]["ConfigModel"]|undefined
 }
 
 export const AddHeader: FC<AddHeaderProps> = ({ selectedSearchType,setSelectedSearchType, configModel }) => {

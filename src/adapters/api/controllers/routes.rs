@@ -1,72 +1,46 @@
-use crate::adapters::api::controllers::device_controller::{get_devices_of_user, post_device};
+use axum::middleware::from_fn;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+use crate::commands::startup::get_api_config;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::api_doc::ApiDoc;
-use crate::controllers::file_hosting::get_podcast_serving;
-use crate::controllers::manifest_controller::get_manifest;
-use crate::controllers::podcast_controller::proxy_podcast;
-use crate::controllers::websocket_controller::{
-    get_rss_feed, get_rss_feed_for_podcast, start_connection,
-};
 use crate::gpodder::auth::authentication::login;
-use crate::gpodder::parametrization::get_client_parametrization;
-use crate::gpodder::subscription::subscriptions::{get_subscriptions, get_subscriptions_all, upload_subscription_changes};
-use crate::{get_api_config, get_ui_config};
-use actix_web::body::{BoxBody, EitherBody};
-use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
-use actix_web::web::redirect;
-use actix_web::{web, Error, Scope};
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
+use crate::gpodder::parametrization::{get_client_parametrization_router};
+use crate::gpodder::device::device_controller::get_device_router;
+use crate::gpodder::episodes::gpodder_episodes::get_gpodder_episodes_router;
+use crate::gpodder::session_middleware::handle_cookie_session;
+use crate::gpodder::subscription::subscriptions::get_subscription_router;
 
-pub fn global_routes() -> Scope {
+pub fn global_routes() -> OpenApiRouter {
     let base_path = ENVIRONMENT_SERVICE
         .sub_directory
         .clone()
         .unwrap_or("/".to_string());
-    let openapi = ApiDoc::openapi();
     let service = get_api_config();
 
-    web::scope(&base_path)
-        .service(get_client_parametrization)
-        .service(proxy_podcast)
-        .service(get_ui_config())
-        .service(get_podcast_serving())
-        .service(redirect("/swagger-ui", "/swagger-ui/"))
-        .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-doc/openapi.json", openapi))
-        .service(redirect("/", "./ui/"))
-        .service(service)
-        .service(start_connection)
-        .service(get_rss_feed)
-        .service(get_manifest)
-        .service(get_rss_feed_for_podcast)
-}
+    let mut router = match base_path.is_empty() {
+        true=>{
+            OpenApiRouter::new()
+                    .merge(get_client_parametrization_router())
+                    .merge(service)
+        }
+        false=>{
+            OpenApiRouter::new()
+                .nest(&base_path, OpenApiRouter::new()
+                    .merge(get_client_parametrization_router())
+                    .merge(service))
+        }
+    };
 
-pub fn get_gpodder_api() -> Scope {
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
-        web::scope("/api/2")
-            .service(login)
-            .service(get_authenticated_gpodder())
-    } else {
-        web::scope("/api/2")
+        use crate::gpodder::auth::authentication::__path_login;
+        router = router
+            .routes(routes!(login))
+            .nest("/api/2",OpenApiRouter::new()
+            .merge(get_subscription_router())
+            .merge(get_device_router())
+            .merge(get_gpodder_episodes_router())
+            .layer(from_fn(handle_cookie_session))
+        );
     }
-}
-
-fn get_authenticated_gpodder() -> Scope<
-    impl ServiceFactory<
-        ServiceRequest,
-        Config = (),
-        Response = ServiceResponse<EitherBody<BoxBody>>,
-        Error = Error,
-        InitError = (),
-    >,
-> {
-    web::scope("")
-        .wrap(crate::gpodder::session_middleware::CookieFilter::new())
-        .service(post_device)
-        .service(get_devices_of_user)
-        .service(get_subscriptions)
-        .service(get_subscriptions_all)
-        .service(upload_subscription_changes)
-        .service(crate::gpodder::episodes::gpodder_episodes::get_episode_actions)
-        .service(crate::gpodder::episodes::gpodder_episodes::upload_episode_actions)
+    router
 }

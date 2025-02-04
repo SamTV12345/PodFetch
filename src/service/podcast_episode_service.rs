@@ -7,7 +7,6 @@ use crate::service::download_service::DownloadService;
 use crate::service::file_service::FileService;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
-
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 use crate::controllers::server::ChatServerHandle;
@@ -22,7 +21,6 @@ use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
-use actix_web::web;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
 use regex::Regex;
@@ -35,8 +33,7 @@ pub struct PodcastEpisodeService;
 impl PodcastEpisodeService {
     pub fn download_podcast_episode_if_not_locally_available(
         podcast_episode: PodcastEpisode,
-        podcast: Podcast,
-        lobby: Option<web::Data<ChatServerHandle>>,
+        podcast: Podcast
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
 
@@ -44,9 +41,7 @@ impl PodcastEpisodeService {
             Ok(true) => {}
             Ok(false) => {
                 let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
-                if let Some(lobby) = lobby {
-                    lobby.broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
-                }
+                ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
 
                 if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
                     send_new_episode_notification(podcast_episode, podcast)

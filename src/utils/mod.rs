@@ -10,3 +10,5 @@ pub mod podcast_key_checker;
 pub mod reqwest_client;
 pub(crate) mod rss_feed_parser;
 pub mod time;
+pub mod gpodder_trimmer;
+pub mod test_builder;

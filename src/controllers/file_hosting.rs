@@ -1,24 +1,20 @@
+use axum::middleware::from_fn;
+use axum::routing::get;
+use tower_http::services::ServeDir;
+use utoipa_axum::router::OpenApiRouter;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::podcast_key_checker::check_permissions_for_files;
-use actix_files::Files;
-use actix_web::body::MessageBody;
-use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
-use actix_web::middleware::from_fn;
-use actix_web::{web, Scope};
 
-pub fn get_podcast_serving() -> Scope<
-    impl ServiceFactory<
-        ServiceRequest,
-        Config = (),
-        Response = ServiceResponse<impl MessageBody>,
-        Error = actix_web::Error,
-        InitError = (),
-    >,
-> {
-    web::scope("/podcasts")
-        .wrap(from_fn(check_permissions_for_files))
-        .service(
-            Files::new("/", ENVIRONMENT_SERVICE.default_podfetch_folder.to_string())
-                .disable_content_disposition(),
-        )
+pub fn podcast_serving() -> OpenApiRouter {
+
+    OpenApiRouter::new()
+        .nest("/podcasts", OpenApiRouter::new()
+            .route("/trololol", get(||{
+                async {
+                    "trololol"
+                }
+            }))
+            .fallback_service(ServeDir::new(&ENVIRONMENT_SERVICE.default_podfetch_folder))
+        .route_layer(from_fn(check_permissions_for_files)))
+
 }

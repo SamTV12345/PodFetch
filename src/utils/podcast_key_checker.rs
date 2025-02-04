@@ -1,14 +1,14 @@
+use axum::extract::Request;
+use axum::http::Uri;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::dev::{ServiceRequest, ServiceResponse};
-use actix_web::middleware::Next;
-use actix_web::web::Query;
-use actix_web::{Error, HttpMessage};
-use awc::body::BoxBody;
+use axum::middleware::Next;
+use axum::response::Response;
+use axum_extra::extract::OptionalQuery;
 use substring::Substring;
 
 #[derive(Debug, Clone)]
@@ -18,17 +18,16 @@ pub enum PodcastOrPodcastEpisodeResource {
 }
 
 pub async fn check_permissions_for_files(
-    mut req: ServiceRequest,
-    next: Next<BoxBody>,
-) -> Result<ServiceResponse<BoxBody>, Error> {
-    let request = req
-        .extract::<Option<Query<RSSAPiKey>>>()
-        .await?
+    OptionalQuery(query): OptionalQuery<RSSAPiKey>,
+    mut req: Request,
+    next: Next,
+) -> Result<Response, CustomError> {
+    let request = query
         .map(|rss_api_key| rss_api_key.api_key.to_string());
-    let extracted_podcast = check_auth(&req, request)?;
+    let extracted_podcast = check_auth(req.uri().clone(), request)?;
 
     req.extensions_mut().insert(extracted_podcast);
-    next.call(req).await
+    Ok(next.run(req).await)
 }
 
 fn retrieve_podcast_or_podcast_episode(
@@ -67,7 +66,7 @@ fn retrieve_podcast_or_podcast_episode(
 }
 
 fn check_auth(
-    req: &ServiceRequest,
+    uri: Uri,
     api_key: Option<String>,
 ) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
     match ENVIRONMENT_SERVICE.any_auth_enabled {
@@ -87,9 +86,7 @@ fn check_auth(
             if !api_key_exists {
                 return Err(CustomErrorInner::Forbidden.into());
             }
-
-            let requested_path = req
-                .path()
+            let requested_path = uri.path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
             let requested_path = requested_path.substring(1, requested_path.len());
@@ -100,8 +97,7 @@ fn check_auth(
             retrieve_podcast_or_podcast_episode(decoded_path, requested_path)
         }
         false => {
-            let requested_path = req
-                .path()
+            let requested_path = uri.path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
             let requested_path = requested_path.substring(1, requested_path.len());

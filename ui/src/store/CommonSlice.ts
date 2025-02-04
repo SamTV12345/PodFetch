@@ -1,17 +1,12 @@
-import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
-import {Notification} from "../models/Notification";
-import {ConfigModel} from "../models/SysInfo";
 import {LoginData} from "../pages/Login";
 import {User} from "../models/User";
 import {ConfirmModalProps} from "../components/ConfirmModal";
-import {Invite} from "../components/UserAdminInvites";
-import {TimelineHATEOASModel} from "../models/TimeLineModel";
-import {Filter} from "../models/Filter";
-import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {create} from "zustand";
-import {Episode} from "../models/Episode";
-import {PodcastTags} from "../models/PodcastTags";
+import {components} from "../../schema";
+import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
+import {addHeader} from "../utils/http";
+import io, {Socket} from "socket.io-client";
+import {ClientToServerEvents, ServerToClientEvents} from "../models/socketioEvents";
 
 export type Podcast = {
     directory: string,
@@ -28,7 +23,7 @@ export type Podcast = {
     last_build_date?: string,
     active:boolean,
     episode_numbering: boolean,
-    tags: PodcastTags[]
+    tags: components["schemas"]["Tag"][][]
 }
 
 export type PodcastEpisode = {
@@ -48,79 +43,68 @@ export type PodcastEpisode = {
     favored?: boolean
 }
 
-type PodcastEpisodeWithPodcastWatchModel = {
-    podcastEpisode: EpisodesWithOptionalTimeline,
-    podcastWatchModel: Episode
-}
-
-export type LoggedInUser = {
-    id: number,
-    explicitConsent: string,
-    username: string,
-    role: "admin"|"user",
-    createdAt: string,
-    apiKey?: string,
-}
-
 // Define a type for the slice state
 interface CommonProps {
-    selectedEpisodes: EpisodesWithOptionalTimeline[],
-    loggedInUser: LoggedInUser|undefined,
-    setLoggedInUser: (loggedInUser: LoggedInUser) => void,
+    selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],
+    loggedInUser: components["schemas"]["UserWithAPiKey"]|undefined,
+    setLoggedInUser: (loggedInUser: components["schemas"]["UserWithAPiKey"]) => void,
     sidebarCollapsed: boolean,
-    podcasts:Podcast[],
+    podcasts:   components["schemas"]["PodcastDto"][],
     searchedPodcasts: AgnosticPodcastDataModel[]|undefined,
-    notifications: Notification[],
-    infoModalPodcast: PodcastEpisode|undefined,
+    notifications: components["schemas"]["Notification"][],
+    infoModalPodcast: components["schemas"]["PodcastEpisodeDto"]|undefined,
     infoModalPodcastOpen: boolean,
     podcastAlreadyPlayed: boolean,
     detailedAudioPlayerOpen: boolean,
-    configModel: ConfigModel|undefined,
+    configModel: components["schemas"]["ConfigModel"]|undefined,
     currentDetailedPodcastId: number|undefined,
     loginData: Partial<LoginData>|undefined,
     confirmModalData: ConfirmModalProps|undefined
-    selectedUser: User|undefined,
-    users: User[],
+    selectedUser: components["schemas"]["UserWithoutPassword"]|undefined,
+    users: components["schemas"]["UserWithoutPassword"][],
     createInviteModalOpen: boolean,
-    invites: Invite[],
-    timeLineEpisodes: TimelineHATEOASModel|undefined
-    filters: Filter|undefined,
+    invites: components["schemas"]["Invite"][],
+    timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]|undefined
+    filters: components["schemas"]["Filter"]|undefined,
     infoHeading: string|undefined,
     infoText: string|undefined,
-    podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel|undefined,
+    podcastEpisodeAlreadyPlayed: components["schemas"]["PodcastEpisodeWithHistory"]|undefined,
     setSidebarCollapsed: (sidebarCollapsed: boolean) => void,
-    setPodcasts: (podcasts: Podcast[]) => void,
-    tags: PodcastTags[],
-    setPodcastTags: (t: PodcastTags[])=>void,
+    setPodcasts: (podcasts: components["schemas"]["PodcastDto"][]) => void,
+    tags: components["schemas"]["Tag"][],
+    setPodcastTags: (t: components["schemas"]["Tag"][])=>void,
     updateLikePodcast: (id: number) => void,
-    setSelectedEpisodes: (selectedEpisodes: EpisodesWithOptionalTimeline[]) => void,
+    setSelectedEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => void,
     setSearchedPodcasts: (searchedPodcasts: AgnosticPodcastDataModel[]) => void,
-    setNotifications: (notifications: Notification[]) => void,
+    setNotifications: (notifications: components["schemas"]["Notification"][]) => void,
     removeNotification: (id: number) => void,
-    setInfoModalPodcast: (infoModalPodcast: PodcastEpisode) => void,
+    setInfoModalPodcast: (infoModalPodcast: components["schemas"]["PodcastEpisodeDto"]) => void,
     setInfoModalPodcastOpen: (infoModalPodcastOpen: boolean) => void,
     setEpisodeDownloaded: (episode_id: string) => void,
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => void,
-    setConfigModel: (configModel: ConfigModel) => void,
+    setConfigModel: (configModel: components["schemas"]["ConfigModel"]) => void,
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => void,
-    addPodcast: (podcast: Podcast) => void,
+    addPodcast: (podcast: components["schemas"]["PodcastDto"]) => void,
     podcastDeleted: (id: number) => void,
     setLoginData: (loginData: Partial<LoginData>) => void,
     setConfirmModalData: (confirmModalData: ConfirmModalProps) => void,
     setSelectedUser: (selectedUser: User) => void,
-    setUsers: (users: User[]) => void,
+    setUsers: (users: components["schemas"]["UserWithoutPassword"][]) => void,
     setCreateInviteModalOpen: (createInviteModalOpen: boolean) => void,
-    setInvites: (invites: Invite[]) => void,
-    setTimeLineEpisodes: (timeLineEpisodes: TimelineHATEOASModel) => void,
-    addTimelineEpisodes: (timeLineEpisodes: TimelineHATEOASModel) => void,
-    addPodcastEpisodes: (selectedEpisodes: EpisodesWithOptionalTimeline[]) => void,
-    setFilters: (filters: Filter) => void,
+    setInvites: (invites: components["schemas"]["Invite"][]) => void,
+    setTimeLineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => void,
+    addTimelineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => void,
+    addPodcastEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => void,
+    setFilters: (filters: components["schemas"]["Filter"]) => void,
     setInfoHeading: (infoHeading: string) => void,
     setInfoText: (infoText: string) => void,
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => void,
-    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => void,
-    updatePodcast: (podcast: Podcast) => void
-
+    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: components["schemas"]["PodcastEpisodeWithHistory"]) => void,
+    updatePodcast: (podcast: components["schemas"]["PodcastDto"]) => void,
+    headers: Record<string,string>,
+    setHeaders:(headers: Record<string,string>)=>void,
+    isAuthenticated: boolean,
+    socketIo: Socket<ServerToClientEvents, ClientToServerEvents> | undefined
 }
 
 const useCommon = create<CommonProps>((set, get) => ({
@@ -147,8 +131,8 @@ const useCommon = create<CommonProps>((set, get) => ({
     podcastAlreadyPlayed: false,
     podcastEpisodeAlreadyPlayed: undefined,
     setSidebarCollapsed: (sidebarCollapsed: boolean) => set({sidebarCollapsed}),
-    setPodcasts: (podcasts: Podcast[]) => set({podcasts}),
-    updatePodcast: (podcast: Podcast) => {
+    setPodcasts: (podcasts) => set({podcasts}),
+    updatePodcast: (podcast) => {
         const podcasts = get().podcasts
         if(podcasts){
             set({podcasts: podcasts.map((p) => {
@@ -170,16 +154,16 @@ const useCommon = create<CommonProps>((set, get) => ({
                 })})
         }
     },
-    setSelectedEpisodes: (selectedEpisodes: EpisodesWithOptionalTimeline[]) => set({selectedEpisodes}),
-    setSearchedPodcasts: (searchedPodcasts: AgnosticPodcastDataModel[]) => set({searchedPodcasts}),
-    setNotifications: (notifications: Notification[]) => set({notifications}),
+    setSelectedEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => set({selectedEpisodes}),
+    setSearchedPodcasts: (searchedPodcasts) => set({searchedPodcasts}),
+    setNotifications: (notifications) => set({notifications}),
     removeNotification: (id: number) => {
         const notifications = get().notifications
         if(notifications){
             set({notifications: notifications.filter((notification) => notification.id !== id)})
         }
     },
-    setInfoModalPodcast: (infoModalPodcast: PodcastEpisode) => set({infoModalPodcast}),
+    setInfoModalPodcast: (infoModalPodcast) => set({infoModalPodcast}),
     setInfoModalPodcastOpen: (infoModalPodcastOpen: boolean) => set({infoModalPodcastOpen}),
     setEpisodeDownloaded: (episode_id: string) => {
         const selectedEpisodes = get().selectedEpisodes
@@ -193,9 +177,15 @@ const useCommon = create<CommonProps>((set, get) => ({
         }
     },
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => set({detailedAudioPlayerOpen}),
-    setConfigModel: (configModel: ConfigModel) => set({configModel}),
+    setConfigModel: (configModel: components["schemas"]["ConfigModel"]) => {
+        set({configModel, socketIo: io(new URL(configModel.wsUrl).host + "/main", {
+                transports: ['websocket'],
+                path: new URL(configModel.wsUrl).pathname,
+                hostname: new URL(configModel.wsUrl).host,
+            })})
+    },
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => set({currentDetailedPodcastId}),
-    addPodcast: (podcast: Podcast) => {
+    addPodcast: (podcast: components["schemas"]["PodcastDto"]) => {
         set({podcasts: [...get().podcasts, podcast]})
     },
     podcastDeleted: (id: number) => {
@@ -204,11 +194,11 @@ const useCommon = create<CommonProps>((set, get) => ({
     setLoginData: (loginData: Partial<LoginData>) => set({loginData}),
     setConfirmModalData: (confirmModalData: ConfirmModalProps) => set({confirmModalData}),
     setSelectedUser: (selectedUser: User) => set({selectedUser}),
-    setUsers: (users: User[]) => set({users}),
+    setUsers: (users: components["schemas"]["UserWithoutPassword"][]) => set({users}),
     setCreateInviteModalOpen: (createInviteModalOpen: boolean) => set({createInviteModalOpen}),
-    setInvites: (invites: Invite[]) => set({invites}),
-    setTimeLineEpisodes: (timeLineEpisodes: TimelineHATEOASModel) => set({timeLineEpisodes}),
-    addTimelineEpisodes: (timeLineEpisodes: TimelineHATEOASModel) => {
+    setInvites: (invites) => set({invites}),
+    setTimeLineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => set({timeLineEpisodes}),
+    addTimelineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => {
         const currentTimeline = get().timeLineEpisodes
         if(currentTimeline){
             set({timeLineEpisodes: {
@@ -220,18 +210,32 @@ const useCommon = create<CommonProps>((set, get) => ({
             set({timeLineEpisodes})
         }
     },
-    addPodcastEpisodes: (selectedEpisodes: EpisodesWithOptionalTimeline[]) => {
-        set({selectedEpisodes: [...get().selectedEpisodes, ...selectedEpisodes]})
+    addPodcastEpisodes: (selectedEpisodes) => {
+        set({selectedEpisodes: [...get().selectedEpisodes, ...selectedEpisodes!]})
     },
-    setFilters: (filters: Filter) => set({filters}),
+    setFilters: (filters: components["schemas"]["Filter"]) => set({filters}),
     setInfoHeading: (infoHeading: string) => set({infoHeading}),
     setInfoText: (infoText: string) => set({infoText}),
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => set({podcastAlreadyPlayed}),
-    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: PodcastEpisodeWithPodcastWatchModel) => set({podcastEpisodeAlreadyPlayed}),
-    setLoggedInUser: (loggedInUser: LoggedInUser) => set({loggedInUser}),
+    setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed) => set({podcastEpisodeAlreadyPlayed}),
+    setLoggedInUser: (loggedInUser: components["schemas"]["UserWithoutPassword"]) => set({loggedInUser}),
     loggedInUser: undefined,
     tags: [],
-    setPodcastTags: (t)=>set({tags: t})
+    setPodcastTags: (t)=>set({tags: t}),
+    headers:{
+        "Content-Type":"application/json"
+    },
+    isAuthenticated: false,
+    setHeaders:(headers)=>{
+
+        set({...get().headers, ...headers})
+        if (headers["Authorization"]) {
+            addHeader("Authorization", headers["Authorization"])
+            set({isAuthenticated: true})
+
+        }
+    },
+    socketIo: undefined
 }))
 
 export default useCommon

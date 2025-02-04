@@ -1,26 +1,29 @@
 use crate::db::TimelineItem;
-use crate::models::episode::Episode;
+use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::web::{Data, Json, Query};
-use actix_web::{delete, get, post, put};
-use actix_web::{web, HttpResponse};
 use serde_json::from_str;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use std::thread;
+use axum::{Extension, Json};
+use axum::extract::{Path, Query};
+use axum::http::StatusCode;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+use crate::controllers::server::ChatServerHandle;
+use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 pub struct OptionalId {
     last_podcast_episode: Option<String>,
     only_unlistened: Option<bool>,
@@ -30,29 +33,28 @@ pub struct OptionalId {
 #[serde(rename_all = "camelCase")]
 pub struct PodcastEpisodeWithHistory {
     pub podcast_episode: PodcastEpisodeDto,
-    pub podcast_history_item: Option<Episode>,
+    pub podcast_history_item: Option<EpisodeDto>,
 }
 
 #[utoipa::path(
-context_path = "/api/v1",
+get,
+path="/podcasts/{id}/episodes",
+params(OptionalId),
 responses(
 (status = 200, description = "Finds all podcast episodes of a given podcast id.", body =
-[PodcastEpisode])),
+[PodcastEpisodeWithHistory])),
 tag = "podcast_episodes"
 )]
-#[get("/podcast/{id}/episodes")]
 pub async fn find_all_podcast_episodes_of_podcast(
-    id: web::Path<String>,
-    requester: web::ReqData<User>,
+    Path(id): Path<String>,
+    Extension(user): Extension<User>,
     last_podcast_episode: Query<OptionalId>,
-) -> Result<HttpResponse, CustomError> {
-    let last_podcast_episode = last_podcast_episode.into_inner();
+) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
     let id_num = from_str(&id).unwrap();
-    let user = requester.into_inner();
 
     let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
         id_num,
-        last_podcast_episode.last_podcast_episode,
+        last_podcast_episode.last_podcast_episode.clone(),
         last_podcast_episode.only_unlistened,
         &user,
     )?;
@@ -63,14 +65,14 @@ pub async fn find_all_podcast_episodes_of_podcast(
                 (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
-                podcast_history_item: podcast_inner.1,
+                podcast_history_item: podcast_inner.1.map(|e|e.convert_to_episode_dto()),
             }
         })
         .collect::<Vec<PodcastEpisodeWithHistory>>();
-    Ok(HttpResponse::Ok().json(mapped_podcasts))
+    Ok(Json(mapped_podcasts))
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct TimeLinePodcastEpisode {
     podcast_episode: PodcastEpisodeDto,
     podcast: PodcastDto,
@@ -78,26 +80,33 @@ pub struct TimeLinePodcastEpisode {
     favorite: Option<Favorite>,
 }
 
-#[get("/podcast/available/gpodder")]
+#[utoipa::path(
+    get,
+    path="/podcasts/available/gpodder",
+    responses(
+(status = 200, description = "Finds all podcast not in webview", body =
+[GPodderAvailablePodcasts])),
+    tag = "gpodder"
+)]
 pub async fn get_available_podcasts_not_in_webview(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+) -> Result<Json<Vec<GPodderAvailablePodcasts>>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
     let found_episodes = Episode::find_episodes_not_in_webview()?;
 
-    Ok(HttpResponse::Ok().json(found_episodes))
+    Ok(Json(found_episodes))
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeLinePodcastItem {
     data: Vec<TimeLinePodcastEpisode>,
     total_elements: i64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineQueryParams {
     pub favored_only: bool,
@@ -107,17 +116,18 @@ pub struct TimelineQueryParams {
 }
 
 #[utoipa::path(
-context_path = "/api/v1",
+get,
+path="/podcasts/timeline",
+params(TimelineQueryParams),
 responses(
-(status = 200, description = "Gets the current timeline of the user")),
+(status = 200, description = "Gets the current timeline of the user", body = TimeLinePodcastItem)),
 tag = "podcasts"
 )]
-#[get("/podcasts/timeline")]
 pub async fn get_timeline(
-    requester: web::ReqData<User>,
-    favored_only: Query<TimelineQueryParams>,
-) -> Result<HttpResponse, CustomError> {
-    let res = TimelineItem::get_timeline(requester.into_inner(), favored_only.into_inner())?;
+    Extension(requester): Extension<User>,
+    Query(favored_only): Query<TimelineQueryParams>,
+) -> Result<Json<TimeLinePodcastItem>, CustomError> {
+    let res = TimelineItem::get_timeline(requester, favored_only)?;
 
     let mapped_timeline = res
         .data
@@ -134,7 +144,7 @@ pub async fn get_timeline(
             }
         })
         .collect::<Vec<TimeLinePodcastEpisode>>();
-    Ok(HttpResponse::Ok().json(TimeLinePodcastItem {
+    Ok(Json(TimeLinePodcastItem {
         data: mapped_timeline,
         total_elements: res.total_elements,
     }))
@@ -149,94 +159,100 @@ pub struct FavoritePut {
  * id is the episode id (uuid)
  */
 #[utoipa::path(
-    context_path = "/api/v1",
+put,
+path="/podcasts/{id}/episodes/favor",
     responses(
 (status = 200, description = "Likes a given podcast episode.", body=FavoritePut)),
     tag = "podcast_episodes"
 )]
-#[put("/podcast/{id}/episodes/favor")]
 pub async fn like_podcast_episode(
-    id: web::Path<i32>,
-    requester: web::ReqData<User>,
-    fav: Json<FavoritePut>,
-) -> Result<HttpResponse, CustomError> {
-    let user = requester.into_inner();
-    println!("User id is {}, Episode id is {}", user.id, id.clone());
-    FavoritePodcastEpisode::like_podcast_episode(id.into_inner(), &user, fav.favored)?;
+    Path(id): Path<i32>,
+    Extension(requester): Extension<User>,
+    Json(fav): Json<FavoritePut>,
+) -> Result<StatusCode, CustomError> {
+    println!("User id is {}, Episode id is {}", requester.id, id.clone());
+    FavoritePodcastEpisode::like_podcast_episode(id, &requester, fav.favored)?;
 
-    Ok(HttpResponse::Ok().body(""))
+    Ok(StatusCode::OK)
 }
 
 /**
  * id is the episode id (uuid)
  */
 #[utoipa::path(
-context_path = "/api/v1",
+put,
+path="/podcasts/{id}/episodes/download",
 responses(
 (status = 200, description = "Starts the download of a given podcast episode")),
 tag = "podcast_episodes"
 )]
-#[put("/podcast/{id}/episodes/download")]
 pub async fn download_podcast_episodes_of_podcast(
-    id: web::Path<String>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
     thread::spawn(move || {
-        let res = PodcastEpisode::get_podcast_episode_by_id(&id.into_inner()).unwrap();
+        let res = PodcastEpisode::get_podcast_episode_by_id(&id).unwrap();
         if let Some(podcast_episode) = res {
             let podcast_found = Podcast::get_podcast(podcast_episode.podcast_id).unwrap();
             PodcastEpisodeService::perform_download(&podcast_episode.clone(), &podcast_found)
                 .unwrap();
             PodcastEpisode::update_deleted(&podcast_episode.clone().episode_id, false).unwrap();
+            ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_episode, &podcast_found);
         }
     });
 
-    Ok(HttpResponse::Ok().json("Download started"))
+    Ok(StatusCode::from_u16(200).unwrap())
 }
 
 /**
  * id is the episode id (uuid)
  */
 #[utoipa::path(
-context_path = "/api/v1",
+delete,
+path="/episodes/{id}/download",
 responses(
 (status = 204, description = "Removes the download of a given podcast episode. This very episode \
 won't be included in further checks/downloads unless done by user.")),
 tag = "podcast_episodes"
 )]
-#[delete("/episodes/{id}/download")]
 pub async fn delete_podcast_episode_locally(
-    id: web::Path<String>,
-    requester: web::ReqData<User>,
-    lobby: Data<ChatServerHandle>,
-) -> Result<HttpResponse, CustomError> {
+    id: Path<String>,
+    requester: Extension<User>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
     let delted_podcast_episode =
-        web::block(|| PodcastEpisodeService::delete_podcast_episode_locally(&id.into_inner()))
+        tokio::task::spawn_blocking(move || PodcastEpisodeService::delete_podcast_episode_locally
+            (&id))
             .await
             .unwrap()?;
 
-    lobby.broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
+    ChatServerHandle::broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
 
-    Ok(HttpResponse::NoContent().finish())
+    Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct EpisodeFormatDto {
     pub content: String,
 }
 
-#[post("/episodes/formatting")]
+#[utoipa::path(
+    post,
+    path="/episodes/formatting",
+    responses(
+(status = 204, description = "Retrieve episode sample format")),
+    tag = "podcast_episodes"
+)]
 pub async fn retrieve_episode_sample_format(
     sample_string: Json<EpisodeFormatDto>,
-) -> Result<HttpResponse, CustomError> {
+) -> Result<String, CustomError> {
     // Sample episode for formatting
     let episode: PodcastEpisode = PodcastEpisode {
         id: 0,
@@ -270,10 +286,18 @@ pub async fn retrieve_episode_sample_format(
         podcast_format: "test".to_string(),
         direct_paths: true,
     };
-    let result = perform_episode_variable_replacement(settings, episode, None);
+    let result = perform_episode_variable_replacement(settings, episode, None)?;
 
-    match result {
-        Ok(v) => Ok(HttpResponse::Ok().json(v)),
-        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
-    }
+    Ok(result)
+}
+
+pub fn get_podcast_episode_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(find_all_podcast_episodes_of_podcast))
+        .routes(routes!(get_available_podcasts_not_in_webview))
+        .routes(routes!(get_timeline))
+        .routes(routes!(like_podcast_episode))
+        .routes(routes!(download_podcast_episodes_of_podcast))
+        .routes(routes!(delete_podcast_episode_locally))
+        .routes(routes!(retrieve_episode_sample_format))
 }

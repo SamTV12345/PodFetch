@@ -1,15 +1,14 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios, { AxiosResponse } from 'axios'
 import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
-import { DiskModel } from '../models/DiskModel'
-import { SysExtraInfo } from '../models/SysExtraInfo'
 import { CustomGaugeChart } from '../components/CustomGaugeChart'
 import { Heading1 } from '../components/Heading1'
 import { Heading3 } from '../components/Heading3'
 import { Loading } from '../components/Loading'
 import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 type VersionInfoModel = {
     commit: string,
@@ -22,7 +21,7 @@ type VersionInfoModel = {
 
 export const SystemInfoPage: FC = () => {
     const configModel = useCommon(state => state.configModel)
-    const [systemInfo, setSystemInfo] = useState<SysExtraInfo>()
+    const [systemInfo, setSystemInfo] = useState<components["schemas"]["SysExtraInfo"]>()
     const [versionInfo, setVersionInfo] = useState<VersionInfoModel>()
     const { t } = useTranslation()
 
@@ -30,14 +29,11 @@ export const SystemInfoPage: FC = () => {
     const megaByte = Math.pow(10,6)
 
     useEffect(() => {
-        axios.get('/sys/info')
-            .then((response: AxiosResponse<SysExtraInfo>) => setSystemInfo(response.data))
-        axios.get('/info')
-            .then(c => setVersionInfo(c.data))
+        client.GET("/api/v1/sys/info").then(v=>setSystemInfo(v.data!))
+        client.GET("/api/v1/info").then(v=>setVersionInfo(v.data!))
 
         const updateInterval = setInterval(() => {
-            axios.get('/sys/info')
-                .then((response: AxiosResponse<SysExtraInfo>) => setSystemInfo(response.data))
+            client.GET("/api/v1/sys/info").then(v=>setSystemInfo(v.data!))
         }, 5000)
         return () => clearInterval(updateInterval)
     }, [])
@@ -46,7 +42,7 @@ export const SystemInfoPage: FC = () => {
         return <Loading />
     }
 
-    const calculateFreeDiskSpace = (disk: DiskModel[]) => {
+    const calculateFreeDiskSpace = (disk: components["schemas"]["SysExtraInfo"]["disks"]) => {
         const used = disk.reduce((x, y) => {
             return (x + (y.total_space - y.available_space))
         }, 0)
@@ -113,7 +109,7 @@ export const SystemInfoPage: FC = () => {
 
                     <dl className="grid lg:grid-cols-2 gap-2 lg:gap-6 text-sm">
                         <dt className="font-medium text-[--fg-color]">{t('cpu-brand')}</dt>
-                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.cpus[0].brand}</dd>
+                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.cpus[0]!.brand}</dd>
 
                         <dt className="font-medium text-[--fg-color]">{t('cpu-cores')}</dt>
                         <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.cpus.length}</dd>

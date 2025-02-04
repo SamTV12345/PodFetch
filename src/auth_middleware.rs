@@ -1,41 +1,21 @@
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
-use actix::fut::ok;
-use actix_web::body::{EitherBody, MessageBody};
-use actix_web::{
-    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    web, Error, HttpMessage,
-};
 use base64::engine::general_purpose;
 use base64::Engine;
 use std::collections::HashSet;
-use std::future::Future;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::rc::Rc;
-
+use std::sync::LazyLock;
+use axum::extract::Request;
+use axum::http::HeaderValue;
+use axum::middleware::Next;
+use axum::response::Response;
 use crate::service::environment_service::ReverseProxyConfig;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use futures_util::future::{LocalBoxFuture, Ready};
-use futures_util::FutureExt;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
-
-pub struct AuthFilter {}
-
-impl AuthFilter {
-    pub fn new() -> Self {
-        AuthFilter {}
-    }
-}
-
-#[derive(Default)]
-pub struct AuthFilterMiddleware<S> {
-    service: Rc<S>,
-}
+use crate::utils::reqwest_client::get_sync_client;
 
 enum AuthType {
     Basic,
@@ -44,81 +24,58 @@ enum AuthType {
     None,
 }
 
-impl<S, B> Transform<S, ServiceRequest> for AuthFilter
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<EitherBody<B>>;
-    type Error = Error;
-    type Transform = AuthFilterMiddleware<S>;
-    type InitError = ();
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+pub struct AuthFilter;
 
-    fn new_transform(&self, service: S) -> Self::Future {
-        ok(AuthFilterMiddleware {
-            service: Rc::new(service),
-        })
+
+pub async fn handle_basic_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Basic)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+static JWKS: LazyLock<Jwk> = LazyLock::new(||{
+   let sync_client = get_sync_client().build().unwrap();
+    
+    sync_client.get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri).send().unwrap().json::<Jwk>().unwrap()
+});
+
+pub async fn handle_oidc_auth(
+    mut request: Request,
+    next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Oidc)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+pub async fn handle_proxy_auth(
+    mut request: Request,
+    next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Proxy)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+pub async fn handle_no_auth(
+    mut request: Request,
+    next: Next) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::None)?;
+    request.extensions_mut().insert(user);
+    Ok(next.run(request).await)
+}
+
+
+fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
+    match auth_type {
+        AuthType::Basic => AuthFilter::handle_basic_auth_internal(req),
+        AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req),
+        AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
+            req,
+            &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
+        ),
+        AuthType::None => Ok(User::create_standard_admin_user()),
     }
 }
 
-impl<S, B> Service<ServiceRequest> for AuthFilterMiddleware<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<EitherBody<B>>;
-    type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    forward_ready!(service);
-
-    fn call(&self, req: ServiceRequest) -> Self::Future {
-        if ENVIRONMENT_SERVICE.http_basic {
-            self.handle_auth(req, AuthType::Basic)
-        } else if ENVIRONMENT_SERVICE.oidc_configured {
-            self.handle_auth(req, AuthType::Oidc)
-        } else if ENVIRONMENT_SERVICE.reverse_proxy {
-            self.handle_auth(req, AuthType::Proxy)
-        } else {
-            // It can only be no auth
-            self.handle_auth(req, AuthType::None)
-        }
-    }
-}
-
-type MyFuture<B, Error> =
-    Pin<Box<dyn Future<Output = Result<ServiceResponse<EitherBody<B>>, Error>>>>;
-
-impl<S, B> AuthFilterMiddleware<S>
-where
-    B: 'static + MessageBody,
-    S: 'static + Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
-    S::Future: 'static,
-{
-    fn handle_auth(&self, req: ServiceRequest, auth_type: AuthType) -> MyFuture<B, Error> {
-        let result = match auth_type {
-            AuthType::Basic => AuthFilter::handle_basic_auth_internal(&req),
-            AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(&req),
-            AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
-                &req,
-                &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
-            ),
-            AuthType::None => Ok(User::create_standard_admin_user()),
-        };
-        match result {
-            Ok(user) => {
-                req.extensions_mut().insert(user);
-                let service = Rc::clone(&self.service);
-                async move { service.call(req).await.map(|res| res.map_into_left_body()) }
-                    .boxed_local()
-            }
-            Err(e) => Box::pin(ok(req.error_response(e).map_into_right_body())),
-        }
-    }
-}
 
 impl AuthFilter {
     pub fn extract_basic_auth(auth: &str) -> Result<(String, String), CustomError> {
@@ -141,7 +98,7 @@ impl AuthFilter {
         Ok((u.to_string(), p.to_string()))
     }
 
-    fn handle_basic_auth_internal(req: &ServiceRequest) -> Result<User, CustomError> {
+    fn handle_basic_auth_internal(req: &Request) -> Result<User, CustomError> {
         let opt_auth_header = req.headers().get("Authorization");
         match opt_auth_header {
             Some(header) => match header.to_str() {
@@ -150,20 +107,6 @@ impl AuthFilter {
 
                     let found_user =
                         User::find_by_username(&user).map_err(|_| CustomErrorInner::Forbidden)?;
-
-                    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
-                        if &found_user.username == admin_username {
-                            return if let Some(env_password) = &ENVIRONMENT_SERVICE.password {
-                                if &digest(password) == env_password {
-                                    Ok(found_user)
-                                } else {
-                                    Err(CustomErrorInner::Forbidden.into())
-                                }
-                            } else {
-                                Err(CustomErrorInner::Forbidden.into())
-                            };
-                        }
-                    }
 
                     if let Some(password_from_user) = &found_user.password {
                         if password_from_user == &digest(password) {
@@ -181,7 +124,8 @@ impl AuthFilter {
         }
     }
 
-    fn handle_oidc_auth_internal(req: &ServiceRequest) -> Result<User, CustomError> {
+    fn handle_oidc_auth_internal(req: &mut Request) ->
+                                                                                     Result<User, CustomError> {
         let token_res = match req.headers().get("Authorization") {
             Some(token) => match token.to_str() {
                 Ok(token) => Ok(token),
@@ -191,23 +135,11 @@ impl AuthFilter {
         }?;
 
         let token = token_res.replace("Bearer ", "");
-        let jwk = match req.app_data::<web::Data<Option<Jwk>>>() {
-            Some(jwk) => match jwk.get_ref() {
-                Some(jwk) => Ok(jwk),
-                None => Err(CustomError::from(CustomErrorInner::Forbidden)),
-            },
-            None => Err(CustomError::from(CustomErrorInner::Forbidden)),
-        }?;
-        let key = DecodingKey::from_jwk(jwk).unwrap();
+        let key = DecodingKey::from_jwk(&JWKS).unwrap();
         let mut validation = Validation::new(Algorithm::RS256);
-        validation.aud = Some(
-            req.app_data::<web::Data<HashSet<String>>>()
-                .unwrap()
-                .clone()
-                .into_inner()
-                .deref()
-                .clone(),
-        );
+        let mut aud_hashset = HashSet::new();
+        aud_hashset.insert(ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().client_id.to_string());
+        validation.aud = Some(aud_hashset);
 
         let decoded_token = match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => Ok(decoded),
@@ -250,14 +182,14 @@ impl AuthFilter {
     }
 
     fn handle_proxy_auth_internal(
-        req: &ServiceRequest,
+        req: &Request,
         reverse_proxy_config: &ReverseProxyConfig,
     ) -> Result<User, CustomError> {
         let header_val = match req
             .headers()
             .get(reverse_proxy_config.header_name.to_string())
         {
-            Some(header) => Ok::<&awc::error::HeaderValue, CustomError>(header),
+            Some(header) => Ok::<&HeaderValue, CustomError>(header),
             None => {
                 info!("Reverse proxy is enabled but no header is provided");
                 return Err(CustomError::from(CustomErrorInner::Forbidden));
@@ -295,19 +227,19 @@ impl AuthFilter {
 
 #[cfg(test)]
 mod test {
-
-    use actix_web::http::header::ContentType;
-    use actix_web::test;
-
+    use axum::extract::Request;
+    
+    
     use serial_test::serial;
-
     use crate::auth_middleware::AuthFilter;
-
+    use crate::commands::startup::handle_config_for_server_startup;
+    use crate::commands::startup::tests::handle_test_startup;
     use crate::service::environment_service::ReverseProxyConfig;
-    use crate::test_utils::test::{clear_users, create_random_user};
+    use crate::test_utils::test::{ create_random_user, ContainerCommands, POSTGRES_CHANNEL};
 
     #[test]
-    async fn test_basic_auth_login() {
+    #[serial]
+    fn test_basic_auth_login() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdDp0ZXN0");
         assert!(result.is_ok());
         let (u, p) = result.unwrap();
@@ -316,7 +248,8 @@ mod test {
     }
 
     #[test]
-    async fn test_basic_auth_login_with_special_characters() {
+    #[serial]
+    fn test_basic_auth_login_with_special_characters() {
         let result = AuthFilter::extract_basic_auth("Bearer dGVzdCTDvMOWOnRlc3Q=");
         assert!(result.is_ok());
         let (u, p) = result.unwrap();
@@ -324,97 +257,97 @@ mod test {
         assert_eq!(p, "test");
     }
 
-    #[actix_web::test]
     #[serial]
+    #[tokio::test]
     async fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
-        clear_users();
+        let _ = handle_config_for_server_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: true,
         };
 
-        let req = test::TestRequest::default()
-            .insert_header(ContentType::plaintext())
-            .to_srv_request();
+        let req = Request::builder().header("Content-Type", "text/plain").body("".into()).unwrap();
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
 
         assert!(result.is_err());
     }
 
-    #[actix_web::test]
     #[serial]
+    #[tokio::test]
     async fn test_proxy_auth_with_header_in_request_auto_sign_up() {
-        clear_users();
+        let _ = handle_test_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: false,
         };
-
-        let req = test::TestRequest::default()
-            .insert_header(ContentType::plaintext())
-            .insert_header(("X-Auth", "test"))
-            .to_srv_request();
+        let req = Request::builder().header("Content-Type", "text/plain")
+            .header("X-Auth", "test")
+            .body("".into()).unwrap();
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
 
         assert!(result.is_err());
     }
 
-    #[actix_web::test]
     #[serial]
+    #[tokio::test]
     async fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
-        clear_users();
+        let _ = handle_config_for_server_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: true,
         };
 
-        let req = test::TestRequest::default()
-            .insert_header(ContentType::plaintext())
-            .insert_header(("X-Auth", "test"))
-            .to_srv_request();
+        let req = Request::builder().header("Content-Type", "text/plain")
+            .header("X-Auth", "test")
+            .body("".into()).unwrap();
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
 
         assert!(result.is_ok());
     }
 
-    #[actix_web::test]
     #[serial]
+    #[tokio::test]
     async fn test_basic_auth_no_header() {
-        clear_users();
+        let _ = handle_config_for_server_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
 
-        let req = test::TestRequest::default()
-            .insert_header(ContentType::plaintext())
-            .to_srv_request();
+        let req = Request::builder().header("Content-Type", "text/plain")
+            .body("".into()).unwrap();
         let result = AuthFilter::handle_basic_auth_internal(&req);
 
         assert!(result.is_err());
     }
 
-    #[actix_web::test]
     #[serial]
+    #[tokio::test]
     async fn test_basic_auth_header_no_user() {
-        clear_users();
+        let _ = handle_config_for_server_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
 
-        let req = test::TestRequest::default()
-            .insert_header(ContentType::plaintext())
-            .insert_header(("Authorization", "Bearer dGVzdDp0ZXN0"))
-            .to_srv_request();
+        let req = Request::builder().header("Content-Type", "text/plain")
+            .header("Authorization", "Bearer dGVzdDp0ZXN0")
+            .body("".into()).unwrap();
         let result = AuthFilter::handle_basic_auth_internal(&req);
 
         assert!(result.is_err());
     }
 
-    #[actix_web::test]
     #[serial]
+    #[tokio::test]
     async fn test_basic_auth_header_other_user() {
         // given
-        clear_users();
+        let _ = handle_config_for_server_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
         create_random_user().insert_user().unwrap();
 
-        let req = test::TestRequest::default()
-            .insert_header(ContentType::plaintext())
-            .insert_header(("Authorization", "Bearer dGVzdDp0ZXN0"))
-            .to_srv_request();
+        let req = Request::builder().header("Content-Type", "text/plain")
+            .header("Authorization", "Bearer dGVzdDp0ZXN0")
+            .body("".into()).unwrap();
+
         // when
         let result = AuthFilter::handle_basic_auth_internal(&req);
 
@@ -422,17 +355,17 @@ mod test {
         assert!(result.is_err());
     }
 
-    #[actix_web::test]
     #[serial]
+    #[tokio::test]
     async fn test_basic_auth_header_correct_user_wrong_password() {
         // given
-        clear_users();
+        let _ = handle_config_for_server_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
         create_random_user().insert_user().unwrap();
 
-        let req = test::TestRequest::default()
-            .insert_header(ContentType::plaintext())
-            .insert_header(("Authorization", "Bearer dGVzdHVzZXI6dGVzdA=="))
-            .to_srv_request();
+        let req = Request::builder().header("Content-Type", "text/plain")
+            .header("Authorization", "Bearer dGVzdHVzZXI6dGVzdA==")
+            .body("".into()).unwrap();
         // when
         let result = AuthFilter::handle_basic_auth_internal(&req);
 

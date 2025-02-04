@@ -1,6 +1,5 @@
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios, { AxiosError, AxiosResponse } from 'axios'
 import { useDebounce } from '../utils/useDebounce'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
 import useCommon from '../store/CommonSlice'
@@ -11,6 +10,7 @@ import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
+import {client} from "../utils/http";
 
 type ProviderImportComponent = {
     selectedSearchType: AddTypes
@@ -30,47 +30,87 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     const setModalOpen = useModal(state => state.setOpenModal)
 
     const addPodcast = (podcast: AddPostPostModel) => {
-        axios.post(  '/podcast/' + selectedSearchType, podcast)
-            .then((err: any) => {
-                setModalOpen(false)
-                err.response.status && handleAddPodcast(err.response.status,
-                    searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
-            })
-            .catch((err: AxiosError) => {
-                err.response && err.response.status && handleAddPodcast(err.response.status,
-                    searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
-            })
+        switch (selectedSearchType) {
+            case "itunes": {
+                client.POST("/api/v1/podcasts/itunes", {
+                    body: podcast
+                })
+                    .then((err: any) => {
+                        setModalOpen(false)
+                        err.response.status && handleAddPodcast(err.response.status,
+                            searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
+                    })
+                    .catch((err) => {
+                        err.response && err.response.status && handleAddPodcast(err.response.status,
+                            searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
+                    })
+                break
+            }
+            case "podindex": {
+                client.POST("/api/v1/podcasts/podindex", {
+                    body: podcast
+                })
+                    .then((err: any) => {
+                        setModalOpen(false)
+                        err.response.status && handleAddPodcast(err.response.status,
+                            searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
+                    })
+                    .catch((err) => {
+                        err.response && err.response.status && handleAddPodcast(err.response.status,
+                            searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
+                    })
+                break
+            }
+        }
     }
 
     useDebounce(() => {
         setLoading(true)
         selectedSearchType === 'itunes' ?
-            axios.get( '/podcasts/0/' +  encodeURIComponent(searchText) + '/search')
-                .then((v: AxiosResponse<GeneralModel>) => {
-                    setLoading(false)
-                    const agnosticModel: AgnosticPodcastDataModel[] = v.data.results.map((podcast) => {
-                        return {
-                            title: podcast.collectionName,
-                            artist: podcast.artistName,
-                            id: podcast.trackId,
-                            imageUrl: podcast.artworkUrl600
-                        }
-                    })
+            client.GET("/api/v1/podcasts/{type_of}/{podcast}/search", {
+                params: {
+                    path: {
+                        type_of: 0,
+                        podcast: searchText
+                    }
+                }
+            }).then((v) => {
+                    if ("resultCount" in v.data!) {
+                        const data = v.data
+                        setLoading(false)
+                        const agnosticModel: AgnosticPodcastDataModel[] = data!.results.map((podcast) => {
+                            return {
+                                title: podcast.collectionName!,
+                                artist: podcast.artistName!,
+                                id: podcast.trackId!,
+                                imageUrl: podcast.artworkUrl600!
+                            }
+                        })
+                        setSearchedPodcasts(agnosticModel)
+                    }
 
-                    setSearchedPodcasts(agnosticModel)
-                })
-            : axios.get(  '/podcasts/1/' + searchText + '/search')
-                .then((v: AxiosResponse<PodIndexModel>) => {
-                    setLoading(false)
-                    let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast) => {
-                        return {
-                            title: podcast.title,
-                            artist: podcast.author,
-                            id: podcast.id,
-                            imageUrl: podcast.artwork
+            })
+            : client.GET("/api/v1/podcasts/{type_of}/{podcast}/search", {
+                params: {
+                    path: {
+                        type_of: 1,
+                        podcast: searchText
+                    }
+                }
+            }).then((v) => {
+                        if ("feeds" in v.data!) {
+                            setLoading(false)
+                            let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast) => {
+                                return {
+                                    title: podcast.title!,
+                                    artist: podcast.author!,
+                                    id: podcast.id!,
+                                    imageUrl: podcast.artwork!
+                                }
+                            })
+                            setSearchedPodcasts(agnosticModel)
                         }
-                    })
-                    setSearchedPodcasts(agnosticModel)
+
                 })
     }, 2000, [searchText])
 

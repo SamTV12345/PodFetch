@@ -30,9 +30,11 @@ pub fn add_basic_auth_headers_conditionally(
 
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
     use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 
     #[test]
+    #[serial]
     fn check_if_adding_headers_works_with_at_sign() {
         let mut header_map = reqwest::header::HeaderMap::new();
         let url = "https://user:pass@localhost:8080";
@@ -47,6 +49,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn check_if_adding_headers_works_with_at_sign_complicated_password() {
         let mut header_map = reqwest::header::HeaderMap::new();
         let url = "https://user123123:Jm7YAT8m5YA8Forx7w6wsmUXDvcJny@localhost:8080";
@@ -61,6 +64,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn check_if_adding_headers_works_with_at_sign_and_existing_header() {
         let mut header_map = reqwest::header::HeaderMap::new();
         let url = "https://user:pass@localhost:8080";
@@ -73,6 +77,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn check_if_nothing_happens_when_no_at_sign_present() {
         let mut header_map = reqwest::header::HeaderMap::new();
         let url = "https://user:pass@localhost:8080";

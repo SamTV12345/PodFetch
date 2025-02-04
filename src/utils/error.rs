@@ -1,19 +1,20 @@
-use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, ResponseError};
 use log::error;
 use s3::error::S3Error;
 use std::backtrace::Backtrace;
+use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
-pub struct BacktraceError {
+pub struct CustomError {
     pub inner: CustomErrorInner,
     pub backtrace: Box<Backtrace>,
 }
 
-impl Display for BacktraceError {
+impl Display for CustomError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Initial error: {:}", self.inner)?;
         writeln!(f, "Error context:")?;
@@ -21,7 +22,14 @@ impl Display for BacktraceError {
     }
 }
 
-impl From<CustomErrorInner> for BacktraceError {
+
+impl From<CustomError> for Infallible {
+    fn from(val: CustomError) -> Self {
+        panic!("{}", val)
+    }
+}
+
+impl From<CustomErrorInner> for CustomError {
     fn from(inner: CustomErrorInner) -> Self {
         let backtrace = Box::new(Backtrace::force_capture());
         Self { inner, backtrace }
@@ -36,7 +44,7 @@ pub trait ResultExt: Sized {
     fn expect_or_backtrace(self, msg: &str) -> Self::T;
 }
 
-impl<T> ResultExt for Result<T, BacktraceError> {
+impl<T> ResultExt for Result<T, CustomError> {
     type T = T;
     fn expect_or_backtrace(self, msg: &str) -> T {
         match self {
@@ -87,6 +95,12 @@ impl Display for DynBacktraceError {
     }
 }
 
+impl From<Infallible> for CustomError {
+    fn from(_: Infallible) -> Self {
+        CustomErrorInner::Unknown.into()
+    }
+}
+
 impl Debug for DynBacktraceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Self as Display>::fmt(self, f)
@@ -108,41 +122,52 @@ impl ResultExt for Result<(), DynBacktraceError> {
     }
 }
 
-impl Debug for BacktraceError {
+impl Debug for CustomError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Self as Display>::fmt(self, f)
     }
 }
 
-impl Error for BacktraceError {
+impl Error for CustomError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(&self.inner)
     }
 }
 
-pub(crate) type CustomError = BacktraceError;
 
-impl ResponseError for CustomError {
-    fn status_code(&self) -> StatusCode {
-        match self.inner {
+impl IntoResponse  for CustomError {
+    fn into_response(self) -> Response {
+        let status = match &self.inner {
             CustomErrorInner::NotFound => StatusCode::NOT_FOUND,
             CustomErrorInner::Forbidden => StatusCode::FORBIDDEN,
             CustomErrorInner::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
             CustomErrorInner::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            CustomErrorInner::Conflict(..) => StatusCode::CONFLICT,
-            CustomErrorInner::BadRequest(..) => StatusCode::BAD_REQUEST,
-            CustomErrorInner::UnAuthorized(..) => StatusCode::UNAUTHORIZED,
-        }
-    }
+            CustomErrorInner::Conflict(_) => StatusCode::CONFLICT,
+            CustomErrorInner::BadRequest(_) => StatusCode::BAD_REQUEST,
+            CustomErrorInner::UnAuthorized(_) => StatusCode::UNAUTHORIZED,
+        };
 
-    fn error_response(&self) -> HttpResponse {
-        let status_code = self.status_code();
-        let error_response = ErrorResponse {
-            code: status_code.as_u16(),
+        (status, self.error_response().message).into_response()
+    }
+}
+
+
+impl CustomError {
+    fn error_response(&self) -> ErrorResponse {
+        let status_code = match &self.inner {
+            CustomErrorInner::NotFound => {404}
+            CustomErrorInner::Forbidden => {403}
+            CustomErrorInner::UnAuthorized(_) => {401}
+            CustomErrorInner::BadRequest(_) => {404}
+            CustomErrorInner::Conflict(_) => {409}
+            CustomErrorInner::Unknown => {500}
+            CustomErrorInner::DatabaseError(_) => {500}
+        };
+        ErrorResponse {
+            code: status_code as u16,
             message: self.inner.to_string(),
             error: self.inner.name(),
-        };
-        HttpResponse::build(status_code).json(error_response)
+        }
     }
 }
 
@@ -250,8 +275,10 @@ mod tests {
 
     use diesel::result::Error;
     use std::io::ErrorKind;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_map_io_error() {
         let io_error = std::io::Error::new(ErrorKind::NotFound, "File not found");
         let custom_error = map_io_error(io_error, None);
@@ -261,6 +288,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_map_db_error() {
         let db_error = Error::NotFound;
         let custom_error = map_db_error(db_error);
@@ -268,12 +296,14 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_custom_error() {
         let custom_error = CustomErrorInner::NotFound;
         assert_eq!(custom_error.to_string(), "Requested file was not found");
     }
 
     #[test]
+    #[serial]
     fn test_custom_conflict_message() {
         let custom_error = CustomErrorInner::Conflict("An error occured".to_string());
         assert_eq!(

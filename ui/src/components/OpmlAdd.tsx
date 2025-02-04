@@ -1,10 +1,10 @@
 import { FC, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { FileItem, readFile } from '../utils/FileUtils'
 import useOpmlImport from '../store/opmlImportSlice'
 import { AddTypes } from '../models/AddTypes'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
+import {client} from "../utils/http";
 
 type DragState = "none" | "allowed" | "invalid"
 
@@ -47,13 +47,15 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
     }
 
     const uploadOpml = () => {
-        let content = files[0].content
+        let content = files[0]!.content
         const count = (content.match(/type="rss"/g) || []).length
 
         setPodcastsToUpload(count)
 
-        axios.post(  '/podcast/opml', {
-            content: files[0].content
+        client.POST("/api/v1/podcasts/opml", {
+            body: {
+                content: files[0]!.content
+            }
         })
     }
 
@@ -115,7 +117,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
                 <div className="leading-[1.75] text-sm text-[--fg-color] w-full">
                     {t('following-file-uploaded')}
                     <div className="" onClick={() => {setFiles([])}}>
-                        {files[0].name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i>
+                        {files[0]!.name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i>
                     </div>
                 </div>
             }

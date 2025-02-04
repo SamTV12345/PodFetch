@@ -136,7 +136,7 @@ impl Episode {
         }
     }
     pub async fn get_actions_by_username(
-        username1: String,
+        username1: &str,
         since_date: Option<NaiveDateTime>,
         opt_device: Option<String>,
         _opt_aggregate: Option<String>,
@@ -440,7 +440,7 @@ impl Episode {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EpisodeDto {
     pub podcast: String,
     pub episode: String,
@@ -453,7 +453,7 @@ pub struct EpisodeDto {
     pub device: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[derive(PartialEq, Clone)]
 pub enum EpisodeAction {

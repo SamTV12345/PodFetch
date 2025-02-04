@@ -1,34 +1,32 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
-import { TimeLineModel, TimelineHATEOASModel } from '../models/TimeLineModel'
 import { EpisodeCard } from '../components/EpisodeCard'
 import { Heading2 } from '../components/Heading2'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 export const Homepage = () => {
-    const [podcastWatched, setPodcastWatched] = useState<PodcastWatchedEpisodeModel[]>([])
-    const [latestEpisodes, setLatestEpisodes] = useState<TimeLineModel[]>([])
+    const [podcastWatched, setPodcastWatched] = useState<components["schemas"]["PodcastWatchedEpisodeModelWithPodcastEpisode"][]>([])
+    const [latestEpisodes, setLatestEpisodes] = useState<components["schemas"]["TimeLinePodcastItem"]["data"]>([])
     const { t } = useTranslation()
 
     useEffect(()=>{
-        axios.get<PodcastWatchedEpisodeModel[]>('/podcast/episode/lastwatched')
-            .then((response) => {
-                setPodcastWatched(response.data)
-            })
+        client.GET("/api/v1/podcasts/episode/lastwatched")
+            .then(response=>setPodcastWatched(response.data!))
+        client.GET("/api/v1/podcasts/timeline", {
+            params:{
+                query: {
+                    favoredOnly: false,
+                    notListened: false,
+                    favoredEpisodes: false
+                }
+            },
 
-        axios.get<TimelineHATEOASModel>('/podcasts/timeline', {
-            params: {
-                favoredOnly: false,
-                notListened: false,
-                favoredEpisodes: false
-            }
         })
-            .then((response) => {
-                setLatestEpisodes(response.data.data)
-            })
+            .then(response=>setLatestEpisodes(response.data!.data))
     }, [])
 
     return (

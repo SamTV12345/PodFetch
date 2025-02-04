@@ -1,6 +1,5 @@
 import {createRef, FC, useState} from 'react'
 import {Link} from 'react-router-dom'
-import axios, {AxiosResponse} from 'axios'
 import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
@@ -14,9 +13,11 @@ import {CustomCheckbox} from "./CustomCheckbox";
 import {Tag} from "sanitize-html";
 import {LuMinus, LuTags} from "react-icons/lu";
 import {useTranslation} from "react-i18next";
+import {components} from "../../schema";
+import {client} from "../utils/http";
 
 type PodcastCardProps = {
-    podcast: Podcast
+    podcast: components["schemas"]["PodcastDto"]
 }
 
 export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
@@ -27,9 +28,11 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
     const setPodcasts = useCommon(state=>state.setPodcasts)
     const podcasts = useCommon(state=>state.podcasts)
     const likePodcast = () => {
-        axios.put('/podcast/favored', {
-            id: podcast.id,
-            favored: !podcast.favorites
+        client.PUT("/api/v1/podcasts/favored", {
+            body: {
+                id: podcast.id,
+                favored: !podcast.favorites
+            }
         })
     }
     const {t} = useTranslation()
@@ -81,37 +84,47 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                              <span className="grid grid-cols-3 gap-5">
                                  <CustomCheckbox value={podcast.tags.filter(e=>e.name=== t.name).length>0} onChange={(v)=>{
                                      if (v.valueOf() === true) {
-
-                                         axios.post(`/tags/${t.id}/${podcast.id}`)
-                                             .then(()=>{
-                                                 const addedTag = tags.filter(tag=>tag.id === t.id)[0]
-
-                                                 setPodcasts(podcasts.map(p=>{
-                                                     if (p.id === podcast.id) {
-                                                         const tags = podcast.tags
-                                                         tags.push(addedTag)
-                                                         return {
-                                                             ...p,
-                                                             tags
-                                                         }
+                                         client.POST("/api/v1/tags/{tag_id}/{podcast_id}", {
+                                             params: {
+                                                 path: {
+                                                        tag_id: t.id,
+                                                        podcast_id: podcast.id
+                                                 }
+                                             }
+                                         }).then(()=>{
+                                             const addedTag = tags.filter(tag=>tag.id === t.id)[0]!
+                                             setPodcasts(podcasts.map(p=>{
+                                                 if (p.id === podcast.id) {
+                                                     const tags = podcast.tags
+                                                     tags.push(addedTag)
+                                                     return {
+                                                         ...p,
+                                                         tags
                                                      }
-                                                     return p
-                                                 }))
-                                             })
+                                                 }
+                                                 return p
+                                             }))
+                                         })
                                      } else {
-                                         axios.delete(`/tags/${t.id}/${podcast.id}`)
-                                             .then(()=>{
-                                                 setPodcasts(podcasts.map(p=>{
-                                                     if (p.id === podcast.id) {
-                                                         const tags = podcast.tags.filter(tag=>tag.id !== t.id)
-                                                         return {
-                                                             ...p,
-                                                             tags
-                                                         }
+                                         client.DELETE("/api/v1/tags/{tag_id}/{podcast_id}", {
+                                             params: {
+                                                 path: {
+                                                     tag_id: t.id,
+                                                     podcast_id: podcast.id
+                                                 }
+                                             }
+                                         }).then(()=>{
+                                             setPodcasts(podcasts.map(p=>{
+                                                 if (p.id === podcast.id) {
+                                                     const tags = podcast.tags.filter(tag=>tag.id !== t.id)
+                                                     return {
+                                                         ...p,
+                                                         tags
                                                      }
-                                                     return p
-                                                 }))
-                                             })
+                                                 }
+                                                 return p
+                                             }))
+                                         })
                                      }
                                  }}/>
                                  <span className="self-center">{t.name}</span>
@@ -126,13 +139,16 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                 return
                             }
 
-                            axios.post('/tags', {
-                                color: 'Green',
-                                name: newTag
-                            } satisfies TagCreate)
-                                .then((c: AxiosResponse<PodcastTags>)=>{
-                                    setTags([...tags,c.data])
-                                })
+                            client.POST('/api/v1/tags', {
+                                body: {
+                                    name: newTag,
+                                    color: 'Green'
+                                }
+                            }).then((resp)=>{
+                                if (resp) {
+                                    setTags([...tags,resp.data!])
+                                }
+                            })
                         }}/>
                         <CustomInput className="mt-5" placeholder="Add new tag" value={newTag} onChange={(event)=>{
                             setNewTag(event.target.value)

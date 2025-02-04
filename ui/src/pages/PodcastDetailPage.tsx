@@ -1,7 +1,6 @@
 import {Fragment, useEffect, useState} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
-import axios, {AxiosResponse} from 'axios'
 import {prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
@@ -12,10 +11,10 @@ import {PodcastDetailItem} from '../components/PodcastDetailItem'
 import {PodcastInfoModal} from '../components/PodcastInfoModal'
 import {Switcher} from '../components/Switcher'
 import 'material-symbols/outlined.css'
-import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {ErrorIcon} from "../icons/ErrorIcon";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
+import { client } from '../utils/http'
 
 export const PodcastDetailPage = () => {
     const configModel = useCommon(state => state.configModel)
@@ -35,25 +34,36 @@ export const PodcastDetailPage = () => {
         if (params && !isNaN(parseFloat(params.id as string))) {
             setCurrentDetailedPodcastId(Number(params.id))
         }
-        axios.get('/podcast/' + params.id).then((response: AxiosResponse<Podcast>) => {
-            setCurrentPodcast(response.data)
-        }).then(() => {
-            axios.get('/podcast/' + params.id + '/episodes', {
+        client.GET("/api/v1/podcasts/{id}", {
+            params: {
+                path: {
+                    id: params.id!
+                }
+            }
+        }).then(resp=>{
+            setCurrentPodcast(resp.data!)
+        })
+        .then(() => {
+            client.GET("/api/v1/podcasts/{id}/episodes", {
                 params: {
-                    only_unlistened: onlyUnplayed
+                    query: {
+                        only_unlistened: onlyUnplayed
+                    },
+                    path: {
+                        id: params.id!
+                    }
+                }
+            }).then((response) => {
+                setSelectedEpisodes(response.data!)
+
+                if (params.podcastid) {
+                    const element = document.getElementById('episode_' + params.podcastid)
+
+                    if (element) {
+                        element.scrollIntoView({behavior: 'smooth', block: 'start', inline: 'nearest'})
+                    }
                 }
             })
-                .then((response: AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
-                    setSelectedEpisodes(response.data)
-
-                    if (params.podcastid) {
-                        const element = document.getElementById('episode_' + params.podcastid)
-
-                        if (element) {
-                            element.scrollIntoView({behavior: 'smooth', block: 'start', inline: 'nearest'})
-                        }
-                    }
-                })
         })
     }, [onlyUnplayed])
 
@@ -134,10 +144,13 @@ export const PodcastDetailPage = () => {
                         <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
                             onClick={() => {
-                                axios.post('/podcast/' + params.id + '/refresh')
-                                    .then(() => {
-                                        console.log('Refreshed')
-                                    })
+                                client.POST("/api/v1/podcasts/{id}/refresh", {
+                                    params: {
+                                        path: {
+                                            id: params.id!
+                                        }
+                                    }
+                                })
                             }}>refresh</span>
                         <span>
                             <button className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
@@ -179,7 +192,7 @@ export const PodcastDetailPage = () => {
                             <span className="text-[--fg-color]">{t('original-rss-feed')}</span>
                         </button>
                             <div className="flex gap-4 justify-end">
-                                <Switcher checked={onlyUnplayed} setChecked={setOnlyUnplayed}/>
+                                <Switcher checked={onlyUnplayed} onChange={setOnlyUnplayed}/>
                                 <span className=" text-[--fg-color] mt-auto">{t('active')}</span>
                             </div>
                             </span>
@@ -195,11 +208,16 @@ export const PodcastDetailPage = () => {
                     ">
                         <span className="text-xs text-[--fg-secondary-color]">{t('active')}</span>
 
-                        <Switcher checked={currentPodcast.active} setChecked={() => {
-                            axios.put('/podcast/' + params.id + '/active')
-                                .then(() => {
-                                    setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active})
-                                })
+                        <Switcher checked={currentPodcast.active} onChange={() => {
+                            client.PUT("/api/v1/podcasts/{id}/active", {
+                                params: {
+                                    path: {
+                                        id: params.id!
+                                    }
+                                }
+                            }).then(()=>{
+                                setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active})
+                            })
                         }}/>
                     </div>
                 </div>

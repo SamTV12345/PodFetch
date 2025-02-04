@@ -1,6 +1,4 @@
-import axios from "axios";
-
-
+import {client} from "./http";
 
 const wsEndpoint = "ws"
 
@@ -11,8 +9,10 @@ export const configWSUrl = (url: string) => {
     return url.replace("https", "wss") + wsEndpoint
 }
 export const logCurrentPlaybackTime = (episodeId: string, timeInSeconds: number) => {
-    axios.post("/podcast/episode", {
-        podcastEpisodeId: episodeId,
-        time: Number(timeInSeconds.toFixed(0))
+    client.POST("/api/v1/podcasts/episode", {
+        body: {
+            podcastEpisodeId: episodeId,
+            time: Number(timeInSeconds.toFixed(0))
+        }
     })
 }

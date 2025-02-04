@@ -3,59 +3,61 @@ use crate::models::settings::Setting;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::settings_service::SettingsService;
-use actix_web::web::{Path, ReqData};
-use actix_web::{get, put};
-use actix_web::{web, HttpResponse};
 use chrono::Local;
 use std::fmt::Display;
 use std::str::FromStr;
+use axum::{Extension, Json};
+use axum::extract::Path;
+use axum::http::Response;
+use reqwest::StatusCode;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/settings",
 responses(
-(status = 200, description = "Gets the current settings")),
+(status = 200, description = "Gets the current settings", body=Setting)),
 tag="podcast_episodes"
 )]
-#[get("/settings")]
-pub async fn get_settings(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+pub async fn get_settings(Extension(requester): Extension<User>) -> Result<Json<Setting>,
+    CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
     let settings = Setting::get_settings()?;
     match settings {
-        Some(settings) => Ok(HttpResponse::Ok().json(settings)),
+        Some(settings) => Ok(Json(settings)),
         None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+put,
+path="/settings",
 request_body=Setting,
 responses(
-(status = 200, description = "Updates the current settings")),
+(status = 200, description = "Updates the current settings", body = Setting)),
 tag="settings"
 )]
-#[put("/settings")]
 pub async fn update_settings(
-    settings: web::Json<Setting>,
-    requester: ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Json(settings): Json<Setting>
+) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
-    let settings = SettingsService::update_settings(settings.into_inner())?;
-    Ok(HttpResponse::Ok().json(settings))
+    let settings = SettingsService::update_settings(settings)?;
+    Ok(Json(settings))
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+put,
+path="/settings/runcleanup",
 responses(
 (status = 200, description = "Runs a cleanup of old episodes")),
 tag="settings"
 )]
-#[put("/settings/runcleanup")]
-pub async fn run_cleanup(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+pub async fn run_cleanup(requester: Extension<User>) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -63,7 +65,7 @@ pub async fn run_cleanup(requester: web::ReqData<User>) -> Result<HttpResponse, 
     match settings {
         Some(settings) => {
             PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
-            Ok(HttpResponse::Ok().finish())
+            Ok(StatusCode::OK)
         }
         None => {
             log::error!("Error getting settings");
@@ -79,17 +81,27 @@ pub enum Mode {
     Online,
 }
 
+impl From<String> for Mode {
+    fn from(val: String) -> Self {
+        match val.as_str() {
+            "local" => Mode::Local,
+            "online" => Mode::Online,
+            _ => Mode::Local,
+        }
+    }
+}
+
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/settings/opml/{type_of}",
 responses(
-(status = 200, description = "Gets the podcasts in opml format")),
-tag="podcasts"
+(status = 200, description = "Gets the podcasts in opml format", body = String)),
+tag="settings"
 )]
-#[get("/settings/opml/{type_of}")]
 pub async fn get_opml(
-    requester: ReqData<User>,
-    type_of: Path<Mode>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Path(type_of): Path<String>,
+) -> Result<Response<String>, CustomError> {
     if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
         return Err(CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into
         ());
@@ -107,8 +119,8 @@ pub async fn get_opml(
     opml.add_child(add_header()).expect("TODO: panic message");
     opml.add_child(add_podcasts(
         podcasts_found,
-        type_of.into_inner(),
-        requester,
+        Mode::from(type_of),
+        &requester,
     ))
     .map_err(|e| {
         log::error!("Error adding podcasts to opml: {}", e);
@@ -119,7 +131,11 @@ pub async fn get_opml(
 
     let mut writer: Vec<u8> = Vec::new();
     xml.generate(&mut writer).unwrap();
-    Ok(HttpResponse::Ok().body(writer))
+    let response = Response::builder()
+        .header("Content-Type", "application/xml")
+        .body(String::from_utf8(writer).unwrap())
+        .unwrap();
+    Ok(response)
 }
 
 fn add_header() -> XMLElement {
@@ -145,7 +161,7 @@ fn add_body() -> XMLElement {
 fn add_podcasts(
     podcasts_found: Vec<Podcast>,
     type_of: Mode,
-    requester: ReqData<User>,
+    requester: &User,
 ) -> XMLElement {
     let mut body = add_body();
     for podcast in podcasts_found {
@@ -177,28 +193,30 @@ fn add_podcasts(
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+put,
+path="/settings/name",
 responses(
-(status = 200, description = "Updates the name settings")),
-tag="podcasts",
+(status = 200, description = "Updates the name settings", body = Setting)),
+tag="settings",
 request_body=UpdateNameSettings
 )]
-#[put("/settings/name")]
 pub async fn update_name(
-    update_information: web::Json<UpdateNameSettings>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Json(update_information): Json<UpdateNameSettings>,
+) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
-    let settings = SettingsService::update_name(update_information.into_inner())?;
-    Ok(HttpResponse::Ok().json(settings))
+    let settings = SettingsService::update_name(update_information)?;
+    Ok(Json(settings))
 }
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -264,4 +282,14 @@ impl FromStr for ReplacementStrategy {
             _ => Err(()),
         }
     }
+}
+
+
+pub fn get_settings_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_settings))
+        .routes(routes!(update_settings))
+        .routes(routes!(run_cleanup))
+        .routes(routes!(get_opml))
+        .routes(routes!(update_name))
 }

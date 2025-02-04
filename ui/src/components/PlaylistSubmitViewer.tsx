@@ -1,8 +1,7 @@
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
-import axios, {AxiosResponse} from "axios";
-import {PlaylistDto, PlaylistDtoPost, PlaylistItem} from "../models/Playlist";
 import usePlaylist from "../store/PlaylistSlice";
 import {useTranslation} from "react-i18next";
+import {client} from "../utils/http";
 
 export const PlaylistSubmitViewer = ()=>{
     const {t} = useTranslation()
@@ -12,17 +11,19 @@ export const PlaylistSubmitViewer = ()=>{
     const setPlaylist = usePlaylist(state=>state.setPlaylist)
 
     const savePlaylist = ()=>{
-        const idsToMap:PlaylistItem[] = currentPlaylistToEdit!.items.map(item=>{
+        const idsToMap = currentPlaylistToEdit!.items.map(item=>{
             return{
                 episode: item.podcastEpisode.id
             }})
 
-        axios.post('/playlist', {
-            name: currentPlaylistToEdit?.name!,
-            items: idsToMap
-        } satisfies PlaylistDtoPost)
-            .then((v: AxiosResponse<PlaylistDto>)=>{
-                setPlaylist([...playlists,v.data])
+        client.POST("/api/v1/playlist", {
+            body: {
+                name: currentPlaylistToEdit?.name!,
+                items: idsToMap
+            }
+        })
+            .then((v)=>{
+                setPlaylist([...playlists,v.data!])
                 setCreatePlaylistOpen(false)
             })
     }
@@ -31,7 +32,7 @@ export const PlaylistSubmitViewer = ()=>{
     return <>
         <CustomButtonPrimary type="submit" className="float-right" onClick={()=>{
             savePlaylist()
-        }}>{currentPlaylistToEdit?.id===-1?t('create-playlist'):t('update-playlist')}</CustomButtonPrimary>
+        }}>{currentPlaylistToEdit?.id==="-1"?t('create-playlist'):t('update-playlist')}</CustomButtonPrimary>
         <br/>
     </>
 }

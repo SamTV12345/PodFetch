@@ -1,15 +1,15 @@
 import {useEffect, useState} from "react"
 import {createPortal} from "react-dom"
 import {useTranslation} from "react-i18next"
-import axios, {AxiosResponse} from "axios"
 import {enqueueSnackbar} from "notistack"
 import {Heading2} from "./Heading2"
 import "material-symbols/outlined.css"
-import {PlaylistDto, PlaylistDtoPost, PlaylistDtoPut, PlaylistItem} from "../models/Playlist";
 import usePlaylist from "../store/PlaylistSlice";
 import {PlaylistData} from "./PlaylistData";
 import {PlaylistSearchEpisode} from "./PlaylistSearchEpisode";
 import {PlaylistSubmitViewer} from "./PlaylistSubmitViewer";
+import {components} from "../../schema";
+import {client} from "../utils/http";
 
 
 export const CreatePlaylistModal = () => {
@@ -31,32 +31,41 @@ export const CreatePlaylistModal = () => {
         const itemsMappedToIDs = currentPlaylistToEdit!.items.map(item=>{
             return {
                 episode: item.podcastEpisode.id
-            } satisfies PlaylistItem
+            } satisfies components["schemas"]["PlaylistItem"]
         })
 
 
-        if (currentPlaylistToEdit && currentPlaylistToEdit.id !== -1){
-            axios.put("/playlist/"+currentPlaylistToEdit.id, {
-                id: currentPlaylistToEdit.id,
-                name: currentPlaylistToEdit.name,
-                items: itemsMappedToIDs
-            } satisfies PlaylistDtoPut)
-                .then((e:AxiosResponse<PlaylistDto>)=>{
-                    setPlaylist(playlists.map(p=>p.id===e.data.id?e.data:p))
-                    enqueueSnackbar(t('updated-playlist'), {variant: "success"})
-                })
+        if (currentPlaylistToEdit && currentPlaylistToEdit.id !== "-1"){
+            client.PUT("/api/v1/playlist/{playlist_id}", {
+                params: {
+                    path: {
+                        playlist_id: currentPlaylistToEdit.id
+                    }
+                },
+                body: {
+                    id: currentPlaylistToEdit.id,
+                    name: currentPlaylistToEdit.name,
+                    items: itemsMappedToIDs
+                }
+            }).then((e)=>{
+                const mapped = playlists.map(p=>p.id===e.data!.id?e.data!:p)
+                setPlaylist(mapped)
+                enqueueSnackbar(t('updated-playlist'), {variant: "success"})
+            })
+
             return
         }
 
-        if (currentPlaylistToEdit && currentPlaylistToEdit.id === -1) {
-            axios.post(  "/playlist", {
-                name: currentPlaylistToEdit.name,
-                items: itemsMappedToIDs
-            } satisfies PlaylistDtoPost)
-                .then((e:AxiosResponse<PlaylistDto>) => {
-                    setPlaylist([...playlists, e.data])
-                    enqueueSnackbar(t('created-playlist'), {variant: "success"})
-                })
+        if (currentPlaylistToEdit && currentPlaylistToEdit.id === "-1") {
+            client.POST("/api/v1/playlist", {
+                body: {
+                    name: currentPlaylistToEdit.name,
+                    items: itemsMappedToIDs
+                }
+            }).then((e)=>{
+                setPlaylist([...playlists, e.data!])
+                enqueueSnackbar(t('created-playlist'), {variant: "success"})
+            })
         }
     }
 

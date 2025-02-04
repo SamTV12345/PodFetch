@@ -69,7 +69,7 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
                 audioplayerRef.current.currentTime = Math.floor(percentage / 100 * audioplayerRef.current.duration)
 
                 if (time && currentPodcastEpisode) {
-                    logCurrentPlaybackTime(currentPodcastEpisode.episode_id, Number(audioplayerRef.current.currentTime.toFixed(0)))
+                    logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, Number(audioplayerRef.current.currentTime.toFixed(0)))
                 }
             }
         }

@@ -1,12 +1,15 @@
+use axum::{Extension, Json};
+use axum::extract::Path;
+use axum::http::StatusCode;
 use crate::models::color::Color;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::web::Json;
-use actix_web::{delete, get, post, put, web, HttpResponse};
 use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct TagCreate {
@@ -22,75 +25,75 @@ pub struct TagWithPodcast {
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/tags",
 responses(
 (status = 200, description = "Creates a new tag",
-body = TagCreate)),
+body = Tag)),
 tag="tags"
 )]
-#[post("/tags")]
 pub async fn insert_tag(
-    tag_create: Json<TagCreate>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Json(tag_create): Json<TagCreate>,
+) -> Result<Json<Tag>, CustomError> {
     let new_tag = Tag::new(
         tag_create.name.clone(),
         tag_create.description.clone(),
         tag_create.color.to_string(),
         requester.username.clone(),
     );
-    new_tag.insert_tag().map(|tag| HttpResponse::Ok().json(tag))
+    new_tag.insert_tag().map(Json)
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/tags",
 responses(
 (status = 200, description = "Gets all tags of a user", body=Vec<Tag>)),
 tag="tags"
 )]
-#[get("/tags")]
-pub async fn get_tags(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+pub async fn get_tags(requester: Extension<User>) -> Result<Json<Vec<Tag>>, CustomError> {
     let tags = Tag::get_tags(requester.username.clone())?;
-    Ok(HttpResponse::Ok().json(tags))
+    Ok(Json(tags))
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+delete,
+path="/tags/{tag_id}",
 responses(
 (status = 200, description = "Deletes a tag by id")),
 tag="tags"
 )]
-#[delete("/tags/{tag_id}")]
 pub async fn delete_tag(
-    tag_id: web::Path<String>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(tag_id): Path<String>,
+    Extension(requester): Extension<User>,
+) -> Result<StatusCode, CustomError> {
     let opt_tag =
-        Tag::get_tag_by_id_and_username(&tag_id.into_inner(), &requester.username.clone())?;
+        Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             TagsPodcast::delete_tag_podcasts(&tag.id)?;
             Tag::delete_tag(&tag.id)?;
-            Ok(HttpResponse::Ok().finish())
+            Ok(StatusCode::OK)
         }
         None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+put,
+path="/tags/{tag_id}",
 responses(
 (status = 200, description = "Updates a tag by id")),
 tag="tags"
 )]
-#[put("/tags/{tag_id}")]
 pub async fn update_tag(
-    tag_id: web::Path<String>,
-    tag_create: Json<TagCreate>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(tag_id): Path<String>,
+    Extension(requester): Extension<User>,
+    Json(tag_create): Json<TagCreate>,
+) -> Result<Json<Tag>, CustomError> {
     let opt_tag =
-        Tag::get_tag_by_id_and_username(&tag_id.into_inner(), &requester.username.clone())?;
+        Tag::get_tag_by_id_and_username(&tag_id, &requester.username)?;
     match opt_tag {
         Some(tag) => {
             let updated_tag = Tag::update_tag(
@@ -99,53 +102,64 @@ pub async fn update_tag(
                 tag_create.description.clone(),
                 tag_create.color.to_string(),
             )?;
-            Ok(HttpResponse::Ok().json(updated_tag))
+            Ok(Json(updated_tag))
         }
         None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/tags/{tag_id}/{podcast_id}",
 responses(
 (status = 200, description = "Adds a podcast to a tag", body=TagsPodcast)),
 tag="tags"
 )]
-#[post("/tags/{tag_id}/{podcast_id}")]
 pub async fn add_podcast_to_tag(
-    tag_id: web::Path<(String, i32)>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
-    let (tag_id, podcast_id) = tag_id.into_inner();
+    Path(tag_id_to_convert): Path<(String, i32)>,
+    requester: Extension<User>,
+) -> Result<Json<TagsPodcast>, CustomError> {
+    let (tag_id, podcast_id) = tag_id_to_convert;
     let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             let podcast = TagsPodcast::add_podcast_to_tag(tag.id.clone(), podcast_id)?;
-            Ok(HttpResponse::Ok().json(podcast))
+            Ok(Json(podcast))
         }
         None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+delete,
+path="/tags/{tag_id}/{podcast_id}",
 responses(
 (status = 200, description = "Deletes a podcast from a tag")),
 tag="tags"
 )]
-#[delete("/tags/{tag_id}/{podcast_id}")]
 pub async fn delete_podcast_from_tag(
-    tag_id: web::Path<(String, i32)>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
-    let (tag_id, podcast_id) = tag_id.into_inner();
+    Path(tag_id): Path<(String, i32)>,
+    Extension(requester): Extension<User>,
+) -> Result<StatusCode, CustomError> {
+    let (tag_id, podcast_id) = tag_id;
 
     let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(podcast_id, &tag.id)?;
-            Ok(HttpResponse::Ok().finish())
+            Ok(StatusCode::OK)
         }
         None => Err(CustomErrorInner::NotFound.into()),
     }
+}
+
+
+pub fn get_tags_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(insert_tag))
+        .routes(routes!(get_tags))
+        .routes(routes!(delete_tag))
+        .routes(routes!(update_tag))
+        .routes(routes!(add_podcast_to_tag))
+        .routes(routes!(delete_podcast_from_tag))
 }

@@ -1,10 +1,7 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
-import axios, { AxiosResponse } from 'axios'
 import { enqueueSnackbar } from 'notistack'
-import { Setting } from '../models/Setting'
-import { UpdateNameSettings } from '../models/UpdateNameSettings'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomSelect } from './CustomSelect'
 import { CustomInput } from './CustomInput'
@@ -13,9 +10,11 @@ import { CustomCheckbox } from './CustomCheckbox'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
 import {EpisodeFormatModal} from "./EpisodeFormatModal";
 import {useDebounce} from "../utils/useDebounce";
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 type SettingsProps = {
-    intialSettings: Setting
+    intialSettings: components["schemas"]["Setting"]
 }
 
 export const options = [
@@ -34,13 +33,13 @@ export const options = [
 ]
 
 export const SettingsNaming: FC = () => {
-    const [settings, setSettings] = useState<Setting>()
+    const [settings, setSettings] = useState<components["schemas"]["Setting"]>()
 
     /* Fetch existing settings */
     useEffect(() => {
-        axios.get('/settings')
-            .then((res:AxiosResponse<Setting>) => {
-                setSettings(res.data)
+        client.GET("/api/v1/settings")
+            .then(res=>{
+                setSettings(res.data!)
             })
     }, [])
 
@@ -58,9 +57,9 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     const [resultingPodcastFormat, setResultingPodcastFormat] = useState<string>('')
     const [resultingEpisodeFormat, setResultingEpisodeFormat] = useState<string>('')
     const { control, formState: {}, handleSubmit, watch}
-        = useForm<UpdateNameSettings>({
+        = useForm<components["schemas"]["UpdateNameSettings"]>({
         defaultValues: {
-            replacementStrategy: intialSettings.replacementStrategy,
+            replacementStrategy: intialSettings.replacementStrategy as any,
             episodeFormat: intialSettings.episodeFormat,
             replaceInvalidCharacters: intialSettings.replaceInvalidCharacters,
             useExistingFilename: intialSettings.useExistingFilename,
@@ -77,8 +76,10 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: episodeFormat
         }
-        axios.post( '/episodes/formatting', content)
-            .then((v: AxiosResponse<string>)=>setResultingEpisodeFormat(v.data))
+        client.POST( '/api/v1/episodes/formatting', {
+            body: content
+        })
+            .then((v)=>setResultingEpisodeFormat(v.data!))
             .catch(e=>setResultingEpisodeFormat(e.response.data.error))
 
     },2000,[episodeFormat])
@@ -87,16 +88,18 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: podcastFormat
         }
-        axios.post( '/podcasts/formatting', content)
-            .then((v: AxiosResponse<string>)=>setResultingPodcastFormat(v.data))
+        client.POST("/api/v1/podcasts/formatting", {
+            body: content
+        }).then((v)=>setResultingPodcastFormat(v.data!))
             .catch(e=>setResultingPodcastFormat(e.response.data.error))
     },2000,[podcastFormat])
 
-    const update_settings: SubmitHandler<UpdateNameSettings> = (data) => {
-        axios.put(  '/settings/name', data satisfies UpdateNameSettings)
-            .then(() => {
-                enqueueSnackbar(t('settings-saved'), { variant: 'success' })
-            })
+    const update_settings: SubmitHandler<components["schemas"]["UpdateNameSettings"]> = (data) => {
+        client.PUT("/api/v1/settings/name", {
+            body: data
+        }).then(() => {
+            enqueueSnackbar(t('settings-saved'), { variant: 'success' })
+        })
             .catch(e=>{
                 enqueueSnackbar(e.response.data.error, { variant: 'error' })
             })

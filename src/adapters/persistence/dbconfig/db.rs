@@ -1,12 +1,12 @@
 use crate::adapters::persistence::dbconfig::DBType;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::DbPool;
 use diesel::r2d2::ConnectionManager;
 use diesel::Connection;
 use r2d2::Pool;
 use std::process::exit;
 use std::sync::OnceLock;
 use std::time::Duration;
+use crate::commands::startup::DbPool;
 
 #[derive(Debug)]
 pub struct ConnectionOptions {

@@ -15,19 +15,18 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
 use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::http_client::get_http_client;
-use actix_web::web::Data;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
-use serde::Serialize;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
+use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
 
 pub struct PodcastService;
 
 impl PodcastService {
-    pub async fn find_podcast(podcast: &str) -> Value {
+    pub async fn find_podcast(podcast: &str) -> ItunesWrapper {
         let query = vec![("term", podcast), ("entity", "podcast")];
         let result = get_http_client()
             .get(ITUNES_URL)
@@ -45,11 +44,11 @@ impl PodcastService {
                 "Error searching for podcast: {}",
                 res_of_search.err().unwrap()
             );
-            serde_json::from_str("{}").unwrap()
+            ItunesWrapper::default()
         }
     }
 
-    pub async fn find_podcast_on_podindex(podcast: &str) -> Result<Value, CustomError> {
+    pub async fn find_podcast_on_podindex(podcast: &str) -> Result<PodindexResponse, CustomError> {
         let headers = Self::compute_podindex_header();
 
         let query = vec![("q", podcast)];
@@ -87,7 +86,6 @@ impl PodcastService {
 
     pub async fn insert_podcast_from_podindex(
         id: i32,
-        lobby: Data<ChatServerHandle>,
     ) -> Result<Podcast, CustomError> {
         let resp = get_http_client()
             .get(format!(
@@ -110,7 +108,6 @@ impl PodcastService {
                 feed_url: unwrap_string(&podcast["feed"]["url"]),
                 image_url: unwrap_string(&podcast["feed"]["image"]),
             },
-            lobby,
             None,
         )
         .await
@@ -118,7 +115,6 @@ impl PodcastService {
 
     pub async fn handle_insert_of_podcast(
         podcast_insert: PodcastInsertModel,
-        lobby: Data<ChatServerHandle>,
         channel: Option<Channel>,
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(&podcast_insert.feed_url.clone());
@@ -150,17 +146,17 @@ impl PodcastService {
         let podcast = Podcast::get_podcast_by_track_id(podcast_insert.id)?;
         match podcast {
             Some(podcast) => {
-                lobby.broadcast_podcast_downloaded(podcast.clone());
+                ChatServerHandle::broadcast_podcast_downloaded(podcast.clone());
                 spawn_blocking(move || {
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
                     let inserted_podcasts =
                         PodcastEpisodeService::insert_podcast_episodes(podcast.clone()).unwrap();
 
-                    lobby.broadcast_added_podcast_episodes(
+                    ChatServerHandle::broadcast_added_podcast_episodes(
                         podcast.clone(),
                         inserted_podcasts.clone(),
                     );
-                    if let Err(e) = Self::schedule_episode_download(podcast, Some(lobby)) {
+                    if let Err(e) = Self::schedule_episode_download(podcast) {
                         log::error!("Error scheduling episode download: {}", e);
                     }
                 })
@@ -176,7 +172,6 @@ impl PodcastService {
 
     pub fn schedule_episode_download(
         podcast: Podcast,
-        lobby: Option<Data<ChatServerHandle>>,
     ) -> Result<(), CustomError> {
         let settings = Setting::get_settings()?;
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
@@ -193,7 +188,6 @@ impl PodcastService {
                             PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
                                     podcast_episode,
                                     podcast.clone(),
-                                    lobby.clone(),
                                 ){
                                 log::error!("Error downloading podcast episode: {}", e);
                             }
@@ -211,11 +205,10 @@ impl PodcastService {
 
     pub fn refresh_podcast(
         podcast: Podcast,
-        lobby: Data<ChatServerHandle>,
     ) -> Result<(), CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
         PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
-        Self::schedule_episode_download(podcast.clone(), Some(lobby.clone()))
+        Self::schedule_episode_download(podcast.clone())
     }
 
     pub fn update_favor_podcast(id: i32, x: bool, username: &str) -> Result<(), CustomError> {
@@ -286,7 +279,7 @@ impl PodcastService {
         latest_pub: OrderOption,
         designated_username: String,
         tag: Option<String>,
-    ) -> Result<Vec<impl Serialize>, CustomError> {
+    ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
             Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?;
         let mut podcast_dto_vec: Vec<PodcastDto> = Vec::new();

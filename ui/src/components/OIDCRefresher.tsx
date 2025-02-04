@@ -1,7 +1,7 @@
 import { FC, PropsWithChildren, useEffect } from 'react'
 import { useAuth } from 'react-oidc-context'
-import axios from 'axios'
 import useOnMount from '../hooks/useOnMount'
+import useCommon from "../store/CommonSlice";
 
 export const OIDCRefresher: FC<PropsWithChildren> = ({ children }) => {
     const auth = useAuth()
@@ -21,7 +21,7 @@ export const OIDCRefresher: FC<PropsWithChildren> = ({ children }) => {
 
     useEffect(() => {
         if (auth.user?.id_token) {
-            axios.defaults.headers.common['Authorization'] = 'Bearer ' + auth.user.id_token
+            useCommon.getState().setHeaders({Authorization: 'Bearer ' + auth.user.id_token})
         }
     }, [auth.user?.id_token])
 

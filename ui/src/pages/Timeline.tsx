@@ -1,14 +1,13 @@
 import {Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
-import axios, { AxiosResponse } from 'axios'
 import { formatTime, getFiltersDefault } from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Filter } from '../models/Filter'
-import { TimelineHATEOASModel } from '../models/TimeLineModel'
 import { Heading1 } from '../components/Heading1'
 import { Loading } from '../components/Loading'
 import { Switcher } from '../components/Switcher'
 import { TimelineEpisode } from '../components/TimelineEpisode'
+import {client} from "../utils/http";
 
 export const Timeline = () => {
     const timeLineEpisodes = useCommon(state => state.timeLineEpisodes)
@@ -21,28 +20,26 @@ export const Timeline = () => {
 
 
     useEffect(() => {
-        !filter && axios.get( '/podcasts/filter')
-            .then((filterAxiosResponse: AxiosResponse<Filter>) => {
-                filterAxiosResponse.data == null && setFilters(getFiltersDefault())
-
-                filterAxiosResponse.data && setFilters(filterAxiosResponse.data)
-            })
+        !filter && client.GET("/api/v1/podcasts/filter").then(resp=>{
+            setFilters(resp.data || getFiltersDefault())
+        }).catch(()=>setFilters(getFiltersDefault()))
     }, [])
 
     useEffect(() => {
         if (filter) {
             let favoredOnly = filter?.onlyFavored
 
-            axios.get('/podcasts/timeline', {
+            client.GET('/api/v1/podcasts/timeline', {
                 params: {
-                    favoredOnly: favoredOnly === undefined ? false : favoredOnly,
-                    notListened: notListened,
-                    favoredEpisodes: notFavored
+                    query: {
+                        favoredOnly: favoredOnly === undefined ? false : favoredOnly,
+                        notListened: notListened,
+                        favoredEpisodes: notFavored
+                    }
                 }
+            }).then((c) => {
+                setTimelineEpisodes(c.data!)
             })
-                .then((c: AxiosResponse<TimelineHATEOASModel>) => {
-                    setTimelineEpisodes(c.data)
-                })
         }
     }, [filter,notListened, notFavored])
 
@@ -61,7 +58,7 @@ export const Timeline = () => {
                         <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavored')}</span>
 
                         <Switcher checked={filter === undefined ? true : filter.onlyFavored}
-                                  setChecked={() => setFilters({
+                                  onChange={() => setFilters({
                                       ...filter as Filter,
                                       onlyFavored: !filter?.onlyFavored
                                   })}/>
@@ -69,12 +66,12 @@ export const Timeline = () => {
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-[--fg-secondary-color]">{t('not-yet-played')}</span>
 
-                        <Switcher checked={notListened} setChecked={() => setNotListened(!notListened)}/>
+                        <Switcher checked={notListened} onChange={() => setNotListened(!notListened)}/>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-[--fg-secondary-color]">{t('onlyFavoredEpisodes')}</span>
 
-                        <Switcher checked={notFavored} setChecked={() => setFavored(!notFavored)}/>
+                        <Switcher checked={notFavored} onChange={() => setFavored(!notFavored)}/>
                     </div>
                 </div>
             </div>
@@ -84,7 +81,7 @@ export const Timeline = () => {
                 {timeLineEpisodes.data.map((e, index) => (
                     <Fragment key={e.podcast_episode.episode_id+index + "Parent"}>
                         {/* Section start */
-                        index === 0 || (formatTime(e.podcast_episode.date_of_recording) !== formatTime(timeLineEpisodes.data[index-1].podcast_episode.date_of_recording)) ? (<>
+                        index === 0 || (formatTime(e.podcast_episode.date_of_recording) !== formatTime(timeLineEpisodes.data[index-1]!.podcast_episode.date_of_recording)) ? (<>
                             {/* Date */}
                             <span className="col-span-full bg-[--bg-color] -mb-4 -ml-6 py-2">
                                 <span className="inline-block bg-[--accent-color] mr-4 outline outline-2 outline-offset-2 outline-[--accent-color] h-2 w-2 rounded-full"></span>
@@ -96,15 +93,16 @@ export const Timeline = () => {
                         </>) : ''}
 
                         <TimelineEpisode
-                            podcastHistoryItem={e.history}
+                            podcastHistoryItem={e.history!}
                             notListened={notListened}
-                            podcastEpisode={e}
+                            podcastEpisode={e.podcast_episode!}
                             key={e.podcast_episode.episode_id+index + "Parent"}
                             index={index}
                             timelineLength={timeLineEpisodes.data.length}
                             timeLineEpisodes={timeLineEpisodes}
                             totalLength={timeLineEpisodes.totalElements}
                             favoredEpisodes={notFavored}
+                            podcast={e.podcast!}
                         />
                     </Fragment>
                 ))}

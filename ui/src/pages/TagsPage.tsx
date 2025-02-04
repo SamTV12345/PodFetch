@@ -2,10 +2,9 @@ import {Heading1} from "../components/Heading1";
 import {useTranslation} from "react-i18next";
 import useCommon from "../store/CommonSlice";
 import {useEffect} from "react";
-import axios, {AxiosResponse} from "axios";
 import {PodcastTags} from "../models/PodcastTags";
-import {PlaylistDto} from "../models/Playlist";
 import {CustomInput} from "../components/CustomInput";
+import {client} from "../utils/http";
 
 export const TagsPage = ()=>{
     const {t}  = useTranslation()
@@ -14,9 +13,7 @@ export const TagsPage = ()=>{
 
     useEffect(() => {
         if (tags.length === 0) {
-            axios.get('/tags').then((response: AxiosResponse<PodcastTags[]>) => {
-                setTags(response.data)
-            })
+            client.GET("/api/v1/tags").then(v=>setTags(v.data!))
         }
     }, []);
 
@@ -40,9 +37,16 @@ export const TagsPage = ()=>{
                         return <tr className="border-b border-stone-300 " key={tag.id}>
                             <td className="px-2 py-4 flex items-center text-[--fg-color]">
                                 <CustomInput onBlur={()=>{
-                                    axios.put(`/tags/${tag.id}`, {
-                                        name: tag.name,
-                                        color: tag.color
+                                    client.PUT("/api/v1/tags/{tag_id}", {
+                                        params: {
+                                            path: {
+                                                tag_id: tag.id
+                                            }
+                                        },
+                                        body: {
+                                            name: tag.name,
+                                            color: tag.color as "Green" | "Red" | "Blue"
+                                        }
                                     })
                                 }} value={tag.name} onChange={(event)=>{
                                     setTags(tags.map(t=>{
@@ -58,9 +62,14 @@ export const TagsPage = ()=>{
                             </td>
                             <td>
                                 <button className="px-2 py-1 text-[--fg-color] rounded-md bg-red-700" onClick={() => {
-                                    console.log(tags, tag)
-                                    axios.delete(`/tags/${tag.id}`).then(() => {
-                                       setTags(tags.filter(tagfiltered => tagfiltered.id !== tag.id))
+                                    client.DELETE("/api/v1/tags/{tag_id}", {
+                                        params: {
+                                            path: {
+                                                tag_id: tag.id
+                                            }
+                                        }
+                                    }).then(()=>{
+                                        setTags(tags.filter(tagfiltered=>tagfiltered.id !== tag.id))
                                     })
                                 }}>{t('delete')}</button>
                             </td>

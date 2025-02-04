@@ -1,12 +1,11 @@
-import { FC} from 'react'
-import axios, { AxiosResponse } from 'axios'
-import {Podcast, PodcastEpisode} from '../store/CommonSlice'
-import {Episode} from "../models/Episode";
+import {FC} from 'react'
 import {handlePlayofEpisode} from "../utils/PlayHandler";
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 type EpisodeCardProps = {
-    podcast: Podcast,
-    podcastEpisode: PodcastEpisode,
+    podcast: components["schemas"]["PodcastDto"],
+    podcastEpisode: components["schemas"]["PodcastEpisodeDto"],
     totalTime?: number,
     watchedTime?: number
 }
@@ -15,13 +14,15 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
 
     return (
         <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
-            axios.get(  '/podcast/episode/' + podcastEpisode.episode_id)
-                .then((response: AxiosResponse<Episode>) => {
-                    handlePlayofEpisode(response, {
-                        podcastEpisode: podcastEpisode,
-                        podcastHistoryItem: response.data
-                    })
-        })}}>
+            client.GET("/api/v1/podcasts/episode/{id}", {
+                params: {
+                    path:{
+                        id: podcastEpisode.episode_id
+                    }
+                }
+            }).then(resp => handlePlayofEpisode(podcastEpisode, resp.data!))
+                .catch(() => handlePlayofEpisode(podcastEpisode, undefined))
+        }}>
 
             {/* Thumbnail */}
             <div className="relative aspect-square bg-center bg-cover mb-2 overflow-hidden rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)] w-full" key={podcastEpisode.episode_id} style={{backgroundImage: `url("${podcastEpisode.local_image_url}")`}}>

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { enqueueSnackbar } from 'notistack'
 import useCommon from '../store/CommonSlice'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
@@ -9,11 +8,8 @@ import { CustomSelect } from './CustomSelect'
 import { Heading2 } from './Heading2'
 import { Switcher } from './Switcher'
 import 'material-symbols/outlined.css'
-
-type Invite = {
-    role: string,
-    explicitConsent: boolean
-}
+import {client} from "../utils/http";
+import {components} from "../../schema";
 
 const roleOptions = [
     { translationKey: 'admin', value: 'Admin' },
@@ -24,7 +20,7 @@ const roleOptions = [
 export const CreateInviteModal = () => {
     const inviteModalOpen = useCommon(state => state.createInviteModalOpen)
     const invites = useCommon(state => state.invites)
-    const [invite, setInvite] = useState<Invite>({ role: 'User', explicitConsent: false })
+    const [invite, setInvite] = useState<components["schemas"]["InvitePostModel"]>({ role: 'user', explicitConsent: false })
     const { t } = useTranslation()
     const setCreateInviteModalOpen = useCommon(state => state.setCreateInviteModalOpen)
     const setInvites = useCommon(state => state.setInvites)
@@ -46,26 +42,28 @@ export const CreateInviteModal = () => {
                 {/* Role select */}
                 <div className="mb-6">
                     <label className="block mb-2 text-sm text-[--fg-color]" htmlFor="role">{t('role')}</label>
-                    <CustomSelect className="text-left w-full" id="role" onChange={(v) => {setInvite({ ...invite, role: v })}} options={roleOptions} placeholder={t('select-role')} value={invite.role} />
+                    <CustomSelect className="text-left w-full" id="role" onChange={(v) => {setInvite({ ...invite, role: v as components["schemas"]["InvitePostModel"]["role"] })}} options={roleOptions} placeholder={t('select-role')} value={invite.role} />
                 </div>
 
                 {/* Explicit content toggle */}
                 <div className="flex items-center gap-4 mb-6">
                     <label className="text-sm text-[--fg-color]" htmlFor="allow-explicit-content">{t('allow-explicit-content')}</label>
-                    <Switcher checked={invite.explicitConsent} id="allow-explicit-content" setChecked={() => {setInvite({ ...invite, explicitConsent: !invite.explicitConsent })}}/>
+                    <Switcher checked={invite.explicitConsent} id="allow-explicit-content" onChange={() => {setInvite({ ...invite, explicitConsent: !invite.explicitConsent })}}/>
                 </div>
 
                 <CustomButtonPrimary className="float-right" onClick={() => {
                     const modifiedInvite = {
-                        role: invite.role.toLowerCase(),
+                        role: invite.role,
                         explicitConsent: invite.explicitConsent
-                    } satisfies Invite
-                    axios.post(  '/users/invites', modifiedInvite)
-                        .then((v) => {
-                            enqueueSnackbar(t('invite-created'), { variant: 'success' })
-                            setInvites([...invites,v.data])
-                            setCreateInviteModalOpen(false)
-                        })
+                    } satisfies components["schemas"]["InvitePostModel"]
+
+                    client.POST("/api/v1/invites", {
+                        body: modifiedInvite
+                    }).then((v) => {
+                        enqueueSnackbar(t('invite-created'), { variant: 'success' })
+                        setInvites([...invites,v.data!])
+                        setCreateInviteModalOpen(false)
+                    })
                 }}>{t('create-invite')}</CustomButtonPrimary>
 
             </div>

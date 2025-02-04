@@ -1,16 +1,14 @@
-use crate::controllers::web_socket::chat_ws;
-
+use axum::extract::Path;
+use axum::response::{IntoResponse, Response};
+use axum_extra::extract::OptionalQuery;
 use crate::models::podcasts::Podcast;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use actix_web::web::Query;
-use actix_web::{get, web, Error, HttpRequest, HttpResponse};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
@@ -19,30 +17,12 @@ use rss::{
     Category, CategoryBuilder, Channel, ChannelBuilder, EnclosureBuilder, GuidBuilder, Item,
     ItemBuilder,
 };
-use tokio::task::spawn_local;
-
-#[utoipa::path(
-context_path = "/api/v1",
-responses(
-(status = 200, description = "Gets a web socket connection"))
-, tag = "info")]
-#[get("/ws")]
-pub async fn start_connection(
-    req: HttpRequest,
-    body: web::Payload,
-    chat_server: web::Data<ChatServerHandle>,
-) -> Result<HttpResponse, Error> {
-    let (res, session, msg_stream) = actix_ws::handle(&req, body)?;
-
-    // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(chat_ws((**chat_server).clone(), session, msg_stream));
-
-    Ok(res)
-}
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 #[derive(Deserialize, Serialize)]
 pub struct RSSQuery {
-    top: i32,
+    top: Option<i32>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -52,21 +32,21 @@ pub struct RSSAPiKey {
 }
 
 #[utoipa::path(
-context_path = "/api/v1",
+get,
+path="/rss",
 responses(
 (status = 200, description = "Gets the complete rss feed"))
-, tag = "info")]
-#[get("/rss")]
+, tag = "rss")]
 pub async fn get_rss_feed(
-    query: Option<Query<RSSQuery>>,
-    api_key: Option<Query<RSSAPiKey>>,
-) -> Result<HttpResponse, CustomError> {
+    OptionalQuery(query): OptionalQuery<RSSQuery>,
+    OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
+) -> Result<impl IntoResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
 
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
-            Some(q) => Ok::<&Query<RSSAPiKey>, CustomError>(q),
+            Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
             None => Err(CustomErrorInner::Forbidden.into()),
         }?;
         let api_key = &api_key.api_key;
@@ -79,7 +59,13 @@ pub async fn get_rss_feed(
     }
 
     let downloaded_episodes = match query {
-        Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(q.top)?,
+        Some(q) => match q.top
+        {
+            Some(q)=>{
+                PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(q)?
+            }
+            None=>PodcastEpisodeService::find_all_downloaded_podcast_episodes()?
+        },
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };
 
@@ -119,7 +105,11 @@ pub async fn get_rss_feed(
     let channel =
         generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, &api_key);
 
-    Ok(HttpResponse::Ok().body(channel.to_string()))
+    let response = Response::builder()
+        .header("Content-Type", "application/rss+xml")
+        .body(channel.to_string())
+        .unwrap();
+    Ok(response)
 }
 
 fn add_api_key_to_url(url: String, api_key: &Option<String>) -> String {
@@ -155,21 +145,20 @@ fn generate_itunes_extension_conditionally(
 }
 
 #[utoipa::path(
-context_path = "/api/v1",
+get,
+path="/rss/{id}",
 responses(
 (status = 200, description = "Gets a specific rss feed"))
-, tag = "info")]
-#[get("/rss/{id}")]
+, tag = "rss")]
 pub async fn get_rss_feed_for_podcast(
-    id: web::Path<i32>,
-    api_key: Option<web::Query<RSSAPiKey>>,
-) -> Result<HttpResponse, CustomError> {
+    Path(id): Path<i32>,
+    OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
+) -> Result<impl IntoResponse, CustomError> {
     let server_url = ENVIRONMENT_SERVICE.server_url.clone();
-
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
-            Some(q) => Ok::<&Query<RSSAPiKey>, CustomError>(q),
+            Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
             None => Err(CustomErrorInner::Forbidden.into()),
         }?;
         let api_key = &api_key.api_key;
@@ -181,10 +170,10 @@ pub async fn get_rss_feed_for_podcast(
         }
     }
     let api_key = api_key.map(|c| c.api_key.clone());
-    let podcast = Podcast::get_podcast(*id)?;
+    let podcast = Podcast::get_podcast(id)?;
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
-        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(*id)?
+        PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(id)?
             .into_iter()
             .map(|c| (c, api_key.clone(), None::<FavoritePodcastEpisode>).into())
             .collect();
@@ -245,8 +234,11 @@ pub async fn get_rss_feed_for_podcast(
         Some(podcast.clone()),
         &api_key,
     );
-
-    Ok(HttpResponse::Ok().body(channel.to_string()))
+    let response = Response::builder()
+        .header("Content-Type", "application/rss+xml")
+        .body(channel.to_string())
+        .unwrap();
+    Ok(response)
 }
 
 fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item> {
@@ -302,4 +294,10 @@ fn get_itunes_owner(name: &str, email: &str) -> ITunesOwner {
         .name(Some(name.to_string()))
         .email(Some(email.to_string()))
         .build()
+}
+
+pub fn get_websocket_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_rss_feed))
+        .routes(routes!(get_rss_feed_for_podcast))
 }

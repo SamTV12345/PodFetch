@@ -2,7 +2,6 @@ import {FC, Fragment, useMemo} from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
-import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
 import {formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
 import 'material-symbols/outlined.css'
@@ -11,9 +10,11 @@ import useCommon from "../store/CommonSlice";
 import {Episode} from "../models/Episode";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
+import {components} from "../../schema";
+import {client} from "../utils/http";
 
 type PodcastDetailItemProps = {
-    episode: EpisodesWithOptionalTimeline,
+    episode: components["schemas"]["PodcastEpisodeWithHistory"],
     index: number,
     episodesLength: number,
     onlyUnplayed: boolean
@@ -28,7 +29,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         if(!episode.podcastHistoryItem){
             return -1
         }
-        return Math.round(episode.podcastHistoryItem.position*100/episode.podcastEpisode.total_time)
+        return Math.round(episode.podcastHistoryItem.position!*100/episode.podcastEpisode.total_time)
     }, [episode.podcastHistoryItem?.position])
     const addPodcastEpisodes = useCommon(state => state.addPodcastEpisodes)
     const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
@@ -82,34 +83,35 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             return
                         }
 
-                        axios.put(  "/podcast/" + episode.podcastEpisode.episode_id + "/episodes/download")
-                            .then(()=>{
-                                enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
-                                setEpisodeDownloaded(episode.podcastEpisode.episode_id)
-                            })
+                        client.PUT("/api/v1/podcasts/{id}/episodes/download", {
+                            params: {
+                                path: {
+                                    id: episode.podcastEpisode.episode_id
+                                }
+                            }
+                        }).then(()=>{
+                            enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
+                            setEpisodeDownloaded(episode.podcastEpisode.episode_id)
+                        })
                     }}>cloud_download</span>
                         {/* Check icon */}
                         <span className="material-symbols-outlined text-[--fg-icon-color] active:scale-95" onClick={(e)=>{
                             // Prevent icon click from triggering info modal
                             e.stopPropagation()
                             logCurrentPlaybackTime(episode.podcastEpisode.episode_id, episode.podcastHistoryItem?.total || 0)
-                            console.log(episode)
                             const mappedEpisodes = selectedEpisodes.map(s=>{
                                 if (s.podcastEpisode.episode_id === episode.podcastEpisode.episode_id){
                                     if (s.podcastHistoryItem) {
                                         s.podcastHistoryItem.position = episode.podcastEpisode.total_time
                                     } else {
                                         s.podcastHistoryItem = {
-                                            action: "",
-                                            clean_url: "",
+                                            action: "new",
                                             device: "",
                                             episode: "",
                                             guid: "",
-                                            id: 0,
                                             podcast: "",
                                             started: 0,
                                             timestamp: "",
-                                            username: "",
                                             total: episode.podcastEpisode.total_time,
                                             position: episode.podcastEpisode.total_time
                                         }
@@ -122,8 +124,15 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         }}>check</span>
                         <span className={"material-symbols-outlined text-[--fg-color] " + (episode.podcastEpisode.favored && 'filled')}
                               onClick={() => {
-                                  axios.put(  '/podcast/' + episode.podcastEpisode.id + '/episodes/favor', {
-                                      favored: !episode.podcastEpisode.favored
+                                  client.PUT(  "/api/v1/podcasts/{id}/episodes/favor", {
+                                      params: {
+                                          path: {
+                                                id: episode.podcastEpisode.id
+                                          }
+                                      },
+                                      body: {
+                                          favored: !episode.podcastEpisode.favored
+                                      }
                                   })
                                       .then(() => {
                                             const mappedEpisodes = selectedEpisodes.map(s => {
@@ -168,25 +177,36 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                 `} key={episode.podcastEpisode.episode_id + 'icon'} onClick={(e) => {
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
-
-                    axios.get(  '/podcast/episode/' + episode.podcastEpisode.episode_id)
-                        .then((response: AxiosResponse<Episode>) => {
-                            handlePlayofEpisode(response, episode)
-                        })
+                    client.GET("/api/v1/podcasts/episode/{id}", {
+                        params: {
+                            path: {
+                                id: episode.podcastEpisode.episode_id
+                            }
+                        }
+                    }).then((resp)=>{
+                        handlePlayofEpisode(episode.podcastEpisode, resp.data!,)
+                    }).catch(e=>{
+                        handlePlayofEpisode(episode.podcastEpisode, undefined)
+                    })
                 }}>play_circle</span>
             </div>
 
             {/* Infinite scroll */
             index === (episodesLength - 5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    axios.get(  '/podcast/' + params.id + '/episodes',{
+                    client.GET("/api/v1/podcasts/{id}/episodes", {
                         params: {
-                            last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1].podcastEpisode.date_of_recording,
-                            only_unlistened: onlyUnplayed
+                            path: {
+                                id: params.id!,
+                            },
+                            query: {
+                                last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1]!.podcastEpisode.date_of_recording,
+                                only_unlistened: onlyUnplayed
+                            }
                         }
                     })
-                        .then((response:AxiosResponse<EpisodesWithOptionalTimeline[]>) => {
-                            addPodcastEpisodes(response.data)
+                        .then((response) => {
+                            addPodcastEpisodes(response.data!)
                         })
                 }} />
             }

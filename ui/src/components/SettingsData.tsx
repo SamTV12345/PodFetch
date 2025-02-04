@@ -1,6 +1,5 @@
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import axios, { AxiosResponse } from 'axios'
 import { useSnackbar } from 'notistack'
 import { Setting } from '../models/Setting'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
@@ -9,6 +8,7 @@ import { CustomInput } from './CustomInput'
 import { Loading } from './Loading'
 import { Switcher } from './Switcher'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
+import { client } from '../utils/http'
 
 type SettingsProps = {
     initialSettings: Setting
@@ -19,8 +19,8 @@ export const SettingsData: FC = () => {
 
     /* Fetch existing settings */
     useEffect(()=>{
-        axios.get( '/settings').then((res: AxiosResponse<Setting>) => {
-            setSettings(res.data)
+        client.GET("/api/v1/settings").then(resp=>{
+            setSettings(resp.data!)
         })
     }, [])
 
@@ -43,10 +43,10 @@ export const Settings: FC<SettingsProps> = ({ initialSettings }) => {
                     <div>
                         <label className="mr-6" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
                         <CustomButtonSecondary onClick={() => {
-                            axios.put("/settings/runcleanup")
+                            client.PUT("/api/v1/settings/runcleanup")
                         }}>{t('run-cleanup')}</CustomButtonSecondary>
                     </div>
-                    <Switcher checked={settings.autoCleanup} className="xs:justify-self-end" id="auto-cleanup" setChecked={() => {
+                    <Switcher checked={settings.autoCleanup} className="xs:justify-self-end" id="auto-cleanup" onChange={() => {
                         setSettings({ ...settings, autoCleanup: !settings?.autoCleanup })
                     }} />
                 </div>
@@ -60,14 +60,14 @@ export const Settings: FC<SettingsProps> = ({ initialSettings }) => {
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label htmlFor="auto-update" className="flex gap-1">{t('auto-update')} <SettingsInfoIcon headerKey="auto-update" textKey="auto-update-explanation" /></label>
-                    <Switcher checked={settings.autoUpdate} className="xs:justify-self-end" id="auto-update" setChecked={() => {
+                    <Switcher checked={settings.autoUpdate} className="xs:justify-self-end" id="auto-update" onChange={() => {
                         setSettings({ ...settings, autoUpdate: !settings?.autoUpdate })
                     }} />
                 </div>
 
                 <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label htmlFor="auto-download" className="flex gap-1">{t('auto-download')} <SettingsInfoIcon headerKey="auto-download" textKey="auto-download-explanation" /></label>
-                    <Switcher checked={settings.autoDownload} className="xs:justify-self-end" id="auto-download" setChecked={() => {
+                    <Switcher checked={settings.autoDownload} className="xs:justify-self-end" id="auto-download" onChange={() => {
                         setSettings({ ...settings, autoDownload: !settings?.autoDownload })
                     }} />
                 </div>
@@ -81,10 +81,11 @@ export const Settings: FC<SettingsProps> = ({ initialSettings }) => {
             </div>
 
             <CustomButtonPrimary className="float-right" onClick={() => {
-                axios.put(  '/settings', settings)
-                    .then(() => {
-                        enqueueSnackbar(t('settings-saved'), { variant: 'success' })
-                    })
+                client.PUT("/api/v1/settings", {
+                    body: settings
+                }).then(() => {
+                    enqueueSnackbar(t('settings-saved'), { variant: 'success' })
+                })
             }}>{t('save')}</CustomButtonPrimary>
         </div>
     )

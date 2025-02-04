@@ -1,54 +1,68 @@
-use crate::models::episode::Episode;
-use crate::models::misc_models::PodcastWatchedPostModel;
+use axum::{Extension, Json};
+use axum::extract::Path;
+use reqwest::StatusCode;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+use crate::models::episode::{Episode, EpisodeDto};
+use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
 use crate::models::user::User;
 
-use crate::utils::error::CustomError;
-use actix_web::{get, post, web, HttpResponse};
+use crate::utils::error::{CustomError, CustomErrorInner};
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/podcasts/episode",
 responses(
 (status = 200, description = "Logs a watchtime request.")),
 tag="watchtime"
 )]
-#[post("/podcast/episode")]
 pub async fn log_watchtime(
-    podcast_watch: web::Json<PodcastWatchedPostModel>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
-    let podcast_episode_id = podcast_watch.0.podcast_episode_id.clone();
-    Episode::log_watchtime(podcast_watch.0, requester.username.clone())?;
+    Extension(requester): Extension<User>,
+    Json(podcast_watch): Json<PodcastWatchedPostModel>,
+) -> Result<StatusCode, CustomError> {
+    let podcast_episode_id = podcast_watch.podcast_episode_id.clone();
+    Episode::log_watchtime(podcast_watch, requester.username.clone())?;
     log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
-    Ok(HttpResponse::Ok().body("Watchtime logged."))
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/episode/lastwatched",
 responses(
-(status = 200, description = "Gets the last watched podcast episodes.")),
+(status = 200, description = "Gets the last watched podcast episodes.", body= Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>)),
 tag="watchtime"
 )]
-#[get("/podcast/episode/lastwatched")]
-pub async fn get_last_watched(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
-    let designated_user = requester.into_inner();
+pub async fn get_last_watched(Extension(requester): Extension<User>) ->
+                                                                     Result<Json<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>,
+    CustomError> {
 
-    let mut episodes = Episode::get_last_watched_episodes(&designated_user)?;
+    let mut episodes = Episode::get_last_watched_episodes(&requester)?;
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
-    Ok(HttpResponse::Ok().json(episodes))
+    Ok(Json(episodes))
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/episode/{id}",
 responses(
-(status = 200, description = "Gets watchtime by id.")),
+(status = 200, description = "Gets watchtime by id.", body=EpisodeDto)),
 tag="watchtime"
 )]
-#[get("/podcast/episode/{id}")]
 pub async fn get_watchtime(
-    id: web::Path<String>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
-    let designated_username = requester.username.clone();
-    let watchtime = Episode::get_watchtime(id.into_inner(), designated_username)?;
-    Ok(HttpResponse::Ok().json(watchtime))
+    Path(id): Path<String>,
+    Extension(requester): Extension<User>,
+) -> Result<Json<EpisodeDto>, CustomError> {
+    let watchtime = Episode::get_watchtime(id, requester.username)?;
+    match watchtime {
+        None => Err(CustomErrorInner::NotFound.into()),
+        Some(w) => Ok(Json(w.convert_to_episode_dto())),
+    }
+}
+
+pub fn get_watchtime_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(log_watchtime))
+        .routes(routes!(get_last_watched))
+        .routes(routes!(get_watchtime))
 }

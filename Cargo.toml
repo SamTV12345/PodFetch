@@ -16,19 +16,15 @@ postgresql = ["diesel/postgres", "diesel_migrations/postgres", "diesel/chrono", 
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
 
 [dependencies]
-awc =  {version="3.5.1", features = ["rustls"]}
 rpassword = "7.3.1"
 reqwest = { version = "0.12.11", features = ["stream", "json","blocking"] }
 tokio-stream = { version = "0.1.17", features = ["sync"] }
-actix = "0.13.5"
 async-recursion = "1.1.1"
 base64 = "0.22.1"
 uuid = {version="1.11.1", features = ["v4", "serde"]}
 libsqlite3-sys = {version = "0.30.1", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.2", optional = true}
 diesel_migrations = "2.2.0"
-actix-files = "0.6.6"
-actix-web = {version="4.9.0", features=["rustls", "http2"]}
 jsonwebtoken = {version="9.3.0"}
 log = "0.4.22"
 futures-util = "0.3.31"
@@ -38,15 +34,14 @@ rand = "0.8.5"
 env_logger = "0.11.6"
 chrono = {version  = "0.4.39", default-features=false, features = ["serde"]}
 rss = "2.0.11"
-actix-ws = "0.3.0"
 frankenstein = "0.38.0"
 regex = "1.11.0"
 xml-builder = "0.5.2"
 diesel = { version = "2.2.6", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
-utoipa = { version = "5.3.1", features = ["actix_extras", "chrono"] }
+utoipa = { version = "5.3.1", features = ["chrono", "axum_extras"] }
 futures = "0.3.31"
-utoipa-swagger-ui = {version = "9.0.0", features = ["actix-web"] }
+utoipa-swagger-ui = {version = "9.0.0", features = ["axum"] }
 clokwerk= "0.4.0"
 tokio = {version = "1.43.0", features = ["full"]}
 serde = "1.0.217"
@@ -63,19 +58,35 @@ urlencoding="2.1.3"
 id3 = "1.16.0"
 mp4ameta = "0.11.0"
 file-format = "0.26.0"
-maud = { version = "*", features = ["actix-web"] }
+maud = { version = "*", features = ["axum","axum-core"] }
 url = "2.5.4"
-rust-s3 = { version = "0.35.1", features = ["blocking", "fail-on-err"] }
+rust-s3 = { version = "0.36.0-beta.2", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
 async-trait = "0.1.85"
+axum = { version = "0.8.1", features = ["macros","http2"] }
+tower-http = { version = "0.6.1", features = ["fs"] }
+tower = { version = "0.5.2", features = ["util"] }
+utoipa-axum = { version = "0.2.0" }
+utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
+utoipa-redoc = { version = "6.0.0", features = ["axum"] }
+utoipa-scalar = { version = "0.3.0", features = ["axum"] }
+axum-extra={version = "0.10.0", features = ["cookie", "query"]}
+axum-test = "17.1.0"
+socketioxide = "0.16.0"
+mime_guess = "2.0.5"
 
 [target.'cfg(not(windows))'.dependencies]
 openssl = "0.10.68"
+
 
 [dev-dependencies]
 serial_test = {version="3.2.0"}
 testcontainers = { version = "0.23.1" }
 testcontainers-modules = { version = "0.11.5", features = ["postgres","blocking"] }
 ctor = "0.2.9"
+derive_builder = {version = "0.20.2"}
+fake = { version = "3.1.0", features = ["chrono"] }
+bollard = {version = "*"}
+
 
 [profile.release]
 debug = true

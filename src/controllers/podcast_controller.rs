@@ -8,11 +8,6 @@ use crate::models::search_type::SearchType::{ITunes, Podindex};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string};
-use actix_web::dev::PeerAddr;
-use actix_web::http::Method;
-use actix_web::web::{Data, Json, Path};
-use actix_web::{delete, error, get, post, put, Error, HttpRequest};
-use actix_web::{web, HttpResponse};
 use async_recursion::async_recursion;
 use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
@@ -20,6 +15,12 @@ use rand::Rng;
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::thread;
+use axum::{debug_handler, Extension, Json};
+use axum::body::Body;
+use axum::extract::{Path, Query};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum_extra::extract::OptionalQuery;
 use tokio::task::spawn_blocking;
 
 use crate::models::filter::Filter;
@@ -30,13 +31,10 @@ use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use futures_util::StreamExt;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastSearchModel {
     order: Option<OrderCriteria>,
@@ -46,33 +44,48 @@ pub struct PodcastSearchModel {
     tag: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct PodcastSearchModelUtoipa {
+    order: Option<String>,
+    title: Option<String>,
+    order_option: Option<String>,
+    favored_only: bool,
+    tag: Option<String>,
+}
+
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/filter",
 responses(
 (status = 200, description = "Gets the user specific filter.",body= Option<Filter>)),
 tag="podcasts"
 )]
-#[get("/podcasts/filter")]
-pub async fn get_filter(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+pub async fn get_filter(Extension(requester): Extension<User>) -> Result<Json<Filter>,
+    CustomError> {
     let filter = Filter::get_filter_by_username(&requester.username).await?;
-    Ok(HttpResponse::Ok().json(filter))
+    match filter {
+        Some(f)=> Ok(Json(f)),
+        None=> Err(CustomErrorInner::NotFound.into())
+    }
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/search",
+params(PodcastSearchModelUtoipa),
 responses(
 (status = 200, description = "Gets the podcasts matching the searching criteria",body=
 Vec<PodcastDto>)),
 tag="podcasts"
 )]
-#[get("/podcasts/search")]
 pub async fn search_podcasts(
-    query: web::Query<PodcastSearchModel>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
-    let query = query.into_inner();
-    let _order = query.order.unwrap_or(OrderCriteria::Asc);
-    let _latest_pub = query.order_option.unwrap_or(OrderOption::Title);
+    Query(query): Query<PodcastSearchModelUtoipa>,
+    Extension(requester): Extension<User>,
+) -> Result<Json<Vec<PodcastDto>>, CustomError> {
+    let _order = query.order.map(|o|o.into()).unwrap_or(OrderCriteria::Asc);
+    let _latest_pub = query.order_option.map(OrderOption::from_string).unwrap_or
+    (OrderOption::Title);
     let tag = query.tag;
 
     let opt_filter = Filter::get_filter_by_username(&requester.username).await?;
@@ -104,7 +117,7 @@ pub async fn search_podcasts(
                     tag,
                 )?;
             }
-            Ok(HttpResponse::Ok().json(podcasts))
+            Ok(Json(podcasts))
         }
         false => {
             let podcasts;
@@ -117,23 +130,23 @@ pub async fn search_podcasts(
                     tag,
                 )?;
             }
-            Ok(HttpResponse::Ok().json(podcasts))
+            Ok(Json(podcasts))
         }
     }
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/{id}",
 responses(
-(status = 200, description = "Find a podcast by its collection id", body = [PodcastDto])
+(status = 200, description = "Find a podcast by its collection id", body = PodcastDto)
 ),
 tag="podcasts"
 )]
-#[get("/podcast/{id}")]
 pub async fn find_podcast_by_id(
-    id: Path<String>,
-    user: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(id): Path<String>,
+    Extension(user): Extension<User>,
+) -> Result<Json<PodcastDto>, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
     let username = &user.username;
 
@@ -141,42 +154,43 @@ pub async fn find_podcast_by_id(
     let tags = Tag::get_tags_of_podcast(id_num, username)?;
     let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?;
     let podcast_dto: PodcastDto = (podcast, favorite, tags).into();
-    Ok(HttpResponse::Ok().json(podcast_dto))
+    Ok(Json(podcast_dto))
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts",
 responses(
 (status = 200, description = "Gets all stored podcasts as a list", body = [PodcastDto])
 ),
 tag="podcasts"
 )]
-#[get("/podcasts")]
-pub async fn find_all_podcasts(requester: web::ReqData<User>) -> Result<HttpResponse, CustomError> {
+pub async fn find_all_podcasts(requester: Extension<User>) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let username = &requester.username;
 
     let podcasts = PodcastService::get_podcasts(username)?;
 
-    Ok(HttpResponse::Ok().json(podcasts))
+    Ok(Json(podcasts))
 }
-use crate::models::itunes_models::ItunesModel;
+use crate::models::itunes_models::PodcastSearchReturn;
+
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/{type_of}/{podcast}/search",
 responses(
-(status = 200, description = "Finds a podcast from the itunes url.", body = [ItunesModel])
+(status = 200, description = "Finds a podcast from the itunes url.", body = PodcastSearchReturn)
 ),
 tag="podcasts"
 )]
-#[get("/podcasts/{type_of}/{podcast}/search")]
 pub async fn find_podcast(
-    podcast_col: Path<(i32, String)>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(podcast_col): Path<(i32, String)>,
+    Extension(requester): Extension<User>,
+) -> Result<Json<PodcastSearchReturn>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
-    let (type_of, podcast) = podcast_col.into_inner();
+    let (type_of, podcast) = podcast_col;
     match type_of.try_into() {
         Ok(ITunes) => {
             let res;
@@ -184,32 +198,34 @@ pub async fn find_podcast(
                 log::debug!("Searching for podcast: {}", podcast);
                 res = PodcastService::find_podcast(&podcast).await;
             }
-            Ok(HttpResponse::Ok().json(res))
+            Ok(Json(PodcastSearchReturn::Itunes(res)))
         }
         Ok(Podindex) => {
             if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-                return Ok(HttpResponse::BadRequest().json("Podindex is not configured"));
+                return Err(CustomErrorInner::BadRequest("Podindex is not configured".to_string())
+                    .into());
             }
 
-            Ok(HttpResponse::Ok().json(PodcastService::find_podcast_on_podindex(&podcast).await?))
+            Ok(Json(PodcastSearchReturn::Podindex(PodcastService::find_podcast_on_podindex
+                (&podcast).await?)))
         }
         Err(_) => Err(CustomErrorInner::BadRequest("Invalid search type".to_string()).into()),
     }
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/podcasts/itunes",
 request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podcast to the database.")),
 tag="podcasts"
 )]
-#[post("/podcast/itunes")]
+#[debug_handler]
 pub async fn add_podcast(
-    track_id: web::Json<PodcastAddModel>,
-    lobby: Data<ChatServerHandle>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Json(track_id): Json<PodcastAddModel>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -237,25 +253,24 @@ pub async fn add_podcast(
                 .unwrap(),
             image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
         },
-        lobby,
         None,
     )
     .await?;
-    Ok(HttpResponse::Ok().into())
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/podcasts/feed",
+request_body = PodcastRSSAddModel,
 responses(
 (status = 200, description = "Adds a podcast by its feed url",body=PodcastDto)),
 tag="podcasts"
 )]
-#[post("/podcast/feed")]
 pub async fn add_podcast_by_feed(
-    rss_feed: web::Json<PodcastRSSAddModel>,
-    lobby: Data<ChatServerHandle>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Json(rss_feed): Json<PodcastRSSAddModel>,
+) -> Result<Json<PodcastDto>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -287,29 +302,27 @@ pub async fn add_podcast_by_feed(
                     .map(|i| i.url)
                     .unwrap_or(get_default_image()),
             },
-            lobby,
             Some(channel),
         )
         .await?
         .into();
     }
 
-    Ok(HttpResponse::Ok().json(res))
+    Ok(Json(res))
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/podcasts/opml",
 request_body=OpmlModel,
 responses(
 (status = 200, description = "Adds all podcasts of an opml podcast list to the database.")),
 tag="podcasts"
 )]
-#[post("/podcast/opml")]
 pub async fn import_podcasts_from_opml(
-    opml: Json<OpmlModel>,
-    lobby: Data<ChatServerHandle>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    requester: Extension<User>,
+    Json(opml): Json<OpmlModel>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -317,31 +330,29 @@ pub async fn import_podcasts_from_opml(
 
     spawn_blocking(move || {
         for outline in document.body.outlines {
-            let moved_lobby = lobby.clone();
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 let rng = rand::thread_rng();
-                rt.block_on(insert_outline(outline.clone(), moved_lobby, rng.clone()));
+                rt.block_on(insert_outline(outline.clone(), rng.clone()));
             });
         }
     });
 
-    Ok(HttpResponse::Ok().into())
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/podcasts/podindex",
 request_body=PodcastAddModel,
 responses(
 (status = 200, description = "Adds a podindex podcast to the database")),
 tag="podcasts"
 )]
-#[post("/podcast/podindex")]
 pub async fn add_podcast_from_podindex(
-    id: web::Json<PodcastAddModel>,
-    lobby: Data<ChatServerHandle>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Json(id): Json<PodcastAddModel>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -350,45 +361,48 @@ pub async fn add_podcast_from_podindex(
         return Err(CustomErrorInner::BadRequest("Podindex is not configured".to_string()).into());
     }
 
-    spawn_blocking(move || match start_download_podindex(id.track_id, lobby) {
+    spawn_blocking(move || match start_download_podindex(id.track_id) {
         Ok(_) => {}
         Err(e) => {
             log::error!("Error: {}", e)
         }
     });
-    Ok(HttpResponse::Ok().into())
+    Ok(StatusCode::OK)
 }
 
-fn start_download_podindex(id: i32, lobby: Data<ChatServerHandle>) -> Result<Podcast, CustomError> {
+fn start_download_podindex(id: i32) -> Result<Podcast,
+    CustomError> {
     let rt = Runtime::new().unwrap();
 
-    rt.block_on(async { PodcastService::insert_podcast_from_podindex(id, lobby).await })
+    rt.block_on(async { PodcastService::insert_podcast_from_podindex(id).await })
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/{podcast}/query",
 params(("podcast", description="The podcast episode query parameter.")),
 responses(
-(status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisode>)),
+(status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisodeDto>)),
 tag="podcasts",)]
-#[get("/podcasts/{podcast}/query")]
-pub async fn query_for_podcast(podcast: Path<String>) -> Result<HttpResponse, CustomError> {
-    let res = PodcastEpisodeService::query_for_podcast(&podcast)?;
+pub async fn query_for_podcast(podcast: Path<String>) -> Result<Json<Vec<PodcastEpisodeDto>>,
+    CustomError> {
+    let res = PodcastEpisodeService::query_for_podcast(&podcast)?.into_iter().map(|p|(p, None::<User>,
+                                                                                  None::<FavoritePodcastEpisode>).into())
+        .collect::<Vec<PodcastEpisodeDto>>();
 
-    Ok(HttpResponse::Ok().json(res))
+    Ok(Json(res))
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/podcasts/all",
 responses(
 (status = 200, description = "Refreshes all podcasts")),
 tag="podcasts"
 )]
-#[post("/podcast/all")]
 pub async fn refresh_all_podcasts(
-    lobby: Data<ChatServerHandle>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -396,25 +410,24 @@ pub async fn refresh_all_podcasts(
     let podcasts = Podcast::get_all_podcasts()?;
     thread::spawn(move || {
         for podcast in podcasts {
-            PodcastService::refresh_podcast(podcast.clone(), lobby.clone()).unwrap();
-            lobby.broadcast_podcast_refreshed(&podcast);
+            PodcastService::refresh_podcast(podcast.clone()).unwrap();
+            ChatServerHandle::broadcast_podcast_refreshed(&podcast);
         }
     });
-    Ok(HttpResponse::Ok().into())
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+post,
+path="/podcasts/{id}/refresh",
 responses(
 (status = 200, description = "Refreshes a podcast episode")),
 tag="podcasts"
 )]
-#[post("/podcast/{id}/refresh")]
 pub async fn download_podcast(
-    id: Path<String>,
-    lobby: Data<ChatServerHandle>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -422,7 +435,7 @@ pub async fn download_podcast(
     let id_num = from_str::<i32>(&id).unwrap();
     let podcast = PodcastService::get_podcast_by_id(id_num);
     thread::spawn(move || {
-        match PodcastService::refresh_podcast(podcast.clone(), lobby.clone()) {
+        match PodcastService::refresh_podcast(podcast.clone()) {
             Ok(_) => {
                 log::info!("Succesfully refreshed podcast.");
             }
@@ -431,76 +444,76 @@ pub async fn download_podcast(
             }
         }
 
-        let download = PodcastService::schedule_episode_download(podcast.clone(), Some(lobby));
+        let download = PodcastService::schedule_episode_download(podcast.clone());
 
         if download.is_err() {
             log::error!("Error downloading podcast: {}", download.err().unwrap());
         }
     });
 
-    Ok(HttpResponse::Ok().json("Refreshing podcast"))
+    Ok("Refreshing podcast")
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+put,
+path="/podcasts/favored",
 request_body=PodcastFavorUpdateModel,
 responses(
 (status = 200, description = "Updates favoring a podcast.", body=String)),
 tag="podcasts"
 )]
-#[put("/podcast/favored")]
 pub async fn favorite_podcast(
+    requester: Extension<User>,
     update_model: Json<PodcastFavorUpdateModel>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+) -> Result<StatusCode, CustomError> {
     PodcastService::update_favor_podcast(
         update_model.id,
         update_model.favored,
         &requester.username,
     )?;
-    Ok(HttpResponse::Ok().json("Favorited podcast"))
+    Ok(StatusCode::OK)
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/podcasts/favored",
 responses(
 (status = 200, description = "Finds all favored podcasts.")),
 tag="podcasts"
 )]
-#[get("/podcasts/favored")]
 pub async fn get_favored_podcasts(
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
-    let podcasts = PodcastService::get_favored_podcasts(requester.username.clone())?;
-    Ok(HttpResponse::Ok().json(podcasts))
+    Extension(requester): Extension<User>,
+) -> Result<Json<Vec<PodcastDto>>, CustomError> {
+    let podcasts = PodcastService::get_favored_podcasts(requester.username)?;
+    Ok(Json(podcasts))
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+put,
+path="/podcasts/{id}/active",
 responses(
 (status = 200, description = "Updates the active state of a podcast. If inactive the podcast \
 will not be refreshed automatically.")),
 tag="podcasts"
 )]
-#[put("/podcast/{id}/active")]
 pub async fn update_active_podcast(
-    id: Path<String>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(id): Path<String>,
+    Extension(requester): Extension<User>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
     PodcastService::update_active_podcast(id_num)?;
-    Ok(HttpResponse::Ok().json("Updated active podcast"))
+    Ok(StatusCode::OK)
 }
 
 #[async_recursion(?Send)]
-async fn insert_outline(podcast: Outline, lobby: Data<ChatServerHandle>, mut rng: ThreadRng) {
+async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
     if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
-            insert_outline(outline_nested, lobby.clone(), rng.clone()).await;
+            insert_outline(outline_nested, rng.clone()).await;
         }
         return;
     }
@@ -511,7 +524,7 @@ async fn insert_outline(podcast: Outline, lobby: Data<ChatServerHandle>, mut rng
 
     let feed_response = get_http_client().get(feed_url.unwrap()).send().await;
     if feed_response.is_err() {
-        lobby.broadcast_opml_error(feed_response.err().unwrap().to_string());
+        ChatServerHandle::broadcast_opml_error(feed_response.err().unwrap().to_string());
         return;
     }
     let content = feed_response.unwrap().bytes().await.unwrap();
@@ -538,31 +551,33 @@ async fn insert_outline(podcast: Outline, lobby: Data<ChatServerHandle>, mut rng
                     id: rng.gen::<i32>(),
                     image_url,
                 },
-                lobby.clone(),
                 Some(channel),
             )
             .await;
             match inserted_podcast {
                 Ok(podcast) => {
-                    lobby.broadcast_opml_added(&podcast);
+                    ChatServerHandle::broadcast_opml_added(&podcast);
                 }
                 Err(e) => {
-                    lobby.broadcast_opml_error(e.to_string());
+                    ChatServerHandle::broadcast_opml_error(e.to_string());
                 }
             }
         }
         Err(e) => {
-            lobby.broadcast_opml_error(e.to_string());
+            ChatServerHandle::broadcast_opml_error(e.to_string());
         }
     }
 }
 use crate::models::episode::Episode;
 use crate::models::tag::Tag;
-use utoipa::ToSchema;
-
+use utoipa::{IntoParams, ToSchema};
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
@@ -580,35 +595,33 @@ pub struct DeletePodcast {
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+delete,
+path="/podcasts/{id}",
 request_body=DeletePodcast,
 responses(
 (status = 200, description = "Deletes a podcast by id")),
 tag="podcasts"
 )]
-#[delete("/podcast/{id}")]
 pub async fn delete_podcast(
-    data: web::Json<DeletePodcast>,
-    id: Path<i32>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(id): Path<i32>,
+    Extension(requester): Extension<User>,
+    Json(data): Json<DeletePodcast>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
 
-    let podcast = Podcast::get_podcast(*id).expect(
-        "Error \
-        finding podcast",
-    );
+    let podcast = Podcast::get_podcast(id)?;
     if data.delete_files {
-        web::block(move ||FileService::delete_podcast_files(&podcast)).await.expect("Error deleting files");
+        spawn_blocking(move ||FileService::delete_podcast_files(&podcast)).await.expect("Error deleting \
+        files");
     }
-    Episode::delete_watchtime(*id)?;
-    PodcastEpisode::delete_episodes_of_podcast(*id)?;
-    TagsPodcast::delete_tags_by_podcast_id(*id)?;
+    Episode::delete_watchtime(id)?;
+    PodcastEpisode::delete_episodes_of_podcast(id)?;
+    TagsPodcast::delete_tags_by_podcast_id(id)?;
 
-    Podcast::delete_podcast(*id)?;
-    Ok(HttpResponse::Ok().into())
+    Podcast::delete_podcast(id)?;
+    Ok(StatusCode::OK)
 }
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -617,134 +630,116 @@ pub struct Params {
 }
 
 #[utoipa::path(
-context_path="/api/v1",
+get,
+path="/proxy/podcast",
 responses(
 (status = 200, description = "Proxies a podcast so people can stream podcasts from the remote \
 server")),
 tag="podcasts"
 )]
-#[get("/proxy/podcast")]
 pub(crate) async fn proxy_podcast(
-    mut payload: web::Payload,
-    params: web::Query<Params>,
-    peer_addr: Option<PeerAddr>,
-    query: Option<web::Query<RSSAPiKey>>,
-    method: Method,
-    rq: HttpRequest,
-) -> Result<HttpResponse, Error> {
+    Query(params): Query<Params>,
+    OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
+    req: axum::extract::Request
+) -> Result<Body, CustomError> {
+    let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
+    let headers = req.headers_mut();
+
     let is_auth_enabled =
         is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
 
     if is_auth_enabled {
-        if query.is_none() {
-            return Ok(HttpResponse::Unauthorized().finish());
+        if api_key.is_none() {
+            return Err(CustomErrorInner::Forbidden.into());
         }
-        let api_key = query.unwrap().0;
+        let api_key = api_key.unwrap().api_key;
 
-        let api_key_exists = User::check_if_api_key_exists(&api_key.api_key);
+        let api_key_exists = User::check_if_api_key_exists(&api_key);
 
         if !api_key_exists {
-            return Ok(HttpResponse::Unauthorized().body("Unauthorized"));
+            return Err(CustomErrorInner::Forbidden.into());
         }
     }
 
     let opt_res = PodcastEpisodeService::get_podcast_episode_by_id(&params.episode_id)?;
-    if opt_res.clone().is_none() {
-        return Ok(HttpResponse::NotFound().finish());
+    if opt_res.is_none() {
+        return Err(CustomErrorInner::NotFound.into());
     }
     let episode = opt_res.unwrap();
-    let (tx, rx) = mpsc::unbounded_channel();
-
-    actix_web::rt::spawn(async move {
-        while let Some(chunk) = payload.next().await {
-            tx.send(chunk).unwrap();
-        }
-    });
-
-    let mut header_map = HeaderMap::new();
-    let headers_from_request = rq.headers().clone();
-    for (header, header_value) in headers_from_request {
-        if header == "host"
-            || header == "referer"
-            || header == "sec-fetch-site"
-            || header == "sec-fetch-mode"
-        {
-            continue;
-        }
-        let header = reqwest::header::HeaderName::from_str(header.as_ref()).unwrap();
-        header_map.append(header, header_value.to_str().unwrap().parse().unwrap());
+    for header in ["host", "referer", "sec-fetch-site"] {
+        headers.remove(header);
     }
 
-    add_basic_auth_headers_conditionally(episode.clone().url, &mut header_map);
-    // Required to not generate a 302 redirect
-    header_map.append("sec-fetch-mode", "no-cors".parse().unwrap());
-    header_map.append("sec-fetch-site", "cross-site".parse().unwrap());
-    use std::str::FromStr;
-    let forwarded_req = get_http_client()
-        .request(
-            reqwest::Method::from_str(method.as_str()).unwrap(),
-            episode.url,
-        )
-        .headers(header_map)
-        .fetch_mode_no_cors()
-        .body(reqwest::Body::wrap_stream(UnboundedReceiverStream::new(rx)));
+    add_basic_auth_headers_conditionally(episode.url.clone(), headers);
 
-    let forwarded_req = match peer_addr {
-        Some(PeerAddr(addr)) => forwarded_req.header("x-forwarded-for", addr.ip().to_string()),
-        None => forwarded_req,
-    };
+    let reqwest_to_make = reqwest::Request::try_from(req).expect("http::Uri to url::Url conversion \
+    failed");
 
-    let res = forwarded_req
-        .send()
-        .await
-        .map_err(error::ErrorInternalServerError)?;
 
-    let mut client_resp =
-        HttpResponse::build(actix_web::http::StatusCode::from_u16(res.status().as_u16()).unwrap());
-    for (header_name, header_value) in res.headers().iter() {
-        client_resp.insert_header((header_name.as_str(), header_value.to_str().unwrap()));
-    }
+    let client = reqwest::Client::new();
+    let resp = client.execute(reqwest_to_make).await.unwrap();
 
-    Ok(client_resp.streaming(res.bytes_stream()))
+    let stream = resp.bytes_stream();
+    Ok(Body::from_stream(stream))
 }
 
-#[put("/podcasts/{id}/settings")]
+#[utoipa::path(
+    put,
+    path="/podcasts/{id}/settings",
+    responses(
+(status = 200, description = "Updates the settings of a podcast by id")),
+    tag="podcasts"
+)]
 pub async fn update_podcast_settings(
-    id: Path<i32>,
-    settings: Json<PodcastSetting>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(id_num): Path<i32>,
+    Extension(requester): Extension<User>,
+    Json(mut settings): Json<PodcastSetting>,
+) -> Result<Json<PodcastSetting>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
-
-    let id_num = id.into_inner();
-    let mut settings = settings.into_inner();
     settings.podcast_id = id_num;
     let updated_podcast = PodcastSetting::update_settings(&settings)?;
 
-    Ok(HttpResponse::Ok().json(updated_podcast))
+    Ok(Json(updated_podcast))
 }
 
-#[get("/podcasts/{id}/settings")]
+#[utoipa::path(
+    get,
+    path="/podcasts/{id}/settings",
+    responses(
+(status = 200, description = "Gets the settings of a podcast by id")),
+    tag="podcasts"
+)]
 pub async fn get_podcast_settings(
-    id: Path<i32>,
-    requester: web::ReqData<User>,
-) -> Result<HttpResponse, CustomError> {
+    Path(id): Path<i32>,
+    Extension(requester): Extension<User>,
+) -> Result<Json<PodcastSetting>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden.into());
     }
+    let settings = PodcastSetting::get_settings(id)?;
 
-    let id_num = id.into_inner();
-    let settings = PodcastSetting::get_settings(id_num)?;
-
-    Ok(HttpResponse::Ok().json(settings))
+    match settings {
+        None => {
+            Err(CustomErrorInner::NotFound.into())
+        }
+        Some(s) => {
+            Ok(Json(s))
+        }
+    }
 }
 
-#[post("/podcasts/formatting")]
+#[utoipa::path(
+    post,
+    path="/podcasts/formatting",
+    responses(
+(status = 200, description = "Retrieve the podcast sample format")),
+    tag="podcasts"
+)]
 pub async fn retrieve_podcast_sample_format(
     sample_string: Json<EpisodeFormatDto>,
-) -> Result<HttpResponse, CustomError> {
+) -> Result<Json<String>, CustomError> {
     let podcast = PodcastParsed {
         date: "2021-01-01".to_string(),
         summary: "A podcast about homelabing".to_string(),
@@ -770,7 +765,31 @@ pub async fn retrieve_podcast_sample_format(
     let result = perform_podcast_variable_replacement(settings, podcast, None);
 
     match result {
-        Ok(v) => Ok(HttpResponse::Ok().json(v)),
+        Ok(v) => Ok(Json(v)),
         Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
     }
+}
+
+pub fn get_podcast_router() -> OpenApiRouter {
+    OpenApiRouter::new()
+                .routes(routes!(get_filter))
+        .routes(routes!(search_podcasts))
+        .routes(routes!(find_podcast_by_id))
+        .routes(routes!(find_all_podcasts))
+        .routes(routes!(find_podcast))
+        .routes(routes!(add_podcast))
+        .routes(routes!(add_podcast_by_feed))
+        .routes(routes!(import_podcasts_from_opml))
+        .routes(routes!(add_podcast_from_podindex))
+        .routes(routes!(get_favored_podcasts))
+        .routes(routes!(refresh_all_podcasts))
+        .routes(routes!(download_podcast))
+        .routes(routes!(favorite_podcast))
+        .routes(routes!(update_active_podcast))
+        .routes(routes!(delete_podcast))
+        .routes(routes!(proxy_podcast))
+        .routes(routes!(update_podcast_settings))
+        .routes(routes!(get_podcast_settings))
+        .routes(routes!(retrieve_podcast_sample_format))
+        .routes(routes!(query_for_podcast))
 }

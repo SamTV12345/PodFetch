@@ -1,4 +1,3 @@
-import axios from "axios";
 import TimeAgo from 'javascript-time-ago'
 import sanitizeHtml, {IOptions} from 'sanitize-html'
 import en from 'javascript-time-ago/locale/en'
@@ -12,6 +11,7 @@ import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Filter} from "../models/Filter";
 import {OrderCriteria} from "../models/Order";
 import {Episode} from "../models/Episode";
+import {components} from "../../schema";
 
 const defaultOptions: IOptions = {
     allowedTags: ['b', 'i', 'em', 'strong', 'a'],
@@ -59,12 +59,17 @@ export const isJsonString = (str: string) => {
     return true;
 }
 
-export const preparePodcastEpisode = (episode: PodcastEpisode, response: Episode) => {
+export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response?: components["schemas"]["EpisodeDto"]): components["schemas"]["PodcastEpisodeWithHistory"] => {
     return {
-        ...episode,
-        local_url: episode.local_url,
-        local_image_url: episode.local_image_url,
-        time: response&&response.position?response.position: 0
+        podcastEpisode: {
+          ...episode,
+            local_url: episode.local_url,
+            local_image_url: episode.local_image_url,
+        },
+        podcastHistoryItem: {
+            ...response!,
+            position: response === null? 0: response?.position?response.position: 0
+        }
     }
 }
 
@@ -83,10 +88,9 @@ export const prependAPIKeyOnAuthEnabled = (url: string)=>{
 }
 
 
-export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: Episode) => {
+export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response?: components["schemas"]["EpisodeDto"]) : components["schemas"]["PodcastEpisodeWithHistory"] => {
     let online_url_with_proxy = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?episodeId=' + episode.episode_id
 
-    console.log(useCommon.getState().loggedInUser?.apiKey)
     if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
         if (online_url_with_proxy.includes('?')) {
             online_url_with_proxy += '&'
@@ -98,10 +102,15 @@ export const prepareOnlinePodcastEpisode = (episode: PodcastEpisode, response: E
     }
 
     return {
-        ...episode,
-        local_url: online_url_with_proxy,
-        local_image_url: episode.image_url,
-        time: response&&response.position?response.position: 0
+        podcastEpisode: {
+            ...episode,
+            local_url: online_url_with_proxy,
+            local_image_url: episode.local_image_url,
+        },
+        podcastHistoryItem: {
+            ...response!,
+            position: response === null? 0: response?.position?response.position: 0
+        }
     }
 }
 

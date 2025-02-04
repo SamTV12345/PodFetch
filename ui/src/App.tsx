@@ -1,36 +1,27 @@
-import { FC, PropsWithChildren, Suspense, useEffect, useState } from 'react'
+import {FC, PropsWithChildren, Suspense, useEffect, useRef, useState} from 'react'
 import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import axios, { AxiosResponse } from 'axios'
-import { enqueueSnackbar } from 'notistack'
-import useCommon, {LoggedInUser} from './store/CommonSlice'
+import {useTranslation} from 'react-i18next'
+import {enqueueSnackbar} from 'notistack'
+import useCommon from './store/CommonSlice'
 import useOpmlImport from './store/opmlImportSlice'
-import {decodeHTMLEntities, isJsonString} from './utils/Utilities'
+import {decodeHTMLEntities} from './utils/Utilities'
 import {
-    UserAdminViewLazyLoad,
     EpisodeSearchViewLazyLoad,
+    HomepageViewLazyLoad,
+    PlaylistViewLazyLoad,
     PodcastDetailViewLazyLoad,
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
     SettingsViewLazyLoad,
-    TimeLineViewLazyLoad, PlaylistViewLazyLoad, HomepageViewLazyLoad
+    TimeLineViewLazyLoad,
+    UserAdminViewLazyLoad
 } from "./utils/LazyLoading"
-import {
-    checkIfOpmlAdded,
-    checkIfOpmlErrored,
-    checkIfPodcastAdded,
-    checkIfPodcastEpisodeAdded,
-    checkIfPodcastEpisodeDeleted,
-    checkIfPodcastRefreshed
-} from "./utils/MessageIdentifier"
-import {Notification} from "./models/Notification"
 import {Root} from "./routing/Root"
 import {AcceptInvite} from "./pages/AcceptInvite"
 import {Login} from "./pages/Login"
 import "./App.css"
 import './App.css'
 import {HomePageSelector} from "./pages/HomePageSelector";
-import {EpisodesWithOptionalTimeline} from "./models/EpisodesWithOptionalTimeline";
 import {PlaylistPage} from "./pages/PlaylistPage";
 import {SettingsData} from "./components/SettingsData";
 import {SettingsOPMLExport} from "./components/SettingsOPMLExport";
@@ -39,9 +30,12 @@ import {SettingsPodcastDelete} from "./components/SettingsPodcastDelete";
 import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
-import {configWSUrl} from "./utils/navigationUtils";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
+import {components} from "../schema";
+import {client} from "./utils/http";
+import io, {Socket} from "socket.io-client"
+import {ClientToServerEvents, ServerToClientEvents} from "./models/socketioEvents";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -98,49 +92,47 @@ export const router = createBrowserRouter(createRoutesFromElements(
 
 const App: FC<PropsWithChildren> = ({ children }) => {
     const config = useCommon(state => state.configModel)
-    const podcasts = useCommon(state => state.podcasts)
     const addPodcast = useCommon(state => state.addPodcast)
-    const [socket, setSocket] = useState<WebSocket>()
     const { t } = useTranslation()
+    const socket = useCommon(state=>state.socketIo)
     const setProgress = useOpmlImport(state => state.setProgress)
-    const setMessages = useOpmlImport(state => state.setMessages)
     const setNotifications = useCommon(state => state.setNotifications)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
+    const wasAlreadyRequested = useRef(false);
 
     useEffect(() => {
-        if (socket) {
-            socket.onopen = () => {
+        if (!socket) {
+            return
+        }
+
+        wasAlreadyRequested.current = true;
+
+
+        socket.on('offlineAvailable', (data) => {
+            if (!data) {
+                return
             }
+            console.log("I am ", typeof data === "string")
 
-            socket.onmessage = (event) => {
-                if (!isJsonString(event.data)) return
+            if (useCommon.getState().currentDetailedPodcastId === data.podcast.id) {
+            console.log("setting local url")
+                enqueueSnackbar(t('new-podcast-episode-added', {name: decodeHTMLEntities(data.podcast_episode.name)}), {variant: 'success'})
 
-                const parsed = JSON.parse(event.data)
+                const downloadedPodcastEpisode = data.podcast_episode
+                let res = useCommon.getState().selectedEpisodes
+                    .find(p => p.podcastEpisode.id === downloadedPodcastEpisode.id)
 
-                if (checkIfPodcastAdded(parsed)) {
-                    const podcast = parsed.podcast
+                if (res == undefined) {
+                    // This is a completely new episode
+                    useCommon.getState().setSelectedEpisodes([...useCommon.getState().selectedEpisodes, {
+                        podcastEpisode: downloadedPodcastEpisode
+                    }])
+                }
 
-                    addPodcast(podcast)
-                    enqueueSnackbar(t('new-podcast-added', { name: decodeHTMLEntities(podcast.name) }), { variant: 'success' })
-                } else if (checkIfPodcastEpisodeAdded(parsed)) {
-                    if (useCommon.getState().currentDetailedPodcastId === parsed.podcast_episode.podcast_id) {
-                        enqueueSnackbar(t('new-podcast-episode-added', { name: decodeHTMLEntities(parsed.podcast_episode.name) }), { variant: 'success' })
-
-                        const downloadedPodcastEpisode = parsed.podcast_episode
-                        let res = useCommon.getState().selectedEpisodes
-                            .find(p => p.podcastEpisode.id === downloadedPodcastEpisode.id)
-
-                        if (res == undefined) {
-                            // This is a completely new episode
-                            setSelectedEpisodes([...useCommon.getState().selectedEpisodes, {
-                                podcastEpisode: downloadedPodcastEpisode
-                            }])
-                        }
-
-                        let podcastUpdated:EpisodesWithOptionalTimeline[] = useCommon.getState().selectedEpisodes
-                            .map(p => {
+                let podcastUpdated = useCommon.getState().selectedEpisodes
+                    .map(p => {
                             if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
-                                const foundDownload = JSON.parse(JSON.stringify(p)) as EpisodesWithOptionalTimeline
+                                const foundDownload = JSON.parse(JSON.stringify(p)) as components["schemas"]["PodcastEpisodeWithHistory"]
 
                                 foundDownload.podcastEpisode.status = true
                                 foundDownload.podcastEpisode.url = downloadedPodcastEpisode.url
@@ -152,69 +144,76 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                             }
 
                             return p
-                        })
+                        }) satisfies  components["schemas"]["PodcastEpisodeWithHistory"][]
 
-                        setSelectedEpisodes(podcastUpdated)
+                useCommon.getState().setSelectedEpisodes(podcastUpdated)
+            }
+        })
+
+        socket.on('opmlError', (data) => {
+
+            useOpmlImport.getState().setProgress([...useOpmlImport.getState().progress, false])
+            useOpmlImport.getState().setMessages([...useOpmlImport.getState().messages, data.message])
+        })
+
+        socket.on('refreshedPodcast', (data) => {
+            const podcast = data.podcast
+
+            enqueueSnackbar(t('podcast-refreshed', {name: decodeHTMLEntities(podcast.name)}), {variant: 'success'})
+        })
+
+        socket.on('addedEpisodes', (data) => {
+            enqueueSnackbar(t('new-podcast-episode-added', {name: decodeHTMLEntities(data.podcast.name)}), {variant: 'success'})
+        })
+
+        socket.on('addedPodcast', (data) => {
+            const podcast = data.podcast
+
+            addPodcast(podcast)
+            enqueueSnackbar(t('new-podcast-added', {name: decodeHTMLEntities(podcast.name)}), {variant: 'success'})
+        })
+
+        socket.on('deletedPodcastEpisodeLocally', (data) => {
+            const updatedPodcastEpisodes = useCommon.getState().selectedEpisodes.map(e => {
+                if (e.podcastEpisode.episode_id === data.podcast_episode.episode_id) {
+                    const clonedPodcast = Object.assign({}, data.podcast_episode)
+
+                    clonedPodcast.status = false
+
+                    return {
+                        podcastEpisode: clonedPodcast
                     }
-                } else if (checkIfPodcastEpisodeDeleted(parsed)) {
-                    const updatedPodcastEpisodes = useCommon.getState().selectedEpisodes.map(e => {
-                        if (e.podcastEpisode.episode_id === parsed.podcast_episode.episode_id) {
-                            const clonedPodcast = Object.assign({}, parsed.podcast_episode)
-
-                            clonedPodcast.status = false
-
-                            return {
-                                podcastEpisode: clonedPodcast
-                            }
-                        }
-
-                        return e
-                    })
-
-                    enqueueSnackbar(t('podcast-episode-deleted', { name: decodeHTMLEntities(parsed.podcast_episode.name) }), { variant: 'success' })
-                    setSelectedEpisodes(updatedPodcastEpisodes)
-                } else if (checkIfPodcastRefreshed(parsed)) {
-                    const podcast = parsed.podcast
-
-                    enqueueSnackbar(t('podcast-refreshed', { name: decodeHTMLEntities(podcast.name) }), { variant: 'success' })
-                } else if (checkIfOpmlAdded(parsed)) {
-                    setProgress([...useOpmlImport.getState().progress,true])
-                } else if (checkIfOpmlErrored(parsed)) {
-                    const podcast = parsed
-
-                    setProgress([...useOpmlImport.getState().progress,false])
-                    setMessages([...useOpmlImport.getState().messages, podcast.message])
                 }
-            }
 
-            socket.onerror = () => {
-            }
+                return e
+            })
 
-            socket.onclose = () => {
-            }
-        }
-    }, [podcasts, socket, config])
+            enqueueSnackbar(t('podcast-episode-deleted', {name: decodeHTMLEntities(data.podcast_episode.name)}), {variant: 'success'})
+            setSelectedEpisodes(updatedPodcastEpisodes)
+        })
 
-    let ws:  WebSocket
-    useEffect(() => {
-        if (config && !ws) {
-            ws = new WebSocket(config?.wsUrl)
-            setSocket(ws)
-        }
-    }, [config])
+        socket.on('opmlAdded', () => {
+            setProgress([...useOpmlImport.getState().progress, true])
+        })
+    }, [socket])
 
     useEffect(() => {
         if (config?.basicAuth||config?.oidcConfigured||config?.reverseProxy){
-            axios.get('/users/me')
-                .then((c:AxiosResponse<LoggedInUser>)=>useCommon.getState().setLoggedInUser(c.data))
+            client.GET("/api/v1/users/{username}", {
+                params: {
+                    path: {
+                        username: "me"
+                    }
+                }
+            }).then((c)=>useCommon.getState().setLoggedInUser(c.data!))
                 .catch(() => enqueueSnackbar(t('not-admin'), { variant: 'error' }))
         }
     }, []);
 
     const getNotifications = () => {
-        axios.get(  '/notifications/unread')
-            .then((response: AxiosResponse<Notification[]>) => {
-                setNotifications(response.data)
+        client.GET("/api/v1/notifications/unread")
+            .then((response) => {
+                setNotifications(response.data!)
             })
     }
 

@@ -1,27 +1,27 @@
 import {FC, useEffect, useMemo, useState} from 'react'
-import { useLocation } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import axios, { AxiosResponse } from 'axios'
-import { useDebounce } from '../utils/useDebounce'
+import {useLocation} from 'react-router-dom'
+import {useTranslation} from 'react-i18next'
+import {useDebounce} from '../utils/useDebounce'
 import {
     getFiltersDefault,
-    OrderCriteriaSortingType, TIME_ASCENDING, TIME_DESCENDING,
+    OrderCriteriaSortingType,
+    TIME_ASCENDING,
+    TIME_DESCENDING,
     TITLE_ASCENDING,
     TITLE_DESCENDING
 } from '../utils/Utilities'
-import useCommon, { Podcast,  } from '../store/CommonSlice'
-import { Order } from '../models/Order'
-import { Filter } from '../models/Filter'
-import { AddPodcastModal } from '../components/AddPodcastModal'
-import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
-import { CustomInput } from '../components/CustomInput'
+import useCommon from '../store/CommonSlice'
+import {Order} from '../models/Order'
+import {Filter} from '../models/Filter'
+import {AddPodcastModal} from '../components/AddPodcastModal'
+import {CustomButtonPrimary} from '../components/CustomButtonPrimary'
+import {CustomInput} from '../components/CustomInput'
 import {CustomSelect, Option} from '../components/CustomSelect'
-import { Heading1 } from '../components/Heading1'
-import { PodcastCard } from '../components/PodcastCard'
+import {Heading1} from '../components/Heading1'
+import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {PodcastTags} from "../models/PodcastTags";
-import {CustomDropdownMenu} from "../components/CustomDropdownMenu";
+import {client} from "../utils/http";
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -66,15 +66,12 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     }, [filters])
 
     const refreshAllPodcasts = () => {
-        axios.post('/podcast/all')
+        client.POST("/api/v1/podcasts/all")
     }
 
 
     useEffect(() => {
-        axios.get('/tags')
-            .then((c: AxiosResponse<PodcastTags[]>)=>{
-                setTags(c.data)
-            })
+        client.GET("/api/v1/tags").then(c=>setTags(c.data!))
     }, []);
 
     const performFilter = () => {
@@ -87,19 +84,17 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
             tag = tagsVal.value
         }
 
-
-        axios.get('/podcasts/search', {
+        client.GET("/api/v1/podcasts/search", {
             params: {
-                title: filters?.title,
-                order: filters?.ascending?Order.ASC:Order.DESC,
-                orderOption: filters?.filter?.toUpperCase(),
-                favoredOnly: !!onlyFavorites,
-                tag: tag
+                query: {
+                    title: filters?.title,
+                    order: filters?.ascending?Order.ASC:Order.DESC,
+                    orderOption: filters?.filter,
+                    favoredOnly: !!onlyFavorites,
+                    tag: tag
+                }
             }
-        })
-            .then((v: AxiosResponse<Podcast[]>) => {
-                setPodcasts(v.data)
-            })
+        }).then(v=>setPodcasts(v.data!))
     }
 
     useDebounce(() => {
@@ -107,20 +102,9 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     },500, [filters, tagsVal])
 
     useEffect(() => {
-        axios.get('/podcasts/filter')
-            .then((c: AxiosResponse<Filter>) => {
-                if (c.data === null) {
-                    setFilters(getFiltersDefault())
-                } else {
-                    setFilters({
-                        ascending: c.data.ascending,
-                        filter: c.data.filter,
-                        title: c.data.title,
-                        username: c.data.username,
-                        onlyFavored: c.data.onlyFavored
-                    })
-                }
-            })
+        client.GET("/api/v1/podcasts/filter")
+            .then(c => setFilters(c.data || getFiltersDefault()))
+            .catch(() => setFilters(getFiltersDefault()))
     }, [location])
 
     return (
@@ -143,7 +127,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                         }}>refresh</span>
                     <div>
                         <CustomSelect className="bg-mustard-600 text-black" options={mappedTagsOptions} value={tagsVal.value} onChange={(v)=>{
-                            setTagVal(mappedTagsOptions.filter(e=>e.value === v)[0])
+                            setTagVal(mappedTagsOptions.filter(e=>e.value === v)[0]!)
                         }}/>
                     </div>
                 </div>

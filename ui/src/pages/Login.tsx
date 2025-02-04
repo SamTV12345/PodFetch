@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import axios, { AxiosError } from 'axios'
 import useCommon from '../store/CommonSlice'
 import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
 import { CustomCheckbox } from '../components/CustomCheckbox'
@@ -11,6 +10,7 @@ import { Heading2 } from '../components/Heading2'
 import { Loading } from '../components/Loading'
 import { OIDCButton } from '../components/OIDCButton'
 import 'material-symbols/outlined.css'
+import {client} from "../utils/http";
 
 export type LoginData = {
     username: string,
@@ -35,25 +35,28 @@ export const Login = () => {
     const onSubmit: SubmitHandler<LoginData> = (data, p) => {
         p?.preventDefault()
 
-        axios.post('/login', data)
-            .then(() => {
-                const basicAuthString = btoa(data.username + ':' + data.password)
+        client.POST("/api/v1/login", {
+            body: {
+                username: data.username,
+                password: data.password
+            }
+        }).then(()=>{
+            const basicAuthString = btoa(data.username + ':' + data.password)
 
-                if (data.rememberMe) {
-                    localStorage.setItem('auth', basicAuthString)
-                } else {
-                    sessionStorage.setItem('auth', basicAuthString)
-                }
+            if (data.rememberMe) {
+                localStorage.setItem('auth', basicAuthString)
+            } else {
+                sessionStorage.setItem('auth', basicAuthString)
+            }
 
-                setLoginData(data)
+            setLoginData(data)
 
-                axios.defaults.headers.common['Authorization'] = 'Basic ' + basicAuthString
+            useCommon.getState().setHeaders({ Authorization: 'Basic ' + basicAuthString })
 
-                setTimeout(() => navigate('/'), 100)
-            })
-            .catch((e: AxiosError<ErrorModel>) => {
-               setAlert(e.response!.data.message)
-            })
+            setTimeout(() => navigate('/'), 100)
+        }).catch((e)=>{
+            setAlert(e.toString())
+        })
     }
 
     if (!configModel) {

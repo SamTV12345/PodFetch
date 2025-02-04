@@ -6,7 +6,6 @@ use crate::constants::inner_constants::{
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use crate::DBType as DbConnection;
-use actix_web::HttpResponse;
 use chrono::NaiveDateTime;
 use diesel::associations::HasTable;
 use diesel::prelude::{Insertable, Queryable};
@@ -14,10 +13,11 @@ use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use std::io::Error;
+use axum::extract::Request;
 use utoipa::ToSchema;
 
 #[derive(
-    Serialize, Deserialize, Queryable, Insertable, Clone, ToSchema, PartialEq, Debug, AsChangeset,
+    Serialize, Deserialize, Queryable, Insertable, Clone, PartialEq, Debug, AsChangeset,
 )]
 #[serde(rename_all = "camelCase")]
 pub struct User {
@@ -30,7 +30,7 @@ pub struct User {
     pub api_key: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserWithoutPassword {
     pub id: i32,
@@ -40,7 +40,7 @@ pub struct UserWithoutPassword {
     pub explicit_consent: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UserWithAPiKey {
     pub id: i32,
@@ -140,7 +140,7 @@ impl User {
             id: 9999,
             username: username.unwrap_or(STANDARD_USER.to_string()),
             role: Role::Admin.to_string(),
-            password,
+            password: password.map(sha256::digest),
             explicit_consent: true,
             created_at: Default::default(),
             api_key: ENVIRONMENT_SERVICE.api_key_admin.clone(),
@@ -193,7 +193,7 @@ impl User {
      * Otherwise returns None
      */
     pub fn get_username_from_req_header(
-        req: &actix_web::HttpRequest,
+        req: &Request,
     ) -> Result<Option<String>, Error> {
         if is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH) {
             let auth_header = req.headers().get(USERNAME);
@@ -207,7 +207,7 @@ impl User {
         Ok(None)
     }
 
-    pub fn get_gpodder_req_header(req: &actix_web::HttpRequest) -> Result<String, Error> {
+    pub fn get_gpodder_req_header(req: &Request) -> Result<String, Error> {
         let auth_header = req.headers().get(USERNAME);
         if auth_header.is_none() {
             return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
@@ -217,7 +217,7 @@ impl User {
 
     pub fn check_if_admin_or_uploader(
         username: &Option<String>,
-    ) -> Result<Option<HttpResponse>, CustomError> {
+    ) -> Result<Option<Request>, CustomError> {
         if let Some(username) = username {
             let found_user = User::find_by_username(username)?;
             if found_user.role.ne(&Role::Admin.to_string())

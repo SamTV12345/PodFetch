@@ -9,6 +9,7 @@ import useAudioPlayer from "../store/AudioPlayerSlice";
 import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "../utils/Utilities";
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Episode} from "../models/Episode";
+import {components} from "../../schema";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
     const infoModalOpen = useCommon(state => state.podcastAlreadyPlayed)
@@ -25,7 +26,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                 __html: ''
             }
         }
-        return removeHTML(selectedPodcastEpisode?.podcastEpisode.podcastEpisode.name!)
+        return removeHTML(selectedPodcastEpisode?.podcastEpisode.name!)
     }, [selectedPodcastEpisode])
     return createPortal(
         <div
@@ -63,15 +64,15 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                             return
                         }
 
-                        const watchedModel:Episode = {
-                        ...selectedPodcastEpisode.podcastWatchModel,
+                        const watchedModel: components["schemas"]["EpisodeDto"] = {
+                        ...selectedPodcastEpisode.podcastHistoryItem!,
                             position: 0
                         }
 
-                        selectedPodcastEpisode.podcastEpisode.podcastEpisode.status
-                            ? setCurrentPodcastEpisode(preparePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,
+                        selectedPodcastEpisode.podcastEpisode.status
+                            ? setCurrentPodcastEpisode(preparePodcastEpisode(selectedPodcastEpisode.podcastEpisode,
                                 watchedModel ))
-                            : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(selectedPodcastEpisode.podcastEpisode.podcastEpisode,
+                            : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(selectedPodcastEpisode.podcastEpisode,
                                 watchedModel))
                     }}>{t('restart-playing')}</CustomButtonPrimary>
                 </div>
