@@ -1,4 +1,6 @@
-use axum::extract::{Path, Query};
+use axum::extract::Path;
+use axum::response::{IntoResponse, Response};
+use axum_extra::extract::OptionalQuery;
 use crate::models::podcasts::Podcast;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
@@ -20,7 +22,7 @@ use utoipa_axum::routes;
 
 #[derive(Deserialize, Serialize)]
 pub struct RSSQuery {
-    top: i32,
+    top: Option<i32>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -36,9 +38,9 @@ responses(
 (status = 200, description = "Gets the complete rss feed"))
 , tag = "rss")]
 pub async fn get_rss_feed(
-    Query(query): Query<Option<RSSQuery>>,
-    Query(api_key): Query<Option<RSSAPiKey>>,
-) -> Result<String, CustomError> {
+    OptionalQuery(query): OptionalQuery<RSSQuery>,
+    OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
+) -> Result<impl IntoResponse, CustomError> {
     use crate::ENVIRONMENT_SERVICE;
 
     // If http basic is enabled, we need to check if the api key is valid
@@ -57,7 +59,13 @@ pub async fn get_rss_feed(
     }
 
     let downloaded_episodes = match query {
-        Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(q.top)?,
+        Some(q) => match q.top
+        {
+            Some(q)=>{
+                PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(q)?
+            }
+            None=>PodcastEpisodeService::find_all_downloaded_podcast_episodes()?
+        },
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };
 
@@ -97,7 +105,11 @@ pub async fn get_rss_feed(
     let channel =
         generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, &api_key);
 
-    Ok(channel.to_string())
+    let response = Response::builder()
+        .header("Content-Type", "application/rss+xml")
+        .body(channel.to_string())
+        .unwrap();
+    Ok(response)
 }
 
 fn add_api_key_to_url(url: String, api_key: &Option<String>) -> String {
@@ -140,10 +152,9 @@ responses(
 , tag = "rss")]
 pub async fn get_rss_feed_for_podcast(
     Path(id): Path<i32>,
-    Query(api_key): Query<Option<RSSAPiKey>>,
-) -> Result<String, CustomError> {
+    OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
+) -> Result<impl IntoResponse, CustomError> {
     let server_url = ENVIRONMENT_SERVICE.server_url.clone();
-
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
@@ -223,8 +234,11 @@ pub async fn get_rss_feed_for_podcast(
         Some(podcast.clone()),
         &api_key,
     );
-
-    Ok(channel.to_string())
+    let response = Response::builder()
+        .header("Content-Type", "application/rss+xml")
+        .body(channel.to_string())
+        .unwrap();
+    Ok(response)
 }
 
 fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item> {

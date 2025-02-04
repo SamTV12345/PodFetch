@@ -20,6 +20,7 @@ use axum::body::Body;
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum_extra::extract::OptionalQuery;
 use tokio::task::spawn_blocking;
 
 use crate::models::filter::Filter;
@@ -638,7 +639,7 @@ tag="podcasts"
 )]
 pub(crate) async fn proxy_podcast(
     Query(params): Query<Params>,
-    Query(api_key): Query<Option<RSSAPiKey>>,
+    OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
     req: axum::extract::Request
 ) -> Result<Body, CustomError> {
     let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));

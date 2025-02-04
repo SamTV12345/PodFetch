@@ -238,6 +238,7 @@ pub fn get_api_config() -> OpenApiRouter {
         .merge(get_ui_config())
         .merge(podcast_serving())
         .merge(get_manifest_router())
+        .merge(get_websocket_router())
         .nest("/api/v1", OpenApiRouter::new().merge(config()))
 
 }
@@ -265,8 +266,7 @@ fn get_private_api() -> OpenApiRouter {
         .merge(get_podcast_episode_router())
         .merge(get_settings_router())
         .merge(get_tags_router())
-        .merge(get_user_router())
-        .merge(get_websocket_router());
+        .merge(get_user_router());
 
     if ENVIRONMENT_SERVICE.http_basic {
         router.layer(from_fn(handle_basic_auth))
