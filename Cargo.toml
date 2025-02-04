@@ -75,7 +75,7 @@ socketioxide = "0.16.0"
 mime_guess = "2.0.5"
 
 [target.'cfg(not(windows))'.dependencies]
-openssl = "0.10.68"
+openssl = "0.10.70"
 
 
 [dev-dependencies]
