@@ -8,15 +8,16 @@ export const SettingsOPMLExport: FC = () => {
     const { t } = useTranslation()
 
     const downloadOPML = (exportType: string) => {
-        client.GET("/api/v1/settings/opml/{type_of}", {
+        client.request("get","/api/v1/settings/opml/{type_of}", {
+            parseAs: "text",
             params: {
                 path: {
                     type_of: exportType
                 }
             }
         }).then((response) => {
-            // create file link in browser's memory
-            const href = URL.createObjectURL(response.data! as unknown as Blob)
+            const blob = new Blob([response.data!], { type: "text/plain" })
+            const href = URL.createObjectURL(blob)
 
             // create "a" HTML element with href to file & click
             const link = document.createElement('a')
