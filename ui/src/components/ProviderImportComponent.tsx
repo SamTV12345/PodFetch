@@ -75,18 +75,20 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     }
                 }
             }).then((v) => {
-                    const data = v.data
-                    setLoading(false)
-                    // @ts-ignore
-                    const agnosticModel: AgnosticPodcastDataModel[] = data!.results.map((podcast) => {
-                        return {
-                            title: podcast.collectionName,
-                            artist: podcast.artistName,
-                            id: podcast.trackId!,
-                            imageUrl: podcast.artworkUrl600
-                        }
-                    })
-                    setSearchedPodcasts(agnosticModel)
+                    if ("resultCount" in v.data!) {
+                        const data = v.data
+                        setLoading(false)
+                        const agnosticModel: AgnosticPodcastDataModel[] = data!.results.map((podcast) => {
+                            return {
+                                title: podcast.collectionName!,
+                                artist: podcast.artistName!,
+                                id: podcast.trackId!,
+                                imageUrl: podcast.artworkUrl600!
+                            }
+                        })
+                        setSearchedPodcasts(agnosticModel)
+                    }
+
             })
             : client.GET("/api/v1/podcasts/{type_of}/{podcast}/search", {
                 params: {
@@ -96,17 +98,19 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     }
                 }
             }).then((v) => {
-                        setLoading(false)
-                        // @ts-ignore
-                        let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast) => {
-                            return {
-                                title: podcast.title,
-                                artist: podcast.author,
-                                id: podcast.id,
-                                imageUrl: podcast.artwork
-                            }
-                        })
-                        setSearchedPodcasts(agnosticModel)
+                        if ("feeds" in v.data!) {
+                            setLoading(false)
+                            let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast) => {
+                                return {
+                                    title: podcast.title!,
+                                    artist: podcast.author!,
+                                    id: podcast.id!,
+                                    imageUrl: podcast.artwork!
+                                }
+                            })
+                            setSearchedPodcasts(agnosticModel)
+                        }
+
                 })
     }, 2000, [searchText])
 

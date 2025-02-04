@@ -1049,27 +1049,27 @@ export interface components {
             favored: boolean;
         };
         Feed: {
-            artwork: string;
-            author: string;
-            description: string;
-            explicit: boolean;
+            artwork?: string | null;
+            author?: string | null;
+            description?: string | null;
+            explicit?: boolean | null;
             /** Format: int32 */
-            id: number;
-            image: string;
+            id?: number | null;
+            image?: string | null;
             /** Format: int32 */
-            lastCrawlTime: number;
+            lastCrawlTime?: number | null;
             /** Format: int32 */
-            lastGoodHttpStatusTime: number;
+            lastGoodHttpStatusTime?: number | null;
             /** Format: int32 */
-            lastParseTime: number;
+            lastParseTime?: number | null;
             /** Format: int32 */
-            lastUpdateTime: number;
-            link: string;
-            originalUrl: string;
-            ownerName: string;
-            podcastGuid: string;
-            title: string;
-            url: string;
+            lastUpdateTime?: number | null;
+            link?: string | null;
+            originalUrl?: string | null;
+            ownerName?: string | null;
+            podcastGuid?: string | null;
+            title?: string | null;
+            url?: string | null;
         };
         Filter: {
             ascending: boolean;
@@ -1100,50 +1100,50 @@ export interface components {
         ItunesModel: {
             /** Format: int64 */
             artistId?: number | null;
-            artistName: string;
+            artistName?: string | null;
             artistViewUrl?: string | null;
-            artworkUrl100: string;
-            artworkUrl30: string;
-            artworkUrl60: string;
-            artworkUrl600: string;
-            collectionCensoredName: string;
-            collectionExplicitness: string;
+            artworkUrl100?: string | null;
+            artworkUrl30?: string | null;
+            artworkUrl60?: string | null;
+            artworkUrl600?: string | null;
+            collectionCensoredName?: string | null;
+            collectionExplicitness?: string | null;
             /** Format: double */
-            collectionHdPrice: number;
+            collectionHdPrice?: number | null;
             /** Format: int64 */
             collectionId: number;
-            collectionName: string;
+            collectionName?: string | null;
             /** Format: double */
-            collectionPrice: number;
-            collectionViewUrl: string;
-            contentAdvisoryRating: string;
-            country: string;
-            currency: string;
+            collectionPrice?: number | null;
+            collectionViewUrl?: string | null;
+            contentAdvisoryRating?: string | null;
+            country?: string | null;
+            currency?: string | null;
             description?: string | null;
-            feedUrl: string;
+            feedUrl?: string | null;
             genreIds: string[];
             genres: string[];
             kind?: string | null;
             previewUrl?: string | null;
-            primaryGenreName: string;
-            releaseDate: string;
+            primaryGenreName?: string | null;
+            releaseDate?: string | null;
             trackCensoredName?: string | null;
             /** Format: int32 */
-            trackCount: number;
-            trackExplicitness: string;
+            trackCount?: number | null;
+            trackExplicitness?: string | null;
             /** Format: int64 */
             trackId?: number | null;
-            trackName: string;
+            trackName?: string | null;
             /** Format: double */
-            trackPrice: number;
+            trackPrice?: number | null;
             /** Format: int64 */
-            trackTimeMillis: number;
+            trackTimeMillis?: number | null;
             trackViewUrl: string;
-            wrapperType: string;
+            wrapperType?: string | null;
         };
         ItunesWrapper: {
             /** Format: int32 */
-            result_count: number;
+            resultCount: number;
             results: components["schemas"]["ItunesModel"][];
         };
         LoginRequest: {
@@ -1245,11 +1245,7 @@ export interface components {
         PodcastRSSAddModel: {
             rssFeedUrl: string;
         };
-        PodcastSearchReturn: {
-            Itunes: components["schemas"]["ItunesWrapper"];
-        } | {
-            Podindex: components["schemas"]["PodindexResponse"];
-        };
+        PodcastSearchReturn: components["schemas"]["ItunesWrapper"] | components["schemas"]["PodindexResponse"];
         PodcastSetting: {
             activated: boolean;
             autoCleanup: boolean;
@@ -1429,6 +1425,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logs in the user and returns a session cookie. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_devices_of_user: {
         parameters: {
             query?: never;
@@ -2702,7 +2718,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/octet-stream": number[];
+                    "text/plain": string;
                 };
             };
         };
