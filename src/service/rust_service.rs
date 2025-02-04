@@ -44,7 +44,7 @@ impl PodcastService {
                 "Error searching for podcast: {}",
                 res_of_search.err().unwrap()
             );
-            serde_json::from_str("{}").unwrap()
+            ItunesWrapper::default()
         }
     }
 

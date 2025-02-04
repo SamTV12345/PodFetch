@@ -8,6 +8,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 use axum::{Extension, Json};
 use axum::extract::Path;
+use axum::http::Response;
 use reqwest::StatusCode;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
@@ -94,13 +95,13 @@ impl From<String> for Mode {
 get,
 path="/settings/opml/{type_of}",
 responses(
-(status = 200, description = "Gets the podcasts in opml format", body = Vec<u8>)),
+(status = 200, description = "Gets the podcasts in opml format", body = String)),
 tag="settings"
 )]
 pub async fn get_opml(
     Extension(requester): Extension<User>,
     Path(type_of): Path<String>,
-) -> Result<Vec<u8>, CustomError> {
+) -> Result<Response<String>, CustomError> {
     if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
         return Err(CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into
         ());
@@ -130,7 +131,11 @@ pub async fn get_opml(
 
     let mut writer: Vec<u8> = Vec::new();
     xml.generate(&mut writer).unwrap();
-    Ok(writer)
+    let response = Response::builder()
+        .header("Content-Type", "application/xml")
+        .body(String::from_utf8(writer).unwrap())
+        .unwrap();
+    Ok(response)
 }
 
 fn add_header() -> XMLElement {

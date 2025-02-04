@@ -75,10 +75,10 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     }
                 }
             }).then((v) => {
-                if ("Itunes" in v.data!) {
                     const data = v.data
                     setLoading(false)
-                    const agnosticModel: AgnosticPodcastDataModel[] = data!.Itunes.results.map((podcast) => {
+                    // @ts-ignore
+                    const agnosticModel: AgnosticPodcastDataModel[] = data!.results.map((podcast) => {
                         return {
                             title: podcast.collectionName,
                             artist: podcast.artistName,
@@ -87,7 +87,6 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                         }
                     })
                     setSearchedPodcasts(agnosticModel)
-                }
             })
             : client.GET("/api/v1/podcasts/{type_of}/{podcast}/search", {
                 params: {
@@ -97,9 +96,9 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     }
                 }
             }).then((v) => {
-                    if ("Podindex" in v.data!) {
                         setLoading(false)
-                        let agnosticModel: AgnosticPodcastDataModel[] = v.data.Podindex.feeds.map((podcast) => {
+                        // @ts-ignore
+                        let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast) => {
                             return {
                                 title: podcast.title,
                                 artist: podcast.author,
@@ -108,7 +107,6 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                             }
                         })
                         setSearchedPodcasts(agnosticModel)
-                    }
                 })
     }, 2000, [searchText])
 
