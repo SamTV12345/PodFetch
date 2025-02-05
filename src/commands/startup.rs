@@ -377,7 +377,7 @@ pub fn handle_config_for_server_startup() -> Router {
         .clone()
         .unwrap_or("/".to_string());
 
-    let ui_dir = format!("{}/ui", sub_dir);
+    let ui_dir = format!("{}/ui/", sub_dir);
     let (layer, io) = SocketIoBuilder::new().build_layer();
     io.ns("/", |socket: SocketRef|{
         log::info!("Socket connected {}", socket.id);
