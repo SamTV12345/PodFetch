@@ -69,12 +69,31 @@ pub struct SubscriptionChangesToClient {
     pub timestamp: i64,
 }
 
+
+pub struct SubscriptionModelChangesToClient {
+    pub add: Vec<Subscription>,
+    pub remove: Vec<Subscription>,
+    pub timestamp: i64,
+}
+
+
+impl From<SubscriptionModelChangesToClient> for SubscriptionChangesToClient {
+    fn from(value: SubscriptionModelChangesToClient) -> Self {
+        Self {
+            add: value.add.iter().map(|c| c.podcast.clone()).collect(),
+            remove: value.remove.iter().map(|c| c.podcast.clone()).collect(),
+            timestamp: value.timestamp,
+        }
+    }
+}
+
+
 impl SubscriptionChangesToClient {
     pub async fn get_device_subscriptions(
         device_id: &str,
         username: &str,
         since: i32,
-    ) -> Result<SubscriptionChangesToClient, Error> {
+    ) -> Result<SubscriptionModelChangesToClient, Error> {
         let since = DateTime::from_timestamp(since as i64, 0)
             .map(|v| v.naive_utc())
             .unwrap();
@@ -91,22 +110,16 @@ impl SubscriptionChangesToClient {
         let (deleted_subscriptions, created_subscriptions): (Vec<Subscription>, Vec<Subscription>) =
             res.into_iter().partition(|c| c.deleted.is_some());
 
-        Ok(SubscriptionChangesToClient {
-            add: created_subscriptions
-                .into_iter()
-                .map(|c| c.podcast)
-                .collect(),
-            remove: deleted_subscriptions
-                .into_iter()
-                .map(|c| c.podcast)
-                .collect(),
+        Ok(SubscriptionModelChangesToClient {
+            add: created_subscriptions,
+            remove: deleted_subscriptions,
             timestamp: get_current_timestamp(),
         })
     }
 
 
     pub async fn get_user_subscriptions(username: &str,since: i32) ->
-                                                                   Result<SubscriptionChangesToClient, CustomError> {
+                                                                   Result<SubscriptionModelChangesToClient, CustomError> {
         let since = DateTime::from_timestamp(since as i64, 0)
             .map(|v| v.naive_utc())
             .unwrap();
@@ -121,15 +134,9 @@ impl SubscriptionChangesToClient {
         let (deleted_subscriptions, created_subscriptions): (Vec<Subscription>, Vec<Subscription>) =
             res.into_iter().partition(|c| c.deleted.is_some());
 
-        Ok(SubscriptionChangesToClient {
-            add: created_subscriptions
-                .into_iter()
-                .map(|c| c.podcast)
-                .collect(),
-            remove: deleted_subscriptions
-                .into_iter()
-                .map(|c| c.podcast)
-                .collect(),
+        Ok(SubscriptionModelChangesToClient {
+            add: created_subscriptions,
+            remove: deleted_subscriptions,
             timestamp: get_current_timestamp(),
         })
     }

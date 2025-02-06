@@ -44,13 +44,13 @@ pub async fn get_episode_actions(
     Path(username): Path<String>,
 ) -> Result<Json<EpisodeActionResponse>, CustomError> {
     let username = trim_from_path(&username);
-            if flag.username != username {
+            if flag.username != username.0 {
                 return Err(CustomErrorInner::Forbidden.into());
             }
 
             let since_date = DateTime::from_timestamp(since.since, 0).map(|v| v.naive_utc());
             let mut actions = Episode::get_actions_by_username(
-                username,
+                username.0,
                 since_date,
                 since.device.clone(),
                 since.aggregate.clone(),
@@ -87,12 +87,12 @@ pub async fn upload_episode_actions(
     Json(podcast_episode): Json<Vec<EpisodeDto>>,
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     let username = trim_from_path(&username);
-            if flag.username != username {
+            if flag.username != username.0 {
                 return Err(CustomErrorInner::Forbidden.into());
             }
             let mut inserted_episodes: Vec<Episode> = vec![];
             podcast_episode.iter().for_each(|episode| {
-                let episode = Episode::convert_to_episode(episode, username.to_string());
+                let episode = Episode::convert_to_episode(episode, username.0.to_string());
                 inserted_episodes.push(Episode::insert_episode(&episode.clone()).unwrap());
             });
             Ok(Json(EpisodeActionPostResponse {

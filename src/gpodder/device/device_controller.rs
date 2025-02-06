@@ -34,7 +34,7 @@ pub async fn post_device(
     }
 
     let device_create = DeviceCreate {
-        id: deviceid.to_string(),
+        id: deviceid.0.to_string(),
         username: username.clone(),
         type_: device_post.kind.clone(),
         caption: device_post.caption.clone(),
@@ -59,7 +59,7 @@ pub async fn get_devices_of_user(
     Extension(flag): Extension<Session>,
 ) -> Result<Json<Vec<DeviceResponse>>, CustomError> {
     let query = trim_from_path(&query);
-    let user_query = query;
+    let user_query = query.0;
     if flag.username != user_query {
         return Err(CustomErrorInner::Forbidden.into());
     }
