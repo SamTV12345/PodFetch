@@ -793,3 +793,60 @@ pub fn get_podcast_router() -> OpenApiRouter {
         .routes(routes!(retrieve_podcast_sample_format))
         .routes(routes!(query_for_podcast))
 }
+
+
+#[cfg(test)]
+pub mod tests {
+    use serial_test::serial;
+    use crate::commands::startup::tests::handle_test_startup;
+    use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
+    use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
+
+    #[tokio::test]
+    #[serial]
+    async fn test_retrieve_podcast_sample_format() {
+        let ts_server = handle_test_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
+            content: "test".to_string(),
+        }).await;
+        assert_eq!(resp.status_code(), 200);
+        assert_eq!(resp.json::<String>(), "test");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_retrieve_podcast_sample_format_with_podcast_title() {
+        let ts_server = handle_test_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
+            content: "{podcastTitle}".to_string(),
+        }).await;
+        assert_eq!(resp.status_code(), 200);
+        assert_eq!(resp.json::<String>(), "The homelab podcast");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_retrieve_podcast_sample_format_with_podcast_description() {
+        let ts_server = handle_test_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
+            content: "{podcastDescription}".to_string(),
+        }).await;
+        assert_eq!(resp.status_code(), 200);
+        assert_eq!(resp.json::<String>(), "A podcast about homelabing");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_retrieve_podcast_sample_format_with_podcast_title_date() {
+        let ts_server = handle_test_startup();
+        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
+            content: "{podcastDescription}-{date}".to_string(),
+        }).await;
+        assert_eq!(resp.status_code(), 200);
+        assert_eq!(resp.json::<String>(), "A podcast about homelabing-2021-01-01");
+    }
+}
