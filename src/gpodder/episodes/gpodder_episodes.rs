@@ -109,26 +109,26 @@ pub fn get_gpodder_episodes_router() -> OpenApiRouter {
 
 #[cfg(test)]
 pub mod tests {
+    
     use crate::commands::startup::tests::handle_test_startup;
+    use crate::gpodder::episodes::gpodder_episodes::EpisodeActionResponse;
     use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
+    use crate::utils::auth::tests::{create_auth_gpodder};
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
 
     #[tokio::test]
     async fn test_get_episodes_action() {
+        let mut test_server = handle_test_startup();
         POSTGRES_CHANNEL
             .tx
             .send(ContainerCommands::Cleanup)
             .unwrap();
-        let mut test_server = handle_test_startup();
         let mut user = UserTestDataBuilder::new().build();
         user.insert_user().unwrap();
-        test_server.clear_headers();
-        test_server.add_header("Authorization", &user.username, &user.password);
-        let response = test_server
-            .get(&format!("/api/2/episodes/{}", user.username))
-            .add_query_param("since", "0")
-            .await;
-
-        assert_eq!(response.status_code(), 200);
+        create_auth_gpodder(&mut test_server, &user).await;
+        let resp = test_server.get(&format!("/api/2/episodes/{}?since=0", user.username)).await;
+        assert_eq!(resp.status_code(), 200);
+        let json = resp.json::<EpisodeActionResponse>();
+        assert_eq!(json.actions.len(), 0);
     }
 }
