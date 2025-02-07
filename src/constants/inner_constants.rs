@@ -150,7 +150,7 @@ pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new(|| 
             .to_string();
         env.http_basic = true;
         env.username = Some("postgres".to_string());
-        env.password = Some("postgres".to_string());
+        env.password = Some("a942b37ccfaf5a813b1432caa209a43b9d144e47ad0de1549c289c253e556cd5".to_string());
         env.gpodder_integration_enabled = true;
         env
     }
