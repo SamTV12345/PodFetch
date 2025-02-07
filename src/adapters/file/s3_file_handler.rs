@@ -92,11 +92,9 @@ impl S3Handler {
 
 impl FileHandler for S3Handler {
     fn read_file(path: &str) -> Result<String, CustomError> {
-        println!("Reading file {}", path);
         let resp = Self::get_bucket()?
             .head_object_blocking(Self::prepare_path_resolution(path))
             .map_err(map_s3_error)?;
-        println!("Response {:?}", resp.0.e_tag);
         Ok(Self::get_url_for_file(&resp.0.e_tag.unwrap()))
     }
 

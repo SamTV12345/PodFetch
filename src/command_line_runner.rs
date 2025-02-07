@@ -225,7 +225,6 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         &mut username,
                     );
                     username = trim_string(&username);
-                    println!(">{}<", username);
                     let user = User::find_by_username(username.as_str())?;
 
                     do_user_update(user);

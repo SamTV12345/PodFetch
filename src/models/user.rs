@@ -75,7 +75,8 @@ impl User {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         if let Some(res) = ENVIRONMENT_SERVICE.username.clone() {
             if res == username_to_find {
-                return Ok(User::create_admin_user());
+                let admin = User::create_admin_user();
+                return Ok(admin);
             }
         }
 
@@ -140,7 +141,7 @@ impl User {
             id: 9999,
             username: username.unwrap_or(STANDARD_USER.to_string()),
             role: Role::Admin.to_string(),
-            password: password.map(sha256::digest),
+            password,
             explicit_consent: true,
             created_at: Default::default(),
             api_key: ENVIRONMENT_SERVICE.api_key_admin.clone(),
