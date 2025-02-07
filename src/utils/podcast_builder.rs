@@ -92,8 +92,8 @@ impl PodcastBuilder {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::utils::podcast_builder::PodcastBuilder;
+    use serial_test::serial;
 
     #[test]
     #[serial]

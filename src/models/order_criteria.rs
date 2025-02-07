@@ -51,7 +51,7 @@ impl OrderOption {
             "Title" => OrderOption::Title,
             _ => {
                 panic!("Invalid OrderOption")
-            },
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
-use utoipa::ToSchema;
 use crate::domain::models::device::model::Device;
+use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct DeviceResponse {

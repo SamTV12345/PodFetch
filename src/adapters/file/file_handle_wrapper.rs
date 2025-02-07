@@ -1,11 +1,11 @@
 use crate::adapters::file::file_handler::{FileHandler, FileHandlerType, FileRequest};
 use crate::adapters::file::local_file_handler::LocalFileHandler;
 use crate::adapters::file::s3_file_handler::S3Handler;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
 use crate::utils::error::CustomError;
 use std::future::Future;
 use std::pin::Pin;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
 
 pub struct FileHandleWrapper;
 
@@ -56,25 +56,31 @@ impl FileHandleWrapper {
                             if FileHandlerType::S3 == file_type {
                                 if let Some(file_path) = &episode.file_image_path {
                                     if let Err(e) = S3Handler::remove_file(file_path) {
-                                        log::error!("Error removing file: {} with reason {}",
-                                            file_path, e);
+                                        log::error!(
+                                            "Error removing file: {} with reason {}",
+                                            file_path,
+                                            e
+                                        );
                                     }
                                 }
                                 if let Some(file_path) = &episode.file_episode_path {
                                     if let Err(e) = S3Handler::remove_file(file_path) {
-                                        log::error!("Error removing file: {} with reason {e}",
-                                            file_path);
+                                        log::error!(
+                                            "Error removing file: {} with reason {e}",
+                                            file_path
+                                        );
                                     }
                                 }
                             }
                         }
                     });
                 Ok(())
-            },
+            }
             FileHandlerType::S3 => {
                 let image_url = urlencoding::decode(&podcast.image_url).unwrap().to_string();
                 S3Handler::remove_file(&image_url)?;
-                PodcastEpisode::get_episodes_by_podcast_id(podcast.id)?.iter()
+                PodcastEpisode::get_episodes_by_podcast_id(podcast.id)?
+                    .iter()
                     .for_each(|episode| {
                         // Remove the episode directory
                         if let Some(download_type) = &episode.download_location {
@@ -82,8 +88,11 @@ impl FileHandleWrapper {
                             if FileHandlerType::S3 == file_type {
                                 if let Some(file_path) = &episode.file_image_path {
                                     if let Err(e) = S3Handler::remove_file(file_path) {
-                                        log::error!("Error removing file: {} with reason {}",
-                                            file_path, e);
+                                        log::error!(
+                                            "Error removing file: {} with reason {}",
+                                            file_path,
+                                            e
+                                        );
                                     }
                                 }
                                 if let Some(file_path) = &episode.file_episode_path {
@@ -94,8 +103,11 @@ impl FileHandleWrapper {
                             } else {
                                 if let Some(file_path) = &episode.file_image_path {
                                     if let Err(e) = LocalFileHandler::remove_file(file_path) {
-                                        log::error!("Error removing file: {} with reason {}",
-                                            file_path, e);
+                                        log::error!(
+                                            "Error removing file: {} with reason {}",
+                                            file_path,
+                                            e
+                                        );
                                     }
                                 }
                                 if let Some(file_path) = &episode.file_episode_path {
@@ -107,7 +119,7 @@ impl FileHandleWrapper {
                         }
                     });
                 Ok(())
-            },
+            }
         }
     }
     pub fn remove_file(path: &str, download_location: &FileHandlerType) -> Result<(), CustomError> {

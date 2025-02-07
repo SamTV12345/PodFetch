@@ -1,8 +1,8 @@
-use axum::Json;
-use axum::routing::get;
-use utoipa_axum::router::OpenApiRouter;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::CustomError;
+use axum::routing::get;
+use axum::Json;
+use utoipa_axum::router::OpenApiRouter;
 
 #[derive(Serialize)]
 pub struct Icon {
@@ -22,7 +22,6 @@ pub struct Manifest {
     pub display: String,
     pub orientation: String,
 }
-
 
 pub async fn get_manifest() -> Result<Json<Manifest>, CustomError> {
     let mut icons = Vec::new();

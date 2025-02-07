@@ -30,8 +30,8 @@ pub fn add_basic_auth_headers_conditionally(
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
+    use serial_test::serial;
 
     #[test]
     #[serial]

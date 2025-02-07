@@ -1,7 +1,7 @@
-use axum::Json;
-use axum::routing::get;
-use utoipa_axum::router::OpenApiRouter;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use axum::routing::get;
+use axum::Json;
+use utoipa_axum::router::OpenApiRouter;
 
 #[derive(Serialize, Deserialize)]
 pub struct ClientParametrization {

@@ -25,7 +25,7 @@ use utoipa::ToSchema;
     Insertable,
     Clone,
     AsChangeset,
-    ToSchema
+    ToSchema,
 )]
 #[diesel(belongs_to(Podcast, foreign_key = podcast_id))]
 #[diesel(belongs_to(User, foreign_key = username))]

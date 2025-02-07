@@ -7,8 +7,8 @@ pub fn trim_from_path(path_segment_with_extension: &str) -> (&str, &str) {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use super::*;
+    use serial_test::serial;
 
     #[test]
     #[serial]

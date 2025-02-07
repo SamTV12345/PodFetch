@@ -1,8 +1,8 @@
+use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
+use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
 use axum::extract::Path;
 use axum::{Extension, Json};
 use reqwest::StatusCode;
-use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
-use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
 
 use crate::service::user_management_service::UserManagementService;
 use crate::utils::error::{CustomError, CustomErrorInner};
@@ -52,7 +52,6 @@ tag="user"
 pub async fn onboard_user(
     Json(user_to_onboard): Json<UserOnboardingModel>,
 ) -> Result<Json<UserWithoutPassword>, CustomError> {
-
     let res = UserManagementService::onboard_user(
         user_to_onboard.username,
         user_to_onboard.password,
@@ -69,9 +68,9 @@ responses(
 (status = 200, description = "Gets all users", body= Vec<UserWithoutPassword>)),
 tag="info"
 )]
-pub async fn get_users(Extension(requester): Extension<User>) ->
-                                                              Result<Json<Vec<UserWithoutPassword>>,
-    CustomError> {
+pub async fn get_users(
+    Extension(requester): Extension<User>,
+) -> Result<Json<Vec<UserWithoutPassword>>, CustomError> {
     let res = UserManagementService::get_users(requester)?;
 
     Ok(Json(res))
@@ -193,11 +192,8 @@ pub async fn create_invite(
     Extension(requester): Extension<User>,
     Json(invite): Json<InvitePostModel>,
 ) -> Result<Json<Invite>, CustomError> {
-    let created_invite = UserManagementService::create_invite(
-        invite.role,
-        invite.explicit_consent,
-        requester,
-    )?;
+    let created_invite =
+        UserManagementService::create_invite(invite.role, invite.explicit_consent, requester)?;
     Ok(Json(created_invite))
 }
 
@@ -208,8 +204,9 @@ responses(
 (status = 200, description = "Gets all invites", body = Vec<Invite>)),
 tag="invite"
 )]
-pub async fn get_invites(Extension(requester): Extension<User>) -> Result<Json<Vec<Invite>>,
-    CustomError> {
+pub async fn get_invites(
+    Extension(requester): Extension<User>,
+) -> Result<Json<Vec<Invite>>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -295,15 +292,16 @@ pub async fn delete_invite(
     }
 }
 
-
 pub fn get_user_router() -> OpenApiRouter {
     OpenApiRouter::new()
-        .nest("/users", OpenApiRouter::new()
-            .routes(routes!(get_users))
-            .routes(routes!(get_user))
-            .routes(routes!(update_role))
-            .routes(routes!(delete_user))
-            .routes(routes!(update_user))
+        .nest(
+            "/users",
+            OpenApiRouter::new()
+                .routes(routes!(get_users))
+                .routes(routes!(get_user))
+                .routes(routes!(update_role))
+                .routes(routes!(delete_user))
+                .routes(routes!(update_user)),
         )
         .routes(routes!(delete_invite))
         .routes(routes!(get_invite_link))

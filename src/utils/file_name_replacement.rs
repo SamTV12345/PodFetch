@@ -129,8 +129,8 @@ impl Sanitizer {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::utils::file_name_replacement::{Options, Sanitizer};
+    use serial_test::serial;
 
     // From https://github.com/parshap/node-sanitize-filename/blob/master/test.js
     static NAMES: &[&str] = &[

@@ -162,8 +162,7 @@ impl FileService {
     }
 
     pub fn delete_podcast_files(podcast: &Podcast) {
-        FileHandleWrapper::remove_dir(podcast)
-        .unwrap();
+        FileHandleWrapper::remove_dir(podcast).unwrap();
     }
 }
 
@@ -405,7 +404,6 @@ fn remove_extension(filename: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::settings::Setting;
     use crate::service::file_service::{
@@ -413,6 +411,7 @@ mod tests {
         perform_replacement,
     };
     use crate::utils::rss_feed_parser::PodcastParsed;
+    use serial_test::serial;
 
     #[test]
     #[serial]

@@ -1,19 +1,19 @@
-use crate::gpodder::subscription::subscriptions::SubscriptionUpdateRequest;
-use chrono::{DateTime, NaiveDateTime, Utc};
-use diesel::ExpressionMethods;
-use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
-use std::io::Error;
-use axum::Json;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::subscriptions;
+use crate::gpodder::subscription::subscriptions::SubscriptionUpdateRequest;
+use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::time::get_current_timestamp;
 use crate::DBType as DbConnection;
+use axum::Json;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
+use diesel::ExpressionMethods;
 use diesel::OptionalExtension;
 use diesel::{AsChangeset, Insertable, Queryable, QueryableByName};
+use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::{Deserialize, Serialize};
+use std::io::Error;
 use utoipa::ToSchema;
-use crate::utils::error::{map_db_error, CustomError};
 
 #[derive(
     Debug,
@@ -69,13 +69,11 @@ pub struct SubscriptionChangesToClient {
     pub timestamp: i64,
 }
 
-
 pub struct SubscriptionModelChangesToClient {
     pub add: Vec<Subscription>,
     pub remove: Vec<Subscription>,
     pub timestamp: i64,
 }
-
 
 impl From<SubscriptionModelChangesToClient> for SubscriptionChangesToClient {
     fn from(value: SubscriptionModelChangesToClient) -> Self {
@@ -86,7 +84,6 @@ impl From<SubscriptionModelChangesToClient> for SubscriptionChangesToClient {
         }
     }
 }
-
 
 impl SubscriptionChangesToClient {
     pub async fn get_device_subscriptions(
@@ -117,17 +114,16 @@ impl SubscriptionChangesToClient {
         })
     }
 
-
-    pub async fn get_user_subscriptions(username: &str,since: i32) ->
-                                                                   Result<SubscriptionModelChangesToClient, CustomError> {
+    pub async fn get_user_subscriptions(
+        username: &str,
+        since: i32,
+    ) -> Result<SubscriptionModelChangesToClient, CustomError> {
         let since = DateTime::from_timestamp(since as i64, 0)
             .map(|v| v.naive_utc())
             .unwrap();
         let res: Vec<Subscription> = subscriptions::table
             .filter(subscriptions::username.eq(username))
-            .filter(
-                subscriptions::created.gt(since),
-            )
+            .filter(subscriptions::created.gt(since))
             .load::<Subscription>(&mut get_connection())
             .map_err(map_db_error)?;
 

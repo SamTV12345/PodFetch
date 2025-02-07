@@ -1,5 +1,5 @@
-use axum::Json;
 use crate::models::user::User;
+use axum::Json;
 
 use fs_extra::dir::get_size;
 use reqwest::StatusCode;
@@ -50,11 +50,11 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
     }))
 }
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::models::settings::ConfigModel;
 use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use crate::models::settings::ConfigModel;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {

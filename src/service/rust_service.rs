@@ -6,6 +6,7 @@ use crate::models::misc_models::PodcastInsertModel;
 
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorites::Favorite;
+use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
@@ -21,7 +22,6 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
-use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
 
 pub struct PodcastService;
 
@@ -84,9 +84,7 @@ impl PodcastService {
         }
     }
 
-    pub async fn insert_podcast_from_podindex(
-        id: i32,
-    ) -> Result<Podcast, CustomError> {
+    pub async fn insert_podcast_from_podindex(id: i32) -> Result<Podcast, CustomError> {
         let resp = get_http_client()
             .get(format!(
                 "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id={}",
@@ -170,9 +168,7 @@ impl PodcastService {
         }
     }
 
-    pub fn schedule_episode_download(
-        podcast: Podcast,
-    ) -> Result<(), CustomError> {
+    pub fn schedule_episode_download(podcast: Podcast) -> Result<(), CustomError> {
         let settings = Setting::get_settings()?;
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
         match settings {
@@ -203,9 +199,7 @@ impl PodcastService {
         }
     }
 
-    pub fn refresh_podcast(
-        podcast: Podcast,
-    ) -> Result<(), CustomError> {
+    pub fn refresh_podcast(podcast: Podcast) -> Result<(), CustomError> {
         log::info!("Refreshing podcast: {}", podcast.name);
         PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
         Self::schedule_episode_download(podcast.clone())

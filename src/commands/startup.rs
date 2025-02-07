@@ -1,34 +1,10 @@
-use std::ops::DerefMut;
-use std::process::exit;
-use std::sync::OnceLock;
-use std::thread;
-use std::time::Duration;
-use axum::body::Body;
-use axum::extract::Request;
-use axum::middleware::from_fn;
-use axum::response::{IntoResponse, Redirect, Response};
-use axum::Router;
-use axum::routing::get;
-use clokwerk::{Scheduler, TimeUnits};
-use diesel::r2d2::ConnectionManager;
-use diesel_migrations::MigrationHarness;
-use log::info;
-use maud::{html, Markup};
-use r2d2::Pool;
-use socketioxide::extract::SocketRef;
-use socketioxide::SocketIoBuilder;
-use tokio::fs;
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
-use utoipa_rapidoc::RapiDoc;
-use utoipa_redoc::{Redoc, Servable};
-use utoipa_scalar::{Scalar};
-use utoipa_swagger_ui::SwaggerUi;
-use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS, MAIN_ROOM};
 use crate::adapters::api::controllers::routes::global_routes;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::auth_middleware::{handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth};
+use crate::auth_middleware::{
+    handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
+};
+use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS, MAIN_ROOM};
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::notification_controller::get_notification_router;
@@ -50,7 +26,33 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use axum::body::Body;
+use axum::extract::Request;
+use axum::middleware::from_fn;
+use axum::response::{IntoResponse, Redirect, Response};
+use axum::routing::get;
+use axum::Router;
+use clokwerk::{Scheduler, TimeUnits};
+use diesel::r2d2::ConnectionManager;
+use diesel_migrations::MigrationHarness;
+use log::info;
+use maud::{html, Markup};
+use r2d2::Pool;
+use socketioxide::extract::SocketRef;
+use socketioxide::SocketIoBuilder;
+use std::ops::DerefMut;
+use std::process::exit;
+use std::sync::OnceLock;
+use std::thread;
+use std::time::Duration;
+use tokio::fs;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
+use utoipa_scalar::Scalar;
 use utoipa_scalar::Servable as UtoipaServable;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub type DbPool = Pool<ConnectionManager<DBType>>;
 use crate::embed_migrations;
@@ -78,12 +80,7 @@ fn fix_links(content: &str) -> String {
 
 pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
-#[
-utoipa::path(
-get,
-path="/index.html",
-)
-]
+#[utoipa::path(get, path = "/index.html")]
 async fn index() -> Result<Response<String>, CustomError> {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
@@ -135,7 +132,6 @@ async fn index() -> Result<Response<String>, CustomError> {
     Ok(response)
 }
 
-
 fn check_if_multiple_auth_is_configured() -> bool {
     let mut num_of_auth_count = 0;
     if ENVIRONMENT_SERVICE.http_basic {
@@ -150,7 +146,6 @@ fn check_if_multiple_auth_is_configured() -> bool {
     num_of_auth_count > 1
 }
 
-
 pub fn check_server_config() {
     if ENVIRONMENT_SERVICE.http_basic
         && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
@@ -161,8 +156,8 @@ pub fn check_server_config() {
 
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled
         && !(ENVIRONMENT_SERVICE.http_basic
-        || ENVIRONMENT_SERVICE.oidc_configured
-        || ENVIRONMENT_SERVICE.reverse_proxy)
+            || ENVIRONMENT_SERVICE.oidc_configured
+            || ENVIRONMENT_SERVICE.reverse_proxy)
     {
         eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
         exit(1);
@@ -174,14 +169,14 @@ pub fn check_server_config() {
     }
 }
 
-
 pub fn get_ui_config() -> OpenApiRouter {
-    OpenApiRouter::new()
-        .nest("/ui/", OpenApiRouter::new()
-        .routes(routes!(index))
-        .fallback(handle_ui_access))
+    OpenApiRouter::new().nest(
+        "/ui/",
+        OpenApiRouter::new()
+            .routes(routes!(index))
+            .fallback(handle_ui_access),
+    )
 }
-
 
 pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     let settings = Setting::get_settings()?;
@@ -198,8 +193,6 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     }
 }
 
-
-
 async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError> {
     let (req_parts, _) = req.into_parts();
     let path = req_parts.uri.path();
@@ -210,8 +203,8 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
     let mut file_path = format!("{}{}", "./static", path);
 
     let mut content = match fs::read(&file_path).await {
-        Ok(e)=>Ok::<Vec<u8>, CustomError>(e),
-        Err(_)=>{
+        Ok(e) => Ok::<Vec<u8>, CustomError>(e),
+        Err(_) => {
             file_path = "./static/index.html".to_string();
             Ok(fs::read("./static/index.html").await.unwrap())
         }
@@ -232,7 +225,6 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
     Ok(res)
 }
 
-
 pub fn get_api_config() -> OpenApiRouter {
     OpenApiRouter::new()
         .merge(get_ui_config())
@@ -240,14 +232,13 @@ pub fn get_api_config() -> OpenApiRouter {
         .merge(get_manifest_router())
         .merge(get_websocket_router())
         .nest("/api/v1", OpenApiRouter::new().merge(config()))
-
 }
 
 fn config() -> OpenApiRouter {
-    use crate::controllers::user_controller::__path_get_invite;
-    use crate::controllers::user_controller::__path_onboard_user;
     use crate::controllers::sys_info_controller::__path_get_public_config;
     use crate::controllers::sys_info_controller::__path_login;
+    use crate::controllers::user_controller::__path_get_invite;
+    use crate::controllers::user_controller::__path_onboard_user;
     OpenApiRouter::new()
         .routes(routes!(get_invite))
         .routes(routes!(onboard_user))
@@ -279,7 +270,6 @@ fn get_private_api() -> OpenApiRouter {
     }
 }
 
-
 pub fn run_migrations() {
     let mut conn = get_connection();
     let conn = conn.deref_mut();
@@ -301,7 +291,6 @@ pub fn run_migrations() {
         }
     }
 }
-
 
 pub fn handle_config_for_server_startup() -> Router {
     run_migrations();
@@ -379,10 +368,10 @@ pub fn handle_config_for_server_startup() -> Router {
 
     let ui_dir = format!("{}/ui/", sub_dir);
     let (layer, io) = SocketIoBuilder::new().build_layer();
-    io.ns("/", |socket: SocketRef|{
+    io.ns("/", |socket: SocketRef| {
         log::info!("Socket connected {}", socket.id);
     });
-    io.ns("/".to_owned() +MAIN_ROOM, ||{
+    io.ns("/".to_owned() + MAIN_ROOM, || {
         info!("Socket connected to main room");
     });
     SOCKET_IO_LAYER.get_or_init(|| io);
@@ -403,14 +392,12 @@ pub fn handle_config_for_server_startup() -> Router {
         .layer(layer)
 }
 
-
 #[cfg(test)]
 pub mod tests {
-    use axum_test::TestServer;
     use crate::commands::startup::handle_config_for_server_startup;
+    use axum_test::TestServer;
 
     pub fn handle_test_startup() -> TestServer {
-
         let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
         test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
         test_server

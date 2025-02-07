@@ -1,21 +1,21 @@
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
-use base64::engine::general_purpose;
-use base64::Engine;
-use std::collections::HashSet;
-use std::sync::LazyLock;
+use crate::service::environment_service::ReverseProxyConfig;
+use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::utils::reqwest_client::get_sync_client;
 use axum::extract::Request;
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
-use crate::service::environment_service::ReverseProxyConfig;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use base64::engine::general_purpose;
+use base64::Engine;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
-use crate::utils::reqwest_client::get_sync_client;
+use std::collections::HashSet;
+use std::sync::LazyLock;
 
 enum AuthType {
     Basic,
@@ -26,43 +26,40 @@ enum AuthType {
 
 pub struct AuthFilter;
 
-
 pub async fn handle_basic_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::Basic)?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
-static JWKS: LazyLock<Jwk> = LazyLock::new(||{
-   let sync_client = get_sync_client().build().unwrap();
-    
-    sync_client.get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri).send().unwrap().json::<Jwk>().unwrap()
+static JWKS: LazyLock<Jwk> = LazyLock::new(|| {
+    let sync_client = get_sync_client().build().unwrap();
+
+    sync_client
+        .get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri)
+        .send()
+        .unwrap()
+        .json::<Jwk>()
+        .unwrap()
 });
 
-pub async fn handle_oidc_auth(
-    mut request: Request,
-    next: Next) -> Result<Response, CustomError> {
+pub async fn handle_oidc_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::Oidc)?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
-pub async fn handle_proxy_auth(
-    mut request: Request,
-    next: Next) -> Result<Response, CustomError> {
+pub async fn handle_proxy_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::Proxy)?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
-pub async fn handle_no_auth(
-    mut request: Request,
-    next: Next) -> Result<Response, CustomError> {
+pub async fn handle_no_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
     let user = handle_auth_internal(&mut request, AuthType::None)?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
-
 
 fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
     match auth_type {
@@ -75,7 +72,6 @@ fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, 
         AuthType::None => Ok(User::create_standard_admin_user()),
     }
 }
-
 
 impl AuthFilter {
     pub fn extract_basic_auth(auth: &str) -> Result<(String, String), CustomError> {
@@ -124,8 +120,7 @@ impl AuthFilter {
         }
     }
 
-    fn handle_oidc_auth_internal(req: &mut Request) ->
-                                                                                     Result<User, CustomError> {
+    fn handle_oidc_auth_internal(req: &mut Request) -> Result<User, CustomError> {
         let token_res = match req.headers().get("Authorization") {
             Some(token) => match token.to_str() {
                 Ok(token) => Ok(token),
@@ -138,7 +133,14 @@ impl AuthFilter {
         let key = DecodingKey::from_jwk(&JWKS).unwrap();
         let mut validation = Validation::new(Algorithm::RS256);
         let mut aud_hashset = HashSet::new();
-        aud_hashset.insert(ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().client_id.to_string());
+        aud_hashset.insert(
+            ENVIRONMENT_SERVICE
+                .oidc_config
+                .clone()
+                .unwrap()
+                .client_id
+                .to_string(),
+        );
         validation.aud = Some(aud_hashset);
 
         let decoded_token = match decode::<Value>(&token, &key, &validation) {
@@ -228,14 +230,13 @@ impl AuthFilter {
 #[cfg(test)]
 mod test {
     use axum::extract::Request;
-    
-    
-    use serial_test::serial;
+
     use crate::auth_middleware::AuthFilter;
     use crate::commands::startup::handle_config_for_server_startup;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::service::environment_service::ReverseProxyConfig;
-    use crate::test_utils::test::{ create_random_user, ContainerCommands, POSTGRES_CHANNEL};
+    use crate::test_utils::test::{create_random_user, ContainerCommands, POSTGRES_CHANNEL};
+    use serial_test::serial;
 
     #[test]
     #[serial]
@@ -261,13 +262,19 @@ mod test {
     #[tokio::test]
     async fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
         let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: true,
         };
 
-        let req = Request::builder().header("Content-Type", "text/plain").body("".into()).unwrap();
+        let req = Request::builder()
+            .header("Content-Type", "text/plain")
+            .body("".into())
+            .unwrap();
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
 
         assert!(result.is_err());
@@ -277,15 +284,20 @@ mod test {
     #[tokio::test]
     async fn test_proxy_auth_with_header_in_request_auto_sign_up() {
         let _ = handle_test_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
 
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: false,
         };
-        let req = Request::builder().header("Content-Type", "text/plain")
+        let req = Request::builder()
+            .header("Content-Type", "text/plain")
             .header("X-Auth", "test")
-            .body("".into()).unwrap();
+            .body("".into())
+            .unwrap();
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
 
         assert!(result.is_err());
@@ -295,15 +307,20 @@ mod test {
     #[tokio::test]
     async fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
         let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: true,
         };
 
-        let req = Request::builder().header("Content-Type", "text/plain")
+        let req = Request::builder()
+            .header("Content-Type", "text/plain")
             .header("X-Auth", "test")
-            .body("".into()).unwrap();
+            .body("".into())
+            .unwrap();
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
 
         assert!(result.is_ok());
@@ -313,10 +330,15 @@ mod test {
     #[tokio::test]
     async fn test_basic_auth_no_header() {
         let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
 
-        let req = Request::builder().header("Content-Type", "text/plain")
-            .body("".into()).unwrap();
+        let req = Request::builder()
+            .header("Content-Type", "text/plain")
+            .body("".into())
+            .unwrap();
         let result = AuthFilter::handle_basic_auth_internal(&req);
 
         assert!(result.is_err());
@@ -326,11 +348,16 @@ mod test {
     #[tokio::test]
     async fn test_basic_auth_header_no_user() {
         let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
 
-        let req = Request::builder().header("Content-Type", "text/plain")
+        let req = Request::builder()
+            .header("Content-Type", "text/plain")
             .header("Authorization", "Bearer dGVzdDp0ZXN0")
-            .body("".into()).unwrap();
+            .body("".into())
+            .unwrap();
         let result = AuthFilter::handle_basic_auth_internal(&req);
 
         assert!(result.is_err());
@@ -341,12 +368,17 @@ mod test {
     async fn test_basic_auth_header_other_user() {
         // given
         let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
         create_random_user().insert_user().unwrap();
 
-        let req = Request::builder().header("Content-Type", "text/plain")
+        let req = Request::builder()
+            .header("Content-Type", "text/plain")
             .header("Authorization", "Bearer dGVzdDp0ZXN0")
-            .body("".into()).unwrap();
+            .body("".into())
+            .unwrap();
 
         // when
         let result = AuthFilter::handle_basic_auth_internal(&req);
@@ -360,12 +392,17 @@ mod test {
     async fn test_basic_auth_header_correct_user_wrong_password() {
         // given
         let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
         create_random_user().insert_user().unwrap();
 
-        let req = Request::builder().header("Content-Type", "text/plain")
+        let req = Request::builder()
+            .header("Content-Type", "text/plain")
             .header("Authorization", "Bearer dGVzdHVzZXI6dGVzdA==")
-            .body("".into()).unwrap();
+            .body("".into())
+            .unwrap();
         // when
         let result = AuthFilter::handle_basic_auth_internal(&req);
 

@@ -157,13 +157,13 @@ mod tests {
         assert_eq!(cookie.value(), session.session_id);
     }
 
+    use crate::adapters::api::models::device::device_response::DeviceResponse;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
+    use crate::utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use base64::engine::general_purpose;
     use base64::Engine;
-    use crate::adapters::api::models::device::device_response::DeviceResponse;
-    use crate::utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
 
     #[tokio::test]
     #[serial]
@@ -194,12 +194,15 @@ mod tests {
             .get(&format!("/api/2/devices/{}", user.username))
             .await;
         assert_eq!(response.status_code(), 200);
-        assert_eq!(response.json::<Vec<DeviceResponse>>().len(),0);
+        assert_eq!(response.json::<Vec<DeviceResponse>>().len(), 0);
 
         // create device
         let device_post = DevicePostTestDataBuilder::new().build();
-        let created_response = server.post(&format!("/api/2/devices/{}/{}", user.username,
-                                                    device_post.caption))
+        let created_response = server
+            .post(&format!(
+                "/api/2/devices/{}/{}",
+                user.username, device_post.caption
+            ))
             .json(&device_post)
             .await;
         assert_eq!(created_response.status_code(), 200);
@@ -209,6 +212,6 @@ mod tests {
             .get(&format!("/api/2/devices/{}", user.username))
             .await;
         assert_eq!(response.status_code(), 200);
-        assert_eq!(response.json::<Vec<DeviceResponse>>().len(),1);
+        assert_eq!(response.json::<Vec<DeviceResponse>>().len(), 1);
     }
 }

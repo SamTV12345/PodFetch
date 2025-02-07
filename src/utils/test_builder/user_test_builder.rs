@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod tests {
-    use fake::Fake;
+    use crate::models::user::User;
     use fake::faker::internet::raw::Username;
     use fake::locales::EN;
-    use crate::models::user::User;
+    use fake::Fake;
 
     pub struct UserTestDataBuilder {
         id: i32,
@@ -35,7 +35,7 @@ pub mod tests {
         }
 
         pub fn build(self) -> User {
-            User{
+            User {
                 id: self.id,
                 explicit_consent: self.explicit_consent,
                 username: self.username,

@@ -4,8 +4,8 @@ use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
 use crate::utils::time::get_current_timestamp;
 use axum::extract::{Path, Query};
-use axum::{Extension, Json};
 use axum::response::IntoResponse;
+use axum::{Extension, Json};
 use opml::{Outline, OPML};
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -83,13 +83,12 @@ pub async fn get_subscriptions_all(
     let res =
         SubscriptionChangesToClient::get_user_subscriptions(&flag.username, query.since).await;
 
-
     match res {
         Ok(res) => {
             if username.1 == "opml" {
                 let mut opml = OPML::default();
-                res.add.iter().for_each(|s|{
-                    opml.body.outlines.push(Outline{
+                res.add.iter().for_each(|s| {
+                    opml.body.outlines.push(Outline {
                         text: s.podcast.to_string(),
                         r#type: Some("rss".to_string()),
                         is_comment: None,
@@ -107,13 +106,12 @@ pub async fn get_subscriptions_all(
                     });
                 });
 
-
                 Ok(opml.to_string().unwrap().into_response())
             } else {
                 let tes: SubscriptionChangesToClient = res.into();
                 Ok(Json(tes).into_response())
             }
-        },
+        }
         Err(_) => Err(CustomErrorInner::Forbidden.into()),
     }
 }
@@ -140,12 +138,12 @@ pub async fn upload_subscription_changes(
     }
 
     SubscriptionChangesToClient::update_subscriptions(deviceid.0, &username, upload_request)
-            .await
-            .unwrap();
+        .await
+        .unwrap();
 
     Ok(Json(SubscriptionPostResponse {
-            update_urls: vec![],
-            timestamp: get_current_timestamp(),
+        update_urls: vec![],
+        timestamp: get_current_timestamp(),
     }))
 }
 

@@ -1,7 +1,7 @@
+use crate::models::podcasts::Podcast;
 use axum::extract::Path;
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::OptionalQuery;
-use crate::models::podcasts::Podcast;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
@@ -59,12 +59,9 @@ pub async fn get_rss_feed(
     }
 
     let downloaded_episodes = match query {
-        Some(q) => match q.top
-        {
-            Some(q)=>{
-                PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(q)?
-            }
-            None=>PodcastEpisodeService::find_all_downloaded_podcast_episodes()?
+        Some(q) => match q.top {
+            Some(q) => PodcastEpisodeService::find_all_downloaded_podcast_episodes_with_top_k(q)?,
+            None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
         },
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };

@@ -10,18 +10,18 @@ use serde_json::from_str;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
+use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
-use std::thread;
-use axum::{Extension, Json};
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
+use axum::{Extension, Json};
+use std::thread;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use crate::controllers::server::ChatServerHandle;
-use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 pub struct OptionalId {
@@ -65,7 +65,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
                 (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
-                podcast_history_item: podcast_inner.1.map(|e|e.convert_to_episode_dto()),
+                podcast_history_item: podcast_inner.1.map(|e| e.convert_to_episode_dto()),
             }
         })
         .collect::<Vec<PodcastEpisodeWithHistory>>();
@@ -201,7 +201,10 @@ pub async fn download_podcast_episodes_of_podcast(
             PodcastEpisodeService::perform_download(&podcast_episode.clone(), &podcast_found)
                 .unwrap();
             PodcastEpisode::update_deleted(&podcast_episode.clone().episode_id, false).unwrap();
-            ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_episode, &podcast_found);
+            ChatServerHandle::broadcast_podcast_episode_offline_available(
+                &podcast_episode,
+                &podcast_found,
+            );
         }
     });
 
@@ -227,11 +230,11 @@ pub async fn delete_podcast_episode_locally(
         return Err(CustomErrorInner::Forbidden.into());
     }
 
-    let delted_podcast_episode =
-        tokio::task::spawn_blocking(move || PodcastEpisodeService::delete_podcast_episode_locally
-            (&id))
-            .await
-            .unwrap()?;
+    let delted_podcast_episode = tokio::task::spawn_blocking(move || {
+        PodcastEpisodeService::delete_podcast_episode_locally(&id)
+    })
+    .await
+    .unwrap()?;
 
     ChatServerHandle::broadcast_podcast_episode_deleted_locally(&delted_podcast_episode);
 

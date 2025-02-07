@@ -21,10 +21,10 @@ pub fn opt_or_empty_string<T: ToString>(opt: Option<T>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::utils::time::{
         get_current_timestamp, get_current_timestamp_str, opt_or_empty_string,
     };
+    use serial_test::serial;
 
     #[test]
     #[serial]
