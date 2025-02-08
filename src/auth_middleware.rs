@@ -9,13 +9,14 @@ use axum::middleware::Next;
 use axum::response::Response;
 use base64::engine::general_purpose;
 use base64::Engine;
-use jsonwebtoken::jwk::{Jwk, KeyAlgorithm};
+use jsonwebtoken::jwk::{Jwk, JwkSet, KeyAlgorithm};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
 use std::collections::HashSet;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
+use crate::utils::http_client::get_async_sync_client;
 
 enum AuthType {
     Basic,
@@ -27,46 +28,49 @@ enum AuthType {
 pub struct AuthFilter;
 
 pub async fn handle_basic_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::Basic)?;
+    let user = handle_auth_internal(&mut request, AuthType::Basic).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
-static JWKS: LazyLock<Jwk> = LazyLock::new(|| {
-    let sync_client = get_sync_client().build().unwrap();
+static JWKS: OnceLock<JwkSet> = OnceLock::new();
 
-    sync_client
+pub async fn get_jwks() -> JwkSet {
+    let client = get_async_sync_client().build().unwrap();
+    client
         .get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri)
         .send()
+        .await
         .unwrap()
-        .json::<Jwk>()
+        .json::<JwkSet>()
+        .await
         .unwrap()
-});
+}
 
 pub async fn handle_oidc_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::Oidc)?;
+    let user = handle_auth_internal(&mut request, AuthType::Oidc).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
 pub async fn handle_proxy_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::Proxy)?;
+    let user = handle_auth_internal(&mut request, AuthType::Proxy).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
 pub async fn handle_no_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::None)?;
+    let user = handle_auth_internal(&mut request, AuthType::None).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
 
 
-fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
+async fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
     match auth_type {
         AuthType::Basic => AuthFilter::handle_basic_auth_internal(req),
-        AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req),
+        AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req).await,
         AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
             req,
             &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
@@ -142,7 +146,7 @@ impl AuthFilter {
         }
     }
 
-    fn handle_oidc_auth_internal(req: &mut Request) -> Result<User, CustomError> {
+    async fn handle_oidc_auth_internal(req: &mut Request) -> Result<User, CustomError> {
         let token_res = match req.headers().get("Authorization") {
             Some(token) => match token.to_str() {
                 Ok(token) => Ok(token),
@@ -152,8 +156,29 @@ impl AuthFilter {
         }?;
 
         let token = token_res.replace("Bearer ", "");
-        let key = DecodingKey::from_jwk(&JWKS).unwrap();
-        let alg = JWKS.common.key_algorithm.unwrap();
+
+        let jwk = match JWKS.get() {
+            Some(jwks)=>{
+                Ok::<&JwkSet, String>(jwks)
+            },
+            None=>{
+                let jwks = get_jwks().await;
+                JWKS.get_or_init(|| jwks);
+                Ok::<&JwkSet, String>(JWKS.get().unwrap())
+            }
+        }.unwrap();
+
+        let first_jwk = match jwk.keys.first() {
+            Some(jwk) => Ok(jwk),
+            None => {
+                log::error!("No JWK found for {}", ENVIRONMENT_SERVICE.oidc_config.clone().unwrap()
+                    .jwks_uri);
+                Err(CustomError::from(CustomErrorInner::Forbidden))
+            },
+        }?;
+
+        let key = DecodingKey::from_jwk(&first_jwk).unwrap();
+        let alg = first_jwk.common.key_algorithm.unwrap();
         let mut validation = Validation::new(from_key_alg_into_alg(alg));
         let mut aud_hashset = HashSet::new();
         aud_hashset.insert(
@@ -168,7 +193,10 @@ impl AuthFilter {
 
         let decoded_token = match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => Ok(decoded),
-            Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden)),
+            Err(e) => {
+                log::error!("Error is {:?}", e);
+                Err(CustomError::from(CustomErrorInner::Forbidden))
+            },
         }?;
         let username = decoded_token
             .claims
