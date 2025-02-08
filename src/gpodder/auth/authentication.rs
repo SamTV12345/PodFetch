@@ -159,7 +159,6 @@ mod tests {
 
     use crate::adapters::api::models::device::device_response::DeviceResponse;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
     use crate::utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use crate::utils::auth::tests::create_auth_gpodder;
@@ -167,17 +166,14 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_login() {
-        let mut server = handle_test_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let mut server = handle_test_startup().await;
         let mut user = UserTestDataBuilder::new().build();
         user.insert_user().expect("TODO: panic message");
 
         create_auth_gpodder(&mut server, &user).await;
 
         let response = server
+            .test_server
             .get(&format!("/api/2/devices/{}", user.username))
             .await;
         assert_eq!(response.status_code(), 200);
@@ -186,6 +182,7 @@ mod tests {
         // create device
         let device_post = DevicePostTestDataBuilder::new().build();
         let created_response = server
+            .test_server
             .post(&format!(
                 "/api/2/devices/{}/{}",
                 user.username, device_post.caption
@@ -196,6 +193,7 @@ mod tests {
 
         // get devices
         let response = server
+            .test_server
             .get(&format!("/api/2/devices/{}", user.username))
             .await;
         assert_eq!(response.status_code(), 200);

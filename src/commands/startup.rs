@@ -394,12 +394,30 @@ pub fn handle_config_for_server_startup() -> Router {
 
 #[cfg(test)]
 pub mod tests {
+    use std::sync::{MutexGuard};
     use crate::commands::startup::handle_config_for_server_startup;
     use axum_test::TestServer;
+    use testcontainers::{ContainerAsync};
+    use testcontainers::runners::AsyncRunner;
+    use testcontainers_modules::postgres::Postgres;
+    use crate::test_utils::test::setup_container;
 
-    pub fn handle_test_startup() -> TestServer {
+    pub struct TestServerWrapper<'a> {
+        pub test_server: TestServer,
+        pub mutex:  MutexGuard<'a,()>,
+        pub container: ContainerAsync<Postgres>
+    }
+
+    pub static GLOBAL_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
+        let container = setup_container().start().await.unwrap();
         let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
         test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
-        test_server
+        TestServerWrapper {
+            test_server,
+            mutex: GLOBAL_MUTEX.lock().unwrap(),
+            container
+        }
     }
 }
