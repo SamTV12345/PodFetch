@@ -9,7 +9,7 @@ use axum::middleware::Next;
 use axum::response::Response;
 use base64::engine::general_purpose;
 use base64::Engine;
-use jsonwebtoken::jwk::Jwk;
+use jsonwebtoken::jwk::{Jwk, KeyAlgorithm};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
@@ -61,6 +61,8 @@ pub async fn handle_no_auth(mut request: Request, next: Next) -> Result<Response
     Ok(next.run(request).await)
 }
 
+
+
 fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
     match auth_type {
         AuthType::Basic => AuthFilter::handle_basic_auth_internal(req),
@@ -70,6 +72,26 @@ fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, 
             &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
         ),
         AuthType::None => Ok(User::create_standard_admin_user()),
+    }
+}
+
+fn from_key_alg_into_alg(value: KeyAlgorithm) -> Algorithm {
+    match value {
+        KeyAlgorithm::RS256 => Algorithm::RS256,
+        KeyAlgorithm::RS384 => Algorithm::RS384,
+        KeyAlgorithm::RS512 => Algorithm::RS512,
+        KeyAlgorithm::ES256 => Algorithm::ES256,
+        KeyAlgorithm::ES384 => Algorithm::ES384,
+        KeyAlgorithm::PS256 => Algorithm::PS256,
+        KeyAlgorithm::PS384 => Algorithm::PS384,
+        KeyAlgorithm::PS512 => Algorithm::PS512,
+        KeyAlgorithm::HS256 => Algorithm::HS256,
+        KeyAlgorithm::HS384 => Algorithm::HS384,
+        KeyAlgorithm::HS512 => Algorithm::HS512,
+        KeyAlgorithm::EdDSA => Algorithm::EdDSA,
+        KeyAlgorithm::RSA1_5 => Algorithm::ES256,
+        KeyAlgorithm::RSA_OAEP => Algorithm::RS256,
+        KeyAlgorithm::RSA_OAEP_256 => Algorithm::RS256
     }
 }
 
@@ -131,7 +153,8 @@ impl AuthFilter {
 
         let token = token_res.replace("Bearer ", "");
         let key = DecodingKey::from_jwk(&JWKS).unwrap();
-        let mut validation = Validation::new(Algorithm::RS256);
+        let alg = JWKS.common.key_algorithm.unwrap();
+        let mut validation = Validation::new(from_key_alg_into_alg(alg));
         let mut aud_hashset = HashSet::new();
         aud_hashset.insert(
             ENVIRONMENT_SERVICE
