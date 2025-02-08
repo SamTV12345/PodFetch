@@ -2,20 +2,19 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use crate::service::environment_service::ReverseProxyConfig;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::reqwest_client::get_sync_client;
 use axum::extract::Request;
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
 use base64::engine::general_purpose;
 use base64::Engine;
-use jsonwebtoken::jwk::{Jwk, JwkSet, KeyAlgorithm};
+use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use log::info;
 use serde_json::Value;
 use sha256::digest;
 use std::collections::HashSet;
-use std::sync::{LazyLock, OnceLock};
+use std::sync::OnceLock;
 use crate::utils::http_client::get_async_sync_client;
 
 enum AuthType {
@@ -177,7 +176,7 @@ impl AuthFilter {
             },
         }?;
 
-        let key = DecodingKey::from_jwk(&first_jwk).unwrap();
+        let key = DecodingKey::from_jwk(first_jwk).unwrap();
         let alg = first_jwk.common.key_algorithm.unwrap();
         let mut validation = Validation::new(from_key_alg_into_alg(alg));
         let mut aud_hashset = HashSet::new();
