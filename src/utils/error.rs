@@ -1,3 +1,5 @@
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use log::error;
 use s3::error::S3Error;
 use std::backtrace::Backtrace;
@@ -5,8 +7,6 @@ use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
 pub struct CustomError {
@@ -21,7 +21,6 @@ impl Display for CustomError {
         writeln!(f, "{:}", self.backtrace)
     }
 }
-
 
 impl From<CustomError> for Infallible {
     fn from(val: CustomError) -> Self {
@@ -134,8 +133,7 @@ impl Error for CustomError {
     }
 }
 
-
-impl IntoResponse  for CustomError {
+impl IntoResponse for CustomError {
     fn into_response(self) -> Response {
         let status = match &self.inner {
             CustomErrorInner::NotFound => StatusCode::NOT_FOUND,
@@ -151,17 +149,16 @@ impl IntoResponse  for CustomError {
     }
 }
 
-
 impl CustomError {
     fn error_response(&self) -> ErrorResponse {
         let status_code = match &self.inner {
-            CustomErrorInner::NotFound => {404}
-            CustomErrorInner::Forbidden => {403}
-            CustomErrorInner::UnAuthorized(_) => {401}
-            CustomErrorInner::BadRequest(_) => {404}
-            CustomErrorInner::Conflict(_) => {409}
-            CustomErrorInner::Unknown => {500}
-            CustomErrorInner::DatabaseError(_) => {500}
+            CustomErrorInner::NotFound => 404,
+            CustomErrorInner::Forbidden => 403,
+            CustomErrorInner::UnAuthorized(_) => 401,
+            CustomErrorInner::BadRequest(_) => 404,
+            CustomErrorInner::Conflict(_) => 409,
+            CustomErrorInner::Unknown => 500,
+            CustomErrorInner::DatabaseError(_) => 500,
         };
         ErrorResponse {
             code: status_code as u16,
@@ -274,8 +271,8 @@ mod tests {
     use crate::utils::error::{map_db_error, map_io_error, CustomErrorInner};
 
     use diesel::result::Error;
-    use std::io::ErrorKind;
     use serial_test::serial;
+    use std::io::ErrorKind;
 
     #[test]
     #[serial]

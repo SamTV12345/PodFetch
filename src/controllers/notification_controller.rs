@@ -1,8 +1,8 @@
-use axum::Json;
-use reqwest::StatusCode;
 use crate::models::notification::Notification;
 use crate::service::notification_service::NotificationService;
 use crate::utils::error::CustomError;
+use axum::Json;
+use reqwest::StatusCode;
 
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -45,19 +45,21 @@ pub fn get_notification_router() -> OpenApiRouter {
         .routes(routes!(dismiss_notifications))
 }
 
-
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::models::notification::Notification;
     use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
     use crate::utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
+    use serial_test::serial;
 
     #[tokio::test]
     #[serial]
     async fn test_get_unread_notifications() {
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
         // given
         let test_server = handle_test_startup();
 
@@ -73,7 +75,10 @@ mod tests {
     #[serial]
     async fn test_get_dismiss_notifications() {
         // given
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
         let test_server = handle_test_startup();
         let notification = NotificationTestDataBuilder::new().build();
         Notification::insert_notification(notification).unwrap();

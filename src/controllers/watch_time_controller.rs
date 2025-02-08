@@ -1,11 +1,13 @@
-use axum::{Extension, Json};
+use crate::models::episode::{Episode, EpisodeDto};
+use crate::models::misc_models::{
+    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
+};
+use crate::models::user::User;
 use axum::extract::Path;
+use axum::{Extension, Json};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::misc_models::{PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel};
-use crate::models::user::User;
 
 use crate::utils::error::{CustomError, CustomErrorInner};
 
@@ -33,10 +35,9 @@ responses(
 (status = 200, description = "Gets the last watched podcast episodes.", body= Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>)),
 tag="watchtime"
 )]
-pub async fn get_last_watched(Extension(requester): Extension<User>) ->
-                                                                     Result<Json<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>,
-    CustomError> {
-
+pub async fn get_last_watched(
+    Extension(requester): Extension<User>,
+) -> Result<Json<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>, CustomError> {
     let mut episodes = Episode::get_last_watched_episodes(&requester)?;
     episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
     Ok(Json(episodes))

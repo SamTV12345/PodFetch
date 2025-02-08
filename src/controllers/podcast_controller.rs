@@ -9,18 +9,18 @@ use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string};
 use async_recursion::async_recursion;
+use axum::body::Body;
+use axum::extract::{Path, Query};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::{debug_handler, Extension, Json};
+use axum_extra::extract::OptionalQuery;
 use opml::{Outline, OPML};
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use rss::Channel;
 use serde_json::{from_str, Value};
 use std::thread;
-use axum::{debug_handler, Extension, Json};
-use axum::body::Body;
-use axum::extract::{Path, Query};
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum_extra::extract::OptionalQuery;
 use tokio::task::spawn_blocking;
 
 use crate::models::filter::Filter;
@@ -61,12 +61,13 @@ responses(
 (status = 200, description = "Gets the user specific filter.",body= Option<Filter>)),
 tag="podcasts"
 )]
-pub async fn get_filter(Extension(requester): Extension<User>) -> Result<Json<Filter>,
-    CustomError> {
+pub async fn get_filter(
+    Extension(requester): Extension<User>,
+) -> Result<Json<Filter>, CustomError> {
     let filter = Filter::get_filter_by_username(&requester.username).await?;
     match filter {
-        Some(f)=> Ok(Json(f)),
-        None=> Err(CustomErrorInner::NotFound.into())
+        Some(f) => Ok(Json(f)),
+        None => Err(CustomErrorInner::NotFound.into()),
     }
 }
 
@@ -83,9 +84,11 @@ pub async fn search_podcasts(
     Query(query): Query<PodcastSearchModelUtoipa>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let _order = query.order.map(|o|o.into()).unwrap_or(OrderCriteria::Asc);
-    let _latest_pub = query.order_option.map(OrderOption::from_string).unwrap_or
-    (OrderOption::Title);
+    let _order = query.order.map(|o| o.into()).unwrap_or(OrderCriteria::Asc);
+    let _latest_pub = query
+        .order_option
+        .map(OrderOption::from_string)
+        .unwrap_or(OrderOption::Title);
     let tag = query.tag;
 
     let opt_filter = Filter::get_filter_by_username(&requester.username).await?;
@@ -165,7 +168,9 @@ responses(
 ),
 tag="podcasts"
 )]
-pub async fn find_all_podcasts(requester: Extension<User>) -> Result<Json<Vec<PodcastDto>>, CustomError> {
+pub async fn find_all_podcasts(
+    requester: Extension<User>,
+) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let username = &requester.username;
 
     let podcasts = PodcastService::get_podcasts(username)?;
@@ -202,12 +207,14 @@ pub async fn find_podcast(
         }
         Ok(Podindex) => {
             if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-                return Err(CustomErrorInner::BadRequest("Podindex is not configured".to_string())
-                    .into());
+                return Err(
+                    CustomErrorInner::BadRequest("Podindex is not configured".to_string()).into(),
+                );
             }
 
-            Ok(Json(PodcastSearchReturn::Podindex(PodcastService::find_podcast_on_podindex
-                (&podcast).await?)))
+            Ok(Json(PodcastSearchReturn::Podindex(
+                PodcastService::find_podcast_on_podindex(&podcast).await?,
+            )))
         }
         Err(_) => Err(CustomErrorInner::BadRequest("Invalid search type".to_string()).into()),
     }
@@ -370,8 +377,7 @@ pub async fn add_podcast_from_podindex(
     Ok(StatusCode::OK)
 }
 
-fn start_download_podindex(id: i32) -> Result<Podcast,
-    CustomError> {
+fn start_download_podindex(id: i32) -> Result<Podcast, CustomError> {
     let rt = Runtime::new().unwrap();
 
     rt.block_on(async { PodcastService::insert_podcast_from_podindex(id).await })
@@ -384,10 +390,12 @@ params(("podcast", description="The podcast episode query parameter.")),
 responses(
 (status = 200, description = "Queries for a podcast episode by a query string", body = Vec<PodcastEpisodeDto>)),
 tag="podcasts",)]
-pub async fn query_for_podcast(podcast: Path<String>) -> Result<Json<Vec<PodcastEpisodeDto>>,
-    CustomError> {
-    let res = PodcastEpisodeService::query_for_podcast(&podcast)?.into_iter().map(|p|(p, None::<User>,
-                                                                                  None::<FavoritePodcastEpisode>).into())
+pub async fn query_for_podcast(
+    podcast: Path<String>,
+) -> Result<Json<Vec<PodcastEpisodeDto>>, CustomError> {
+    let res = PodcastEpisodeService::query_for_podcast(&podcast)?
+        .into_iter()
+        .map(|p| (p, None::<User>, None::<FavoritePodcastEpisode>).into())
         .collect::<Vec<PodcastEpisodeDto>>();
 
     Ok(Json(res))
@@ -568,22 +576,22 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
         }
     }
 }
-use crate::models::episode::Episode;
-use crate::models::tag::Tag;
-use utoipa::{IntoParams, ToSchema};
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
+use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
+use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
+use utoipa::{IntoParams, ToSchema};
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::http_client::get_http_client;
@@ -613,8 +621,12 @@ pub async fn delete_podcast(
 
     let podcast = Podcast::get_podcast(id)?;
     if data.delete_files {
-        spawn_blocking(move ||FileService::delete_podcast_files(&podcast)).await.expect("Error deleting \
-        files");
+        spawn_blocking(move || FileService::delete_podcast_files(&podcast))
+            .await
+            .expect(
+                "Error deleting \
+        files",
+            );
     }
     Episode::delete_watchtime(id)?;
     PodcastEpisode::delete_episodes_of_podcast(id)?;
@@ -640,7 +652,7 @@ tag="podcasts"
 pub(crate) async fn proxy_podcast(
     Query(params): Query<Params>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
-    req: axum::extract::Request
+    req: axum::extract::Request,
 ) -> Result<Body, CustomError> {
     let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
     let headers = req.headers_mut();
@@ -672,9 +684,10 @@ pub(crate) async fn proxy_podcast(
 
     add_basic_auth_headers_conditionally(episode.url.clone(), headers);
 
-    let reqwest_to_make = reqwest::Request::try_from(req).expect("http::Uri to url::Url conversion \
-    failed");
-
+    let reqwest_to_make = reqwest::Request::try_from(req).expect(
+        "http::Uri to url::Url conversion \
+    failed",
+    );
 
     let client = reqwest::Client::new();
     let resp = client.execute(reqwest_to_make).await.unwrap();
@@ -721,12 +734,8 @@ pub async fn get_podcast_settings(
     let settings = PodcastSetting::get_settings(id)?;
 
     match settings {
-        None => {
-            Err(CustomErrorInner::NotFound.into())
-        }
-        Some(s) => {
-            Ok(Json(s))
-        }
+        None => Err(CustomErrorInner::NotFound.into()),
+        Some(s) => Ok(Json(s)),
     }
 }
 
@@ -772,7 +781,7 @@ pub async fn retrieve_podcast_sample_format(
 
 pub fn get_podcast_router() -> OpenApiRouter {
     OpenApiRouter::new()
-                .routes(routes!(get_filter))
+        .routes(routes!(get_filter))
         .routes(routes!(search_podcasts))
         .routes(routes!(find_podcast_by_id))
         .routes(routes!(find_all_podcasts))
@@ -794,22 +803,27 @@ pub fn get_podcast_router() -> OpenApiRouter {
         .routes(routes!(query_for_podcast))
 }
 
-
 #[cfg(test)]
 pub mod tests {
-    use serial_test::serial;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
     use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
+    use serial_test::serial;
 
     #[tokio::test]
     #[serial]
     async fn test_retrieve_podcast_sample_format() {
         let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
-        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
-            content: "test".to_string(),
-        }).await;
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
+        let resp = ts_server
+            .post("/api/v1/podcasts/formatting")
+            .json(&EpisodeFormatDto {
+                content: "test".to_string(),
+            })
+            .await;
         assert_eq!(resp.status_code(), 200);
         assert_eq!(resp.json::<String>(), "test");
     }
@@ -818,10 +832,16 @@ pub mod tests {
     #[serial]
     async fn test_retrieve_podcast_sample_format_with_podcast_title() {
         let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
-        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
-            content: "{podcastTitle}".to_string(),
-        }).await;
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
+        let resp = ts_server
+            .post("/api/v1/podcasts/formatting")
+            .json(&EpisodeFormatDto {
+                content: "{podcastTitle}".to_string(),
+            })
+            .await;
         assert_eq!(resp.status_code(), 200);
         assert_eq!(resp.json::<String>(), "The homelab podcast");
     }
@@ -830,10 +850,16 @@ pub mod tests {
     #[serial]
     async fn test_retrieve_podcast_sample_format_with_podcast_description() {
         let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
-        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
-            content: "{podcastDescription}".to_string(),
-        }).await;
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
+        let resp = ts_server
+            .post("/api/v1/podcasts/formatting")
+            .json(&EpisodeFormatDto {
+                content: "{podcastDescription}".to_string(),
+            })
+            .await;
         assert_eq!(resp.status_code(), 200);
         assert_eq!(resp.json::<String>(), "A podcast about homelabing");
     }
@@ -842,11 +868,20 @@ pub mod tests {
     #[serial]
     async fn test_retrieve_podcast_sample_format_with_podcast_title_date() {
         let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL.tx.send(ContainerCommands::Cleanup).unwrap();
-        let resp = ts_server.post("/api/v1/podcasts/formatting").json(&EpisodeFormatDto{
-            content: "{podcastDescription}-{date}".to_string(),
-        }).await;
+        POSTGRES_CHANNEL
+            .tx
+            .send(ContainerCommands::Cleanup)
+            .unwrap();
+        let resp = ts_server
+            .post("/api/v1/podcasts/formatting")
+            .json(&EpisodeFormatDto {
+                content: "{podcastDescription}-{date}".to_string(),
+            })
+            .await;
         assert_eq!(resp.status_code(), 200);
-        assert_eq!(resp.json::<String>(), "A podcast about homelabing-2021-01-01");
+        assert_eq!(
+            resp.json::<String>(),
+            "A podcast about homelabing-2021-01-01"
+        );
     }
 }

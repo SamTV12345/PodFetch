@@ -1,10 +1,10 @@
-use axum::{Extension, Json};
-use axum::extract::Path;
-use reqwest::StatusCode;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::models::playlist::Playlist;
 use crate::models::user::User;
 use crate::utils::error::CustomError;
+use axum::extract::Path;
+use axum::{Extension, Json};
+use reqwest::StatusCode;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -38,7 +38,6 @@ pub async fn add_playlist(
     Extension(requester): Extension<User>,
     Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-
     let res = Playlist::create_new_playlist(playlist, requester)?;
 
     Ok(Json(res))
@@ -56,7 +55,6 @@ pub async fn update_playlist(
     Path(playlist_id): Path<String>,
     Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-
     let res = Playlist::update_playlist(playlist, playlist_id.clone(), requester)?;
 
     Ok(Json(res))
@@ -69,12 +67,16 @@ responses(
 (status = 200, description = "Gets all playlists of the user", body=Vec<PlaylistDto>)),
 tag="playlist"
 )]
-pub async fn get_all_playlists(Extension(requester): Extension<User>) ->
-                                                                      Result<Json<Vec<PlaylistDto>>,
-    CustomError> {
+pub async fn get_all_playlists(
+    Extension(requester): Extension<User>,
+) -> Result<Json<Vec<PlaylistDto>>, CustomError> {
     Playlist::get_playlists(requester.id)
-        .map(|p|p.iter().map(|p|Playlist::get_playlist_dto(p.id.clone(), p.clone(), requester
-            .clone())).collect::<Result<Vec<PlaylistDto>, CustomError>>().unwrap())
+        .map(|p| {
+            p.iter()
+                .map(|p| Playlist::get_playlist_dto(p.id.clone(), p.clone(), requester.clone()))
+                .collect::<Result<Vec<PlaylistDto>, CustomError>>()
+                .unwrap()
+        })
         .map(Json)
 }
 
@@ -89,10 +91,8 @@ pub async fn get_playlist_by_id(
     Extension(requester): Extension<User>,
     Path(playlist_id): Path<String>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    let playlist =
-        Playlist::get_playlist_by_user_and_id(playlist_id.clone(), requester.clone())?;
-    let playlist =
-        Playlist::get_playlist_dto(playlist_id.clone(), playlist, requester.clone())?;
+    let playlist = Playlist::get_playlist_by_user_and_id(playlist_id.clone(), requester.clone())?;
+    let playlist = Playlist::get_playlist_dto(playlist_id.clone(), playlist, requester.clone())?;
     Ok(Json(playlist))
 }
 

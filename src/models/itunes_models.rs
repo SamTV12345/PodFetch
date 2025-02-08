@@ -11,7 +11,7 @@ pub struct ItunesWrapper {
 #[serde(rename_all = "camelCase")]
 pub struct PodindexResponse {
     pub status: bool,
-    pub feeds: Vec<Feed>
+    pub feeds: Vec<Feed>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
@@ -39,9 +39,8 @@ pub struct Feed {
     last_crawl_time: Option<i32>,
     last_parse_time: Option<i32>,
     last_good_http_status_time: Option<i32>,
-    explicit: Option<bool>
+    explicit: Option<bool>,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]

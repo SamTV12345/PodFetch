@@ -6,6 +6,7 @@ use crate::constants::inner_constants::{
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use crate::DBType as DbConnection;
+use axum::extract::Request;
 use chrono::NaiveDateTime;
 use diesel::associations::HasTable;
 use diesel::prelude::{Insertable, Queryable};
@@ -13,12 +14,9 @@ use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use std::io::Error;
-use axum::extract::Request;
 use utoipa::ToSchema;
 
-#[derive(
-    Serialize, Deserialize, Queryable, Insertable, Clone, PartialEq, Debug, AsChangeset,
-)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, PartialEq, Debug, AsChangeset)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
@@ -193,9 +191,7 @@ impl User {
      * Returns the username from the request header if the BASIC_AUTH environment variable is set to true
      * Otherwise returns None
      */
-    pub fn get_username_from_req_header(
-        req: &Request,
-    ) -> Result<Option<String>, Error> {
+    pub fn get_username_from_req_header(req: &Request) -> Result<Option<String>, Error> {
         if is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH) {
             let auth_header = req.headers().get(USERNAME);
             if auth_header.is_none() {

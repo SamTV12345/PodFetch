@@ -112,17 +112,27 @@ impl DownloadService {
                 .build(conn)?,
         };
 
-        if !FileHandleWrapper::path_exists(&podcast.directory_name,FileRequest::Directory,
-                                           &ENVIRONMENT_SERVICE.default_file_handler) {
-            FileHandleWrapper::create_dir(&podcast.directory_name, &ENVIRONMENT_SERVICE.default_file_handler)?;
+        if !FileHandleWrapper::path_exists(
+            &podcast.directory_name,
+            FileRequest::Directory,
+            &ENVIRONMENT_SERVICE.default_file_handler,
+        ) {
+            FileHandleWrapper::create_dir(
+                &podcast.directory_name,
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
         }
 
-
         if let Some(p) = PathBuf::from(&paths.filename).parent() {
-            if !FileHandleWrapper::path_exists(p.to_str().unwrap(), FileRequest::Directory,
-                                               &ENVIRONMENT_SERVICE.default_file_handler) {
-                FileHandleWrapper::create_dir(p.to_str().unwrap(), &ENVIRONMENT_SERVICE
-                    .default_file_handler)?;
+            if !FileHandleWrapper::path_exists(
+                p.to_str().unwrap(),
+                FileRequest::Directory,
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            ) {
+                FileHandleWrapper::create_dir(
+                    p.to_str().unwrap(),
+                    &ENVIRONMENT_SERVICE.default_file_handler,
+                )?;
             }
         }
 

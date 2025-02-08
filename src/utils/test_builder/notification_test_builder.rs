@@ -1,15 +1,15 @@
 #[cfg(test)]
 pub mod tests {
-    use derive_builder::Builder;
-    use fake::{Fake, Faker};
-    use fake::faker::chrono::en::Time;
     use crate::models::notification::Notification;
+    use derive_builder::Builder;
+    use fake::faker::chrono::en::Time;
+    use fake::{Fake, Faker};
 
     #[derive(Builder)]
     pub struct NotificationTestDataBuilder {
         pub message: String,
         pub status: String,
-        pub created_at: String
+        pub created_at: String,
     }
 
     impl Default for NotificationTestDataBuilder {
@@ -23,7 +23,7 @@ pub mod tests {
             NotificationTestDataBuilder {
                 status: "unread".to_string(),
                 message: Faker.fake::<String>(),
-                created_at: Time().fake::<String>()
+                created_at: Time().fake::<String>(),
             }
         }
         pub fn random() -> NotificationTestDataBuilder {

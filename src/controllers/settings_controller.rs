@@ -3,13 +3,13 @@ use crate::models::settings::Setting;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::settings_service::SettingsService;
-use chrono::Local;
-use std::fmt::Display;
-use std::str::FromStr;
-use axum::{Extension, Json};
 use axum::extract::Path;
 use axum::http::Response;
+use axum::{Extension, Json};
+use chrono::Local;
 use reqwest::StatusCode;
+use std::fmt::Display;
+use std::str::FromStr;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[utoipa::path(
@@ -19,8 +19,9 @@ responses(
 (status = 200, description = "Gets the current settings", body=Setting)),
 tag="podcast_episodes"
 )]
-pub async fn get_settings(Extension(requester): Extension<User>) -> Result<Json<Setting>,
-    CustomError> {
+pub async fn get_settings(
+    Extension(requester): Extension<User>,
+) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -41,7 +42,7 @@ tag="settings"
 )]
 pub async fn update_settings(
     Extension(requester): Extension<User>,
-    Json(settings): Json<Setting>
+    Json(settings): Json<Setting>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
@@ -103,10 +104,10 @@ pub async fn get_opml(
     Path(type_of): Path<String>,
 ) -> Result<Response<String>, CustomError> {
     if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
-        return Err(CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into
-        ());
+        return Err(
+            CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into(),
+        );
     }
-
 
     let podcasts_found = Podcast::get_all_podcasts()?;
 
@@ -158,11 +159,7 @@ fn add_body() -> XMLElement {
     XMLElement::new("body")
 }
 
-fn add_podcasts(
-    podcasts_found: Vec<Podcast>,
-    type_of: Mode,
-    requester: &User,
-) -> XMLElement {
+fn add_podcasts(podcasts_found: Vec<Podcast>, type_of: Mode, requester: &User) -> XMLElement {
     let mut body = add_body();
     for podcast in podcasts_found {
         let mut outline = XMLElement::new("outline");
@@ -283,7 +280,6 @@ impl FromStr for ReplacementStrategy {
         }
     }
 }
-
 
 pub fn get_settings_router() -> OpenApiRouter {
     OpenApiRouter::new()

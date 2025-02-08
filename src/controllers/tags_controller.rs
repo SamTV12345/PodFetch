@@ -1,12 +1,12 @@
-use axum::{Extension, Json};
-use axum::extract::Path;
-use axum::http::StatusCode;
 use crate::models::color::Color;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use axum::extract::Path;
+use axum::http::StatusCode;
+use axum::{Extension, Json};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -68,8 +68,7 @@ pub async fn delete_tag(
     Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    let opt_tag =
-        Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
+    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
     match opt_tag {
         Some(tag) => {
             TagsPodcast::delete_tag_podcasts(&tag.id)?;
@@ -92,8 +91,7 @@ pub async fn update_tag(
     Extension(requester): Extension<User>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    let opt_tag =
-        Tag::get_tag_by_id_and_username(&tag_id, &requester.username)?;
+    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username)?;
     match opt_tag {
         Some(tag) => {
             let updated_tag = Tag::update_tag(
@@ -152,7 +150,6 @@ pub async fn delete_podcast_from_tag(
         None => Err(CustomErrorInner::NotFound.into()),
     }
 }
-
 
 pub fn get_tags_router() -> OpenApiRouter {
     OpenApiRouter::new()

@@ -5,10 +5,10 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use std::sync::OnceLock;
 use futures::executor::block_on;
 use serde::Serialize;
 use socketioxide::SocketIo;
+use std::sync::OnceLock;
 
 type RoomId = String;
 
@@ -114,12 +114,20 @@ pub static SOCKET_IO_LAYER: OnceLock<SocketIo> = OnceLock::new();
 pub struct ChatServerHandle;
 
 impl ChatServerHandle {
-
     fn send_broadcast_sync<T>(room_id: RoomId, msg: &T, event: impl AsRef<str>)
-    where T: ?Sized + Serialize {
-        let room_id = "/".to_owned()+room_id.as_str();
-        block_on(SOCKET_IO_LAYER.get().unwrap().of(room_id).unwrap().emit(event, &msg))
-            .unwrap();
+    where
+        T: ?Sized + Serialize,
+    {
+        let room_id = "/".to_owned() + room_id.as_str();
+        block_on(
+            SOCKET_IO_LAYER
+                .get()
+                .unwrap()
+                .of(room_id)
+                .unwrap()
+                .emit(event, &msg),
+        )
+        .unwrap();
     }
 
     pub fn broadcast_podcast_episode_offline_available(
@@ -161,7 +169,7 @@ impl ChatServerHandle {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             &OpmlErrorMessage::from(message),
-            "opmlError"
+            "opmlError",
         )
     }
 
@@ -169,7 +177,7 @@ impl ChatServerHandle {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             &OpmlAddedMessage::from(podcast.clone()),
-            "opmlAdded"
+            "opmlAdded",
         );
     }
 
@@ -197,10 +205,7 @@ impl ChatServerHandle {
         );
     }
 
-    pub fn broadcast_added_podcast_episodes(
-        podcast: Podcast,
-        episodes: Vec<PodcastEpisode>,
-    ) {
+    pub fn broadcast_added_podcast_episodes(podcast: Podcast, episodes: Vec<PodcastEpisode>) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             &PodcastEpisodesAdded::from((podcast, episodes)),
