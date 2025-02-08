@@ -15,13 +15,12 @@ use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
 use diesel::query_dsl::methods::DistinctDsl;
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::{debug_query, BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl, QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable};
+use diesel::{BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl, QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable};
 use diesel::{ExpressionMethods, JoinOnDsl};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Error;
-use diesel::sqlite::Sqlite;
 use utoipa::ToSchema;
 
 #[derive(
