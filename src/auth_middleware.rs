@@ -282,10 +282,10 @@ mod test {
     use axum::extract::Request;
 
     use crate::auth_middleware::AuthFilter;
-    use crate::commands::startup::handle_config_for_server_startup;
+    
     use crate::commands::startup::tests::handle_test_startup;
     use crate::service::environment_service::ReverseProxyConfig;
-    use crate::test_utils::test::{create_random_user, ContainerCommands, POSTGRES_CHANNEL};
+    use crate::test_utils::test::{create_random_user};
     use serial_test::serial;
 
     #[test]
@@ -311,11 +311,7 @@ mod test {
     #[serial]
     #[tokio::test]
     async fn test_proxy_auth_with_no_header_in_request_auto_sign_up() {
-        let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let _router = handle_test_startup().await;
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: true,
@@ -333,12 +329,7 @@ mod test {
     #[serial]
     #[tokio::test]
     async fn test_proxy_auth_with_header_in_request_auto_sign_up() {
-        let _ = handle_test_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
-
+        let _server = handle_test_startup().await;
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: false,
@@ -356,11 +347,7 @@ mod test {
     #[serial]
     #[tokio::test]
     async fn test_proxy_auth_with_header_in_request_auto_sign_up_false() {
-        let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let _server = handle_test_startup().await;
         let rv_config = ReverseProxyConfig {
             header_name: "X-Auth".to_string(),
             auto_sign_up: true,
@@ -379,11 +366,8 @@ mod test {
     #[serial]
     #[tokio::test]
     async fn test_basic_auth_no_header() {
-        let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let _router = handle_test_startup().await;
+
 
         let req = Request::builder()
             .header("Content-Type", "text/plain")
@@ -397,11 +381,7 @@ mod test {
     #[serial]
     #[tokio::test]
     async fn test_basic_auth_header_no_user() {
-        let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let _router = handle_test_startup().await;
 
         let req = Request::builder()
             .header("Content-Type", "text/plain")
@@ -417,11 +397,7 @@ mod test {
     #[tokio::test]
     async fn test_basic_auth_header_other_user() {
         // given
-        let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let _router = handle_test_startup().await;
         create_random_user().insert_user().unwrap();
 
         let req = Request::builder()
@@ -441,11 +417,7 @@ mod test {
     #[tokio::test]
     async fn test_basic_auth_header_correct_user_wrong_password() {
         // given
-        let _ = handle_config_for_server_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let _router = handle_test_startup().await;
         create_random_user().insert_user().unwrap();
 
         let req = Request::builder()

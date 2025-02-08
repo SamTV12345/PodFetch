@@ -807,18 +807,14 @@ pub fn get_podcast_router() -> OpenApiRouter {
 pub mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
-    use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
     use serial_test::serial;
 
     #[tokio::test]
     #[serial]
     async fn test_retrieve_podcast_sample_format() {
-        let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let ts_server = handle_test_startup().await;
         let resp = ts_server
+            .test_server
             .post("/api/v1/podcasts/formatting")
             .json(&EpisodeFormatDto {
                 content: "test".to_string(),
@@ -831,12 +827,9 @@ pub mod tests {
     #[tokio::test]
     #[serial]
     async fn test_retrieve_podcast_sample_format_with_podcast_title() {
-        let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let ts_server = handle_test_startup().await;
         let resp = ts_server
+            .test_server
             .post("/api/v1/podcasts/formatting")
             .json(&EpisodeFormatDto {
                 content: "{podcastTitle}".to_string(),
@@ -849,12 +842,9 @@ pub mod tests {
     #[tokio::test]
     #[serial]
     async fn test_retrieve_podcast_sample_format_with_podcast_description() {
-        let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let ts_server = handle_test_startup().await;
         let resp = ts_server
+            .test_server
             .post("/api/v1/podcasts/formatting")
             .json(&EpisodeFormatDto {
                 content: "{podcastDescription}".to_string(),
@@ -867,12 +857,9 @@ pub mod tests {
     #[tokio::test]
     #[serial]
     async fn test_retrieve_podcast_sample_format_with_podcast_title_date() {
-        let ts_server = handle_test_startup();
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
+        let ts_server = handle_test_startup().await;
         let resp = ts_server
+            .test_server
             .post("/api/v1/podcasts/formatting")
             .json(&EpisodeFormatDto {
                 content: "{podcastDescription}-{date}".to_string(),

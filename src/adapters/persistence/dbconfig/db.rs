@@ -38,7 +38,7 @@ pub fn establish_connection() -> DBType {
     let database_url = &ENVIRONMENT_SERVICE.database_url;
     DBType::establish(database_url).unwrap_or_else(|e| {
         log::error!("Error connecting to {} with reason {}", database_url, e);
-        exit(1)
+        panic!("Error connecting to database")
     })
 }
 

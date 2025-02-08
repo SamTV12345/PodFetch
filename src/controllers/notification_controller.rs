@@ -49,22 +49,18 @@ pub fn get_notification_router() -> OpenApiRouter {
 mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::models::notification::Notification;
-    use crate::test_utils::test::{ContainerCommands, POSTGRES_CHANNEL};
     use crate::utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
     use serial_test::serial;
 
     #[tokio::test]
     #[serial]
     async fn test_get_unread_notifications() {
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
         // given
-        let test_server = handle_test_startup();
+        let test_server = handle_test_startup().await;
+
 
         // when
-        let response = test_server.get("/api/v1/notifications/unread").await;
+        let response = test_server.test_server.get("/api/v1/notifications/unread").await;
 
         // then
         assert!(response.status_code().is_success());
@@ -74,17 +70,13 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_get_dismiss_notifications() {
+        let test_server = handle_test_startup().await;
         // given
-        POSTGRES_CHANNEL
-            .tx
-            .send(ContainerCommands::Cleanup)
-            .unwrap();
-        let test_server = handle_test_startup();
         let notification = NotificationTestDataBuilder::new().build();
         Notification::insert_notification(notification).unwrap();
 
         // when
-        let response = test_server.get("/api/v1/notifications/unread").await;
+        let response = test_server.test_server.get("/api/v1/notifications/unread").await;
 
         // then
         assert!(response.status_code().is_success());
