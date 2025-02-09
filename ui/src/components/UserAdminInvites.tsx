@@ -140,6 +140,7 @@ export const UserAdminInvites = () => {
                                 <td className="pr-2 py-4">
                                     <button className="text-left text-[--fg-color] hover:text-[--fg-color-hover]" onClick={() => {
                                         client.GET("/api/v1/invites/{invite_id}/link", {
+                                            parseAs: "text",
                                             params: {
                                                 path: {
                                                     invite_id: i.id
