@@ -146,7 +146,6 @@ impl Episode {
 
         let mut query = ep_table.filter(username.eq(username1)).into_boxed();
 
-        println!("Since {}", since_date.unwrap());
         if let Some(since_date) = since_date {
             query = query.filter(timestamp.ge(since_date));
         }
@@ -158,8 +157,6 @@ impl Episode {
                     .eq(device)
                     .or(ep_dsl::device.eq(DEFAULT_DEVICE)),
             );
-        } else {
-            query = query.filter(ep_dsl::device.eq(DEFAULT_DEVICE))
         }
 
         if let Some(podcast) = opt_podcast {
@@ -167,6 +164,7 @@ impl Episode {
         }
 
         query
+            .order_by(timestamp.desc())
             .load::<Episode>(&mut get_connection())
             .expect("Error querying episodes")
     }
@@ -329,6 +327,7 @@ impl Episode {
         let episode = ep_table
             .filter(ep_dsl::username.eq(username))
             .filter(ep_dsl::guid.eq(podcast_episode.unwrap().guid))
+            .order_by(ep_dsl::timestamp.desc())
             .first::<Episode>(&mut get_connection())
             .optional()
             .map_err(map_db_error)?;
