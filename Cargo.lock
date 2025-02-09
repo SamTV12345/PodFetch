@@ -2198,7 +2198,6 @@ dependencies = [
  "sha256",
  "socketioxide",
  "strfmt",
- "substring",
  "sysinfo",
  "testcontainers",
  "testcontainers-modules",
@@ -3303,15 +3302,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.96",
-]
-
-[[package]]
-name = "substring"
-version = "1.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42ee6433ecef213b2e72f587ef64a2f5943e7cd16fbd82dbe8bc07486c534c86"
-dependencies = [
- "autocfg",
 ]
 
 [[package]]

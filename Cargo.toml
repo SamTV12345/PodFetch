@@ -26,7 +26,6 @@ diesel_migrations = "2.2.0"
 jsonwebtoken = {version="9.3.1"}
 log = "0.4.22"
 futures-util = "0.3.31"
-substring = "1.4.5"
 opml = "1.1.6"
 rand = "0.9.0"
 env_logger = "0.11.6"
@@ -40,7 +39,7 @@ r2d2 = "0.8.10"
 utoipa = { version = "5.3.1", features = ["chrono", "axum_extras"] }
 futures = "0.3.31"
 utoipa-swagger-ui = {version = "9.0.0", features = ["axum", "reqwest"], default-features = false}
-clokwerk= "0.4.0"
+clokwerk = "0.4.0"
 tokio = {version = "1.43.0", features = ["full"]}
 serde = "1.0.217"
 serde_derive = "1.0.189"
@@ -66,8 +65,7 @@ utoipa-axum = { version = "0.2.0" }
 utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-axum-extra={version = "0.10.0", features = ["cookie", "query"]}
-axum-test = "17.2.0"
+axum-extra = {version = "0.10.0", features = ["cookie", "query"]}
 socketioxide = "0.16.1"
 mime_guess = "2.0.5"
 
@@ -80,7 +78,7 @@ ctor = "0.2.9"
 derive_builder = {version = "0.20.2"}
 fake = { version = "3.1.0", features = ["chrono"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
-
+axum-test = "17.2.0"
 
 [profile.release]
 debug = true
