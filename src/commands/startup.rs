@@ -66,8 +66,18 @@ pub fn run_poll() -> Result<(), CustomError> {
     for podcast in podcats_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
-            PodcastEpisodeService::insert_podcast_episodes(podcast)?;
-            PodcastService::schedule_episode_download(podcast_clone)?;
+            let insert_result = PodcastEpisodeService::insert_podcast_episodes(&podcast);
+            if let Err(e) = insert_result {
+                log::error!("Could not insert new podcast episodes for podcast: {} with cause {}",
+                    &podcast.name, e);
+                continue;
+            }
+            let schedule = PodcastService::schedule_episode_download(&podcast_clone);
+            if let Err(e) = schedule {
+                log::error!("Could not schedule episode download for podcast: {} with cause {}",
+                    &podcast.name, e);
+                continue;
+            }
         }
     }
     Ok(())
@@ -321,7 +331,7 @@ pub fn handle_config_for_server_startup() -> Router {
                         info!("Polling for new episodes");
                         match run_poll() {
                             Ok(_) => {
-                                log::info!("Polling for new episodes successful");
+                                info!("Polling for new episodes successful");
                             }
                             Err(e) => {
                                 log::error!("Error polling for new episodes: {}", e);
