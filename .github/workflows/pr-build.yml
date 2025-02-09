@@ -27,6 +27,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-all
       - name: Run cargo build
         run: cargo build
+      - name: Run lint
+        run: cargo clippy -- -D warnings
       - name: Run cargo test
         run: cargo test
   build_sqlite:
@@ -50,6 +52,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-sqlite
       - name: Run cargo build
         run: cargo build --no-default-features --features sqlite
+      - name: Run lint
+        run: cargo clippy --no-default-features --features sqlite -- -D warnings
       - name: Run cargo test
         run: cargo test --no-default-features --features sqlite
   build_postgres:
@@ -73,5 +77,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-postgres
       - name: Run cargo build
         run: cargo build --no-default-features --features postgresql
+      - name: Run lint
+        run: cargo clippy --no-default-features --features postgresql -- -D warnings
       - name: Run cargo test
         run: cargo test --no-default-features --features postgresql
