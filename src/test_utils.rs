@@ -7,10 +7,14 @@ pub mod test {
 
     use sha256::digest;
 
+    #[cfg(feature = "postgresql")]
     use testcontainers::core::ContainerPort;
+    #[cfg(feature = "postgresql")]
     use testcontainers::{ContainerRequest, ImageExt};
+    #[cfg(feature = "postgresql")]
     use testcontainers_modules::postgres::Postgres;
 
+    #[cfg(feature = "postgresql")]
     pub fn setup_container() -> ContainerRequest<Postgres> {
         Postgres::default().with_mapped_port(55002, ContainerPort::Tcp(5432))
     }
