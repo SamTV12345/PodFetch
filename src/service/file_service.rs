@@ -209,8 +209,7 @@ pub fn perform_podcast_variable_replacement(
         &podcast.title,
         retrieved_settings.clone(),
         podcast_setting.clone(),
-    )
-    .replace(|c: char| !c.is_ascii(), "");
+    );
     let podcast_format;
 
     if podcast_setting.is_none() {
@@ -289,8 +288,7 @@ pub fn perform_episode_variable_replacement(
         &podcast_episode.name,
         retrieved_settings.clone(),
         podcast_settings.clone(),
-    )
-    .replace(|c: char| !c.is_ascii(), "");
+    );
     let episode_format;
 
     if podcast_settings.is_none() {
