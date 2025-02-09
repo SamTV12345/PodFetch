@@ -147,9 +147,13 @@ pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new(|| 
     {
         let mut env = EnvironmentService::new();
         #[cfg(feature = "postgresql")]
-        env.database_url = "postgres://postgres:postgres@127.0.0.1:55002/postgres".to_string();
+        {
+            env.database_url = "postgres://postgres:postgres@127.0.0.1:55002/postgres".to_string();
+        }
         #[cfg(feature = "sqlite")]
-        env.database_url = "sqlite://./podcast.db".to_string();
+        {
+            env.database_url = "sqlite://./podcast.db".to_string();
+        }
         env.http_basic = true;
         env.username = Some("postgres".to_string());
         env.password =
