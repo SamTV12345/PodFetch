@@ -12,9 +12,9 @@ import {client} from "../utils/http";
 import {components} from "../../schema";
 
 const roleOptions = [
-    { translationKey: 'admin', value: 'Admin' },
-    { translationKey: 'user', value: 'User' },
-    { translationKey: 'uploader', value: 'Uploader' }
+    { translationKey: 'admin', value: 'admin' },
+    { translationKey: 'user', value: 'user' },
+    { translationKey: 'uploader', value: 'uploader' }
 ]
 
 export const CreateInviteModal = () => {
