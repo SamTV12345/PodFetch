@@ -39,7 +39,7 @@ diesel = { version = "2.2.7", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
 utoipa = { version = "5.3.1", features = ["chrono", "axum_extras"] }
 futures = "0.3.31"
-utoipa-swagger-ui = {version = "9.0.0", features = ["axum"] }
+utoipa-swagger-ui = {version = "9.0.0", features = ["axum", "reqwest"] }
 clokwerk= "0.4.0"
 tokio = {version = "1.43.0", features = ["full"]}
 serde = "1.0.217"
