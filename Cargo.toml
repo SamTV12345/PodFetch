@@ -16,7 +16,7 @@ sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys", "di
 
 [dependencies]
 rpassword = "7.3.1"
-reqwest = { version = "0.12.11", features = ["stream", "json","blocking"] }
+reqwest = { version = "0.12.11", features = ["stream", "json","blocking", "rustls-tls"], default-features = false }
 async-recursion = "1.1.1"
 base64 = "0.22.1"
 uuid = {version="1.13.1", features = ["v4", "serde"]}
@@ -71,9 +71,6 @@ axum-test = "17.2.0"
 socketioxide = "0.16.1"
 mime_guess = "2.0.5"
 
-[target.'cfg(not(windows))'.dependencies]
-openssl = "0.10.70"
-
 
 [dev-dependencies]
 serial_test = {version="3.2.0"}
@@ -82,7 +79,7 @@ testcontainers-modules = { version = "0.11.6", features = ["postgres","blocking"
 ctor = "0.2.9"
 derive_builder = {version = "0.20.2"}
 fake = { version = "3.1.0", features = ["chrono"] }
-bollard = {version = "*"}
+bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
 
 
 [profile.release]
