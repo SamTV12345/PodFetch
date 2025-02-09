@@ -70,11 +70,13 @@ pub fn run_poll() -> Result<(), CustomError> {
             if let Err(e) = insert_result {
                 log::error!("Could not insert new podcast episodes for podcast: {} with cause {}",
                     &podcast.name, e);
+                continue;
             }
             let schedule = PodcastService::schedule_episode_download(&podcast_clone);
             if let Err(e) = schedule {
                 log::error!("Could not schedule episode download for podcast: {} with cause {}",
                     &podcast.name, e);
+                continue;
             }
         }
     }
