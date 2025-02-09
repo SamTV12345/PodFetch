@@ -423,14 +423,20 @@ pub mod tests {
     pub struct TestServerWrapper<'a> {
         pub test_server: TestServer,
         pub mutex: MutexGuard<'a, ()>,
-        pub container: ContainerAsync<Postgres>,
+        pub container: Option<ContainerAsync<Postgres>>,
     }
 
     pub static GLOBAL_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
+        #[cfg(feature = "sqlite")]
+        {
+            let container = None;
+        }
         #[cfg(feature = "postgresql")]
-        let container = setup_container().start().await.unwrap();
+        {
+            let container = Some(setup_container().start().await.unwrap());
+        }
         let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
         test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
         TestServerWrapper {
