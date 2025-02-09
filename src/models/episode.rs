@@ -15,7 +15,10 @@ use crate::DBType as DbConnection;
 use chrono::{NaiveDateTime, Utc};
 use diesel::query_dsl::methods::DistinctDsl;
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
-use diesel::{BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl, QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable};
+use diesel::{
+    BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
+    QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
+};
 use diesel::{ExpressionMethods, JoinOnDsl};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -272,11 +275,11 @@ impl Episode {
     }
 
     pub fn find_episodes_not_in_webview() -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::rssfeed;
         use crate::adapters::persistence::dbconfig::schema::subscriptions::device;
         use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::subscriptions;
         use crate::adapters::persistence::dbconfig::schema::subscriptions::podcast;
-        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
-        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::rssfeed;
 
         let result = DistinctDsl::distinct(
             subscriptions
@@ -366,9 +369,9 @@ impl Episode {
         }
 
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
-        let id = rng.gen_range(0..1000000);
+        let id = rng.random_range(0..1000000);
 
         match Self::get_watchlog_by_device_and_episode(
             found_episode.guid.clone(),

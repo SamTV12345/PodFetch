@@ -103,8 +103,8 @@ impl PodcastEpisodeService {
     pub fn insert_podcast_episodes(podcast: &Podcast) -> Result<Vec<PodcastEpisode>, CustomError> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
 
-        let returned_data_from_podcast_insert = Self::do_request_to_podcast_server(podcast.clone
-        ())?;
+        let returned_data_from_podcast_insert =
+            Self::do_request_to_podcast_server(podcast.clone())?;
 
         let channel = Channel::read_from(returned_data_from_podcast_insert.content.as_bytes());
 
@@ -290,8 +290,8 @@ impl PodcastEpisodeService {
                 let new_url = extension.new_feed_url.unwrap();
                 Podcast::update_podcast_urls_on_redirect(podcast.id, new_url);
 
-                let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone
-                ())?;
+                let returned_data_from_server =
+                    Self::do_request_to_podcast_server(podcast.clone())?;
 
                 let channel =
                     Channel::read_from(returned_data_from_server.content.as_bytes()).unwrap();

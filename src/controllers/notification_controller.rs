@@ -58,9 +58,11 @@ mod tests {
         // given
         let test_server = handle_test_startup().await;
 
-
         // when
-        let response = test_server.test_server.get("/api/v1/notifications/unread").await;
+        let response = test_server
+            .test_server
+            .get("/api/v1/notifications/unread")
+            .await;
 
         // then
         assert!(response.status_code().is_success());
@@ -76,7 +78,10 @@ mod tests {
         Notification::insert_notification(notification).unwrap();
 
         // when
-        let response = test_server.test_server.get("/api/v1/notifications/unread").await;
+        let response = test_server
+            .test_server
+            .get("/api/v1/notifications/unread")
+            .await;
 
         // then
         assert!(response.status_code().is_success());

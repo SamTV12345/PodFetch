@@ -9,7 +9,6 @@ use axum::http::Uri;
 use axum::middleware::Next;
 use axum::response::Response;
 use axum_extra::extract::OptionalQuery;
-use substring::Substring;
 
 #[derive(Debug, Clone)]
 pub enum PodcastOrPodcastEpisodeResource {
@@ -89,7 +88,7 @@ fn check_auth(
                 .path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
-            let requested_path = requested_path.substring(1, requested_path.len());
+            let requested_path = &requested_path[1..];
             let decoded_path = urlencoding::decode(requested_path).map_err(|_| {
                 CustomErrorInner::BadRequest("Error while decoding URL".to_string())
             })?;
@@ -101,7 +100,7 @@ fn check_auth(
                 .path()
                 .to_string()
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
-            let requested_path = requested_path.substring(1, requested_path.len());
+            let requested_path = &requested_path[1..];
             let decoded_path = urlencoding::decode(requested_path).map_err(|_| {
                 CustomErrorInner::BadRequest("Error while decoding URL".to_string())
             })?;
