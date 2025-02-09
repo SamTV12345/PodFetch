@@ -412,30 +412,87 @@ pub fn handle_config_for_server_startup() -> Router {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::commands::startup::handle_config_for_server_startup;
+    
+    #[cfg(feature = "postgresql")]
     use crate::test_utils::test::setup_container;
     use axum_test::TestServer;
     use std::sync::MutexGuard;
+    
+    #[cfg(feature = "postgresql")]
     use testcontainers::runners::AsyncRunner;
+    #[cfg(feature = "postgresql")]
     use testcontainers::ContainerAsync;
+    #[cfg(feature = "postgresql")]
     use testcontainers_modules::postgres::Postgres;
+    #[cfg(feature = "postgresql")]
+    use crate::commands::startup::handle_config_for_server_startup;
 
     pub struct TestServerWrapper<'a> {
         pub test_server: TestServer,
         pub mutex: MutexGuard<'a, ()>,
-        pub container: ContainerAsync<Postgres>,
+        #[cfg(feature = "postgresql")]
+        pub container: Option<ContainerAsync<Postgres>>,
     }
 
     pub static GLOBAL_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
-        let container = setup_container().start().await.unwrap();
-        let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
-        test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
-        TestServerWrapper {
-            test_server,
-            mutex: GLOBAL_MUTEX.lock().unwrap(),
-            container,
+        #[cfg(feature = "postgresql")]
+        let test_server = {
+            let container = AsyncRunner::start(setup_container()).await.unwrap();
+            let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
+            test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
+            TestServerWrapper{
+                test_server,
+                mutex: GLOBAL_MUTEX.lock().unwrap(),
+                container: {
+                    Some(container)
+                }
+            }
+        };
+        #[cfg(not(feature = "postgresql"))]
+        let test_server = {
+            let mut test_server = TestServer::new(crate::commands::startup::handle_config_for_server_startup()).unwrap();
+            test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
+            TestServerWrapper{
+                test_server,
+                mutex: crate::commands::startup::tests::GLOBAL_MUTEX.lock().unwrap(),
+            }
+        };
+        test_server
+    }
+
+
+    #[cfg(feature = "sqlite")]
+    impl Drop for TestServerWrapper<'_> {
+        fn drop(&mut self) {
+            use diesel::RunQueryDsl;
+            use crate::adapters::persistence::dbconfig::db::get_connection;
+            {
+                use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
+                diesel::delete(podcasts)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::notifications::dsl::notifications;
+                diesel::delete(notifications)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::devices::dsl::devices;
+                diesel::delete(devices)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::users::dsl::users;
+                diesel::delete(users)
+                    .execute(&mut get_connection())
+                    .unwrap();
+
+            }
         }
     }
 }

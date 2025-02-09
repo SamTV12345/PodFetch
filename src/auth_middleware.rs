@@ -335,7 +335,7 @@ mod test {
         };
         let req = Request::builder()
             .header("Content-Type", "text/plain")
-            .header("X-Auth", "test")
+            .header("X-Auth", "test1")
             .body("".into())
             .unwrap();
         let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
