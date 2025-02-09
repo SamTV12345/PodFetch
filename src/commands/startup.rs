@@ -429,6 +429,7 @@ pub mod tests {
     pub static GLOBAL_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
+        #[cfg(feature = "postgresql")]
         let container = setup_container().start().await.unwrap();
         let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
         test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
