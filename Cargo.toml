@@ -16,7 +16,7 @@ sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys", "di
 
 [dependencies]
 rpassword = "7.3.1"
-reqwest = { version = "0.12.11", features = ["stream", "json","blocking", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12.11", features = ["stream", "json","blocking", "rustls-tls"]}
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 async-recursion = "1.1.1"
 base64 = "0.22.1"
