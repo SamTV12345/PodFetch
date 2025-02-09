@@ -11,7 +11,7 @@ built = {version="0.7.5", features=["chrono", "semver","cargo-lock"]}
 [features]
 default = ["sqlite", "postgresql"]
 postgresql = ["diesel/postgres", "diesel_migrations/postgres", "dep:r2d2_postgres",
-    "diesel/postgres_backend", "dep:openssl"]
+    "diesel/postgres_backend", "dep:openssl", "openssl-sys"]
 sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
 
 [dependencies]
@@ -73,7 +73,8 @@ socketioxide = "0.16.1"
 mime_guess = "2.0.5"
 
 [target.'cfg(not(windows))'.dependencies]
-openssl = { version = "0.10.70", optional = true}
+openssl = { version = "0.10.70", optional = true, features = ["vendored"]}
+openssl-sys = {version = "0.9.105", features = ["vendored"], optional = true}
 
 
 [dev-dependencies]
