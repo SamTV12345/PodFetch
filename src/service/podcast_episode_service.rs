@@ -16,7 +16,7 @@ use crate::service::file_service::FileService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
+use crate::utils::error::{map_db_error, map_reqwest_error, CustomError, CustomErrorInner};
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
@@ -100,10 +100,11 @@ impl PodcastEpisodeService {
     }
 
     // Used for creating/updating podcasts
-    pub fn insert_podcast_episodes(podcast: Podcast) -> Result<Vec<PodcastEpisode>, CustomError> {
+    pub fn insert_podcast_episodes(podcast: &Podcast) -> Result<Vec<PodcastEpisode>, CustomError> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
 
-        let returned_data_from_podcast_insert = Self::do_request_to_podcast_server(podcast.clone());
+        let returned_data_from_podcast_insert = Self::do_request_to_podcast_server(podcast.clone
+        ())?;
 
         let channel = Channel::read_from(returned_data_from_podcast_insert.content.as_bytes());
 
@@ -122,13 +123,13 @@ impl PodcastEpisodeService {
                     Self::update_episodes_on_redirect(channel.items())?;
                 }
 
-                Self::handle_itunes_extension(&podcast, &channel)?;
+                Self::handle_itunes_extension(podcast, &channel)?;
 
                 Self::update_podcast_fields(channel.clone(), podcast.id)?;
 
                 let mut podcast_inserted = Vec::new();
 
-                Self::handle_podcast_image_insert(&podcast, &channel)?;
+                Self::handle_podcast_image_insert(podcast, &channel)?;
 
                 for item in channel.items.iter() {
                     let itunes_ext = item.clone().itunes_ext;
@@ -289,7 +290,8 @@ impl PodcastEpisodeService {
                 let new_url = extension.new_feed_url.unwrap();
                 Podcast::update_podcast_urls_on_redirect(podcast.id, new_url);
 
-                let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone());
+                let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone
+                ())?;
 
                 let channel =
                     Channel::read_from(returned_data_from_server.content.as_bytes()).unwrap();
@@ -483,7 +485,7 @@ impl PodcastEpisodeService {
         PodcastEpisode::get_podcast_episode_by_id(id_num)
     }
 
-    fn do_request_to_podcast_server(podcast: Podcast) -> RequestReturnType {
+    fn do_request_to_podcast_server(podcast: Podcast) -> Result<RequestReturnType, CustomError> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
         let client = get_sync_client()
             .redirect(Policy::custom({
@@ -497,10 +499,11 @@ impl PodcastEpisodeService {
                 }
             }))
             .build()
-            .unwrap();
+            .map_err(map_reqwest_error)?;
         let mut header_map = HeaderMap::new();
         header_map.append(
             ACCEPT,
+            // Safe as it is a standard header
             "application/rss+xml,application/xml".parse().unwrap(),
         );
         header_map.append("User-Agent", COMMON_USER_AGENT.parse().unwrap());
@@ -508,11 +511,11 @@ impl PodcastEpisodeService {
             .get(podcast.clone().rssfeed)
             .headers(header_map)
             .send()
-            .unwrap();
+            .map_err(map_reqwest_error)?;
         let url = result.url().clone().to_string();
-        let content = result.text().unwrap().clone();
+        let content = result.text().map_err(map_reqwest_error)?;
 
-        RequestReturnType { url, content }
+        Ok(RequestReturnType { url, content })
     }
 
     pub(crate) fn delete_podcast_episode_locally(

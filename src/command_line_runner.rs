@@ -67,8 +67,8 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                             let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn)
                                 .expect("Error getting podcast");
 
-                            PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
-                            PodcastService::schedule_episode_download(podcast)
+                            PodcastEpisodeService::insert_podcast_episodes(&podcast)?;
+                            PodcastService::schedule_episode_download(&podcast)
                         }
                         None => {
                             println!("Please provide a podcast rss feed url");
@@ -81,8 +81,8 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     for podcast in podcasts {
                         println!("Refreshing podcast {}", podcast.name);
 
-                        PodcastEpisodeService::insert_podcast_episodes(podcast.clone())?;
-                        PodcastService::schedule_episode_download(podcast)?;
+                        PodcastEpisodeService::insert_podcast_episodes(&podcast)?;
+                        PodcastService::schedule_episode_download(&podcast)?;
                     }
                     Ok(())
                 }

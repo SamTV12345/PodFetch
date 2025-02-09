@@ -418,7 +418,10 @@ pub async fn refresh_all_podcasts(
     let podcasts = Podcast::get_all_podcasts()?;
     thread::spawn(move || {
         for podcast in podcasts {
-            PodcastService::refresh_podcast(podcast.clone()).unwrap();
+            let refresh_result = PodcastService::refresh_podcast(&podcast);
+            if let Err(e) = refresh_result {
+                log::error!("Error refreshing podcast: {}", e);
+            }
             ChatServerHandle::broadcast_podcast_refreshed(&podcast);
         }
     });
@@ -443,7 +446,7 @@ pub async fn download_podcast(
     let id_num = from_str::<i32>(&id).unwrap();
     let podcast = PodcastService::get_podcast_by_id(id_num);
     thread::spawn(move || {
-        match PodcastService::refresh_podcast(podcast.clone()) {
+        match PodcastService::refresh_podcast(&podcast) {
             Ok(_) => {
                 log::info!("Succesfully refreshed podcast.");
             }
@@ -452,7 +455,7 @@ pub async fn download_podcast(
             }
         }
 
-        let download = PodcastService::schedule_episode_download(podcast.clone());
+        let download = PodcastService::schedule_episode_download(&podcast);
 
         if download.is_err() {
             log::error!("Error downloading podcast: {}", download.err().unwrap());

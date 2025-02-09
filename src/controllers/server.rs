@@ -205,10 +205,10 @@ impl ChatServerHandle {
         );
     }
 
-    pub fn broadcast_added_podcast_episodes(podcast: Podcast, episodes: Vec<PodcastEpisode>) {
+    pub fn broadcast_added_podcast_episodes(podcast: &Podcast, episodes: Vec<PodcastEpisode>) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &PodcastEpisodesAdded::from((podcast, episodes)),
+            &PodcastEpisodesAdded::from((podcast.clone(), episodes)),
             "addedEpisodes",
         );
     }
