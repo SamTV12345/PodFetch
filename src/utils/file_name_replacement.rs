@@ -232,6 +232,43 @@ mod tests {
         false, false, false, false,
     ];
 
+
+    #[test]
+    fn it_works_with_was_omg() {
+        let options = super::Options {
+            windows: true,
+            truncate: true,
+            replacement: "".to_string(),
+        };
+
+        let sanitizer = Sanitizer::new(Some(options));
+        assert_eq!(sanitizer.sanitize("Was, OMG?").to_string(), "Was, OMG".to_string());
+    }
+
+    #[test]
+    fn it_works_with_with_french() {
+        let options = Options {
+            windows: true,
+            truncate: true,
+            replacement: "".to_string(),
+        };
+
+        let sanitizer = Sanitizer::new(Some(options));
+        assert_eq!(sanitizer.sanitize("Aujourd'hui l'économie").to_string(), "Aujourd'hui l'économie".to_string());
+    }
+
+    #[test]
+    fn it_works_with_with_chinese() {
+        let options = Options {
+            windows: true,
+            truncate: true,
+            replacement: "".to_string(),
+        };
+
+        let sanitizer = Sanitizer::new(Some(options));
+        assert_eq!(sanitizer.sanitize("燕外之意").to_string(), "燕外之意".to_string());
+    }
+
     #[test]
     #[serial]
     fn it_works() {
