@@ -2,6 +2,7 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use crate::service::environment_service::ReverseProxyConfig;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::utils::http_client::get_async_sync_client;
 use axum::extract::Request;
 use axum::http::HeaderValue;
 use axum::middleware::Next;
@@ -15,7 +16,6 @@ use serde_json::Value;
 use sha256::digest;
 use std::collections::HashSet;
 use std::sync::OnceLock;
-use crate::utils::http_client::get_async_sync_client;
 
 enum AuthType {
     Basic,
@@ -64,8 +64,6 @@ pub async fn handle_no_auth(mut request: Request, next: Next) -> Result<Response
     Ok(next.run(request).await)
 }
 
-
-
 async fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
     match auth_type {
         AuthType::Basic => AuthFilter::handle_basic_auth_internal(req),
@@ -94,7 +92,7 @@ fn from_key_alg_into_alg(value: KeyAlgorithm) -> Algorithm {
         KeyAlgorithm::EdDSA => Algorithm::EdDSA,
         KeyAlgorithm::RSA1_5 => Algorithm::ES256,
         KeyAlgorithm::RSA_OAEP => Algorithm::RS256,
-        KeyAlgorithm::RSA_OAEP_256 => Algorithm::RS256
+        KeyAlgorithm::RSA_OAEP_256 => Algorithm::RS256,
     }
 }
 
@@ -157,23 +155,24 @@ impl AuthFilter {
         let token = token_res.replace("Bearer ", "");
 
         let jwk = match JWKS.get() {
-            Some(jwks)=>{
-                Ok::<&JwkSet, String>(jwks)
-            },
-            None=>{
+            Some(jwks) => Ok::<&JwkSet, String>(jwks),
+            None => {
                 let jwks = get_jwks().await;
                 JWKS.get_or_init(|| jwks);
                 Ok::<&JwkSet, String>(JWKS.get().unwrap())
             }
-        }.unwrap();
+        }
+        .unwrap();
 
         let first_jwk = match jwk.keys.first() {
             Some(jwk) => Ok(jwk),
             None => {
-                log::error!("No JWK found for {}", ENVIRONMENT_SERVICE.oidc_config.clone().unwrap()
-                    .jwks_uri);
+                log::error!(
+                    "No JWK found for {}",
+                    ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri
+                );
                 Err(CustomError::from(CustomErrorInner::Forbidden))
-            },
+            }
         }?;
 
         let key = DecodingKey::from_jwk(first_jwk).unwrap();
@@ -195,7 +194,7 @@ impl AuthFilter {
             Err(e) => {
                 log::error!("Error is {:?}", e);
                 Err(CustomError::from(CustomErrorInner::Forbidden))
-            },
+            }
         }?;
         let username = decoded_token
             .claims
@@ -282,10 +281,10 @@ mod test {
     use axum::extract::Request;
 
     use crate::auth_middleware::AuthFilter;
-    
+
     use crate::commands::startup::tests::handle_test_startup;
     use crate::service::environment_service::ReverseProxyConfig;
-    use crate::test_utils::test::{create_random_user};
+    use crate::test_utils::test::create_random_user;
     use serial_test::serial;
 
     #[test]
@@ -367,7 +366,6 @@ mod test {
     #[tokio::test]
     async fn test_basic_auth_no_header() {
         let _router = handle_test_startup().await;
-
 
         let req = Request::builder()
             .header("Content-Type", "text/plain")

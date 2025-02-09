@@ -68,14 +68,20 @@ pub fn run_poll() -> Result<(), CustomError> {
             let podcast_clone = podcast.clone();
             let insert_result = PodcastEpisodeService::insert_podcast_episodes(&podcast);
             if let Err(e) = insert_result {
-                log::error!("Could not insert new podcast episodes for podcast: {} with cause {}",
-                    &podcast.name, e);
+                log::error!(
+                    "Could not insert new podcast episodes for podcast: {} with cause {}",
+                    &podcast.name,
+                    e
+                );
                 continue;
             }
             let schedule = PodcastService::schedule_episode_download(&podcast_clone);
             if let Err(e) = schedule {
-                log::error!("Could not schedule episode download for podcast: {} with cause {}",
-                    &podcast.name, e);
+                log::error!(
+                    "Could not schedule episode download for podcast: {} with cause {}",
+                    &podcast.name,
+                    e
+                );
                 continue;
             }
         }
@@ -285,6 +291,7 @@ pub fn run_migrations() {
     let conn = conn.deref_mut();
 
     match conn {
+        #[cfg(feature = "postgresql")]
         DBType::Postgresql(ref mut conn) => {
             let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
 
@@ -292,6 +299,7 @@ pub fn run_migrations() {
                 panic!("Could not run migrations: {}", res_migration.err().unwrap());
             }
         }
+        #[cfg(feature = "sqlite")]
         DBType::Sqlite(ref mut conn) => {
             let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
 
@@ -404,18 +412,18 @@ pub fn handle_config_for_server_startup() -> Router {
 
 #[cfg(test)]
 pub mod tests {
-    use std::sync::{MutexGuard};
     use crate::commands::startup::handle_config_for_server_startup;
-    use axum_test::TestServer;
-    use testcontainers::{ContainerAsync};
-    use testcontainers::runners::AsyncRunner;
-    use testcontainers_modules::postgres::Postgres;
     use crate::test_utils::test::setup_container;
+    use axum_test::TestServer;
+    use std::sync::MutexGuard;
+    use testcontainers::runners::AsyncRunner;
+    use testcontainers::ContainerAsync;
+    use testcontainers_modules::postgres::Postgres;
 
     pub struct TestServerWrapper<'a> {
         pub test_server: TestServer,
-        pub mutex:  MutexGuard<'a,()>,
-        pub container: ContainerAsync<Postgres>
+        pub mutex: MutexGuard<'a, ()>,
+        pub container: ContainerAsync<Postgres>,
     }
 
     pub static GLOBAL_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -427,7 +435,7 @@ pub mod tests {
         TestServerWrapper {
             test_server,
             mutex: GLOBAL_MUTEX.lock().unwrap(),
-            container
+            container,
         }
     }
 }

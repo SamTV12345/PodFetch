@@ -1,8 +1,12 @@
 use crate::adapters::file::file_handler::FileHandlerType;
+
+#[cfg(feature = "postgresql")]
+use crate::constants::inner_constants::CONNECTION_NUMBERS;
+
 use crate::constants::inner_constants::{
-    API_KEY, BASIC_AUTH, CONNECTION_NUMBERS, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE,
-    DEFAULT_PODFETCH_FOLDER, FILE_HANDLER, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY,
-    OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_FOLDER,
+    API_KEY, BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, DEFAULT_PODFETCH_FOLDER,
+    FILE_HANDLER, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID,
+    OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_FOLDER,
     PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL,
     POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER,
     S3_ACCESS_KEY, S3_PROFILE, S3_REGION, S3_SECRET_KEY, S3_SECURITY_TOKEN, S3_SESSION_TOKEN,
@@ -48,6 +52,7 @@ pub struct EnvironmentService {
     pub any_auth_enabled: bool,
     pub sub_directory: Option<String>,
     pub proxy_url: Option<String>,
+    #[cfg(feature = "postgresql")]
     pub conn_number: i16,
     pub api_key_admin: Option<String>,
     pub default_file_handler: FileHandlerType,
@@ -225,11 +230,12 @@ impl EnvironmentService {
             any_auth_enabled: is_env_var_present_and_true(BASIC_AUTH)
                 || is_env_var_present_and_true(OIDC_AUTH)
                 || is_env_var_present_and_true(REVERSE_PROXY),
+            #[cfg(feature = "postgresql")]
             conn_number: var(CONNECTION_NUMBERS)
                 .unwrap_or("10".to_string())
                 .parse::<i16>()
                 .unwrap_or(10),
-            api_key_admin: dotenv::var(API_KEY).map(Some).unwrap_or(None),
+            api_key_admin: var(API_KEY).map(Some).unwrap_or(None),
             default_file_handler: handler.0,
             s3_config: handler.1,
             default_podfetch_folder: var(PODFETCH_FOLDER)

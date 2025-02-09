@@ -294,7 +294,7 @@ pub async fn add_podcast_by_feed(
     let bytes = result.text().await.unwrap();
 
     let channel = Channel::read_from(bytes.as_bytes()).unwrap();
-    let num = rand::thread_rng().gen_range(100..10000000);
+    let num = rand::rng().random_range(100..10000000);
 
     let res: PodcastDto;
     {
@@ -339,7 +339,7 @@ pub async fn import_podcasts_from_opml(
         for outline in document.body.outlines {
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
-                let rng = rand::thread_rng();
+                let rng = rand::rng();
                 rt.block_on(insert_outline(outline.clone(), rng.clone()));
             });
         }
@@ -559,7 +559,7 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
                 PodcastInsertModel {
                     feed_url: podcast.clone().xml_url.expect("No feed url"),
                     title: channel.clone().title.to_string(),
-                    id: rng.gen::<i32>(),
+                    id: rng.random::<i32>(),
                     image_url,
                 },
                 Some(channel),

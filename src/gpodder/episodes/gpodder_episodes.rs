@@ -109,11 +109,11 @@ pub fn get_gpodder_episodes_router() -> OpenApiRouter {
 
 #[cfg(test)]
 pub mod tests {
-    use serial_test::serial;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::gpodder::episodes::gpodder_episodes::EpisodeActionResponse;
-    use crate::utils::auth::tests::{create_auth_gpodder};
+    use crate::utils::auth::tests::create_auth_gpodder;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use serial_test::serial;
 
     #[serial]
     #[tokio::test]
@@ -122,7 +122,10 @@ pub mod tests {
         let mut user = UserTestDataBuilder::new().build();
         user.insert_user().unwrap();
         create_auth_gpodder(&mut test_server, &user).await;
-        let resp = test_server.test_server.get(&format!("/api/2/episodes/{}?since=0", user.username)).await;
+        let resp = test_server
+            .test_server
+            .get(&format!("/api/2/episodes/{}?since=0", user.username))
+            .await;
         assert_eq!(resp.status_code(), 200);
         let json = resp.json::<EpisodeActionResponse>();
         assert_eq!(json.actions.len(), 0);

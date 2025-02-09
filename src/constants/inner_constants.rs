@@ -168,6 +168,7 @@ pub const REVERSE_PROXY_AUTO_SIGN_UP: &str = "REVERSE_PROXY_AUTO_SIGN_UP";
 pub const PODFETCH_PROXY_FOR_REQUESTS: &str = "PODFETCH_PROXY";
 
 pub const MAIN_ROOM: &str = "main";
+#[cfg(feature = "postgresql")]
 pub const CONNECTION_NUMBERS: &str = "DB_CONNECTIONS";
 
 pub type PodcastEpisodeWithFavorited = Result<

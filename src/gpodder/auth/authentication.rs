@@ -159,9 +159,9 @@ mod tests {
 
     use crate::adapters::api::models::device::device_response::DeviceResponse;
     use crate::commands::startup::tests::handle_test_startup;
+    use crate::utils::auth::tests::create_auth_gpodder;
     use crate::utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use crate::utils::auth::tests::create_auth_gpodder;
 
     #[tokio::test]
     #[serial]
