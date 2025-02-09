@@ -906,12 +906,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dotenv"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
-
-[[package]]
 name = "dsl_auto_type"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1649,9 +1643,9 @@ dependencies = [
 
 [[package]]
 name = "id3"
-version = "1.16.1"
+version = "1.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "872718dfcd3a6f4601a3fb413365ee5e1d3ec050316ff79e690c98658a6738ef"
+checksum = "472295f55960dd48e38c89442fa5d5423f5cf0ed2c665485be78e129231a39e9"
 dependencies = [
  "bitflags 2.8.0",
  "byteorder",
@@ -2259,7 +2253,6 @@ dependencies = [
  "derive_builder",
  "diesel",
  "diesel_migrations",
- "dotenv",
  "env_logger",
  "fake",
  "file-format",

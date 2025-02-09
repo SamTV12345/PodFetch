@@ -1,9 +1,13 @@
-on: [pull_request]
+on:
+  pull_request: {}
+  push:
+    branches:
+      - 'main'
 name: Test rust
 
 jobs:
-  build_and_test:
-    name: Rust project
+  build_all_features:
+    name: Build all features
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -22,9 +26,55 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - name: Add required index.html
-        run: |
-          touch ./static/index.html
       - name: Run cargo build
         run: cargo build
-
+      - name: Run cargo test
+        run: cargo test
+  build_sqlite:
+    name: Build sqlite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+      - name: Run cargo build
+        run: cargo build --no-default-features --features sqlite
+      - name: Run cargo test
+        run: cargo test --no-default-features --features sqlite
+  build_postgres:
+    name: Build postgres
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+      - name: Run cargo build
+        run: cargo build --no-default-features --features postgresql
+      - name: Run cargo test
+        run: cargo test --no-default-features --features postgresql
