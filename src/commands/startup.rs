@@ -424,7 +424,6 @@ pub mod tests {
     use testcontainers::ContainerAsync;
     #[cfg(feature = "postgresql")]
     use testcontainers_modules::postgres::Postgres;
-    
     #[cfg(feature = "postgresql")]
     use crate::commands::startup::handle_config_for_server_startup;
 
@@ -467,6 +466,8 @@ pub mod tests {
     #[cfg(feature = "sqlite")]
     impl Drop for TestServerWrapper<'_> {
         fn drop(&mut self) {
+            use diesel::RunQueryDsl;
+            use crate::adapters::persistence::dbconfig::db::get_connection;
             {
                 use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
                 diesel::delete(podcasts)
