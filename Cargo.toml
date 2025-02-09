@@ -70,7 +70,7 @@ socketioxide = "0.16.1"
 mime_guess = "2.0.5"
 
 [target.'cfg(not(windows))'.dependencies]
-openssl = {version = "0.10.70", features = ["vendored"], optional = true}
+openssl = {version = "0.10.70", optional = true}
 
 
 [dev-dependencies]
