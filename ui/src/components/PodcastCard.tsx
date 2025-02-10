@@ -4,14 +4,10 @@ import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 import * as Context from '@radix-ui/react-context-menu'
-import {ContextMenu} from "@radix-ui/react-context-menu";
 import {CustomInput} from "./CustomInput";
 import {PlusIcon} from "../icons/PlusIcon";
-import {PodcastTags} from "../models/PodcastTags";
-import {TagCreate} from "../models/Tags";
 import {CustomCheckbox} from "./CustomCheckbox";
-import {Tag} from "sanitize-html";
-import {LuMinus, LuTags} from "react-icons/lu";
+import {LuTags} from "react-icons/lu";
 import {useTranslation} from "react-i18next";
 import {components} from "../../schema";
 import {client} from "../utils/http";
@@ -76,12 +72,13 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                 }}>
                     <h2 className="text-[--fg-color]">Tags</h2>
                     <hr className="mt-1 border-[1px] border-[--border-color] mb-2"/>
+                    <div className="flex gap-3 flex-col text-[--fg-color]">
                     {
                      tags.map(t=>{
                          return <Context.Item key={t.id} onClick={(e)=>{
                              e.preventDefault()
-                         }} className="group mt-2 mb-2 text-[13px] leading-none text-violet11 rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none data-[disabled]:text-mauve8 data-[disabled]:pointer-events-none data-[highlighted]:bg-violet9 data-[highlighted]:text-violet1 text-white">
-                             <span className="grid grid-cols-3 gap-5">
+                         }} className="">
+                             <span className="grid grid-cols-[auto_1fr] gap-5">
                                  <CustomCheckbox value={podcast.tags.filter(e=>e.name=== t.name).length>0} onChange={(v)=>{
                                      if (v.valueOf() === true) {
                                          client.POST("/api/v1/tags/{tag_id}/{podcast_id}", {
@@ -127,11 +124,12 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                          })
                                      }
                                  }}/>
-                                 <span className="self-center">{t.name}</span>
+                                 <span className="">{t.name}</span>
                              </span>
                          </Context.Item>
                      })
                     }
+                    </div>
 
                     <span className="relative">
                         <PlusIcon className="absolute right-5 fill-white h-[19px] top-2  -translate-y-1/2 cursor-pointer" onClick={()=>{
