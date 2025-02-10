@@ -193,7 +193,7 @@ export const PodcastDetailPage = () => {
                         </button>
                             <div className="flex gap-4 justify-end">
                                 <Switcher checked={onlyUnplayed} onChange={setOnlyUnplayed}/>
-                                <span className=" text-[--fg-color] mt-auto">{t('active')}</span>
+                                <span className=" text-[--fg-color] mt-auto">{t('unplayed')}</span>
                             </div>
                             </span>
                     </div>
