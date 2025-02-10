@@ -79,7 +79,7 @@ native-tls = {version = "0.2.13", optional = true}
 
 [dev-dependencies]
 serial_test = {version="3.2.0"}
-testcontainers = { version = "0.23.1" }
+testcontainers = { version = "0.23.2" }
 testcontainers-modules = { version = "0.11.6", features = ["postgres","blocking"] }
 ctor = "0.2.9"
 derive_builder = {version = "0.20.2"}
