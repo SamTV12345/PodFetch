@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::adapters::file::file_handler::FileHandlerType;
 use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
@@ -48,6 +49,12 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
                 }
             };
 
+        let keywords_to_map = value.0.keywords.clone();
+        let keywords = keywords_to_map
+            .map(|k| k.split(",").map(|k|k.trim().to_string())
+            .collect::<HashSet<String>>()
+            .into_iter().collect::<Vec<_>>().join(","));
+
         PodcastDto {
             id: value.0.id,
             name: value.0.name.clone(),
@@ -55,7 +62,7 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
             rssfeed: value.0.rssfeed.clone(),
             image_url,
             language: value.0.language.clone(),
-            keywords: value.0.keywords.clone(),
+            keywords,
             summary: value.0.summary.clone(),
             explicit: value.0.clone().explicit,
             last_build_date: value.0.clone().last_build_date,
@@ -77,6 +84,13 @@ impl From<Podcast> for PodcastDto {
             ENVIRONMENT_SERVICE.get_server_url(),
             value.image_url
         );
+
+        let keywords_to_map = value.keywords.clone();
+        let keywords = keywords_to_map
+            .map(|k| k.split(",").map(|k|k.trim().to_string())
+                .collect::<HashSet<String>>()
+                .into_iter().collect::<Vec<_>>().join(","));
+
         PodcastDto {
             id: value.id,
             name: value.name.clone(),
@@ -84,7 +98,7 @@ impl From<Podcast> for PodcastDto {
             rssfeed: value.rssfeed.clone(),
             image_url,
             language: value.language.clone(),
-            keywords: value.keywords.clone(),
+            keywords,
             summary: value.summary.clone(),
             explicit: value.clone().explicit,
             last_build_date: value.clone().last_build_date,
@@ -95,5 +109,30 @@ impl From<Podcast> for PodcastDto {
             tags: vec![],
             favorites: false,
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::models::podcast_dto::PodcastDto;
+    use crate::models::podcasts::Podcast;
+    use crate::utils::test_builder::podcast_test_builder::tests::{PodcastTestDataBuilder};
+
+    #[test]
+    pub fn test_podcast_2_keywords() {
+        let podcast = PodcastTestDataBuilder::default().keywords("keyword1, keyword2, keyword1".to_string())
+            .build()
+            .unwrap();
+        let podcast_dto: PodcastDto = PodcastDto::from(Podcast::from(podcast));
+        assert_eq!(podcast_dto.keywords.unwrap().split(",").count(), 2);
+    }
+
+    #[test]
+    pub fn test_podcast_3_keywords() {
+        let podcast = PodcastTestDataBuilder::default().keywords("keyword1, keyword2, keyword1, keyword2, keyword1, keyword3".to_string())
+            .build()
+            .unwrap();
+        let podcast_dto: PodcastDto = PodcastDto::from(Podcast::from(podcast));
+        assert_eq!(podcast_dto.keywords.unwrap().split(",").count(), 3);
     }
 }
