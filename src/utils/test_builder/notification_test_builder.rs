@@ -5,17 +5,12 @@ pub mod tests {
     use fake::faker::chrono::en::Time;
     use fake::{Fake, Faker};
 
-    #[derive(Builder)]
+    #[derive(Default, Builder, Debug)]
+    #[builder(setter(into))]
     pub struct NotificationTestDataBuilder {
         pub message: String,
         pub status: String,
         pub created_at: String,
-    }
-
-    impl Default for NotificationTestDataBuilder {
-        fn default() -> Self {
-            Self::new()
-        }
     }
 
     impl NotificationTestDataBuilder {
