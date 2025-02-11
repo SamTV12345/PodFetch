@@ -371,7 +371,7 @@ pub fn retry_read_role(prompt: &str) -> Role {
             exit(1);
         }
     }
-    let res = Role::from_str(&trim_string(&input));
+    let res = Role::try_from(trim_string(&input));
     match res {
         Err(..) => {
             println!("Error setting role. Please choose one of the possible roles.");

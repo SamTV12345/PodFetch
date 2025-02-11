@@ -46,7 +46,7 @@ use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::logging_service::init_logging;
-use crate::utils::error::CustomError;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 
 // User management roles
@@ -74,18 +74,22 @@ impl fmt::Display for Role {
     }
 }
 
-impl FromStr for Role {
-    type Err = ();
+impl TryFrom<String> for Role {
+    type Error = CustomError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+    fn try_from(value: String) -> Result<Self, CustomError> {
+        match value.as_str() {
             "admin" => Ok(Role::Admin),
             "uploader" => Ok(Role::Uploader),
             "user" => Ok(Role::User),
-            _ => Err(()),
+            "Admin" => Ok(Role::Admin),
+            "Uploader" => Ok(Role::Uploader),
+            "User" => Ok(Role::User),
+            _ => Err(CustomErrorInner::BadRequest("Invalid role".to_string()).into()),
         }
     }
 }
+
 impl Role {
     pub const VALUES: [Self; 3] = [Self::User, Self::Admin, Self::Uploader];
 }

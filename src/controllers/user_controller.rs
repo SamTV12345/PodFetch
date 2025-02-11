@@ -22,7 +22,7 @@ pub struct UserOnboardingModel {
 #[derive(Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct InvitePostModel {
-    role: Role,
+    role: String,
     explicit_consent: bool,
 }
 
@@ -193,7 +193,8 @@ pub async fn create_invite(
     Json(invite): Json<InvitePostModel>,
 ) -> Result<Json<Invite>, CustomError> {
     let created_invite =
-        UserManagementService::create_invite(invite.role, invite.explicit_consent, requester)?;
+        UserManagementService::create_invite(Role::try_from(invite.role)?, invite.explicit_consent,
+                                             requester)?;
     Ok(Json(created_invite))
 }
 

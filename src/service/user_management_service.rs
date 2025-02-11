@@ -11,7 +11,7 @@ pub struct UserManagementService {}
 
 impl UserManagementService {
     pub fn may_onboard_user(user: User) -> bool {
-        Role::from_str(&user.role).unwrap() == Role::Admin
+        Role::try_from(user.role).unwrap() == Role::Admin
     }
 
     pub fn is_valid_password(password: String) -> bool {
@@ -53,7 +53,7 @@ impl UserManagementService {
                         let mut actual_user = User::new(
                             1,
                             username,
-                            Role::from_str(&invite.role).unwrap(),
+                            Role::try_from(invite.role)?,
                             Some(digest(password.clone())),
                             chrono::Utc::now().naive_utc(),
                             invite.explicit_consent,
