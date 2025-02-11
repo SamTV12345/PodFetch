@@ -21,8 +21,8 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
 
     return createPortal(
-        <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 bg-[--bg-color] md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
-            <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl text-[--fg-color] hover:text-[--fg-color-hover]"
+        <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 bg-(--bg-color) md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
+            <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl text-(--fg-color) hover:text-(--fg-color-hover)"
                   onClick={() => setDetailedAudioPlayerOpen(false)}>close_fullscreen</span>
 
             {/* Episode information */}
@@ -38,18 +38,18 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
                     <div className="aspect-square bg-center bg-cover md:mb-4 rounded-xl h-40 md:h-60 lg:h-80" style={{ backgroundImage: `url("${selectedPodcast?.podcastEpisode.local_image_url}")` }}></div>
 
                     <div className="md:absolute text-center xs:text-left">
-                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl text-[--fg-color]">{selectedPodcast?.podcastEpisode.name}</span>
-                        <span className="block lg:text-lg text-[--fg-color]">{currentPodcast && currentPodcast.name}</span>
+                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl text-(--fg-color)">{selectedPodcast?.podcastEpisode.name}</span>
+                        <span className="block lg:text-lg text-(--fg-color)">{currentPodcast && currentPodcast.name}</span>
                     </div>
                 </div>
 
                 {/* Description */}
-                <div className="md:max-h-60 lg:max-h-80 md:mb-10 overflow-y-auto xs:text-lg md:text-xl lg:text-2xl text-[--fg-color]"
+                <div className="md:max-h-60 lg:max-h-80 md:mb-10 overflow-y-auto xs:text-lg md:text-xl lg:text-2xl text-(--fg-color)"
                      dangerouslySetInnerHTML={selectedPodcast?.podcastEpisode.description ? removeHTML(selectedPodcast.podcastEpisode.description) : { __html: '' }} />
             </div>
 
             {/* Player */}
-            <div className="bg-[--bg-color] px-2 xs:p-4">
+            <div className="bg-(--bg-color) px-2 xs:p-4">
                 <PlayerProgressBar audioplayerRef={refItem} className="mb-2" />
 
                 <div className="

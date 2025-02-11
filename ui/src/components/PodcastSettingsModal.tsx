@@ -63,26 +63,26 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
 
     return <Dialog.Root open={open}>
         <Dialog.Portal>
-        <Dialog.Overlay onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden z-30 transition-opacity opacity-100" />
+        <Dialog.Overlay onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur-sm overflow-y-auto overflow-x-hidden z-30 transition-opacity opacity-100" />
             <Dialog.Content onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center z-40">
                 <div onClick={(e)=>e.stopPropagation()}
-                    className={"relative bg-[--bg-color] max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] " }>
-                    <Dialog.Title className="text-[--accent-color] text-2xl">Settings</Dialog.Title>
-                    <Dialog.Description className="text-[--fg-color]">Configure your podcast settings</Dialog.Description>
+                    className={"relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] " }>
+                    <Dialog.Title className="text-(--accent-color) text-2xl">Settings</Dialog.Title>
+                    <Dialog.Description className="text-(--fg-color)">Configure your podcast settings</Dialog.Description>
                     <Dialog.Close className="top-5 absolute right-5" onClick={()=>{
                         setOpen(false)
                     }}> <span
-                        className="material-symbols-outlined text-[--modal-close-color] hover:text-[--modal-close-color-hover]">close</span>
+                        className="material-symbols-outlined text-(--modal-close-color) hover:text-(--modal-close-color-hover)">close</span>
                         <span className="sr-only">Close modal</span></Dialog.Close>
-                    <hr className="mb-5 mt-1 border-[1px] border-[--border-color]"/>
+                    <hr className="mb-5 mt-1 border-[1px] border-(--border-color)"/>
                     <div className={`grid grid-cols-3 gap-5 ${!isSettingsEnabled && 'opacity-50'}`}>
-                        <h2 className="text-[--fg-color] col-span-2">{t('episode-numbering')}</h2>
+                        <h2 className="text-(--fg-color) col-span-2">{t('episode-numbering')}</h2>
                         <Switcher className="justify-self-end" disabled={!isSettingsEnabled}
                                   checked={podcastSettings?.episodeNumbering}
                                   onChange={(checked) => {
                                       setPodcastSettings({...podcastSettings!, episodeNumbering: checked})
                                   }}/>
-                        <label className="mr-6 text-[--fg-color]" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
+                        <label className="mr-6 text-(--fg-color)" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
                         <CustomButtonSecondary disabled={!isSettingsEnabled} onClick={() => {
                             client.PUT("/api/v1/settings/runcleanup")
                         }}>{t('run-cleanup')}</CustomButtonSecondary>
@@ -96,7 +96,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                       })
                                   }}/>
                         <label htmlFor="days-to-keep"
-                               className="flex gap-1 col-span-2 text-[--fg-color]">{t('days-to-keep')}<SettingsInfoIcon
+                               className="flex gap-1 col-span-2 text-(--fg-color)">{t('days-to-keep')}<SettingsInfoIcon
                             headerKey="days-to-keep" textKey="days-to-keep-explanation"/></label>
                         <CustomInput disabled={!isSettingsEnabled} className="w-20 justify-self-end" id="days-to-keep"
                                      onChange={(e) => {
@@ -107,7 +107,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                      }} type="number" value={podcastSettings ? podcastSettings!.autoCleanupDays : '0'}/>
 
                         <label htmlFor="auto-update"
-                               className="flex gap-1 col-span-2 text-[--fg-color]">{t('auto-update')} <SettingsInfoIcon
+                               className="flex gap-1 col-span-2 text-(--fg-color)">{t('auto-update')} <SettingsInfoIcon
                             headerKey="auto-update" textKey="auto-update-explanation"/></label>
                         <Switcher disabled={!isSettingsEnabled}
                                   checked={podcastSettings ? podcastSettings.autoUpdate : false}
@@ -120,7 +120,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                   }}/>
 
                         <label htmlFor="auto-download"
-                               className="flex gap-1 col-span-2 text-[--fg-color]">{t('auto-download')}
+                               className="flex gap-1 col-span-2 text-(--fg-color)">{t('auto-download')}
                             <SettingsInfoIcon
                                 headerKey="auto-download" textKey="auto-download-explanation"/></label>
                         <Switcher disabled={!isSettingsEnabled}
@@ -132,7 +132,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                           autoDownload: !podcastSettings?.autoDownload
                                       })
                                   }}/>
-                        <label className="text-[--fg-color] flex gap-1 col-span-2"
+                        <label className="text-(--fg-color) flex gap-1 col-span-2"
                                htmlFor="colon-replacement">{t('colon-replacement')}
                             <SettingsInfoIcon className="mb-auto" headerKey="colon-replacement"
                                               textKey="colon-replacement-explanation"/>
@@ -146,7 +146,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                       }}
                                       value={podcastSettings ? podcastSettings!.replacementStrategy : options[0]!.value}/>
                         <label htmlFor="number-of-podcasts-to-download"
-                               className="flex gap-1 col-span-2 text-[--fg-color]">{t('number-of-podcasts-to-download')}
+                               className="flex gap-1 col-span-2 text-(--fg-color)">{t('number-of-podcasts-to-download')}
                             <SettingsInfoIcon
                                 headerKey="number-of-podcasts-to-download"
                                 textKey="number-of-podcasts-to-download-explanation"/></label>
@@ -154,7 +154,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                             setPodcastSettings({...podcastSettings!, podcastPrefill: parseInt(e.target.value)})
                         }} type="number" value={podcastSettings ? podcastSettings.podcastPrefill : 5}/>
                         <label htmlFor="activate"
-                               className="flex gap-1 col-span-2 text-[--fg-color]">{t('activated')}
+                               className="flex gap-1 col-span-2 text-(--fg-color)">{t('activated')}
                             <SettingsInfoIcon
                                 headerKey="auto-download" textKey="auto-download-explanation"/></label>
                         <Switcher

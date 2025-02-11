@@ -76,7 +76,7 @@ export const SystemInfoPage: FC = () => {
                 {/* CPU */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-[--fg-icon-color]">memory</span>
+                        <span className="material-symbols-outlined text-(--fg-icon-color)">memory</span>
                         <Heading3>{t('cpu-usage')}</Heading3>
                     </span>
 
@@ -86,7 +86,7 @@ export const SystemInfoPage: FC = () => {
                 {/* Memory */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-[--fg-icon-color]">memory_alt</span>
+                        <span className="material-symbols-outlined text-(--fg-icon-color)">memory_alt</span>
                         <Heading3>{t('memory-usage')}</Heading3>
                     </span>
 
@@ -96,7 +96,7 @@ export const SystemInfoPage: FC = () => {
                 {/* Disk */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-[--fg-icon-color]">hard_drive</span>
+                        <span className="material-symbols-outlined text-(--fg-icon-color)">hard_drive</span>
                         <Heading3>{t('disk-usage')}</Heading3>
                     </span>
 
@@ -108,14 +108,14 @@ export const SystemInfoPage: FC = () => {
                     <Heading3 className="mb-6">{t('hardware')}</Heading3>
 
                     <dl className="grid lg:grid-cols-2 gap-2 lg:gap-6 text-sm">
-                        <dt className="font-medium text-[--fg-color]">{t('cpu-brand')}</dt>
-                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.cpus[0]!.brand}</dd>
+                        <dt className="font-medium text-(--fg-color)">{t('cpu-brand')}</dt>
+                        <dd className="text-(--fg-secondary-color)">{systemInfo.system.cpus.cpus[0]!.brand}</dd>
 
-                        <dt className="font-medium text-[--fg-color]">{t('cpu-cores')}</dt>
-                        <dd className="text-[--fg-secondary-color]">{systemInfo.system.cpus.cpus.length}</dd>
+                        <dt className="font-medium text-(--fg-color)">{t('cpu-cores')}</dt>
+                        <dd className="text-(--fg-secondary-color)">{systemInfo.system.cpus.cpus.length}</dd>
 
-                        <dt className="font-medium text-[--fg-color]">{t('podcast-size')}</dt>
-                        <dd className="text-[--fg-secondary-color]">{calcPodcastSize()}</dd>
+                        <dt className="font-medium text-(--fg-color)">{t('podcast-size')}</dt>
+                        <dd className="text-(--fg-secondary-color)">{calcPodcastSize()}</dd>
                     </dl>
                 </div>
 
@@ -124,38 +124,38 @@ export const SystemInfoPage: FC = () => {
                     <Heading3 className="mb-6">{t('system-configuration')}</Heading3>
 
                     <dl className="grid grid-cols-1 xs:grid-cols-[auto_auto] gap-2 xs:gap-6 text-sm">
-                        <dt className="font-medium text-[--fg-color]">{t('podindex-configured')}</dt>
-                        <dd className="text-[--fg-secondary-color]">
+                        <dt className="font-medium text-(--fg-color)">{t('podindex-configured')}</dt>
+                        <dd className="text-(--fg-secondary-color)">
                             {configModel?.podindexConfigured ? (
-                                <span className="material-symbols-outlined text-[--success-fg-color]">check_circle</span>
+                                <span className="material-symbols-outlined text-(--success-fg-color)">check_circle</span>
                             ) : (
-                                <span className="material-symbols-outlined text-[--danger-fg-color]">block</span>
+                                <span className="material-symbols-outlined text-(--danger-fg-color)">block</span>
                             )}
                         </dd>
 
 
-                        <dt className="font-medium text-[--fg-color]">{t('rss-feed')}</dt>
-                        <dd className="text-[--fg-secondary-color]"><a className="text-[--accent-color] hover:text-[--accent-color-hover]" href={prependAPIKeyOnAuthEnabled(configModel!.rssFeed)} target="_blank" rel="noopener noreferrer">{prependAPIKeyOnAuthEnabled(configModel!.rssFeed)}</a></dd>
+                        <dt className="font-medium text-(--fg-color)">{t('rss-feed')}</dt>
+                        <dd className="text-(--fg-secondary-color)"><a className="text-(--accent-color) hover:text-(--accent-color-hover)" href={prependAPIKeyOnAuthEnabled(configModel!.rssFeed)} target="_blank" rel="noopener noreferrer">{prependAPIKeyOnAuthEnabled(configModel!.rssFeed)}</a></dd>
 
                         {versionInfo && (
                             <>
-                                <dt className="font-medium text-[--fg-color]">{t('version')}</dt>
-                                <dd className="text-[--fg-secondary-color]">{versionInfo.version}</dd>
+                                <dt className="font-medium text-(--fg-color)">{t('version')}</dt>
+                                <dd className="text-(--fg-secondary-color)">{versionInfo.version}</dd>
 
-                                <dt className="font-medium text-[--fg-color]">{t('commit')}</dt>
-                                <dd className="text-[--fg-secondary-color]">{versionInfo.commit}</dd>
+                                <dt className="font-medium text-(--fg-color)">{t('commit')}</dt>
+                                <dd className="text-(--fg-secondary-color)">{versionInfo.commit}</dd>
 
-                                <dt className="font-medium text-[--fg-color]">{t('ci-build')}</dt>
-                                <dd className="text-[--fg-secondary-color]">{versionInfo.ci}</dd>
+                                <dt className="font-medium text-(--fg-color)">{t('ci-build')}</dt>
+                                <dd className="text-(--fg-secondary-color)">{versionInfo.ci}</dd>
 
-                                <dt className="font-medium text-[--fg-color]">{t('build-date')}</dt>
-                                <dd className="text-[--fg-secondary-color]">{versionInfo.time}</dd>
+                                <dt className="font-medium text-(--fg-color)">{t('build-date')}</dt>
+                                <dd className="text-(--fg-secondary-color)">{versionInfo.time}</dd>
 
-                                <dt className="font-medium text-[--fg-color]">{t('branch')}</dt>
-                                <dd className="text-[--fg-secondary-color]">{versionInfo.ref}</dd>
+                                <dt className="font-medium text-(--fg-color)">{t('branch')}</dt>
+                                <dd className="text-(--fg-secondary-color)">{versionInfo.ref}</dd>
 
-                                <dt className="font-medium text-[--fg-color]">{t('os')}</dt>
-                                <dd className="text-[--fg-secondary-color]">{versionInfo.os}</dd>
+                                <dt className="font-medium text-(--fg-color)">{t('os')}</dt>
+                                <dd className="text-(--fg-secondary-color)">{versionInfo.os}</dd>
                             </>
                         )}
                     </dl>

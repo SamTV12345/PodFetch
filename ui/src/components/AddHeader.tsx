@@ -14,17 +14,17 @@ export const AddHeader: FC<AddHeaderProps> = ({ selectedSearchType,setSelectedSe
     const {t} = useTranslation()
 
     return (
-        <ul className="flex flex-wrap gap-2 border-b border-[--border-color] mb-6 text-[--fg-secondary-color]">
-            <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'itunes' && 'border-b-2 border-[--accent-color] text-[--accent-color]'}`} onClick={() => setSelectedSearchType(AddTypes.ITUNES)}>
+        <ul className="flex flex-wrap gap-2 border-b border-(--border-color) mb-6 text-(--fg-secondary-color)">
+            <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'itunes' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`} onClick={() => setSelectedSearchType(AddTypes.ITUNES)}>
                 iTunes
             </li>
-            {configModel?.podindexConfigured && <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'podindex' && 'border-b-2 border-[--accent-color] text-[--accent-color]'}`} onClick={() => setSelectedSearchType(AddTypes.PODINDEX)}>
+            {configModel?.podindexConfigured && <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'podindex' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`} onClick={() => setSelectedSearchType(AddTypes.PODINDEX)}>
                 PodIndex
             </li>}
-            <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'opml' && 'border-b-2 border-[--accent-color] text-[--accent-color]'}`} onClick={() => setSelectedSearchType(AddTypes.OPML)}>
+            <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'opml' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`} onClick={() => setSelectedSearchType(AddTypes.OPML)}>
                 {t('opml-file')}
             </li>
-            <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'feed' && 'border-b-2 border-[--accent-color] text-[--accent-color]'}`} onClick={() => setSelectedSearchType(AddTypes.FEED)}>
+            <li className={`cursor-pointer inline-block px-2 py-4 ${selectedSearchType === 'feed' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`} onClick={() => setSelectedSearchType(AddTypes.FEED)}>
                 {t('rss-feed-url')}
             </li>
         </ul>

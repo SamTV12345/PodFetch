@@ -44,14 +44,14 @@ export const PodcastInfoModal = () => {
             ${!infoModalOpen && 'pointer-events-none'}
             ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
         >
-            <div className={`relative bg-[--bg-color] max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
+            <div className={`relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
                 <button
                     type="button"
                     onClick={() => setInfoModalPodcastOpen(false)}
                     className="absolute top-4 right-4 bg-transparent"
                     data-modal-hide="defaultModal"
                 >
-                    <span className="material-symbols-outlined text-[--modal-close-color] hover:text-[--modal-close-color-hover]">close</span>
+                    <span className="material-symbols-outlined text-(--modal-close-color) hover:text-(--modal-close-color-hover)">close</span>
                     <span className="sr-only">Close modal</span>
                 </button>
 
@@ -59,7 +59,7 @@ export const PodcastInfoModal = () => {
                     <Heading2 className="inline align-middle mr-2">{selectedPodcastEpisode?.name || ''}</Heading2>
 
                     {/* Save icon */}
-                    <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
+                    <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
                         if (selectedPodcastEpisode) {
                             download(selectedPodcastEpisode.local_url, selectedPodcastEpisode.name + ".mp3")
                         }
@@ -67,12 +67,12 @@ export const PodcastInfoModal = () => {
 
                     {/* Delete icon */}
                     {selectedPodcastEpisode?.status &&
-                        <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer text-[--danger-fg-color] hover:text-[--danger-fg-color-hover]" title={t('delete') as string}>delete</span>
+                        <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)" title={t('delete') as string}>delete</span>
                     }
                 </div>
 
                 {selectedPodcastEpisode &&
-                    <p className="leading-[1.75] text-sm text-[--fg-color]" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
+                    <p className="leading-[1.75] text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
                     </p>
                 }
             </div>

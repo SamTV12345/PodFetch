@@ -95,7 +95,7 @@ export const CustomGaugeChart: FC<CustomGaugeChartProps> = ({ fill, labels, labe
         <div className="relative w-11/12 mx-auto">
             <Doughnut data={chartData} options={chartOptions} ref={chartRef} />
 
-            <span className="flex items-center justify-center absolute inset-0 pl-2 pt-6 text-4xl xs:text-3xl sm:text-4xl md:text-3xl text-[--fg-color] -z-10">{Math.round(value / max * 100)}%</span>
+            <span className="flex items-center justify-center absolute inset-0 pl-2 pt-6 text-4xl xs:text-3xl sm:text-4xl md:text-3xl text-(--fg-color) -z-10">{Math.round(value / max * 100)}%</span>
         </div>
     )
 }

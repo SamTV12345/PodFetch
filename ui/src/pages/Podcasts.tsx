@@ -121,7 +121,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                     }
 
                     <span
-                        className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                        className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                         onClick={() => {
                             refreshAllPodcasts()
                         }}>refresh</span>
@@ -146,7 +146,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                     <CustomInput className="pl-10 w-full" type="text" onChange={v =>
                         setFilters({...filters as Filter,title: v.target.value})} placeholder={t('search')!} value={filters?.title || ''} />
 
-                    <span className="material-symbols-outlined absolute left-2 top-2 text-[--input-icon-color]">search</span>
+                    <span className="material-symbols-outlined absolute left-2 top-2 text-(--input-icon-color)">search</span>
                 </span>
 
                 <CustomSelect iconName="sort" onChange={(v) => {

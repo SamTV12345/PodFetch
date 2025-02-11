@@ -9,7 +9,7 @@ export const Loading = () => {
             <div className="flex items-center gap-3" role="status">
                 <Spinner/>
 
-                <span className="text-[--fg-color]">{t('loading')}...</span>
+                <span className="text-(--fg-color)">{t('loading')}...</span>
             </div>
         </div>
     )

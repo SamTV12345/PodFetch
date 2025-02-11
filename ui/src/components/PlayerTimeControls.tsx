@@ -157,27 +157,27 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
     return (
         <div className="flex items-center justify-center gap-6">
             {/* Skip back */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => seekBackward()}>replay_30</span>
+            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90 " onClick={() => seekBackward()}>replay_30</span>
 
             {/* Previous */}
-            <span className="material-symbols-outlined filled cursor-pointer text-3xl lg:text-4xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90" onClick={() => skipToPreviousEpisode()}>skip_previous</span>
+            <span className="material-symbols-outlined filled cursor-pointer text-3xl lg:text-4xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90" onClick={() => skipToPreviousEpisode()}>skip_previous</span>
 
             {/* Play/pause */}
-            <span className="flex items-center justify-center bg-[--fg-color] hover:bg-[--fg-color-hover] cursor-pointer h-10 w-10 lg:h-12 lg:w-12 rounded-full active:scale-90" onClick={() => handleButton()}>
+            <span className="flex items-center justify-center bg-(--fg-color) hover:bg-(--fg-color-hover) cursor-pointer h-10 w-10 lg:h-12 lg:w-12 rounded-full active:scale-90" onClick={() => handleButton()}>
                 {isPlaying?
-                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl text-[--bg-color]">pause</span>:
-                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl text-[--bg-color]">play_arrow</span>
+                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl text-(--bg-color)">pause</span>:
+                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl text-(--bg-color)">play_arrow</span>
                 }
             </span>
 
             {/* Next */}
-            <span className="material-symbols-outlined filled cursor-pointer text-3xl lg:text-4xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90" onClick={() => skipToNextEpisode()}>skip_next</span>
+            <span className="material-symbols-outlined filled cursor-pointer text-3xl lg:text-4xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90" onClick={() => skipToNextEpisode()}>skip_next</span>
 
             {/* Skip forward */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-[--fg-color] hover:text-[--fg-color-hover] active:scale-90 " onClick={() => seekForward()}>forward_30</span>
+            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90 " onClick={() => seekForward()}>forward_30</span>
 
             {/* Speed fixed width to prevent layout shift when value changes */}
-            <span className="cursor-pointer text-sm text-[--fg-color] hover:text-[--fg-color-hover] w-8" onClick={() => changeSpeed()}>{speed}x</span>
+            <span className="cursor-pointer text-sm text-(--fg-color) hover:text-(--fg-color-hover) w-8" onClick={() => changeSpeed()}>{speed}x</span>
         </div>
     )
 }

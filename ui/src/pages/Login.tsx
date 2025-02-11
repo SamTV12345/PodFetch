@@ -66,11 +66,11 @@ export const Login = () => {
     return (
         <div className="flex flex-col items-center xs:justify-center bg-stone-900 h-full w-full">
             <span className="flex items-center gap-2 xs:mb-10 px-4 py-3 text-white">
-                <span className="material-symbols-outlined text-[--accent-color]">auto_detect_voice</span>
+                <span className="material-symbols-outlined text-(--accent-color)">auto_detect_voice</span>
                 <span className="font-bold font-['Inter_variable']">Podfetch</span>
             </span>
 
-            <div className="bg-[--bg-color] max-w-sm p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full">
+            <div className="bg-(--bg-color) max-w-sm p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full">
                 <Heading2 className="mb-10 text-center">
                     {t('sign-in')}
                 </Heading2>
@@ -79,7 +79,7 @@ export const Login = () => {
                     <form className="flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
 
                         {alert && (
-                            <div className="bg-[--danger-bg-color] px-6 py-5 rounded-lg relative text-sm text-[--danger-fg-color]" role="alert">
+                            <div className="bg-(--danger-bg-color) px-6 py-5 rounded-lg relative text-sm text-(--danger-fg-color)" role="alert">
                                 <span className="block font-bold mb-2">{t('error-authenticating')}</span>
 
                                 <span className="block sm:inline">{alert}</span>
@@ -87,7 +87,7 @@ export const Login = () => {
                         )}
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-sm text-[--fg-color]" htmlFor="username">{t('username')!}</label>
+                            <label className="text-sm text-(--fg-color)" htmlFor="username">{t('username')!}</label>
 
                             <Controller
                             name="username"
@@ -97,7 +97,7 @@ export const Login = () => {
                             )} />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-sm text-[--fg-color]" htmlFor="password">{t('password')}</label>
+                            <label className="text-sm text-(--fg-color)" htmlFor="password">{t('password')}</label>
 
                             <Controller
                             name="password"
@@ -114,7 +114,7 @@ export const Login = () => {
                                 <CustomCheckbox aria-describedby="remember" id="remember" name={name} onChange={onChange} value ={value} />
                             )} />
 
-                            <label className="ml-2 text-sm text-[--fg-secondary-color]" htmlFor="remember">{t('remember-me')}</label>
+                            <label className="ml-2 text-sm text-(--fg-secondary-color)" htmlFor="remember">{t('remember-me')}</label>
                         </div>
 
                         <CustomButtonPrimary className="self-end" type="submit">{t('sign-in')}</CustomButtonPrimary>

@@ -103,7 +103,7 @@ export const SettingsPodcastDelete: FC = () => {
                             setSelectedPodcasts(selectedPodcasts.filter(pod=>pod !== p))
                         }
                     }}/>
-                    <span className="xs:col-span-2 lg:col-span-2 text-[--fg-color]">{p.name}</span>
+                    <span className="xs:col-span-2 lg:col-span-2 text-(--fg-color)">{p.name}</span>
                         </Fragment>
             ))}
         </div>

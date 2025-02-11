@@ -71,10 +71,10 @@ export const CreatePlaylistModal = () => {
 
 
     return createPortal(
-        <div aria-hidden="true" id="defaultModal" onClick={()=>setCreatePlaylistOpen(false)} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-x-hidden overflow-y-auto z-30 ${playListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
+        <div aria-hidden="true" id="defaultModal" onClick={()=>setCreatePlaylistOpen(false)} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-sm overflow-x-hidden overflow-y-auto z-30 ${playListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
 
             {/* Modal */}
-            <div className="relative bg-[--bg-color] text-[--fg-color] max-w-5xl md:w-[50%] p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)]" onClick={e=>e.stopPropagation()}>
+            <div className="relative bg-(--bg-color) text-(--fg-color) max-w-5xl md:w-[50%] p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)]" onClick={e=>e.stopPropagation()}>
 
                 {/* Close button */}
                 <button type="button" className="absolute top-4 right-4 bg-transparent" data-modal-toggle="defaultModal"
@@ -90,7 +90,7 @@ export const CreatePlaylistModal = () => {
                 }}>
 
                     <div className="mt-5 mb-5 ">
-                    <Heading2 className="mb-4 text-[--fg-color]">{t('add-playlist')}</Heading2>
+                    <Heading2 className="mb-4 text-(--fg-color)">{t('add-playlist')}</Heading2>
                     </div>
 
                     {/* Playlist data like name */}

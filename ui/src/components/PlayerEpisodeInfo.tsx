@@ -23,8 +23,8 @@ export const PlayerEpisodeInfo: FC<PlayerEpisodeInfoProps> = ({ podcastEpisode, 
 
             {/* Titles */}
             <div className="text-center xs:text-left">
-                <span className="line-clamp-3 md:line-clamp-2 font-bold leading-tight text-sm text-[--fg-color]">{podcastEpisode?.name}</span>
-                <span className="hidden md:inline text-xs text-[--fg-color]">{podcast?.name}</span>
+                <span className="line-clamp-3 md:line-clamp-2 font-bold leading-tight text-sm text-(--fg-color)">{podcastEpisode?.name}</span>
+                <span className="hidden md:inline text-xs text-(--fg-color)">{podcast?.name}</span>
             </div>
         </div>
     )

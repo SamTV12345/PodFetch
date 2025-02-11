@@ -12,14 +12,14 @@ export const VolumeIcon: FC<VolumeProps> = ({ audio, max, volume }) => {
     const [muted, setMuted] = useState(false)
 
     return muted ? (
-        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl text-[--fg-color] hover:text-[--fg-color-hover]" onClick={() => {
+        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl text-(--fg-color) hover:text-(--fg-color-hover)" onClick={() => {
             if(audio && audio.current) {
                 audio.current.muted = false
                 setMuted(false)
             }
         }}>volume_off</span>
     ) : (
-        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl text-[--fg-color] hover:text-[--fg-color-hover] inline-block" onClick={() => {
+        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl text-(--fg-color) hover:text-(--fg-color-hover) inline-block" onClick={() => {
             if(audio && audio.current) {
                 audio.current.muted = true
                 setMuted(true)

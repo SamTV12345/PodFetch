@@ -85,17 +85,17 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
     return (
         <div className="flex items-center gap-3">
             {/* Fixed width to avoid layout shift as time progresses */}
-            <span className={`text-xs text-right text-[--fg-color] w-12 ${className}`}>{currentTime}</span>
+            <span className={`text-xs text-right text-(--fg-color) w-12 ${className}`}>{currentTime}</span>
 
-            <div className="grow bg-[--slider-bg-color] cursor-pointer h-1" ref={wrapper} onClick={(e) => {
+            <div className="grow bg-(--slider-bg-color) cursor-pointer h-1" ref={wrapper} onClick={(e) => {
                 endWrapperPosition(e)
             }}>
-                <div className="relative bg-[--slider-fg-color] h-1 text-right" style={{width: (metadata.percentage) + '%'}}>
-                    <span className="absolute -right-1 -top-1 bg-[--slider-fg-color] h-3 w-3 rounded-full" onMouseMove={(e) => calcTotalMovement(e)} ref={control}></span>
+                <div className="relative bg-(--slider-fg-color) h-1 text-right" style={{width: (metadata.percentage) + '%'}}>
+                    <span className="absolute -right-1 -top-1 bg-(--slider-fg-color) h-3 w-3 rounded-full" onMouseMove={(e) => calcTotalMovement(e)} ref={control}></span>
                 </div>
             </div>
 
-            <div className={`text-xs text-[--fg-color] w-12 ${className}`}>{totalDuration}</div>
+            <div className={`text-xs text-(--fg-color) w-12 ${className}`}>{totalDuration}</div>
         </div>
     )
 }

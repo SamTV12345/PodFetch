@@ -20,13 +20,13 @@ export const TagsPage = ()=>{
     return (
         <>
         <Heading1>{t('tag_other')}</Heading1>
-            <table className="text-left text-sm text-[--fg-color]">
+            <table className="text-left text-sm text-(--fg-color)">
                 <thead>
                 <tr className="border-b border-stone-300">
-                    <th scope="col" className="px-2 py-3 text-[--fg-color]">
+                    <th scope="col" className="px-2 py-3 text-(--fg-color)">
                         {t('tag_one')}
                     </th>
-                    <th scope="col" className="px-2 py-3 text-[--fg-color]">
+                    <th scope="col" className="px-2 py-3 text-(--fg-color)">
                         {t('actions')}
                     </th>
                 </tr>
@@ -35,7 +35,7 @@ export const TagsPage = ()=>{
                 {
                     tags.map(tag=> {
                         return <tr className="border-b border-stone-300 " key={tag.id}>
-                            <td className="px-2 py-4 flex items-center text-[--fg-color]">
+                            <td className="px-2 py-4 flex items-center text-(--fg-color)">
                                 <CustomInput onBlur={()=>{
                                     client.PUT("/api/v1/tags/{tag_id}", {
                                         params: {
@@ -61,7 +61,7 @@ export const TagsPage = ()=>{
                                 }}/>
                             </td>
                             <td>
-                                <button className="px-2 py-1 text-[--fg-color] rounded-md bg-red-700" onClick={() => {
+                                <button className="px-2 py-1 text-(--fg-color) rounded-md bg-red-700" onClick={() => {
                                     client.DELETE("/api/v1/tags/{tag_id}", {
                                         params: {
                                             path: {

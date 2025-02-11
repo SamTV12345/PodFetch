@@ -142,7 +142,7 @@ export const PodcastDetailPage = () => {
                         <Heading1 className="inline align-middle mr-2">{currentPodcast.name}</Heading1>
 
                         <span
-                            className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                            className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                             onClick={() => {
                                 client.POST("/api/v1/podcasts/{id}/refresh", {
                                     params: {
@@ -153,7 +153,7 @@ export const PodcastDetailPage = () => {
                                 })
                             }}>refresh</span>
                         <span>
-                            <button className="material-symbols-outlined inline cursor-pointer align-middle text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                            <button className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                                     onClick={() => {
                                         setOpenSettingsMenu(true)
                                     }}>settings</button>
@@ -167,7 +167,7 @@ export const PodcastDetailPage = () => {
                         sm:col-start-2 sm:col-end-3
                         self-start flex flex-col items-start gap-2
                     ">
-                        <span className="block text-[--fg-secondary-color]">{currentPodcast.author}</span>
+                        <span className="block text-(--fg-secondary-color)">{currentPodcast.author}</span>
 
                         <div className="flex gap-2">
                             {currentPodcast.keywords && currentPodcast.keywords?.split(',').map((keyword, index) => (
@@ -179,21 +179,21 @@ export const PodcastDetailPage = () => {
                         <button className="flex gap-4" rel="noopener noreferrer"
                                 onClick={() => window.open(prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id))}>
                             <a rel="noopener noreferrer"
-                               className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                               className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                                target="_blank"
                                href={prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id)}>rss_feed</a>
-                            <span className="text-[--fg-color]">PodFetch</span>
+                            <span className="text-(--fg-color)">PodFetch</span>
                         </button>
 
                         <button className="flex gap-4" rel="noopener noreferrer"
                                 onClick={() => window.open(currentPodcast.rssfeed)}>
-                            <a className="material-symbols-outlined cursor-pointer text-[--fg-icon-color] hover:text-[--fg-icon-color-hover]"
+                            <a className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                                target="_blank" rel="noopener noreferrer" href={currentPodcast.rssfeed}>rss_feed</a>
-                            <span className="text-[--fg-color]">{t('original-rss-feed')}</span>
+                            <span className="text-(--fg-color)">{t('original-rss-feed')}</span>
                         </button>
                             <div className="flex gap-4 justify-end">
                                 <Switcher checked={onlyUnplayed} onChange={setOnlyUnplayed}/>
-                                <span className=" text-[--fg-color] mt-auto">{t('unplayed')}</span>
+                                <span className=" text-(--fg-color) mt-auto">{t('unplayed')}</span>
                             </div>
                             </span>
                     </div>
@@ -206,7 +206,7 @@ export const PodcastDetailPage = () => {
                         justify-self-end self-end sm:self-start
                         flex gap-3 items-center
                     ">
-                        <span className="text-xs text-[--fg-secondary-color]">{t('active')}</span>
+                        <span className="text-xs text-(--fg-secondary-color)">{t('active')}</span>
 
                         <Switcher checked={currentPodcast.active} onChange={() => {
                             client.PUT("/api/v1/podcasts/{id}/active", {
@@ -224,11 +224,11 @@ export const PodcastDetailPage = () => {
 
                 {/* Description */
                     currentPodcast.summary &&
-                    <div className="relative leading-[1.75] mb-8 text-sm text-[--fg-color]">
+                    <div className="relative leading-[1.75] mb-8 text-sm text-(--fg-color)">
                         <div id="summary" className={lineClamp ? 'line-clamp-3' : ''}
                              dangerouslySetInnerHTML={removeHTML(currentPodcast.summary)}/>
                         {(isOverflown('summary') || lineClamp) && <div
-                            className="cursor-pointer underline text-[--accent-color] hover:text-[--accent-color-hover]"
+                            className="cursor-pointer underline text-(--accent-color) hover:text-(--accent-color-hover)"
                             onClick={() => {
                                 setLineClamp(!lineClamp)
                             }}>

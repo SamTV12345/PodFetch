@@ -50,7 +50,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                 <CustomInput className="pl-10 w-full" id="search-input" onChange={(v) =>
                     setSearchName(v.target.value)} placeholder={t('search-episodes')!} type="text" value={searchName} />
 
-                <span className="material-symbols-outlined absolute left-2 text-[--input-icon-color]">search</span>
+                <span className="material-symbols-outlined absolute left-2 text-(--input-icon-color)">search</span>
             </div>
 
             {/* Results */
@@ -61,7 +61,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
             ) : searchResults.length === 0 ? (
                 <div className="grid place-items-center">
                     {searchName ? (
-                        <span className="p-8 text-[--fg-secondary-color]">{t('no-results-found-for')} "<span className="text-[--fg-color]">{searchName}</span>"</span>
+                        <span className="p-8 text-(--fg-secondary-color)">{t('no-results-found-for')} "<span className="text-(--fg-color)">{searchName}</span>"</span>
                     ) : (
                         showBlankState && <EmptyResultIcon />
                     )}
@@ -80,9 +80,9 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
 
                             {/* Information */}
                             <div className="flex flex-col gap-2">
-                                <span className="text-sm text-[--fg-secondary-color]">{formatTime(episode.date_of_recording)}</span>
-                                <span className="font-bold leading-tight text-[--fg-color] transition-color group-hover:text-[--fg-color-hover]">{episode.name}</span>
-                                <div className="leading-[1.75] line-clamp-3 text-sm text-[--fg-color]" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
+                                <span className="text-sm text-(--fg-secondary-color)">{formatTime(episode.date_of_recording)}</span>
+                                <span className="font-bold leading-tight text-(--fg-color) transition-color group-hover:text-(--fg-color-hover)">{episode.name}</span>
+                                <div className="leading-[1.75] line-clamp-3 text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
                             </div>
                         </li>
                     ))}

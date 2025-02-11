@@ -1,87 +1,125 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-xs: 480px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  --color-mustard-100: #fae5c0;
+  --color-mustard-200: #fad490;
+  --color-mustard-300: #fac463;
+  --color-mustard-400: #f3ae34;
+  --color-mustard-500: #e69a13;
+  --color-mustard-600: #c07c03;
+  --color-mustard-700: #855602;
+  --color-mustard-800: #4e3201;
+  --color-mustard-900: #271901;
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
 
 :root {
-    --bg-color: theme(colors.white);
-    --fg-color: theme(colors.stone.900);
-    --fg-color-hover: theme(colors.stone.600);
-    --fg-color-disabled: theme(colors.stone.500);
-    --fg-icon-color: theme(colors.stone.800);
-    --fg-icon-color-hover: theme(colors.stone.600);
+    --bg-color: var(--color-white);
+    --fg-color: var(--color-stone-900);
+    --fg-color-hover: var(--color-stone-600);
+    --fg-color-disabled: var(--color-stone-500);
+    --fg-icon-color: var(--color-stone-800);
+    --fg-icon-color-hover: var(--color-stone-600);
 
-    --fg-secondary-color: theme(colors.stone.500);
-    --fg-secondary-icon-color: theme(colors.stone.400);
+    --fg-secondary-color: var(--color-stone-500);
+    --fg-secondary-icon-color: var(--color-stone-400);
 
-    --accent-color: theme(colors.mustard.600);
-    --accent-color-hover: theme(colors.mustard.500);
+    --accent-color: var(--color-mustard-600);
+    --accent-color-hover: var(--color-mustard-500);
 
-    --border-color: theme(colors.stone.200);
+    --border-color: var(--color-stone-200);
 
-    --input-bg-color: theme(colors.stone.200);
-    --input-fg-color: theme(colors.stone.600);
-    --input-fg-color-disabled: theme(colors.stone.400);
-    --input-icon-color: theme(colors.stone.500);
+    --input-bg-color: var(--color-stone-200);
+    --input-fg-color: var(--color-stone-600);
+    --input-fg-color-disabled: var(--color-stone-400);
+    --input-icon-color: var(--color-stone-500);
 
-    --select-text-color: theme(colors.stone.600);
-    --select-icon-color: theme(colors.stone.500);
+    --select-text-color: var(--color-stone-600);
+    --select-icon-color: var(--color-stone-500);
 
-    --slider-bg-color: theme(colors.stone.300);
+    --slider-bg-color: var(--color-stone-300);
     --slider-fg-color: var(--fg-color);
 
-    --modal-close-color: theme(colors.stone.400);
-    --modal-close-color-hover: theme(colors.stone.500);
+    --modal-close-color: var(--color-stone-400);
+    --modal-close-color-hover: var(--color-stone-500);
 
     --shadow-opacity: 0.2;
     --shadow-opacity-hover: 0.5;
 
-    --danger-bg-color: theme(colors.red.100);
-    --danger-fg-color: theme(colors.red.700);
-    --danger-fg-color-hover: theme(colors.red.500);
+    --danger-bg-color: var(--color-red-100);
+    --danger-fg-color: var(--color-red-700);
+    --danger-fg-color-hover: var(--color-red-500);
 
-    --success-fg-color: theme(colors.green.700);
-    --success-fg-color-hover: theme(colors.green.500);
+    --success-fg-color: var(--color-green-700);
+    --success-fg-color-hover: var(--color-green-500);
 }
 
 :root.dark {
-    --bg-color: theme(colors.stone.900);
-    --fg-color: theme(colors.stone.300);
-    --fg-color-hover: theme(colors.stone.500);
-    --fg-color-disabled: theme(colors.stone.500);
-    --fg-icon-color: theme(colors.stone.400);
-    --fg-icon-color-hover: theme(colors.stone.500);
+    --bg-color: var(--color-stone-900);
+    --fg-color: var(--color-stone-300);
+    --fg-color-hover: var(--color-stone-500);
+    --fg-color-disabled: var(--color-stone-500);
+    --fg-icon-color: var(--color-stone-400);
+    --fg-icon-color-hover: var(--color-stone-500);
 
-    --fg-secondary-color: theme(colors.stone.500);
-    --fg-secondary-icon-color: theme(colors.stone.600);
+    --fg-secondary-color: var(--color-stone-500);
+    --fg-secondary-icon-color: var(--color-stone-600);
 
-    --accent-color: theme(colors.mustard.500);
-    --accent-color-hover: theme(colors.mustard.400);
+    --accent-color: var(--color-mustard-500);
+    --accent-color-hover: var(--color-mustard-400);
 
-    --border-color: theme(colors.stone.700);
+    --border-color: var(--color-stone-700);
 
-    --input-bg-color: theme(colors.stone.800);
-    --input-fg-color: theme(colors.stone.400);
-    --input-fg-color-disabled: theme(colors.stone.600);
-    --input-icon-color: theme(colors.stone.500);
+    --input-bg-color: var(--color-stone-800);
+    --input-fg-color: var(--color-stone-400);
+    --input-fg-color-disabled: var(--color-stone-600);
+    --input-icon-color: var(--color-stone-500);
 
-    --select-text-color: theme(colors.stone.400);
-    --select-icon-color: theme(colors.stone.500);
+    --select-text-color: var(--color-stone-400);
+    --select-icon-color: var(--color-stone-500);
 
-    --slider-bg-color: theme(colors.stone.700);
+    --slider-bg-color: var(--color-stone-700);
     --slider-fg-color: var(--fg-color);
 
-    --modal-action-color: theme(colors.stone.600);
-    --modal-action-color-hover: theme(colors.stone.500);
+    --modal-action-color: var(--color-stone-600);
+    --modal-action-color-hover: var(--color-stone-500);
 
     --shadow-opacity: 0.8;
     --shadow-opacity-hover: 1;
 
-    --danger-bg-color: theme(colors.red.950);
-    --danger-fg-color: theme(colors.red.600);
-    --danger-fg-color-hover: theme(colors.red.700);
+    --danger-bg-color: var(--color-red-950);
+    --danger-fg-color: var(--color-red-600);
+    --danger-fg-color-hover: var(--color-red-700);
 
-    --success-fg-color: theme(colors.green.600);
-    --success-fg-color-hover: theme(colors.green.700);
+    --success-fg-color: var(--color-green-600);
+    --success-fg-color-hover: var(--color-green-700);
 }
 
 * {
@@ -125,7 +163,7 @@ html {
     @apply w-0;
 }
 
-@media screen(xs) {
+@media (width >= theme(--breakpoint-xs)) {
     .i18n-dropdown {
         @apply pl-6;
         @apply pr-2;
@@ -286,5 +324,5 @@ html {
 }
 
 .settings-selector .active {
-    @apply border-b-2 border-[--accent-color] text-[--accent-color];
+    @apply border-b-2 border-(--accent-color) text-(--accent-color);
 }

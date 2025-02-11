@@ -57,9 +57,9 @@ export const ThemeSelector: FC = () => {
     ]
 
     return (
-        <ToggleGroup.Root className="flex items-center border border-[--border-color] p-0.5 rounded-full" defaultValue="" onValueChange={(v) => { if (v) setTheme(v) }} value={theme} type="single" aria-label={t('theme')}>
+        <ToggleGroup.Root className="flex items-center border border-(--border-color) p-0.5 rounded-full" defaultValue="" onValueChange={(v) => { if (v) setTheme(v) }} value={theme} type="single" aria-label={t('theme')}>
             {themes.map((theme) =>
-                <ToggleGroup.Item aria-label={t(theme.translationKey)} className="aspect-square p-2 rounded-full text-[--fg-color] hover:text-[--fg-color-hover] data-[state=on]:bg-[--border-color] data-[state=on]:text-[--fg-color]" key={theme.value} value={theme.value}>
+                <ToggleGroup.Item aria-label={t(theme.translationKey)} className="aspect-square p-2 rounded-full text-(--fg-color) hover:text-(--fg-color-hover) data-[state=on]:bg-(--border-color) data-[state=on]:text-(--fg-color)" key={theme.value} value={theme.value}>
                     <span className="material-symbols-outlined leading-none text-xl">{theme.icon}</span>
                 </ToggleGroup.Item>
             )}

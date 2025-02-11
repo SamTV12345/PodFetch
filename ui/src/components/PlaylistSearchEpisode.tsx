@@ -27,16 +27,16 @@ export const PlaylistSearchEpisode = ()=>{
         }} classNameResults="max-h-[min(20rem,calc(100vh-3rem-3rem))]"
                                                   showBlankState={false} />
     <div className={`scrollbox-x  p-2`}>
-        <table className="text-left text-sm text-stone-900 w-full overflow-y-auto text-[--fg-color]">
+        <table className="text-left text-sm text-stone-900 w-full overflow-y-auto text-(--fg-color)">
             <thead>
             <tr className="border-b border-stone-300">
-                <th scope="col" className="pr-2 py-3 text-[--fg-color]">
+                <th scope="col" className="pr-2 py-3 text-(--fg-color)">
                     #
                 </th>
-                <th scope="col" className="px-2 py-3 text-[--fg-color]">
+                <th scope="col" className="px-2 py-3 text-(--fg-color)">
                     {t('episode-name')}
                 </th>
-                <th scope="col" className="px-2 py-3 text-[--fg-color]">
+                <th scope="col" className="px-2 py-3 text-(--fg-color)">
                     {t('actions')}
                 </th>
             </tr>
@@ -58,10 +58,10 @@ export const PlaylistSearchEpisode = ()=>{
                         items: newItems
                     })
                 }} onDragOver={(e)=>item.podcastEpisode.id!=itemCurrentlyDragged?.id&&e.preventDefault()} onDragStart={e=>handleDragStart(item.podcastEpisode, index, e)}>
-                    <td className="text-[--fg-color] p-2">
+                    <td className="text-(--fg-color) p-2">
                         {index}
                     </td>
-                    <td className="text-[--fg-color]">
+                    <td className="text-(--fg-color)">
                         {item.podcastEpisode.name}
                     </td>
                     <td>

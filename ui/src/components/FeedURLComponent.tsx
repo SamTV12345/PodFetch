@@ -37,7 +37,7 @@ export const FeedURLComponent: FC = () => {
             <input {...register('feedUrl', {
                 pattern: /^(http|https):\/\/[^ "]+$/,
             })} placeholder={t('rss-feed-url')!}
-            className={"bg-[--input-bg-color] w-full px-4 py-2 rounded-lg text-sm text-[--input-fg-color] placeholder:text-[--input-fg-color-disabled]"} />
+            className={"bg-(--input-bg-color) w-full px-4 py-2 rounded-lg text-sm text-(--input-fg-color) placeholder:text-(--input-fg-color-disabled)"} />
 
             <CustomButtonPrimary disabled={!isDirty || !isValid} type="submit">{t('add')}</CustomButtonPrimary>
         </form>

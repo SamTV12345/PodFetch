@@ -56,7 +56,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
             <div className="mt-5">
                 <form onSubmit={handleSubmit(update_settings)}>
                     <div className="grid grid-cols-2 gap-5 mb-5">
-                        <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
+                        <label className="ml-2 mt-2 text-sm text-(--fg-secondary-color)"
                                htmlFor="username">{t('username')}</label>
                         <Controller name="username" control={control}
                                     render={({field: {name, onChange, value}}) => (
@@ -64,7 +64,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                                      onChange={onChange}
                                                      value={value}/>
                                     )}/>
-                        <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
+                        <label className="ml-2 mt-2 text-sm text-(--fg-secondary-color)"
                                htmlFor="password">{t('password')}</label>
                         <Controller name="password" control={control}
                                     render={({field: {name, onChange, value}}) => (
@@ -72,7 +72,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                                      onChange={onChange}
                                                      value={value ?? ""}/>
                                     )}/>
-                        <label className="ml-2 mt-2 text-sm text-[--fg-secondary-color]"
+                        <label className="ml-2 mt-2 text-sm text-(--fg-secondary-color)"
                                htmlFor="apiKey">{t('api-key')}</label>
                         <Controller name="apiKey" control={control}
                                     render={({field: {name, onChange, value}}) => (
@@ -80,7 +80,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                             <CustomInput disabled={true} className="w-full" id="apiKey" name={name}
                                                      onChange={onChange}
                                                      value={value ?? ""}/>
-                                            <button type="button" className="material-symbols-outlined absolute right-2 top-1.5 text-[--fg-color]" onClick={()=>{
+                                            <button type="button" className="material-symbols-outlined absolute right-2 top-1.5 text-(--fg-color)" onClick={()=>{
                                                 setValue("apiKey", v4().replace(/-/g, ''))
                                             }}>cached</button>
                                         </div>

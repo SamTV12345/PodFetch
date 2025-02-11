@@ -37,19 +37,19 @@ export const GPodderIntegration = ()=> {
     }
 
 
-    return <table className="text-left text-sm text-stone-900 w-full overflow-y-auto text-[--fg-color]">
+    return <table className="text-left text-sm text-stone-900 w-full overflow-y-auto text-(--fg-color)">
         <thead>
         <tr className="border-b border-stone-300">
-            <th scope="col" className="pr-2 py-3 text-[--fg-color]">
+            <th scope="col" className="pr-2 py-3 text-(--fg-color)">
                 #
             </th>
-            <th scope="col" className="px-2 py-3 text-[--fg-color]">
+            <th scope="col" className="px-2 py-3 text-(--fg-color)">
                 {t('device')}
             </th>
-            <th scope="col" className="px-2 py-3 text-[--fg-color]">
+            <th scope="col" className="px-2 py-3 text-(--fg-color)">
                 {t('podcasts')}
             </th>
-            <th scope="col" className="px-2 py-3 text-[--fg-color]">
+            <th scope="col" className="px-2 py-3 text-(--fg-color)">
                 {t('actions')}
             </th>
         </tr>
@@ -58,9 +58,9 @@ export const GPodderIntegration = ()=> {
         {
             gpodderOnlyPodcasts?.map((int, index)=>{
                 return <tr key={index}>
-                    <td className="px-2 py-4 text-[--fg-color]">{index}</td>
-                    <td className="px-2 py-4  text-[--fg-color]">{int.device}</td>
-                    <td className="px-2 py-4  text-[--fg-color]">{int.podcast}</td>
+                    <td className="px-2 py-4 text-(--fg-color)">{index}</td>
+                    <td className="px-2 py-4  text-(--fg-color)">{int.device}</td>
+                    <td className="px-2 py-4  text-(--fg-color)">{int.podcast}</td>
                     <td><CustomButtonPrimary onClick={()=>addPodcast(int.podcast)}>{t('add')}</CustomButtonPrimary></td>
                 </tr>
                 }

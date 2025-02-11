@@ -61,7 +61,7 @@ export const ChangeRoleModal = () => {
 
             {/* Role select */}
             <div className="mb-6">
-                <label className="block mb-2 text-sm text-[--fg-color]" htmlFor="role">{t('role')}</label>
+                <label className="block mb-2 text-sm text-(--fg-color)" htmlFor="role">{t('role')}</label>
                 <CustomSelect className="text-left w-full" id="role" onChange={(v) => {
                 setSelectedUser({ ...selectedUser!, role: v })
                 }} options={roleOptions} placeholder={t('select-role')} value={selectedUser?.role || ''} />
@@ -69,7 +69,7 @@ export const ChangeRoleModal = () => {
 
             {/* Explicit content toggle */}
             <div className="flex items-center gap-4 mb-6">
-                <label className="text-sm text-[--fg-color]" htmlFor="allow-explicit-content">{t('allow-explicit-content')}</label>
+                <label className="text-sm text-(--fg-color)" htmlFor="allow-explicit-content">{t('allow-explicit-content')}</label>
                 <Switcher checked={selectedUser?.explicitConsent || false} id="allow-explicit-content"
                           onChange={() => {setSelectedUser({ ...selectedUser!, explicitConsent: !selectedUser?.explicitConsent })}}/>
             </div>

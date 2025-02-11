@@ -119,7 +119,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
             <span className="relative">
                 <CustomInput type="text" value={searchText} placeholder={t('search-podcast')!} className="pl-10 w-full" onChange={(v) => setSearchText(v.target.value)} />
 
-                <span className="material-symbols-outlined absolute left-2 top-2 text-[--input-icon-color]">search</span>
+                <span className="material-symbols-outlined absolute left-2 top-2 text-(--input-icon-color)">search</span>
             </span>
 
             {loading ? (
@@ -132,8 +132,8 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                         return (
                             <li key={index} className="flex gap-4 items-center">
                                 <div className="flex-1 flex flex-col gap-1">
-                                    <span className="font-bold leading-tight text-[--fg-color]">{podcast.title}</span>
-                                    <span className="leading-tight text-sm text-[--fg-secondary-color]">{podcast.artist}</span>
+                                    <span className="font-bold leading-tight text-(--fg-color)">{podcast.title}</span>
+                                    <span className="leading-tight text-sm text-(--fg-secondary-color)">{podcast.artist}</span>
                                 </div>
                                 <div>
                                     <CustomButtonSecondary className="flex" onClick={() => {

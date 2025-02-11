@@ -23,8 +23,8 @@ export const EpisodeSearchModal = () => {
     }, ['Escape'])
 
     return createPortal(
-        <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(false)} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-x-hidden overflow-y-auto z-30 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className={`bg-[--bg-color] max-h-screen max-w-4xl p-4 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full`} onClick={e => e.stopPropagation()}>
+        <div id="defaultModal" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(false)} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-sm overflow-x-hidden overflow-y-auto z-30 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className={`bg-(--bg-color) max-h-screen max-w-4xl p-4 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full`} onClick={e => e.stopPropagation()}>
                 {/*
                 Max-height of search results section should be the lesser of:
                     - 24rem

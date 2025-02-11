@@ -38,10 +38,10 @@ export const PlaylistPage = ()=>{
                 xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
                 md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
             `}>
-                <table className="text-left text-sm text-stone-900 w-full text-[--fg-color]">
+                <table className="text-left text-sm text-stone-900 w-full text-(--fg-color)">
                     <thead>
                     <tr className="border-b border-stone-300">
-                        <th scope="col" className="pr-2 py-3 text-[--fg-color]">
+                        <th scope="col" className="pr-2 py-3 text-(--fg-color)">
                             {t('playlist-name')}
                         </th>
                     </tr>
@@ -49,7 +49,7 @@ export const PlaylistPage = ()=>{
                     <tbody>
                     {playlist.map(i=>
                         <tr className="border-b border-stone-300 " key={i.id}>
-                            <td className="px-2 py-4 flex items-center text-[--fg-color]">
+                            <td className="px-2 py-4 flex items-center text-(--fg-color)">
                                 {i.name}
                                 <button className="flex ml-2" onClick={(e)=>{
                                     e.preventDefault()
@@ -65,7 +65,7 @@ export const PlaylistPage = ()=>{
                                             setCreatePlaylistOpen(true)
                                         })
                                 }} title={t('change-role')}>
-                                    <span className="material-symbols-outlined text-[--fg-color] hover:text-stone-600">edit</span>
+                                    <span className="material-symbols-outlined text-(--fg-color) hover:text-stone-600">edit</span>
                                 </button>
                             </td>
                             <td className="pl-2 py-4 gap-4">
@@ -75,7 +75,7 @@ export const PlaylistPage = ()=>{
                                    setCreatePlaylistOpen(true)
 
                                 }} title={t('change-role')}>
-                                    <span className="material-symbols-outlined hover:text-stone-600 text-[--fg-color]"
+                                    <span className="material-symbols-outlined hover:text-stone-600 text-(--fg-color)"
                                           onClick={()=>{
                                         navigate(i.id)
                                     }}>visibility</span>
