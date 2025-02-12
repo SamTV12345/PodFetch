@@ -381,6 +381,7 @@ impl Episode {
                 episode.position = Some(pod_watch_model.time);
                 diesel::update(episodes_dsl.filter(episodes::id.eq(episode.id)))
                     .set((
+                        episodes::started.eq(pod_watch_model.time),
                         episodes::position.eq(pod_watch_model.time),
                         episodes::timestamp.eq(Utc::now().naive_utc()),
                     ))
@@ -399,7 +400,7 @@ impl Episode {
                     timestamp: naive_date,
                     guid: Some(found_episode.guid.clone()),
                     action: "play".to_string(),
-                    started: None,
+                    started: Some(pod_watch_model.time),
                     position: Some(pod_watch_model.time),
                     total: Some(found_episode.total_time),
                 };

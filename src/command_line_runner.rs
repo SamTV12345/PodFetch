@@ -19,7 +19,6 @@ use sha256::digest;
 use std::env::Args;
 use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use std::process::exit;
-use std::str::FromStr;
 
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");

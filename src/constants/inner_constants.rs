@@ -1,7 +1,6 @@
 use crate::service::environment_service::EnvironmentService;
 use std::fmt;
 use std::fmt::Formatter;
-use std::str::FromStr;
 use std::sync::LazyLock;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search";

@@ -89,23 +89,10 @@ export const prependAPIKeyOnAuthEnabled = (url: string)=>{
 
 
 export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response?: components["schemas"]["EpisodeDto"]) : components["schemas"]["PodcastEpisodeWithHistory"] => {
-    let online_url_with_proxy = window.location.href.substring(0, window.location.href.indexOf('ui/')) + 'proxy/podcast?episodeId=' + episode.episode_id
-
-    if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
-        if (online_url_with_proxy.includes('?')) {
-            online_url_with_proxy += '&'
-        }
-        else {
-            online_url_with_proxy += '?'
-        }
-        online_url_with_proxy += 'apiKey=' + useCommon.getState().loggedInUser?.apiKey
-    }
 
     return {
         podcastEpisode: {
             ...episode,
-            local_url: online_url_with_proxy,
-            local_image_url: episode.local_image_url,
         },
         podcastHistoryItem: {
             ...response!,

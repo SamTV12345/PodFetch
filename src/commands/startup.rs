@@ -9,7 +9,7 @@ use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::notification_controller::get_notification_router;
 use crate::controllers::playlist_controller::get_playlist_router;
-use crate::controllers::podcast_controller::get_podcast_router;
+use crate::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
 use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
 use crate::controllers::server::SOCKET_IO_LAYER;
 use crate::controllers::settings_controller::get_settings_router;
@@ -242,11 +242,13 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
 }
 
 pub fn get_api_config() -> OpenApiRouter {
+    use crate::controllers::podcast_controller::__path_proxy_podcast;
     OpenApiRouter::new()
         .merge(get_ui_config())
         .merge(podcast_serving())
         .merge(get_manifest_router())
         .merge(get_websocket_router())
+        .routes(routes!(proxy_podcast))
         .nest("/api/v1", OpenApiRouter::new().merge(config()))
 }
 

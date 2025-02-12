@@ -644,6 +644,9 @@ pub struct Params {
     episode_id: String,
 }
 
+
+use axum::response::Response;
+
 #[utoipa::path(
 get,
 path="/proxy/podcast",
@@ -656,7 +659,7 @@ pub(crate) async fn proxy_podcast(
     Query(params): Query<Params>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
     req: axum::extract::Request,
-) -> Result<Body, CustomError> {
+) -> Result<axum::http::response::Response<Body>, CustomError> {
     let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
     let headers = req.headers_mut();
 
@@ -687,6 +690,7 @@ pub(crate) async fn proxy_podcast(
 
     add_basic_auth_headers_conditionally(episode.url.clone(), headers);
 
+    *req.uri_mut() = episode.url.parse().unwrap();
     let reqwest_to_make = reqwest::Request::try_from(req).expect(
         "http::Uri to url::Url conversion \
     failed",
@@ -695,8 +699,11 @@ pub(crate) async fn proxy_podcast(
     let client = reqwest::Client::new();
     let resp = client.execute(reqwest_to_make).await.unwrap();
 
-    let stream = resp.bytes_stream();
-    Ok(Body::from_stream(stream))
+    let mut response_builder = Response::builder().status(resp.status());
+    *response_builder.headers_mut().unwrap() = resp.headers().clone();
+    Ok(response_builder
+        .body(Body::from_stream(resp.bytes_stream()))
+        .unwrap())
 }
 
 #[utoipa::path(
@@ -799,7 +806,6 @@ pub fn get_podcast_router() -> OpenApiRouter {
         .routes(routes!(favorite_podcast))
         .routes(routes!(update_active_podcast))
         .routes(routes!(delete_podcast))
-        .routes(routes!(proxy_podcast))
         .routes(routes!(update_podcast_settings))
         .routes(routes!(get_podcast_settings))
         .routes(routes!(retrieve_podcast_sample_format))
