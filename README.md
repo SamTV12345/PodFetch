@@ -1,9 +1,8 @@
 # Podfetch
 
 [![dependency status](https://deps.rs/repo/github/SamTV12345/PodFetch/status.svg)](https://deps.rs/repo/github/SamTV12345/PodFetch)
-[![build status](https://github.com/SamTV12345/PodFetch/actions/workflows/rust.yml/badge.svg)](https://github.com/SamTV12345/PodFetch/actions/workflows/rust.yml)
-[![Lint](https://github.com/SamTV12345/PodFetch/actions/workflows/lint.yml/badge.svg)](https://github.com/SamTV12345/PodFetch/actions/workflows/lint.yml)
-[![Test](https://github.com/SamTV12345/PodFetch/actions/workflows/test.yml/badge.svg)](https://github.com/SamTV12345/PodFetch/actions/workflows/test.yml)
+[![Build documentation](https://github.com/SamTV12345/PodFetch/actions/workflows/build-documentation.yml/badge.svg)](https://github.com/SamTV12345/PodFetch/actions/workflows/build-documentation.yml)
+[![Build](https://github.com/SamTV12345/PodFetch/actions/workflows/pr-build.yml/badge.svg)](https://github.com/SamTV12345/PodFetch/actions/workflows/pr-build.yml)
 
 Podfetch is a self-hosted podcast manager.
 It is a web app that lets you download podcasts and listen to them online.
