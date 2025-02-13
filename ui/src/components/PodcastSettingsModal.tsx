@@ -20,8 +20,6 @@ type PodcastSettingsModalProps = {
 }
 
 export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open, podcast})=>{
-    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
-    const updatePodcastArray = useCommon(state => state.updatePodcast)
     const [podcastSettings, setPodcastSettings] = useState<PodcastSetting>()
     const [loaded, setLoaded] = useState<boolean>(false)
     const {t} = useTranslation()
@@ -39,9 +37,11 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                 }
             }
         }).then((res)=>{
-            if (res != null) {
+            if (res) {
                 setPodcastSettings(res.data)
             }
+            setLoaded(true)
+        }).catch(()=>{
             setLoaded(true)
         })
     }, []);
