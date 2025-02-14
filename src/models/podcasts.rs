@@ -51,6 +51,8 @@ pub struct Podcast {
     pub directory_name: String,
     #[diesel(sql_type = Nullable<Text>)]
     pub download_location: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub guid: Option<String>
 }
 
 impl Podcast {
@@ -216,6 +218,7 @@ impl Podcast {
                     language.eq(podcast_extra.clone().language),
                     summary.eq(podcast_extra.clone().description),
                     last_build_date.eq(podcast_extra.clone().last_build_date),
+                    guid.eq(podcast_extra.clone().guid),
                 ))
                 .execute(&mut get_connection())
         })

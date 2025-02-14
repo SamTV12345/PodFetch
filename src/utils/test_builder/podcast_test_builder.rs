@@ -23,7 +23,8 @@ pub mod tests {
         pub active: bool,
         pub original_image_url: String,
         pub directory_name: String,
-        pub download_location: Option<String>
+        pub download_location: Option<String>,
+        pub guid: Option<String>
     }
 
     impl PodcastTestData {
@@ -47,6 +48,7 @@ pub mod tests {
                 original_image_url: Faker.fake(),
                 directory_name: Faker.fake(),
                 download_location: None,
+                guid: Some(Faker.fake())
             }
         }
 
@@ -67,6 +69,7 @@ pub mod tests {
                 last_build_date: self.last_build_date,
                 keywords: self.keywords,
                 language: self.language,
+                guid: self.guid
             }
         }
     }
@@ -89,6 +92,7 @@ pub mod tests {
                 summary: value.summary,
                 image_url: value.image_url,
                 rssfeed: value.rssfeed,
+                guid: value.guid
             }
         }
     }

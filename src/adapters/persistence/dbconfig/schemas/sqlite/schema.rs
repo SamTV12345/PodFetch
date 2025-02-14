@@ -146,6 +146,7 @@ diesel::table! {
         original_image_url -> Text,
         directory_name -> Text,
         download_location -> Nullable<Text>,
+        guid -> Nullable<Text>,
     }
 }
 
