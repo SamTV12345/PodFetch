@@ -400,17 +400,24 @@ impl PodcastEpisodeService {
     fn update_podcast_fields(feed: Channel, podcast_id: i32) -> Result<(), CustomError> {
         let itunes = feed.clone().itunes_ext;
 
+        let ext = feed.extensions().get("podcast")
+            .and_then(|m| m.get("guid"))
+            .and_then(|v| v.first())
+            .and_then(|v| v.value.clone());
+
         if let Some(itunes) = itunes {
+            println!("GUID is {:?}", ext);
             let constructed_extra_fields = PodcastBuilder::new(podcast_id)
                 .author(itunes.author)
-                .last_build_date(feed.last_build_date)
-                .description(feed.description)
-                .language(feed.language)
+                .last_build_date(feed.last_build_date.clone())
+                .description(feed.description.clone())
+                .guid(ext)
+                .language(feed.language.clone())
                 .keywords(itunes.categories)
                 .build();
-
             Podcast::update_podcast_fields(constructed_extra_fields)?;
         }
+
 
         Ok(())
     }
