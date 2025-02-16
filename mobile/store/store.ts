@@ -16,12 +16,16 @@ type ZustandStore = {
 export const useStore = create<ZustandStore>((set, get)=>({
     podcastEpisodeRecord: undefined,
     setPodcastEpisodeRecord: (e)=>{
+        const podcastEpisodeRecord = get().podcastEpisodeRecord
+        const audioSource = get().audioSource
+        if (podcastEpisodeRecord && podcastEpisodeRecord.podcastEpisode.local_url == e.podcastEpisode.local_url && audioSource) {
+            audioSource.sound.playAsync()
+            return
+        }
         set({
             podcastEpisodeRecord: e
         })
-        Audio.Sound.createAsync({uri: e.podcastEpisode.local_url}, {shouldPlay: true}, (status)=>{
-
-        }).then(audio=>{
+        Audio.Sound.createAsync({uri: e.podcastEpisode.local_url}, {shouldPlay: true}).then(audio=>{
             audio.sound!.setOnPlaybackStatusUpdate((status)=>{
                 if (status.isLoaded) {
                     const status2 = status.positionMillis/status.durationMillis!
