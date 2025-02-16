@@ -3,7 +3,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight } from 'expo-symbols';
 import React from 'react';
-import { OpaqueColorValue, StyleProp, ViewStyle } from 'react-native';
+import {OpaqueColorValue, StyleProp, TextStyle, ViewStyle} from 'react-native';
+import {AntDesign} from "@expo/vector-icons";
 
 // Add your SFSymbol to MaterialIcons mappings here.
 const MAPPING = {
@@ -15,6 +16,7 @@ const MAPPING = {
   "magnifyingglass.circle": "search",
   "bookmark.fill":"book",
   'chevron.right': 'chevron-right',
+  'play.button': 'caretright'
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
@@ -38,8 +40,23 @@ export function IconSymbol({
   name: IconSymbolName;
   size?: number;
   color: string | OpaqueColorValue;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+}
+
+export function AntSymbol({
+                             name,
+                             size = 24,
+                             color,
+                             style,
+                           }: {
+  name: React.ComponentProps<typeof AntDesign>['name'];
+  size?: number;
+  color: string | OpaqueColorValue;
+  style?: StyleProp<TextStyle>;
+  weight?: SymbolWeight;
+}) {
+  return <AntDesign color={color} size={size} name={name} style={style} />;
 }

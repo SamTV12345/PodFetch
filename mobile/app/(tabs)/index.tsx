@@ -4,14 +4,15 @@ import {styles} from "@/styles/styles";
 import Heading1 from "@/components/text/Heading1";
 import {$api} from "@/client";
 import {useTranslation} from "react-i18next";
-
-import SkeletonLoading from 'expo-skeleton-loading'
-import {ScrollView, View} from "react-native";
+import {ScrollView} from "react-native";
 import Heading2 from "@/components/text/Heading2";
 import {LoadingSkeleton} from "@/components/ui/LoadingSkeleton";
+import {PodcastCard} from "@/components/PodcastCard";
+import {PodcastEpisodeCard} from "@/components/PodcastEpisodeCard";
 
 export default function HomeScreen() {
-  const {data, isError, isLoading} = $api.useQuery('get', '/api/v1/podcasts')
+  const {data, isError, isLoading, error} = $api.useQuery('get', '/api/v1/podcasts')
+  const lastWatchedData = $api.useQuery('get', '/api/v1/podcasts/episode/lastwatched')
     const {t} = useTranslation()
 
   return (
@@ -26,22 +27,33 @@ export default function HomeScreen() {
 
           <Heading2>{t('last-listened')}</Heading2>
           <ScrollView horizontal={true} style={{paddingBottom: 20}} overScrollMode="never">
+              {lastWatchedData.isLoading &&<><LoadingSkeleton/>
               <LoadingSkeleton/>
               <LoadingSkeleton/>
               <LoadingSkeleton/>
               <LoadingSkeleton/>
-              <LoadingSkeleton/>
-              <LoadingSkeleton/>
+              <LoadingSkeleton/></>}
+              {
+                  lastWatchedData.data && lastWatchedData.data.map(d=>{
+                      return <PodcastEpisodeCard podcastEpisode={d} key={d.id} />
+                  })
+              }
           </ScrollView>
+
 
           <Heading2 more onMore={()=>{}}>{t('your-podcasts')}</Heading2>
           <ScrollView horizontal={true} style={{paddingBottom: 20}} overScrollMode="never">
-              <LoadingSkeleton/>
-              <LoadingSkeleton/>
-              <LoadingSkeleton/>
-              <LoadingSkeleton/>
-              <LoadingSkeleton/>
-              <LoadingSkeleton/>
+              {isLoading &&<><LoadingSkeleton/>
+                  <LoadingSkeleton/>
+                  <LoadingSkeleton/>
+                  <LoadingSkeleton/>
+                  <LoadingSkeleton/>
+                  <LoadingSkeleton/></>}
+              {
+                  data && data.map(d=>{
+                      return <PodcastCard podcast={d} key={d.id} />
+                  })
+              }
           </ScrollView>
       </ThemedView>
     </SafeAreaView>

@@ -34,7 +34,7 @@ export default function Library() {
             />
         }>
         <ThemedView style={styles.titleContainer}>
-            <ThemedText type="title">Welcome!</ThemedText>
+            <ThemedText type="title">Library!</ThemedText>
         </ThemedView>
     </ParallaxScrollView>
 }
