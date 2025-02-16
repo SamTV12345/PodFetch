@@ -3,7 +3,7 @@ import createClient from "openapi-react-query";
 import createFetchClient from "openapi-fetch";
 
 const fetchClient = createFetchClient<paths>({
-    baseUrl: "http://localhost:8000",
+    baseUrl: "http://192.168.2.122:8000",
 });
 
 export const $api = createClient(fetchClient);

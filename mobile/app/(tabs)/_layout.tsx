@@ -1,144 +1,50 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import {Platform} from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import {styles} from "@/styles/styles";
-
+import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
+import {Text, useColorScheme, View} from "react-native";
 import {useTranslation} from "react-i18next";
-import {Header} from "@react-navigation/elements";
+import {styles} from "@/styles/styles";
+import {IconSymbol} from "@/components/ui/IconSymbol";
+import {ThemedText} from "@/components/ThemedText";
+import {usePathname} from "expo-router";
+import {AudioPlayer} from "@/components/AudioPlayer";
+
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const {t} = useTranslation()
+    const colorScheme = useColorScheme();
+    const {t} = useTranslation()
+    const pathname = usePathname();
 
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: true,
-          header: ()=><Header title={"test"}/>,
-          tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-          tabBarStyle: Platform.select({
-              ios: {
-                  position: 'absolute',
-                  bottom: 20,
-                  left: '10%', // Adjust this value to create the desired margin
-                  right: '10%', // Adjust this value to create the desired margin
-                  backgroundColor: styles.darkColor,
-                  borderRadius: 20,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 4,
-              },
-              android: {
-                  position: 'absolute',
-                  bottom: 20,
-                  left: 50,
-                  right: 20,
-                  backgroundColor: styles.darkColor,
-                  borderRadius: 20,
-                  elevation: 5,
-              }
-          }),
-      }}>
-        <Tabs.Screen
-            name={"index"}
-            options={{
-                tabBarActiveTintColor: styles.accentColor,
-                headerShown: false,
-                tabBarButton: HapticTab,
-                tabBarBackground: TabBarBackground,
-                tabBarStyle: Platform.select({ios: {
-                        position: 'absolute',
-                        bottom: 20,
-                        backgroundColor: 'rgb(22 21 20)',
-                        borderRadius: 20,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                    },
-                    android: {
-                        position: 'absolute',
-                        bottom: 20,
-                        left: '10%',
-                        right: '10%',
-                        backgroundColor: 'rgb(22 21 20)',
-                        borderRadius: 20, // Optional: Add rounded corners
-                        elevation: 5, // Optional: Add elevation for Android
-                    }}),
-                title: t('home'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name={"house.fill"} color={color} />,
-            }}
-        />
-        <Tabs.Screen
-            name={"search"}
-            options={{
-                header: ()=><Header title={"test"}/>,
-                tabBarActiveTintColor: styles.accentColor,
-                headerShown: false,
-                tabBarButton: HapticTab,
-                tabBarBackground: TabBarBackground,
-                tabBarStyle: Platform.select({ios: {
-                        position: 'absolute',
-                        bottom: 20,
-                        backgroundColor: 'rgb(22 21 20)',
-                        borderRadius: 20,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                    },
-                    android: {
-                        position: 'absolute',
-                        bottom: 20,
-                        left: '10%',
-                        right: '10%',
-                        backgroundColor: 'rgb(22 21 20)',
-                        borderRadius: 20, // Optional: Add rounded corners
-                        elevation: 5, // Optional: Add elevation for Android
-                    }}),
-                title: t('search'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name={"magnifyingglass.circle"} color={color} />,
-            }}
-        />
-        <Tabs.Screen
-            name={"library"}
-            options={{
-                tabBarActiveTintColor: styles.accentColor,
-                headerShown: false,
-                tabBarButton: HapticTab,
-                tabBarBackground: TabBarBackground,
-                tabBarStyle: Platform.select({ios: {
-                        position: 'absolute',
-                        bottom: 20,
-                        backgroundColor: 'rgb(22 21 20)',
-                        borderRadius: 20,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                    },
-                    android: {
-                        position: 'absolute',
-                        bottom: 20,
-                        left: '10%',
-                        right: '10%',
-                        backgroundColor: 'rgb(22 21 20)',
-                        borderRadius: 40,
-                        elevation: 5,
-                    }}),
-                title: t('library'),
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name={"bookmark.fill"} color={color} />,
-            }}
-        />
-    </Tabs>
+
+    return (
+      <Tabs>
+          <TabSlot />
+          <AudioPlayer/>
+          <TabList style={{
+              backgroundColor: styles.darkColor,
+              width: '90%',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              bottom: 10,
+              paddingBottom: 10,
+              paddingTop: 10,
+              paddingLeft: 20,
+              paddingRight: 20,
+              borderStyle: undefined,
+              borderBottomLeftRadius: 10,
+              borderBottomRightRadius: 10,
+          }}>
+              <TabTrigger name="home" href="/(tabs)" style={{flexDirection: 'column', display: 'flex'}}>
+                  <IconSymbol size={20} name={"house.fill"} color={ pathname == "/"? styles.accentColor: 'white'} style={{alignSelf: 'center',}} />
+                  <ThemedText style={{color: pathname == "/"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('home')}</ThemedText>
+              </TabTrigger>
+              <TabTrigger name="search" href="/(tabs)/search"  style={{flexDirection: 'column', display: 'flex'}}>
+                  <IconSymbol size={20} name={"magnifyingglass.circle"} color={ pathname == "/search"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
+                  <ThemedText style={{color: pathname == "/search"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('search')}</ThemedText>
+              </TabTrigger>
+              <TabTrigger name="library" href="/(tabs)/library"  style={{flexDirection: 'column', display: 'flex'}}>
+                  <IconSymbol size={20} name={"bookmark.fill"} color={ pathname == "/library"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
+                  <ThemedText style={{color: pathname == "/library"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('library')}</ThemedText>
+              </TabTrigger>
+          </TabList>
+      </Tabs>
   );
 }

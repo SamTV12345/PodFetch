@@ -19,7 +19,8 @@ export default function ({ children, more, onMore }: { children: string, more?: 
         paddingRight: 10,
         borderRadius: 10,
         marginLeft: 10
-    }}> <Text style={{color: 'white', fontSize: 10}}>{t('more')}</Text></Pressable>}
+    }}><ThemedText style={{color: 'white', fontSize: 10}}>{t('more')}</ThemedText>
+    </Pressable>}
         </View>
     )
 }

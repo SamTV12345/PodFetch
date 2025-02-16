@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-query'
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import {Text} from "react-native";
+import {Text, View} from "react-native";
 import {styles} from "@/styles/styles";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
