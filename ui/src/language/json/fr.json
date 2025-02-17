@@ -1,5 +1,5 @@
 {
-  "theme": "Aspect",
+  "theme": "Thème",
   "system": "Système",
   "light": "Clair",
   "dark": "Sombre",
@@ -16,7 +16,7 @@
   "episode-downloaded-to-server": "Épisode téléchargé sur le serveur",
   "hardware" : "Matériel",
   "cpu-brand" : "Marque du processeur",
-  "cpu-cores" : "Noyaux de CPU",
+  "cpu-cores" : "Cœurs de processeur",
   "podcast-size" : "Taille du répertoire podcast",
   "cpu-usage" : "CPU",
   "used-cpu" : "CPU utilisé",
@@ -26,8 +26,8 @@
   "loading" : "Chargement",
   "free-memory" : "Mémoire libre",
   "disk-usage" : "Disque",
-  "used-disk" : "Disque dur utilisé",
-  "free-disk" : "Disque dur libre",
+  "used-disk" : "Espace utilisé",
+  "free-disk" : "Espace libre",
   "system-info" : "Informations système",
   "add-podcast" : "Ajouter un podcast",
   "search-podcast" : "Rechercher un podcast",
@@ -38,7 +38,7 @@
   "auto-cleanup" : "Nettoyage automatique",
   "days-to-keep" : "Jours à conserver",
   "auto-update" : "Mise à jour automatique des podcasts",
-  "auto-download" : "Téléchargement automatique d'épisodes de podcasts",
+  "auto-download" : "Téléchargement automatique des épisodes",
   "save" : "Enregistrer",
   "active" : "Actif",
   "run-cleanup" : "Exécuter le nettoyage maintenant",
@@ -180,5 +180,8 @@
   "profile": "Profil",
   "api-key": "Clé API",
   "user-settings-updated": "Paramètres utilisateur mis à jour",
-  "notification.episode-now-available": "L'épisode {{episode}} est maintenant disponible hors-ligne"
+  "notification.episode-now-available": "L'épisode {{episode}} est maintenant disponible hors-ligne",
+  "episode-numbering": "Numérotation des épisodes",
+  "activated": "Activé",
+  "unplayed": "Non écouté"
 }
