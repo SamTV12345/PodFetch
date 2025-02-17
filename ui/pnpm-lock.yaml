@@ -72,8 +72,8 @@ importers:
         specifier: ^2.5.11
         version: 2.5.11
       material-symbols:
-        specifier: ^0.27.2
-        version: 0.27.2
+        specifier: ^0.28.2
+        version: 0.28.2
       notistack:
         specifier: ^3.0.2
         version: 3.0.2(csstype@3.1.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -2058,8 +2058,8 @@ packages:
   magic-string@0.30.17:
     resolution: {integrity: sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==}
 
-  material-symbols@0.27.2:
-    resolution: {integrity: sha512-3/p3V+UfAfeHrT2HMOBVGWyzsvpHZNxlJJ6jQ01XqqxCCQU+szIbrfpsXOHkZ5glMJi+IB/SMJIRt55l/gYWvQ==}
+  material-symbols@0.28.2:
+    resolution: {integrity: sha512-JLK+Bgtfg5Dn9V2WYk6lSwmxciNNF2zmqc/V8MLmH0K9LttUhPCaauJzrS1Vw3mJPs/Tyfi/tszynNRX6nWQOA==}
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -2277,8 +2277,8 @@ packages:
     resolution: {integrity: sha512-V8AVnmPIICiWpGfm6GLzCR/W5FXLchHop40W4nXBmdlEceh16rCN8O8LNWm5bh5XUX91fh7KpA+W0TgMKmgTpQ==}
     engines: {node: '>=0.10.0'}
 
-  readdirp@4.1.1:
-    resolution: {integrity: sha512-h80JrZu/MHUZCyHu5ciuoI0+WxsCxzxJTILn6Fs8rxSnFPh+UVHYfeIxK1nVGugMqkfC4vJcBOYbkfkwYK0+gw==}
+  readdirp@4.1.2:
+    resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
     engines: {node: '>= 14.18.0'}
 
   reduce-configs@1.1.0:
@@ -4214,7 +4214,7 @@ snapshots:
 
   chokidar@4.0.3:
     dependencies:
-      readdirp: 4.1.1
+      readdirp: 4.1.2
     optional: true
 
   clsx@1.2.1: {}
@@ -4598,7 +4598,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  material-symbols@0.27.2: {}
+  material-symbols@0.28.2: {}
 
   mime-db@1.52.0: {}
 
@@ -4794,7 +4794,7 @@ snapshots:
 
   react@19.0.0: {}
 
-  readdirp@4.1.1:
+  readdirp@4.1.2:
     optional: true
 
   reduce-configs@1.1.0: {}
