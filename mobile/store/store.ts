@@ -19,7 +19,7 @@ export const useStore = create<ZustandStore>((set, get)=>({
         const podcastEpisodeRecord = get().podcastEpisodeRecord
         const audioSource = get().audioSource
         if (podcastEpisodeRecord && podcastEpisodeRecord.podcastEpisode.local_url == e.podcastEpisode.local_url && audioSource) {
-            audioSource.sound.playAsync()
+            audioSource.sound.playFromPositionAsync(e.watchedTime)
             return
         }
         set({

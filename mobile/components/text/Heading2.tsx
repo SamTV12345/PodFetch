@@ -1,17 +1,17 @@
 import {ThemedText} from "@/components/ThemedText";
-import {Pressable, Text, View} from "react-native";
+import {Pressable, StyleProp, Text, View, ViewStyle} from "react-native";
 import {useTranslation} from "react-i18next";
 
-export default function ({ children, more, onMore }: { children: string, more?: boolean, onMore?: ()=>void }) {
+export default function ({ children, more, onMore, styles }: { children: string, more?: boolean, onMore?: ()=>void, styles?:  StyleProp<ViewStyle> }) {
     const {t} = useTranslation()
 
     return (
-        <View style={{
+        <View style={[{
             flexDirection: 'row',
             alignItems: 'center',
             paddingLeft: 20,
-            paddingBottom: 5
-        }}>
+            paddingBottom: 5,
+        }, styles]}>
         <ThemedText style={{color: 'white', fontSize: 20, fontWeight: 'bold', paddingBottom: 5}}>{children}</ThemedText>
     {more && <Pressable onPress={onMore} style={{
         backgroundColor: 'rgba(217, 217, 217, 0.3)',
