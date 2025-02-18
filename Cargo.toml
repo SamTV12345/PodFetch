@@ -6,7 +6,7 @@ build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [build-dependencies]
-built = {version="0.7.6", features=["chrono", "semver","cargo-lock"]}
+built = {version="0.7.7", features=["chrono", "semver","cargo-lock"]}
 
 [features]
 default = ["sqlite", "postgresql"]
@@ -32,7 +32,7 @@ opml = "1.1.6"
 rand = "0.9.0"
 env_logger = "0.11.6"
 chrono = {version  = "0.4.39", default-features=false, features = ["serde"]}
-rss = "2.0.11"
+rss = "2.0.12"
 frankenstein = { version = "0.39.0", features = ["client-ureq"] }
 regex = "1.11.0"
 xml-builder = "0.5.2"
@@ -82,7 +82,7 @@ serial_test = {version="3.2.0"}
 testcontainers = { version = "0.23.2" }
 testcontainers-modules = { version = "0.11.6", features = ["postgres","blocking"] }
 derive_builder = {version = "0.20.2"}
-fake = { version = "3.1.0", features = ["chrono", "url"] }
+fake = { version = "4.0.0", features = ["chrono", "url"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
 axum-test = "17.2.0"
 
