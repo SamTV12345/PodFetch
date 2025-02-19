@@ -4,7 +4,7 @@ import {styles} from "@/styles/styles";
 import Heading1 from "@/components/text/Heading1";
 import {$api} from "@/client";
 import {useTranslation} from "react-i18next";
-import {ScrollView} from "react-native";
+import {ScrollView, View} from "react-native";
 import Heading2 from "@/components/text/Heading2";
 import {LoadingSkeleton} from "@/components/ui/LoadingSkeleton";
 import {PodcastCard} from "@/components/PodcastCard";
@@ -26,18 +26,24 @@ export default function HomeScreen() {
           <Heading1>{t('home')}</Heading1>
 
           <Heading2>{t('last-listened')}</Heading2>
-          <ScrollView horizontal={true} style={{paddingBottom: 20}} overScrollMode="never">
-              {lastWatchedData.isLoading &&<><LoadingSkeleton/>
+          <ScrollView horizontal={true} style={{paddingBottom: 20, display: 'flex', gap: 10}} overScrollMode="never">
+              {lastWatchedData.isLoading &&
+                  <>
+                  <LoadingSkeleton/>
               <LoadingSkeleton/>
               <LoadingSkeleton/>
               <LoadingSkeleton/>
               <LoadingSkeleton/>
-              <LoadingSkeleton/></>}
+              <LoadingSkeleton/>
+              </>
+              }
+              <View style={{display: 'flex', gap: 10, flexDirection: 'row'}}>
               {
                   lastWatchedData.data && lastWatchedData.data.map(d=>{
                       return <PodcastEpisodeCard podcastEpisode={d} key={d.id} />
                   })
               }
+              </View>
           </ScrollView>
 
 
