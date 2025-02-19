@@ -145,6 +145,7 @@
   "remove": "Supprimer",
   "standard-podcast-format": "Format standard du podcast",
   "onlyFavored": "Seulement podcasts favoris",
+  "onlyFavoredEpisodes": "Seulement épisodes favoris",
   "available-episodes": "Épisodes disponibles",
 
   "days-to-keep-explanation" : "Indique le nombre de jours pendant lesquels un podcast est conservé, c'est-à-dire stocké sur le serveur. Ce paramètre n'est actif que si le nettoyage automatique est activé ou si l'on clique sur Exécuter le nettoyage maintenant",
