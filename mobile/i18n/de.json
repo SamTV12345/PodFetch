@@ -4,5 +4,7 @@
   "library": "Bibliothek",
   "last-listened": "Zuletzt gehört",
   "your-podcasts": "Deine Podcasts",
-  "more": "Mehr"
+  "more": "Mehr",
+  "time-left": "{{time}} Minuten verbleibend",
+  "time": "{{time}} Minuten"
 }
