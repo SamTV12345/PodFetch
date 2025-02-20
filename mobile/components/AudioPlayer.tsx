@@ -12,7 +12,7 @@ export const AudioPlayer = ()=>{
     const audioPercent = useStore(state=>state.audioProgress)
 
 
-    return selectedPodcastEpisode?<View style={{bottom: 10, marginLeft: 18, marginRight: 18, backgroundColor: styles.darkColor, display: 'flex', flexDirection: 'row', position: 'relative'}}>
+    return selectedPodcastEpisode?<View style={{bottom: '3%', width: '90%', backgroundColor: styles.darkColor, display: 'flex', flexDirection: 'row', position: 'relative', marginLeft: 'auto', marginRight: 'auto'}}>
         <View style={{width: `${audioPercent}%`, backgroundColor: 'white', height: 2, position: 'absolute', borderTopLeftRadius: 20, borderTopRightRadius: 20}}></View>
         <View style={{width: '100%', backgroundColor: styles.gray, height: 2, position: 'absolute', borderTopLeftRadius: 20, borderTopRightRadius: 20}}></View>
         <Image src={selectedPodcastEpisode?.podcastEpisode.local_image_url} style={{width: 40, height: 40,alignSelf: 'center', marginLeft: 10, marginTop: 10}}/>
@@ -26,6 +26,6 @@ export const AudioPlayer = ()=>{
             <MaterialIcons name="ios-share" color="white" size={20}/>
             {playingAudio ? <AntDesign name="pause" size={20} color="white" onPress={()=>changeAudioState()}/>:  <AntDesign size={20} name="caretright" color="white" onPress={()=>changeAudioState()}/>}
         </View>
-    </View>: <View></View>
-
+    </View>: <View>
+    </View>
 }

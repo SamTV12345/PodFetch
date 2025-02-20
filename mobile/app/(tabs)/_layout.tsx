@@ -23,7 +23,7 @@ export default function TabLayout() {
               width: '90%',
               marginLeft: 'auto',
               marginRight: 'auto',
-              bottom: 10,
+              bottom: '3%',
               paddingBottom: 10,
               paddingTop: 10,
               paddingLeft: 20,
