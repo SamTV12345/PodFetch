@@ -6,5 +6,6 @@
   "your-podcasts": "Deine Podcasts",
   "more": "Mehr",
   "time-left": "{{time}} Minuten verbleibend",
-  "time": "{{time}} Minuten"
+  "time": "{{time}} Minuten",
+  "share-podcast": "Jetzt {{podcast}} auf PodFetch entdecken {{url}}"
 }

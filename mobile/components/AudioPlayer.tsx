@@ -1,7 +1,6 @@
 import {Image, ScrollView, Text, View} from "react-native";
 import {styles} from "@/styles/styles";
 import {useStore} from "@/store/store";
-import {IconSymbol} from "@/components/ui/IconSymbol";
 import {AntDesign} from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 

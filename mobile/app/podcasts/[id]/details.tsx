@@ -1,30 +1,18 @@
-import {Image, ScrollView, Text, View} from "react-native";
+import {Image, ScrollView, Share, Text, View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
-import {Link, useLocalSearchParams} from "expo-router";
-import {$api} from "@/client";
+import {Link} from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Heading2 from "@/components/text/Heading2";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Entypo from '@expo/vector-icons/Entypo';
 import {PodcastEpisodeSlide} from "@/components/PodcastEpisodeSlide";
 import { router } from 'expo-router';
+import {useTranslation} from "react-i18next";
+import {useDetailsPodcast} from "@/hooks/useDetailsPodcast";
 
 export default function () {
-    const { id } = useLocalSearchParams();
-    const {data, isLoading} = $api.useQuery('get', '/api/v1/podcasts/{id}', {
-        params: {
-            path: {
-                id: id as string
-            }
-        }
-    })
-    const dataEpisodes = $api.useQuery('get', '/api/v1/podcasts/{id}/episodes', {
-        params: {
-            path: {
-                id: id as string
-            }
-        }
-    })
+    const {podcastDetailedData, dataEpisodes} = useDetailsPodcast()
+    const {t} = useTranslation()
 
     return <SafeAreaView>
         <ScrollView overScrollMode="never">
@@ -36,8 +24,8 @@ export default function () {
                     router.push('/(tabs)')
                 }} />
         {
-            !isLoading && data? <>
-                <Image src={data.image_url}   style={{
+            !podcastDetailedData.isLoading && podcastDetailedData.data? <>
+                <Image src={podcastDetailedData.data.image_url}   style={{
                     width: 200,
                     height: 200,
                     borderRadius: 20,
@@ -50,16 +38,21 @@ export default function () {
                     shadowRadius: 10,
                 }}
                 />
-                <Heading2 styles={{marginRight: 'auto', marginLeft: 'auto', width: '95%', marginTop: 10, paddingBottom: 0}}>{data.name}</Heading2>
-                {data.tags.map(t=><Text>{t.name}</Text>)}
+                <Heading2 styles={{marginRight: 'auto', marginLeft: 'auto', width: '95%', marginTop: 10, paddingBottom: 0}}>{podcastDetailedData.data.name}</Heading2>
+                {podcastDetailedData.data.tags.map(t=><Text>{t.name}</Text>)}
                 <View style={{marginLeft: 30, display: 'flex', flexDirection: 'row', gap: 10}}>
                     <AntDesign name="hearto" size={24} color="white" />
                     <Link href={{pathname: "/podcasts/[id]/info", params: {
-                                id: data.id
+                                id: podcastDetailedData.data.id
                             }}}>
                         <AntDesign name="infocirlce" size={24} color="white" />
                     </Link>
-                    <Entypo name="share-alternative" size={24} color="white" />
+                    <Entypo name="share-alternative" size={24} color="white" onPress={()=>{
+                       Share.share({
+                           message: t('share-podcast', {name: podcastDetailedData.data.name, url: "tbd"}),
+
+                       })
+                    }} />
                 </View>
                 <View style={{margin: 20}}>
                     {
