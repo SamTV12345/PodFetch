@@ -1,4 +1,4 @@
-import {useLocalSearchParams} from "expo-router";
+import {router, useLocalSearchParams} from "expo-router";
 import {$api} from "@/client";
 import {ScrollView, Text, View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
@@ -20,7 +20,7 @@ export default function () {
             top: 40,
             left: 20,
         }} onPress={()=>{
-            window.history.back()
+            router.back()
         }} />
         {
             !isLoading && data? <>

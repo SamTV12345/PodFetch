@@ -14,7 +14,6 @@ export const HEADER_TO_USE: Record<string, string> = {
 
 
 
-
 export const addHeader = (key: string, value: string) => {
     HEADER_TO_USE[key] = value
 }
