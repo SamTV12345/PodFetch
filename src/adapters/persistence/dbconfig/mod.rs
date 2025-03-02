@@ -26,7 +26,7 @@ macro_rules! import_database_config {
 
 #[macro_export]
 macro_rules! execute_with_conn {
-    ($diesel_func:expr) => {{
+    ($diesel_func:expr_2021) => {{
         use std::ops::DerefMut;
         use $crate::get_connection;
 
@@ -46,7 +46,7 @@ macro_rules! execute_with_conn {
 
 #[macro_export]
 macro_rules! insert_with_conn {
-    ($diesel_func:expr) => {{
+    ($diesel_func:expr_2021) => {{
         use std::ops::DerefMut;
         use $crate::get_connection;
         let mut conn = get_connection();

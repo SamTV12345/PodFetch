@@ -437,15 +437,15 @@ impl PodcastEpisodeService {
             }
             let days;
 
-            if let Some(podcast_settings) = podcast_settings.unwrap() {
+            match podcast_settings.unwrap() { Some(podcast_settings) => {
                 if podcast_settings.auto_cleanup {
                     days = podcast_settings.auto_cleanup_days;
                 } else {
                     days = days_from_settings;
                 }
-            } else {
+            } _ => {
                 days = days_from_settings;
-            }
+            }}
 
             let old_podcast_episodes =
                 PodcastEpisode::get_podcast_episodes_older_than_days(days, p.id);

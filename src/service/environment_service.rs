@@ -390,18 +390,30 @@ mod tests {
     use std::env::{remove_var, set_var};
 
     fn do_env_cleanup() {
-        remove_var(SERVER_URL);
-        remove_var(PODINDEX_API_KEY);
-        remove_var(PODINDEX_API_SECRET);
-        remove_var(POLLING_INTERVAL);
-        remove_var(BASIC_AUTH);
-        remove_var(USERNAME);
-        remove_var(PASSWORD);
-        remove_var(OIDC_AUTH);
-        remove_var(OIDC_REDIRECT_URI);
-        remove_var(OIDC_AUTHORITY);
-        remove_var(OIDC_CLIENT_ID);
-        remove_var(OIDC_SCOPE);
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(SERVER_URL) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(PODINDEX_API_KEY) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(PODINDEX_API_SECRET) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(POLLING_INTERVAL) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(BASIC_AUTH) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(USERNAME) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(PASSWORD) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(OIDC_AUTH) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(OIDC_REDIRECT_URI) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(OIDC_AUTHORITY) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(OIDC_CLIENT_ID) };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { remove_var(OIDC_SCOPE) };
     }
 
     #[test]
@@ -409,17 +421,28 @@ mod tests {
     fn test_get_config() {
         do_env_cleanup();
 
-        set_var(SERVER_URL, "http://localhost:8000");
-        set_var(POLLING_INTERVAL, "10");
-        set_var(BASIC_AUTH, "true");
-        set_var(USERNAME, "test");
-        set_var(PASSWORD, "test");
-        set_var(OIDC_AUTH, "true");
-        set_var(OIDC_REDIRECT_URI, "http://localhost:8000/oidc");
-        set_var(OIDC_AUTHORITY, "http://localhost:8000/oidc");
-        set_var(OIDC_CLIENT_ID, "test");
-        set_var(OIDC_SCOPE, "openid profile email");
-        set_var(OIDC_JWKS, "test");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(SERVER_URL, "http://localhost:8000") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(POLLING_INTERVAL, "10") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(BASIC_AUTH, "true") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(USERNAME, "test") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(PASSWORD, "test") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(OIDC_AUTH, "true") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(OIDC_REDIRECT_URI, "http://localhost:8000/oidc") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(OIDC_AUTHORITY, "http://localhost:8000/oidc") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(OIDC_CLIENT_ID, "test") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(OIDC_SCOPE, "openid profile email") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(OIDC_JWKS, "test") };
         let env_service = EnvironmentService::new();
         let config = env_service.get_config();
         assert!(!config.podindex_configured);
@@ -445,7 +468,8 @@ mod tests {
     #[serial]
     fn test_getting_server_url() {
         do_env_cleanup();
-        set_var(SERVER_URL, "http://localhost:8000");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(SERVER_URL, "http://localhost:8000") };
 
         let env_service = EnvironmentService::new();
         assert_eq!(env_service.get_server_url(), "http://localhost:8000/");
@@ -455,13 +479,20 @@ mod tests {
     #[serial]
     fn test_get_config_without_oidc() {
         do_env_cleanup();
-        set_var(SERVER_URL, "http://localhost:8000");
-        set_var(PODINDEX_API_KEY, "test");
-        set_var(PODINDEX_API_SECRET, "test");
-        set_var(POLLING_INTERVAL, "10");
-        set_var(BASIC_AUTH, "true");
-        set_var(USERNAME, "test");
-        set_var(PASSWORD, "test");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(SERVER_URL, "http://localhost:8000") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(PODINDEX_API_KEY, "test") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(PODINDEX_API_SECRET, "test") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(POLLING_INTERVAL, "10") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(BASIC_AUTH, "true") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(USERNAME, "test") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(PASSWORD, "test") };
         let config = EnvironmentService::new().get_config();
         assert!(config.podindex_configured);
         assert_eq!(config.rss_feed, "http://localhost:8000/rss");
@@ -474,8 +505,10 @@ mod tests {
     #[serial]
     fn test_get_podindex_api_key() {
         do_env_cleanup();
-        set_var(PODINDEX_API_KEY, "test");
-        set_var(PODINDEX_API_SECRET, "testsecret");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(PODINDEX_API_KEY, "test") };
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(PODINDEX_API_SECRET, "testsecret") };
 
         let env_service = EnvironmentService::new();
         assert_eq!(env_service.podindex_api_key, "test");
@@ -486,7 +519,8 @@ mod tests {
     #[serial]
     fn test_get_polling_interval() {
         do_env_cleanup();
-        set_var(POLLING_INTERVAL, "20");
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { set_var(POLLING_INTERVAL, "20") };
         assert_eq!(EnvironmentService::new().polling_interval, 20);
     }
 }
