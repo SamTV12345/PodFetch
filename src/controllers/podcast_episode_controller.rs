@@ -36,6 +36,37 @@ pub struct PodcastEpisodeWithHistory {
     pub podcast_history_item: Option<EpisodeDto>,
 }
 
+
+#[utoipa::path(
+    get,
+    path="/episodes/{id}",
+    params(OptionalId),
+    responses(
+(status = 200, description = "Finds all podcast episodes of a given podcast id.", body =
+[PodcastEpisodeWithHistory])),
+    tag = "podcast_episodes"
+)]
+pub async fn get_podcast_episode_by_id(
+    Path(id): Path<String>,
+    Extension(requester): Extension<User>,
+) -> Result<Json<PodcastEpisodeWithHistory>, CustomError> {
+    let res = PodcastEpisodeService::get_podcast_episode_by_id(&id)?;
+    if res.is_none() {
+        return Err(CustomErrorInner::NotFound.into());
+    }
+
+    let podcast_inner = res.clone().unwrap();
+
+    let episode = Episode::get_watchtime(id, requester.username)?;
+    let mapped_podcast_episode: PodcastEpisodeDto =
+        (podcast_inner, Some(requester.clone()), None).into();
+
+    Ok(Json(PodcastEpisodeWithHistory{
+        podcast_history_item: episode.map(|e| e.convert_to_episode_dto()),
+        podcast_episode: mapped_podcast_episode
+    }))
+}
+
 #[utoipa::path(
 get,
 path="/podcasts/{id}/episodes",
@@ -299,6 +330,7 @@ pub fn get_podcast_episode_router() -> OpenApiRouter {
         .routes(routes!(get_available_podcasts_not_in_webview))
         .routes(routes!(get_timeline))
         .routes(routes!(like_podcast_episode))
+        .routes(routes!(get_podcast_episode_by_id))
         .routes(routes!(download_podcast_episodes_of_podcast))
         .routes(routes!(delete_podcast_episode_locally))
         .routes(routes!(retrieve_episode_sample_format))
