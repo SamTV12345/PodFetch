@@ -54,6 +54,7 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="podcasts/[id]/info" options={{headerShown: false}} />
         <Stack.Screen name="podcasts/[id]/details" options={{headerShown: false}} />
+        <Stack.Screen name="episodes/[id]/index" options={{headerShown: false}} />
       </Stack>
       <StatusBar style="light" backgroundColor="#000" />
     </ThemeProvider>

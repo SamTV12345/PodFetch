@@ -1,11 +1,12 @@
 import {components} from "@/schema";
-import {Image, Text, View} from "react-native";
+import {Image, Pressable, Text, View} from "react-native";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import {styles} from "@/styles/styles";
 import Svg, {Circle} from "react-native-svg";
 import {useMemo} from "react";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {useTranslation} from "react-i18next";
+import { router } from 'expo-router';
 
 type PodcastEpisodeSlideProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
@@ -46,6 +47,8 @@ export const PodcastEpisodeSlide = ({ episode }: PodcastEpisodeSlideProps) => {
         return (episode.podcastHistoryItem?.position||0)/(episode.podcastHistoryItem?.total||1)*100
     }, [episode])
     const {t} = useTranslation()
+
+
     const remainingSeconds = useMemo(()=>{
         const isUnPlayed = episode.podcastHistoryItem?.position === undefined
         const isCompletelyPlayed = episode.podcastHistoryItem?.position === episode.podcastHistoryItem?.total
@@ -72,8 +75,17 @@ export const PodcastEpisodeSlide = ({ episode }: PodcastEpisodeSlideProps) => {
                 </View>
             </View>
             <View style={{width: '80%'}}>
-                <Text style={{ color: 'white', wordWrap: "break", marginLeft: 10 }} numberOfLines={2}>{episode.podcastEpisode.name}</Text>
-                <Text style={{ color: styles.whiteSubText, wordWrap: "break", marginLeft: 10 }} numberOfLines={2}>{episode.podcastEpisode.description}</Text>
+                <Pressable onPress={()=>{
+                    router.push({
+                        pathname: '/episodes/[id]',
+                        params: {
+                            id: episode.podcastEpisode.id,
+                        }
+                    })
+                }}>
+                    <Text style={{ color: 'white', wordWrap: "break", marginLeft: 10 }} numberOfLines={2}>{episode.podcastEpisode.name}</Text>
+                    <Text style={{ color: styles.whiteSubText, wordWrap: "break", marginLeft: 10 }} numberOfLines={2}>{episode.podcastEpisode.description}</Text>
+                </Pressable>
                 <View style={{marginLeft: 10, marginTop: 'auto', display: 'flex', flexDirection: 'row'}}>
                     <ProgressCircle progress={totalProgressPercentage} />
                     {remainingSeconds.alreadyPlaying ? <Text style={{color: 'white', marginTop: 'auto', marginBottom: 'auto'}}>{t('time-left', {time: remainingSeconds.time})}</Text>:
