@@ -20,7 +20,7 @@ reqwest = { version = "0.12.11", features = ["stream", "json","blocking", "rustl
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 async-recursion = "1.1.1"
 base64 = "0.22.1"
-uuid = {version="1.14.0", features = ["v4", "serde"]}
+uuid = {version="1.15.1", features = ["v4", "serde"]}
 libsqlite3-sys = {version = "0.31.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.2", optional = true}
 diesel_migrations = "2.2.0"
