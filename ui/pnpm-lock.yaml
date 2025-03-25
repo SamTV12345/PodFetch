@@ -81,8 +81,8 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0
       openapi-fetch:
-        specifier: ^0.13.4
-        version: 0.13.4
+        specifier: ^0.13.5
+        version: 0.13.5
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -2129,8 +2129,8 @@ packages:
     resolution: {integrity: sha512-IDopEXjiwjkmJLYZo6BTlvwOtnlSniWZkKZoXforC/oLZHC9wkIxd25Kwtmo5yKFMMVcsp3JY6bhcNJqdYk8+g==}
     engines: {node: '>=18'}
 
-  openapi-fetch@0.13.4:
-    resolution: {integrity: sha512-JHX7UYjLEiHuQGCPxa3CCCIqe/nc4bTIF9c4UYVC8BegAbWoS3g4gJxKX5XcG7UtYQs2060kY6DH64KkvNZahg==}
+  openapi-fetch@0.13.5:
+    resolution: {integrity: sha512-AQK8T9GSKFREFlN1DBXTYsLjs7YV2tZcJ7zUWxbjMoQmj8dDSFRrzhLCbHPZWA1TMV3vACqfCxLEZcwf2wxV6Q==}
 
   openapi-typescript-helpers@0.0.15:
     resolution: {integrity: sha512-opyTPaunsklCBpTK8JGef6mfPhLSnyy5a0IN9vKtx3+4aExf+KxEqYwIy3hqkedXIB97u357uLMJsOnm3GVjsw==}
@@ -4663,7 +4663,7 @@ snapshots:
     dependencies:
       jwt-decode: 4.0.0
 
-  openapi-fetch@0.13.4:
+  openapi-fetch@0.13.5:
     dependencies:
       openapi-typescript-helpers: 0.0.15
 
