@@ -69,7 +69,7 @@ utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 axum-extra={version = "0.10.0", features = ["cookie", "query"]}
 axum-test = "17.1.0"
-socketioxide = "0.16.0"
+socketioxide = "0.16.2"
 mime_guess = "2.0.5"
 
 [target.'cfg(not(windows))'.dependencies]
