@@ -82,7 +82,7 @@ serial_test = {version="3.2.0"}
 testcontainers = { version = "0.23.3" }
 testcontainers-modules = { version = "0.11.6", features = ["postgres","blocking"] }
 derive_builder = {version = "0.20.2"}
-fake = { version = "4.2.0", features = ["chrono", "url"] }
+fake = { version = "4.3.0", features = ["chrono", "url"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
 axum-test = "17.2.0"
 
