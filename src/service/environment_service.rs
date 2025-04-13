@@ -287,10 +287,7 @@ impl EnvironmentService {
 
     fn handle_telegram_config() -> Option<TelegramConfig> {
         if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
-            let telegram_bot_token = match var(TELEGRAM_BOT_TOKEN) {
-                Ok(token) => Some(token),
-                Err(_) => None,
-            }
+            let telegram_bot_token = var(TELEGRAM_BOT_TOKEN).ok()
             .map_or_else(
                 || {
                     log::error!("Telegram bot token not configured");
@@ -299,10 +296,7 @@ impl EnvironmentService {
                 |v| v,
             );
 
-            let telegram_chat_id = match var(TELEGRAM_BOT_CHAT_ID) {
-                Ok(chat_id) => Some(chat_id),
-                Err(_) => None,
-            }
+            let telegram_chat_id = var(TELEGRAM_BOT_CHAT_ID).ok()
             .map_or_else(
                 || {
                     log::error!("Telegram chat id not configured");

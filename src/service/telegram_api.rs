@@ -2,7 +2,8 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use frankenstein::client_ureq::Bot;
-use frankenstein::{ParseMode, SendMessageParams, TelegramApi};
+use frankenstein::{ParseMode, TelegramApi};
+use frankenstein::methods::SendMessageParams;
 
 pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: Podcast) {
     let telegram_config = ENVIRONMENT_SERVICE.telegram_api.clone().unwrap();
