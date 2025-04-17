@@ -25,7 +25,7 @@ libsqlite3-sys = {version = "0.31.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.2", optional = true}
 diesel_migrations = "2.2.0"
 jsonwebtoken = {version="9.3.0"}
-log = "0.4.26"
+log = "0.4.27"
 futures-util = "0.3.31"
 substring = "1.4.5"
 opml = "1.1.6"
