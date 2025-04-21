@@ -67,7 +67,7 @@ utoipa-axum = { version = "0.2.0" }
 utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-axum-extra={version = "0.10.0", features = ["cookie", "query"]}
+axum-extra={version = "0.10.1", features = ["cookie", "query"]}
 axum-test = "17.3.0"
 socketioxide = "0.16.2"
 mime_guess = "2.0.5"
