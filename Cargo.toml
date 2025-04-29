@@ -36,7 +36,7 @@ rss = "2.0.12"
 frankenstein = { version = "0.40.0", features = ["client-ureq"] }
 regex = "1.11.0"
 xml-builder = "0.5.2"
-diesel = { version = "2.2.8", features = ["chrono", "r2d2"] }
+diesel = { version = "2.2.10", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
 utoipa = { version = "5.3.1", features = ["chrono", "axum_extras"] }
 futures = "0.3.31"

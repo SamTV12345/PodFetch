@@ -780,9 +780,9 @@ checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
 
 [[package]]
 name = "diesel"
-version = "2.2.8"
+version = "2.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "470eb10efc8646313634c99bb1593f402a6434cbd86e266770c6e39219adb86a"
+checksum = "ff3e1edb1f37b4953dd5176916347289ed43d7119cc2e6c7c3f7849ff44ea506"
 dependencies = [
  "bitflags 2.8.0",
  "byteorder",
