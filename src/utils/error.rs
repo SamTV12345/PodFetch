@@ -172,7 +172,7 @@ impl Drop for CustomError {
     fn drop(&mut self) {
         error!(
             "Error {}: {} with error",
-            self.inner.to_string(),
+            self.inner,
             self.backtrace
         );
     }
