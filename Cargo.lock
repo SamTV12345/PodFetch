@@ -898,9 +898,9 @@ dependencies = [
 
 [[package]]
 name = "engineioxide"
-version = "0.16.2"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a36d7cb810f4501c85c13211064288cdc870742a072005de2851096d4956acb6"
+checksum = "fb6d2ef56d20b87b7f02bc08935e21bd7cfd88da6b82b129d5d89a28ddf3a389"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -925,9 +925,9 @@ dependencies = [
 
 [[package]]
 name = "engineioxide-core"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a6512b1bc8dfb74d61b55878d712082be39a960abee8590f310723587de343e"
+checksum = "04e5d58eb7374df380cbb53ef65f9c35f544c9c217528adb1458c8df05978475"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -3242,9 +3242,9 @@ dependencies = [
 
 [[package]]
 name = "socketioxide"
-version = "0.16.2"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f7227f46a8ccc90ffdc6d96ff8ebf50eea3973866fb87dec8d6d034d5402605"
+checksum = "23077e37ac88d37404fac0e6a576591c4c8d3d754d0e495c110b520ba171fb9d"
 dependencies = [
  "bytes",
  "engineioxide",
@@ -3255,7 +3255,6 @@ dependencies = [
  "hyper",
  "matchit",
  "pin-project-lite",
- "rustversion",
  "serde",
  "socketioxide-core",
  "socketioxide-parser-common",
@@ -3267,13 +3266,13 @@ dependencies = [
 
 [[package]]
 name = "socketioxide-core"
-version = "0.16.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1875d5efa916739f9231fe6d8e7b0d50e989d12d1efc1012d41719556452cc47"
+checksum = "b07b95089a961994921d23dd6e70792a06f5daa250b5ec8919f6f9de371d2cc5"
 dependencies = [
  "arbitrary",
  "bytes",
- "engineioxide",
+ "engineioxide-core",
  "futures-core",
  "serde",
  "smallvec",
@@ -3282,9 +3281,9 @@ dependencies = [
 
 [[package]]
 name = "socketioxide-parser-common"
-version = "0.16.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63831e161c97d45ae4ccf3f39a0cfd22e04e778f4fa88f289cc14404e734a9a1"
+checksum = "0fe3b57122bf9c17fe8c2f364e1d307983068396cfb1b0407ec897de411f8033"
 dependencies = [
  "bytes",
  "itoa",
