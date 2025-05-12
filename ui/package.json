@@ -59,7 +59,7 @@
     "@rsbuild/plugin-babel": "^1.0.3",
     "@rsbuild/plugin-react": "^1.1.1",
     "@rsbuild/plugin-sass": "^1.2.2",
-    "@tailwindcss/postcss": "^4.1.4",
+    "@tailwindcss/postcss": "^4.1.6",
     "@types/node": "^22.13.13",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.0.4",
