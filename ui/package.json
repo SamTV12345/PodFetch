@@ -61,7 +61,7 @@
     "@rsbuild/plugin-sass": "^1.2.2",
     "@tailwindcss/postcss": "^4.1.6",
     "@types/node": "^22.13.13",
-    "@types/react": "^19.1.2",
+    "@types/react": "^19.1.4",
     "@types/react-dom": "^19.0.4",
     "@types/sanitize-html": "^2.15.0",
     "@vitejs/plugin-react": "^4.3.4",
