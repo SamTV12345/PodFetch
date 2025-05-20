@@ -195,7 +195,7 @@ impl User {
         if is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH) {
             let auth_header = req.headers().get(USERNAME);
             if auth_header.is_none() {
-                return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
+                return Err(Error::other("Username not found"));
             }
             return Ok(Some(
                 auth_header.unwrap().to_str().unwrap().parse().unwrap(),
@@ -207,7 +207,7 @@ impl User {
     pub fn get_gpodder_req_header(req: &Request) -> Result<String, Error> {
         let auth_header = req.headers().get(USERNAME);
         if auth_header.is_none() {
-            return Err(Error::new(std::io::ErrorKind::Other, "Username not found"));
+            return Err(Error::other("Username not found"));
         }
         Ok(auth_header.unwrap().to_str().unwrap().parse().unwrap())
     }

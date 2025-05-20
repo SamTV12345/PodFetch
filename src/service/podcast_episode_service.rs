@@ -362,7 +362,7 @@ impl PodcastEpisodeService {
         let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
         let capture = re.captures(url);
         if capture.is_none() {
-            return Err(Error::new(std::io::ErrorKind::Other, "No"));
+            return Err(Error::other("No"));
         }
         Ok(capture.unwrap().get(1).unwrap().as_str().to_string())
     }
