@@ -69,7 +69,7 @@ fn version_from_git_info() -> Result<String, std::io::Error> {
 fn run(args: &[&str]) -> Result<String, std::io::Error> {
     let out = Command::new(args[0]).args(&args[1..]).output()?;
     if !out.status.success() {
-        use std::io::{Error, ErrorKind};
+        use std::io::Error;
         return Err(Error::other("Command not successful"));
     }
     Ok(String::from_utf8(out.stdout).unwrap().trim().to_string())
