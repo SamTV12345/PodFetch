@@ -80,7 +80,7 @@ native-tls = {version = "0.2.14", optional = true}
 [dev-dependencies]
 serial_test = {version="3.2.0"}
 testcontainers = { version = "0.24.0" }
-testcontainers-modules = { version = "0.11.6", features = ["postgres","blocking"] }
+testcontainers-modules = { version = "0.12.0", features = ["postgres","blocking"] }
 derive_builder = {version = "0.20.2"}
 fake = { version = "4.3.0", features = ["chrono", "url"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
