@@ -232,7 +232,6 @@ mod tests {
         false, false, false, false,
     ];
 
-
     #[test]
     fn it_works_with_was_omg() {
         let options = super::Options {
@@ -242,7 +241,10 @@ mod tests {
         };
 
         let sanitizer = Sanitizer::new(Some(options));
-        assert_eq!(sanitizer.sanitize("Was, OMG?").to_string(), "Was, OMG".to_string());
+        assert_eq!(
+            sanitizer.sanitize("Was, OMG?").to_string(),
+            "Was, OMG".to_string()
+        );
     }
 
     #[test]
@@ -254,7 +256,10 @@ mod tests {
         };
 
         let sanitizer = Sanitizer::new(Some(options));
-        assert_eq!(sanitizer.sanitize("Aujourd'hui l'économie").to_string(), "Aujourd'hui l'économie".to_string());
+        assert_eq!(
+            sanitizer.sanitize("Aujourd'hui l'économie").to_string(),
+            "Aujourd'hui l'économie".to_string()
+        );
     }
 
     #[test]
@@ -266,7 +271,10 @@ mod tests {
         };
 
         let sanitizer = Sanitizer::new(Some(options));
-        assert_eq!(sanitizer.sanitize("燕外之意").to_string(), "燕外之意".to_string());
+        assert_eq!(
+            sanitizer.sanitize("燕外之意").to_string(),
+            "燕外之意".to_string()
+        );
     }
 
     #[test]
