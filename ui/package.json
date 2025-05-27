@@ -69,7 +69,7 @@
     "jsdom": "^26.0.0",
     "openapi-typescript": "^7.8.0",
     "postcss": "^8.5.3",
-    "tailwindcss": "^4.0.17",
+    "tailwindcss": "^4.1.7",
     "typescript": "^5.8.3",
     "vite": "npm:rolldown-vite@latest",
     "vitest": "^2.1.8"
