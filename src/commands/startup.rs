@@ -419,7 +419,7 @@ pub mod tests {
     use crate::test_utils::test::setup_container;
     use axum_test::TestServer;
     use std::sync::MutexGuard;
-    
+
     #[cfg(feature = "postgresql")]
     use testcontainers::runners::AsyncRunner;
     #[cfg(feature = "postgresql")]
