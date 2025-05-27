@@ -4,6 +4,8 @@ on:
     branches:
       - 'main'
 name: Test rust
+permissions:
+  contents: read
 
 jobs:
   build_all_features:
