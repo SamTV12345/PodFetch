@@ -30,6 +30,7 @@ export const PodcastDetailPage = () => {
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const [openSettingsMenu, setOpenSettingsMenu] = useState<boolean>(false)
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
+    const loggedInUser = useCommon(state => state.loggedInUser)
 
     useEffect(() => {
         if (params && !isNaN(parseFloat(params.id as string))) {
@@ -140,7 +141,8 @@ export const PodcastDetailPage = () => {
                         lg:col-start-2 lg:col-end-3
                         self-start xs:self-end
                     ">
-                        <EditableHeading initialText={currentPodcast.name}></EditableHeading>
+
+                        <EditableHeading initialText={currentPodcast.name} allowedToEdit={loggedInUser?.role == "admin"}></EditableHeading>
 
                         <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
