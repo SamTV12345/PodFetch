@@ -260,4 +260,18 @@ impl Podcast {
             .execute(&mut get_connection())
             .expect("Error updating podcast episode");
     }
+    
+    pub fn update_podcast_name(
+        podcast_id_to_update: i32,
+        new_name: &str,
+    ) -> Result<(), CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
+        do_retry(|| {
+            diesel::update(podcasts.filter(id.eq(podcast_id_to_update)))
+                .set(name.eq(new_name))
+                .execute(&mut get_connection())
+        })
+        .map_err(map_db_error)?;
+        Ok(())
+    }
 }

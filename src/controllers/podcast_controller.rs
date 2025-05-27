@@ -485,6 +485,39 @@ pub async fn favorite_podcast(
     Ok(StatusCode::OK)
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct PodcastUpdateNameRequest {
+    name: String
+}
+
+#[utoipa::path(
+put,
+path="/podcasts/{id}/name",
+request_body=PodcastUpdateNameRequest,
+responses(
+(status = 200, description = "Updates the name of a podcast.", body=String)),
+tag="podcasts"
+)]
+pub async fn update_name_of_podcast(Path(id): Path<i32>,
+                              Extension(requester): Extension<User>,
+                                    req: Json<PodcastUpdateNameRequest>) -> Result<StatusCode,
+    CustomError> {
+    if !requester.is_admin() {
+        return Err(CustomErrorInner::Forbidden.into());
+    }
+    let found_podcast = match PodcastService::get_podcast(id) {
+        Ok(p) => Ok(p),
+        Err(..) => Err(CustomErrorInner::NotFound),
+    }?;
+
+    Podcast::update_podcast_name(
+        found_podcast.id,
+        &req.name,
+    )?;
+
+    Ok(StatusCode::OK)
+}
+
 #[utoipa::path(
 get,
 path="/podcasts/favored",
@@ -809,6 +842,7 @@ pub fn get_podcast_router() -> OpenApiRouter {
         .routes(routes!(get_podcast_settings))
         .routes(routes!(retrieve_podcast_sample_format))
         .routes(routes!(query_for_podcast))
+        .routes(routes!(update_name_of_podcast))
 }
 
 #[cfg(test)]

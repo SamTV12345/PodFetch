@@ -21,6 +21,7 @@ type PodcastSettingsModalProps = {
 
 export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open, podcast})=>{
     const [podcastSettings, setPodcastSettings] = useState<PodcastSetting>()
+    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const [loaded, setLoaded] = useState<boolean>(false)
     const {t} = useTranslation()
     const isSettingsEnabled = useMemo(()=>{
@@ -67,8 +68,8 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
             <Dialog.Content onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center z-40">
                 <div onClick={(e)=>e.stopPropagation()}
                     className={"relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] " }>
-                    <Dialog.Title className="text-(--accent-color) text-2xl">Settings</Dialog.Title>
-                    <Dialog.Description className="text-(--fg-color)">Configure your podcast settings</Dialog.Description>
+                    <Dialog.Title className="text-(--accent-color) text-2xl">{t('settings')}</Dialog.Title>
+                    <Dialog.Description className="text-(--fg-color)">{t('settings-configure')}</Dialog.Description>
                     <Dialog.Close className="top-5 absolute right-5" onClick={()=>{
                         setOpen(false)
                     }}> <span
@@ -76,6 +77,11 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                         <span className="sr-only">Close modal</span></Dialog.Close>
                     <hr className="mb-5 mt-1 border-[1px] border-(--border-color)"/>
                     <div className={`grid grid-cols-3 gap-5 ${!isSettingsEnabled && 'opacity-50'}`}>
+                        <label className="mr-6 text-(--fg-color) col-span-2" htmlFor="auto-cleanup">{t('podcast-name')}</label>
+                        <CustomInput value={podcast.name} onChange={(event)=>{
+                            event.target.value
+                        }}/>
+
                         <h2 className="text-(--fg-color) col-span-2">{t('episode-numbering')}</h2>
                         <Switcher className="justify-self-end" disabled={!isSettingsEnabled}
                                   checked={podcastSettings?.episodeNumbering}
@@ -188,7 +194,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                             }}/>
                     </div>
                     {!isSettingsEnabled &&
-                        <div className="col-span-3 text-red-500">Settings are not enabled for this podcast</div>}
+                        <div className="col-span-3 text-red-500">{t('settings-not-enabled')}</div>}
                 </div>
             </Dialog.Content>
         </Dialog.Portal>
