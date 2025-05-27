@@ -21,7 +21,7 @@ tokio-stream = { version = "0.1.17", features = ["sync"] }
 async-recursion = "1.1.1"
 base64 = "0.22.1"
 uuid = {version="1.16.0", features = ["v4", "serde"]}
-libsqlite3-sys = {version = "0.31.0", features = ["bundled"], optional = true}
+libsqlite3-sys = {version = "0.33.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.2", optional = true}
 diesel_migrations = "2.2.0"
 jsonwebtoken = {version="9.3.0"}
@@ -33,7 +33,7 @@ rand = "0.9.0"
 env_logger = "0.11.6"
 chrono = {version  = "0.4.41", default-features=false, features = ["serde"]}
 rss = "2.0.12"
-frankenstein = { version = "0.40.0", features = ["client-ureq"] }
+frankenstein = { version = "0.41.0", features = ["client-ureq"] }
 regex = "1.11.0"
 xml-builder = "0.5.2"
 diesel = { version = "2.2.10", features = ["chrono", "r2d2"] }
@@ -55,7 +55,7 @@ strfmt="0.2.4"
 urlencoding="2.1.3"
 id3 = "1.16.2"
 mp4ameta = "0.12.1"
-file-format = "0.26.0"
+file-format = "0.27.0"
 maud = { version = "*", features = ["axum","axum-core"] }
 url = "2.5.4"
 rust-s3 = { version = "0.36.0-beta.2", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
@@ -79,8 +79,8 @@ native-tls = {version = "0.2.14", optional = true}
 
 [dev-dependencies]
 serial_test = {version="3.2.0"}
-testcontainers = { version = "0.23.3" }
-testcontainers-modules = { version = "0.11.6", features = ["postgres","blocking"] }
+testcontainers = { version = "0.24.0" }
+testcontainers-modules = { version = "0.12.0", features = ["postgres","blocking"] }
 derive_builder = {version = "0.20.2"}
 fake = { version = "4.3.0", features = ["chrono", "url"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}

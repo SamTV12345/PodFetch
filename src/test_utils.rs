@@ -2,7 +2,6 @@
 pub mod test {
     use crate::constants::inner_constants::Role;
     use crate::models::user::User;
-
     use chrono::Utc;
 
     use sha256::digest;
