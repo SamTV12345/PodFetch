@@ -15,6 +15,7 @@ import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPl
 import {ErrorIcon} from "../icons/ErrorIcon";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
 import { client } from '../utils/http'
+import {EditableHeading} from "../components/EditableHeading";
 
 export const PodcastDetailPage = () => {
     const configModel = useCommon(state => state.configModel)
@@ -29,6 +30,7 @@ export const PodcastDetailPage = () => {
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const [openSettingsMenu, setOpenSettingsMenu] = useState<boolean>(false)
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
+    const loggedInUser = useCommon(state => state.loggedInUser)
 
     useEffect(() => {
         if (params && !isNaN(parseFloat(params.id as string))) {
@@ -139,7 +141,8 @@ export const PodcastDetailPage = () => {
                         lg:col-start-2 lg:col-end-3
                         self-start xs:self-end
                     ">
-                        <Heading1 className="inline align-middle mr-2">{currentPodcast.name}</Heading1>
+
+                        <EditableHeading initialText={currentPodcast.name} allowedToEdit={loggedInUser?.role == "admin"}></EditableHeading>
 
                         <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
