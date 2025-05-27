@@ -487,7 +487,7 @@ pub async fn favorite_podcast(
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastUpdateNameRequest {
-    name: String
+    name: String,
 }
 
 #[utoipa::path(
@@ -498,10 +498,11 @@ responses(
 (status = 200, description = "Updates the name of a podcast.", body=String)),
 tag="podcasts"
 )]
-pub async fn update_name_of_podcast(Path(id): Path<i32>,
-                              Extension(requester): Extension<User>,
-                                    req: Json<PodcastUpdateNameRequest>) -> Result<StatusCode,
-    CustomError> {
+pub async fn update_name_of_podcast(
+    Path(id): Path<i32>,
+    Extension(requester): Extension<User>,
+    req: Json<PodcastUpdateNameRequest>,
+) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden.into());
     }
@@ -510,10 +511,7 @@ pub async fn update_name_of_podcast(Path(id): Path<i32>,
         Err(..) => Err(CustomErrorInner::NotFound),
     }?;
 
-    Podcast::update_podcast_name(
-        found_podcast.id,
-        &req.name,
-    )?;
+    Podcast::update_podcast_name(found_podcast.id, &req.name)?;
 
     Ok(StatusCode::OK)
 }
@@ -848,7 +846,9 @@ pub fn get_podcast_router() -> OpenApiRouter {
 #[cfg(test)]
 pub mod tests {
     use crate::commands::startup::tests::handle_test_startup;
+    use crate::controllers::podcast_controller::PodcastUpdateNameRequest;
     use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
+    use crate::models::podcasts::Podcast;
     use serial_test::serial;
 
     #[tokio::test]
@@ -879,6 +879,34 @@ pub mod tests {
             .await;
         assert_eq!(resp.status_code(), 200);
         assert_eq!(resp.json::<String>(), "The homelab podcast");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_change_name_of_podcast() {
+        let ts_server = handle_test_startup().await;
+        let saved_podcast = Podcast::add_podcast_to_database(
+            "collection",
+            "The homelab podcast",
+            "https://example.com/feed",
+            "https://example.com/image\
+                                         .jpg",
+            "test123",
+        )
+        .unwrap();
+        let resp = ts_server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/name", &saved_podcast.id))
+            .json(&PodcastUpdateNameRequest {
+                name: "New Podcast Name".to_string(),
+            })
+            .await;
+        assert_eq!(
+            Podcast::get_podcast(saved_podcast.id).unwrap().name,
+            "New Podcast Name"
+        );
+
+        assert_eq!(resp.status_code(), 200);
     }
 
     #[tokio::test]

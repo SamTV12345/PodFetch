@@ -139,11 +139,11 @@ impl Podcast {
     }
 
     pub fn add_podcast_to_database(
-        collection_name: String,
-        collection_id: String,
-        feed_url: String,
-        image_url_1: String,
-        directory_name_to_insert: String,
+        collection_name: &str,
+        collection_id: &str,
+        feed_url: &str,
+        image_url_1: &str,
+        directory_name_to_insert: &str,
     ) -> Result<Podcast, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::{
             directory_id, image_url, name as podcast_name, rssfeed,
@@ -154,12 +154,12 @@ impl Podcast {
 
         let inserted_podcast = insert_into(podcasts::table)
             .values((
-                directory_id.eq(collection_id.to_string()),
-                podcast_name.eq(collection_name.to_string()),
-                rssfeed.eq(feed_url.to_string()),
-                image_url.eq(image_url_1.to_string()),
-                original_image_url.eq(image_url_1.to_string()),
-                directory_name.eq(directory_name_to_insert.to_string()),
+                directory_id.eq(collection_id),
+                podcast_name.eq(collection_name),
+                rssfeed.eq(feed_url),
+                image_url.eq(image_url_1),
+                original_image_url.eq(image_url_1),
+                directory_name.eq(directory_name_to_insert),
             ))
             .get_result::<Podcast>(&mut get_connection())
             .map_err(map_db_error)?;
@@ -260,7 +260,7 @@ impl Podcast {
             .execute(&mut get_connection())
             .expect("Error updating podcast episode");
     }
-    
+
     pub fn update_podcast_name(
         podcast_id_to_update: i32,
         new_name: &str,

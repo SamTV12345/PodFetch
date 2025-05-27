@@ -128,11 +128,11 @@ impl PodcastService {
             FileService::create_podcast_directory_exists(&podcast_insert, channel).await?;
 
         let inserted_podcast = Podcast::add_podcast_to_database(
-            podcast_insert.title,
-            podcast_insert.id.to_string(),
-            podcast_insert.feed_url,
-            podcast_insert.image_url.clone(),
-            podcast_directory_created,
+            &podcast_insert.title,
+            &podcast_insert.id.to_string(),
+            &podcast_insert.feed_url,
+            &podcast_insert.image_url,
+            &podcast_directory_created,
         )?;
 
         FileService::download_podcast_image(
