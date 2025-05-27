@@ -644,7 +644,6 @@ pub struct Params {
     episode_id: String,
 }
 
-
 use axum::response::Response;
 
 #[utoipa::path(

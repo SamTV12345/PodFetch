@@ -1,4 +1,3 @@
-
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
 use crate::models::invite::Invite;

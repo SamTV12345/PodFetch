@@ -5,7 +5,7 @@ pub mod test {
     use chrono::Utc;
 
     use sha256::digest;
-    
+
     #[cfg(feature = "postgresql")]
     use testcontainers::{ContainerRequest, ImageExt};
     #[cfg(feature = "postgresql")]

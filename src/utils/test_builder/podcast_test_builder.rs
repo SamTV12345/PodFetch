@@ -1,10 +1,10 @@
 #[cfg(test)]
 pub mod tests {
+    use crate::models::podcasts::Podcast;
     use derive_builder::Builder;
+    use fake::faker::lorem::de_de::Word;
     use fake::Fake;
     use fake::Faker;
-    use fake::faker::lorem::de_de::Word;
-    use crate::models::podcasts::Podcast;
 
     #[derive(Default, Builder, Debug)]
     #[builder(setter(into), default)]
@@ -24,13 +24,16 @@ pub mod tests {
         pub original_image_url: String,
         pub directory_name: String,
         pub download_location: Option<String>,
-        pub guid: Option<String>
+        pub guid: Option<String>,
     }
 
     impl PodcastTestData {
         pub fn new() -> PodcastTestData {
             let num_of_keywords: i32 = Faker.fake();
-            let keywords: String = (0..num_of_keywords).map(|_| Word().fake()).collect::<Vec<String>>().join(",");
+            let keywords: String = (0..num_of_keywords)
+                .map(|_| Word().fake())
+                .collect::<Vec<String>>()
+                .join(",");
 
             PodcastTestData {
                 id: Faker.fake(),
@@ -48,7 +51,7 @@ pub mod tests {
                 original_image_url: Faker.fake(),
                 directory_name: Faker.fake(),
                 download_location: None,
-                guid: Some(Faker.fake())
+                guid: Some(Faker.fake()),
             }
         }
 
@@ -69,7 +72,7 @@ pub mod tests {
                 last_build_date: self.last_build_date,
                 keywords: self.keywords,
                 language: self.language,
-                guid: self.guid
+                guid: self.guid,
             }
         }
     }
@@ -92,9 +95,8 @@ pub mod tests {
                 summary: value.summary,
                 image_url: value.image_url,
                 rssfeed: value.rssfeed,
-                guid: value.guid
+                guid: value.guid,
             }
         }
     }
-
 }

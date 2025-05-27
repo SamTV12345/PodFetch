@@ -170,11 +170,7 @@ impl CustomError {
 
 impl Drop for CustomError {
     fn drop(&mut self) {
-        error!(
-            "Error {}: {} with error",
-            self.inner,
-            self.backtrace
-        );
+        error!("Error {}: {} with error", self.inner, self.backtrace);
     }
 }
 

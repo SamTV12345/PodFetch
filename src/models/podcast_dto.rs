@@ -1,10 +1,10 @@
-use std::collections::HashSet;
 use crate::adapters::file::file_handler::FileHandlerType;
 use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
+use std::collections::HashSet;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
@@ -50,10 +50,14 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
             };
 
         let keywords_to_map = value.0.keywords.clone();
-        let keywords = keywords_to_map
-            .map(|k| k.split(",").map(|k|k.trim().to_string())
-            .collect::<HashSet<String>>()
-            .into_iter().collect::<Vec<_>>().join(","));
+        let keywords = keywords_to_map.map(|k| {
+            k.split(",")
+                .map(|k| k.trim().to_string())
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(",")
+        });
 
         PodcastDto {
             id: value.0.id,
@@ -86,10 +90,14 @@ impl From<Podcast> for PodcastDto {
         );
 
         let keywords_to_map = value.keywords.clone();
-        let keywords = keywords_to_map
-            .map(|k| k.split(",").map(|k|k.trim().to_string())
+        let keywords = keywords_to_map.map(|k| {
+            k.split(",")
+                .map(|k| k.trim().to_string())
                 .collect::<HashSet<String>>()
-                .into_iter().collect::<Vec<_>>().join(","));
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(",")
+        });
 
         PodcastDto {
             id: value.id,
@@ -116,11 +124,12 @@ impl From<Podcast> for PodcastDto {
 pub mod tests {
     use crate::models::podcast_dto::PodcastDto;
     use crate::models::podcasts::Podcast;
-    use crate::utils::test_builder::podcast_test_builder::tests::{PodcastTestDataBuilder};
+    use crate::utils::test_builder::podcast_test_builder::tests::PodcastTestDataBuilder;
 
     #[test]
     pub fn test_podcast_2_keywords() {
-        let podcast = PodcastTestDataBuilder::default().keywords("keyword1, keyword2, keyword1".to_string())
+        let podcast = PodcastTestDataBuilder::default()
+            .keywords("keyword1, keyword2, keyword1".to_string())
             .build()
             .unwrap();
         let podcast_dto: PodcastDto = PodcastDto::from(Podcast::from(podcast));
@@ -129,7 +138,8 @@ pub mod tests {
 
     #[test]
     pub fn test_podcast_3_keywords() {
-        let podcast = PodcastTestDataBuilder::default().keywords("keyword1, keyword2, keyword1, keyword2, keyword1, keyword3".to_string())
+        let podcast = PodcastTestDataBuilder::default()
+            .keywords("keyword1, keyword2, keyword1, keyword2, keyword1, keyword3".to_string())
             .build()
             .unwrap();
         let podcast_dto: PodcastDto = PodcastDto::from(Podcast::from(podcast));

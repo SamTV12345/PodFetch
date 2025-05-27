@@ -31,10 +31,9 @@ pub struct PodcastEpisodeDto {
     pub favored: Option<bool>,
 }
 
-
 pub enum FileType {
     Image,
-    Episode
+    Episode,
 }
 
 impl From<(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>)> for PodcastEpisodeDto {
@@ -48,14 +47,19 @@ impl From<(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>)> for Po
             date_of_recording: value.0.date_of_recording.to_string(),
             image_url: value.0.image_url.clone(),
             total_time: value.0.total_time,
-            local_url: map_url(&value.0, &value.0.file_episode_path, &value.0.url, &value.1,
-                               FileType::Episode),
+            local_url: map_url(
+                &value.0,
+                &value.0.file_episode_path,
+                &value.0.url,
+                &value.1,
+                FileType::Episode,
+            ),
             local_image_url: map_url(
                 &value.0,
                 &value.0.file_image_path,
                 &value.0.image_url,
                 &value.1,
-                FileType::Image
+                FileType::Image,
             ),
             description: value.0.description.to_string(),
             download_time: value.0.download_time,
@@ -177,26 +181,26 @@ fn map_url(
                 FileHandlerType::S3 => map_s3_url(local_url, remote_url),
             }
         }
-        None => {
-            match r#type {
-                FileType::Image => {
-                    remote_url.to_string()
-                }
-                FileType::Episode => {
-                    let mut url = url::Url::from_str(&format!("{}proxy/podcast", &ENVIRONMENT_SERVICE
-                        .server_url)).unwrap();
-                    if ENVIRONMENT_SERVICE.any_auth_enabled {
-                        if let Some(user) = user {
-                            if let Some(key) = &user.api_key {
-                                url.query_pairs_mut().append_pair("apiKey", key);
-                            }
+        None => match r#type {
+            FileType::Image => remote_url.to_string(),
+            FileType::Episode => {
+                let mut url = url::Url::from_str(&format!(
+                    "{}proxy/podcast",
+                    &ENVIRONMENT_SERVICE.server_url
+                ))
+                .unwrap();
+                if ENVIRONMENT_SERVICE.any_auth_enabled {
+                    if let Some(user) = user {
+                        if let Some(key) = &user.api_key {
+                            url.query_pairs_mut().append_pair("apiKey", key);
                         }
                     }
-                    url.query_pairs_mut().append_pair("episodeId", &episode.episode_id);
-                    url.to_string()
                 }
+                url.query_pairs_mut()
+                    .append_pair("episodeId", &episode.episode_id);
+                url.to_string()
             }
-        }
+        },
     }
 }
 

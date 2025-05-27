@@ -52,7 +52,7 @@ pub struct Podcast {
     #[diesel(sql_type = Nullable<Text>)]
     pub download_location: Option<String>,
     #[diesel(sql_type = Nullable<Text>)]
-    pub guid: Option<String>
+    pub guid: Option<String>,
 }
 
 impl Podcast {

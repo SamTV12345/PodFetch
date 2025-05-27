@@ -192,9 +192,11 @@ pub async fn create_invite(
     Extension(requester): Extension<User>,
     Json(invite): Json<InvitePostModel>,
 ) -> Result<Json<Invite>, CustomError> {
-    let created_invite =
-        UserManagementService::create_invite(Role::try_from(invite.role)?, invite.explicit_consent,
-                                             requester)?;
+    let created_invite = UserManagementService::create_invite(
+        Role::try_from(invite.role)?,
+        invite.explicit_consent,
+        requester,
+    )?;
     Ok(Json(created_invite))
 }
 

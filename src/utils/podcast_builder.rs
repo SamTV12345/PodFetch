@@ -8,7 +8,7 @@ pub struct PodcastBuilder {
     last_build_date: String,
     explicit: bool,
     author: String,
-    guid: Option<String>
+    guid: Option<String>,
 }
 
 #[derive(Clone)]
@@ -20,7 +20,7 @@ pub struct PodcastExtra {
     pub last_build_date: String,
     pub explicit: bool,
     pub author: String,
-    pub guid: Option<String>
+    pub guid: Option<String>,
 }
 
 impl PodcastBuilder {
@@ -33,7 +33,7 @@ impl PodcastBuilder {
             last_build_date: "".to_string(),
             explicit: false,
             author: "".to_string(),
-            guid: None
+            guid: None,
         }
     }
 
@@ -96,7 +96,7 @@ impl PodcastBuilder {
             keywords: self.keywords.clone(),
             last_build_date: self.last_build_date.clone(),
             author: self.author.clone(),
-            guid: self.guid.clone()
+            guid: self.guid.clone(),
         }
     }
 }

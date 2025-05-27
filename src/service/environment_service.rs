@@ -140,7 +140,7 @@ impl EnvironmentService {
             Ok(_) => "http://localhost:5173/".to_string(),
             Err(_) => var(SERVER_URL)
                 .map(|s| if s.ends_with('/') { s } else { s + "/" })
-                .unwrap_or("http://localhost:8000".to_string()),
+                .unwrap_or("http://localhost:8000/".to_string()),
         };
 
         let ws_url = match var("DEV") {
@@ -287,8 +287,7 @@ impl EnvironmentService {
 
     fn handle_telegram_config() -> Option<TelegramConfig> {
         if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
-            let telegram_bot_token = var(TELEGRAM_BOT_TOKEN).ok()
-            .map_or_else(
+            let telegram_bot_token = var(TELEGRAM_BOT_TOKEN).ok().map_or_else(
                 || {
                     log::error!("Telegram bot token not configured");
                     std::process::exit(1);
@@ -296,8 +295,7 @@ impl EnvironmentService {
                 |v| v,
             );
 
-            let telegram_chat_id = var(TELEGRAM_BOT_CHAT_ID).ok()
-            .map_or_else(
+            let telegram_chat_id = var(TELEGRAM_BOT_CHAT_ID).ok().map_or_else(
                 || {
                     log::error!("Telegram chat id not configured");
                     std::process::exit(1);
