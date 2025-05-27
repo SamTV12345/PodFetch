@@ -29,7 +29,7 @@ log = "0.4.27"
 futures-util = "0.3.31"
 substring = "1.4.5"
 opml = "1.1.6"
-rand = "0.9.0"
+rand = "0.9.1"
 env_logger = "0.11.6"
 chrono = {version  = "0.4.41", default-features=false, features = ["serde"]}
 rss = "2.0.12"
@@ -42,7 +42,7 @@ utoipa = { version = "5.3.1", features = ["chrono", "axum_extras"] }
 futures = "0.3.31"
 utoipa-swagger-ui = {version = "9.0.1", features = ["axum"] }
 clokwerk= "0.4.0"
-tokio = {version = "1.44.2", features = ["full"]}
+tokio = {version = "1.45.0", features = ["full"]}
 serde = "1.0.219"
 serde_derive = "1.0.189"
 sysinfo = {version = "0.35.1", features = ["serde"]}
@@ -61,7 +61,7 @@ url = "2.5.4"
 rust-s3 = { version = "0.36.0-beta.2", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
 async-trait = "0.1.88"
 axum = { version = "0.8.4", features = ["macros","http2"] }
-tower-http = { version = "0.6.1", features = ["fs"] }
+tower-http = { version = "0.6.4", features = ["fs"] }
 tower = { version = "0.5.2", features = ["util"] }
 utoipa-axum = { version = "0.2.0" }
 utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
@@ -80,7 +80,7 @@ native-tls = {version = "0.2.14", optional = true}
 [dev-dependencies]
 serial_test = {version="3.2.0"}
 testcontainers = { version = "0.24.0" }
-testcontainers-modules = { version = "0.12.0", features = ["postgres","blocking"] }
+testcontainers-modules = { version = "0.11.6", features = ["postgres","blocking"] }
 derive_builder = {version = "0.20.2"}
 fake = { version = "4.3.0", features = ["chrono", "url"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
