@@ -294,7 +294,7 @@ pub fn run_migrations() {
 
     match conn {
         #[cfg(feature = "postgresql")]
-        DBType::Postgresql(ref mut conn) => {
+        DBType::Postgresql(conn) => {
             let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
 
             if res_migration.is_err() {
@@ -302,7 +302,7 @@ pub fn run_migrations() {
             }
         }
         #[cfg(feature = "sqlite")]
-        DBType::Sqlite(ref mut conn) => {
+        DBType::Sqlite(conn) => {
             let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
 
             if res_migration.is_err() {
