@@ -10,7 +10,7 @@ import {LoadingSkeleton} from "@/components/ui/LoadingSkeleton";
 import {PodcastCard} from "@/components/PodcastCard";
 import {PodcastEpisodeCard} from "@/components/PodcastEpisodeCard";
 
-export default function HomeScreen() {
+const HomeScreen = ()=> {
   const {data, isError, isLoading, error} = $api.useQuery('get', '/api/v1/podcasts')
   const lastWatchedData = $api.useQuery('get', '/api/v1/podcasts/episode/lastwatched')
     const {t} = useTranslation()
@@ -65,3 +65,5 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+export default HomeScreen;

@@ -9,7 +9,7 @@ export const PodcastCard: FC<{podcast: components["schemas"]["PodcastDto"]}> = (
         <View>
         <Image    style={{width: 100, height: 100}}
                   src={podcast.image_url}/>
-        <ThemedText style={{color: 'white', wordWrap: "break"}} numberOfLines={2}>{podcast.name}</ThemedText>
+        <ThemedText style={{color: 'white'}} numberOfLines={2}>{podcast.name}</ThemedText>
     </View>
     </Link>
 }

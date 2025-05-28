@@ -10,6 +10,6 @@ export const PodcastEpisodeCard: FC<{podcastEpisode: components["schemas"]["Podc
     }}>
         <Image    style={{width: 100, height: 100}}
                   src={podcastEpisode.podcastEpisode.local_image_url}/>
-        <ThemedText style={{color: 'white', wordWrap: "break"}} numberOfLines={2}>{podcastEpisode.podcastEpisode.name}</ThemedText>
+        <ThemedText style={{color: 'white'}} numberOfLines={2}>{podcastEpisode.podcastEpisode.name}</ThemedText>
     </Pressable>
 }

@@ -6,7 +6,12 @@ import Heading2 from "@/components/text/Heading2";
 import {$api} from "@/client";
 
 export default function () {
-    const {} = $api.useQuery("get", "epis")
+    const {} = $api.useQuery("get", "/api/v1/info")
+    const podcastDetailedData = {
+        data: {
+            name: "test"
+        }
+    }
 
     return <SafeAreaView>
         <ScrollView overScrollMode="never">

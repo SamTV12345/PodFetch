@@ -1,4 +1,4 @@
-import SkeletonLoading from "expo-skeleton-loading";
+import SkeletonLoading from "../../components/Skeleton";
 import {View} from "react-native";
 
 export const LoadingSkeleton = ()=>{
