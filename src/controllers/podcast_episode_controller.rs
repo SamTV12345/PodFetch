@@ -36,7 +36,6 @@ pub struct PodcastEpisodeWithHistory {
     pub podcast_history_item: Option<EpisodeDto>,
 }
 
-
 #[utoipa::path(
     get,
     path="/episodes/{id}",
@@ -57,13 +56,12 @@ pub async fn get_podcast_episode_by_id(
 
     let podcast_inner = res.clone().unwrap();
 
-    let episode = Episode::get_watchtime(id, requester.username)?;
-    let mapped_podcast_episode: PodcastEpisodeDto =
-        (podcast_inner, Some(requester.clone()), None).into();
+    let episode = Episode::get_watchtime(&id, &requester.username)?;
+    let mapped_podcast_episode: PodcastEpisodeDto = (podcast_inner, Some(requester), None).into();
 
-    Ok(Json(PodcastEpisodeWithHistory{
+    Ok(Json(PodcastEpisodeWithHistory {
         podcast_history_item: episode.map(|e| e.convert_to_episode_dto()),
-        podcast_episode: mapped_podcast_episode
+        podcast_episode: mapped_podcast_episode,
     }))
 }
 
