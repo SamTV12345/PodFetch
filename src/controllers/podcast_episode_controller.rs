@@ -134,13 +134,12 @@ pub async fn get_timeline(
         .iter()
         .map(|podcast_episode| {
             let (podcast_episode, podcast_extracted, history, favorite) = podcast_episode.clone();
-            let mapped_podcast_episode: PodcastEpisodeDto = podcast_episode.clone();
 
             TimeLinePodcastEpisode {
-                podcast_episode: mapped_podcast_episode,
+                podcast_episode,
                 podcast: podcast_extracted,
-                history: history.clone(),
-                favorite: favorite.clone(),
+                history,
+                favorite,
             }
         })
         .collect::<Vec<TimeLinePodcastEpisode>>();

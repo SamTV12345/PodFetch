@@ -107,9 +107,10 @@ impl TimelineItem {
         }
 
         if favored_only.not_listened {
-            query = query.filter(ph1.field(phistory_date).nullable().ne_all(subquery));
-            total_count = total_count.filter(ph1.field(phistory_date).nullable().ne_all(subquery));
+            query = query.filter(ph1.field(phistory_date).is_null());
+            total_count = total_count.filter(ph1.field(phistory_date).is_null());
         }
+
         let results = total_count
             .get_result::<i64>(&mut get_connection())
             .map_err(map_db_error)?;
