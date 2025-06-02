@@ -68,7 +68,7 @@
     "babel-plugin-react-compiler": "19.0.0-beta-30d8a17-20250209",
     "jsdom": "^26.0.0",
     "openapi-typescript": "^7.8.0",
-    "postcss": "^8.5.3",
+    "postcss": "^8.5.4",
     "tailwindcss": "^4.0.17",
     "typescript": "^5.8.3",
     "vite": "npm:rolldown-vite@latest",
