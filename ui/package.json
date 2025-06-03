@@ -72,6 +72,6 @@
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",
     "vite": "npm:rolldown-vite@latest",
-    "vitest": "^2.1.8"
+    "vitest": "^3.2.0"
   }
 }
