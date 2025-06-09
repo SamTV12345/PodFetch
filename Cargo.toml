@@ -61,7 +61,7 @@ url = "2.5.4"
 rust-s3 = { version = "0.36.0-beta.2", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
 async-trait = "0.1.88"
 axum = { version = "0.8.4", features = ["macros","http2"] }
-tower-http = { version = "0.6.5", features = ["fs"] }
+tower-http = { version = "0.6.6", features = ["fs"] }
 tower = { version = "0.5.2", features = ["util"] }
 utoipa-axum = { version = "0.2.0" }
 utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
