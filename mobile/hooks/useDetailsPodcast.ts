@@ -21,6 +21,13 @@ export const useDetailsPodcast = ()=>{
         }
     })
 
+    const updateFavored = $api.useMutation("put", "/api/v1/podcasts/favored", {
+        body: {
+            id: id,
+            favored: !podcastDetailedData.favorites
+        }
+    })
+
     useEffect(() => {
         if (podcastDetailedData.data) {
             useStore.getState().savePodcast(podcastDetailedData.data.id.toString(), podcastDetailedData.data)
@@ -30,6 +37,7 @@ export const useDetailsPodcast = ()=>{
 
     return {
         podcastDetailedData,
-        dataEpisodes
+        dataEpisodes,
+        updateFavored
     }
 }

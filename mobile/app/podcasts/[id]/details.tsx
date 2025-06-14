@@ -11,8 +11,10 @@ import {useTranslation} from "react-i18next";
 import {useDetailsPodcast} from "@/hooks/useDetailsPodcast";
 
 export default function () {
-    const {podcastDetailedData, dataEpisodes} = useDetailsPodcast()
+    const {podcastDetailedData, dataEpisodes, updateFavored} = useDetailsPodcast()
     const {t} = useTranslation()
+
+
 
     return <SafeAreaView>
         <ScrollView overScrollMode="never">
@@ -41,7 +43,13 @@ export default function () {
                 <Heading2 styles={{marginRight: 'auto', marginLeft: 'auto', width: '95%', marginTop: 10, paddingBottom: 0}}>{podcastDetailedData.data.name}</Heading2>
                 {podcastDetailedData.data.tags.map(t=><Text>{t.name}</Text>)}
                 <View style={{marginLeft: 30, display: 'flex', flexDirection: 'row', gap: 10}}>
-                    <AntDesign name="hearto" size={24} color="white" />
+                    {
+                        podcastDetailedData.data.favorites ? <AntDesign name="heart" size={24} color="red" onPress={()=>{
+                            updateFavored.mutate({})
+                        }} /> : <AntDesign name="hearto" onPress={()=>{
+                            updateFavored.mutate({})
+                        }}/>
+                    }
                     <Link href={{pathname: "/podcasts/[id]/info", params: {
                                 id: podcastDetailedData.data.id
                             }}}>
