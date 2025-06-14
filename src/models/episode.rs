@@ -312,10 +312,7 @@ impl Episode {
         Ok(())
     }
 
-    pub fn get_watchtime(
-        episode_id: String,
-        username: String,
-    ) -> Result<Option<Episode>, CustomError> {
+    pub fn get_watchtime(episode_id: &str, username: &str) -> Result<Option<Episode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
