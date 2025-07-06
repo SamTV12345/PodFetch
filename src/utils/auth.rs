@@ -6,7 +6,7 @@ pub mod tests {
     use base64::Engine;
 
     pub fn create_basic_header(username: &str, password: &str) -> String {
-        general_purpose::STANDARD.encode(format!("{}:{}", username, password))
+        general_purpose::STANDARD.encode(format!("{username}:{password}"))
     }
 
     pub async fn create_auth_gpodder(server: &mut TestServerWrapper<'_>, user: &User) {
@@ -15,7 +15,7 @@ pub mod tests {
         server.test_server.clear_headers();
         server
             .test_server
-            .add_header("Authorization", format!("Basic {}", encoded_auth));
+            .add_header("Authorization", format!("Basic {encoded_auth}"));
 
         let response = {
             let server_ref = &mut server.test_server;

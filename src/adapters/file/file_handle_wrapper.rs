@@ -57,17 +57,14 @@ impl FileHandleWrapper {
                                 if let Some(file_path) = &episode.file_image_path {
                                     if let Err(e) = S3Handler::remove_file(file_path) {
                                         log::error!(
-                                            "Error removing file: {} with reason {}",
-                                            file_path,
-                                            e
+                                            "Error removing file: {file_path} with reason {e}"
                                         );
                                     }
                                 }
                                 if let Some(file_path) = &episode.file_episode_path {
                                     if let Err(e) = S3Handler::remove_file(file_path) {
                                         log::error!(
-                                            "Error removing file: {} with reason {e}",
-                                            file_path
+                                            "Error removing file: {file_path} with reason {e}"
                                         );
                                     }
                                 }
@@ -89,30 +86,26 @@ impl FileHandleWrapper {
                                 if let Some(file_path) = &episode.file_image_path {
                                     if let Err(e) = S3Handler::remove_file(file_path) {
                                         log::error!(
-                                            "Error removing file: {} with reason {}",
-                                            file_path,
-                                            e
+                                            "Error removing file: {file_path} with reason {e}"
                                         );
                                     }
                                 }
                                 if let Some(file_path) = &episode.file_episode_path {
                                     if let Err(e) = S3Handler::remove_file(file_path) {
-                                        log::error!("Error removing file: {} {e}", file_path);
+                                        log::error!("Error removing file: {file_path} {e}");
                                     }
                                 }
                             } else {
                                 if let Some(file_path) = &episode.file_image_path {
                                     if let Err(e) = LocalFileHandler::remove_file(file_path) {
                                         log::error!(
-                                            "Error removing file: {} with reason {}",
-                                            file_path,
-                                            e
+                                            "Error removing file: {file_path} with reason {e}"
                                         );
                                     }
                                 }
                                 if let Some(file_path) = &episode.file_episode_path {
                                     if let Err(e) = LocalFileHandler::remove_file(file_path) {
-                                        log::error!("Error removing file: {} {e}", file_path);
+                                        log::error!("Error removing file: {file_path} {e}");
                                     }
                                 }
                             }

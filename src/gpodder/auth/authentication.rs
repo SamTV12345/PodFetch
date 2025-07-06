@@ -75,7 +75,7 @@ fn handle_proxy_auth(
                         .expect("Error inserting user on auto registering");
                         handle_proxy_auth(rq, username)
                     } else {
-                        log::error!("Error finding user by username: {}", e);
+                        log::error!("Error finding user by username: {e}");
                         Err(CustomErrorInner::Forbidden.into())
                     }
                 }

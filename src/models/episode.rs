@@ -470,7 +470,7 @@ impl EpisodeAction {
             "download" => EpisodeAction::Download,
             "play" => EpisodeAction::Play,
             "delete" => EpisodeAction::Delete,
-            _ => panic!("Unknown episode action: {}", s),
+            _ => panic!("Unknown episode action: {s}"),
         }
     }
 }

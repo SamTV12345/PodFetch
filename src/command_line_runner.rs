@@ -61,7 +61,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                             let conn = &mut get_connection();
 
                             let replaced_feed = feed.replace(['\'', ' '], "");
-                            println!("Refreshing podcast {}", replaced_feed);
+                            println!("Refreshing podcast {replaced_feed}");
 
                             let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn)
                                 .expect("Error getting podcast");
@@ -131,8 +131,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     let mut user = read_user_account()?;
 
                     println!(
-                        "Should a user with the following settings be applied {:?}",
-                        user
+                        "Should a user with the following settings be applied {user:?}"
                     );
 
                     if ask_for_confirmation().is_ok() {
@@ -311,7 +310,7 @@ pub fn read_user_account() -> Result<User, CustomError> {
 }
 
 pub fn retry_read(prompt: &str, input: &mut String) {
-    println!("{}", prompt);
+    println!("{prompt}");
     match stdin().read_line(input) {
         Ok(..) => {}
         Err(..) => {
@@ -332,7 +331,7 @@ pub fn retry_read(prompt: &str, input: &mut String) {
 }
 
 pub fn retry_read_secret(prompt: &str) -> String {
-    println!("{}", prompt);
+    println!("{prompt}");
     match stdout().flush() {
         Ok(..) => {}
         Err(..) => {
@@ -362,7 +361,7 @@ pub fn retry_read_secret(prompt: &str) -> String {
 
 pub fn retry_read_role(prompt: &str) -> Role {
     let mut input = String::new();
-    println!("{}", prompt);
+    println!("{prompt}");
     match stdin().read_line(&mut input) {
         Ok(..) => {}
         Err(..) => {
@@ -403,8 +402,7 @@ fn trim_string(string_to_trim: &str) -> String {
 fn do_user_update(mut user: User) {
     let mut input = String::new();
     println!(
-        "The following settings of a user should be updated: {:?}",
-        user
+        "The following settings of a user should be updated: {user:?}"
     );
     println!(
         "Enter which field of a user should be updated [role, password, \
@@ -464,11 +462,11 @@ pub fn create_debug_message() {
     match podcasts {
         Ok(podcasts) => {
             podcasts.iter().for_each(|p| {
-                println!("Podcast: {:?}", p);
+                println!("Podcast: {p:?}");
             });
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            println!("Error: {e:?}");
         }
     }
 }

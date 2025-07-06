@@ -408,7 +408,7 @@ impl PodcastEpisodeService {
             .and_then(|v| v.value.clone());
 
         if let Some(itunes) = itunes {
-            println!("GUID is {:?}", ext);
+            println!("GUID is {ext:?}");
             let constructed_extra_fields = PodcastBuilder::new(podcast_id)
                 .author(itunes.author)
                 .last_build_date(feed.last_build_date.clone())
@@ -460,7 +460,7 @@ impl PodcastEpisodeService {
                     }
                     Ok(false) => {}
                     Err(e) => {
-                        log::error!("Error checking if podcast episode is liked.{}", e);
+                        log::error!("Error checking if podcast episode is liked.{e}");
                     }
                 }
 
@@ -473,7 +473,7 @@ impl PodcastEpisodeService {
                         );
                     }
                     Err(e) => {
-                        println!("Error deleting podcast episode.{}", e);
+                        println!("Error deleting podcast episode.{e}");
                     }
                 }
             }

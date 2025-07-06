@@ -26,7 +26,7 @@ pub fn get_async_sync_client() -> reqwest::ClientBuilder {
                 res = res.proxy(e);
             }
             Err(e) => {
-                log::error!("Proxy is invalid {}", e)
+                log::error!("Proxy is invalid {e}")
             }
         }
     }

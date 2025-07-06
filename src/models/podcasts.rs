@@ -197,8 +197,8 @@ impl Podcast {
         use diesel::TextExpressionMethods;
         let result = podcast_episodes
             .filter(
-                name.like(format!("%{}%", query))
-                    .or(description.like(format!("%{}%", query))),
+                name.like(format!("%{query}%"))
+                    .or(description.like(format!("%{query}%"))),
             )
             .load::<PodcastEpisode>(&mut get_connection())
             .map_err(map_db_error)?;

@@ -69,7 +69,7 @@ impl FileService {
     ) -> Result<String, CustomError> {
         let escaped_title =
             prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
-        let escaped_path = format!("podcasts/{}", escaped_title);
+        let escaped_path = format!("podcasts/{escaped_title}");
 
         if !FileHandleWrapper::path_exists(
             &escaped_path,
@@ -95,15 +95,15 @@ impl FileService {
                 None => {
                     // has not been inserted into the database yet
                     let mut i = 1;
-                    while Path::new(&format!("podcasts/{}-{}", escaped_title, i)).exists() {
+                    while Path::new(&format!("podcasts/{escaped_title}-{i}")).exists() {
                         i += 1;
                     }
                     // This is save to insert because this directory does not exist
                     FileHandleWrapper::create_dir(
-                        &format!("podcasts/{}-{}", escaped_title, i),
+                        &format!("podcasts/{escaped_title}-{i}"),
                         &ENVIRONMENT_SERVICE.default_file_handler,
                     )?;
-                    Ok(format!("podcasts/{}-{}", escaped_title, i))
+                    Ok(format!("podcasts/{escaped_title}-{i}"))
                 }
             }
         }
@@ -259,7 +259,7 @@ pub fn perform_podcast_variable_replacement(
     match result {
         Ok(res) => Ok(sanitizer.sanitize(res)),
         Err(err) => {
-            log::error!("Error formatting podcast title: {}", err);
+            log::error!("Error formatting podcast title: {err}");
             Err(CustomErrorInner::Conflict(err.to_string()).into())
         }
     }
@@ -338,7 +338,7 @@ pub fn perform_episode_variable_replacement(
     match result {
         Ok(res) => Ok(res.to_string()),
         Err(err) => {
-            log::error!("Error formatting episode title: {}", err);
+            log::error!("Error formatting episode title: {err}");
             Err(CustomErrorInner::Conflict(err.to_string()).into())
         }
     }

@@ -164,7 +164,7 @@ impl DownloadService {
         )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Err(err) = result {
-            log::error!("Error handling metadata insertion: {:?}", err);
+            log::error!("Error handling metadata insertion: {err:?}");
         }
         Ok(())
     }
@@ -187,17 +187,17 @@ impl DownloadService {
             | FileFormat::WaveformAudio => {
                 let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
-                    log::error!("Error updating metadata: {:?}", err);
+                    log::error!("Error updating metadata: {err:?}");
                 }
             }
             FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio => {
                 let result_of_update = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
-                    log::error!("Error updating metadata: {:?}", err);
+                    log::error!("Error updating metadata: {err:?}");
                 }
             }
             _ => {
-                log::error!("File format not supported: {:?}", detected_file);
+                log::error!("File format not supported: {detected_file:?}");
                 return Err(
                     CustomErrorInner::Conflict("File format not supported".to_string()).into(),
                 );
@@ -347,7 +347,7 @@ impl DownloadService {
                         tag.set_track_number(track_number as u16);
                     }
                     Err(e) => {
-                        log::error!("Error getting track number: {:?}", e);
+                        log::error!("Error getting track number: {e:?}");
                         e.to_string();
                     }
                 }
@@ -356,7 +356,7 @@ impl DownloadService {
                 Ok(())
             }
             Err(e) => {
-                log::error!("Error reading metadata: {:?}", e);
+                log::error!("Error reading metadata: {e:?}");
                 let err: CustomError = CustomErrorInner::Conflict(e.to_string()).into();
                 Err(err)
             }

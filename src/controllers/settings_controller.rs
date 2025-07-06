@@ -124,7 +124,7 @@ pub async fn get_opml(
         &requester,
     ))
     .map_err(|e| {
-        log::error!("Error adding podcasts to opml: {}", e);
+        log::error!("Error adding podcasts to opml: {e}");
         CustomErrorInner::Unknown
     })?;
 
@@ -177,7 +177,7 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, type_of: Mode, requester: &User) -
                 );
 
                 if let Some(api_key) = &requester.api_key {
-                    local_url = format!("{}?apiKey={}", local_url, api_key);
+                    local_url = format!("{local_url}?apiKey={api_key}");
                 }
 
                 outline.add_attribute("xmlUrl", &local_url)
@@ -262,7 +262,7 @@ impl Display for ReplacementStrategy {
             ReplacementStrategy::Remove => "remove".to_string(),
             ReplacementStrategy::ReplaceWithDash => "replace-with-dash".to_string(),
         };
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 

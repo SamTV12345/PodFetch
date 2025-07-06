@@ -67,8 +67,7 @@ impl UserManagementService {
                                 }
                                 Err(e) => {
                                     log::error!(
-                                        "The following error occured when inserting a user {}",
-                                        e
+                                        "The following error occured when inserting a user {e}"
                                     );
                                     Err(CustomErrorInner::Unknown.into())
                                 }
@@ -84,7 +83,7 @@ impl UserManagementService {
                 }
             }
             Err(e) => {
-                log::error!("The following error occured when finding an invite {}", e);
+                log::error!("The following error occured when finding an invite {e}");
                 Err(CustomErrorInner::NotFound.into())
             }
         }
@@ -115,14 +114,14 @@ impl UserManagementService {
                 match User::update_explicit_consent(&user_to_update) {
                     Ok(_) => {}
                     Err(e) => {
-                        log::error!("The following error occured when updating a user {}", e);
+                        log::error!("The following error occured when updating a user {e}");
                         return Err(CustomErrorInner::Unknown.into());
                     }
                 }
                 Ok(user)
             }
             Err(e) => {
-                log::error!("The following error occured when updating a user {}", e);
+                log::error!("The following error occured when updating a user {e}");
                 Err(CustomErrorInner::Unknown.into())
             }
         }
@@ -159,7 +158,7 @@ impl UserManagementService {
         match Invite::find_all_invites() {
             Ok(invites) => Ok(invites),
             Err(e) => {
-                log::error!("The following error occured when finding an invite {}", e);
+                log::error!("The following error occured when finding an invite {e}");
                 Err(CustomErrorInner::NotFound.into())
             }
         }

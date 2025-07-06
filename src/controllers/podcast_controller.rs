@@ -200,7 +200,7 @@ pub async fn find_podcast(
         Ok(ITunes) => {
             let res;
             {
-                log::debug!("Searching for podcast: {}", podcast);
+                log::debug!("Searching for podcast: {podcast}");
                 res = PodcastService::find_podcast(&podcast).await;
             }
             Ok(Json(PodcastSearchReturn::Itunes(res)))
@@ -371,7 +371,7 @@ pub async fn add_podcast_from_podindex(
     spawn_blocking(move || match start_download_podindex(id.track_id) {
         Ok(_) => {}
         Err(e) => {
-            log::error!("Error: {}", e)
+            log::error!("Error: {e}")
         }
     });
     Ok(StatusCode::OK)
@@ -420,7 +420,7 @@ pub async fn refresh_all_podcasts(
         for podcast in podcasts {
             let refresh_result = PodcastService::refresh_podcast(&podcast);
             if let Err(e) = refresh_result {
-                log::error!("Error refreshing podcast: {}", e);
+                log::error!("Error refreshing podcast: {e}");
             }
             ChatServerHandle::broadcast_podcast_refreshed(&podcast);
         }
@@ -451,7 +451,7 @@ pub async fn download_podcast(
                 log::info!("Succesfully refreshed podcast.");
             }
             Err(e) => {
-                log::error!("Error refreshing podcast: {}", e);
+                log::error!("Error refreshing podcast: {e}");
             }
         }
 

@@ -192,7 +192,7 @@ impl AuthFilter {
         let decoded_token = match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => Ok(decoded),
             Err(e) => {
-                log::error!("Error is {:?}", e);
+                log::error!("Error is {e:?}");
                 Err(CustomError::from(CustomErrorInner::Forbidden))
             }
         }?;

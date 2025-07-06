@@ -324,7 +324,7 @@ impl EnvironmentService {
         println!("\n");
         log::info!("Starting with the following environment variables:");
         for (key, value) in env::vars() {
-            log::debug!("{}: {}", key, value);
+            log::debug!("{key}: {value}");
         }
         log::info!("Public server url: {}", self.server_url);
         log::info!(

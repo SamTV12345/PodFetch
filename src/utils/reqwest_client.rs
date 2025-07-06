@@ -17,7 +17,7 @@ pub fn get_sync_client() -> ClientBuilder {
                 res = res.proxy(e);
             }
             Err(e) => {
-                log::error!("Proxy is invalid {}", e)
+                log::error!("Proxy is invalid {e}")
             }
         }
     }

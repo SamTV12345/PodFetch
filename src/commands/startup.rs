@@ -322,8 +322,8 @@ pub fn handle_config_for_server_startup() -> Router {
     match FileService::create_podcast_root_directory_exists() {
         Ok(_) => {}
         Err(e) => {
-            log::error!("Could not create podcast root directory: {}", e);
-            panic!("Could not create podcast root directory: {}", e);
+            log::error!("Could not create podcast root directory: {e}");
+            panic!("Could not create podcast root directory: {e}");
         }
     }
 
@@ -344,7 +344,7 @@ pub fn handle_config_for_server_startup() -> Router {
                                 info!("Polling for new episodes successful");
                             }
                             Err(e) => {
-                                log::error!("Error polling for new episodes: {}", e);
+                                log::error!("Error polling for new episodes: {e}");
                             }
                         }
                     }
@@ -386,7 +386,7 @@ pub fn handle_config_for_server_startup() -> Router {
         .clone()
         .unwrap_or("/".to_string());
 
-    let ui_dir = format!("{}/ui/", sub_dir);
+    let ui_dir = format!("{sub_dir}/ui/");
     let (layer, io) = SocketIoBuilder::new().build_layer();
     io.ns("/", |socket: SocketRef| {
         log::info!("Socket connected {}", socket.id);

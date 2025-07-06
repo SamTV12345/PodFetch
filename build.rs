@@ -28,7 +28,7 @@ fn main() {
 fn create_git_sqlite() {
     let src = env::var("CARGO_MANIFEST_DIR").unwrap();
     let dst = Path::new(&env::var("OUT_DIR").unwrap()).join("built.rs");
-    println!("Path: {:?}", dst);
+    println!("Path: {dst:?}");
     let path = Path::new(&src);
     built::write_built_file_with_opts(Option::from(path), &dst)
         .expect("Failed to acquire build-time information");

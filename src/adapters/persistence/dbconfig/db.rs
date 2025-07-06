@@ -37,7 +37,7 @@ impl r2d2::CustomizeConnection<DBType, diesel::r2d2::Error> for ConnectionOption
 pub fn establish_connection() -> DBType {
     let database_url = &ENVIRONMENT_SERVICE.database_url;
     DBType::establish(database_url).unwrap_or_else(|e| {
-        log::error!("Error connecting to {} with reason {}", database_url, e);
+        log::error!("Error connecting to {database_url} with reason {e}");
         panic!("Error connecting to database")
     })
 }
@@ -70,7 +70,7 @@ fn init_postgres_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DB
 
     match pool {
         Err(e) => {
-            log::error!("Failed to create postgres pool: {}", e);
+            log::error!("Failed to create postgres pool: {e}");
             exit(1);
         }
         Ok(pool) => Ok(pool),
@@ -91,7 +91,7 @@ fn init_sqlite_db_pool(database_url: &str) -> Result<Pool<ConnectionManager<DBTy
 
     match pool {
         Err(e) => {
-            log::error!("Failed to create pool: {}", e);
+            log::error!("Failed to create pool: {e}");
             exit(1);
         }
         Ok(pool) => Ok(pool),

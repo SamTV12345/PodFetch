@@ -49,9 +49,9 @@ impl<T> ResultExt for Result<T, CustomError> {
         match self {
             Ok(ok) => ok,
             Err(bterr) => {
-                eprintln!("{}", msg);
+                eprintln!("{msg}");
                 eprintln!();
-                eprintln!("{:}", bterr);
+                eprintln!("{bterr:}");
                 panic!("{}", msg);
             }
         }
@@ -112,9 +112,9 @@ impl ResultExt for Result<(), DynBacktraceError> {
         match self {
             Ok(()) => (),
             Err(bterr) => {
-                eprintln!("{}", msg);
+                eprintln!("{msg}");
                 eprintln!();
-                eprintln!("{:}", bterr);
+                eprintln!("{bterr:}");
                 panic!("{}", msg);
             }
         }
@@ -220,7 +220,7 @@ pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
 }
 
 pub fn map_s3_error(error: S3Error) -> CustomError {
-    log::info!("S3 error: {}", error);
+    log::info!("S3 error: {error}");
     CustomErrorInner::Unknown.into()
 }
 
@@ -234,7 +234,7 @@ pub fn map_io_extra_error(e: fs_extra::error::Error, path: Option<String>) -> Cu
 }
 
 pub fn map_db_error(e: diesel::result::Error) -> CustomError {
-    error!("Database error: {}", e);
+    error!("Database error: {e}");
     match e {
         diesel::result::Error::InvalidCString(_) => CustomError::from(CustomErrorInner::NotFound),
         diesel::result::Error::DatabaseError(_, _) => {
@@ -245,12 +245,12 @@ pub fn map_db_error(e: diesel::result::Error) -> CustomError {
 }
 
 pub fn map_r2d2_error(e: r2d2::Error) -> CustomError {
-    error!("R2D2 error: {}", e);
+    error!("R2D2 error: {e}");
     CustomError::from(CustomErrorInner::Unknown)
 }
 
 pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
-    error!("Error during reqwest: {}", e);
+    error!("Error during reqwest: {e}");
 
     CustomErrorInner::BadRequest("Error requesting resource from server".to_string()).into()
 }

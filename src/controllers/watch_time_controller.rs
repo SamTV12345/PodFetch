@@ -24,7 +24,7 @@ pub async fn log_watchtime(
 ) -> Result<StatusCode, CustomError> {
     let podcast_episode_id = podcast_watch.podcast_episode_id.clone();
     Episode::log_watchtime(podcast_watch, requester.username.clone())?;
-    log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
+    log::debug!("Logged watchtime for episode: {podcast_episode_id}");
     Ok(StatusCode::OK)
 }
 

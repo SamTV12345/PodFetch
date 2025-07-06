@@ -67,7 +67,7 @@ impl PodcastService {
         let possible_json = result.text().await.map_err(map_reqwest_error)?;
 
         if status.is_client_error() || status.is_server_error() {
-            log::error!("Error searching for podcast: {}", possible_json);
+            log::error!("Error searching for podcast: {possible_json}");
             Err(CustomErrorInner::BadRequest(possible_json).into())
         } else {
             let res_of_search = serde_json::from_str(&possible_json);
@@ -95,7 +95,7 @@ impl PodcastService {
             .await
             .unwrap();
 
-        println!("Result: {:?}", resp);
+        println!("Result: {resp:?}");
 
         let podcast = resp.json::<Value>().await.unwrap();
 
@@ -155,7 +155,7 @@ impl PodcastService {
                         inserted_podcasts.clone(),
                     );
                     if let Err(e) = Self::schedule_episode_download(&podcast) {
-                        log::error!("Error scheduling episode download: {}", e);
+                        log::error!("Error scheduling episode download: {e}");
                     }
                 })
                 .await
@@ -185,7 +185,7 @@ impl PodcastService {
                                     podcast_episode,
                                     podcast.clone(),
                                 ){
-                                log::error!("Error downloading podcast episode: {}", e);
+                                log::error!("Error downloading podcast episode: {e}");
                             }
                         }
                     }

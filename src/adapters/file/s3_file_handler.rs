@@ -86,7 +86,7 @@ impl S3Handler {
     }
 
     fn prepare_path_resolution(str: &str) -> String {
-        format!("/{}", str)
+        format!("/{str}")
     }
 }
 
