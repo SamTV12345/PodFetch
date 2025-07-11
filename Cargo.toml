@@ -42,7 +42,7 @@ utoipa = { version = "5.3.1", features = ["chrono", "axum_extras"] }
 futures = "0.3.31"
 utoipa-swagger-ui = {version = "9.0.2", features = ["axum"] }
 clokwerk= "0.4.0"
-tokio = {version = "1.45.1", features = ["full"]}
+tokio = {version = "1.46.1", features = ["full"]}
 serde = "1.0.219"
 serde_derive = "1.0.189"
 sysinfo = {version = "0.35.1", features = ["serde"]}
