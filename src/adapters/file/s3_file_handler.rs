@@ -1,5 +1,5 @@
 use crate::adapters::file::file_handler::{FileHandler, FileRequest};
-use crate::utils::error::{map_s3_error, CustomError};
+use crate::utils::error::{map_s3_error, CustomError, ErrorSeverity};
 use futures_util::TryFutureExt;
 use std::future::Future;
 use std::pin::Pin;
@@ -22,7 +22,7 @@ impl S3Handler {
             .await?
             .put_object(path, content)
             .await
-            .map_err(map_s3_error)?;
+            .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))?;
         Ok(())
     }
 
@@ -33,7 +33,7 @@ impl S3Handler {
             (&*S3_BUCKET_CONFIG).into(),
             BucketConfiguration::default(),
         )
-        .map_err(map_s3_error)?;
+        .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))?;
         Ok(())
     }
 
@@ -44,7 +44,7 @@ impl S3Handler {
             (&*S3_BUCKET_CONFIG).into(),
             BucketConfiguration::default(),
         )
-        .map_err(map_s3_error)
+        .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))
         .await?;
         Ok(())
     }
@@ -52,11 +52,11 @@ impl S3Handler {
     async fn get_bucket_async() -> Result<Box<Bucket>, CustomError> {
         let bucket: Box<Bucket> =
             <&S3Config as Into<Result<Box<Bucket>, S3Error>>>::into(&S3_BUCKET_CONFIG)
-                .map_err(map_s3_error)?;
+                .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))?;
         if !bucket
             .exists()
             .await
-            .map_err(map_s3_error)
+            .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))
             .expect("Error checking if bucket exists")
         {
             Self::create_bucket_async().await?;
@@ -68,11 +68,11 @@ impl S3Handler {
     fn get_bucket() -> Result<Box<Bucket>, CustomError> {
         let bucket: Box<Bucket> =
             <&S3Config as Into<Result<Box<Bucket>, S3Error>>>::into(&S3_BUCKET_CONFIG)
-                .map_err(map_s3_error)?;
+                .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))?;
 
         if !bucket
             .exists_blocking()
-            .map_err(map_s3_error)
+            .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))
             .unwrap_or(false)
         {
             Self::create_bucket()?;
@@ -94,14 +94,14 @@ impl FileHandler for S3Handler {
     fn read_file(path: &str) -> Result<String, CustomError> {
         let resp = Self::get_bucket()?
             .head_object_blocking(Self::prepare_path_resolution(path))
-            .map_err(map_s3_error)?;
+            .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))?;
         Ok(Self::get_url_for_file(&resp.0.e_tag.unwrap()))
     }
 
     fn write_file(path: &str, content: &mut [u8]) -> Result<(), CustomError> {
         Self::get_bucket()?
             .put_object_blocking(Self::prepare_path_resolution(path), content)
-            .map_err(map_s3_error)?;
+            .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))?;
         Ok(())
     }
 
@@ -137,7 +137,7 @@ impl FileHandler for S3Handler {
     fn remove_file(path: &str) -> Result<(), CustomError> {
         Self::get_bucket()?
             .delete_object_blocking(path)
-            .map_err(map_s3_error)?;
+            .map_err(|e| map_s3_error(e, ErrorSeverity::Critical))?;
         Ok(())
     }
 }

@@ -8,6 +8,7 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
@@ -47,14 +48,14 @@ pub async fn get_rss_feed(
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
             Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
-            None => Err(CustomErrorInner::Forbidden.into()),
+            None => Err(CustomErrorInner::Forbidden(Warning).into()),
         }?;
         let api_key = &api_key.api_key;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
         if !&api_key_exists {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Warning).into());
         }
     }
 
@@ -156,14 +157,14 @@ pub async fn get_rss_feed_for_podcast(
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
             Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
-            None => Err(CustomErrorInner::Forbidden.into()),
+            None => Err(CustomErrorInner::Forbidden(Warning).into()),
         }?;
         let api_key = &api_key.api_key;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
         if !&api_key_exists {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Warning).into());
         }
     }
     let api_key = api_key.map(|c| c.api_key.clone());

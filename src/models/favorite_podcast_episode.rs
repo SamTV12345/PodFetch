@@ -1,6 +1,7 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes;
 use crate::models::user::User;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
@@ -26,7 +27,7 @@ impl FavoritePodcastEpisode {
             .filter(favorite.eq(true))
             .first::<FavoritePodcastEpisode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
             .map(|res| res.map(|res| res.favorite).unwrap_or(false))
     }
 }
@@ -44,7 +45,7 @@ impl FavoritePodcastEpisode {
                 .filter(favorite_podcast_episodes::username.eq(&user.username))
                 .set(favorite_podcast_episodes::favorite.eq(favored))
                 .execute(&mut get_connection())
-                .map_err(map_db_error)
+                .map_err(|e| map_db_error(e, Critical))
                 .map(|_| ()),
             None => {
                 let new_favorite = FavoritePodcastEpisode::new(&user.username, episode, favored);
@@ -68,7 +69,7 @@ impl FavoritePodcastEpisode {
         diesel::insert_into(favorite_podcast_episodes)
             .values(self)
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -83,6 +84,6 @@ impl FavoritePodcastEpisode {
             .filter(episode_id.eq(episode_id_to_search))
             .first(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 }

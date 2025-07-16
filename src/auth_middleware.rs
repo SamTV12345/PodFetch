@@ -1,6 +1,7 @@
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::user::User;
 use crate::service::environment_service::ReverseProxyConfig;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::http_client::get_async_sync_client;
 use axum::extract::Request;
@@ -103,7 +104,7 @@ impl AuthFilter {
         let auth = auth[1];
         let auth = general_purpose::STANDARD
             .decode(auth)
-            .map_err(|_| CustomError::from(CustomErrorInner::Forbidden))?;
+            .map_err(|_| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
         let auth = String::from_utf8(auth).unwrap();
         let auth = auth.split(':').collect::<Vec<&str>>();
         let username = auth[0];
@@ -124,22 +125,22 @@ impl AuthFilter {
                 Ok(auth) => {
                     let (user, password) = AuthFilter::extract_basic_auth(auth)?;
 
-                    let found_user =
-                        User::find_by_username(&user).map_err(|_| CustomErrorInner::Forbidden)?;
+                    let found_user = User::find_by_username(&user)
+                        .map_err(|_| CustomErrorInner::Forbidden(Warning))?;
 
                     if let Some(password_from_user) = &found_user.password {
                         if password_from_user == &digest(password) {
                             Ok(found_user)
                         } else {
-                            Err(CustomErrorInner::Forbidden.into())
+                            Err(CustomErrorInner::Forbidden(Warning).into())
                         }
                     } else {
-                        Err(CustomErrorInner::Forbidden.into())
+                        Err(CustomErrorInner::Forbidden(Warning).into())
                     }
                 }
-                Err(_) => Err(CustomErrorInner::Forbidden.into()),
+                Err(_) => Err(CustomErrorInner::Forbidden(Warning).into()),
             },
-            None => Err(CustomErrorInner::Forbidden.into()),
+            None => Err(CustomErrorInner::Forbidden(Warning).into()),
         }
     }
 
@@ -147,9 +148,9 @@ impl AuthFilter {
         let token_res = match req.headers().get("Authorization") {
             Some(token) => match token.to_str() {
                 Ok(token) => Ok(token),
-                Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden)),
+                Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
             },
-            None => Err(CustomErrorInner::UnAuthorized("Unauthorized".to_string()).into()),
+            None => Err(CustomErrorInner::UnAuthorized("Unauthorized".to_string(), Warning).into()),
         }?;
 
         let token = token_res.replace("Bearer ", "");
@@ -171,7 +172,7 @@ impl AuthFilter {
                     "No JWK found for {}",
                     ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri
                 );
-                Err(CustomError::from(CustomErrorInner::Forbidden))
+                Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
             }
         }?;
 
@@ -193,7 +194,7 @@ impl AuthFilter {
             Ok(decoded) => Ok(decoded),
             Err(e) => {
                 log::error!("Error is {e:?}");
-                Err(CustomError::from(CustomErrorInner::Forbidden))
+                Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
             }
         }?;
         let username = decoded_token
@@ -211,9 +212,9 @@ impl AuthFilter {
                 {
                     Some(claim) => match claim.as_str() {
                         Some(content) => Ok(content),
-                        None => Err(CustomError::from(CustomErrorInner::Forbidden)),
+                        None => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
                     },
-                    None => Err(CustomErrorInner::Forbidden.into()),
+                    None => Err(CustomErrorInner::Forbidden(Warning).into()),
                 }?;
 
                 // User is authenticated so we can onboard him if he is new
@@ -243,12 +244,12 @@ impl AuthFilter {
             Some(header) => Ok::<&HeaderValue, CustomError>(header),
             None => {
                 info!("Reverse proxy is enabled but no header is provided");
-                return Err(CustomError::from(CustomErrorInner::Forbidden));
+                return Err(CustomError::from(CustomErrorInner::Forbidden(Warning)));
             }
         }?;
         let token_res = match header_val.to_str() {
             Ok(token) => Ok(token),
-            Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden)),
+            Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
         }?;
         let found_user = User::find_by_username(token_res);
 
@@ -269,7 +270,7 @@ impl AuthFilter {
                     .expect("Error inserting user");
                     Ok(user)
                 } else {
-                    Err(CustomErrorInner::Forbidden.into())
+                    Err(CustomErrorInner::Forbidden(Warning).into())
                 }
             }
         }

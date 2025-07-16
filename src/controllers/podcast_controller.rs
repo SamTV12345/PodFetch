@@ -67,7 +67,7 @@ pub async fn get_filter(
     let filter = Filter::get_filter_by_username(&requester.username).await?;
     match filter {
         Some(f) => Ok(Json(f)),
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(ErrorSeverity::Debug).into()),
     }
 }
 
@@ -192,7 +192,7 @@ pub async fn find_podcast(
     Extension(requester): Extension<User>,
 ) -> Result<Json<PodcastSearchReturn>, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     let (type_of, podcast) = podcast_col;
@@ -207,16 +207,22 @@ pub async fn find_podcast(
         }
         Ok(Podindex) => {
             if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-                return Err(
-                    CustomErrorInner::BadRequest("Podindex is not configured".to_string()).into(),
-                );
+                return Err(CustomErrorInner::BadRequest(
+                    "Podindex is not configured".to_string(),
+                    ErrorSeverity::Warning,
+                )
+                .into());
             }
 
             Ok(Json(PodcastSearchReturn::Podindex(
                 PodcastService::find_podcast_on_podindex(&podcast).await?,
             )))
         }
-        Err(_) => Err(CustomErrorInner::BadRequest("Invalid search type".to_string()).into()),
+        Err(_) => Err(CustomErrorInner::BadRequest(
+            "Invalid search type".to_string(),
+            ErrorSeverity::Info,
+        )
+        .into()),
     }
 }
 
@@ -234,7 +240,7 @@ pub async fn add_podcast(
     Json(track_id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     let query: Vec<(&str, String)> = vec![
@@ -279,7 +285,7 @@ pub async fn add_podcast_by_feed(
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
     let mut header_map = HeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
@@ -331,7 +337,7 @@ pub async fn import_podcasts_from_opml(
     Json(opml): Json<OpmlModel>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
     let document = OPML::from_str(&opml.content).unwrap();
 
@@ -361,11 +367,15 @@ pub async fn add_podcast_from_podindex(
     Json(id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-        return Err(CustomErrorInner::BadRequest("Podindex is not configured".to_string()).into());
+        return Err(CustomErrorInner::BadRequest(
+            "Podindex is not configured".to_string(),
+            ErrorSeverity::Warning,
+        )
+        .into());
     }
 
     spawn_blocking(move || match start_download_podindex(id.track_id) {
@@ -412,7 +422,7 @@ pub async fn refresh_all_podcasts(
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     let podcasts = Podcast::get_all_podcasts()?;
@@ -440,7 +450,7 @@ pub async fn download_podcast(
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
@@ -504,11 +514,11 @@ pub async fn update_name_of_podcast(
     req: Json<PodcastUpdateNameRequest>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
     let found_podcast = match PodcastService::get_podcast(id) {
         Ok(p) => Ok(p),
-        Err(..) => Err(CustomErrorInner::NotFound),
+        Err(..) => Err(CustomErrorInner::NotFound(ErrorSeverity::Debug)),
     }?;
 
     Podcast::update_podcast_name(found_podcast.id, &req.name)?;
@@ -543,7 +553,7 @@ pub async fn update_active_podcast(
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     let id_num = from_str::<i32>(&id).unwrap();
@@ -627,7 +637,7 @@ use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
+use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity};
 use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
 
@@ -650,7 +660,7 @@ pub async fn delete_podcast(
     Json(data): Json<DeletePodcast>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     let podcast = Podcast::get_podcast(id)?;
@@ -675,6 +685,7 @@ pub struct Params {
     episode_id: String,
 }
 
+use crate::utils::error::ErrorSeverity::{Debug, Warning};
 use axum::response::Response;
 
 #[utoipa::path(
@@ -698,20 +709,20 @@ pub(crate) async fn proxy_podcast(
 
     if is_auth_enabled {
         if api_key.is_none() {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Debug).into());
         }
         let api_key = api_key.unwrap().api_key;
 
         let api_key_exists = User::check_if_api_key_exists(&api_key);
 
         if !api_key_exists {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Debug).into());
         }
     }
 
     let opt_res = PodcastEpisodeService::get_podcast_episode_by_id(&params.episode_id)?;
     if opt_res.is_none() {
-        return Err(CustomErrorInner::NotFound.into());
+        return Err(CustomErrorInner::NotFound(Debug).into());
     }
     let episode = opt_res.unwrap();
     for header in ["host", "referer", "sec-fetch-site"] {
@@ -749,7 +760,7 @@ pub async fn update_podcast_settings(
     Json(mut settings): Json<PodcastSetting>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     settings.podcast_id = id_num;
     let updated_podcast = PodcastSetting::update_settings(&settings)?;
@@ -769,12 +780,12 @@ pub async fn get_podcast_settings(
     Extension(requester): Extension<User>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let settings = PodcastSetting::get_settings(id)?;
 
     match settings {
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
         Some(s) => Ok(Json(s)),
     }
 }
@@ -815,7 +826,7 @@ pub async fn retrieve_podcast_sample_format(
 
     match result {
         Ok(v) => Ok(Json(v)),
-        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
+        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string(), ErrorSeverity::Info).into()),
     }
 }
 

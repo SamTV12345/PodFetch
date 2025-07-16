@@ -4,6 +4,7 @@ use crate::models::file_path::FilenameBuilderReturn;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
+use crate::utils::error::ErrorSeverity::{Critical, Warning};
 use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
 use diesel::{
     AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl,
@@ -64,7 +65,7 @@ impl PodcastSetting {
             .filter(podcast_id.eq(id))
             .first::<PodcastSetting>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn handle_episode_numbering() {}
@@ -80,20 +81,22 @@ impl PodcastSetting {
                 diesel::update(podcast_settings.find(setting_to_insert.podcast_id))
                     .set(setting_to_insert.clone())
                     .execute(&mut get_connection())
-                    .map_err(map_db_error)?;
+                    .map_err(|e| map_db_error(e, Critical))?;
             }
             None => {
                 diesel::insert_into(podcast_settings)
                     .values(setting_to_insert.clone())
                     .execute(&mut get_connection())
-                    .map_err(map_db_error)?;
+                    .map_err(|e| map_db_error(e, Critical))?;
             }
         }
         let available_episodes =
             PodcastEpisode::get_episodes_by_podcast_id(setting_to_insert.podcast_id)?;
         let podcast = Podcast::get_podcast(setting_to_insert.podcast_id);
         if podcast.is_err() {
-            return Err(CustomErrorInner::Conflict("Podcast not found".to_string()).into());
+            return Err(
+                CustomErrorInner::Conflict("Podcast not found".to_string(), Warning).into(),
+            );
         }
         let podcast = podcast?;
         for e in available_episodes {

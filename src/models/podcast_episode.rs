@@ -12,6 +12,7 @@ use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::do_retry::do_retry;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::time::opt_or_empty_string;
 use crate::DBType as DbConnection;
@@ -88,7 +89,7 @@ impl PodcastEpisode {
             .filter(file_episode_path.eq(p0).or(file_image_path.eq(p0)))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 }
 
@@ -109,7 +110,7 @@ impl PodcastEpisode {
             .filter(id.eq(podcast_episode_id_to_be_found))
             .first::<PodcastEpisode>(conn)
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         Ok(found_podcast_episode)
     }
@@ -128,7 +129,7 @@ impl PodcastEpisode {
             date_of_recording.desc(),
         )
         .execute(conn)
-        .map_err(map_db_error)?;
+        .map_err(|e| map_db_error(e, Critical))?;
         Ok(result)
     }
 
@@ -141,7 +142,7 @@ impl PodcastEpisode {
             .filter(episode_id.eq(podcas_episode_id_to_be_found))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         Ok(found_podcast_episode)
     }
@@ -159,13 +160,13 @@ impl PodcastEpisode {
                 )
                 .first::<PodcastEpisode>(&mut get_connection())
                 .optional()
-                .map_err(map_db_error)?
+                .map_err(|e| map_db_error(e, Critical))?
         } else {
             podcast_episodes
                 .filter(url.eq(podcas_episode_url_to_be_found))
                 .first::<PodcastEpisode>(&mut get_connection())
                 .optional()
-                .map_err(map_db_error)?
+                .map_err(|e| map_db_error(e, Critical))?
         };
 
         Ok(found_podcast_epsiode)
@@ -173,14 +174,14 @@ impl PodcastEpisode {
 
     pub fn query_podcast_episode_by_url(
         podcas_episode_url_to_be_found: &str,
-    ) -> Result<Option<PodcastEpisode>, String> {
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
 
         let found_podcast_episode = podcast_episodes
             .filter(url.like("%".to_owned() + podcas_episode_url_to_be_found + "%"))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .expect("Error loading podcast by id");
+            .map_err(|e| map_db_error(e, Critical))?;
 
         Ok(found_podcast_episode)
     }
@@ -307,7 +308,7 @@ impl PodcastEpisode {
                 Option<Episode>,
                 Option<FavoritePodcastEpisode>,
             )>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn get_last_n_podcast_episodes(
@@ -320,7 +321,7 @@ impl PodcastEpisode {
             .limit(number_to_download as i64)
             .order(date_of_recording.desc())
             .load::<PodcastEpisode>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn update_local_paths(
@@ -338,7 +339,7 @@ impl PodcastEpisode {
             .filter(episode_id_column.eq(episode_id))
             .first::<PodcastEpisode>(conn)
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         if result.is_some() {
             diesel::update(podcast_episodes)
@@ -348,7 +349,7 @@ impl PodcastEpisode {
                     file_image_path_column.eq(file_image_path),
                 ))
                 .execute(conn)
-                .map_err(map_db_error)?;
+                .map_err(|e| map_db_error(e, Critical))?;
         }
         Ok(())
     }
@@ -367,7 +368,7 @@ impl PodcastEpisode {
         delete(podcast_episodes)
             .filter(podcast_id_column.eq(podcast_id))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -391,7 +392,7 @@ impl PodcastEpisode {
                             .eq(ENVIRONMENT_SERVICE.default_file_handler.to_string()),
                     ))
                     .execute(&mut get_connection())
-                    .map_err(map_db_error)?;
+                    .map_err(|e| map_db_error(e, Critical))?;
                 Ok(())
             }
             None => {
@@ -418,7 +419,7 @@ impl PodcastEpisode {
             .filter(podcast_episode_url.eq(download_episode_url))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(result.is_some())
     }
 
@@ -445,7 +446,7 @@ impl PodcastEpisode {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes as dsl_podcast_episodes;
         dsl_podcast_episodes
             .load::<PodcastEpisode>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn get_podcast_episodes_older_than_days(
@@ -483,10 +484,13 @@ impl PodcastEpisode {
         podcast_episodes
             .filter(podcast_id.eq(id_to_search))
             .load::<PodcastEpisode>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
-    pub fn update_guid(guid_to_update: Guid, podcast_episode_id_to_update: &str) {
+    pub fn update_guid(
+        guid_to_update: Guid,
+        podcast_episode_id_to_update: &str,
+    ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::episode_id as podcast_episode_id;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
 
@@ -495,7 +499,8 @@ impl PodcastEpisode {
         )
         .set(guid.eq(guid_to_update.value))
         .execute(&mut get_connection())
-        .expect("Error updating guide");
+        .map_err(|e| map_db_error(e, Critical))?;
+        Ok(())
     }
 
     pub fn update_podcast_episode(episode_to_update: PodcastEpisode) -> PodcastEpisode {
@@ -520,7 +525,7 @@ impl PodcastEpisode {
         diesel::update(podcast_episodes.filter(episode_id.eq(episode_to_update)))
             .set(deleted.eq(deleted_status))
             .execute(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn get_podcast_episodes_by_podcast_to_k(
@@ -546,7 +551,7 @@ impl PodcastEpisode {
                 ),
             )
             .load::<PodcastEpisode>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn update_episode_numbering_processed(

@@ -11,6 +11,7 @@ use crate::models::subscription::Subscription;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
+use crate::utils::error::ErrorSeverity::Error as ErrorSeverityError;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp_str;
 use log::error;
@@ -113,7 +114,11 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 }
                 _ => {
                     println!("Unknown command");
-                    Err(CustomErrorInner::BadRequest("Unknown command".to_string()).into())
+                    Err(CustomErrorInner::BadRequest(
+                        "Unknown command".to_string(),
+                        ErrorSeverityError,
+                    )
+                    .into())
                 }
             }
         }
@@ -130,9 +135,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 "add" => {
                     let mut user = read_user_account()?;
 
-                    println!(
-                        "Should a user with the following settings be applied {user:?}"
-                    );
+                    println!("Should a user with the following settings be applied {user:?}");
 
                     if ask_for_confirmation().is_ok() {
                         user.password =
@@ -150,6 +153,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                             error!("Command not found");
                             return Err(CustomErrorInner::BadRequest(
                                 "Command not found".to_string(),
+                                ErrorSeverityError,
                             )
                             .into());
                         }
@@ -169,10 +173,11 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         }
                         _ => {
                             error!("Command not found");
-                            Err(
-                                CustomErrorInner::BadRequest("Command not found".to_string())
-                                    .into(),
+                            Err(CustomErrorInner::BadRequest(
+                                "Command not found".to_string(),
+                                ErrorSeverityError,
                             )
+                            .into())
                         }
                     }
                 }
@@ -401,9 +406,7 @@ fn trim_string(string_to_trim: &str) -> String {
 
 fn do_user_update(mut user: User) {
     let mut input = String::new();
-    println!(
-        "The following settings of a user should be updated: {user:?}"
-    );
+    println!("The following settings of a user should be updated: {user:?}");
     println!(
         "Enter which field of a user should be updated [role, password, \
     consent]"

@@ -23,12 +23,12 @@ pub async fn get_settings(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let settings = Setting::get_settings()?;
     match settings {
         Some(settings) => Ok(Json(settings)),
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
     }
 }
 
@@ -45,7 +45,7 @@ pub async fn update_settings(
     Json(settings): Json<Setting>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let settings = SettingsService::update_settings(settings)?;
     Ok(Json(settings))
@@ -60,7 +60,7 @@ tag="settings"
 )]
 pub async fn run_cleanup(requester: Extension<User>) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let settings = SettingsService::get_settings()?;
     match settings {
@@ -70,7 +70,7 @@ pub async fn run_cleanup(requester: Extension<User>) -> Result<StatusCode, Custo
         }
         None => {
             log::error!("Error getting settings");
-            Err(CustomErrorInner::Unknown.into())
+            Err(CustomErrorInner::Unknown(Error).into())
         }
     }
 }
@@ -104,9 +104,11 @@ pub async fn get_opml(
     Path(type_of): Path<String>,
 ) -> Result<Response<String>, CustomError> {
     if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
-        return Err(
-            CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into(),
-        );
+        return Err(CustomErrorInner::UnAuthorized(
+            "Please generate an api key".to_string(),
+            Critical,
+        )
+        .into());
     }
 
     let podcasts_found = Podcast::get_all_podcasts()?;
@@ -125,7 +127,7 @@ pub async fn get_opml(
     ))
     .map_err(|e| {
         log::error!("Error adding podcasts to opml: {e}");
-        CustomErrorInner::Unknown
+        Into::<CustomError>::into(CustomErrorInner::Unknown(Error))
     })?;
 
     xml.set_root_element(opml);
@@ -202,7 +204,7 @@ pub async fn update_name(
     Json(update_information): Json<UpdateNameSettings>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let settings = SettingsService::update_name(update_information)?;
@@ -210,6 +212,7 @@ pub async fn update_name(
 }
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::utils::error::ErrorSeverity::{Critical, Debug, Error, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;

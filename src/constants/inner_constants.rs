@@ -45,6 +45,7 @@ use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::logging_service::init_logging;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 
@@ -84,7 +85,7 @@ impl TryFrom<String> for Role {
             "Admin" => Ok(Role::Admin),
             "Uploader" => Ok(Role::Uploader),
             "User" => Ok(Role::User),
-            _ => Err(CustomErrorInner::BadRequest("Invalid role".to_string()).into()),
+            _ => Err(CustomErrorInner::BadRequest("Invalid role".to_string(), Warning).into()),
         }
     }
 }

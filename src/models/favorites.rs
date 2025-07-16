@@ -6,6 +6,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
 use crate::models::user::User;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::DBType as DbConnection;
 use diesel::insert_into;
@@ -62,7 +63,7 @@ impl Favorite {
             .filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1)))
             .first::<Favorite>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         match res {
             Some(..) => {
@@ -71,7 +72,7 @@ impl Favorite {
                 )
                 .set(favor_column.eq(favor))
                 .execute(&mut get_connection())
-                .map_err(map_db_error)?;
+                .map_err(|e| map_db_error(e, Critical))?;
                 Ok(())
             }
             None => {
@@ -82,7 +83,7 @@ impl Favorite {
                         favor_column.eq(favor),
                     ))
                     .execute(&mut get_connection())
-                    .map_err(map_db_error)?;
+                    .map_err(|e| map_db_error(e, Critical))?;
                 Ok(())
             }
         }
@@ -97,7 +98,7 @@ impl Favorite {
             .filter(username.eq(username1).and(podcast_id.eq(podcast_id1)))
             .first::<Favorite>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(res)
     }
 
@@ -111,7 +112,7 @@ impl Favorite {
             .inner_join(f_db)
             .filter(favor_column.eq(true).and(user_favor.eq(&found_username)))
             .load::<(Podcast, Favorite)>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         let mapped_result = result
             .iter()
@@ -172,7 +173,7 @@ impl Favorite {
         let mut matching_podcast_ids = vec![];
         let pr = query
             .load::<(Podcast, PodcastEpisode, Favorite)>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         let distinct_podcasts: Vec<(Podcast, Favorite)> = pr
             .iter()
             .filter(|c| {
@@ -237,7 +238,7 @@ impl Favorite {
         let mut matching_podcast_ids = vec![];
         let pr = query
             .load::<(Podcast, PodcastEpisode, Option<Favorite>)>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         let distinct_podcasts = pr
             .iter()
             .filter(|c| {

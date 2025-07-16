@@ -10,6 +10,7 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::dsl::max;
 use diesel::prelude::*;
@@ -113,7 +114,7 @@ impl TimelineItem {
 
         let results = total_count
             .get_result::<i64>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         let result = query
             .load::<(
                 PodcastEpisode,
@@ -122,7 +123,7 @@ impl TimelineItem {
                 Option<Episode>,
                 Option<Favorite>,
             )>(&mut get_connection())
-            .map_err(map_db_error)?
+            .map_err(|e| map_db_error(e, Critical))?
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {

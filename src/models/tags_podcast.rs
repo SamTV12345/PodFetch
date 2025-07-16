@@ -1,4 +1,5 @@
 use crate::adapters::persistence::dbconfig::schema::tags_podcasts;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::{execute_with_conn, insert_with_conn};
 use diesel::{AsChangeset, Insertable, Queryable, QueryableByName};
@@ -36,7 +37,7 @@ impl TagsPodcast {
         execute_with_conn!(|conn| diesel::insert_into(tags_podcasts)
             .values(&new_tag_podcast)
             .get_result(conn)
-            .map_err(map_db_error))
+            .map_err(|e| map_db_error(e, Critical)))
     }
 
     pub fn delete_tags_by_podcast_id(podcast_id_to_delete: i32) -> Result<(), CustomError> {
@@ -50,7 +51,7 @@ impl TagsPodcast {
             t_podcasts.filter(podcast_id.eq(podcast_id_to_delete))
         )
         .execute(conn)
-        .map_err(map_db_error));
+        .map_err(|e| map_db_error(e, Critical)));
         Ok(())
     }
 
@@ -63,7 +64,7 @@ impl TagsPodcast {
         insert_with_conn!(
             |conn| diesel::delete(t_podcasts.filter(tag_id.eq(tag_id_to_delete)))
                 .execute(conn)
-                .map_err(map_db_error)
+                .map_err(|e| map_db_error(e, Critical))
         );
         Ok(())
     }
@@ -86,7 +87,7 @@ impl TagsPodcast {
             )
         )
         .execute(conn)
-        .map_err(map_db_error));
+        .map_err(|e| map_db_error(e, Critical)));
         Ok(())
     }
 }

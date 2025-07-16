@@ -16,6 +16,7 @@ use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
+use crate::utils::error::ErrorSeverity::Warning;
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
@@ -92,7 +93,7 @@ pub async fn get_available_podcasts_not_in_webview(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<GPodderAvailablePodcasts>>, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let found_episodes = Episode::find_episodes_not_in_webview()?;
 
@@ -190,7 +191,7 @@ pub async fn download_podcast_episodes_of_podcast(
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     thread::spawn(move || {
@@ -226,7 +227,7 @@ pub async fn delete_podcast_episode_locally(
     requester: Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let delted_podcast_episode = tokio::task::spawn_blocking(move || {

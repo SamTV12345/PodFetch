@@ -1,6 +1,6 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use log::error;
+use log::{debug, error, info, warn};
 use s3::error::S3Error;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
@@ -12,6 +12,7 @@ use thiserror::Error;
 pub struct CustomError {
     pub inner: CustomErrorInner,
     pub backtrace: Box<Backtrace>,
+    pub error_severity: ErrorSeverity,
 }
 
 impl Display for CustomError {
@@ -30,8 +31,21 @@ impl From<CustomError> for Infallible {
 
 impl From<CustomErrorInner> for CustomError {
     fn from(inner: CustomErrorInner) -> Self {
+        let error_severity = match &inner {
+            CustomErrorInner::NotFound(sev)
+            | CustomErrorInner::Forbidden(sev)
+            | CustomErrorInner::Unknown(sev) => sev.clone(),
+            CustomErrorInner::DatabaseError(_, sev)
+            | CustomErrorInner::Conflict(_, sev)
+            | CustomErrorInner::BadRequest(_, sev)
+            | CustomErrorInner::UnAuthorized(_, sev) => sev.clone(),
+        };
         let backtrace = Box::new(Backtrace::force_capture());
-        Self { inner, backtrace }
+        Self {
+            inner,
+            backtrace,
+            error_severity: error_severity.clone(),
+        }
     }
 }
 
@@ -49,7 +63,7 @@ impl<T> ResultExt for Result<T, CustomError> {
         match self {
             Ok(ok) => ok,
             Err(bterr) => {
-                eprintln!("{msg}");
+                eprintln!("Error occurred{msg}");
                 eprintln!();
                 eprintln!("{bterr:}");
                 panic!("{}", msg);
@@ -96,7 +110,7 @@ impl Display for DynBacktraceError {
 
 impl From<Infallible> for CustomError {
     fn from(_: Infallible) -> Self {
-        CustomErrorInner::Unknown.into()
+        CustomErrorInner::Unknown(ErrorSeverity::Error).into()
     }
 }
 
@@ -136,13 +150,13 @@ impl Error for CustomError {
 impl IntoResponse for CustomError {
     fn into_response(self) -> Response {
         let status = match &self.inner {
-            CustomErrorInner::NotFound => StatusCode::NOT_FOUND,
-            CustomErrorInner::Forbidden => StatusCode::FORBIDDEN,
-            CustomErrorInner::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
-            CustomErrorInner::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            CustomErrorInner::Conflict(_) => StatusCode::CONFLICT,
-            CustomErrorInner::BadRequest(_) => StatusCode::BAD_REQUEST,
-            CustomErrorInner::UnAuthorized(_) => StatusCode::UNAUTHORIZED,
+            CustomErrorInner::NotFound(_) => StatusCode::NOT_FOUND,
+            CustomErrorInner::Forbidden(_) => StatusCode::FORBIDDEN,
+            CustomErrorInner::Unknown(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            CustomErrorInner::DatabaseError(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
+            CustomErrorInner::Conflict(_, _) => StatusCode::CONFLICT,
+            CustomErrorInner::BadRequest(_, _) => StatusCode::BAD_REQUEST,
+            CustomErrorInner::UnAuthorized(_, _) => StatusCode::UNAUTHORIZED,
         };
 
         (status, self.error_response().message).into_response()
@@ -152,13 +166,13 @@ impl IntoResponse for CustomError {
 impl CustomError {
     fn error_response(&self) -> ErrorResponse {
         let status_code = match &self.inner {
-            CustomErrorInner::NotFound => 404,
-            CustomErrorInner::Forbidden => 403,
-            CustomErrorInner::UnAuthorized(_) => 401,
-            CustomErrorInner::BadRequest(_) => 404,
-            CustomErrorInner::Conflict(_) => 409,
-            CustomErrorInner::Unknown => 500,
-            CustomErrorInner::DatabaseError(_) => 500,
+            CustomErrorInner::NotFound(_) => 404,
+            CustomErrorInner::Forbidden(_) => 403,
+            CustomErrorInner::UnAuthorized(_, _) => 401,
+            CustomErrorInner::BadRequest(_, _) => 404,
+            CustomErrorInner::Conflict(_, _) => 409,
+            CustomErrorInner::Unknown(_) => 500,
+            CustomErrorInner::DatabaseError(_, _) => 500,
         };
         ErrorResponse {
             code: status_code as u16,
@@ -170,89 +184,129 @@ impl CustomError {
 
 impl Drop for CustomError {
     fn drop(&mut self) {
-        error!("Error {}: {} with error", self.inner, self.backtrace);
+        match self.error_severity {
+            ErrorSeverity::Critical | ErrorSeverity::Error => {
+                error!("Error {}: {} with error", self.inner, self.backtrace);
+            }
+            ErrorSeverity::Warning => {
+                warn!("Warning {}: {} with error", self.inner, self.backtrace);
+            }
+            ErrorSeverity::Info => {
+                info!("Info {}: {} with error", self.inner, self.backtrace);
+            }
+            ErrorSeverity::Debug => {
+                debug!("Debug {}: {} with error", self.inner, self.backtrace);
+            }
+        }
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum ErrorSeverity {
+    Info,
+    Warning,
+    Error,
+    Debug,
+    Critical,
 }
 
 #[derive(Error, Debug)]
 pub enum CustomErrorInner {
     #[error("Requested file was not found")]
-    NotFound,
+    NotFound(ErrorSeverity),
     #[error("You are forbidden to access requested file.")]
-    Forbidden,
+    Forbidden(ErrorSeverity),
     #[error("You are not authorized to access this resource. {0}")]
-    UnAuthorized(String),
+    UnAuthorized(String, ErrorSeverity),
     #[error("Bad Request: {0}")]
-    BadRequest(String),
+    BadRequest(String, ErrorSeverity),
     #[error("The following error occurred: {0}")]
-    Conflict(String),
+    Conflict(String, ErrorSeverity),
     #[error("Unknown Internal Error")]
-    Unknown,
+    Unknown(ErrorSeverity),
     #[error("Unknown Internal Error")]
-    DatabaseError(diesel::result::Error),
+    DatabaseError(diesel::result::Error, ErrorSeverity),
 }
 
 impl CustomErrorInner {
     pub fn name(&self) -> String {
         match self {
-            Self::NotFound => "NotFound".to_string(),
-            Self::Forbidden => "Forbidden".to_string(),
-            Self::Unknown => "Unknown".to_string(),
-            Self::DatabaseError(_) => "DatabaseError".to_string(),
-            Self::Conflict(e) => e.to_string(),
-            Self::BadRequest(e) => e.to_string(),
-            Self::UnAuthorized(_) => "UnAuthorized".to_string(),
+            Self::NotFound(_) => "NotFound".to_string(),
+            Self::Forbidden(_) => "Forbidden".to_string(),
+            Self::Unknown(_) => "Unknown".to_string(),
+            Self::DatabaseError(_, _) => "DatabaseError".to_string(),
+            Self::Conflict(e, _) => e.to_string(),
+            Self::BadRequest(e, _) => e.to_string(),
+            Self::UnAuthorized(_, _) => "UnAuthorized".to_string(),
         }
     }
 }
 
-pub fn map_io_error(e: std::io::Error, path: Option<String>) -> CustomError {
+pub fn map_io_error(
+    e: std::io::Error,
+    path: Option<String>,
+    error_severity: ErrorSeverity,
+) -> CustomError {
     error!(
         "IO error: {} for path {}",
         e,
         path.unwrap_or("".to_string())
     );
     match e.kind() {
-        std::io::ErrorKind::NotFound => CustomError::from(CustomErrorInner::NotFound),
-        std::io::ErrorKind::PermissionDenied => CustomError::from(CustomErrorInner::Forbidden),
-        _ => CustomError::from(CustomErrorInner::Unknown),
+        std::io::ErrorKind::NotFound => {
+            CustomError::from(CustomErrorInner::NotFound(error_severity))
+        }
+        std::io::ErrorKind::PermissionDenied => {
+            CustomError::from(CustomErrorInner::Forbidden(error_severity))
+        }
+        _ => CustomError::from(CustomErrorInner::Unknown(error_severity)),
     }
 }
 
-pub fn map_s3_error(error: S3Error) -> CustomError {
+pub fn map_s3_error(error: S3Error, error_severity: ErrorSeverity) -> CustomError {
     log::info!("S3 error: {error}");
-    CustomErrorInner::Unknown.into()
+    CustomErrorInner::Unknown(error_severity).into()
 }
 
-pub fn map_io_extra_error(e: fs_extra::error::Error, path: Option<String>) -> CustomError {
+pub fn map_io_extra_error(
+    e: fs_extra::error::Error,
+    path: Option<String>,
+    severity: ErrorSeverity,
+) -> CustomError {
     error!(
         "IO extra error: {} for path {}",
         e,
         path.unwrap_or("".to_string())
     );
-    CustomError::from(CustomErrorInner::Unknown)
+    CustomError::from(CustomErrorInner::Unknown(severity))
 }
 
-pub fn map_db_error(e: diesel::result::Error) -> CustomError {
+pub fn map_db_error(e: diesel::result::Error, severity: ErrorSeverity) -> CustomError {
     error!("Database error: {e}");
     match e {
-        diesel::result::Error::InvalidCString(_) => CustomError::from(CustomErrorInner::NotFound),
-        diesel::result::Error::DatabaseError(_, _) => {
-            CustomError::from(CustomErrorInner::DatabaseError(e))
+        diesel::result::Error::InvalidCString(_) => {
+            CustomError::from(CustomErrorInner::NotFound(severity))
         }
-        _ => CustomError::from(CustomErrorInner::Unknown),
+        diesel::result::Error::DatabaseError(_, _) => {
+            CustomError::from(CustomErrorInner::DatabaseError(e, severity))
+        }
+        _ => CustomError::from(CustomErrorInner::Unknown(severity)),
     }
 }
 
-pub fn map_r2d2_error(e: r2d2::Error) -> CustomError {
+pub fn map_r2d2_error(e: r2d2::Error, error_severity: ErrorSeverity) -> CustomError {
     error!("R2D2 error: {e}");
-    CustomError::from(CustomErrorInner::Unknown)
+    CustomError::from(CustomErrorInner::Unknown(error_severity))
 }
 
 pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
     error!("Error during reqwest: {e}");
 
-    CustomErrorInner::BadRequest("Error requesting resource from server".to_string()).into()
+    CustomErrorInner::BadRequest(
+        "Error requesting resource from server".to_string(),
+        ErrorSeverity::Warning,
+    )
+    .into()
 }
 
 #[derive(Serialize)]
@@ -264,7 +318,7 @@ struct ErrorResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::error::{map_db_error, map_io_error, CustomErrorInner};
+    use crate::utils::error::{map_db_error, map_io_error, CustomErrorInner, ErrorSeverity};
 
     use diesel::result::Error;
     use serial_test::serial;
@@ -274,7 +328,7 @@ mod tests {
     #[serial]
     fn test_map_io_error() {
         let io_error = std::io::Error::new(ErrorKind::NotFound, "File not found");
-        let custom_error = map_io_error(io_error, None);
+        let custom_error = map_io_error(io_error, None, ErrorSeverity::Error);
         assert!(custom_error
             .to_string()
             .contains("Requested file was not found"));
@@ -284,7 +338,7 @@ mod tests {
     #[serial]
     fn test_map_db_error() {
         let db_error = Error::NotFound;
-        let custom_error = map_db_error(db_error);
+        let custom_error = map_db_error(db_error, ErrorSeverity::Warning);
         assert!(custom_error.to_string().starts_with("Initial error"));
     }
 
@@ -292,13 +346,17 @@ mod tests {
     #[serial]
     fn test_custom_error() {
         let custom_error = CustomErrorInner::NotFound;
-        assert_eq!(custom_error.to_string(), "Requested file was not found");
+        assert_eq!(
+            custom_error(ErrorSeverity::Error).to_string(),
+            "Requested file was not found"
+        );
     }
 
     #[test]
     #[serial]
     fn test_custom_conflict_message() {
-        let custom_error = CustomErrorInner::Conflict("An error occured".to_string());
+        let custom_error =
+            CustomErrorInner::Conflict("An error occured".to_string(), ErrorSeverity::Warning);
         assert_eq!(
             custom_error.to_string(),
             "The following error occurred: An error occured"

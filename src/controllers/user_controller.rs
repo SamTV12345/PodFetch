@@ -5,7 +5,7 @@ use axum::{Extension, Json};
 use reqwest::StatusCode;
 
 use crate::service::user_management_service::UserManagementService;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -92,7 +92,7 @@ pub async fn get_user(
     }
 
     if !requester.is_admin() || requester.username != username {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
 
     let user = User::find_by_username(&username.clone())?;
@@ -114,7 +114,7 @@ pub async fn update_role(
     Json(role): Json<UserRoleUpdateModel>,
 ) -> Result<Json<UserWithoutPassword>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
     let mut user_to_update = User::find_by_username(&username)?;
 
@@ -142,13 +142,15 @@ pub async fn update_user(
 ) -> Result<Json<UserWithAPiKey>, CustomError> {
     let old_username = &user.clone().username;
     if old_username != &username {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
     }
     let mut user = User::find_by_username(&username)?;
 
     if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
         if admin_username == user.username {
-            return Err(CustomErrorInner::Conflict("Cannot update admin user".to_string()).into());
+            return Err(
+                CustomErrorInner::Conflict("Cannot update admin user".to_string(), Info).into(),
+            );
         }
     }
 
@@ -156,7 +158,9 @@ pub async fn update_user(
         // Check if this username is already taken
         let new_username_res = User::find_by_username(&user_update.username);
         if new_username_res.is_ok() {
-            return Err(CustomErrorInner::Conflict("Username already taken".to_string()).into());
+            return Err(
+                CustomErrorInner::Conflict("Username already taken".to_string(), Info).into(),
+            );
         }
         user.username = user_update.username.to_string();
     }
@@ -164,6 +168,7 @@ pub async fn update_user(
         if password.trim().len() < 8 {
             return Err(CustomErrorInner::BadRequest(
                 "Password must be at least 8 characters long".to_string(),
+                Info,
             )
             .into());
         }
@@ -180,6 +185,8 @@ pub async fn update_user(
 }
 
 use crate::models::invite::Invite;
+use crate::utils::error::ErrorSeverity::{Info, Warning};
+
 #[utoipa::path(
 post,
 path="/invites",
@@ -211,7 +218,7 @@ pub async fn get_invites(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<Invite>>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Info).into());
     }
 
     let invites = UserManagementService::get_invites()?;
@@ -245,7 +252,7 @@ pub async fn delete_user(
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Info).into());
     }
 
     let user_to_delete = User::find_by_username(&username)?;
@@ -266,12 +273,12 @@ pub async fn get_invite_link(
     requester: Extension<User>,
 ) -> Result<String, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     match UserManagementService::get_invite_link(invite_id) {
         Ok(invite) => Ok(invite),
-        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
+        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string(), Warning).into()),
     }
 }
 
@@ -286,12 +293,12 @@ pub async fn delete_invite(
     requester: Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     match UserManagementService::delete_invite(invite_id.0) {
         Ok(_) => Ok(StatusCode::OK),
-        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string()).into()),
+        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string(), Warning).into()),
     }
 }
 

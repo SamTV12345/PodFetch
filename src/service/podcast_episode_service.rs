@@ -16,7 +16,10 @@ use crate::service::file_service::FileService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::{map_db_error, map_reqwest_error, CustomError, CustomErrorInner};
+use crate::utils::error::ErrorSeverity::{Critical, Warning};
+use crate::utils::error::{
+    map_db_error, map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity,
+};
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
@@ -244,10 +247,10 @@ impl PodcastEpisodeService {
                     returned_data_from_podcast_insert.content,
                     e
                 );
-                Err(CustomErrorInner::BadRequest(format!(
-                    "Error parsing podcast {} with cause {:?}",
-                    podcast.name, e
-                ))
+                Err(CustomErrorInner::BadRequest(
+                    format!("Error parsing podcast {} with cause {:?}", podcast.name, e,),
+                    ErrorSeverity::Error,
+                )
                 .into())
             }
         }
@@ -329,7 +332,7 @@ impl PodcastEpisodeService {
             .filter(guid.eq(guid_to_search))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     fn parse_duration(duration_str: &str) -> u32 {
@@ -531,7 +534,7 @@ impl PodcastEpisodeService {
     ) -> Result<PodcastEpisode, CustomError> {
         let episode = PodcastEpisode::get_podcast_episode_by_id(episode_id)?;
         if episode.is_none() {
-            return Err(CustomErrorInner::NotFound.into());
+            return Err(CustomErrorInner::NotFound(Warning).into());
         }
 
         match episode {
@@ -541,7 +544,7 @@ impl PodcastEpisodeService {
                 PodcastEpisode::update_deleted(episode_id, true)?;
                 Ok(episode)
             }
-            None => Err(CustomErrorInner::NotFound.into()),
+            None => Err(CustomErrorInner::NotFound(Warning).into()),
         }
     }
 
@@ -562,7 +565,7 @@ impl PodcastEpisodeService {
             )
             .count()
             .get_result::<i64>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 }
 

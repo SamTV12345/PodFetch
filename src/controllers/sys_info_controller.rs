@@ -41,6 +41,7 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
                         .to_string()
                         .to_string(),
                 ),
+                ErrorSeverity::Critical,
             )
         })?;
     Ok(Json(SysExtraInfo {
@@ -51,7 +52,8 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
 }
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::settings::ConfigModel;
-use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner};
+use crate::utils::error::ErrorSeverity::Info;
+use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner, ErrorSeverity};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -176,14 +178,14 @@ pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, CustomError> 
 
     if db_user.password.is_none() {
         log::warn!("Login failed for user {}", auth.0.username);
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Info).into());
     }
 
     if db_user.password.unwrap() == digested_password {
         return Ok(StatusCode::OK);
     }
     log::warn!("Login failed for user {}", auth.0.username);
-    Err(CustomErrorInner::Forbidden.into())
+    Err(CustomErrorInner::Forbidden(Info).into())
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]

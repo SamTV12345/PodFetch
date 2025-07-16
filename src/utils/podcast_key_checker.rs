@@ -3,6 +3,7 @@ use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
+use crate::utils::error::ErrorSeverity::{Info, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::extract::Request;
 use axum::http::Uri;
@@ -57,7 +58,7 @@ fn retrieve_podcast_or_podcast_episode(
             let podcast = Podcast::find_by_path(encoded_path)?;
             match podcast {
                 Some(podcast) => Ok(PodcastOrPodcastEpisodeResource::Podcast(podcast)),
-                None => Err(CustomErrorInner::NotFound.into()),
+                None => Err(CustomErrorInner::NotFound(Info).into()),
             }
         }
     }
@@ -74,6 +75,7 @@ fn check_auth(
                 None => {
                     return Err(CustomErrorInner::BadRequest(
                         "No query parameters found".to_string(),
+                        Info,
                     )
                     .into())
                 }
@@ -82,7 +84,7 @@ fn check_auth(
             let api_key_exists = User::check_if_api_key_exists(api_key);
 
             if !api_key_exists {
-                return Err(CustomErrorInner::Forbidden.into());
+                return Err(CustomErrorInner::Forbidden(Warning).into());
             }
             let requested_path = uri
                 .path()
@@ -90,7 +92,7 @@ fn check_auth(
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
             let requested_path = &requested_path[1..];
             let decoded_path = urlencoding::decode(requested_path).map_err(|_| {
-                CustomErrorInner::BadRequest("Error while decoding URL".to_string())
+                CustomErrorInner::BadRequest("Error while decoding URL".to_string(), Warning)
             })?;
             let decoded_path = decoded_path.as_ref();
             retrieve_podcast_or_podcast_episode(decoded_path, requested_path)
@@ -102,7 +104,7 @@ fn check_auth(
                 .replace(ENVIRONMENT_SERVICE.server_url.as_str(), "");
             let requested_path = &requested_path[1..];
             let decoded_path = urlencoding::decode(requested_path).map_err(|_| {
-                CustomErrorInner::BadRequest("Error while decoding URL".to_string())
+                CustomErrorInner::BadRequest("Error while decoding URL".to_string(), Warning)
             })?;
             let decoded_path = decoded_path.as_ref();
             retrieve_podcast_or_podcast_episode(decoded_path, requested_path)

@@ -1,5 +1,6 @@
 use crate::models::session::Session;
 use crate::models::subscription::SubscriptionChangesToClient;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
 use crate::utils::time::get_current_timestamp;
@@ -47,7 +48,7 @@ pub async fn get_subscriptions(
     let username = paths.clone().0;
     let deviceid = trim_from_path(&paths.1);
     if flag.username != username.clone() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let res =
@@ -56,7 +57,7 @@ pub async fn get_subscriptions(
 
     match res {
         Ok(res) => Ok(Json(res.into())),
-        Err(_) => Err(CustomErrorInner::Forbidden.into()),
+        Err(_) => Err(CustomErrorInner::Forbidden(Warning).into()),
     }
 }
 
@@ -77,7 +78,7 @@ pub async fn get_subscriptions_all(
 ) -> Result<impl IntoResponse, CustomError> {
     let username = trim_from_path(&username);
     if flag.username != username.0 {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let res =
@@ -112,7 +113,7 @@ pub async fn get_subscriptions_all(
                 Ok(Json(tes).into_response())
             }
         }
-        Err(_) => Err(CustomErrorInner::Forbidden.into()),
+        Err(_) => Err(CustomErrorInner::Forbidden(Warning).into()),
     }
 }
 
@@ -134,7 +135,7 @@ pub async fn upload_subscription_changes(
     let username = paths.clone().0;
     let deviceid = trim_from_path(&paths.1);
     if flag.username != username.clone() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     SubscriptionChangesToClient::update_subscriptions(deviceid.0, &username, upload_request)

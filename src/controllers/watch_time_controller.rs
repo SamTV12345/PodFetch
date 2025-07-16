@@ -9,6 +9,7 @@ use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::utils::error::ErrorSeverity::Debug;
 use crate::utils::error::{CustomError, CustomErrorInner};
 
 #[utoipa::path(
@@ -56,7 +57,7 @@ pub async fn get_watchtime(
 ) -> Result<Json<EpisodeDto>, CustomError> {
     let watchtime = Episode::get_watchtime(id, requester.username)?;
     match watchtime {
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
         Some(w) => Ok(Json(w.convert_to_episode_dto())),
     }
 }

@@ -1,6 +1,7 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::invites;
 use crate::constants::inner_constants::Role;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use chrono::NaiveDateTime;
 use diesel::associations::HasTable;
@@ -67,7 +68,7 @@ impl Invite {
             .filter(invites::id.eq(id))
             .first::<Invite>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn find_all_invites() -> Result<Vec<Invite>, diesel::result::Error> {
@@ -89,7 +90,7 @@ impl Invite {
 
         diesel::delete(invites.filter(id.eq(invite_id)))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         Ok(())
     }

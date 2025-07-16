@@ -1,6 +1,7 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::tags;
 use crate::execute_with_conn;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use chrono::{NaiveDateTime, Utc};
 use diesel::sql_types::{Nullable, Text, Timestamp};
@@ -55,7 +56,7 @@ impl Tag {
         execute_with_conn!(|conn| diesel::insert_into(tags)
             .values(self)
             .get_result(conn)
-            .map_err(map_db_error))
+            .map_err(|e| map_db_error(e, Critical)))
     }
 
     pub fn delete_tag(tag_id: &str) -> Result<(), CustomError> {
@@ -65,7 +66,7 @@ impl Tag {
 
         diesel::delete(tags.filter(id.eq(tag_id)))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -81,7 +82,7 @@ impl Tag {
             .filter(username.eq(username_to_search))
             .first::<Tag>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn update_tag(
@@ -101,7 +102,7 @@ impl Tag {
                 color.eq(color_new),
             ))
             .get_result::<Tag>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn get_tags(username_to_search: String) -> Result<Vec<Tag>, CustomError> {
@@ -111,7 +112,7 @@ impl Tag {
 
         tags.filter(username.eq(username_to_search))
             .load::<Tag>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn get_tags_of_podcast(
@@ -130,6 +131,6 @@ impl Tag {
             .filter(podcast_id.eq(podcast_id_to_search))
             .filter(username.eq(username_to_search))
             .load::<Tag>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 }

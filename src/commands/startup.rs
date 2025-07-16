@@ -56,6 +56,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 pub type DbPool = Pool<ConnectionManager<DBType>>;
 use crate::embed_migrations;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::EmbeddedMigrations;
 
 import_database_config!();
@@ -214,7 +215,7 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
     let path = req_parts.uri.path();
 
     if path.contains("..") {
-        return Err(CustomErrorInner::NotFound.into());
+        return Err(CustomErrorInner::NotFound(Warning).into());
     }
     let mut file_path = format!("{}{}", "./static", path);
 

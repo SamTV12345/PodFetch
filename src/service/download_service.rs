@@ -13,7 +13,7 @@ use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
+use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity};
 use crate::utils::file_extension_determination::{
     determine_file_extension, DetermineFileExtensionReturn, FileType,
 };
@@ -198,9 +198,11 @@ impl DownloadService {
             }
             _ => {
                 log::error!("File format not supported: {detected_file:?}");
-                return Err(
-                    CustomErrorInner::Conflict("File format not supported".to_string()).into(),
-                );
+                return Err(CustomErrorInner::Conflict(
+                    "File format not supported".to_string(),
+                    ErrorSeverity::Error,
+                )
+                .into());
             }
         }
         Ok(())
@@ -217,7 +219,11 @@ impl DownloadService {
                 kind: ErrorKind::NoTag,
                 ..
             }) => Tag::new(),
-            Err(err) => return Err(CustomErrorInner::Conflict(err.to_string()).into()),
+            Err(err) => {
+                return Err(
+                    CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into(),
+                )
+            }
         };
 
         if let Version::Id3v22 = tag.version() {
@@ -312,7 +318,7 @@ impl DownloadService {
         let write_succesful: Result<(), CustomError> = tag
             .write_to_path(&paths.filename, Version::Id3v24)
             .map(|_| ())
-            .map_err(|e| CustomErrorInner::Conflict(e.to_string()).into());
+            .map_err(|e| CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into());
 
         if write_succesful.is_err() {
             log::error!(
@@ -357,7 +363,8 @@ impl DownloadService {
             }
             Err(e) => {
                 log::error!("Error reading metadata: {e:?}");
-                let err: CustomError = CustomErrorInner::Conflict(e.to_string()).into();
+                let err: CustomError =
+                    CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into();
                 Err(err)
             }
         }

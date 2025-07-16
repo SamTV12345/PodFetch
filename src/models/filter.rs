@@ -1,6 +1,7 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::filters;
 use crate::execute_with_conn;
+use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{map_db_error, CustomError};
 use diesel::AsChangeset;
 use diesel::ExpressionMethods;
@@ -50,14 +51,14 @@ impl Filter {
                 diesel::update(filters.filter(username.eq(&self.clone().username)))
                     .set(self)
                     .execute(&mut get_connection())
-                    .map_err(map_db_error)?;
+                    .map_err(|e| map_db_error(e, Critical))?;
             }
             None => {
                 execute_with_conn!(|conn| {
                     diesel::insert_into(filters)
                         .values(self)
                         .execute(conn)
-                        .map_err(map_db_error)?;
+                        .map_err(|e| map_db_error(e, Critical))?;
                     Ok(())
                 });
             }
@@ -71,7 +72,7 @@ impl Filter {
             .filter(username.eq(username1))
             .first::<Filter>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(res)
     }
 
