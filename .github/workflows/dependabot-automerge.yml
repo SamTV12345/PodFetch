@@ -1,5 +1,7 @@
 name: Dependabot Automerge
-
+permissions:
+  contents: write
+  pull-requests: write
 on:
   pull_request:
     types:
