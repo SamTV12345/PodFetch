@@ -15,10 +15,9 @@ use crate::utils::error::ErrorSeverity::Error as ErrorSeverityError;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp_str;
 use log::error;
-use rpassword::read_password;
 use sha256::digest;
 use std::env::Args;
-use std::io::{stdin, stdout, Error, ErrorKind, Write};
+use std::io::{stdin, Error, ErrorKind};
 use std::process::exit;
 
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
@@ -336,15 +335,7 @@ pub fn retry_read(prompt: &str, input: &mut String) {
 }
 
 pub fn retry_read_secret(prompt: &str) -> String {
-    println!("{prompt}");
-    match stdout().flush() {
-        Ok(..) => {}
-        Err(..) => {
-            println!("Error reading from terminal");
-            exit(1);
-        }
-    }
-    let input = match read_password() {
+    let input = match rpassword::prompt_password(prompt) {
         Ok(input) => input,
         Err(..) => {
             println!("Error reading from terminal");
