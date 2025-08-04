@@ -120,8 +120,8 @@ importers:
         specifier: ^11.1.0
         version: 11.1.0
       zustand:
-        specifier: ^5.0.6
-        version: 5.0.6(@types/react@19.1.6)(react@19.1.0)(use-sync-external-store@1.2.2(react@19.1.0))
+        specifier: ^5.0.7
+        version: 5.0.7(@types/react@19.1.6)(react@19.1.0)(use-sync-external-store@1.2.2(react@19.1.0))
     devDependencies:
       '@rsbuild/core':
         specifier: ^1.4.13
@@ -2798,8 +2798,8 @@ packages:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
     engines: {node: '>=12'}
 
-  zustand@5.0.6:
-    resolution: {integrity: sha512-ihAqNeUVhe0MAD+X8M5UzqyZ9k3FFZLBTtqo6JLPwV53cbRB/mJwBI0PxcIgqhBBHlEs8G45OTDTMq3gNcLq3A==}
+  zustand@5.0.7:
+    resolution: {integrity: sha512-Ot6uqHDW/O2VdYsKLLU8GQu8sCOM1LcoE8RwvLv9uuRT9s6SOHCKs0ZEOhxg+I1Ld+A1Q5lwx+UlKXXUoCZITg==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -5333,7 +5333,7 @@ snapshots:
 
   yargs-parser@21.1.1: {}
 
-  zustand@5.0.6(@types/react@19.1.6)(react@19.1.0)(use-sync-external-store@1.2.2(react@19.1.0)):
+  zustand@5.0.7(@types/react@19.1.6)(react@19.1.0)(use-sync-external-store@1.2.2(react@19.1.0)):
     optionalDependencies:
       '@types/react': 19.1.6
       react: 19.1.0
