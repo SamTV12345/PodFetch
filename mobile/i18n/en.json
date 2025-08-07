@@ -1,0 +1,8 @@
+{
+  "home": "Home",
+  "search": "Search",
+  "library": "Library",
+  "last-listened": "Last listened",
+  "more": "More",
+  "share-podcast": "Explore {{podcast}} on PodFetch now {{url}}"
+}

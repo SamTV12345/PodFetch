@@ -38,14 +38,15 @@ impl PodcastService {
         log::info!("Found podcast: {}", result.url());
         let res_of_search = result.json().await;
 
-        if let Ok(res) = res_of_search {
-            res
-        } else {
-            log::error!(
-                "Error searching for podcast: {}",
-                res_of_search.err().unwrap()
-            );
-            ItunesWrapper::default()
+        match res_of_search {
+            Ok(res) => res,
+            _ => {
+                log::error!(
+                    "Error searching for podcast: {}",
+                    res_of_search.err().unwrap()
+                );
+                ItunesWrapper::default()
+            }
         }
     }
 
