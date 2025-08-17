@@ -6,8 +6,10 @@ use diesel::Connection;
 use r2d2::Pool;
 use std::process::exit;
 use std::sync::OnceLock;
+#[cfg(feature = "sqlite")]
 use std::time::Duration;
 
+#[cfg(feature = "sqlite")]
 #[derive(Debug)]
 pub struct ConnectionOptions {
     pub enable_wal: bool,
@@ -15,6 +17,7 @@ pub struct ConnectionOptions {
     pub busy_timeout: Option<Duration>,
 }
 
+#[cfg(feature = "sqlite")]
 impl r2d2::CustomizeConnection<DBType, diesel::r2d2::Error> for ConnectionOptions {
     fn on_acquire(&self, conn: &mut DBType) -> Result<(), diesel::r2d2::Error> {
         use diesel::connection::SimpleConnection;
