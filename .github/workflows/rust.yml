@@ -55,8 +55,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
-        permissions:
-          contents: write
         with:
           files: |
             podfetch-linux.zip
