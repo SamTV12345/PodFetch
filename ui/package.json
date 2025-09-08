@@ -62,7 +62,7 @@
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.11",
-    "@types/react-dom": "^19.1.5",
+    "@types/react-dom": "^19.1.9",
     "@types/sanitize-html": "^2.16.0",
     "@vitejs/plugin-react": "^5.0.2",
     "babel-plugin-react-compiler": "19.0.0-beta-30d8a17-20250209",
