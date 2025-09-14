@@ -6,7 +6,8 @@ on:
       - "v*.*.*"
 
 permissions:
-  contents: read
+  contents: write
+  packages: write
 
 jobs:
   build:
@@ -123,8 +124,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
-        permissions:
-          contents: write
         with:
           files: |
             podfetch-win.zip
