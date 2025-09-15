@@ -54,8 +54,8 @@ importers:
         specifier: ^4.5.0
         version: 4.5.0
       copy-text-to-clipboard:
-        specifier: ^3.2.0
-        version: 3.2.0
+        specifier: ^3.2.1
+        version: 3.2.1
       csstype:
         specifier: ^3.1.3
         version: 3.1.3
@@ -1705,8 +1705,8 @@ packages:
     resolution: {integrity: sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==}
     engines: {node: '>=18'}
 
-  copy-text-to-clipboard@3.2.0:
-    resolution: {integrity: sha512-RnJFp1XR/LOBDckxTib5Qjr/PMfkatD0MUCQgdpqS8MdKiNUzBjAQBEN6oUy+jW7LI93BBG3DtMB2KOOKpGs2Q==}
+  copy-text-to-clipboard@3.2.1:
+    resolution: {integrity: sha512-3am6cw+WOicd0+HyzhC4kYS02wHJUiVQXmAADxfUARKsHBkWl1Vl3QQEiILlSs8YcPS/C0+y/urCNEYQk+byWA==}
     engines: {node: '>=12'}
 
   core-js@3.45.1:
@@ -4338,7 +4338,7 @@ snapshots:
 
   cookie@1.0.2: {}
 
-  copy-text-to-clipboard@3.2.0: {}
+  copy-text-to-clipboard@3.2.1: {}
 
   core-js@3.45.1: {}
 
