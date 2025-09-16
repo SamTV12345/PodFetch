@@ -1,7 +1,7 @@
 target
 *.db
 .idea
-podcasts
+/podcasts
 static/*
 .env
 *.iml
