@@ -1,4 +1,6 @@
 name: checkFrontend.yml
+permissions:
+  contents: read
 on:
   push:
 
