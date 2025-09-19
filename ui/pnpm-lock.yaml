@@ -18,8 +18,8 @@ importers:
         specifier: ^5.2.6
         version: 5.2.6
       '@fontsource/roboto':
-        specifier: ^5.2.6
-        version: 5.2.6
+        specifier: ^5.2.7
+        version: 5.2.7
       '@fortawesome/fontawesome-free':
         specifier: ^7.0.1
         version: 7.0.1
@@ -603,8 +603,8 @@ packages:
   '@fontsource/poppins@5.2.6':
     resolution: {integrity: sha512-NFr0121+vWCfzLDVvSZOzwAjRUaNj6QHA9gtUh/KHHoWf1Qn23EkwVFs63XZ6UtF5K1b3UNmCx77YEMGgV7BOQ==}
 
-  '@fontsource/roboto@5.2.6':
-    resolution: {integrity: sha512-hzarG7yAhMoP418smNgfY4fO7UmuUEm5JUtbxCoCcFHT0hOJB+d/qAEyoNjz7YkPU5OjM2LM8rJnW8hfm0JLaA==}
+  '@fontsource/roboto@5.2.7':
+    resolution: {integrity: sha512-fca6Jtyxn6kPR51+TTTMCFm0FOhnKaLEYYiAQc8P/4iFCKoKGR0aX89QR4CfP+N64RPXJus64UxhJaVENnSM6Q==}
 
   '@fortawesome/fontawesome-free@7.0.1':
     resolution: {integrity: sha512-RLmb9U6H2rJDnGxEqXxzy7ANPrQz7WK2/eTjdZqyU9uRU5W+FkAec9uU5gTYzFBH7aoXIw2WTJSCJR4KPlReQw==}
@@ -3277,7 +3277,7 @@ snapshots:
 
   '@fontsource/poppins@5.2.6': {}
 
-  '@fontsource/roboto@5.2.6': {}
+  '@fontsource/roboto@5.2.7': {}
 
   '@fortawesome/fontawesome-free@7.0.1': {}
 
