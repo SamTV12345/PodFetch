@@ -20,7 +20,7 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.7",
     "@fontsource/anton": "^5.2.6",
-    "@fontsource/poppins": "^5.2.6",
+    "@fontsource/poppins": "^5.2.7",
     "@fontsource/roboto": "^5.2.7",
     "@fortawesome/fontawesome-free": "^7.0.1",
     "@radix-ui/react-checkbox": "^1.3.3",
