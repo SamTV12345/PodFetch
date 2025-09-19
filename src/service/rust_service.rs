@@ -183,15 +183,14 @@ impl PodcastService {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
                     for podcast_episode in result {
-                        if !podcast_episode.deleted {
-                            if let Err(e) =
+                        if !podcast_episode.deleted
+                            && let Err(e) =
                             PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
                                     podcast_episode,
                                     podcast.clone(),
                                 ){
                                 log::error!("Error downloading podcast episode: {e}");
                             }
-                        }
                     }
                 }
                 Ok(())

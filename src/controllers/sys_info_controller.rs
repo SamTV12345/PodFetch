@@ -165,15 +165,12 @@ pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, CustomError> 
     use crate::ENVIRONMENT_SERVICE;
 
     let digested_password = digest(auth.0.password);
-    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
-        if admin_username == &auth.0.username {
-            if let Some(admin_password) = &ENVIRONMENT_SERVICE.password {
-                if admin_password == &digested_password {
+    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
+        && admin_username == &auth.0.username
+            && let Some(admin_password) = &ENVIRONMENT_SERVICE.password
+                && admin_password == &digested_password {
                     return Ok(StatusCode::OK);
                 }
-            }
-        }
-    }
     let db_user = User::find_by_username(&auth.0.username)?;
 
     if db_user.password.is_none() {

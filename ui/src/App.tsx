@@ -33,7 +33,7 @@ import {UserManagementPage} from "./pages/UserManagement";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
 import {components} from "../schema";
-import {client} from "./utils/http";
+import {$api, client} from "./utils/http";
 import io, {Socket} from "socket.io-client"
 import {ClientToServerEvents, ServerToClientEvents} from "./models/socketioEvents";
 
@@ -196,19 +196,6 @@ const App: FC<PropsWithChildren> = ({ children }) => {
             setProgress([...useOpmlImport.getState().progress, true])
         })
     }, [socket])
-
-    useEffect(() => {
-        if (config?.basicAuth||config?.oidcConfigured||config?.reverseProxy){
-            client.GET("/api/v1/users/{username}", {
-                params: {
-                    path: {
-                        username: "me"
-                    }
-                }
-            }).then((c)=>useCommon.getState().setLoggedInUser(c.data!))
-                .catch(() => enqueueSnackbar(t('not-admin'), { variant: 'error' }))
-        }
-    }, []);
 
     const getNotifications = () => {
         client.GET("/api/v1/notifications/unread")

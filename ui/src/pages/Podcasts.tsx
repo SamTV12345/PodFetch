@@ -61,6 +61,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
 
     const setTags = useCommon(state=>state.setPodcastTags)
 
+
     const memorizedSelection = useMemo(() => {
         return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
     }, [filters])

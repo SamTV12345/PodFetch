@@ -16,16 +16,14 @@ pub fn add_basic_auth_headers_conditionally(
     url: String,
     header_map: &mut reqwest::header::HeaderMap,
 ) {
-    if url.contains('@') {
-        if let Some(captures) = BASIC_AUTH_COND_REGEX.captures(&url) {
-            if let Some(auth) = captures.get(1) {
+    if url.contains('@')
+        && let Some(captures) = BASIC_AUTH_COND_REGEX.captures(&url)
+            && let Some(auth) = captures.get(1) {
                 let b64_auth = general_purpose::STANDARD.encode(auth.as_str());
                 let mut bearer = "Basic ".to_owned();
                 bearer.push_str(&b64_auth);
                 header_map.append("Authorization", bearer.parse().unwrap());
             }
-        }
-    }
 }
 
 #[cfg(test)]

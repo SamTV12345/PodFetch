@@ -1308,6 +1308,7 @@ export interface components {
             explicitConsent: boolean;
             /** Format: int32 */
             id: number;
+            readOnly: boolean;
             role: string;
             username: string;
         };

@@ -123,8 +123,8 @@ impl DownloadService {
             )?;
         }
 
-        if let Some(p) = PathBuf::from(&paths.filename).parent() {
-            if !FileHandleWrapper::path_exists(
+        if let Some(p) = PathBuf::from(&paths.filename).parent()
+            && !FileHandleWrapper::path_exists(
                 p.to_str().unwrap(),
                 FileRequest::Directory,
                 &ENVIRONMENT_SERVICE.default_file_handler,
@@ -134,7 +134,6 @@ impl DownloadService {
                     &ENVIRONMENT_SERVICE.default_file_handler,
                 )?;
             }
-        }
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
@@ -278,11 +277,10 @@ impl DownloadService {
             )
         }
 
-        if tag.artist().is_none() {
-            if let Some(author) = &podcast.author {
+        if tag.artist().is_none()
+            && let Some(author) = &podcast.author {
                 tag.set_artist(author);
             }
-        }
 
         if tag.album().is_none() {
             tag.set_album(&podcast.name);
@@ -290,11 +288,10 @@ impl DownloadService {
 
         tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
 
-        if tag.genres().is_none() {
-            if let Some(keywords) = &podcast.keywords {
+        if tag.genres().is_none()
+            && let Some(keywords) = &podcast.keywords {
                 tag.set_genre(keywords);
             }
-        }
 
         if tag.clone().comments().next().is_none() {
             tag.add_frame(id3::frame::Comment {
@@ -309,11 +306,10 @@ impl DownloadService {
             &podcast_episode.date_of_recording,
         );
 
-        if tag.track().is_none() {
-            if let Ok(track_number) = track_number {
+        if tag.track().is_none()
+            && let Ok(track_number) = track_number {
                 tag.set_track(track_number as u32);
             }
-        }
 
         let write_succesful: Result<(), CustomError> = tag
             .write_to_path(&paths.filename, Version::Id3v24)

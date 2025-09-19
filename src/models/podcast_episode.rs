@@ -228,7 +228,9 @@ impl PodcastEpisode {
             value: uuid::Uuid::new_v4().to_string(),
             ..Default::default()
         };
-        let inserted_podcast = insert_into(podcast_episodes)
+        
+
+        insert_into(podcast_episodes)
             .values((
                 total_time.eq(duration),
                 podcast_id.eq(podcast.id),
@@ -241,9 +243,7 @@ impl PodcastEpisode {
                 description.eq(opt_or_empty_string(item.description)),
             ))
             .get_result::<PodcastEpisode>(&mut get_connection())
-            .expect("Error inserting podcast episode");
-
-        inserted_podcast
+            .expect("Error inserting podcast episode")
     }
 
     pub fn get_podcast_episodes_of_podcast(
@@ -292,15 +292,14 @@ impl PodcastEpisode {
             podcast_query = podcast_query.filter(date_of_recording.lt(last_id));
         }
 
-        if let Some(only_unlistened) = &only_unlistened {
-            if *only_unlistened {
+        if let Some(only_unlistened) = &only_unlistened
+            && *only_unlistened {
                 podcast_query = podcast_query.filter(
                     ph1.field(phistory_position)
                         .is_null()
                         .or(ph1.field(phistory_total).ne(ph1.field(phistory_position))),
                 );
             }
-        }
 
         podcast_query
             .load::<(

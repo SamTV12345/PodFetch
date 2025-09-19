@@ -103,8 +103,8 @@ fn handle_gpodder_basic_auth(
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
-    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
-        if admin_username == username {
+    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
+        && admin_username == username {
             return Err(CustomErrorInner::Conflict(
                 "The user you are trying to login is equal to the admin user. Please\
                  use another user to login."
@@ -113,7 +113,6 @@ fn handle_gpodder_basic_auth(
             )
             .into());
         }
-    }
 
     let user = User::find_by_username(username)?;
     match user.password {

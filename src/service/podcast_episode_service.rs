@@ -162,8 +162,7 @@ impl PodcastEpisodeService {
                                     let result_unwrapped = result.unwrap();
 
                                     if let Some(result_unwrapped_non_opt) = result_unwrapped.clone()
-                                    {
-                                        if result_unwrapped_non_opt.clone().podcast_id != podcast.id
+                                        && result_unwrapped_non_opt.clone().podcast_id != podcast.id
                                         {
                                             let inserted_episode =
                                                 PodcastEpisode::insert_podcast_episodes(
@@ -174,7 +173,6 @@ impl PodcastEpisodeService {
                                                 );
                                             podcast_inserted.push(inserted_episode);
                                         }
-                                    }
 
                                     if result_unwrapped.is_none() {
                                         // Insert new podcast episode
@@ -257,15 +255,12 @@ impl PodcastEpisodeService {
     }
 
     fn extract_itunes_url_if_present(item: &Item) -> Option<String> {
-        if let Some(itunes_data) = item.extensions.get(ITUNES) {
-            if let Some(image_url_extracted) = itunes_data.get("image") {
-                if let Some(i_val) = image_url_extracted.first() {
-                    if let Some(image_attr) = i_val.attrs.get("href") {
+        if let Some(itunes_data) = item.extensions.get(ITUNES)
+            && let Some(image_url_extracted) = itunes_data.get("image")
+                && let Some(i_val) = image_url_extracted.first()
+                    && let Some(image_attr) = i_val.attrs.get("href") {
                         return Some(image_attr.clone());
                     }
-                }
-            }
-        }
         None
     }
 

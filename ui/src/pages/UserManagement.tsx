@@ -7,8 +7,10 @@ import {Controller, useForm} from "react-hook-form";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {v4} from "uuid";
 import {enqueueSnackbar} from "notistack";
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
 import {components} from "../../schema";
+import {useQueryClient} from "@tanstack/react-query";
+import {APIError} from "../utils/ErrorDefinition";
 
 type UserManagementPageProps = {
 
@@ -17,37 +19,59 @@ type UserManagementPageProps = {
 
 export const UserManagementPage: FC<UserManagementPageProps> = () => {
     const {t} = useTranslation()
-    const loggedInUser = useCommon(state => state.loggedInUser)
-
+    const queryClient = useQueryClient()
+    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+        params: {
+            path: {
+                username: 'me'
+            }
+        },
+    })
+    const updateProfile = $api.useMutation('put', '/api/v1/users/{username}')
     const {control, handleSubmit, setValue} = useForm<components["schemas"]["UserCoreUpdateModel"]>({
         defaultValues: {
             username: '',
             apiKey: ''
         }})
 
+
     useEffect(() => {
-        if (loggedInUser) {
-            setValue('username', loggedInUser.username)
+        if (data && data.username) {
+            setValue('username', data.username)
         }
-    }, [loggedInUser])
+    }, [data])
 
     const update_settings = (data: components["schemas"]["UserCoreUpdateModel"]) => {
         if (data.password === '') {
             delete data.password
         }
-        client.PUT("/api/v1/users/{username}", {
+
+        updateProfile.mutateAsync({
+            body: data,
             params: {
                 path: {
-                    username: loggedInUser!.username
+                    username: data!.username
                 }
             },
-            body: data
-        }).then((resp)=>{
-            if (!resp.error) {
-                useCommon.getState().setLoggedInUser(resp.data!)
-                enqueueSnackbar(t('user-settings-updated'), {variant: 'success'})
+        }).then(()=>{
+            queryClient.setQueryData(['get', '/api/v1/users/{username}'], (oldData: any) => {
+                return {
+                    ...oldData,
+                    ...data
+                }
+            })
+        })
+            .catch(e=>{
+            if (e instanceof APIError) {
+                enqueueSnackbar(t(e.details?.errorCode, e.details.arguments), {variant: 'error'})
+            } else {
+                enqueueSnackbar(e.message, {variant: 'error'})
             }
         })
+    }
+
+    if (isLoading  || !data) {
+        return <div>{t('loading')}...</div>
     }
 
     return (
@@ -60,7 +84,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                htmlFor="username">{t('username')}</label>
                         <Controller name="username" control={control}
                                     render={({field: {name, onChange, value}}) => (
-                                        <CustomInput id="username" name={name}
+                                        <CustomInput id="username" readOnly={data.readOnly} name={name}
                                                      onChange={onChange}
                                                      value={value}/>
                                     )}/>
@@ -68,7 +92,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                htmlFor="password">{t('password')}</label>
                         <Controller name="password" control={control}
                                     render={({field: {name, onChange, value}}) => (
-                                        <CustomInput id="password" name={name}
+                                        <CustomInput id="password" name={name}  readOnly={data.readOnly}
                                                      onChange={onChange}
                                                      value={value ?? ""}/>
                                     )}/>
@@ -78,18 +102,16 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                     render={({field: {name, onChange, value}}) => (
                                         <div className="block relative">
                                             <CustomInput disabled={true} className="w-full" id="apiKey" name={name}
-                                                     onChange={onChange}
+                                                     onChange={onChange} readOnly={data.readOnly}
                                                      value={value ?? ""}/>
-                                            <button type="button" className="material-symbols-outlined absolute right-2 top-1.5 text-(--fg-color)" onClick={()=>{
+                                            <button disabled={data.readOnly} type="button" className="material-symbols-outlined absolute right-2 top-1.5 text-(--fg-color)" onClick={()=>{
                                                 setValue("apiKey", v4().replace(/-/g, ''))
                                             }}>cached</button>
                                         </div>
                                     )}/>
                     </div>
 
-                    <CustomButtonPrimary type="submit" className="float-right" onClick={() => {
-
-                    }}>{t('save')}</CustomButtonPrimary>
+                    <CustomButtonPrimary disabled={data.readOnly} type="submit" className="float-right">{t('save')}</CustomButtonPrimary>
                 </form>
             </div>
         </div>

@@ -193,5 +193,9 @@
   "add": "Hinzufügen",
   "tag_one": "Tag",
   "tag_other": "Tags",
-  "unplayed": "Ungehört"
+  "unplayed": "Ungehört",
+
+
+
+  "UPDATE_OF_ADMIN_NOT_ALLOWED": "Das Ändern des Administratoraccounts {{username}} ist nicht erlaubt"
 }

@@ -4,6 +4,7 @@ import { CustomDropdownMenu } from './CustomDropdownMenu'
 import { MenuItem } from './CustomDropdownMenu'
 import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
+import {$api} from "../utils/http";
 
 
 const AccountTrigger = ()=>{
@@ -15,9 +16,18 @@ const AccountTrigger = ()=>{
 export const UserMenu: FC = () => {
     const config = useCommon(state => state.configModel)
     const configModel = useCommon(state => state.configModel)
-    const loggedInUser = useCommon(state => state.loggedInUser)
+    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+        params: {
+            path: {
+                username: 'me'
+            }
+        },
+    })
 
     const menuItems: Array<MenuItem> = useMemo(()=>{
+        if (isLoading || !data) {
+            return []
+        }
         const menuItems: Array<MenuItem> = [
             {
                 iconName: 'info',
@@ -32,7 +42,7 @@ export const UserMenu: FC = () => {
             path: 'profile'
         })
 
-        if (loggedInUser?.role === 'admin' || !(config?.oidcConfigured && config.basicAuth)) {
+        if (data.role === 'admin' || !(config?.oidcConfigured && config.basicAuth)) {
             menuItems.push({
                 iconName: 'settings',
                 translationKey: 'settings',
@@ -70,7 +80,7 @@ export const UserMenu: FC = () => {
             })
         }
         return menuItems
-    }, [configModel,config, loggedInUser])
+    }, [configModel,config, data])
 
 
     return (
