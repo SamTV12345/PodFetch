@@ -1,5 +1,5 @@
-use base64::engine::general_purpose;
 use base64::Engine;
+use base64::engine::general_purpose;
 use regex::Regex;
 use std::process::exit;
 use std::sync::LazyLock;
@@ -18,12 +18,13 @@ pub fn add_basic_auth_headers_conditionally(
 ) {
     if url.contains('@')
         && let Some(captures) = BASIC_AUTH_COND_REGEX.captures(&url)
-            && let Some(auth) = captures.get(1) {
-                let b64_auth = general_purpose::STANDARD.encode(auth.as_str());
-                let mut bearer = "Basic ".to_owned();
-                bearer.push_str(&b64_auth);
-                header_map.append("Authorization", bearer.parse().unwrap());
-            }
+        && let Some(auth) = captures.get(1)
+    {
+        let b64_auth = general_purpose::STANDARD.encode(auth.as_str());
+        let mut bearer = "Basic ".to_owned();
+        bearer.push_str(&b64_auth);
+        header_map.append("Authorization", bearer.parse().unwrap());
+    }
 }
 
 #[cfg(test)]

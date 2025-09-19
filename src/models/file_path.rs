@@ -1,10 +1,10 @@
+use crate::DBType as DbConnection;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::settings::Setting;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
 use crate::service::path_service::PathService;
 use crate::utils::error::CustomError;
-use crate::DBType as DbConnection;
 
 #[derive(Default, Clone, Debug)]
 pub struct FilenameBuilder {

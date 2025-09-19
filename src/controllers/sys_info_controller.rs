@@ -53,7 +53,7 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::settings::ConfigModel;
 use crate::utils::error::ErrorSeverity::Info;
-use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner, ErrorSeverity};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_io_extra_error};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -167,10 +167,11 @@ pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, CustomError> 
     let digested_password = digest(auth.0.password);
     if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
         && admin_username == &auth.0.username
-            && let Some(admin_password) = &ENVIRONMENT_SERVICE.password
-                && admin_password == &digested_password {
-                    return Ok(StatusCode::OK);
-                }
+        && let Some(admin_password) = &ENVIRONMENT_SERVICE.password
+        && admin_password == &digested_password
+    {
+        return Ok(StatusCode::OK);
+    }
     let db_user = User::find_by_username(&auth.0.username)?;
 
     if db_user.password.is_none() {

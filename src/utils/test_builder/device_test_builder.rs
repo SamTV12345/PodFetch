@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod tests {
     use crate::gpodder::device::dto::device_post::DevicePost;
-    use fake::faker::lorem::en::Word;
     use fake::Fake;
+    use fake::faker::lorem::en::Word;
 
     pub struct DevicePostTestDataBuilder {
         caption: String,

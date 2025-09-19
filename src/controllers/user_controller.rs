@@ -1,4 +1,6 @@
-use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE, STANDARD_USER, STANDARD_USER_ID};
+use crate::constants::inner_constants::{
+    ENVIRONMENT_SERVICE, Role, STANDARD_USER, STANDARD_USER_ID,
+};
 use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
 use axum::extract::Path;
 use axum::{Extension, Json};
@@ -148,7 +150,6 @@ pub async fn update_user(
     if old_username != &username {
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
-
 
     let mut user = User::find_by_username(&username)?;
 

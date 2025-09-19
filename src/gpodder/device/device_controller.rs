@@ -28,8 +28,8 @@ pub async fn post_device(
     Extension(flag): Extension<Session>,
     Json(device_post): Json<DevicePost>,
 ) -> Result<Json<DeviceResponse>, CustomError> {
-    let username = &query.0 .0;
-    let deviceid = trim_from_path(&query.0 .1);
+    let username = &query.0.0;
+    let deviceid = trim_from_path(&query.0.1);
     if &flag.username != username {
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }

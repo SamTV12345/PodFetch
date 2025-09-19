@@ -1,3 +1,4 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
@@ -11,8 +12,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
-use crate::DBType as DbConnection;
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use chrono::{NaiveDateTime, Utc};
 use diesel::query_dsl::methods::DistinctDsl;
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};

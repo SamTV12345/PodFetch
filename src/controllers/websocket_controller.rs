@@ -263,7 +263,7 @@ fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item>
                 .permalink(false)
                 .value(episode.clone().episode_id)
                 .build();
-            
+
             ItemBuilder::default()
                 .guid(Some(guid))
                 .pub_date(Some(episode.clone().date_of_recording))

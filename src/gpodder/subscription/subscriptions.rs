@@ -7,7 +7,7 @@ use crate::utils::time::get_current_timestamp;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
-use opml::{Outline, OPML};
+use opml::{OPML, Outline};
 use serde::Serialize;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;

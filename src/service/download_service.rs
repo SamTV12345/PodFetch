@@ -13,9 +13,9 @@ use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::file_extension_determination::{
-    determine_file_extension, DetermineFileExtensionReturn, FileType,
+    DetermineFileExtensionReturn, FileType, determine_file_extension,
 };
 use crate::utils::http_client::get_async_sync_client;
 use crate::utils::reqwest_client::get_sync_client;
@@ -128,12 +128,13 @@ impl DownloadService {
                 p.to_str().unwrap(),
                 FileRequest::Directory,
                 &ENVIRONMENT_SERVICE.default_file_handler,
-            ) {
-                FileHandleWrapper::create_dir(
-                    p.to_str().unwrap(),
-                    &ENVIRONMENT_SERVICE.default_file_handler,
-                )?;
-            }
+            )
+        {
+            FileHandleWrapper::create_dir(
+                p.to_str().unwrap(),
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
+        }
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
         {
@@ -221,7 +222,7 @@ impl DownloadService {
             Err(err) => {
                 return Err(
                     CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into(),
-                )
+                );
             }
         };
 
@@ -278,9 +279,10 @@ impl DownloadService {
         }
 
         if tag.artist().is_none()
-            && let Some(author) = &podcast.author {
-                tag.set_artist(author);
-            }
+            && let Some(author) = &podcast.author
+        {
+            tag.set_artist(author);
+        }
 
         if tag.album().is_none() {
             tag.set_album(&podcast.name);
@@ -289,9 +291,10 @@ impl DownloadService {
         tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
 
         if tag.genres().is_none()
-            && let Some(keywords) = &podcast.keywords {
-                tag.set_genre(keywords);
-            }
+            && let Some(keywords) = &podcast.keywords
+        {
+            tag.set_genre(keywords);
+        }
 
         if tag.clone().comments().next().is_none() {
             tag.add_frame(id3::frame::Comment {
@@ -307,9 +310,10 @@ impl DownloadService {
         );
 
         if tag.track().is_none()
-            && let Ok(track_number) = track_number {
-                tag.set_track(track_number as u32);
-            }
+            && let Ok(track_number) = track_number
+        {
+            tag.set_track(track_number as u32);
+        }
 
         let write_succesful: Result<(), CustomError> = tag
             .write_to_path(&paths.filename, Version::Id3v24)

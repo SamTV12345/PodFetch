@@ -1,10 +1,11 @@
+use crate::DBType as DbConnection;
 use crate::adapters::file::file_handler::FileHandlerType;
+use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::adapters::persistence::dbconfig::schema::*;
-use crate::adapters::persistence::dbconfig::DBType;
 use crate::constants::inner_constants::{
-    PodcastEpisodeWithFavorited, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE,
+    DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PodcastEpisodeWithFavorited,
 };
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -13,20 +14,19 @@ use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{CustomError, map_db_error};
 use crate::utils::time::opt_or_empty_string;
-use crate::DBType as DbConnection;
 use chrono::{DateTime, Duration, FixedOffset, NaiveDateTime, ParseResult, Utc};
-use diesel::dsl::{max, sql, IsNotNull};
-use diesel::prelude::{Identifiable, Queryable, QueryableByName, Selectable};
-use diesel::query_source::Alias;
-use diesel::sql_types::{Bool, Integer, Nullable, Text, Timestamp};
 use diesel::AsChangeset;
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
+use diesel::dsl::{IsNotNull, max, sql};
+use diesel::prelude::{Identifiable, Queryable, QueryableByName, Selectable};
+use diesel::query_source::Alias;
+use diesel::sql_types::{Bool, Integer, Nullable, Text, Timestamp};
 use diesel::{
-    delete, insert_into, BoolExpressionMethods, JoinOnDsl, NullableExpressionMethods,
-    OptionalExtension, RunQueryDsl, TextExpressionMethods,
+    BoolExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, RunQueryDsl,
+    TextExpressionMethods, delete, insert_into,
 };
 use rss::{Guid, Item};
 use utoipa::ToSchema;
@@ -228,7 +228,6 @@ impl PodcastEpisode {
             value: uuid::Uuid::new_v4().to_string(),
             ..Default::default()
         };
-        
 
         insert_into(podcast_episodes)
             .values((
@@ -293,13 +292,14 @@ impl PodcastEpisode {
         }
 
         if let Some(only_unlistened) = &only_unlistened
-            && *only_unlistened {
-                podcast_query = podcast_query.filter(
-                    ph1.field(phistory_position)
-                        .is_null()
-                        .or(ph1.field(phistory_total).ne(ph1.field(phistory_position))),
-                );
-            }
+            && *only_unlistened
+        {
+            podcast_query = podcast_query.filter(
+                ph1.field(phistory_position)
+                    .is_null()
+                    .or(ph1.field(phistory_total).ne(ph1.field(phistory_position))),
+            );
+        }
 
         podcast_query
             .load::<(

@@ -7,8 +7,8 @@ use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::extract::Path;
 use axum::http::StatusCode;
-use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::CookieJar;
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use sha256::digest;
 
 #[utoipa::path(
@@ -104,15 +104,16 @@ fn handle_gpodder_basic_auth(
     }
 
     if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
-        && admin_username == username {
-            return Err(CustomErrorInner::Conflict(
-                "The user you are trying to login is equal to the admin user. Please\
+        && admin_username == username
+    {
+        return Err(CustomErrorInner::Conflict(
+            "The user you are trying to login is equal to the admin user. Please\
                  use another user to login."
-                    .to_string(),
-                Warning,
-            )
-            .into());
-        }
+                .to_string(),
+            Warning,
+        )
+        .into());
+    }
 
     let user = User::find_by_username(username)?;
     match user.password {

@@ -17,7 +17,7 @@ use crate::utils::time::get_current_timestamp_str;
 use log::error;
 use sha256::digest;
 use std::env::Args;
-use std::io::{stdin, Error, ErrorKind};
+use std::io::{Error, ErrorKind, stdin};
 use std::process::exit;
 
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {

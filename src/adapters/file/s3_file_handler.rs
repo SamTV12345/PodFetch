@@ -1,5 +1,5 @@
 use crate::adapters::file::file_handler::{FileHandler, FileRequest};
-use crate::utils::error::{map_s3_error, CustomError, ErrorSeverity};
+use crate::utils::error::{CustomError, ErrorSeverity, map_s3_error};
 use futures_util::TryFutureExt;
 use std::future::Future;
 use std::pin::Pin;

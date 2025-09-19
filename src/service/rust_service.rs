@@ -15,7 +15,7 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
 use crate::utils::error::ErrorSeverity::{Critical, Error};
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::http_client::get_http_client;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;

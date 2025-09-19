@@ -13,13 +13,13 @@ use axum::body::Body;
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{debug_handler, Extension, Json};
+use axum::{Extension, Json, debug_handler};
 use axum_extra::extract::OptionalQuery;
-use opml::{Outline, OPML};
-use rand::rngs::ThreadRng;
+use opml::{OPML, Outline};
 use rand::Rng;
+use rand::rngs::ThreadRng;
 use rss::Channel;
-use serde_json::{from_str, Value};
+use serde_json::{Value, from_str};
 use std::thread;
 use tokio::task::spawn_blocking;
 
@@ -29,11 +29,10 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use crate::service::file_service::{perform_podcast_variable_replacement, FileService};
+use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
-
 
 #[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -628,7 +627,7 @@ use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
 

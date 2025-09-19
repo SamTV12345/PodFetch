@@ -191,9 +191,10 @@ fn map_url(
                 .unwrap();
                 if ENVIRONMENT_SERVICE.any_auth_enabled
                     && let Some(user) = user
-                        && let Some(key) = &user.api_key {
-                            url.query_pairs_mut().append_pair("apiKey", key);
-                        }
+                    && let Some(key) = &user.api_key
+                {
+                    url.query_pairs_mut().append_pair("apiKey", key);
+                }
                 url.query_pairs_mut()
                     .append_pair("episodeId", &episode.episode_id);
                 url.to_string()

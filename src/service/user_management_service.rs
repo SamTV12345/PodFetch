@@ -1,5 +1,5 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, Role};
 use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithoutPassword};
 use crate::utils::error::ErrorSeverity::{Critical, Debug, Error, Info, Warning};

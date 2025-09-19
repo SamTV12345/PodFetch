@@ -4,7 +4,7 @@ use crate::constants::inner_constants::DEFAULT_SETTINGS;
 use crate::service::environment_service::OidcConfig;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};

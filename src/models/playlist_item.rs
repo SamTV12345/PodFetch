@@ -1,15 +1,15 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::playlist_items;
 use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
+use crate::utils::error::{CustomError, map_db_error};
+use diesel::ExpressionMethods;
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
-use diesel::ExpressionMethods;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
 

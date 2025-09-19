@@ -2,9 +2,9 @@
 pub mod tests {
     use crate::models::podcasts::Podcast;
     use derive_builder::Builder;
-    use fake::faker::lorem::de_de::Word;
     use fake::Fake;
     use fake::Faker;
+    use fake::faker::lorem::de_de::Word;
 
     #[derive(Default, Builder, Debug)]
     #[builder(setter(into), default)]

@@ -1,7 +1,7 @@
 use crate::constants::inner_constants::{COMMON_USER_AGENT, ENVIRONMENT_SERVICE};
+use reqwest::Proxy;
 use reqwest::blocking::ClientBuilder;
 use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::Proxy;
 
 pub fn get_sync_client() -> ClientBuilder {
     let mut res = ClientBuilder::new();
