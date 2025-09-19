@@ -13,6 +13,8 @@
     "preview": "vite preview",
     "build-github": "tsc && vite build --emptyOutDir --outDir ../static",
     "tsc:watch": "tsc --watch --noEmit",
+    "tsc:check": "tsc --noEmit",
+    "test": "vitest",
     "generate:types": "npx openapi-typescript  http://localhost:8000/api-docs/openapi.json -o ./schema.d.ts"
   },
   "dependencies": {
