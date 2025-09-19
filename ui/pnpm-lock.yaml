@@ -105,8 +105,8 @@ importers:
         specifier: ^3.3.0
         version: 3.3.0(oidc-client-ts@3.3.0)(react@19.1.1)
       react-router-dom:
-        specifier: ^7.8.2
-        version: 7.8.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+        specifier: ^7.9.1
+        version: 7.9.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react-waypoint:
         specifier: ^10.3.0
         version: 10.3.0(react@19.1.1)
@@ -2280,15 +2280,15 @@ packages:
       '@types/react':
         optional: true
 
-  react-router-dom@7.8.2:
-    resolution: {integrity: sha512-Z4VM5mKDipal2jQ385H6UBhiiEDlnJPx6jyWsTYoZQdl5TrjxEV2a9yl3Fi60NBJxYzOTGTTHXPi0pdizvTwow==}
+  react-router-dom@7.9.1:
+    resolution: {integrity: sha512-U9WBQssBE9B1vmRjo9qTM7YRzfZ3lUxESIZnsf4VjR/lXYz9MHjvOxHzr/aUm4efpktbVOrF09rL/y4VHa8RMw==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
 
-  react-router@7.8.2:
-    resolution: {integrity: sha512-7M2fR1JbIZ/jFWqelpvSZx+7vd7UlBTfdZqf6OSdF9g6+sfdqJDAWcak6ervbHph200ePlu+7G8LdoiC3ReyAQ==}
+  react-router@7.9.1:
+    resolution: {integrity: sha512-pfAByjcTpX55mqSDGwGnY9vDCpxqBLASg0BMNAuMmpSGESo/TaOUG6BllhAtAkCGx8Rnohik/XtaqiYUJtgW2g==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       react: '>=18'
@@ -4857,13 +4857,13 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.1.13
 
-  react-router-dom@7.8.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+  react-router-dom@7.9.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
-      react-router: 7.8.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      react-router: 7.9.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
 
-  react-router@7.8.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+  react-router@7.9.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       cookie: 1.0.2
       react: 19.1.1
