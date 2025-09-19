@@ -9,6 +9,9 @@ import { Loading } from '../components/Loading'
 import { MainContentPanel } from '../components/MainContentPanel'
 import { Sidebar } from '../components/Sidebar'
 import {configWSUrl} from "../utils/navigationUtils";
+import {QueryClientProvider, QueryClient} from "@tanstack/react-query";
+
+const queryClient = new QueryClient()
 
 export const Root = () => {
     const configModel = useCommon(state => state.configModel)
@@ -57,6 +60,7 @@ export const Root = () => {
 
 
     return (
+        <QueryClientProvider client={queryClient}>
         <App>
             <div className="grid grid-cols-[1fr] md:grid-cols-[18rem_1fr] grid-rows-[1fr_auto]">
                 <Sidebar />
@@ -70,5 +74,6 @@ export const Root = () => {
                 <EpisodeSearchModal />
             </div>
         </App>
+        </QueryClientProvider>
     )
 }

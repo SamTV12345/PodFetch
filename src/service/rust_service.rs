@@ -15,7 +15,7 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
 use crate::utils::error::ErrorSeverity::{Critical, Error};
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::http_client::get_http_client;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
@@ -183,15 +183,14 @@ impl PodcastService {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
                     for podcast_episode in result {
-                        if !podcast_episode.deleted {
-                            if let Err(e) =
+                        if !podcast_episode.deleted
+                            && let Err(e) =
                             PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
                                     podcast_episode,
                                     podcast.clone(),
                                 ){
                                 log::error!("Error downloading podcast episode: {e}");
                             }
-                        }
                     }
                 }
                 Ok(())

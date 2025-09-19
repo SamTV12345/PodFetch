@@ -1,3 +1,4 @@
+use crate::DBType as DbConnection;
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::models::podcast_episode::PodcastEpisode;
@@ -5,7 +6,6 @@ use crate::models::podcasts::Podcast;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
-use crate::DBType as DbConnection;
 
 pub struct PathService {}
 

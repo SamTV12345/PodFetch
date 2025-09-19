@@ -6,11 +6,9 @@ import fr from 'javascript-time-ago/locale/fr'
 import pl from 'javascript-time-ago/locale/pl'
 import es from 'javascript-time-ago/locale/es'
 import i18n from "i18next";
-import useCommon, {PodcastEpisode} from "../store/CommonSlice";
-import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
+import useCommon from "../store/CommonSlice";
 import {Filter} from "../models/Filter";
 import {OrderCriteria} from "../models/Order";
-import {Episode} from "../models/Episode";
 import {components} from "../../schema";
 
 const defaultOptions: IOptions = {
@@ -74,15 +72,15 @@ export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpi
 }
 
 
-export const prependAPIKeyOnAuthEnabled = (url: string)=>{
-    if (useCommon.getState().loggedInUser?.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
+export const prependAPIKeyOnAuthEnabled = (url: string, loggedInUser: components['schemas']['UserWithAPiKey'])=>{
+    if (loggedInUser.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
         if (url.includes('?')) {
             url += '&'
         }
         else {
             url += '?'
         }
-        url += 'apiKey=' + useCommon.getState().loggedInUser?.apiKey
+        url += 'apiKey=' + loggedInUser?.apiKey
     }
     return url
 }
@@ -136,9 +134,4 @@ export const TITLE_DESCENDING:OrderCriteriaSortingType = {
     ascending: false
 }
 
-export const decodeHTMLEntities = (html: string): string => {
-    const textArea = document.createElement('textarea');
-    textArea.innerHTML = html;
-    textArea.remove()
-    return textArea.value;
-}
+

@@ -1,9 +1,9 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
-use diesel::insert_into;
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::Queryable;
+use diesel::insert_into;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, Queryable, Clone, ToSchema)]

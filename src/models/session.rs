@@ -1,8 +1,8 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::sessions;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::{execute_with_conn, DBType as DbConnection};
+use crate::utils::error::{CustomError, map_db_error};
+use crate::{DBType as DbConnection, execute_with_conn};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;

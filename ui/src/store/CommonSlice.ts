@@ -46,8 +46,6 @@ export type PodcastEpisode = {
 // Define a type for the slice state
 interface CommonProps {
     selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],
-    loggedInUser: components["schemas"]["UserWithAPiKey"]|undefined,
-    setLoggedInUser: (loggedInUser: components["schemas"]["UserWithAPiKey"]) => void,
     sidebarCollapsed: boolean,
     podcasts:   components["schemas"]["PodcastDto"][],
     searchedPodcasts: AgnosticPodcastDataModel[]|undefined,
@@ -218,8 +216,6 @@ const useCommon = create<CommonProps>((set, get) => ({
     setInfoText: (infoText: string) => set({infoText}),
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => set({podcastAlreadyPlayed}),
     setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed) => set({podcastEpisodeAlreadyPlayed}),
-    setLoggedInUser: (loggedInUser: components["schemas"]["UserWithoutPassword"]) => set({loggedInUser}),
-    loggedInUser: undefined,
     tags: [],
     setPodcastTags: (t)=>set({tags: t}),
     headers:{

@@ -10,7 +10,8 @@ import {CustomCheckbox} from "./CustomCheckbox";
 import {LuTags} from "react-icons/lu";
 import {useTranslation} from "react-i18next";
 import {components} from "../../schema";
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
+import {Loading} from "./Loading";
 
 type PodcastCardProps = {
     podcast: components["schemas"]["PodcastDto"]
@@ -33,6 +34,19 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
     }
     const {t} = useTranslation()
     const [newTag, setNewTag] = useState<string>('')
+    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+        params: {
+            path: {
+                username: 'me'
+            }
+        },
+    })
+
+
+    if (isLoading ||!data) {
+        return <Loading/>
+    }
+
 
     return (
         <Context.Root modal={true} onOpenChange={()=>{
@@ -43,7 +57,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                     <div className="relative mb-2">
                         <img
                             className={`rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,var(--shadow-opacity))] ${!podcast.active ? 'opacity-20' : ''}`}
-                            src={prependAPIKeyOnAuthEnabled(podcast.image_url)} alt=""/>
+                            src={prependAPIKeyOnAuthEnabled(podcast.image_url, data)} alt=""/>
 
                         <span ref={likeButton}
                               className={`material-symbols-outlined filled absolute top-2 right-2 h-6 w-6 filled ${podcast.favorites ? 'text-rose-700 hover:text-rose-600' : 'text-stone-200 hover:text-stone-100'}`}

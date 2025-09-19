@@ -14,8 +14,9 @@ import 'material-symbols/outlined.css'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {ErrorIcon} from "../icons/ErrorIcon";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
-import { client } from '../utils/http'
+import {$api, client} from '../utils/http'
 import {EditableHeading} from "../components/EditableHeading";
+import {Loading} from "../components/Loading";
 
 export const PodcastDetailPage = () => {
     const configModel = useCommon(state => state.configModel)
@@ -30,7 +31,13 @@ export const PodcastDetailPage = () => {
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const [openSettingsMenu, setOpenSettingsMenu] = useState<boolean>(false)
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
-    const loggedInUser = useCommon(state => state.loggedInUser)
+    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+        params: {
+            path: {
+                username: 'me'
+            }
+        },
+    })
 
     useEffect(() => {
         if (params && !isNaN(parseFloat(params.id as string))) {
@@ -111,6 +118,10 @@ export const PodcastDetailPage = () => {
         </div>
     }
 
+    if (isLoading ||!data) {
+        return <Loading/>
+    }
+
     return (
         <Fragment key={'detail'}>
             <div className="max-w-4xl">
@@ -131,7 +142,7 @@ export const PodcastDetailPage = () => {
                         xs:col-start-1 xs:col-end-2 row-start-3 row-end-4
                         lg:col-start-1 lg:col-end-2 lg:row-start-2 lg:row-end-4
                         w-full xs:w-24 md:w-32 lg:w-40 rounded-xl
-                    " src={prependAPIKeyOnAuthEnabled(currentPodcast.image_url)} alt=""/>
+                    " src={prependAPIKeyOnAuthEnabled(currentPodcast.image_url, data)} alt=""/>
 
                     {/* Title and refresh icon */}
                     <div className="
@@ -142,7 +153,7 @@ export const PodcastDetailPage = () => {
                         self-start xs:self-end
                     ">
 
-                        <EditableHeading initialText={currentPodcast.name} allowedToEdit={loggedInUser?.role == "admin"}></EditableHeading>
+                        <EditableHeading initialText={currentPodcast.name} allowedToEdit={data.role == "admin"}></EditableHeading>
 
                         <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
@@ -180,11 +191,11 @@ export const PodcastDetailPage = () => {
 
                         <span className="grid grid-cols-2 md:grid-cols-3">
                         <button className="flex gap-4" rel="noopener noreferrer"
-                                onClick={() => window.open(prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id))}>
+                                onClick={() => window.open(prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id, data))}>
                             <a rel="noopener noreferrer"
                                className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                                target="_blank"
-                               href={prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id)}>rss_feed</a>
+                               href={prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id, data)}>rss_feed</a>
                             <span className="text-(--fg-color)">PodFetch</span>
                         </button>
 

@@ -42,12 +42,12 @@ fn retrieve_podcast_or_podcast_episode(
                 ));
             }
 
-            if let Some(image) = &podcast_episode.file_image_path {
-                if image.eq(path) {
-                    return Ok(PodcastOrPodcastEpisodeResource::PodcastEpisode(
-                        podcast_episode,
-                    ));
-                }
+            if let Some(image) = &podcast_episode.file_image_path
+                && image.eq(path)
+            {
+                return Ok(PodcastOrPodcastEpisodeResource::PodcastEpisode(
+                    podcast_episode,
+                ));
             }
 
             Ok(PodcastOrPodcastEpisodeResource::PodcastEpisode(
@@ -77,7 +77,7 @@ fn check_auth(
                         "No query parameters found".to_string(),
                         Info,
                     )
-                    .into())
+                    .into());
                 }
             };
 

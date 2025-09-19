@@ -3,7 +3,8 @@ use axum::response::{IntoResponse, Response};
 use log::{debug, error, info, warn};
 use s3::error::S3Error;
 use std::backtrace::Backtrace;
-use std::convert::Infallible;
+use std::collections::HashMap;
+use std::convert::{Infallible, Into};
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
@@ -13,6 +14,68 @@ pub struct CustomError {
     pub inner: CustomErrorInner,
     pub backtrace: Box<Backtrace>,
     pub error_severity: ErrorSeverity,
+}
+
+pub struct ApiError {
+    pub status: StatusCode,
+    pub value: ApiErrorValue,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiErrorValue {
+    pub error_code: String,
+    pub arguments: HashMap<String, String>,
+}
+
+impl ApiError {
+    pub fn updating_admin_not_allowed(username: &str) -> Self {
+        let mut args = HashMap::new();
+        args.insert("username".into(), username.into());
+        ApiError {
+            value: ApiErrorValue {
+                error_code: "UPDATE_OF_ADMIN_NOT_ALLOWED".into(),
+                arguments: args.clone(),
+            },
+            status: StatusCode::BAD_REQUEST,
+        }
+    }
+}
+
+pub enum ErrorType {
+    CustomErrorType(CustomError),
+    ApiErrorType(ApiError),
+}
+
+impl IntoResponse for ErrorType {
+    fn into_response(self) -> Response {
+        match self {
+            ErrorType::CustomErrorType(ce) => ce.into_response(),
+            ErrorType::ApiErrorType(ae) => {
+                let body = serde_json::to_string(&ae.value)
+                    .unwrap_or_else(|_| "{\"error\":\"Serialization error\"}".to_string());
+                (ae.status, body).into_response()
+            }
+        }
+    }
+}
+
+impl From<CustomError> for ErrorType {
+    fn from(value: CustomError) -> Self {
+        ErrorType::CustomErrorType(value)
+    }
+}
+
+impl From<CustomErrorInner> for ErrorType {
+    fn from(value: CustomErrorInner) -> Self {
+        ErrorType::CustomErrorType(value.into())
+    }
+}
+
+impl From<ApiError> for ErrorType {
+    fn from(value: ApiError) -> Self {
+        ErrorType::ApiErrorType(value)
+    }
 }
 
 impl Display for CustomError {
@@ -318,7 +381,7 @@ struct ErrorResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::error::{map_db_error, map_io_error, CustomErrorInner, ErrorSeverity};
+    use crate::utils::error::{CustomErrorInner, ErrorSeverity, map_db_error, map_io_error};
 
     use diesel::result::Error;
     use serial_test::serial;
@@ -329,9 +392,11 @@ mod tests {
     fn test_map_io_error() {
         let io_error = std::io::Error::new(ErrorKind::NotFound, "File not found");
         let custom_error = map_io_error(io_error, None, ErrorSeverity::Error);
-        assert!(custom_error
-            .to_string()
-            .contains("Requested file was not found"));
+        assert!(
+            custom_error
+                .to_string()
+                .contains("Requested file was not found")
+        );
     }
 
     #[test]

@@ -11,10 +11,10 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{CustomError, map_db_error};
+use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
-use diesel::RunQueryDsl;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

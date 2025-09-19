@@ -1,3 +1,4 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
@@ -7,8 +8,7 @@ use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
 use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};

@@ -1,5 +1,6 @@
 use crate::adapters::persistence::dbconfig::schema::*;
 
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
@@ -7,17 +8,16 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::tag::Tag;
 use crate::utils::do_retry::do_retry;
 use crate::utils::podcast_builder::PodcastExtra;
-use crate::DBType as DbConnection;
-use diesel::prelude::{Identifiable, Queryable, QueryableByName, Selectable};
-use diesel::sql_types::{Bool, Integer, Nullable, Text};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
+use diesel::prelude::{Identifiable, Queryable, QueryableByName, Selectable};
+use diesel::sql_types::{Bool, Integer, Nullable, Text};
 use diesel::{
-    delete, insert_into, BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl,
+    BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl, delete, insert_into,
 };
 
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 
 #[derive(
     Queryable, Identifiable, QueryableByName, Selectable, Debug, PartialEq, Clone, Default,

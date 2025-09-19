@@ -18,14 +18,14 @@ use crate::service::telegram_api::send_new_episode_notification;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
 use crate::utils::error::{
-    map_db_error, map_reqwest_error, CustomError, CustomErrorInner, ErrorSeverity,
+    CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_reqwest_error,
 };
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
 use regex::Regex;
-use reqwest::header::{HeaderMap, ACCEPT};
+use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 use std::io::Error;
@@ -162,18 +162,16 @@ impl PodcastEpisodeService {
                                     let result_unwrapped = result.unwrap();
 
                                     if let Some(result_unwrapped_non_opt) = result_unwrapped.clone()
+                                        && result_unwrapped_non_opt.clone().podcast_id != podcast.id
                                     {
-                                        if result_unwrapped_non_opt.clone().podcast_id != podcast.id
-                                        {
-                                            let inserted_episode =
-                                                PodcastEpisode::insert_podcast_episodes(
-                                                    podcast.clone(),
-                                                    item.clone(),
-                                                    Some(result_unwrapped_non_opt.image_url),
-                                                    duration_episode as i32,
-                                                );
-                                            podcast_inserted.push(inserted_episode);
-                                        }
+                                        let inserted_episode =
+                                            PodcastEpisode::insert_podcast_episodes(
+                                                podcast.clone(),
+                                                item.clone(),
+                                                Some(result_unwrapped_non_opt.image_url),
+                                                duration_episode as i32,
+                                            );
+                                        podcast_inserted.push(inserted_episode);
                                     }
 
                                     if result_unwrapped.is_none() {
@@ -257,14 +255,12 @@ impl PodcastEpisodeService {
     }
 
     fn extract_itunes_url_if_present(item: &Item) -> Option<String> {
-        if let Some(itunes_data) = item.extensions.get(ITUNES) {
-            if let Some(image_url_extracted) = itunes_data.get("image") {
-                if let Some(i_val) = image_url_extracted.first() {
-                    if let Some(image_attr) = i_val.attrs.get("href") {
-                        return Some(image_attr.clone());
-                    }
-                }
-            }
+        if let Some(itunes_data) = item.extensions.get(ITUNES)
+            && let Some(image_url_extracted) = itunes_data.get("image")
+            && let Some(i_val) = image_url_extracted.first()
+            && let Some(image_attr) = i_val.attrs.get("href")
+        {
+            return Some(image_attr.clone());
         }
         None
     }

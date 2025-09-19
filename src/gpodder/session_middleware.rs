@@ -4,7 +4,7 @@ use axum_extra::extract::cookie::CookieJar;
 use std::convert::Infallible;
 
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use axum::extract::Request;
 use axum::middleware::Next;
 use axum::response::IntoResponse;

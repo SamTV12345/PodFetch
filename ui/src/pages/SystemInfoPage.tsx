@@ -7,7 +7,7 @@ import { Heading3 } from '../components/Heading3'
 import { Loading } from '../components/Loading'
 import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
 import {components} from "../../schema";
 
 type VersionInfoModel = {
@@ -23,6 +23,13 @@ export const SystemInfoPage: FC = () => {
     const configModel = useCommon(state => state.configModel)
     const [systemInfo, setSystemInfo] = useState<components["schemas"]["SysExtraInfo"]>()
     const [versionInfo, setVersionInfo] = useState<VersionInfoModel>()
+    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+        params: {
+            path: {
+                username: 'me'
+            }
+        },
+    })
     const { t } = useTranslation()
 
     const gigaByte = Math.pow(10,9)
@@ -65,6 +72,10 @@ export const SystemInfoPage: FC = () => {
         else if (systemInfo.podcast_directory < gigaByte) {
             return (systemInfo.podcast_directory / megaByte).toFixed(2) + ' MB'
         }
+    }
+
+    if (isLoading ||!data) {
+        return <Loading />
     }
 
 
@@ -135,7 +146,7 @@ export const SystemInfoPage: FC = () => {
 
 
                         <dt className="font-medium text-(--fg-color)">{t('rss-feed')}</dt>
-                        <dd className="text-(--fg-secondary-color)"><a className="text-(--accent-color) hover:text-(--accent-color-hover)" href={prependAPIKeyOnAuthEnabled(configModel!.rssFeed)} target="_blank" rel="noopener noreferrer">{prependAPIKeyOnAuthEnabled(configModel!.rssFeed)}</a></dd>
+                        <dd className="text-(--fg-secondary-color)"><a className="text-(--accent-color) hover:text-(--accent-color-hover)" href={prependAPIKeyOnAuthEnabled(configModel!.rssFeed, data)} target="_blank" rel="noopener noreferrer">{prependAPIKeyOnAuthEnabled(configModel!.rssFeed, data)}</a></dd>
 
                         {versionInfo && (
                             <>

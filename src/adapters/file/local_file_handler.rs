@@ -1,5 +1,5 @@
 use crate::adapters::file::file_handler::{FileHandler, FileRequest};
-use crate::utils::error::{map_io_error, CustomError, ErrorSeverity};
+use crate::utils::error::{CustomError, ErrorSeverity, map_io_error};
 use std::fs::File;
 use std::future::Future;
 use std::io;

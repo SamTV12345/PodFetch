@@ -5,7 +5,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use diesel::{
     AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl,
 };

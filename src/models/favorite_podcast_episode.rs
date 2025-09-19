@@ -2,7 +2,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes;
 use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel::{Insertable, OptionalExtension, Queryable, QueryableByName, RunQueryDsl};

@@ -2,7 +2,6 @@ pub mod db;
 #[path = "schemas/sqlite/schema.rs"]
 pub mod schema;
 
-
 #[derive(diesel::MultiConnection)]
 pub enum DBType {
     #[cfg(feature = "postgresql")]
@@ -33,11 +32,11 @@ macro_rules! execute_with_conn {
         let _ = match conn.deref_mut() {
             #[cfg(feature = "sqlite")]
             $crate::adapters::persistence::dbconfig::DBType::Sqlite(conn) => {
-                return $diesel_func(conn)
+                return $diesel_func(conn);
             }
             #[cfg(feature = "postgresql")]
             $crate::adapters::persistence::dbconfig::DBType::Postgresql(conn) => {
-                return $diesel_func(conn)
+                return $diesel_func(conn);
             }
         };
     }};

@@ -113,6 +113,7 @@ pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
 pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 
 pub const STANDARD_USER: &str = "user123";
+pub const STANDARD_USER_ID: i32 = 9999;
 
 pub const PODCAST_FILENAME: &str = "podcast";
 pub const PODCAST_IMAGENAME: &str = "image";

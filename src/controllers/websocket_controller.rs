@@ -111,7 +111,7 @@ pub async fn get_rss_feed(
 }
 
 fn add_api_key_to_url(url: String, api_key: &Option<String>) -> String {
-    if let Some(ref api_key) = api_key {
+    if let Some(api_key) = &api_key {
         if url.contains('?') {
             return format!("{url}&apiKey={api_key}");
         }
@@ -263,15 +263,15 @@ fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item>
                 .permalink(false)
                 .value(episode.clone().episode_id)
                 .build();
-            let item = ItemBuilder::default()
+
+            ItemBuilder::default()
                 .guid(Some(guid))
                 .pub_date(Some(episode.clone().date_of_recording))
                 .title(Some(episode.clone().name))
                 .description(Some(episode.clone().description))
                 .enclosure(Some(enclosure))
                 .itunes_ext(itunes_extension)
-                .build();
-            item
+                .build()
         })
         .collect::<Vec<Item>>()
 }

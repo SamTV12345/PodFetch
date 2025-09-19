@@ -1,6 +1,6 @@
 use crate::adapters::api::controllers::routes::global_routes;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
@@ -26,20 +26,20 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::middleware::from_fn;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
-use axum::Router;
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
 use diesel_migrations::MigrationHarness;
 use log::info;
-use maud::{html, Markup};
+use maud::{Markup, html};
 use r2d2::Pool;
-use socketioxide::extract::SocketRef;
 use socketioxide::SocketIoBuilder;
+use socketioxide::extract::SocketRef;
 use std::ops::DerefMut;
 use std::process::exit;
 use std::sync::OnceLock;
@@ -55,9 +55,9 @@ use utoipa_scalar::Servable as UtoipaServable;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub type DbPool = Pool<ConnectionManager<DBType>>;
+use crate::EmbeddedMigrations;
 use crate::embed_migrations;
 use crate::utils::error::ErrorSeverity::Warning;
-use crate::EmbeddedMigrations;
 
 import_database_config!();
 
@@ -167,7 +167,9 @@ pub fn check_server_config() {
     if ENVIRONMENT_SERVICE.http_basic
         && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
     {
-        eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
+        eprintln!(
+            "BASIC_AUTH activated but no username or password set. Please set username and password in the .env file."
+        );
         exit(1);
     }
 
@@ -176,12 +178,16 @@ pub fn check_server_config() {
             || ENVIRONMENT_SERVICE.oidc_configured
             || ENVIRONMENT_SERVICE.reverse_proxy)
     {
-        eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
+        eprintln!(
+            "GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file."
+        );
         exit(1);
     }
 
     if check_if_multiple_auth_is_configured() {
-        eprintln!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
+        eprintln!(
+            "You cannot have oidc and basic auth enabled at the same time. Please disable one of them."
+        );
         exit(1);
     }
 }
@@ -295,7 +301,7 @@ pub fn run_migrations() {
 
     match conn {
         #[cfg(feature = "postgresql")]
-        DBType::Postgresql(ref mut conn) => {
+        DBType::Postgresql(conn) => {
             let res_migration = conn.run_pending_migrations(POSTGRES_MIGRATIONS);
 
             if res_migration.is_err() {
@@ -303,7 +309,7 @@ pub fn run_migrations() {
             }
         }
         #[cfg(feature = "sqlite")]
-        DBType::Sqlite(ref mut conn) => {
+        DBType::Sqlite(conn) => {
             let res_migration = conn.run_pending_migrations(SQLITE_MIGRATIONS);
 
             if res_migration.is_err() {
@@ -424,9 +430,9 @@ pub mod tests {
     #[cfg(feature = "postgresql")]
     use crate::commands::startup::handle_config_for_server_startup;
     #[cfg(feature = "postgresql")]
-    use testcontainers::runners::AsyncRunner;
-    #[cfg(feature = "postgresql")]
     use testcontainers::ContainerAsync;
+    #[cfg(feature = "postgresql")]
+    use testcontainers::runners::AsyncRunner;
     #[cfg(feature = "postgresql")]
     use testcontainers_modules::postgres::Postgres;
 

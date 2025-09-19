@@ -1,4 +1,4 @@
-use diesel_migrations::{embed_migrations, EmbeddedMigrations};
+use diesel_migrations::{EmbeddedMigrations, embed_migrations};
 
 #[macro_use]
 extern crate serde_derive;
@@ -9,8 +9,8 @@ use std::env;
 use std::env::args;
 use std::process::exit;
 mod controllers;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::command_line_runner::start_command_line;
 use crate::commands::startup::handle_config_for_server_startup;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;

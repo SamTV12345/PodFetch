@@ -6,7 +6,7 @@ import { useDebounce } from '../utils/useDebounce'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import { EmptyResultIcon } from '../icons/EmptyResultIcon'
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
 import {components} from "../../schema";
 
 type EpisodeSearchProps = {
@@ -23,6 +23,15 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
     const [searchName, setSearchName] = useState<string>('')
     const [searchResults, setSearchResults] = useState<components["schemas"]["PodcastEpisodeDto"][]>([])
     const { t } = useTranslation()
+    const {data, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+        params: {
+            path: {
+                username: 'me'
+            }
+        }
+    })
+
+
 
     const performSearch = () => {
         if (searchName.trim().length > 0) {
@@ -42,6 +51,12 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
     }
 
     useDebounce(performSearch, 500, [searchName])
+
+    if (isLoading || !data) {
+        return <div className="grid place-items-center p-10">
+            <Spinner className="w-12 h-12"/>
+        </div>
+    }
 
     return (
         <>
@@ -76,7 +91,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                             <img alt={episode.name} className="
                                 hidden xs:block
                                 rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]
-                            " src={prependAPIKeyOnAuthEnabled(episode.image_url)} />
+                            " src={prependAPIKeyOnAuthEnabled(episode.image_url, data)} />
 
                             {/* Information */}
                             <div className="flex flex-col gap-2">

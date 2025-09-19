@@ -2,7 +2,7 @@ use crate::adapters::persistence::model::device::device_entity::DeviceEntity;
 use crate::application::repositories::device_repository::DeviceRepository;
 use crate::domain::models::device::model::Device;
 use crate::execute_with_conn;
-use crate::utils::error::{map_db_error, CustomError, ErrorSeverity};
+use crate::utils::error::{CustomError, ErrorSeverity, map_db_error};
 use diesel::RunQueryDsl;
 
 pub struct DeviceRepositoryImpl;

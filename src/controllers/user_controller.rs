@@ -1,11 +1,13 @@
-use crate::constants::inner_constants::{Role, ENVIRONMENT_SERVICE};
+use crate::constants::inner_constants::{
+    ENVIRONMENT_SERVICE, Role, STANDARD_USER, STANDARD_USER_ID,
+};
 use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
 use axum::extract::Path;
 use axum::{Extension, Json};
 use reqwest::StatusCode;
 
 use crate::service::user_management_service::UserManagementService;
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use crate::utils::error::{ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType};
 
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -86,13 +88,13 @@ tag="user"
 pub async fn get_user(
     Path(username): Path<String>,
     Extension(requester): Extension<User>,
-) -> Result<Json<UserWithAPiKey>, CustomError> {
+) -> Result<Json<UserWithAPiKey>, ErrorType> {
     if username == requester.username || username == "me" {
         return Ok(Json(User::map_to_api_dto(requester)));
     }
 
     if !requester.is_admin() || requester.username != username {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let user = User::find_by_username(&username.clone())?;
@@ -139,20 +141,17 @@ pub async fn update_user(
     Extension(user): Extension<User>,
     Path(username): Path<String>,
     user_update: Json<UserCoreUpdateModel>,
-) -> Result<Json<UserWithAPiKey>, CustomError> {
+) -> Result<Json<UserWithAPiKey>, ErrorType> {
+    if STANDARD_USER_ID == user.id {
+        return Err(ApiError::updating_admin_not_allowed(STANDARD_USER).into());
+    }
+
     let old_username = &user.clone().username;
     if old_username != &username {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
-    let mut user = User::find_by_username(&username)?;
 
-    if let Some(admin_username) = ENVIRONMENT_SERVICE.username.clone() {
-        if admin_username == user.username {
-            return Err(
-                CustomErrorInner::Conflict("Cannot update admin user".to_string(), Info).into(),
-            );
-        }
-    }
+    let mut user = User::find_by_username(&username)?;
 
     if old_username != &user_update.username && !ENVIRONMENT_SERVICE.oidc_configured {
         // Check if this username is already taken
