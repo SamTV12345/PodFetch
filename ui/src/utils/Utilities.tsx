@@ -6,7 +6,7 @@ import fr from 'javascript-time-ago/locale/fr'
 import pl from 'javascript-time-ago/locale/pl'
 import es from 'javascript-time-ago/locale/es'
 import i18n from "i18next";
-import useCommon, {PodcastEpisode} from "../store/CommonSlice";
+import useCommon from "../store/CommonSlice";
 import {Filter} from "../models/Filter";
 import {OrderCriteria} from "../models/Order";
 import {components} from "../../schema";
@@ -134,9 +134,4 @@ export const TITLE_DESCENDING:OrderCriteriaSortingType = {
     ascending: false
 }
 
-export const decodeHTMLEntities = (html: string): string => {
-    const textArea = document.createElement('textarea');
-    textArea.innerHTML = html;
-    textArea.remove()
-    return textArea.value;
-}
+

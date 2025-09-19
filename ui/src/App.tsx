@@ -4,7 +4,6 @@ import {useTranslation} from 'react-i18next'
 import {enqueueSnackbar} from 'notistack'
 import useCommon from './store/CommonSlice'
 import useOpmlImport from './store/opmlImportSlice'
-import {decodeHTMLEntities} from './utils/Utilities'
 import {
     EpisodeSearchViewLazyLoad,
     HomepageViewLazyLoad,
@@ -36,6 +35,7 @@ import {components} from "../schema";
 import {$api, client} from "./utils/http";
 import io, {Socket} from "socket.io-client"
 import {ClientToServerEvents, ServerToClientEvents} from "./models/socketioEvents";
+import {decodeHTMLEntities} from "./utils/decodingUtilities";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
