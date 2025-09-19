@@ -488,12 +488,3 @@ impl fmt::Display for EpisodeAction {
         }
     }
 }
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum EpisodeActionRaw {
-    New,
-    Download,
-    Play,
-    Delete,
-}

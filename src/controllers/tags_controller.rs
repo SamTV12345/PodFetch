@@ -1,5 +1,4 @@
 use crate::models::color::Color;
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
@@ -17,12 +16,6 @@ pub struct TagCreate {
     pub name: String,
     pub description: Option<String>,
     pub color: Color,
-}
-
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct TagWithPodcast {
-    pub tag: Tag,
-    pub podcast: PodcastDto,
 }
 
 #[utoipa::path(

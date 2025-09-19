@@ -34,15 +34,6 @@ use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use reqwest::header::HeaderMap;
 use tokio::runtime::Runtime;
 
-#[derive(Serialize, Deserialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
-pub struct PodcastSearchModel {
-    order: Option<OrderCriteria>,
-    title: Option<String>,
-    order_option: Option<OrderOption>,
-    favored_only: bool,
-    tag: Option<String>,
-}
 
 #[derive(Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]

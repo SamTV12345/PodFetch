@@ -3,14 +3,6 @@ use crate::models::podcast_dto::PodcastDto;
 use chrono::NaiveDateTime;
 use utoipa::ToSchema;
 
-// this is to insert users to database
-#[derive(Serialize, Deserialize)]
-pub struct NewUser {
-    pub username: String,
-    pub password: String,
-    pub first_name: String,
-}
-
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodcastAddModel {
@@ -30,20 +22,6 @@ pub struct PodcastInsertModel {
 pub struct PodcastWatchedPostModel {
     pub podcast_episode_id: String,
     pub time: i32,
-}
-
-#[derive(Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct PodcastWatchedEpisodeModel {
-    pub id: i32,
-    pub podcast_id: i32,
-    pub episode_id: String,
-    pub url: String,
-    pub name: String,
-    pub image_url: String,
-    pub watched_time: i32,
-    pub date: String,
-    pub total_time: i32,
 }
 
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
