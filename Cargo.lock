@@ -181,9 +181,9 @@ dependencies = [
 
 [[package]]
 name = "aws-region"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73ae4ae7c45238b60af0a3b27ef2fcc7bd5b8fdcd8a6d679919558b40d3eff7a"
+checksum = "8369408b4c9287bbaa8f5030814167b29a4999920ae45670d531d10511c3843e"
 dependencies = [
  "thiserror 1.0.69",
 ]
@@ -2979,9 +2979,9 @@ dependencies = [
 
 [[package]]
 name = "rust-s3"
-version = "0.36.0-beta.2"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc7d6f3a3dd397743e8f344ffc80ea7137aee423983ae25b512e5332ad11362f"
+checksum = "8ea86af11ea9703eaca42a5bbcf7289d271b6e0e3894f7f9c5232aab09fae29a"
 dependencies = [
  "async-trait",
  "aws-creds",
