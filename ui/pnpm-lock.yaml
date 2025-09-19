@@ -12,8 +12,8 @@ importers:
         specifier: ^5.2.7
         version: 5.2.7
       '@fontsource/anton':
-        specifier: ^5.2.6
-        version: 5.2.6
+        specifier: ^5.2.7
+        version: 5.2.7
       '@fontsource/poppins':
         specifier: ^5.2.6
         version: 5.2.6
@@ -597,8 +597,8 @@ packages:
   '@fontsource-variable/inter@5.2.7':
     resolution: {integrity: sha512-1Ej2Y2l+l1VHAu0cNBmOqPdnO7MKhMvaZ4ilL/qcF5lOQw8ieLhp1APcksXIsqO3eAB0+7/nIc/3cSxfEIdj4Q==}
 
-  '@fontsource/anton@5.2.6':
-    resolution: {integrity: sha512-tVKRAqItGgBVk7EkrJoLxpYwFd9PVB+KjA9lAAQKOcW+JCmqcY728182hHoOsIVoKqm210AmX6jL4N0gJ7gSAw==}
+  '@fontsource/anton@5.2.7':
+    resolution: {integrity: sha512-fiPl7Kx0HC50Ws2uRkNC+QLVK8xPFUB9E+IxFdSA6tbNTZWe7HOq8IxYqkERIzsIBvYj6nrU+7uNMUM9vNLxig==}
 
   '@fontsource/poppins@5.2.6':
     resolution: {integrity: sha512-NFr0121+vWCfzLDVvSZOzwAjRUaNj6QHA9gtUh/KHHoWf1Qn23EkwVFs63XZ6UtF5K1b3UNmCx77YEMGgV7BOQ==}
@@ -3398,7 +3398,7 @@ snapshots:
 
   '@fontsource-variable/inter@5.2.7': {}
 
-  '@fontsource/anton@5.2.6': {}
+  '@fontsource/anton@5.2.7': {}
 
   '@fontsource/poppins@5.2.6': {}
 
