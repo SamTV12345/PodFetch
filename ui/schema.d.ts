@@ -1321,6 +1321,14 @@ export interface components {
             role: string;
             username: string;
         };
+        VersionInfo: {
+            ci: string;
+            commit: string;
+            os: string;
+            ref: string;
+            time: string;
+            version: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1386,7 +1394,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["VersionInfo"];
+                };
             };
         };
     };

@@ -2,6 +2,9 @@ import createClient, {Middleware} from "openapi-fetch";
 import createTanstackQueryClient from "openapi-react-query";
 import type {paths} from "../../schema";
 import {APIError} from "./ErrorDefinition";
+import { enqueueSnackbar } from "notistack";
+import i18n from "../language/i18n";
+
 
 export let apiURL: string
 export let uiURL: string
@@ -52,13 +55,15 @@ const authMiddleware: Middleware = {
             if (response.body != null) {
                 const textData = await response.text()
                 if (isJsonString(textData)) {
-                    throw new APIError(JSON.parse(textData))
+                    const e = JSON.parse(textData)
+                    // @ts-ignore
+                    enqueueSnackbar(i18n.t(e.errorCode, e.arguments), {variant: 'error'})
+                    throw new APIError(e)
                 } else {
                     throw new Error("Request failed: " + response.body === null? response.statusText: await response.text());
                 }
             }
         }
-
         return response;
     },
 };

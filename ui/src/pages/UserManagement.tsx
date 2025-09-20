@@ -2,15 +2,12 @@ import {FC, useEffect} from "react";
 import {useTranslation} from "react-i18next";
 import {Heading1} from "../components/Heading1";
 import {CustomInput} from "../components/CustomInput";
-import useCommon from "../store/CommonSlice";
 import {Controller, useForm} from "react-hook-form";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {v4} from "uuid";
-import {enqueueSnackbar} from "notistack";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {useQueryClient} from "@tanstack/react-query";
-import {APIError} from "../utils/ErrorDefinition";
 
 type UserManagementPageProps = {
 
@@ -20,7 +17,7 @@ type UserManagementPageProps = {
 export const UserManagementPage: FC<UserManagementPageProps> = () => {
     const {t} = useTranslation()
     const queryClient = useQueryClient()
-    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+    const user = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
             path: {
                 username: 'me'
@@ -36,10 +33,10 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
 
 
     useEffect(() => {
-        if (data && data.username) {
-            setValue('username', data.username)
+        if (user.data && user.data.username) {
+            setValue('username', user.data.username)
         }
-    }, [data])
+    }, [user])
 
     const update_settings = (data: components["schemas"]["UserCoreUpdateModel"]) => {
         if (data.password === '') {
@@ -61,17 +58,6 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                 }
             })
         })
-            .catch(e=>{
-            if (e instanceof APIError) {
-                enqueueSnackbar(t(e.details?.errorCode, e.details.arguments), {variant: 'error'})
-            } else {
-                enqueueSnackbar(e.message, {variant: 'error'})
-            }
-        })
-    }
-
-    if (isLoading  || !data) {
-        return <div>{t('loading')}...</div>
     }
 
     return (
@@ -84,7 +70,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                htmlFor="username">{t('username')}</label>
                         <Controller name="username" control={control}
                                     render={({field: {name, onChange, value}}) => (
-                                        <CustomInput id="username" readOnly={data.readOnly} name={name}
+                                        <CustomInput id="username" loading={user.isLoading} readOnly={user.data?.readOnly} name={name}
                                                      onChange={onChange}
                                                      value={value}/>
                                     )}/>
@@ -92,7 +78,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                htmlFor="password">{t('password')}</label>
                         <Controller name="password" control={control}
                                     render={({field: {name, onChange, value}}) => (
-                                        <CustomInput id="password" name={name}  readOnly={data.readOnly}
+                                        <CustomInput id="password" loading={user.isLoading} name={name}  readOnly={user.data?.readOnly}
                                                      onChange={onChange}
                                                      value={value ?? ""}/>
                                     )}/>
@@ -101,17 +87,16 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                         <Controller name="apiKey" control={control}
                                     render={({field: {name, onChange, value}}) => (
                                         <div className="block relative">
-                                            <CustomInput disabled={true} className="w-full" id="apiKey" name={name}
-                                                     onChange={onChange} readOnly={data.readOnly}
+                                            <CustomInput disabled={true} loading={user.isLoading} className="w-full" id="apiKey" name={name}
+                                                     onChange={onChange} readOnly={user.data?.readOnly}
                                                      value={value ?? ""}/>
-                                            <button disabled={data.readOnly} type="button" className="material-symbols-outlined absolute right-2 top-1.5 text-(--fg-color)" onClick={()=>{
+                                            <button disabled={user.data?.readOnly} hidden={user.isLoading} type="button" className="material-symbols-outlined absolute right-2 top-1.5 text-(--fg-color)" onClick={()=>{
                                                 setValue("apiKey", v4().replace(/-/g, ''))
                                             }}>cached</button>
                                         </div>
                                     )}/>
                     </div>
-
-                    <CustomButtonPrimary disabled={data.readOnly} type="submit" className="float-right">{t('save')}</CustomButtonPrimary>
+                    <CustomButtonPrimary disabled={user.data?.readOnly || user.isLoading} type="submit" className="float-right">{t('save')}</CustomButtonPrimary>
                 </form>
             </div>
         </div>
