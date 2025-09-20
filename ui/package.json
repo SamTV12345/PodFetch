@@ -18,7 +18,7 @@
     "generate:types": "npx openapi-typescript  http://localhost:8000/api-docs/openapi.json -o ./schema.d.ts"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.2.7",
+    "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/anton": "^5.2.7",
     "@fontsource/poppins": "^5.2.6",
     "@fontsource/roboto": "^5.2.8",
