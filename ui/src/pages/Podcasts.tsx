@@ -21,7 +21,7 @@ import {Heading1} from '../components/Heading1'
 import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -47,9 +47,18 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     const setModalOpen = useModal(state => state.setOpenModal)
     const setFilters = useCommon(state => state.setFilters)
     const setPodcasts = useCommon(state => state.setPodcasts)
-    const tags = useCommon(state=>state.tags)
+
+    const [tagsVal, setTagVal] = useState<Option>(()=>allTags)
+    const memorizedSelection = useMemo(() => {
+        return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
+    }, [filters])
+    const refreshAllPodcasts = $api.useMutation('post', '/api/v1/podcasts/all')
+    const tags = $api.useQuery('get', '/api/v1/tags')
     const mappedTagsOptions = useMemo(() => {
-        const mappedTags = tags.map(tag => {
+        if (tags.isLoading || !tags.data) {
+            return []
+        }
+        const mappedTags = tags.data.map(tag => {
             return {
                 value: tag.id,
                 label: tag.name
@@ -57,23 +66,6 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
         })
         return [...mappedTags, allTags]
     }, [tags])
-    const [tagsVal, setTagVal] = useState<Option>(()=>allTags)
-
-    const setTags = useCommon(state=>state.setPodcastTags)
-
-
-    const memorizedSelection = useMemo(() => {
-        return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
-    }, [filters])
-
-    const refreshAllPodcasts = () => {
-        client.POST("/api/v1/podcasts/all")
-    }
-
-
-    useEffect(() => {
-        client.GET("/api/v1/tags").then(c=>setTags(c.data!))
-    }, []);
 
     const performFilter = () => {
         if (filters === undefined) {
@@ -124,7 +116,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                     <span
                         className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                         onClick={() => {
-                            refreshAllPodcasts()
+                            refreshAllPodcasts.mutate({})
                         }}>refresh</span>
                     <div>
                         <CustomSelect className="bg-mustard-600 text-black" options={mappedTagsOptions} value={tagsVal.value} onChange={(v)=>{
