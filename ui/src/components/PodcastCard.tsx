@@ -12,6 +12,7 @@ import {useTranslation} from "react-i18next";
 import {components} from "../../schema";
 import {$api, client} from "../utils/http";
 import {Loading} from "./Loading";
+import {useQueryClient} from "@tanstack/react-query";
 
 type PodcastCardProps = {
     podcast: components["schemas"]["PodcastDto"]
@@ -20,10 +21,8 @@ type PodcastCardProps = {
 export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
     const likeButton = createRef<HTMLElement>()
     const updateLikePodcast = useCommon(state => state.updateLikePodcast)
-    const tags = useCommon(state=>state.tags)
-    const setTags = useCommon(state=>state.setPodcastTags)
-    const setPodcasts = useCommon(state=>state.setPodcasts)
-    const podcasts = useCommon(state=>state.podcasts)
+    const tags = $api.useQuery('get', '/api/v1/tags')
+    const queryClient = useQueryClient()
     const likePodcast = () => {
         client.PUT("/api/v1/podcasts/favored", {
             body: {
@@ -76,7 +75,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                             className="block font-bold leading-[1.2] mb-2 text-(--fg-color) transition-colors group-hover:text-(--fg-color-hover)">{podcast.name}</span>
                         <span
                             className="block leading-[1.2] text-sm text-(--fg-secondary-color)">{podcast.author}</span>
-                        <span className="flex gap-2 mb-2 text-(--fg-color)"><LuTags className="text-(--fg-secondary-color) text-2xl"/> <span className="self-center mb-2 text-(--fg-color)">{podcast.tags.length}</span> {t('tag', {count: tags.length})}</span>
+                        <span className="flex gap-2 mb-2 text-(--fg-color)"><LuTags className="text-(--fg-secondary-color) text-2xl"/> <span className="self-center mb-2 text-(--fg-color)">{podcast.tags.length}</span> {t('tag', {count: tags.data?.length ?? 0})}</span>
                     </div>
                 </Link>
             </Context.Trigger>
@@ -88,7 +87,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                     <hr className="mt-1 border-[1px] border-(--border-color) mb-2"/>
                     <div className="flex gap-3 flex-col text-(--fg-color)">
                     {
-                     tags.map(t=>{
+                     tags.data?.map(t=>{
                          return <Context.Item key={t.id} onClick={(e)=>{
                              e.preventDefault()
                          }} className="">
@@ -103,18 +102,20 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                                  }
                                              }
                                          }).then(()=>{
-                                             const addedTag = tags.filter(tag=>tag.id === t.id)[0]!
-                                             setPodcasts(podcasts.map(p=>{
-                                                 if (p.id === podcast.id) {
-                                                     const tags = podcast.tags
-                                                     tags.push(addedTag)
-                                                     return {
-                                                         ...p,
-                                                         tags
+                                             const addedTag = tags.data?.filter(tag=>tag.id === t.id)[0]!
+                                             queryClient.setQueryData(['get', '/api/v1/podcasts'], (oldData: components["schemas"]["PodcastDto"][])=> {
+                                                 return oldData.map(p=>{
+                                                     if (p.id === podcast.id) {
+                                                         const tags = [...podcast.tags]
+                                                         tags.push(addedTag)
+                                                         return {
+                                                             ...p,
+                                                             tags
+                                                         }
                                                      }
-                                                 }
-                                                 return p
-                                             }))
+                                                     return p
+                                                 })
+                                             })
                                          })
                                      } else {
                                          client.DELETE("/api/v1/tags/{tag_id}/{podcast_id}", {
@@ -125,7 +126,8 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                                  }
                                              }
                                          }).then(()=>{
-                                             setPodcasts(podcasts.map(p=>{
+                                             queryClient.setQueryData(['get', '/api/v1/podcasts'], (oldData: components["schemas"]["PodcastDto"][])=> {
+                                                 return oldData.map(p=>{
                                                  if (p.id === podcast.id) {
                                                      const tags = podcast.tags.filter(tag=>tag.id !== t.id)
                                                      return {
@@ -134,10 +136,10 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                                      }
                                                  }
                                                  return p
-                                             }))
-                                         })
-                                     }
-                                 }}/>
+                                             })
+                                         })})
+                                        }
+                                    }}/>
                                  <span className="">{t.name}</span>
                              </span>
                          </Context.Item>
@@ -147,7 +149,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
 
                     <span className="relative">
                         <PlusIcon className="absolute right-5 fill-white h-[19px] top-2  -translate-y-1/2 cursor-pointer" onClick={()=>{
-                            if(tags.map(t=>t.name).includes(newTag)||!newTag.trim()) {
+                            if(tags.data?.map(t=>t.name).includes(newTag)||!newTag.trim()) {
                                 return
                             }
 
@@ -158,7 +160,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                 }
                             }).then((resp)=>{
                                 if (resp) {
-                                    setTags([...tags,resp.data!])
+                                    queryClient.invalidateQueries({queryKey: ['get', '/api/v1/tags']})
                                 }
                             })
                         }}/>

@@ -22,6 +22,8 @@ import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
 import {$api, client} from "../utils/http";
+import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
+import {useQueryClient} from "@tanstack/react-query";
 
 interface PodcastsProps {
     onlyFavorites?: boolean
@@ -41,12 +43,12 @@ const allTags: Option = {
 
 export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
     const filters = useCommon(state => state.filters)
-    const podcasts = useCommon(state => state.podcasts)
+    const podcasts = $api.useQuery('get', '/api/v1/podcasts')
     let location = useLocation();
+    const queryClient = useQueryClient()
     const { t } = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
     const setFilters = useCommon(state => state.setFilters)
-    const setPodcasts = useCommon(state => state.setPodcasts)
 
     const [tagsVal, setTagVal] = useState<Option>(()=>allTags)
     const memorizedSelection = useMemo(() => {
@@ -87,7 +89,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                     tag: tag
                 }
             }
-        }).then(v=>setPodcasts(v.data!))
+        }).then(v=>queryClient.setQueryData(['get', '/api/v1/podcasts'], v.data))
     }
 
     useDebounce(() => {
@@ -99,6 +101,18 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
             .then(c => setFilters(c.data || getFiltersDefault()))
             .catch(() => setFilters(getFiltersDefault()))
     }, [location])
+
+
+
+    const podcastsToShow = useMemo(() => {
+        if (podcasts.isLoading || !podcasts.data) {
+            return []
+        }
+        if (onlyFavorites) {
+            return podcasts.data.filter(podcast => podcast.favorites)
+        }
+        return podcasts.data
+    }, [podcasts, onlyFavorites])
 
     return (
         <div>
@@ -150,11 +164,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
 
             {/* Podcast list */}
             <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
-                {!onlyFavorites && podcasts.map((podcast) => {
-                    return <PodcastCard podcast={podcast} key={podcast.id} />
-                })}
-
-                {onlyFavorites && podcasts.filter(podcast => podcast.favorites).map((podcast) => {
+                {podcasts.isLoading? Array.from({length: 5}).map((value, index, array)=><LoadingPodcastCard key={index}/>): podcastsToShow.map((podcast) => {
                     return <PodcastCard podcast={podcast} key={podcast.id} />
                 })}
             </div>

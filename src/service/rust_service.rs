@@ -304,7 +304,7 @@ impl PodcastService {
             .iter()
             .filter(|podcast| {
                 if let Some(tag) = &tag {
-                    return podcast.2.iter().filter(|p| p.name == *tag).count() > 0;
+                    return podcast.2.iter().filter(|p| p.id == *tag).count() > 0;
                 }
                 true
             })
