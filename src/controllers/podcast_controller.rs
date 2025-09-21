@@ -1,6 +1,4 @@
-use crate::constants::inner_constants::{
-    BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
-};
+use crate::constants::inner_constants::{BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -48,17 +46,22 @@ pub struct PodcastSearchModelUtoipa {
 get,
 path="/podcasts/filter",
 responses(
-(status = 200, description = "Gets the user specific filter.",body= Option<Filter>)),
+(status = 200, description = "Gets the user specific filter.",body= Filter)),
 tag="podcasts"
 )]
 pub async fn get_filter(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Filter>, CustomError> {
-    let filter = Filter::get_filter_by_username(&requester.username).await?;
-    match filter {
-        Some(f) => Ok(Json(f)),
-        None => Err(CustomErrorInner::NotFound(ErrorSeverity::Debug).into()),
-    }
+    let default_filter: Filter = Filter {
+        filter: Option::from("PUBLISHEDDATE".to_string()),
+        ascending: true,
+        only_favored: false,
+        title: None,
+        username: "".into(),
+    };
+
+    let filter = Filter::get_filter_by_username(&requester.username).await?.unwrap_or(default_filter);
+    Ok(Json(filter))
 }
 
 #[utoipa::path(
@@ -741,7 +744,7 @@ pub(crate) async fn proxy_podcast(
     put,
     path="/podcasts/{id}/settings",
     responses(
-(status = 200, description = "Updates the settings of a podcast by id")),
+(status = 200, description = "Updates the settings of a podcast by id", body=PodcastSetting)),
     tag="podcasts"
 )]
 pub async fn update_podcast_settings(
@@ -762,7 +765,7 @@ pub async fn update_podcast_settings(
     get,
     path="/podcasts/{id}/settings",
     responses(
-(status = 200, description = "Gets the settings of a podcast by id")),
+(status = 200, description = "Gets the settings of a podcast by id", body=PodcastSetting)),
     tag="podcasts"
 )]
 pub async fn get_podcast_settings(

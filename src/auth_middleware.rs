@@ -101,6 +101,9 @@ impl AuthFilter {
     pub fn extract_basic_auth(auth: &str) -> Result<(String, String), CustomError> {
         let auth = auth.to_string();
         let auth = auth.split(' ').collect::<Vec<&str>>();
+        if auth.len() != 2 || auth[0] != "Basic" {
+            return Err(CustomError::from(CustomErrorInner::Forbidden(Warning)));
+        }
         let auth = auth[1];
         let auth = general_purpose::STANDARD
             .decode(auth)

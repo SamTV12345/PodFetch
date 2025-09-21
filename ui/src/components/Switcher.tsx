@@ -1,4 +1,5 @@
 import React, { FC } from 'react'
+import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
 
 type SwitcherProps = {
     checked?: boolean,
@@ -6,9 +7,15 @@ type SwitcherProps = {
     id?: string,
     onChange: (checked: boolean) => void,
     disabled?: boolean
+    loading?: boolean
 }
 
-export const Switcher: FC<SwitcherProps> = ({ checked, className = '', id, onChange, disabled }) => {
+export const Switcher: FC<SwitcherProps> = ({ checked, className = '', id, onChange, disabled, loading }) => {
+    if (loading) {
+        return (
+            <LoadingSkeletonSpan height="30px" width="50px" loading={true}/>
+        )
+    }
     return (
         <div className={`relative inline-flex items-center cursor-pointer ${className}`} onClick={() => {
             if (disabled) return

@@ -3,15 +3,14 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Waypoint } from 'react-waypoint'
 import { useSnackbar } from 'notistack'
-import {formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
+import {formatTime, removeHTML} from '../utils/Utilities'
 import 'material-symbols/outlined.css'
-import {EpisodesWithOptionalTimeline} from "../models/EpisodesWithOptionalTimeline";
 import useCommon from "../store/CommonSlice";
-import {Episode} from "../models/Episode";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 import {components} from "../../schema";
 import {client} from "../utils/http";
+import {useQueryClient} from "@tanstack/react-query";
 
 type PodcastDetailItemProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
@@ -31,11 +30,11 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
         }
         return Math.round(episode.podcastHistoryItem.position!*100/episode.podcastEpisode.total_time)
     }, [episode.podcastHistoryItem?.position])
-    const addPodcastEpisodes = useCommon(state => state.addPodcastEpisodes)
     const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
     const setInfoModalPodcast = useCommon(state => state.setInfoModalPodcast)
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
+    const queryClient = useQueryClient()
 
     const playedTime = useMemo(()=>{
         if(percentagePlayed === -1){
@@ -206,7 +205,16 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         }
                     })
                         .then((response) => {
-                            addPodcastEpisodes(response.data!)
+                            for (const ep of queryClient.getQueryCache().getAll()) {
+                                if (ep.queryKey[0] == "get" && ep.queryKey[1] == `/api/v1/podcasts/${params.id}/episodes`) {
+                                    queryClient.setQueryData(ep.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
+                                        if (!oldData) {
+                                            return response.data!
+                                        }
+                                        return [...oldData, ...response.data!]
+                                    })
+                                }
+                            }
                         })
                 }} />
             }

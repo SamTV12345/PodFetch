@@ -6,8 +6,7 @@ export const CustomInput: FC<InputHTMLAttributes<HTMLInputElement> &  {
     loading?: boolean
 }> = ({ autoComplete, onBlur, className = '', id, name, onChange, disabled, placeholder, required, type = 'text', value, ...props }) => {
     if (props.loading) {
-        console.log("Loading")
-        return <LoadingSkeletonSpan text={""} loading={props.loading}/>
+        return <LoadingSkeletonSpan height="30px" width="100px" text={""} loading={props.loading}/>
     }
     return (
         <input onBlur={onBlur} autoComplete={autoComplete} disabled={disabled} className={"bg-(--input-bg-color)" +

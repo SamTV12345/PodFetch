@@ -7,15 +7,16 @@ import { Modal } from './Modal'
 import { OpmlAdd } from './OpmlAdd'
 import { ProviderImportComponent } from './ProviderImportComponent'
 import useCommon from "../store/CommonSlice";
+import {$api} from "../utils/http";
 
 export const AddPodcastModal: FC = () => {
     const {t} = useTranslation()
     const [selectedSearchType, setSelectedSearchType] = useState<AddTypes>(AddTypes.ITUNES)
-    const configModel = useCommon(state => state.configModel)
+    const configModel = $api.useQuery('get', '/api/v1/sys/config')
 
     return (
         <Modal onCancel={() => {}} onAccept={() => {}} headerText={t('add-podcast')!} onDelete={() => {}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"}>
-            <AddHeader selectedSearchType={selectedSearchType} setSelectedSearchType={setSelectedSearchType} configModel={configModel} />
+            {configModel.data && <AddHeader selectedSearchType={selectedSearchType} setSelectedSearchType={setSelectedSearchType} configModel={configModel.data} />}
 
             {selectedSearchType !== AddTypes.OPML && selectedSearchType !== AddTypes.FEED &&
                 <ProviderImportComponent selectedSearchType={selectedSearchType} />

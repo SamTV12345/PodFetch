@@ -4,7 +4,6 @@ import {ConfirmModalProps} from "../components/ConfirmModal";
 import {create} from "zustand";
 import {components} from "../../schema";
 import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
-import {addHeader} from "../utils/http";
 import io, {Socket} from "socket.io-client";
 import {ClientToServerEvents, ServerToClientEvents} from "../models/socketioEvents";
 
@@ -47,14 +46,11 @@ export type PodcastEpisode = {
 interface CommonProps {
     selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],
     sidebarCollapsed: boolean,
-    podcasts:   components["schemas"]["PodcastDto"][],
     searchedPodcasts: AgnosticPodcastDataModel[]|undefined,
-    notifications: components["schemas"]["Notification"][],
     infoModalPodcast: components["schemas"]["PodcastEpisodeDto"]|undefined,
     infoModalPodcastOpen: boolean,
     podcastAlreadyPlayed: boolean,
     detailedAudioPlayerOpen: boolean,
-    configModel: components["schemas"]["ConfigModel"]|undefined,
     currentDetailedPodcastId: number|undefined,
     loginData: Partial<LoginData>|undefined,
     confirmModalData: ConfirmModalProps|undefined
@@ -68,22 +64,15 @@ interface CommonProps {
     infoText: string|undefined,
     podcastEpisodeAlreadyPlayed: components["schemas"]["PodcastEpisodeWithHistory"]|undefined,
     setSidebarCollapsed: (sidebarCollapsed: boolean) => void,
-    setPodcasts: (podcasts: components["schemas"]["PodcastDto"][]) => void,
     tags: components["schemas"]["Tag"][],
     setPodcastTags: (t: components["schemas"]["Tag"][])=>void,
-    updateLikePodcast: (id: number) => void,
     setSelectedEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => void,
     setSearchedPodcasts: (searchedPodcasts: AgnosticPodcastDataModel[]) => void,
-    setNotifications: (notifications: components["schemas"]["Notification"][]) => void,
-    removeNotification: (id: number) => void,
     setInfoModalPodcast: (infoModalPodcast: components["schemas"]["PodcastEpisodeDto"]) => void,
     setInfoModalPodcastOpen: (infoModalPodcastOpen: boolean) => void,
     setEpisodeDownloaded: (episode_id: string) => void,
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => void,
-    setConfigModel: (configModel: components["schemas"]["ConfigModel"]) => void,
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => void,
-    addPodcast: (podcast: components["schemas"]["PodcastDto"]) => void,
-    podcastDeleted: (id: number) => void,
     setLoginData: (loginData: Partial<LoginData>) => void,
     setConfirmModalData: (confirmModalData: ConfirmModalProps) => void,
     setSelectedUser: (selectedUser: User) => void,
@@ -92,15 +81,11 @@ interface CommonProps {
     setInvites: (invites: components["schemas"]["Invite"][]) => void,
     setTimeLineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => void,
     addTimelineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => void,
-    addPodcastEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => void,
     setFilters: (filters: components["schemas"]["Filter"]) => void,
     setInfoHeading: (infoHeading: string) => void,
     setInfoText: (infoText: string) => void,
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => void,
     setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: components["schemas"]["PodcastEpisodeWithHistory"]) => void,
-    updatePodcast: (podcast: components["schemas"]["PodcastDto"]) => void,
-    headers: Record<string,string>,
-    setHeaders:(headers: Record<string,string>)=>void,
     isAuthenticated: boolean,
     socketIo: Socket<ServerToClientEvents, ClientToServerEvents> | undefined
 }
@@ -110,11 +95,9 @@ const useCommon = create<CommonProps>((set, get) => ({
     sidebarCollapsed: true,
     podcasts: [],
     searchedPodcasts: undefined,
-    notifications: [],
     infoModalPodcast: undefined,
     infoModalPodcastOpen: false,
     detailedAudioPlayerOpen: false,
-    configModel: undefined,
     currentDetailedPodcastId: undefined,
     loginData: undefined,
     confirmModalData: undefined,
@@ -129,38 +112,8 @@ const useCommon = create<CommonProps>((set, get) => ({
     podcastAlreadyPlayed: false,
     podcastEpisodeAlreadyPlayed: undefined,
     setSidebarCollapsed: (sidebarCollapsed: boolean) => set({sidebarCollapsed}),
-    setPodcasts: (podcasts) => set({podcasts}),
-    updatePodcast: (podcast) => {
-        const podcasts = get().podcasts
-        if(podcasts){
-            set({podcasts: podcasts.map((p) => {
-                    if(p.id === podcast.id) {
-                        return podcast
-                    }
-                    return p
-                })})
-        }
-    },
-    updateLikePodcast: (id: number) => {
-        const podcasts = get().podcasts
-        if(podcasts){
-            set({podcasts: podcasts.map((podcast) => {
-                    if(podcast.id === id) {
-                        podcast.favorites = !podcast.favorites
-                    }
-                    return podcast
-                })})
-        }
-    },
     setSelectedEpisodes: (selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][]) => set({selectedEpisodes}),
     setSearchedPodcasts: (searchedPodcasts) => set({searchedPodcasts}),
-    setNotifications: (notifications) => set({notifications}),
-    removeNotification: (id: number) => {
-        const notifications = get().notifications
-        if(notifications){
-            set({notifications: notifications.filter((notification) => notification.id !== id)})
-        }
-    },
     setInfoModalPodcast: (infoModalPodcast) => set({infoModalPodcast}),
     setInfoModalPodcastOpen: (infoModalPodcastOpen: boolean) => set({infoModalPodcastOpen}),
     setEpisodeDownloaded: (episode_id: string) => {
@@ -175,20 +128,7 @@ const useCommon = create<CommonProps>((set, get) => ({
         }
     },
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => set({detailedAudioPlayerOpen}),
-    setConfigModel: (configModel: components["schemas"]["ConfigModel"]) => {
-        set({configModel, socketIo: io(new URL(configModel.wsUrl).host + "/main", {
-                transports: ['websocket'],
-                path: new URL(configModel.wsUrl).pathname,
-                hostname: new URL(configModel.wsUrl).host,
-            })})
-    },
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => set({currentDetailedPodcastId}),
-    addPodcast: (podcast: components["schemas"]["PodcastDto"]) => {
-        set({podcasts: [...get().podcasts, podcast]})
-    },
-    podcastDeleted: (id: number) => {
-        set({podcasts: get().podcasts.filter((podcast) => podcast.id !== id)})
-    },
     setLoginData: (loginData: Partial<LoginData>) => set({loginData}),
     setConfirmModalData: (confirmModalData: ConfirmModalProps) => set({confirmModalData}),
     setSelectedUser: (selectedUser: User) => set({selectedUser}),
@@ -208,9 +148,6 @@ const useCommon = create<CommonProps>((set, get) => ({
             set({timeLineEpisodes})
         }
     },
-    addPodcastEpisodes: (selectedEpisodes) => {
-        set({selectedEpisodes: [...get().selectedEpisodes, ...selectedEpisodes!]})
-    },
     setFilters: (filters: components["schemas"]["Filter"]) => set({filters}),
     setInfoHeading: (infoHeading: string) => set({infoHeading}),
     setInfoText: (infoText: string) => set({infoText}),
@@ -218,19 +155,7 @@ const useCommon = create<CommonProps>((set, get) => ({
     setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed) => set({podcastEpisodeAlreadyPlayed}),
     tags: [],
     setPodcastTags: (t)=>set({tags: t}),
-    headers:{
-        "Content-Type":"application/json"
-    },
     isAuthenticated: false,
-    setHeaders:(headers)=>{
-
-        set({...get().headers, ...headers})
-        if (headers["Authorization"]) {
-            addHeader("Authorization", headers["Authorization"])
-            set({isAuthenticated: true})
-
-        }
-    },
     socketIo: undefined
 }))
 

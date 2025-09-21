@@ -22,7 +22,7 @@ import "./App.css"
 import './App.css'
 import {HomePageSelector} from "./pages/HomePageSelector";
 import {PlaylistPage} from "./pages/PlaylistPage";
-import {SettingsData} from "./components/SettingsData";
+import {Settings} from "./components/SettingsData";
 import {SettingsOPMLExport} from "./components/SettingsOPMLExport";
 import {SettingsNaming} from "./components/SettingsNaming";
 import {SettingsPodcastDelete} from "./components/SettingsPodcastDelete";
@@ -32,10 +32,8 @@ import {UserManagementPage} from "./pages/UserManagement";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
 import {components} from "../schema";
-import {$api, client} from "./utils/http";
-import io, {Socket} from "socket.io-client"
-import {ClientToServerEvents, ServerToClientEvents} from "./models/socketioEvents";
 import {decodeHTMLEntities} from "./utils/decodingUtilities";
+import {useQueryClient} from "@tanstack/react-query";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -65,7 +63,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
             <Route path={"info"} element={<Suspense><PodcastInfoViewLazyLoad /></Suspense>} />
             <Route path={"settings"} element={<Suspense><SettingsViewLazyLoad /></Suspense>}>
                 <Route index element={<Navigate  to="retention"/>}/>
-                <Route path="retention" element={<SettingsData/>}/>
+                <Route path="retention" element={<Settings/>}/>
                 <Route path="opml" element={<SettingsOPMLExport/>}/>
                 <Route path="naming" element={<SettingsNaming/>}/>
                 <Route path="podcasts" element={<SettingsPodcastDelete/>}/>
@@ -91,14 +89,12 @@ export const router = createBrowserRouter(createRoutesFromElements(
 })
 
 const App: FC<PropsWithChildren> = ({ children }) => {
-    const config = useCommon(state => state.configModel)
-    const addPodcast = useCommon(state => state.addPodcast)
     const { t } = useTranslation()
     const socket = useCommon(state=>state.socketIo)
     const setProgress = useOpmlImport(state => state.setProgress)
-    const setNotifications = useCommon(state => state.setNotifications)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const wasAlreadyRequested = useRef(false);
+    const queryClient = useQueryClient()
 
     useEffect(() => {
         if (!socket) {
@@ -112,8 +108,6 @@ const App: FC<PropsWithChildren> = ({ children }) => {
             if (!data) {
                 return
             }
-            console.log("I am ", typeof data === "string")
-
             if (useCommon.getState().currentDetailedPodcastId === data.podcast.id) {
             console.log("setting local url")
                 enqueueSnackbar(t('new-podcast-episode-added', {name: decodeHTMLEntities(data.podcast_episode.name)}), {variant: 'success'})
@@ -169,7 +163,13 @@ const App: FC<PropsWithChildren> = ({ children }) => {
         socket.on('addedPodcast', (data) => {
             const podcast = data.podcast
 
-            addPodcast(podcast)
+            for (const cache of queryClient.getQueryCache().getAll()) {
+                if (cache.queryKey[0] === 'get' && (cache.queryKey[1] as string) === '/api/v1/podcasts/search') {
+                    queryClient.setQueryData(cache.queryKey, (oldData: components["schemas"]["PodcastDto"][]) => {
+                        return [podcast, ...oldData]
+                    })
+                }
+            }
             enqueueSnackbar(t('new-podcast-added', {name: decodeHTMLEntities(podcast.name)}), {variant: 'success'})
         })
 
@@ -196,17 +196,6 @@ const App: FC<PropsWithChildren> = ({ children }) => {
             setProgress([...useOpmlImport.getState().progress, true])
         })
     }, [socket])
-
-    const getNotifications = () => {
-        client.GET("/api/v1/notifications/unread")
-            .then((response) => {
-                setNotifications(response.data!)
-            })
-    }
-
-    useEffect(() => {
-        getNotifications()
-    }, [])
 
     return (
         <Suspense>

@@ -116,6 +116,9 @@ async fn index() -> Result<Response<String>, CustomError> {
             .filter(|x| x.starts_with("index") && x.ends_with(".css"))
             .collect::<Vec<&String>>()[0];
 
+
+        let config = ENVIRONMENT_SERVICE.get_config();
+        let config_string = serde_json::to_string(&config).unwrap();
         let html = html! {
             html {
                 head {
@@ -130,6 +133,7 @@ async fn index() -> Result<Response<String>, CustomError> {
                     link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",css_file));
                 }
             body {
+            div id="config" data-config=(config_string)    {};
             div id="root" {};
             div id="modal" {};
             div id="modal1"{};

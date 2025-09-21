@@ -53,10 +53,11 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::settings::ConfigModel;
 use crate::utils::error::ErrorSeverity::Info;
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_io_extra_error};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_io_extra_error, ErrorType, ApiError};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use crate::utils::error::ErrorType::CustomErrorType;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {
@@ -161,7 +162,7 @@ responses(
 body=String)),
 tag="sys"
 )]
-pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, CustomError> {
+pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, ErrorType> {
     use crate::ENVIRONMENT_SERVICE;
 
     let digested_password = digest(auth.0.password);
@@ -172,7 +173,16 @@ pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, CustomError> 
     {
         return Ok(StatusCode::OK);
     }
-    let db_user = User::find_by_username(&auth.0.username)?;
+    let db_user = match User::find_by_username(&auth.0.username) {
+        Ok(user) => user,
+        Err(err) => {
+            if matches!(err.inner, CustomErrorInner::NotFound(_)) {
+                log::warn!("Login failed for user {}", auth.0.username);
+                return Err(ApiError::wrong_user_or_password().into());
+            }
+            return Err(CustomErrorType(err))
+        }
+    };
 
     if db_user.password.is_none() {
         log::warn!("Login failed for user {}", auth.0.username);

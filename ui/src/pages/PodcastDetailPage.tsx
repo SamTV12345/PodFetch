@@ -1,11 +1,10 @@
-import {Fragment, useEffect, useState} from 'react'
+import {Fragment, useEffect, useMemo, useState} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
-import {prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
+import {removeHTML} from '../utils/Utilities'
 import useCommon, {Podcast} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import {Chip} from '../components/Chip'
-import {Heading1} from '../components/Heading1'
 import {Heading2} from '../components/Heading2'
 import {PodcastDetailItem} from '../components/PodcastDetailItem'
 import {PodcastInfoModal} from '../components/PodcastInfoModal'
@@ -19,16 +18,13 @@ import {EditableHeading} from "../components/EditableHeading";
 import {Loading} from "../components/Loading";
 
 export const PodcastDetailPage = () => {
-    const configModel = useCommon(state => state.configModel)
-    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
-    const selectedEpisodes = useCommon(state => state.selectedEpisodes)
+    const configModel = $api.useQuery('get', '/api/v1/sys/config')
     const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const params = useParams()
     const [lineClamp, setLineClamp] = useState(true)
     const {t} = useTranslation()
-    const setCurrentDetailedPodcastId = useCommon(state => state.setCurrentDetailedPodcastId)
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
-    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
+
     const [openSettingsMenu, setOpenSettingsMenu] = useState<boolean>(false)
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
     const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
@@ -39,52 +35,51 @@ export const PodcastDetailPage = () => {
         },
     })
 
-    useEffect(() => {
+    const currentDetailedPodcastId = useMemo(()=>{
         if (params && !isNaN(parseFloat(params.id as string))) {
-            setCurrentDetailedPodcastId(Number(params.id))
+            return params.id ?? ""
         }
-        client.GET("/api/v1/podcasts/{id}", {
-            params: {
-                path: {
-                    id: params.id!
-                }
+        return ""
+    }, [params])
+
+    const currentPodcast = $api.useQuery('get', '/api/v1/podcasts/{id}', {
+        params: {
+            path: {
+                id: currentDetailedPodcastId
             }
-        }).then(resp=>{
-            setCurrentPodcast(resp.data!)
-        })
-        .then(() => {
-            client.GET("/api/v1/podcasts/{id}/episodes", {
-                params: {
-                    query: {
-                        only_unlistened: onlyUnplayed
-                    },
-                    path: {
-                        id: params.id!
-                    }
-                }
-            }).then((response) => {
-                setSelectedEpisodes(response.data!)
+        }
+    })
+    const currentPodcastEpisodes = $api.useQuery('get', '/api/v1/podcasts/{id}/episodes', {
+        params: {
+            query: {
+                only_unlistened: onlyUnplayed
+            },
+            path: {
+                id: currentDetailedPodcastId
+            }
+        }
+    })
 
-                if (params.podcastid) {
-                    const element = document.getElementById('episode_' + params.podcastid)
+    useEffect(() => {
 
-                    if (element) {
+        if (params.podcastid) {
+            const element = document.getElementById('episode_' + params.podcastid)
+
+            if (element) {
                         element.scrollIntoView({behavior: 'smooth', block: 'start', inline: 'nearest'})
-                    }
-                }
-            })
-        })
+            }
+        }
     }, [onlyUnplayed])
 
     useEffect(() => {
-        if (currentPodcast?.summary) {
+        if (currentPodcast.data?.summary) {
             const summary = document.getElementById('summary')!
 
             summary.querySelectorAll('a').forEach((a) => {
                 a.setAttribute('target', '_blank')
             })
         }
-    }, [currentPodcast?.summary])
+    }, [currentPodcast.data?.summary])
 
     const isOverflown = (element: string) => {
         let foundElement = document.getElementById(element)
@@ -112,22 +107,12 @@ export const PodcastDetailPage = () => {
         }
     }, []);
 
-    if (currentPodcast === undefined) {
-        return <div className="w-full md:w-3/4 mx-auto">
-            <ErrorIcon text={t('podcast-not-found')}/>
-        </div>
-    }
-
-    if (isLoading ||!data) {
-        return <Loading/>
-    }
-
     return (
         <Fragment key={'detail'}>
             <div className="max-w-4xl">
                 <PodcastInfoModal/>
                 <PodcastEpisodeAlreadyPlayed/>
-                <PodcastSettingsModal open={openSettingsMenu} setOpen={setOpenSettingsMenu} podcast={currentPodcast}/>
+                {currentPodcast.data && <PodcastSettingsModal open={openSettingsMenu} setOpen={setOpenSettingsMenu} podcast={currentPodcast.data}/>}
 
                 {/* Header */}
                 <div className="
@@ -137,12 +122,12 @@ export const PodcastDetailPage = () => {
                     gap-x-4 gap-y-2 lg:gap-x-8 lg:gap-y-1 items-center mb-8
                 ">
                     {/* Thumbnail */}
-                    <img className="
+                    {currentPodcast.data && <img className="
                         order-4
                         xs:col-start-1 xs:col-end-2 row-start-3 row-end-4
                         lg:col-start-1 lg:col-end-2 lg:row-start-2 lg:row-end-4
                         w-full xs:w-24 md:w-32 lg:w-40 rounded-xl
-                    " src={prependAPIKeyOnAuthEnabled(currentPodcast.image_url, data)} alt=""/>
+                    " src={currentPodcast.data.image_url} alt=""/>}
 
                     {/* Title and refresh icon */}
                     <div className="
@@ -153,7 +138,7 @@ export const PodcastDetailPage = () => {
                         self-start xs:self-end
                     ">
 
-                        <EditableHeading initialText={currentPodcast.name} allowedToEdit={data.role == "admin"}></EditableHeading>
+                        {currentPodcast.data && <EditableHeading podcastId={Number(currentDetailedPodcastId)} initialText={currentPodcast.data.name} allowedToEdit={data?.role == "admin"}></EditableHeading>}
 
                         <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
@@ -181,28 +166,28 @@ export const PodcastDetailPage = () => {
                         sm:col-start-2 sm:col-end-3
                         self-start flex flex-col items-start gap-2
                     ">
-                        <span className="block text-(--fg-secondary-color)">{currentPodcast.author}</span>
+                        <span className="block text-(--fg-secondary-color)">{currentPodcast.data?.author}</span>
 
                         <div className="flex gap-2">
-                            {currentPodcast.keywords && currentPodcast.keywords?.split(',').map((keyword, index) => (
+                            {currentPodcast.data?.keywords && currentPodcast.data?.keywords?.split(',').map((keyword, index) => (
                                 <Chip key={"keyword"+index} index={index}>{keyword}</Chip>
                             ))}
                         </div>
 
                         <span className="grid grid-cols-2 md:grid-cols-3">
                         <button className="flex gap-4" rel="noopener noreferrer"
-                                onClick={() => window.open(prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id, data))}>
+                                onClick={() => window.open(configModel?.data?.rssFeed + '/' + params.id)}>
                             <a rel="noopener noreferrer"
                                className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                                target="_blank"
-                               href={prependAPIKeyOnAuthEnabled(configModel?.rssFeed + '/' + params.id, data)}>rss_feed</a>
+                               href={configModel?.data?.rssFeed + '/' + params.id}>rss_feed</a>
                             <span className="text-(--fg-color)">PodFetch</span>
                         </button>
 
                         <button className="flex gap-4" rel="noopener noreferrer"
-                                onClick={() => window.open(currentPodcast.rssfeed)}>
+                                onClick={() => window.open(currentPodcast.data?.rssfeed)}>
                             <a className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
-                               target="_blank" rel="noopener noreferrer" href={currentPodcast.rssfeed}>rss_feed</a>
+                               target="_blank" rel="noopener noreferrer" href={currentPodcast.data?.rssfeed}>rss_feed</a>
                             <span className="text-(--fg-color)">{t('original-rss-feed')}</span>
                         </button>
                             <div className="flex gap-4 justify-end">
@@ -222,7 +207,7 @@ export const PodcastDetailPage = () => {
                     ">
                         <span className="text-xs text-(--fg-secondary-color)">{t('active')}</span>
 
-                        <Switcher checked={currentPodcast.active} onChange={() => {
+                        <Switcher checked={currentPodcast.data?.active} onChange={() => {
                             client.PUT("/api/v1/podcasts/{id}/active", {
                                 params: {
                                     path: {
@@ -230,17 +215,17 @@ export const PodcastDetailPage = () => {
                                     }
                                 }
                             }).then(()=>{
-                                setCurrentPodcast({...currentPodcast, active: !currentPodcast?.active})
+                                setCurrentPodcast({...currentPodcast.data!, active: !currentPodcast.data?.active})
                             })
                         }}/>
                     </div>
                 </div>
 
                 {/* Description */
-                    currentPodcast.summary &&
+                    currentPodcast.data?.summary &&
                     <div className="relative leading-[1.75] mb-8 text-sm text-(--fg-color)">
                         <div id="summary" className={lineClamp ? 'line-clamp-3' : ''}
-                             dangerouslySetInnerHTML={removeHTML(currentPodcast.summary)}/>
+                             dangerouslySetInnerHTML={removeHTML(currentPodcast.data.summary)}/>
                         {(isOverflown('summary') || lineClamp) && <div
                             className="cursor-pointer underline text-(--accent-color) hover:text-(--accent-color-hover)"
                             onClick={() => {
@@ -255,10 +240,10 @@ export const PodcastDetailPage = () => {
                 <div>
                     <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
 
-                    {selectedEpisodes.map((episode, index) => (
+                    {currentPodcastEpisodes.data?.map((episode, index) => (
                         <PodcastDetailItem episode={episode} key={episode.podcastEpisode.id} index={index}
                                            onlyUnplayed={onlyUnplayed}
-                                           episodesLength={selectedEpisodes.length}/>
+                                           episodesLength={currentPodcastEpisodes.data.length}/>
                     ))}
                 </div>
             </div>

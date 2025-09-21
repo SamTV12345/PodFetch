@@ -4,8 +4,11 @@ import {useTranslation} from "react-i18next";
 import {Podcast} from "../store/CommonSlice";
 import {handleAddPodcast} from "../utils/ErrorSnackBarResponses";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
 import {components} from "../../schema";
+import {useQueryClient} from "@tanstack/react-query";
+import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
+import {LoadingSkeletonSpan} from "../components/ui/LoadingSkeletonSpan";
 
 type GPodderIntegrationItem = {
     device: string,
@@ -14,19 +17,15 @@ type GPodderIntegrationItem = {
 
 
 export const GPodderIntegration = ()=> {
-    const [gpodderOnlyPodcasts, setGPodderOnlyPodcasts] = useState<components["schemas"]["GPodderAvailablePodcasts"][]>([])
     const {t} = useTranslation()
-
-
-    useEffect(() => {
-        client.GET("/api/v1/podcasts/available/gpodder").then((gpitem)=>{
-           setGPodderOnlyPodcasts(gpitem.data!);
-        })
-    }, []);
+    const queryClient = useQueryClient()
+    const gpodder = $api.useQuery('get', '/api/v1/podcasts/available/gpodder')
 
 
     const addPodcast = (feedUrl: string)=>{
-        setGPodderOnlyPodcasts(gpodderOnlyPodcasts.filter(p=>p.podcast!=feedUrl))
+        queryClient.setQueryData(['get', '/api/v1/podcasts/available/gpodder'], (oldData?: components["schemas"]["GPodderAvailablePodcasts"][])=>{
+           return oldData?.filter(d=>d.podcast!=feedUrl)
+        })
         client.POST(  "/api/v1/podcasts/feed", {
             body: {
                 rssFeedUrl: feedUrl
@@ -37,7 +36,7 @@ export const GPodderIntegration = ()=> {
     }
 
 
-    return <table className="text-left text-sm text-stone-900 w-full overflow-y-auto text-(--fg-color)">
+    return <table className="text-left text-sm w-full overflow-y-auto text-(--fg-color)">
         <thead>
         <tr className="border-b border-stone-300">
             <th scope="col" className="pr-2 py-3 text-(--fg-color)">
@@ -55,8 +54,13 @@ export const GPodderIntegration = ()=> {
         </tr>
         </thead>
         <tbody className="">
-        {
-            gpodderOnlyPodcasts?.map((int, index)=>{
+        {(gpodder.isLoading || !gpodder.data)? Array.from({length: 5}).map((_, index)=><tr key={index}>
+                <td className="px-2 py-4 text-(--fg-color)"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
+                <td className="px-2 py-4  text-(--fg-color)"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
+                <td className="px-2 py-4  text-(--fg-color)"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
+                <td><CustomButtonPrimary><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading} width="100px"/></CustomButtonPrimary></td>
+            </tr>):
+            gpodder.data.map((int, index)=>{
                 return <tr key={index}>
                     <td className="px-2 py-4 text-(--fg-color)">{index}</td>
                     <td className="px-2 py-4  text-(--fg-color)">{int.device}</td>

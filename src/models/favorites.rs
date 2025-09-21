@@ -16,6 +16,7 @@ use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use indexmap::IndexMap;
 use utoipa::ToSchema;
 
 #[derive(
@@ -141,7 +142,6 @@ impl Favorite {
         use crate::adapters::persistence::dbconfig::schema::tags_podcasts as t_join_table;
 
         let mut query = podcasts
-            .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
             .inner_join(
                 favorites::table.on(podcastsid
                     .eq(favorites::dsl::podcast_id)
@@ -174,10 +174,10 @@ impl Favorite {
             }
             OrderOption::PublishedDate => match order {
                 OrderCriteria::Asc => {
-                    query = query.order_by(date_of_recording.asc());
+                    query = query.order_by(last_build_date.asc());
                 }
                 OrderCriteria::Desc => {
-                    query = query.order_by(date_of_recording.desc());
+                    query = query.order_by(last_build_date.desc());
                 }
             },
         }
@@ -192,7 +192,6 @@ impl Favorite {
         let pr = query
             .load::<(
                 Podcast,
-                PodcastEpisode,
                 Favorite,
                 Option<TagsPodcast>,
                 Option<Tag>,
@@ -200,16 +199,16 @@ impl Favorite {
             .map_err(|e| map_db_error(e, Critical))?;
         pr.iter().for_each(|c| {
             if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
-                if let Some(tag) = &c.4
+                if let Some(tag) = &c.3
                     && !existing.2.iter().any(|t| t.id == tag.id) {
                         existing.2.push(tag.clone());
                     }
             } else {
                 let mut tags = vec![];
-                if let Some(tag) = &c.4 {
+                if let Some(tag) = &c.3 {
                     tags.push(tag.clone());
                 }
-                matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.2.clone(), tags));
+                matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.1.clone(), tags));
             }
         });
 
@@ -231,8 +230,7 @@ impl Favorite {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 
         let mut query = podcasts
-            .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
-            .left_join(f_db.on(f_username.eq(designated_username).and(f_id.eq(podcast_id))))
+            .left_join(f_db.on(f_username.eq(designated_username).and(f_id.eq(podcastsid))))
             .left_join(tags_podcasts.on(podcastsid.eq(
                 crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::podcast_id,
             )))
@@ -262,10 +260,10 @@ impl Favorite {
             }
             OrderOption::PublishedDate => match order {
                 OrderCriteria::Asc => {
-                    query = query.order_by(date_of_recording.asc());
+                    query = query.order_by(last_build_date.asc());
                 }
                 OrderCriteria::Desc => {
-                    query = query.order_by(date_of_recording.desc());
+                    query = query.order_by(last_build_date.desc());
                 }
             },
         }
@@ -277,12 +275,11 @@ impl Favorite {
             query = query.filter(lower(podcasttitle).like(format!("%{}%", title.to_lowercase())));
         }
 
-        let mut matching_podcast_ids: BTreeMap<i32, (Podcast, Option<Favorite>, Vec<Tag>)> =
-            BTreeMap::new();
+        let mut matching_podcast_ids: IndexMap<i32, (Podcast, Option<Favorite>, Vec<Tag>)> =
+            IndexMap::new();
         let pr = query
             .load::<(
                 Podcast,
-                PodcastEpisode,
                 Option<Favorite>,
                 Option<TagsPodcast>,
                 Option<Tag>,
@@ -290,16 +287,16 @@ impl Favorite {
             .map_err(|e| map_db_error(e, Critical))?;
         pr.iter().for_each(|c| {
             if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
-                if let Some(tag) = &c.4
+                if let Some(tag) = &c.3
                     && !existing.2.iter().any(|t| t.id == tag.id) {
                         existing.2.push(tag.clone());
                     }
             } else {
                 let mut tags = vec![];
-                if let Some(tag) = &c.4 {
+                if let Some(tag) = &c.3 {
                     tags.push(tag.clone());
                 }
-                matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.2.clone(), tags));
+                matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.1.clone(), tags));
             }
         });
         Ok(matching_podcast_ids.values().cloned().collect())
