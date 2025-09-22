@@ -66,6 +66,9 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                   for (const query of queryClient.getQueryCache().getAll()) {
                                         if (query.queryKey[0] === 'get' && (query.queryKey[1] as string) === '/api/v1/podcasts/search') {
                                             queryClient.setQueryData(query.queryKey, (oldData: components["schemas"]["PodcastDto"][]) => {
+                                                if (!oldData) {
+                                                    return []
+                                                }
                                                 return oldData.map(p => {
                                                     if (p.id === podcast.id) {
                                                         return {
