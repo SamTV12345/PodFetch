@@ -294,7 +294,7 @@ mod test {
     #[test]
     #[serial]
     fn test_basic_auth_login() {
-        let result = AuthFilter::extract_basic_auth("Bearer dGVzdDp0ZXN0");
+        let result = AuthFilter::extract_basic_auth("Basic dGVzdDp0ZXN0");
         assert!(result.is_ok());
         let (u, p) = result.unwrap();
         assert_eq!(u, "test");
@@ -304,7 +304,7 @@ mod test {
     #[test]
     #[serial]
     fn test_basic_auth_login_with_special_characters() {
-        let result = AuthFilter::extract_basic_auth("Bearer dGVzdCTDvMOWOnRlc3Q=");
+        let result = AuthFilter::extract_basic_auth("Basic dGVzdCTDvMOWOnRlc3Q=");
         assert!(result.is_ok());
         let (u, p) = result.unwrap();
         assert_eq!(u, "test$üÖ");
