@@ -1,21 +1,22 @@
 import {FC, useMemo} from 'react'
-import { useAuth } from 'react-oidc-context'
 import { CustomDropdownMenu } from './CustomDropdownMenu'
 import { MenuItem } from './CustomDropdownMenu'
 import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
 import {$api} from "../utils/http";
+import {removeLogin} from "../utils/login";
+import {ADMIN_ROLE} from "../models/constants";
 
 
 const AccountTrigger = ()=>{
     const username = useCommon(state => state.loginData)
 
-    return <button className="flex gap-3"><span className="hidden md:block text-(--fg-color)">{username?.username}</span><span className="material-symbols-outlined text-(--fg-color) hover:text-(--fg-color-hover)">account_circle</span></button>
+    return <><span className="hidden md:block text-(--fg-color)">{username?.username}</span><span
+        className="material-symbols-outlined text-(--fg-color) hover:text-(--fg-color-hover)">account_circle</span></>
 }
 
 export const UserMenu: FC = () => {
-    const config = useCommon(state => state.configModel)
-    const configModel = useCommon(state => state.configModel)
+    const configModel = $api.useQuery('get', '/api/v1/sys/config')
     const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
             path: {
@@ -29,12 +30,12 @@ export const UserMenu: FC = () => {
             return []
         }
         const menuItems: Array<MenuItem> = [
-            {
-                iconName: 'info',
-                translationKey: 'system-info',
-                path: 'info'
-            }
+
         ]
+
+        if (data.role === ADMIN_ROLE) {
+
+        }
 
         menuItems.push({
             iconName: 'account_circle',
@@ -42,15 +43,20 @@ export const UserMenu: FC = () => {
             path: 'profile'
         })
 
-        if (data.role === 'admin' || !(config?.oidcConfigured && config.basicAuth)) {
+        if (data.role === 'admin') {
             menuItems.push({
                 iconName: 'settings',
                 translationKey: 'settings',
                 path: 'settings'
             })
+            menuItems.push({
+                iconName: 'info',
+                translationKey: 'system-info',
+                path: 'info'
+            })
         }
 
-        if (config?.oidcConfig || config?.basicAuth) {
+        if (data.role === 'admin') {
             menuItems.push({
                 iconName: 'group',
                 translationKey: 'administration',
@@ -58,29 +64,18 @@ export const UserMenu: FC = () => {
             })
         }
 
-        if (configModel?.oidcConfigured) {
-            const auth = useAuth()
-
-            menuItems.push({
-                iconName: 'logout',
-                translationKey: 'logout',
-                onClick: () => auth.signoutRedirect()
-            })
-        }
-
-        if(configModel?.basicAuth){
+        if (configModel?.data?.oidcConfigured || configModel?.data?.basicAuth) {
             menuItems.push({
                 iconName: 'logout',
                 translationKey: 'logout',
                 onClick: () => {
-                    localStorage.removeItem('auth')
-                    sessionStorage.removeItem('auth')
+                    removeLogin()
                     window.location.reload()
                 }
             })
         }
         return menuItems
-    }, [configModel,config, data])
+    }, [configModel, data])
 
 
     return (

@@ -197,5 +197,6 @@
 
 
 
-  "UPDATE_OF_ADMIN_NOT_ALLOWED": "Das Ändern des Administratoraccounts {{username}} ist nicht erlaubt"
+  "UPDATE_OF_ADMIN_NOT_ALLOWED": "Das Ändern des Administratoraccounts {{username}} ist nicht erlaubt",
+  "WRONG_USER_OR_PASSWORD": "Falscher Benutzername oder Passwort"
 }

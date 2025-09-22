@@ -34,7 +34,7 @@ export const Homepage = () => {
                 `}>
                     <div className="flex gap-8">
                         {
-                            lastWatched.isLoading ? Array.from({length: 5}).map(()=><LoadingPodcastCard/>)  :lastWatched.data?.map((v)=>{
+                            lastWatched.isLoading ? Array.from({length: 5}).map((value, index, array)=><LoadingPodcastCard key={index}/>)  :lastWatched.data?.map((v)=>{
                                     return (
                                         <div className="basis-40 shrink-0 whitespace-normal" key={v.episodeId}>
                                             <EpisodeCard podcast={v.podcast} podcastEpisode={v.podcastEpisode} watchedTime={v.watchedTime} totalTime={v.totalTime} />
@@ -60,7 +60,7 @@ export const Homepage = () => {
                     md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
                 `}>
                     <div className="flex gap-8">
-                        {timeline.isLoading ? Array.from({length: 10}).map(()=><LoadingPodcastCard/>):timeline.data?.data.map((episode)=>{
+                        {timeline.isLoading ? Array.from({length: 10}).map((value, index, array)=><LoadingPodcastCard key={index}/>):timeline.data?.data.map((episode)=>{
                             return (
                                 <div className="basis-40 shrink-0 whitespace-normal" key={episode.podcast_episode.episode_id}>
                                     <EpisodeCard podcast={episode.podcast} podcastEpisode={episode.podcast_episode} />

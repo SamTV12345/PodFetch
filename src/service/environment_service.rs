@@ -3,16 +3,7 @@ use crate::adapters::file::file_handler::FileHandlerType;
 #[cfg(feature = "postgresql")]
 use crate::constants::inner_constants::CONNECTION_NUMBERS;
 
-use crate::constants::inner_constants::{
-    API_KEY, BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, DEFAULT_PODFETCH_FOLDER,
-    FILE_HANDLER, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID,
-    OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_SCOPE, PASSWORD, PODFETCH_FOLDER,
-    PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL,
-    POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER,
-    S3_ACCESS_KEY, S3_PROFILE, S3_REGION, S3_SECRET_KEY, S3_SECURITY_TOKEN, S3_SESSION_TOKEN,
-    S3_URL, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID,
-    TELEGRAM_BOT_TOKEN, USERNAME,
-};
+use crate::constants::inner_constants::{API_KEY, BASIC_AUTH, DATABASE_URL, DATABASE_URL_DEFAULT_SQLITE, DEFAULT_OIDC_REFRESH_INTERVAL, DEFAULT_PODFETCH_FOLDER, FILE_HANDLER, GPODDER_INTEGRATION_ENABLED, OIDC_AUTH, OIDC_AUTHORITY, OIDC_CLIENT_ID, OIDC_JWKS, OIDC_REDIRECT_URI, OIDC_REFRESH_INTERVAL, OIDC_SCOPE, PASSWORD, PODFETCH_FOLDER, PODFETCH_PROXY_FOR_REQUESTS, PODINDEX_API_KEY, PODINDEX_API_SECRET, POLLING_INTERVAL, POLLING_INTERVAL_DEFAULT, REVERSE_PROXY, REVERSE_PROXY_AUTO_SIGN_UP, REVERSE_PROXY_HEADER, S3_ACCESS_KEY, S3_PROFILE, S3_REGION, S3_SECRET_KEY, S3_SECURITY_TOKEN, S3_SESSION_TOKEN, S3_URL, SERVER_URL, SUB_DIRECTORY, TELEGRAM_API_ENABLED, TELEGRAM_BOT_CHAT_ID, TELEGRAM_BOT_TOKEN, USERNAME};
 use crate::models::settings::ConfigModel;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use s3::creds::Credentials;
@@ -31,6 +22,7 @@ pub struct OidcConfig {
     pub redirect_uri: String,
     pub scope: String,
     pub jwks_uri: String,
+    pub refresh_interval: u64
 }
 
 pub struct EnvironmentService {
@@ -127,6 +119,8 @@ impl EnvironmentService {
                 client_id: var(OIDC_CLIENT_ID).expect("OIDC client id not configured"),
                 scope: var(OIDC_SCOPE).unwrap_or("openid profile email".to_string()),
                 jwks_uri: var(OIDC_JWKS).unwrap(),
+                refresh_interval: var(OIDC_REFRESH_INTERVAL).unwrap_or
+                (DEFAULT_OIDC_REFRESH_INTERVAL.to_string()).parse::<u64>().unwrap_or(DEFAULT_OIDC_REFRESH_INTERVAL),
             })
         } else {
             None

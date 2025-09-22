@@ -40,6 +40,16 @@ impl ApiError {
             status: StatusCode::BAD_REQUEST,
         }
     }
+
+    pub fn wrong_user_or_password() -> Self {
+        ApiError {
+            value: ApiErrorValue {
+                error_code: "WRONG_USER_OR_PASSWORD".into(),
+                arguments: HashMap::new(),
+            },
+            status: StatusCode::UNAUTHORIZED,
+        }
+    }
 }
 
 pub enum ErrorType {

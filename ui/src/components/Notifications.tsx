@@ -5,8 +5,10 @@ import * as Popover from '@radix-ui/react-popover'
 import { removeHTML} from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
 import {components} from "../../schema";
+import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
+import {useQueryClient} from "@tanstack/react-query";
 
 
 const NotificationFormatter = (notification: components["schemas"]["Notification"]) => {
@@ -23,16 +25,15 @@ const NotificationFormatter = (notification: components["schemas"]["Notification
 }
 
 export const Notifications: FC = () => {
-    const notifications = useCommon(state => state.notifications)
+    const notifications = $api.useQuery('get','/api/v1/notifications/unread')
+    const queryClient = useQueryClient()
     const { t }  = useTranslation()
-    const removeNotification = useCommon(state => state.removeNotification)
-    const setNotifications = useCommon(state => state.setNotifications)
 
     const trigger = () => (
         <div className="flex items-center relative">
             <span className="material-symbols-outlined cursor-pointer text-(--fg-color) hover:text-(--fg-color-hover)">notifications</span>
 
-            {notifications.length > 0 && <div className="absolute top-0 right-0 border-2 border-(--bg-color) bg-red-700 h-3 w-3 rounded-full"/>}
+            {(notifications.isLoading || !notifications.data) ? <span>Loading</span> :notifications.data.length > 0 && <div className="absolute top-0 right-0 border-2 border-(--bg-color) bg-red-700 h-3 w-3 rounded-full"/>}
         </div>
     )
 
@@ -42,12 +43,21 @@ export const Notifications: FC = () => {
                 id: notification.id
             }
         }).then(() => {
-            removeNotification(notification.id)
+            queryClient.setQueryData(['get','/api/v1/notifications/unread'], (oldData: components["schemas"]["Notification"][]) => {
+                return oldData.filter(n => n.id !== notification.id)
+            })
         })
     }
 
     const DisplayNotification = () => {
-        if (notifications.length === 0) {
+
+        if (notifications.isLoading || !notifications.data) {
+            return (
+                <><LoadingSkeletonSpan/><LoadingSkeletonSpan/></>
+            )
+        }
+
+        if (notifications.data.length === 0) {
             return (
                 <div className="text-center place-items-center flex px-5 text-sm text-(--fg-color-disabled)">
                     {t('no-notifications')}
@@ -56,7 +66,7 @@ export const Notifications: FC = () => {
         } else {
             return (
                 <AnimatePresence>
-                    {notifications.map((notification) => (
+                    {notifications.data.map((notification) => (
                         <motion.div className="grid grid-cols-[1fr_auto] gap-2 last-of-type:border-b-0! border-b-(--border-color) px-5 text-sm text-(--fg-color)"
                         key={notification.id}
                         initial={false}
@@ -91,10 +101,10 @@ export const Notifications: FC = () => {
                         <div className="grow"/>
                          <button className="border-b-(--border-color) flex active:scale-95
                          text-sm text-(--fg-color) border-[2px] rounded-2xl  pl-2 pr-2 float-right mr-3 mb-3" onClick={()=>{
-                             notifications.forEach(n=>{
+                             notifications.data?.forEach(n=>{
                                     dismissNotification(n)
                              })
-                             setNotifications([])
+                             queryClient.setQueryData(['get','/api/v1/notifications/unread'], []);
                          }}>{t('clear-all')}</button>
                     </div>
                     <div>

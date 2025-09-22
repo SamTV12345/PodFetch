@@ -22,38 +22,55 @@ import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
 import {$api, client} from "../utils/http";
+import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
+import {useQueryClient} from "@tanstack/react-query";
 
 interface PodcastsProps {
     onlyFavorites?: boolean
 }
 
 const orderOptions = [
-    { value: JSON.stringify(TIME_ASCENDING), label: '1.1.-31.12' },
-    { value: JSON.stringify(TIME_DESCENDING), label: '31.12-1.1' },
-    { value: JSON.stringify(TITLE_ASCENDING), label: 'A-Z' },
-    { value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A' }
+    {value: JSON.stringify(TIME_ASCENDING), label: '1.1.-31.12'},
+    {value: JSON.stringify(TIME_DESCENDING), label: '31.12-1.1'},
+    {value: JSON.stringify(TITLE_ASCENDING), label: 'A-Z'},
+    {value: JSON.stringify(TITLE_DESCENDING), label: 'Z-A'}
 ]
 
 const allTags: Option = {
-   label: 'All',
+    label: 'All',
     value: 'all'
 }
 
-export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
-    const filters = useCommon(state => state.filters)
-    const podcasts = useCommon(state => state.podcasts)
-    let location = useLocation();
-    const { t } = useTranslation()
+export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
+    const queryClient = useQueryClient()
+    const {t} = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
-    const setFilters = useCommon(state => state.setFilters)
-    const setPodcasts = useCommon(state => state.setPodcasts)
+    const [tagsVal, setTagVal] = useState<Option>(() => allTags)
 
-    const [tagsVal, setTagVal] = useState<Option>(()=>allTags)
-    const memorizedSelection = useMemo(() => {
-        return JSON.stringify({sorting: filters?.filter?.toUpperCase(), ascending: filters?.ascending})
-    }, [filters])
     const refreshAllPodcasts = $api.useMutation('post', '/api/v1/podcasts/all')
     const tags = $api.useQuery('get', '/api/v1/tags')
+    const filters = $api.useQuery('get', '/api/v1/podcasts/filter')
+    const tag = useMemo(()=>{
+        if (tagsVal.value === 'all') {
+            return undefined
+        }
+        return tagsVal.value
+    }, [tagsVal])
+    const podcasts = $api.useQuery('get', '/api/v1/podcasts/search', {
+        params: {
+            query: {
+                title: filters?.data?.title,
+                order: filters?.data?.ascending ? Order.ASC : Order.DESC,
+                orderOption: filters?.data?.filter,
+                favoredOnly: !!onlyFavorites,
+                tag: tag
+            }
+        }
+    })
+    const memorizedSelection = useMemo(() => {
+        return JSON.stringify({sorting: filters?.data?.filter?.toUpperCase(), ascending: filters?.data?.ascending})
+    }, [filters])
+
     const mappedTagsOptions = useMemo(() => {
         if (tags.isLoading || !tags.data) {
             return []
@@ -67,42 +84,20 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
         return [...mappedTags, allTags]
     }, [tags])
 
-    const performFilter = () => {
-        if (filters === undefined) {
-            return
+
+    const podcastsToShow = useMemo(() => {
+        if (podcasts.isLoading || !podcasts.data) {
+            return []
         }
-        let tag = undefined
-
-        if (tagsVal.value !== 'all') {
-            tag = tagsVal.value
+        if (onlyFavorites) {
+            return podcasts.data.filter(podcast => podcast.favorites)
         }
-
-        client.GET("/api/v1/podcasts/search", {
-            params: {
-                query: {
-                    title: filters?.title,
-                    order: filters?.ascending?Order.ASC:Order.DESC,
-                    orderOption: filters?.filter,
-                    favoredOnly: !!onlyFavorites,
-                    tag: tag
-                }
-            }
-        }).then(v=>setPodcasts(v.data!))
-    }
-
-    useDebounce(() => {
-        performFilter()
-    },500, [filters, tagsVal])
-
-    useEffect(() => {
-        client.GET("/api/v1/podcasts/filter")
-            .then(c => setFilters(c.data || getFiltersDefault()))
-            .catch(() => setFilters(getFiltersDefault()))
-    }, [location])
+        return podcasts.data
+    }, [podcasts, onlyFavorites])
 
     return (
         <div>
-            <AddPodcastModal />
+            <AddPodcastModal/>
 
             {/* Title and Add button */}
             <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-4 mb-10">
@@ -110,7 +105,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                     {
                         onlyFavorites ?
                             <Heading1>{t('favorites')}</Heading1> :
-                        <Heading1>{t('all-subscriptions')}</Heading1>
+                            <Heading1>{t('all-subscriptions')}</Heading1>
                     }
 
                     <span
@@ -119,8 +114,9 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
                             refreshAllPodcasts.mutate({})
                         }}>refresh</span>
                     <div>
-                        <CustomSelect className="bg-mustard-600 text-black" options={mappedTagsOptions} value={tagsVal.value} onChange={(v)=>{
-                            setTagVal(mappedTagsOptions.filter(e=>e.value === v)[0]!)
+                        <CustomSelect className="bg-mustard-600 text-black" options={mappedTagsOptions}
+                                      value={tagsVal.value} onChange={(v) => {
+                            setTagVal(mappedTagsOptions.filter(e => e.value === v)[0]!)
                         }}/>
                     </div>
                 </div>
@@ -137,25 +133,31 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
             <div className="flex flex-col md:flex-row gap-4 mb-10">
                 <span className="flex-1 relative">
                     <CustomInput className="pl-10 w-full" type="text" onChange={v =>
-                        setFilters({...filters as Filter,title: v.target.value})} placeholder={t('search')!} value={filters?.title || ''} />
+                        queryClient.setQueryData(['get', '/api/v1/podcasts/filter'], {
+                            ...filters.data as Filter,
+                            title: v.target.value
+                        })} placeholder={t('search')!} value={filters?.data?.title || ''}/>
 
-                    <span className="material-symbols-outlined absolute left-2 top-2 text-(--input-icon-color)">search</span>
+                    <span
+                        className="material-symbols-outlined absolute left-2 top-2 text-(--input-icon-color)">search</span>
                 </span>
 
                 <CustomSelect iconName="sort" onChange={(v) => {
                     let converted = JSON.parse(v) as OrderCriteriaSortingType
-                    setFilters({...filters as Filter, filter: converted.sorting, ascending: converted.ascending})
-                }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection} />
+                    queryClient.setQueryData(['get', '/api/v1/podcasts/filter'], {
+                        ...filters.data,
+                        filter: converted.sorting,
+                        ascending: converted.ascending
+                    })
+                }} options={orderOptions} placeholder={t('sort-by')} value={memorizedSelection}/>
             </div>
 
             {/* Podcast list */}
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
-                {!onlyFavorites && podcasts.map((podcast) => {
-                    return <PodcastCard podcast={podcast} key={podcast.id} />
-                })}
-
-                {onlyFavorites && podcasts.filter(podcast => podcast.favorites).map((podcast) => {
-                    return <PodcastCard podcast={podcast} key={podcast.id} />
+            <div
+                className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
+                {(podcasts.isLoading ||!podcasts.data) ? Array.from({length: 5}).map((value, index, array) => <LoadingPodcastCard
+                    key={index}/>) : podcastsToShow.map((podcast) => {
+                    return <PodcastCard podcast={podcast} key={podcast.id}/>
                 })}
             </div>
         </div>

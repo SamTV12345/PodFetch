@@ -2426,6 +2426,7 @@ dependencies = [
  "futures-util",
  "hyper-tls",
  "id3",
+ "indexmap 2.7.1",
  "jsonwebtoken",
  "libsqlite3-sys",
  "log",

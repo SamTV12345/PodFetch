@@ -6,7 +6,7 @@ import { PlayerProgressBar } from './PlayerProgressBar'
 import { PlayerVolumeSlider } from './PlayerVolumeSlider'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {Podcast} from "../store/CommonSlice";
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
 import {components} from "../../schema";
 
 type DrawerAudioPlayerProps = {
@@ -17,24 +17,19 @@ type DrawerAudioPlayerProps = {
 export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
     const playing = useAudioPlayer(state => state.isPlaying)
     const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
-    const [podcast, setPodcast] = useState<components["schemas"]["PodcastDto"]>()
+    const podcast = $api.useQuery('get','/api/v1/podcasts/{id}', {
+        params: {
+            path: {
+                id: String(podcastEpisode?.podcastEpisode.podcast_id)
+            }
+        }
+    })
 
     useEffect(() => {
         if (podcastEpisode && playing) {
             refItem.current?.play()
         }
     }, [podcastEpisode, playing])
-
-    useEffect(() => {
-        client.GET("/api/v1/podcasts/{id}", {
-            params: {
-                path: {
-                    id: String(podcastEpisode?.podcastEpisode.podcast_id)
-                }
-            }
-        }).then((resp)=>setPodcast(resp.data!))
-
-    }, [podcastEpisode]);
 
     return (
         <div className="
@@ -46,7 +41,7 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAm
             p-4 lg:pr-8
             bg-(--bg-color) shadow-[0_-4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_-4px_16px_rgba(0,0,0,0.35)]
         ">
-            <PlayerEpisodeInfo podcast={podcast} podcastEpisode={podcastEpisode?.podcastEpisode}/>
+            {podcast.data && <PlayerEpisodeInfo podcast={podcast.data} podcastEpisode={podcastEpisode?.podcastEpisode}/>}
 
             <div className="flex flex-col gap-2 w-full">
                 <PlayerTimeControls refItem={refItem}/>

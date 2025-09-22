@@ -3,14 +3,17 @@ import {Skeleton} from "./skeleton";
 
 type LoadingSkeletonProps = {
     loading?: boolean,
-    text: string| undefined
+    text?: string| undefined,
+    height?: string,
+    width?: string
 }
 
 export const LoadingSkeletonSpan: FC<LoadingSkeletonProps> = ({
                                                                 loading,
-                                                                text
+                                                                text,
+    height, width
                                                             }) => {
     return (
-        <span className="text-(--fg-secondary-color)">{loading == true ? <Skeleton style={{height: '100%'}}/>: text}</span>
+        <span className="text-(--fg-secondary-color)">{loading == true ? <Skeleton style={{height: height??'100%', width: width?? '100%'}}/>: text}</span>
     )
 }
