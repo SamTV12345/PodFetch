@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react'
+import {FC, useEffect, useMemo, useState} from 'react'
 import { useTranslation } from 'react-i18next'
 import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import { CustomGaugeChart } from '../components/CustomGaugeChart'
@@ -9,6 +9,9 @@ import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
 import {$api, client} from "../utils/http";
 import {components} from "../../schema";
+import {LoadingSkeletonDD} from "../components/ui/LoadingSkeletonDD";
+import {ChartLoadingSkeleton} from "../components/ui/ChartLoadingSkeleton";
+import {LoadingSkeletonSpan} from "../components/ui/LoadingSkeletonSpan";
 
 type VersionInfoModel = {
     commit: string,
@@ -21,33 +24,20 @@ type VersionInfoModel = {
 
 export const SystemInfoPage: FC = () => {
     const configModel = useCommon(state => state.configModel)
-    const [systemInfo, setSystemInfo] = useState<components["schemas"]["SysExtraInfo"]>()
-    const [versionInfo, setVersionInfo] = useState<VersionInfoModel>()
-    const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
+    const user = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
             path: {
                 username: 'me'
             }
         },
     })
+    const systemInfo = $api.useQuery('get', '/api/v1/sys/info')
+    const infoVersion = $api.useQuery('get', '/api/v1/info')
+
     const { t } = useTranslation()
 
     const gigaByte = Math.pow(10,9)
     const megaByte = Math.pow(10,6)
-
-    useEffect(() => {
-        client.GET("/api/v1/sys/info").then(v=>setSystemInfo(v.data!))
-        client.GET("/api/v1/info").then(v=>setVersionInfo(v.data!))
-
-        const updateInterval = setInterval(() => {
-            client.GET("/api/v1/sys/info").then(v=>setSystemInfo(v.data!))
-        }, 5000)
-        return () => clearInterval(updateInterval)
-    }, [])
-
-    if (!systemInfo) {
-        return <Loading />
-    }
 
     const calculateFreeDiskSpace = (disk: components["schemas"]["SysExtraInfo"]["disks"]) => {
         const used = disk.reduce((x, y) => {
@@ -65,18 +55,27 @@ export const SystemInfoPage: FC = () => {
         return { used, available, total }
     }
 
-    const calcPodcastSize = () => {
-        if (systemInfo.podcast_directory > gigaByte) {
-            return (systemInfo.podcast_directory / gigaByte).toFixed(2) + ' GB'
-        }
-        else if (systemInfo.podcast_directory < gigaByte) {
-            return (systemInfo.podcast_directory / megaByte).toFixed(2) + ' MB'
-        }
-    }
 
-    if (isLoading ||!data) {
-        return <Loading />
-    }
+    const calcedPodcastSize = useMemo(()=>{
+        if (!systemInfo.data) {
+            return ''
+        }
+        if (systemInfo.data.podcast_directory > gigaByte) {
+            return (systemInfo.data.podcast_directory / gigaByte).toFixed(2) + ' GB'
+        }
+        else if (systemInfo.data.podcast_directory < gigaByte) {
+            return (systemInfo.data.podcast_directory / megaByte).toFixed(2) + ' MB'
+        }
+
+    }, [systemInfo])
+
+
+    const linkToRSSFeed = useMemo(()=>{
+        if (!configModel || !user.data) {
+            return ''
+        }
+        return prependAPIKeyOnAuthEnabled(configModel!.rssFeed, user.data)
+    }, [configModel, user])
 
 
     return (
@@ -90,8 +89,11 @@ export const SystemInfoPage: FC = () => {
                         <span className="material-symbols-outlined text-(--fg-icon-color)">memory</span>
                         <Heading3>{t('cpu-usage')}</Heading3>
                     </span>
-
-                    <CustomGaugeChart fill={['#10b981', '#064e3b']} labels={[t('used-cpu'), t('free-cpu')]} labelUnit="percent" max={100} value={systemInfo.system.cpus.global} />
+                    {
+                        (systemInfo.isLoading ||!systemInfo.data) ?
+                            <ChartLoadingSkeleton/>:
+                    <CustomGaugeChart fill={['#10b981', '#064e3b']} labels={[t('used-cpu'), t('free-cpu')]} labelUnit="percent" max={100} value={systemInfo.data.system.cpus.global} />
+                    }
                 </div>
 
                 {/* Memory */}
@@ -100,8 +102,12 @@ export const SystemInfoPage: FC = () => {
                         <span className="material-symbols-outlined text-(--fg-icon-color)">memory_alt</span>
                         <Heading3>{t('memory-usage')}</Heading3>
                     </span>
+                    {
+                        (systemInfo.isLoading ||!systemInfo.data) ?
+                            <ChartLoadingSkeleton/>:
+                            <CustomGaugeChart fill={['#c4b5fd', '#6d28d9']} labels={[t('used-memory'), t('free-memory')]} labelUnit="capacity" max={systemInfo.data.system.mem_total} value={systemInfo.data.system.mem_total - systemInfo.data.system.mem_available} />
+                    }
 
-                    <CustomGaugeChart fill={['#c4b5fd', '#6d28d9']} labels={[t('used-memory'), t('free-memory')]} labelUnit="capacity" max={systemInfo.system.mem_total} value={systemInfo.system.mem_total - systemInfo.system.mem_available} />
                 </div>
 
                 {/* Disk */}
@@ -110,8 +116,11 @@ export const SystemInfoPage: FC = () => {
                         <span className="material-symbols-outlined text-(--fg-icon-color)">hard_drive</span>
                         <Heading3>{t('disk-usage')}</Heading3>
                     </span>
-
-                    <CustomGaugeChart fill={['#fcd34d', '#d97706']} labels={[t('used-disk'), t('free-disk')]} labelUnit="capacity" max={calculateFreeDiskSpace(systemInfo.disks).total} value={calculateFreeDiskSpace(systemInfo.disks).used} />
+                    {
+                        (systemInfo.isLoading ||!systemInfo.data) ?
+                            <ChartLoadingSkeleton/>:
+                            <CustomGaugeChart fill={['#fcd34d', '#d97706']} labels={[t('used-disk'), t('free-disk')]} labelUnit="capacity" max={calculateFreeDiskSpace(systemInfo.data.disks).total} value={calculateFreeDiskSpace(systemInfo.data.disks).used} />
+                    }
                 </div>
 
                 {/* Hardware info */}
@@ -120,13 +129,14 @@ export const SystemInfoPage: FC = () => {
 
                     <dl className="grid lg:grid-cols-2 gap-2 lg:gap-6 text-sm">
                         <dt className="font-medium text-(--fg-color)">{t('cpu-brand')}</dt>
-                        <dd className="text-(--fg-secondary-color)">{systemInfo.system.cpus.cpus[0]!.brand}</dd>
-
+                        <LoadingSkeletonDD text={systemInfo.data?.system.cpus.cpus[0]?.brand} loading={systemInfo.isLoading}/>
                         <dt className="font-medium text-(--fg-color)">{t('cpu-cores')}</dt>
-                        <dd className="text-(--fg-secondary-color)">{systemInfo.system.cpus.cpus.length}</dd>
+
+                        <LoadingSkeletonDD text={systemInfo.data?.system.cpus.cpus.length} loading={systemInfo.isLoading}/>
+
 
                         <dt className="font-medium text-(--fg-color)">{t('podcast-size')}</dt>
-                        <dd className="text-(--fg-secondary-color)">{calcPodcastSize()}</dd>
+                        <LoadingSkeletonDD loading={systemInfo.isLoading} text={calcedPodcastSize}/>
                     </dl>
                 </div>
 
@@ -146,29 +156,24 @@ export const SystemInfoPage: FC = () => {
 
 
                         <dt className="font-medium text-(--fg-color)">{t('rss-feed')}</dt>
-                        <dd className="text-(--fg-secondary-color)"><a className="text-(--accent-color) hover:text-(--accent-color-hover)" href={prependAPIKeyOnAuthEnabled(configModel!.rssFeed, data)} target="_blank" rel="noopener noreferrer">{prependAPIKeyOnAuthEnabled(configModel!.rssFeed, data)}</a></dd>
-
-                        {versionInfo && (
+                        <dd className="text-(--fg-secondary-color)"><a className="text-(--accent-color) hover:text-(--accent-color-hover)" href={linkToRSSFeed} target="_blank" rel="noopener noreferrer"><LoadingSkeletonSpan text={linkToRSSFeed} loading={user.isLoading}/></a></dd>
                             <>
                                 <dt className="font-medium text-(--fg-color)">{t('version')}</dt>
-                                <dd className="text-(--fg-secondary-color)">{versionInfo.version}</dd>
+                                <LoadingSkeletonDD text={infoVersion?.data?.version} loading={infoVersion.isLoading}></LoadingSkeletonDD>
 
                                 <dt className="font-medium text-(--fg-color)">{t('commit')}</dt>
-                                <dd className="text-(--fg-secondary-color)">{versionInfo.commit}</dd>
+                                <LoadingSkeletonDD text={infoVersion.data?.commit} loading={infoVersion.isLoading}></LoadingSkeletonDD>
 
                                 <dt className="font-medium text-(--fg-color)">{t('ci-build')}</dt>
-                                <dd className="text-(--fg-secondary-color)">{versionInfo.ci}</dd>
+                                <LoadingSkeletonDD text={infoVersion?.data?.ci} loading={infoVersion.isLoading}></LoadingSkeletonDD>
 
                                 <dt className="font-medium text-(--fg-color)">{t('build-date')}</dt>
-                                <dd className="text-(--fg-secondary-color)">{versionInfo.time}</dd>
-
+                                <LoadingSkeletonDD text={infoVersion?.data?.time} loading={infoVersion.isLoading}></LoadingSkeletonDD>
                                 <dt className="font-medium text-(--fg-color)">{t('branch')}</dt>
-                                <dd className="text-(--fg-secondary-color)">{versionInfo.ref}</dd>
-
+                                <LoadingSkeletonDD text={infoVersion?.data?.ref} loading={infoVersion.isLoading}></LoadingSkeletonDD>
                                 <dt className="font-medium text-(--fg-color)">{t('os')}</dt>
-                                <dd className="text-(--fg-secondary-color)">{versionInfo.os}</dd>
+                                <LoadingSkeletonDD text={infoVersion?.data?.os} loading={infoVersion.isLoading}></LoadingSkeletonDD>
                             </>
-                        )}
                     </dl>
                 </div>
             </div>

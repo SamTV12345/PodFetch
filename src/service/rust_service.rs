@@ -10,7 +10,6 @@ use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
-use crate::models::tag::Tag;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
@@ -278,32 +277,20 @@ impl PodcastService {
         tag: Option<String>,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
-            Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?;
-        let mut podcast_dto_vec: Vec<PodcastDto> = Vec::new();
-        for podcast in podcasts {
-            let tags_of_podcast = Tag::get_tags_of_podcast(podcast.0.id, &designated_username)?;
-            podcast_dto_vec.push(
-                (
-                    podcast.0.clone(),
-                    Some(podcast.1.clone()),
-                    tags_of_podcast.clone(),
-                )
-                    .into(),
-            );
-        }
+            Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?
+                .iter()
+                .filter(|podcast| {
+                    if let Some(tag) = &tag {
+                        return podcast.2.iter().filter(|p| p.name == *tag).count() > 0;
+                    }
+                    true
+                })
+                .map(|p| {
+                    (p.0.clone(), Option::from(p.1.clone()), p.2.clone()).into()
+                })
+                .collect::<Vec<PodcastDto>>();
 
-        if let Some(tag) = tag {
-            let found_tag = Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
-
-            if let Some(foud_tag) = found_tag {
-                podcast_dto_vec = podcast_dto_vec
-                    .into_iter()
-                    .filter(|p| p.tags.iter().any(|t| t.id == foud_tag.id))
-                    .collect::<Vec<PodcastDto>>()
-            }
-        }
-
-        Ok(podcast_dto_vec)
+        Ok(podcasts)
     }
 
     pub fn search_podcasts(
@@ -313,25 +300,18 @@ impl PodcastService {
         designated_username: String,
         tag: Option<String>,
     ) -> Result<Vec<PodcastDto>, CustomError> {
-        let podcasts = Favorite::search_podcasts(order, title, latest_pub, &designated_username)?;
-        let mut mapped_result = podcasts
+        let podcasts = Favorite::search_podcasts(order, title, latest_pub, &designated_username)?
             .iter()
-            .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &designated_username).unwrap();
-                (podcast.0.clone(), podcast.1.clone(), tags).into()
+            .filter(|podcast| {
+                if let Some(tag) = &tag {
+                    return podcast.2.iter().filter(|p| p.name == *tag).count() > 0;
+                }
+                true
+            })
+            .map(|p| {
+                (p.0.clone(), p.1.clone(), p.2.clone()).into()
             })
             .collect::<Vec<PodcastDto>>();
-
-        if let Some(tag) = tag {
-            let found_tag = Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
-
-            if let Some(foud_tag) = found_tag {
-                mapped_result = mapped_result
-                    .into_iter()
-                    .filter(|p| p.tags.iter().any(|t| t.id == foud_tag.id))
-                    .collect::<Vec<PodcastDto>>()
-            }
-        }
-        Ok(mapped_result)
+        Ok(podcasts)
     }
 }

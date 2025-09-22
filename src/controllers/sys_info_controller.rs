@@ -192,7 +192,7 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct VersionInfo {
     pub version: &'static str,
     pub r#ref: &'static str,
@@ -206,7 +206,7 @@ pub struct VersionInfo {
 get,
 path="/info",
 responses(
-(status = 200, description = "Gets the info of the server")),
+(status = 200, description = "Gets the info of the server", body=VersionInfo)),
 tag="info"
 )]
 pub async fn get_info() -> Json<VersionInfo> {
