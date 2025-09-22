@@ -1076,6 +1076,8 @@ export interface components {
             clientId: string;
             jwksUri: string;
             redirectUri: string;
+            /** Format: int64 */
+            refreshInterval: number;
             scope: string;
         };
         OpmlModel: {

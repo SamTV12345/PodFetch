@@ -92,7 +92,6 @@ const App: FC<PropsWithChildren> = ({ children }) => {
     const { t } = useTranslation()
     const socket = useCommon(state=>state.socketIo)
     const setProgress = useOpmlImport(state => state.setProgress)
-    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const wasAlreadyRequested = useRef(false);
     const queryClient = useQueryClient()
 
@@ -109,7 +108,6 @@ const App: FC<PropsWithChildren> = ({ children }) => {
                 return
             }
             if (useCommon.getState().currentDetailedPodcastId === data.podcast.id) {
-            console.log("setting local url")
                 enqueueSnackbar(t('new-podcast-episode-added', {name: decodeHTMLEntities(data.podcast_episode.name)}), {variant: 'success'})
 
                 const downloadedPodcastEpisode = data.podcast_episode
@@ -189,7 +187,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
             })
 
             enqueueSnackbar(t('podcast-episode-deleted', {name: decodeHTMLEntities(data.podcast_episode.name)}), {variant: 'success'})
-            setSelectedEpisodes(updatedPodcastEpisodes)
+            useCommon.getState().setSelectedEpisodes(updatedPodcastEpisodes)
         })
 
         socket.on('opmlAdded', () => {

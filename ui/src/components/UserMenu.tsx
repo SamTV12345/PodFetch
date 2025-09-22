@@ -5,6 +5,7 @@ import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
 import {$api} from "../utils/http";
 import {removeLogin} from "../utils/login";
+import {ADMIN_ROLE} from "../models/constants";
 
 
 const AccountTrigger = ()=>{
@@ -29,12 +30,12 @@ export const UserMenu: FC = () => {
             return []
         }
         const menuItems: Array<MenuItem> = [
-            {
-                iconName: 'info',
-                translationKey: 'system-info',
-                path: 'info'
-            }
+
         ]
+
+        if (data.role === ADMIN_ROLE) {
+
+        }
 
         menuItems.push({
             iconName: 'account_circle',
@@ -42,15 +43,20 @@ export const UserMenu: FC = () => {
             path: 'profile'
         })
 
-        if (data.role === 'admin' || !(configModel.data?.oidcConfigured && configModel.data.basicAuth)) {
+        if (data.role === 'admin') {
             menuItems.push({
                 iconName: 'settings',
                 translationKey: 'settings',
                 path: 'settings'
             })
+            menuItems.push({
+                iconName: 'info',
+                translationKey: 'system-info',
+                path: 'info'
+            })
         }
 
-        if (configModel?.data?.oidcConfig || configModel?.data?.basicAuth) {
+        if (data.role === 'admin') {
             menuItems.push({
                 iconName: 'group',
                 translationKey: 'administration',
@@ -59,7 +65,6 @@ export const UserMenu: FC = () => {
         }
 
         if (configModel?.data?.oidcConfigured || configModel?.data?.basicAuth) {
-
             menuItems.push({
                 iconName: 'logout',
                 translationKey: 'logout',

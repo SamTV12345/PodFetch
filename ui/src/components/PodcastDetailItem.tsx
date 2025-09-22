@@ -1,14 +1,14 @@
 import {FC, Fragment, useMemo} from 'react'
-import { useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { Waypoint } from 'react-waypoint'
-import { useSnackbar } from 'notistack'
+import {useParams} from 'react-router-dom'
+import {useTranslation} from 'react-i18next'
+import {Waypoint} from 'react-waypoint'
+import {useSnackbar} from 'notistack'
 import {formatTime, removeHTML} from '../utils/Utilities'
 import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
-import {components} from "../../schema";
+import {components, operations} from "../../schema";
 import {client} from "../utils/http";
 import {useQueryClient} from "@tanstack/react-query";
 
@@ -122,8 +122,8 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                             setSelectedEpisodes(mappedEpisodes)
                         }}>check</span>
                         <span className={"material-symbols-outlined text-(--fg-color) " + (episode.podcastEpisode.favored && 'filled')}
-                              onClick={() => {
-                                  client.PUT(  "/api/v1/podcasts/{id}/episodes/favor", {
+                              onClick={async () => {
+                                  await client.PUT(  "/api/v1/podcasts/{id}/episodes/favor", {
                                       params: {
                                           path: {
                                                 id: episode.podcastEpisode.id
@@ -133,16 +133,30 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                                           favored: !episode.podcastEpisode.favored
                                       }
                                   })
-                                      .then(() => {
-                                            const mappedEpisodes = selectedEpisodes.map(s => {
-                                                if (s.podcastEpisode.episode_id === episode.podcastEpisode.episode_id) {
-                                                    s.podcastEpisode.favored = !episode.podcastEpisode.favored
-                                                }
-                                                return s
-                                            })
-                                            setSelectedEpisodes(mappedEpisodes)
-                                        })
+                                  for (const cache of queryClient.getQueryCache().getAll()) {
+                                      if (cache.queryKey[0] == "get" && (cache.queryKey[1] as string) === ("/api/v1/podcasts/{id}/episodes")
+                                          && (cache.queryKey[2] as {params: operations['find_all_podcast_episodes_of_podcast']['parameters']}).params.path.id === params.id) {
+                                          queryClient.setQueryData(cache.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
+                                              if (!oldData) {
+                                                  return []
+                                              }
+                                              return oldData.map(s => {
+                                                  if (s.podcastEpisode.id === episode.podcastEpisode.id) {
+                                                      return {
+                                                          ...s,
+                                                          podcastEpisode: {
+                                                              ...s.podcastEpisode,
+                                                              favored: !s.podcastEpisode.favored
+                                                          }
+                                                      }
+                                                  }
+                                                  return s
+                                              })
+                                          })
+                                      }
+                                  }
                               }}
+
                         >favorite</span>
                     </span>
                 </div>
@@ -205,9 +219,10 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                         }
                     })
                         .then((response) => {
-                            for (const ep of queryClient.getQueryCache().getAll()) {
-                                if (ep.queryKey[0] == "get" && ep.queryKey[1] == `/api/v1/podcasts/${params.id}/episodes`) {
-                                    queryClient.setQueryData(ep.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
+                            for (const cache of queryClient.getQueryCache().getAll()) {
+                                if (cache.queryKey[0] == "get" && (cache.queryKey[1] as string) === ("/api/v1/podcasts/{id}/episodes")
+                                    && (cache.queryKey[2] as {params: operations['find_all_podcast_episodes_of_podcast']['parameters']}).params.path.id === params.id) {
+                                    queryClient.setQueryData(cache.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
                                         if (!oldData) {
                                             return response.data!
                                         }

@@ -1,5 +1,5 @@
 use crate::models::user::User;
-use axum::Json;
+use axum::{Extension, Json};
 
 use fs_extra::dir::get_size;
 use reqwest::StatusCode;
@@ -19,7 +19,12 @@ responses(
 body = SysExtraInfo)),
 tag="sys"
 )]
-pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
+pub async fn get_sys_info(Extension(requester): Extension<User>) -> Result<Json<SysExtraInfo>, CustomError> {
+
+    if !requester.is_admin() {
+        return Err(CustomErrorInner::Forbidden(Info).into());
+    }
+
     let mut sys = System::new();
     let disks = Disks::new_with_refreshed_list();
 

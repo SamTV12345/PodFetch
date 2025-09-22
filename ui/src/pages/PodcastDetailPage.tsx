@@ -11,11 +11,10 @@ import {PodcastInfoModal} from '../components/PodcastInfoModal'
 import {Switcher} from '../components/Switcher'
 import 'material-symbols/outlined.css'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
-import {ErrorIcon} from "../icons/ErrorIcon";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
 import {$api, client} from '../utils/http'
 import {EditableHeading} from "../components/EditableHeading";
-import {Loading} from "../components/Loading";
+import {ADMIN_ROLE} from "../models/constants";
 
 export const PodcastDetailPage = () => {
     const configModel = $api.useQuery('get', '/api/v1/sys/config')
@@ -61,7 +60,6 @@ export const PodcastDetailPage = () => {
     })
 
     useEffect(() => {
-
         if (params.podcastid) {
             const element = document.getElementById('episode_' + params.podcastid)
 
@@ -112,7 +110,7 @@ export const PodcastDetailPage = () => {
             <div className="max-w-4xl">
                 <PodcastInfoModal/>
                 <PodcastEpisodeAlreadyPlayed/>
-                {currentPodcast.data && <PodcastSettingsModal open={openSettingsMenu} setOpen={setOpenSettingsMenu} podcast={currentPodcast.data}/>}
+                {currentPodcast.data && data?.role === ADMIN_ROLE && <PodcastSettingsModal open={openSettingsMenu} setOpen={setOpenSettingsMenu} podcast={currentPodcast.data}/>}
 
                 {/* Header */}
                 <div className="
@@ -140,7 +138,7 @@ export const PodcastDetailPage = () => {
 
                         {currentPodcast.data && <EditableHeading podcastId={Number(currentDetailedPodcastId)} initialText={currentPodcast.data.name} allowedToEdit={data?.role == "admin"}></EditableHeading>}
 
-                        <span
+                        {currentPodcast.data && data?.role === ADMIN_ROLE &&<span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                             onClick={() => {
                                 client.POST("/api/v1/podcasts/{id}/refresh", {
@@ -150,12 +148,13 @@ export const PodcastDetailPage = () => {
                                         }
                                     }
                                 })
-                            }}>refresh</span>
+                            }}>refresh</span> }
                         <span>
-                            <button className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
+                            {currentPodcast.data && data?.role === ADMIN_ROLE && <button className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                                     onClick={() => {
                                         setOpenSettingsMenu(true)
                                     }}>settings</button>
+                            }
                         </span>
                     </div>
 
