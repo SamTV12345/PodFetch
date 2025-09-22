@@ -4,7 +4,6 @@ use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_dto::PodcastDto;
-use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
@@ -136,7 +135,7 @@ impl Favorite {
         latest_pub: OrderOption,
         designated_username: &str,
     ) -> Result<Vec<(Podcast, Favorite, Vec<Tag>)>, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+        
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as podcastsid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
         use crate::adapters::persistence::dbconfig::schema::tags_podcasts as t_join_table;
@@ -225,7 +224,7 @@ impl Favorite {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as f_username;
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+        
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as podcastsid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 

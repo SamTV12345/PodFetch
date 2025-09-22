@@ -4,7 +4,6 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::string::ToString;
 use std::sync::LazyLock;
-use r2d2_postgres::postgres::types::ToSql;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search";
 
@@ -51,7 +50,6 @@ use crate::service::logging_service::init_logging;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
-use crate::models::filter::Filter;
 
 // User management roles
 #[derive(Serialize, Deserialize, Debug, PartialEq, ToSchema)]
