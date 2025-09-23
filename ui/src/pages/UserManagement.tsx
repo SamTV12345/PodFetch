@@ -35,6 +35,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
     useEffect(() => {
         if (user.data && user.data.username) {
             setValue('username', user.data.username)
+            setValue('apiKey', user.data.apiKey)
         }
     }, [user])
 
@@ -78,7 +79,7 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                                htmlFor="password">{t('password')}</label>
                         <Controller name="password" control={control}
                                     render={({field: {name, onChange, value}}) => (
-                                        <CustomInput id="password" loading={user.isLoading} name={name}  readOnly={user.data?.readOnly}
+                                        <CustomInput id="password" placeholder="************" loading={user.isLoading} name={name}  readOnly={user.data?.readOnly}
                                                      onChange={onChange}
                                                      value={value ?? ""}/>
                                     )}/>

@@ -1,9 +1,11 @@
 import createClient, {Middleware} from "openapi-fetch";
 import createTanstackQueryClient from "openapi-react-query";
-import type {paths} from "../../schema";
+import {components, paths} from "../../schema";
 import {APIError} from "./ErrorDefinition";
 import { enqueueSnackbar } from "notistack";
 import i18n from "../language/i18n";
+import {getLogin} from "./login";
+import {getConfigFromHtmlFile} from "./config";
 
 
 export let apiURL: string
@@ -25,14 +27,7 @@ export const HEADER_TO_USE: Record<string, string> = {
 }
 
 
-
-
-export const addHeader = (key: string, value: string) => {
-    HEADER_TO_USE[key] = value
-}
-
-localStorage.getItem("auth") !== null && addHeader("Authorization", "Basic " + localStorage.getItem("auth"))
-sessionStorage.getItem("auth") !== null && addHeader("Authorization", "Basic " + sessionStorage.getItem("auth"))
+const configObj = getConfigFromHtmlFile()
 
 function isJsonString(str: string) {
     try {
@@ -45,9 +40,16 @@ function isJsonString(str: string) {
 
 const authMiddleware: Middleware = {
     async onRequest({ request}) {
+        const auth = localStorage.getItem('auth') || sessionStorage.getItem('auth')
+        const login = getLogin()
         Object.entries(HEADER_TO_USE).forEach(([key, value]) => {
             request.headers.set(key, value)
         })
+        if (auth && configObj && configObj.basicAuth) {
+            request.headers.set('Authorization', 'Basic '+ auth)
+        } else if (auth && configObj && configObj.oidcConfigured) {
+            request.headers.set('Authorization', 'Bearer '+ auth)
+        }
         return request;
     },
     async onResponse({ response }) {
@@ -60,7 +62,7 @@ const authMiddleware: Middleware = {
                     enqueueSnackbar(i18n.t(e.errorCode, e.arguments), {variant: 'error'})
                     throw new APIError(e)
                 } else {
-                    throw new Error("Request failed: " + response.body === null? response.statusText: await response.text());
+                    throw new Error("Request failed: " + response.body === null? response.statusText: textData);
                 }
             }
         }
@@ -71,14 +73,3 @@ const authMiddleware: Middleware = {
 client.use(authMiddleware)
 
 export const $api = createTanstackQueryClient(client);
-
-
-
-client.GET("/api/v1/sys/config", {
-    headers: {
-        "Content-Type": "application/json"
-    },
-    asdamasld: {
-
-    }
-})

@@ -47,16 +47,6 @@ export const removeHTML = (html: string) => {
     }
 }
 
-
-export const isJsonString = (str: string) => {
-    try {
-        JSON.parse(str);
-    } catch (e) {
-        return false;
-    }
-    return true;
-}
-
 export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response?: components["schemas"]["EpisodeDto"]): components["schemas"]["PodcastEpisodeWithHistory"] => {
     return {
         podcastEpisode: {
@@ -70,21 +60,6 @@ export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpi
         }
     }
 }
-
-
-export const prependAPIKeyOnAuthEnabled = (url: string, loggedInUser: components['schemas']['UserWithAPiKey'])=>{
-    if (loggedInUser.apiKey && (useCommon.getState().configModel?.oidcConfig||useCommon.getState().configModel?.basicAuth)) {
-        if (url.includes('?')) {
-            url += '&'
-        }
-        else {
-            url += '?'
-        }
-        url += 'apiKey=' + loggedInUser?.apiKey
-    }
-    return url
-}
-
 
 export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response?: components["schemas"]["EpisodeDto"]) : components["schemas"]["PodcastEpisodeWithHistory"] => {
 

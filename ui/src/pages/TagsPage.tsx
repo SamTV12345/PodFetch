@@ -4,18 +4,14 @@ import useCommon from "../store/CommonSlice";
 import {useEffect} from "react";
 import {PodcastTags} from "../models/PodcastTags";
 import {CustomInput} from "../components/CustomInput";
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
+import {LoadingSkeletonSpan} from "../components/ui/LoadingSkeletonSpan";
+import {useQueryClient} from "@tanstack/react-query";
 
 export const TagsPage = ()=>{
     const {t}  = useTranslation()
-    const tags = useCommon(state=>state.tags)
-    const setTags = useCommon(state=>state.setPodcastTags)
-
-    useEffect(() => {
-        if (tags.length === 0) {
-            client.GET("/api/v1/tags").then(v=>setTags(v.data!))
-        }
-    }, []);
+    const tags = $api.useQuery('get', '/api/v1/tags')
+    const queryClient = useQueryClient()
 
     return (
         <>
@@ -33,7 +29,17 @@ export const TagsPage = ()=>{
                 </thead>
                 <tbody>
                 {
-                    tags.map(tag=> {
+                    (tags.isLoading || !tags.data) ?
+                        Array.from({length: 5}).map((value, index, array)=><tr key={index}>
+                            <td className="px-2 py-4">
+                                <LoadingSkeletonSpan height="30px" loading={tags.isLoading}/>
+                            </td>
+                            <td className="px-2 py-4">
+                                <LoadingSkeletonSpan height="30px" loading={tags.isLoading}/>
+                            </td>
+                        </tr>)
+                        :
+                    tags.data.map(tag=> {
                         return <tr className="border-b border-stone-300 " key={tag.id}>
                             <td className="px-2 py-4 flex items-center text-(--fg-color)">
                                 <CustomInput onBlur={()=>{
@@ -49,15 +55,15 @@ export const TagsPage = ()=>{
                                         }
                                     })
                                 }} value={tag.name} onChange={(event)=>{
-                                    setTags(tags.map(t=>{
-                                        if (t.id === tag.id) {
-                                            return {
-                                                ...t,
-                                                name: event.target.value
+                                    queryClient.setQueryData(['get', '/api/v1/tags'], (oldData?: PodcastTags[])=>{
+                                        return oldData?.map(t=>{
+                                            if (t.id === tag.id) {
+                                                return {
+                                                    ...t,
+                                                    name: event.target.value
+                                                }
                                             }
-                                        }
-                                        return t
-                                    }))
+                                        })})
                                 }}/>
                             </td>
                             <td>
@@ -69,7 +75,7 @@ export const TagsPage = ()=>{
                                             }
                                         }
                                     }).then(()=>{
-                                        setTags(tags.filter(tagfiltered=>tagfiltered.id !== tag.id))
+                                        queryClient.setQueryData(['get', '/api/v1/tags'], (oldData?: PodcastTags[])=>oldData?.filter(tagfiltered=>tagfiltered.id !== tag.id))
                                     })
                                 }}>{t('delete')}</button>
                             </td>

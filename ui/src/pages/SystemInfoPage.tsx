@@ -1,29 +1,17 @@
 import {FC, useEffect, useMemo, useState} from 'react'
 import { useTranslation } from 'react-i18next'
-import {prependAPIKeyOnAuthEnabled} from '../utils/Utilities'
 import { CustomGaugeChart } from '../components/CustomGaugeChart'
 import { Heading1 } from '../components/Heading1'
 import { Heading3 } from '../components/Heading3'
 import { Loading } from '../components/Loading'
 import 'material-symbols/outlined.css'
-import useCommon from "../store/CommonSlice";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {LoadingSkeletonDD} from "../components/ui/LoadingSkeletonDD";
 import {ChartLoadingSkeleton} from "../components/ui/ChartLoadingSkeleton";
 import {LoadingSkeletonSpan} from "../components/ui/LoadingSkeletonSpan";
 
-type VersionInfoModel = {
-    commit: string,
-    version: string,
-    ref: string,
-    ci: string,
-    time: string,
-    os: string
-}
-
 export const SystemInfoPage: FC = () => {
-    const configModel = useCommon(state => state.configModel)
     const user = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
             path: {
@@ -33,6 +21,7 @@ export const SystemInfoPage: FC = () => {
     })
     const systemInfo = $api.useQuery('get', '/api/v1/sys/info')
     const infoVersion = $api.useQuery('get', '/api/v1/info')
+    const configModel = $api.useQuery('get', '/api/v1/sys/config')
 
     const { t } = useTranslation()
 
@@ -74,7 +63,7 @@ export const SystemInfoPage: FC = () => {
         if (!configModel || !user.data) {
             return ''
         }
-        return prependAPIKeyOnAuthEnabled(configModel!.rssFeed, user.data)
+        return configModel?.data?.rssFeed
     }, [configModel, user])
 
 
@@ -147,7 +136,7 @@ export const SystemInfoPage: FC = () => {
                     <dl className="grid grid-cols-1 xs:grid-cols-[auto_auto] gap-2 xs:gap-6 text-sm">
                         <dt className="font-medium text-(--fg-color)">{t('podindex-configured')}</dt>
                         <dd className="text-(--fg-secondary-color)">
-                            {configModel?.podindexConfigured ? (
+                            {configModel?.data?.podindexConfigured ? (
                                 <span className="material-symbols-outlined text-(--success-fg-color)">check_circle</span>
                             ) : (
                                 <span className="material-symbols-outlined text-(--danger-fg-color)">block</span>

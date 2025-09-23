@@ -11,7 +11,8 @@ import {CustomInput} from "./CustomInput";
 import {CustomSelect} from "./CustomSelect";
 import {options} from "./SettingsNaming";
 import {components} from "../../schema";
-import { client } from '../utils/http';
+import {$api, client} from '../utils/http';
+import {useQueryClient} from "@tanstack/react-query";
 
 type PodcastSettingsModalProps = {
     open: boolean,
@@ -20,38 +21,29 @@ type PodcastSettingsModalProps = {
 }
 
 export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open, podcast})=>{
-    const [podcastSettings, setPodcastSettings] = useState<PodcastSetting>()
-    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
-    const [loaded, setLoaded] = useState<boolean>(false)
     const {t} = useTranslation()
+    const queryClient = useQueryClient()
+
+    const podcastSettings = $api.useQuery('get', '/api/v1/podcasts/{id}/settings', {
+        params: {
+            path: {
+                id: podcast.id
+            }
+        }
+    })
     const isSettingsEnabled = useMemo(()=>{
-        return podcastSettings != null && loaded && podcastSettings.activated
-    }, [podcastSettings, loaded])
+        if (!podcastSettings.data) {
+            return false
+        }
 
-
-
-    useEffect(() => {
-        client.GET("/api/v1/podcasts/{id}/settings", {
-            params: {
-                path: {
-                    id: podcast.id
-                }
-            }
-        }).then((res)=>{
-            if (res) {
-                setPodcastSettings(res.data)
-            }
-            setLoaded(true)
-        }).catch(()=>{
-            setLoaded(true)
-        })
-    }, []);
+        return podcastSettings.data.activated
+    }, [podcastSettings])
 
 
     useEffect(() => {
-        if (loaded && !open && podcastSettings) {
+        if (podcastSettings.isFetched && !open && podcastSettings) {
             client.PUT("/api/v1/podcasts/{id}/settings", {
-                body: podcastSettings,
+                body: podcastSettings.data!,
                 params: {
                     path: {
                         id: podcast.id
@@ -59,7 +51,7 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                 }
             })
         }
-    }, [loaded, open, podcastSettings]);
+    }, [open, podcastSettings]);
 
 
     return <Dialog.Root open={open}>
@@ -84,21 +76,26 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
 
                         <h2 className="text-(--fg-color) col-span-2">{t('episode-numbering')}</h2>
                         <Switcher className="justify-self-end" disabled={!isSettingsEnabled}
-                                  checked={podcastSettings?.episodeNumbering}
+                                  checked={podcastSettings?.data?.episodeNumbering}
                                   onChange={(checked) => {
-                                      setPodcastSettings({...podcastSettings!, episodeNumbering: checked})
+                                      queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                            params: { path: { id: podcast.id } }
+                                      }], (oldData: PodcastSetting | undefined) => {
+                                            return {...oldData!, episodeNumbering: checked}
+                                      })
                                   }}/>
                         <label className="mr-6 text-(--fg-color)" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
                         <CustomButtonSecondary disabled={!isSettingsEnabled} onClick={() => {
                             client.PUT("/api/v1/settings/runcleanup")
                         }}>{t('run-cleanup')}</CustomButtonSecondary>
                         <Switcher disabled={!isSettingsEnabled}
-                                  checked={podcastSettings ? podcastSettings.autoCleanup : false}
+                                  checked={podcastSettings.data ? podcastSettings.data.autoCleanup : false}
                                   className="xs:justify-self-end" id="auto-cleanup"
                                   onChange={() => {
-                                      setPodcastSettings({
-                                          ...podcastSettings!,
-                                          autoCleanup: !podcastSettings!.autoCleanup
+                                      queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                          params: { path: { id: podcast.id } }
+                                      }], (oldData: PodcastSetting | undefined) => {
+                                          return {...oldData, autoCleanup: !oldData?.autoCleanup}
                                       })
                                   }}/>
                         <label htmlFor="days-to-keep"
@@ -106,22 +103,24 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                             headerKey="days-to-keep" textKey="days-to-keep-explanation"/></label>
                         <CustomInput disabled={!isSettingsEnabled} className="w-20 justify-self-end" id="days-to-keep"
                                      onChange={(e) => {
-                                         setPodcastSettings({
-                                             ...podcastSettings!,
-                                             autoCleanupDays: parseInt(e.target.value)
+                                         queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                             params: { path: { id: podcast.id } }
+                                         }], (oldData: PodcastSetting | undefined) => {
+                                             return {...oldData, autoCleanupDays: parseInt(e.target.value)}
                                          })
-                                     }} type="number" value={podcastSettings ? podcastSettings!.autoCleanupDays : '0'}/>
+                                     }} type="number" value={podcastSettings.data ? podcastSettings.data?.autoCleanupDays : '0'}/>
 
                         <label htmlFor="auto-update"
                                className="flex gap-1 col-span-2 text-(--fg-color)">{t('auto-update')} <SettingsInfoIcon
                             headerKey="auto-update" textKey="auto-update-explanation"/></label>
                         <Switcher disabled={!isSettingsEnabled}
-                                  checked={podcastSettings ? podcastSettings.autoUpdate : false}
+                                  checked={podcastSettings.data ? podcastSettings.data.autoUpdate : false}
                                   className="xs:justify-self-end" id="auto-update"
                                   onChange={() => {
-                                      setPodcastSettings({
-                                          ...podcastSettings!,
-                                          autoUpdate: !podcastSettings?.autoUpdate
+                                      queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                          params: { path: { id: podcast.id } }
+                                      }], (oldData: PodcastSetting | undefined) => {
+                                          return {...oldData, autoUpdate: !podcastSettings?.data?.autoUpdate}
                                       })
                                   }}/>
 
@@ -130,12 +129,13 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                             <SettingsInfoIcon
                                 headerKey="auto-download" textKey="auto-download-explanation"/></label>
                         <Switcher disabled={!isSettingsEnabled}
-                                  checked={podcastSettings ? podcastSettings.autoDownload : false}
+                                  checked={podcastSettings.data ? podcastSettings.data.autoDownload : false}
                                   className="xs:justify-self-end" id="auto-download"
                                   onChange={() => {
-                                      setPodcastSettings({
-                                          ...podcastSettings!,
-                                          autoDownload: !podcastSettings?.autoDownload
+                                      queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                          params: { path: { id: podcast.id } }
+                                      }], (oldData: PodcastSetting | undefined) => {
+                                          return {...oldData, autoDownload: !podcastSettings?.data?.autoDownload}
                                       })
                                   }}/>
                         <label className="text-(--fg-color) flex gap-1 col-span-2"
@@ -145,30 +145,38 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                         </label>
                         <CustomSelect disabled={!isSettingsEnabled} id="colon-replacement" options={options}
                                       onChange={(v) => {
-                                          setPodcastSettings({
-                                              ...podcastSettings!,
-                                              replacementStrategy: v
+                                          queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                              params: { path: { id: podcast.id } }
+                                          }], (oldData: PodcastSetting | undefined) => {
+                                              return {...oldData, replacementStrategy: v}
                                           })
                                       }}
-                                      value={podcastSettings ? podcastSettings!.replacementStrategy : options[0]!.value}/>
+                                      value={podcastSettings.data ? podcastSettings.data.replacementStrategy : options[0]!.value}/>
                         <label htmlFor="number-of-podcasts-to-download"
                                className="flex gap-1 col-span-2 text-(--fg-color)">{t('number-of-podcasts-to-download')}
                             <SettingsInfoIcon
                                 headerKey="number-of-podcasts-to-download"
                                 textKey="number-of-podcasts-to-download-explanation"/></label>
-                        <CustomInput disabled={!isSettingsEnabled} className="w-20 justify-self-end" id="number-of-podcasts-to-download" onChange={(e) => {
-                            setPodcastSettings({...podcastSettings!, podcastPrefill: parseInt(e.target.value)})
-                        }} type="number" value={podcastSettings ? podcastSettings.podcastPrefill : 5}/>
+                        <CustomInput disabled={!isSettingsEnabled} className="w-20 justify-self-end" id="number-of-podcasts-to-download"
+                                     onChange={(e) => {
+                                         queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                             params: { path: { id: podcast.id } }
+                                         }], (oldData: PodcastSetting | undefined) => {
+                                             return {...oldData, podcastPrefill: parseInt(e.target.value)}
+                                         })
+                        }} type="number" value={podcastSettings.data ? podcastSettings.data.podcastPrefill : 5}/>
                         <label htmlFor="activate"
                                className="flex gap-1 col-span-2 text-(--fg-color)">{t('activated')}
                             <SettingsInfoIcon
                                 headerKey="auto-download" textKey="auto-download-explanation"/></label>
                         <Switcher
-                            checked={podcastSettings ? podcastSettings.activated : false}
+                            checked={podcastSettings.data ? podcastSettings.data.activated : false}
                             className="xs:justify-self-end" id="activate"
                             onChange={() => {
-                                if (!podcastSettings && loaded) {
-                                    setPodcastSettings({
+                                if (!podcastSettings.data && podcastSettings.isFetched) {
+                                    queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                            params: { path: { id: podcast.id } }
+                                        }], ()=>({
                                         podcastId: podcast.id,
                                         episodeNumbering: false,
                                         autoDownload: false,
@@ -183,12 +191,15 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                                         directPaths: false,
                                         activated: true,
                                         podcastPrefill: 5,
-                                    })
+                                    }))
                                 } else {
-                                    setPodcastSettings({
-                                        ...podcastSettings!,
-                                        activated: !podcastSettings?.activated
-                                    })
+                                    queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
+                                        params: { path: { id: podcast.id } }
+                                    }], (oldData: components["schemas"]["PodcastSetting"])=>{
+                                        return {
+                                            ...oldData!,
+                                            activated: !oldData?.activated
+                                        }})
                                 }
 
                             }}/>

@@ -1,7 +1,6 @@
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PodcastEpisode } from '../store/CommonSlice'
-import {formatTime, prependAPIKeyOnAuthEnabled, removeHTML} from '../utils/Utilities'
+import {formatTime, removeHTML} from '../utils/Utilities'
 import { useDebounce } from '../utils/useDebounce'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
@@ -91,7 +90,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                             <img alt={episode.name} className="
                                 hidden xs:block
                                 rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]
-                            " src={prependAPIKeyOnAuthEnabled(episode.image_url, data)} />
+                            " src={episode.image_url} />
 
                             {/* Information */}
                             <div className="flex flex-col gap-2">

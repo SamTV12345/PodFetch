@@ -1076,6 +1076,8 @@ export interface components {
             clientId: string;
             jwksUri: string;
             redirectUri: string;
+            /** Format: int64 */
+            refreshInterval: number;
             scope: string;
         };
         OpmlModel: {
@@ -1910,7 +1912,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null | components["schemas"]["Filter"];
+                    "application/json": components["schemas"]["Filter"];
                 };
             };
         };
@@ -2253,7 +2255,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PodcastSetting"];
+                };
             };
         };
     };
@@ -2277,7 +2281,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PodcastSetting"];
+                };
             };
         };
     };
