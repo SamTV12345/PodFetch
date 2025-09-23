@@ -64,7 +64,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@rsbuild/core": "^1.5.10",
+    "@rsbuild/core": "^1.5.11",
     "@rsbuild/plugin-babel": "^1.0.6",
     "@rsbuild/plugin-react": "^1.4.0",
     "@rsbuild/plugin-sass": "^1.4.0",
