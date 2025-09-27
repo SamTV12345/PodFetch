@@ -1,4 +1,6 @@
-use crate::constants::inner_constants::{BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH};
+use crate::constants::inner_constants::{
+    BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
+};
 use crate::models::dto_models::PodcastFavorUpdateModel;
 use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
 use crate::models::opml_model::OpmlModel;
@@ -60,7 +62,9 @@ pub async fn get_filter(
         username: "".into(),
     };
 
-    let filter = Filter::get_filter_by_username(&requester.username).await?.unwrap_or(default_filter);
+    let filter = Filter::get_filter_by_username(&requester.username)
+        .await?
+        .unwrap_or(default_filter);
     Ok(Json(filter))
 }
 
