@@ -1,3 +1,5 @@
+use std::cell::LazyCell;
+use std::ffi::OsStr;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 use crate::constants::inner_constants::{
@@ -29,9 +31,14 @@ use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 use std::io::Error;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 pub struct PodcastEpisodeService;
+
+
+const EPISODE_REGEX: LazyCell<Regex> = LazyCell::new(||Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap());
+
 
 impl PodcastEpisodeService {
     pub fn download_podcast_episode_if_not_locally_available(
@@ -357,13 +364,21 @@ impl PodcastEpisodeService {
         }
     }
 
+    #[inline]
     pub fn get_url_file_suffix(url: &str) -> Result<String, Error> {
-        let re = Regex::new(r"\.(\w+)(?:\?.*)?$").unwrap();
-        let capture = re.captures(url);
-        if capture.is_none() {
-            return Err(Error::other("No"));
-        }
-        Ok(capture.unwrap().get(1).unwrap().as_str().to_string())
+        /*let url = url::Url::parse(url);
+
+        let converted_url = match url {
+            Ok(url) => {
+                Ok(url)
+            },
+            Err(_) => {
+                Err(Error::other("No"))
+            }
+        }?;
+        let file_name = converted_url.path_segments().iter().last().ok_or(Error::other("No"))?;
+        file_name.rsplit('.').next().filter(|s| *s != file_name).map(|s| s.to_string())*/
+        Ok(Path::new(url).extension().unwrap_or(OsStr::new("")).to_string_lossy().into_owned())
     }
 
     pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
