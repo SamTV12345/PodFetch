@@ -16,6 +16,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          components: clippy, rustfmt
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -41,6 +42,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          components: clippy, rustfmt
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -66,6 +68,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          components: clippy, rustfmt
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
