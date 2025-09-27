@@ -44,8 +44,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          default: true
-          override: true
+          components: clippy, rustfmt
 
       - name: Build
         run: cargo build --all --release && strip target/release/podfetch && mv target/release/podfetch target/release/podfetch_amd64
@@ -112,8 +111,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          default: true
-          override: true
+          components: clippy, rustfmt
 
       - name: Build
         run: cargo build --all --release
