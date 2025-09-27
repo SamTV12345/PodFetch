@@ -285,9 +285,7 @@ impl PodcastService {
                     }
                     true
                 })
-                .map(|p| {
-                    (p.0.clone(), Option::from(p.1.clone()), p.2.clone()).into()
-                })
+                .map(|p| (p.0.clone(), Option::from(p.1.clone()), p.2.clone()).into())
                 .collect::<Vec<PodcastDto>>();
 
         Ok(podcasts)
@@ -308,9 +306,7 @@ impl PodcastService {
                 }
                 true
             })
-            .map(|p| {
-                (p.0.clone(), p.1.clone(), p.2.clone()).into()
-            })
+            .map(|p| (p.0.clone(), p.1.clone(), p.2.clone()).into())
             .collect::<Vec<PodcastDto>>();
         Ok(podcasts)
     }

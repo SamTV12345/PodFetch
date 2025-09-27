@@ -243,32 +243,30 @@ fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item>
     downloaded_episodes
         .iter()
         .map(|episode| {
-            let episode = episode.clone();
-
             let enclosure = EnclosureBuilder::default()
-                .url(episode.local_url.clone())
-                .length(episode.clone().total_time.to_string())
+                .url(&episode.local_url)
+                .length(episode.total_time.to_string())
                 .mime_type(format!(
                     "audio/{}",
-                    PodcastEpisodeService::get_url_file_suffix(&episode.clone().local_url).unwrap()
+                    PodcastEpisodeService::get_url_file_suffix(&episode.local_url).unwrap()
                 ))
                 .build();
 
             let itunes_extension = ITunesItemExtensionBuilder::default()
-                .duration(Some(episode.clone().total_time.to_string()))
-                .image(Some(episode.clone().local_image_url))
+                .duration(Some(episode.total_time.to_string()))
+                .image(Some(episode.local_image_url.to_string()))
                 .build();
 
             let guid = GuidBuilder::default()
                 .permalink(false)
-                .value(episode.clone().episode_id)
+                .value(&episode.episode_id)
                 .build();
 
             ItemBuilder::default()
                 .guid(Some(guid))
-                .pub_date(Some(episode.clone().date_of_recording))
-                .title(Some(episode.clone().name))
-                .description(Some(episode.clone().description))
+                .pub_date(Some(episode.date_of_recording.to_string()))
+                .title(Some(episode.name.to_string()))
+                .description(Some(episode.description.to_string()))
                 .enclosure(Some(enclosure))
                 .itunes_ext(itunes_extension)
                 .build()

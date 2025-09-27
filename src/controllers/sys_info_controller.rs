@@ -19,8 +19,9 @@ responses(
 body = SysExtraInfo)),
 tag="sys"
 )]
-pub async fn get_sys_info(Extension(requester): Extension<User>) -> Result<Json<SysExtraInfo>, CustomError> {
-
+pub async fn get_sys_info(
+    Extension(requester): Extension<User>,
+) -> Result<Json<SysExtraInfo>, CustomError> {
     if !requester.is_admin() {
         return Err(CustomErrorInner::Forbidden(Info).into());
     }
@@ -58,11 +59,13 @@ pub async fn get_sys_info(Extension(requester): Extension<User>) -> Result<Json<
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::settings::ConfigModel;
 use crate::utils::error::ErrorSeverity::Info;
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_io_extra_error, ErrorType, ApiError};
+use crate::utils::error::ErrorType::CustomErrorType;
+use crate::utils::error::{
+    ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
+};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use crate::utils::error::ErrorType::CustomErrorType;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SysExtraInfo {
@@ -185,7 +188,7 @@ pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, ErrorType> {
                 log::warn!("Login failed for user {}", auth.0.username);
                 return Err(ApiError::wrong_user_or_password().into());
             }
-            return Err(CustomErrorType(err))
+            return Err(CustomErrorType(err));
         }
     };
 

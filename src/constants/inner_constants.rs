@@ -1,5 +1,5 @@
-use std::convert::Into;
 use crate::service::environment_service::EnvironmentService;
+use std::convert::Into;
 use std::fmt;
 use std::fmt::Formatter;
 use std::string::ToString;
@@ -59,8 +59,6 @@ pub enum Role {
     Uploader,
     User,
 }
-
-
 
 impl fmt::Display for Role {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -145,7 +143,7 @@ pub const COMMON_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) A
 
 pub const OIDC_JWKS: &str = "OIDC_JWKS";
 pub const OIDC_REFRESH_INTERVAL: &str = "OIDC_REFRESH_INTERVAL";
-pub const DEFAULT_OIDC_REFRESH_INTERVAL: u64 = 1000*60*2; // 2 minutes
+pub const DEFAULT_OIDC_REFRESH_INTERVAL: u64 = 1000 * 60 * 2; // 2 minutes
 
 // Default device when viewing via web interface
 pub const DEFAULT_DEVICE: &str = "webview";
