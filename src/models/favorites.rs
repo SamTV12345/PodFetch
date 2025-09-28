@@ -13,9 +13,9 @@ use crate::utils::error::{CustomError, map_db_error};
 use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use indexmap::IndexMap;
 use utoipa::ToSchema;
 
 #[derive(
@@ -135,7 +135,6 @@ impl Favorite {
         latest_pub: OrderOption,
         designated_username: &str,
     ) -> Result<Vec<(Podcast, Favorite, Vec<Tag>)>, CustomError> {
-        
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as podcastsid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
         use crate::adapters::persistence::dbconfig::schema::tags_podcasts as t_join_table;
@@ -189,19 +188,15 @@ impl Favorite {
         let mut matching_podcast_ids: BTreeMap<i32, (Podcast, Favorite, Vec<Tag>)> =
             BTreeMap::new();
         let pr = query
-            .load::<(
-                Podcast,
-                Favorite,
-                Option<TagsPodcast>,
-                Option<Tag>,
-            )>(&mut get_connection())
+            .load::<(Podcast, Favorite, Option<TagsPodcast>, Option<Tag>)>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
         pr.iter().for_each(|c| {
             if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
                 if let Some(tag) = &c.3
-                    && !existing.2.iter().any(|t| t.id == tag.id) {
-                        existing.2.push(tag.clone());
-                    }
+                    && !existing.2.iter().any(|t| t.id == tag.id)
+                {
+                    existing.2.push(tag.clone());
+                }
             } else {
                 let mut tags = vec![];
                 if let Some(tag) = &c.3 {
@@ -214,7 +209,6 @@ impl Favorite {
         Ok(matching_podcast_ids.values().cloned().collect())
     }
 
-
     pub fn search_podcasts(
         order: OrderCriteria,
         title: Option<String>,
@@ -224,7 +218,7 @@ impl Favorite {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as f_username;
-        
+
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as podcastsid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 
@@ -277,19 +271,17 @@ impl Favorite {
         let mut matching_podcast_ids: IndexMap<i32, (Podcast, Option<Favorite>, Vec<Tag>)> =
             IndexMap::new();
         let pr = query
-            .load::<(
-                Podcast,
-                Option<Favorite>,
-                Option<TagsPodcast>,
-                Option<Tag>,
-            )>(&mut get_connection())
+            .load::<(Podcast, Option<Favorite>, Option<TagsPodcast>, Option<Tag>)>(
+                &mut get_connection(),
+            )
             .map_err(|e| map_db_error(e, Critical))?;
         pr.iter().for_each(|c| {
             if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
                 if let Some(tag) = &c.3
-                    && !existing.2.iter().any(|t| t.id == tag.id) {
-                        existing.2.push(tag.clone());
-                    }
+                    && !existing.2.iter().any(|t| t.id == tag.id)
+                {
+                    existing.2.push(tag.clone());
+                }
             } else {
                 let mut tags = vec![];
                 if let Some(tag) = &c.3 {

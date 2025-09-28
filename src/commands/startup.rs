@@ -116,7 +116,6 @@ async fn index() -> Result<Response<String>, CustomError> {
             .filter(|x| x.starts_with("index") && x.ends_with(".css"))
             .collect::<Vec<&String>>()[0];
 
-
         let config = ENVIRONMENT_SERVICE.get_config();
         let config_string = serde_json::to_string(&config).unwrap();
         let html = html! {
