@@ -148,8 +148,8 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6(@rsbuild/core@1.5.10)
       '@rsbuild/plugin-react':
-        specifier: ^1.4.0
-        version: 1.4.0(@rsbuild/core@1.5.10)
+        specifier: ^1.4.1
+        version: 1.4.1(@rsbuild/core@1.5.10)
       '@rsbuild/plugin-sass':
         specifier: ^1.4.0
         version: 1.4.0(@rsbuild/core@1.5.10)
@@ -1416,8 +1416,8 @@ packages:
     peerDependencies:
       '@rsbuild/core': 1.x
 
-  '@rsbuild/plugin-react@1.4.0':
-    resolution: {integrity: sha512-YhhOUOonJBjnKpUf7E4iXKidldPWAGmYBRtDjQgcSmW4tbW0DasFpNCqLn5870Q2Ly6oCU06sLv+8G597I36+w==}
+  '@rsbuild/plugin-react@1.4.1':
+    resolution: {integrity: sha512-kahvnfRPQTsG0tReR6h0KuVfyjKJfpv/PoU5qW5SDkON7vmbGn8Jx7l3fI+yU3lR/7qDiAO19QnNjkqxPsFT3Q==}
     peerDependencies:
       '@rsbuild/core': 1.x
 
@@ -4227,7 +4227,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@rsbuild/plugin-react@1.4.0(@rsbuild/core@1.5.10)':
+  '@rsbuild/plugin-react@1.4.1(@rsbuild/core@1.5.10)':
     dependencies:
       '@rsbuild/core': 1.5.10
       '@rspack/plugin-react-refresh': 1.5.1(react-refresh@0.17.0)
