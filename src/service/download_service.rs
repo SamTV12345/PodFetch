@@ -278,15 +278,11 @@ impl DownloadService {
             )
         }
 
-        if tag.artist().is_none()
-            && let Some(author) = &podcast.author
-        {
+        if let Some(author) = &podcast.author {
             tag.set_artist(author);
         }
 
-        if tag.album().is_none() {
-            tag.set_album(&podcast.name);
-        }
+        tag.set_album(&podcast.name);
 
         tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
 
