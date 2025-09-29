@@ -73,7 +73,7 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/sanitize-html": "^2.16.0",
-    "@vitejs/plugin-react": "^5.0.3",
+    "@vitejs/plugin-react": "^5.0.4",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "happy-dom": "^18.0.1",
     "jsdom": "^26.0.0",
