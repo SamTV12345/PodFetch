@@ -62,3 +62,36 @@ pub fn determine_file_extension(
 fn get_suffix_by_url(url: &str) -> Result<String, Error> {
     PodcastEpisodeService::get_url_file_suffix(url)
 }
+
+#[cfg(test)]
+mod tests {
+    use serial_test::serial;
+
+    // From https://github.com/parshap/node-sanitize-filename/blob/master/test.js
+    static URLS: &[&str] = &[
+        "http://www.contoso.com/test",
+        "http://www.contoso.com/test.jpg",
+        "http://www.contoso.com/test.mp3",
+        "http://www.contoso.com/test.mp3?Parameter1=42",
+        "http://www.contoso.com/test.jpg?Parameter1=test&Parameter2=42",
+        "http://www.contoso.com/test?Parameter1=test&Parameter2=42",
+    ];
+
+    static URL_EXTENSIONS: &[&str] = &[
+        "",
+        ".jpg",
+        ".mp3",
+        ".mp3",
+        ".jpg",
+        "",
+    ];
+
+    #[test]
+    #[serial]
+    fn it_works() {
+        // Check extensions are correctly determined
+        for (idx, url) in URLS.iter().enumerate() {
+            assert_eq!(get_suffix_by_url(url), URL_EXTENSIONS[idx]);
+        }
+    }
+}
