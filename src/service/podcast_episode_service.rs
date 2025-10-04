@@ -373,7 +373,9 @@ impl PodcastEpisodeService {
         }?;
         let file_name = converted_url.path_segments().iter().last().ok_or(Error::other("No"))?;
         file_name.rsplit('.').next().filter(|s| *s != file_name).map(|s| s.to_string())*/
-        Ok(Path::new(Url::parse(url).unwrap().set_query(None))
+        let mut url = Url::parse(url).unwrap();
+        url.set_query(None);
+        Ok(Path::new(&String::from(url))
             .extension()
             .unwrap_or(OsStr::new(""))
             .to_string_lossy()
