@@ -65,6 +65,7 @@ fn get_suffix_by_url(url: &str) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
+    use crate::service::podcast_episode_service::PodcastEpisodeService;
     use serial_test::serial;
 
     // From https://github.com/parshap/node-sanitize-filename/blob/master/test.js
@@ -79,10 +80,10 @@ mod tests {
 
     static URL_EXTENSIONS: &[&str] = &[
         "",
-        ".jpg",
-        ".mp3",
-        ".mp3",
-        ".jpg",
+        "jpg",
+        "mp3",
+        "mp3",
+        "jpg",
         "",
     ];
 
@@ -91,7 +92,7 @@ mod tests {
     fn it_works() {
         // Check extensions are correctly determined
         for (idx, url) in URLS.iter().enumerate() {
-            assert_eq!(get_suffix_by_url(url), URL_EXTENSIONS[idx]);
+            assert_eq!(PodcastEpisodeService::get_url_file_suffix(url).unwrap(), URL_EXTENSIONS[idx]);
         }
     }
 }
