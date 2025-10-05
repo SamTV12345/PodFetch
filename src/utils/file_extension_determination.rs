@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn it_works() {
+    fn stripping_filename_works() {
         // Check extensions are correctly determined
         for (idx, url) in URLS.iter().enumerate() {
             assert_eq!(PodcastEpisodeService::get_url_file_suffix(url).unwrap(), URL_EXTENSIONS[idx]);
