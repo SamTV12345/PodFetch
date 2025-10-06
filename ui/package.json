@@ -47,7 +47,7 @@
     "material-symbols": "^0.36.1",
     "notistack": "^3.0.2",
     "oidc-client-ts": "^3.3.0",
-    "openapi-fetch": "^0.14.0",
+    "openapi-fetch": "^0.14.1",
     "openapi-react-query": "^0.5.0",
     "react": "^19.1.1",
     "react-chartjs-2": "^5.3.0",
