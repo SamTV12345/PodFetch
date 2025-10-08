@@ -78,21 +78,17 @@ mod tests {
         "http://www.contoso.com/test?Parameter1=test&Parameter2=42",
     ];
 
-    static URL_EXTENSIONS: &[&str] = &[
-        "",
-        "jpg",
-        "mp3",
-        "mp3",
-        "jpg",
-        "",
-    ];
+    static URL_EXTENSIONS: &[&str] = &["", "jpg", "mp3", "mp3", "jpg", ""];
 
     #[test]
     #[serial]
     fn stripping_filename_works() {
         // Check extensions are correctly determined
         for (idx, url) in URLS.iter().enumerate() {
-            assert_eq!(PodcastEpisodeService::get_url_file_suffix(url).unwrap(), URL_EXTENSIONS[idx]);
+            assert_eq!(
+                PodcastEpisodeService::get_url_file_suffix(url).unwrap(),
+                URL_EXTENSIONS[idx]
+            );
         }
     }
 }
