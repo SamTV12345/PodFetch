@@ -94,6 +94,7 @@ fn from_key_alg_into_alg(value: KeyAlgorithm) -> Algorithm {
         KeyAlgorithm::RSA1_5 => Algorithm::ES256,
         KeyAlgorithm::RSA_OAEP => Algorithm::RS256,
         KeyAlgorithm::RSA_OAEP_256 => Algorithm::RS256,
+        KeyAlgorithm::UNKNOWN_ALGORITHM => Algorithm::ES256,
     }
 }
 
