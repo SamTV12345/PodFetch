@@ -2,7 +2,10 @@ name: checkFrontend.yml
 permissions:
   contents: read
 on:
+  pull_request: {}
   push:
+    branches:
+      - 'main'
 
 jobs:
   check-frontend:
