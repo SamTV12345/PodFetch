@@ -97,8 +97,7 @@ fn fix_links(content: &str) -> String {
 
 pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
-#[utoipa::path(get, path = "/index.html")]
-async fn index() -> Result<Response<String>, CustomError> {
+pub fn transform_index_files() -> String {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
         let manifest_json_location =
@@ -144,10 +143,16 @@ async fn index() -> Result<Response<String>, CustomError> {
         html
     });
 
+
+    html.0.to_string()
+}
+
+#[utoipa::path(get, path = "/index.html")]
+async fn index() -> Result<Response<String>, CustomError> {
     let response = Response::builder()
         .header("Content-Type", "text/html")
         .status(200)
-        .body(html.0.to_string())
+        .body(transform_index_files())
         .unwrap();
     Ok(response)
 }
@@ -219,7 +224,7 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     }
 }
 
-async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError> {
+async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
     let (req_parts, _) = req.into_parts();
     let path = req_parts.uri.path();
 
@@ -231,8 +236,8 @@ async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError
     let mut content = match fs::read(&file_path).await {
         Ok(e) => Ok::<Vec<u8>, CustomError>(e),
         Err(_) => {
-            file_path = "./static/index.html".to_string();
-            Ok(fs::read("./static/index.html").await.unwrap())
+            file_path = format!("{}{}", "./static", "/ui/index.html");
+            Ok(transform_index_files().as_bytes().to_vec())
         }
     }?;
     let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
