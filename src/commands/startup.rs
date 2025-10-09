@@ -30,7 +30,7 @@ use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::middleware::from_fn;
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{Redirect, Response};
 use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
@@ -115,6 +115,11 @@ pub fn transform_index_files() -> String {
             .filter(|x| x.starts_with("index") && x.ends_with(".css"))
             .collect::<Vec<&String>>()[0];
 
+        let icon_file = found_files
+            .iter()
+            .filter(|x| x.starts_with("outline-") && x.ends_with(".css"))
+            .collect::<Vec<&String>>()[0];
+
         let config = ENVIRONMENT_SERVICE.get_config();
         let config_string = serde_json::to_string(&config).unwrap();
         let html = html! {
@@ -129,6 +134,7 @@ pub fn transform_index_files() -> String {
                         "assets/",js_file))
                     {};
                     link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",css_file));
+                    link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",icon_file));
                 }
             body {
             div id="config" data-config=(config_string)    {};
