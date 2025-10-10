@@ -1,4 +1,4 @@
-FROM alpine AS cache
+FROM alpine:3.22.2 AS cache
 RUN apk add -U --no-cache ca-certificates
 
 FROM scratch as base
