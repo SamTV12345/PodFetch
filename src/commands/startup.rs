@@ -117,7 +117,7 @@ pub fn transform_index_files() -> String {
 
         let icon_file = found_files
             .iter()
-            .filter(|x| x.starts_with("outline-") && x.ends_with(".css"))
+            .filter(|x| x.starts_with("outlined-") && x.ends_with(".css"))
             .collect::<Vec<&String>>()[0];
 
         let config = ENVIRONMENT_SERVICE.get_config();
@@ -148,7 +148,6 @@ pub fn transform_index_files() -> String {
         }};
         html
     });
-
 
     html.0.to_string()
 }
