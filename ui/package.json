@@ -43,7 +43,7 @@
     "i18next": "^25.5.3",
     "i18next-browser-languagedetector": "^8.2.0",
     "javascript-time-ago": "^2.5.12",
-    "lucide-react": "^0.544.0",
+    "lucide-react": "^0.545.0",
     "material-symbols": "^0.36.2",
     "notistack": "^3.0.2",
     "oidc-client-ts": "^3.3.0",
