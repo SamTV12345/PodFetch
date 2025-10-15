@@ -70,7 +70,7 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>, &User)> for PodcastDto {
 
 
         if let Some(api_key) = &value.3.api_key {
-            podfetch_rss_feed.query_pairs_mut().append_pair("api_key", api_key);
+            podfetch_rss_feed.query_pairs_mut().append_pair("apiKey", api_key);
         }
 
 
