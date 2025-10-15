@@ -1117,6 +1117,7 @@ export interface components {
             last_build_date?: string | null;
             name: string;
             original_image_url: string;
+            podfetch_feed: string;
             rssfeed: string;
             summary?: string | null;
             tags: components["schemas"]["Tag"][];

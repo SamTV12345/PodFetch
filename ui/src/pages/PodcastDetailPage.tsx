@@ -105,6 +105,7 @@ export const PodcastDetailPage = () => {
         }
     }, []);
 
+    console.log(currentPodcast.data?.podfetch_feed)
     return (
         <Fragment key={'detail'}>
             <div className="max-w-4xl">
@@ -174,14 +175,12 @@ export const PodcastDetailPage = () => {
                         </div>
 
                         <span className="grid grid-cols-2 md:grid-cols-3">
-                        <button className="flex gap-4" rel="noopener noreferrer"
-                                onClick={() => window.open(configModel?.data?.rssFeed + '/' + params.id)}>
-                            <a rel="noopener noreferrer"
-                               className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
-                               target="_blank"
-                               href={configModel?.data?.rssFeed + '/' + params.id}>rss_feed</a>
+                        <a className="flex gap-4" rel="noopener noreferrer" href={currentPodcast.data?.podfetch_feed}
+                           target="_blank">
+                            <span
+                               className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)">rss_feed</span>
                             <span className="text-(--fg-color)">PodFetch</span>
-                        </button>
+                        </a>
 
                         <button className="flex gap-4" rel="noopener noreferrer"
                                 onClick={() => window.open(currentPodcast.data?.rssfeed)}>
@@ -193,7 +192,7 @@ export const PodcastDetailPage = () => {
                                 <Switcher checked={onlyUnplayed} onChange={setOnlyUnplayed}/>
                                 <span className=" text-(--fg-color) mt-auto">{t('unplayed')}</span>
                             </div>
-                            </span>
+                        </span>
                     </div>
 
                     {/* Toggle */}

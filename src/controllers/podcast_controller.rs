@@ -115,6 +115,7 @@ pub async fn search_podcasts(
                     _latest_pub.clone(),
                     username,
                     tag,
+                    &requester
                 )?;
             }
             Ok(Json(podcasts))
@@ -126,8 +127,8 @@ pub async fn search_podcasts(
                     _order.clone(),
                     query.title,
                     _latest_pub.clone(),
-                    username,
                     tag,
+                    &requester
                 )?;
             }
             Ok(Json(podcasts))
@@ -153,7 +154,7 @@ pub async fn find_podcast_by_id(
     let podcast = PodcastService::get_podcast(id_num)?;
     let tags = Tag::get_tags_of_podcast(id_num, username)?;
     let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?;
-    let podcast_dto: PodcastDto = (podcast, favorite, tags).into();
+    let podcast_dto: PodcastDto = (podcast, favorite, tags, &user).into();
     Ok(Json(podcast_dto))
 }
 
@@ -166,11 +167,9 @@ responses(
 tag="podcasts"
 )]
 pub async fn find_all_podcasts(
-    requester: Extension<User>,
+    Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let username = &requester.username;
-
-    let podcasts = PodcastService::get_podcasts(username)?;
+    let podcasts = PodcastService::get_podcasts(&requester)?;
 
     Ok(Json(podcasts))
 }
@@ -533,7 +532,7 @@ tag="podcasts"
 pub async fn get_favored_podcasts(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let podcasts = PodcastService::get_favored_podcasts(requester.username)?;
+    let podcasts = PodcastService::get_favored_podcasts(requester)?;
     Ok(Json(podcasts))
 }
 
