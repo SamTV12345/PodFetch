@@ -6,6 +6,7 @@ use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
 use std::collections::HashSet;
 use utoipa::ToSchema;
+use crate::models::user::User;
 
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 pub struct PodcastDto {
@@ -13,6 +14,7 @@ pub struct PodcastDto {
     pub(crate) name: String,
     pub directory_id: String,
     pub directory_name: String,
+    pub podfetch_feed: String,
     pub(crate) rssfeed: String,
     pub image_url: String,
     pub summary: Option<String>,
@@ -27,8 +29,8 @@ pub struct PodcastDto {
     pub tags: Vec<Tag>,
 }
 
-impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
-    fn from(value: (Podcast, Option<Favorite>, Vec<Tag>)) -> Self {
+impl From<(Podcast, Option<Favorite>, Vec<Tag>, &User)> for PodcastDto {
+    fn from(value: (Podcast, Option<Favorite>, Vec<Tag>, &User)) -> Self {
         let favorite = value.1.is_some() && value.1.clone().unwrap().favored;
 
         let image_url =
@@ -59,12 +61,26 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>)> for PodcastDto {
                 .join(",")
         });
 
+        let mut podfetch_rss_feed = ENVIRONMENT_SERVICE.build_url_to_rss_feed();
+        podfetch_rss_feed.join(&format!("/{}", value.0.id)).expect
+        ("this is \
+        safe because we \
+        are \
+        just joining strings");
+
+
+        if let Some(api_key) = &value.3.api_key {
+            podfetch_rss_feed.query_pairs_mut().append_pair("api_key", api_key);
+        }
+
+
         PodcastDto {
             id: value.0.id,
             name: value.0.name.clone(),
             directory_id: value.0.directory_id.clone(),
             rssfeed: value.0.rssfeed.clone(),
             image_url,
+            podfetch_feed: podfetch_rss_feed.to_string(),
             language: value.0.language.clone(),
             keywords,
             summary: value.0.summary.clone(),
@@ -98,6 +114,12 @@ impl From<Podcast> for PodcastDto {
                 .collect::<Vec<_>>()
                 .join(",")
         });
+        let podfetch_rss_feed = ENVIRONMENT_SERVICE.build_url_to_rss_feed();
+        podfetch_rss_feed.join(&format!("/{}", value.id)).expect
+        ("this is \
+        safe \
+        because we \
+        are just joining strings");
 
         PodcastDto {
             id: value.id,
@@ -107,6 +129,7 @@ impl From<Podcast> for PodcastDto {
             image_url,
             language: value.language.clone(),
             keywords,
+            podfetch_feed: podfetch_rss_feed.to_string(),
             summary: value.summary.clone(),
             explicit: value.clone().explicit,
             last_build_date: value.clone().last_build_date,

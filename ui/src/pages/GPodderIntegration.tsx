@@ -1,20 +1,10 @@
-import {Setting} from "../models/Setting";
-import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
-import {Podcast} from "../store/CommonSlice";
 import {handleAddPodcast} from "../utils/ErrorSnackBarResponses";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {$api, client} from "../utils/http";
 import {components} from "../../schema";
 import {useQueryClient} from "@tanstack/react-query";
-import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
 import {LoadingSkeletonSpan} from "../components/ui/LoadingSkeletonSpan";
-
-type GPodderIntegrationItem = {
-    device: string,
-    podcast: string
-}
-
 
 export const GPodderIntegration = ()=> {
     const {t} = useTranslation()

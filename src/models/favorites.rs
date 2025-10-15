@@ -107,7 +107,7 @@ impl Favorite {
         Ok(res)
     }
 
-    pub fn get_favored_podcasts(found_username: String) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_favored_podcasts(requester: &User) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as user_favor;
@@ -115,15 +115,15 @@ impl Favorite {
 
         let result: Vec<(Podcast, Favorite)> = dsl_podcast
             .inner_join(f_db)
-            .filter(favor_column.eq(true).and(user_favor.eq(&found_username)))
+            .filter(favor_column.eq(true).and(user_favor.eq(&requester.username)))
             .load::<(Podcast, Favorite)>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
 
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &found_username).unwrap();
-                (podcast.0.clone(), Some(podcast.1.clone()), tags).into()
+                let tags = Tag::get_tags_of_podcast(podcast.0.id, &requester.username).unwrap();
+                (podcast.0.clone(), Some(podcast.1.clone()), tags, requester).into()
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)

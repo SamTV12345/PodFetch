@@ -22,6 +22,7 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
+use crate::models::user::User;
 
 pub struct PodcastService;
 
@@ -215,8 +216,8 @@ impl PodcastService {
         Podcast::get_podcast(id).unwrap()
     }
 
-    pub fn get_favored_podcasts(found_username: String) -> Result<Vec<PodcastDto>, CustomError> {
-        Favorite::get_favored_podcasts(found_username)
+    pub fn get_favored_podcasts(requester: User) -> Result<Vec<PodcastDto>, CustomError> {
+        Favorite::get_favored_podcasts(&requester)
     }
 
     pub fn update_active_podcast(id: i32) -> Result<(), CustomError> {
@@ -265,7 +266,7 @@ impl PodcastService {
         Podcast::get_podcast(podcast_id_to_be_searched)
     }
 
-    pub fn get_podcasts(u: &str) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: &User) -> Result<Vec<PodcastDto>, CustomError> {
         Podcast::get_podcasts(u)
     }
 
@@ -275,6 +276,7 @@ impl PodcastService {
         latest_pub: OrderOption,
         designated_username: String,
         tag: Option<String>,
+        requester: &User
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
             Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?
@@ -285,7 +287,7 @@ impl PodcastService {
                     }
                     true
                 })
-                .map(|p| (p.0.clone(), Option::from(p.1.clone()), p.2.clone()).into())
+                .map(|p| (p.0.clone(), Option::from(p.1.clone()), p.2.clone(), requester).into())
                 .collect::<Vec<PodcastDto>>();
 
         Ok(podcasts)
@@ -295,10 +297,10 @@ impl PodcastService {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: String,
         tag: Option<String>,
+        requester: &User
     ) -> Result<Vec<PodcastDto>, CustomError> {
-        let podcasts = Favorite::search_podcasts(order, title, latest_pub, &designated_username)?
+        let podcasts = Favorite::search_podcasts(order, title, latest_pub, &requester.username)?
             .iter()
             .filter(|podcast| {
                 if let Some(tag) = &tag {
@@ -306,7 +308,7 @@ impl PodcastService {
                 }
                 true
             })
-            .map(|p| (p.0.clone(), p.1.clone(), p.2.clone()).into())
+            .map(|p| (p.0.clone(), p.1.clone(), p.2.clone(), requester).into())
             .collect::<Vec<PodcastDto>>();
         Ok(podcasts)
     }

@@ -15,7 +15,7 @@ use diesel::sql_types::{Bool, Integer, Nullable, Text};
 use diesel::{
     BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl, delete, insert_into,
 };
-
+use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 
@@ -76,22 +76,22 @@ impl Podcast {
             .map_err(|e| map_db_error(e, Critical))
     }
 
-    pub fn get_podcasts(u: &str) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: &User) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::adapters::persistence::dbconfig::schema::podcasts::id as p_id;
         let result = podcasts
-            .left_join(f_db.on(username.eq(&u).and(f_id.eq(p_id))))
+            .left_join(f_db.on(username.eq(&u.username).and(f_id.eq(p_id))))
             .load::<(Podcast, Option<Favorite>)>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
 
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, u).unwrap();
-                (podcast.0.clone(), podcast.1.clone(), tags).into()
+                let tags = Tag::get_tags_of_podcast(podcast.0.id, &u.username).unwrap();
+                (podcast.0.clone(), podcast.1.clone(), tags, u).into()
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
