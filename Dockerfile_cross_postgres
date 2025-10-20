@@ -1,4 +1,5 @@
 FROM alpine:3 AS cache
+ARG CACHEBUST=1
 RUN apk add -U --no-cache ca-certificates
 RUN update-ca-certificates
 
