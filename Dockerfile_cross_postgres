@@ -1,5 +1,6 @@
 FROM alpine:3 AS cache
 RUN apk add -U --no-cache ca-certificates
+RUN update-ca-certificates
 
 FROM scratch as base
 COPY ./static/ /app/static
