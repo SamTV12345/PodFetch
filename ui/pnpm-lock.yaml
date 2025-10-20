@@ -57,8 +57,8 @@ importers:
         specifier: ^11.0.0
         version: 11.0.0
       chart.js:
-        specifier: ^4.5.0
-        version: 4.5.0
+        specifier: ^4.5.1
+        version: 4.5.1
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -106,7 +106,7 @@ importers:
         version: 19.2.0
       react-chartjs-2:
         specifier: ^5.3.0
-        version: 5.3.0(chart.js@4.5.0)(react@19.2.0)
+        version: 5.3.0(chart.js@4.5.1)(react@19.2.0)
       react-dom:
         specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
@@ -1788,8 +1788,8 @@ packages:
   change-case@5.4.4:
     resolution: {integrity: sha512-HRQyTk2/YPEkt9TnUPbOpr64Uw3KOicFWPVBb+xiHvd6eBx/qPr9xqfBFDT8P2vWsvvz4jbEkfDe71W3VyNu2w==}
 
-  chart.js@4.5.0:
-    resolution: {integrity: sha512-aYeC/jDgSEx8SHWZvANYMioYMZ2KX02W6f6uVfyteuCGcadDLcYVHdfdygsTQkQ4TKn5lghoojAsPj5pu0SnvQ==}
+  chart.js@4.5.1:
+    resolution: {integrity: sha512-GIjfiT9dbmHRiYi6Nl2yFCq7kkwdkp1W/lp2J99rX0yo9tgJGn3lKQATztIjb5tVtevcBtIdICNWqlq5+E8/Pw==}
     engines: {pnpm: '>=8'}
 
   check-error@2.1.1:
@@ -4636,7 +4636,7 @@ snapshots:
 
   change-case@5.4.4: {}
 
-  chart.js@4.5.0:
+  chart.js@4.5.1:
     dependencies:
       '@kurkle/color': 0.3.4
 
@@ -5192,9 +5192,9 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  react-chartjs-2@5.3.0(chart.js@4.5.0)(react@19.2.0):
+  react-chartjs-2@5.3.0(chart.js@4.5.1)(react@19.2.0):
     dependencies:
-      chart.js: 4.5.0
+      chart.js: 4.5.1
       react: 19.2.0
 
   react-dom@19.2.0(react@19.2.0):
