@@ -5,7 +5,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::adapters::persistence::dbconfig::schema::*;
 use crate::constants::inner_constants::{
-    DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PodcastEpisodeWithFavorited,
+    ENVIRONMENT_SERVICE, PodcastEpisodeWithFavorited,
 };
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -187,9 +187,9 @@ impl PodcastEpisode {
     }
 
     pub fn insert_podcast_episodes(
-        podcast: Podcast,
-        item: Item,
-        optional_image: Option<String>,
+        podcast: &Podcast,
+        item: &Item,
+        episode_image_url: &str,
         duration: i32,
     ) -> PodcastEpisode {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
@@ -216,14 +216,6 @@ impl PodcastEpisode {
             inserted_date = parsed_date.with_timezone(&Utc).to_rfc3339();
         }
 
-        let inserted_image_url: String = match optional_image {
-            Some(c) => c,
-            None => match podcast.image_url.is_empty() {
-                true => DEFAULT_IMAGE_URL.to_string(),
-                false => podcast.original_image_url,
-            },
-        };
-
         let guid_to_insert = Guid {
             value: uuid::Uuid::new_v4().to_string(),
             ..Default::default()
@@ -234,12 +226,12 @@ impl PodcastEpisode {
                 total_time.eq(duration),
                 podcast_id.eq(podcast.id),
                 episode_id.eq(uuid_podcast.to_string()),
-                name.eq(item.title.as_ref().unwrap_or(&"No title given".to_string())),
-                url.eq(item.enclosure.unwrap().url),
-                guid.eq(item.guid.unwrap_or(guid_to_insert).value),
+                name.eq(&item.title.clone().as_ref().unwrap_or(&"No title given".to_string())),
+                url.eq(&item.enclosure.clone().unwrap().url),
+                guid.eq(&item.guid.clone().unwrap_or(guid_to_insert).value),
                 date_of_recording.eq(inserted_date),
-                image_url.eq(inserted_image_url),
-                description.eq(opt_or_empty_string(item.description)),
+                image_url.eq(episode_image_url),
+                description.eq(opt_or_empty_string(item.clone().description)),
             ))
             .get_result::<PodcastEpisode>(&mut get_connection())
             .expect("Error inserting podcast episode")

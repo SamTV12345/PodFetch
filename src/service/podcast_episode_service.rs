@@ -1,7 +1,7 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
 use crate::constants::inner_constants::{
-    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, ITUNES, TELEGRAM_API_ENABLED,
+    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED,
 };
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -137,106 +137,69 @@ impl PodcastEpisodeService {
                 Self::handle_podcast_image_insert(podcast, &channel)?;
 
                 for item in channel.items.iter() {
-                    let itunes_ext = item.clone().itunes_ext;
-
-                    match itunes_ext {
-                        Some(itunes_ext) => {
-                            let enclosure = item.enclosure();
-                            match enclosure {
-                                Some(enclosure) => {
-                                    let result = PodcastEpisode::get_podcast_episode_by_url(
-                                        &enclosure.url.to_string(),
-                                        Some(podcast.id),
-                                    );
-                                    let mut duration_episode = 0;
-
-                                    if result.is_err() {
-                                        log::info!(
-                                            "Skipping episode {} with error: {}",
-                                            item.clone()
-                                                .title
-                                                .unwrap_or("with no title".to_string()),
-                                            result.err().unwrap()
-                                        );
-                                        continue;
-                                    }
-
-                                    let result_unwrapped = result.unwrap();
-
-                                    if let Some(result_unwrapped_non_opt) = result_unwrapped.clone()
-                                        && result_unwrapped_non_opt.clone().podcast_id != podcast.id
-                                    {
-                                        let inserted_episode =
-                                            PodcastEpisode::insert_podcast_episodes(
-                                                podcast.clone(),
-                                                item.clone(),
-                                                Some(result_unwrapped_non_opt.image_url),
-                                                duration_episode as i32,
-                                            );
-                                        podcast_inserted.push(inserted_episode);
-                                    }
-
-                                    if result_unwrapped.is_none() {
-                                        // Insert new podcast episode
-                                        if let Some(duration) = itunes_ext.clone().duration {
-                                            duration_episode = Self::parse_duration(&duration);
-                                        }
-
-                                        let inserted_episode =
-                                            PodcastEpisode::insert_podcast_episodes(
-                                                podcast.clone(),
-                                                item.clone(),
-                                                itunes_ext.image,
-                                                duration_episode as i32,
-                                            );
-                                        podcast_inserted.push(inserted_episode);
-                                    }
-                                }
-                                None => {
-                                    log::info!(
-                                        "Skipping episode {} without enclosure.",
-                                        item.clone().title.unwrap_or("with no title".to_string())
-                                    );
-                                    continue;
-                                }
-                            }
+                    let itunes_ext = &item.itunes_ext;
+                    let opt_found_podcast_episode: Option<PodcastEpisode> = match &item.guid {
+                        Some(guid) => {
+                            Self::get_podcast_episode_by_guid(&guid.value)?
                         }
                         None => {
-                            let opt_enclosure = &item.enclosure;
-                            let mut image_url = DEFAULT_IMAGE_URL.to_string();
-
-                            // Also check the itunes extension map
-                            if let Some(image_url_extracted) =
-                                Self::extract_itunes_url_if_present(item)
-                            {
-                                image_url = image_url_extracted;
+                             if let Some(enclosure) = &item.enclosure {
+                                 PodcastEpisode::get_podcast_episode_by_url(
+                                    &enclosure.url.to_string(),
+                                    Some(podcast.id),
+                                )?
+                            } else {
+                                None
                             }
+                        },
+                    };
 
-                            if opt_enclosure.is_none() {
-                                log::info!(
-                                    "Skipping episode {} without enclosure.",
-                                    item.clone().title.unwrap_or("with no title".to_string())
-                                );
-                                continue;
-                            }
-                            let result = PodcastEpisode::get_podcast_episode_by_url(
-                                &opt_enclosure.clone().unwrap().url,
-                                None,
-                            );
-                            // We can't retrieve the duration of the podcast episode, so we set it to 0
 
-                            if result?.is_none() {
-                                let duration_episode = 0;
-                                let inserted_episode = PodcastEpisode::insert_podcast_episodes(
-                                    podcast.clone(),
-                                    item.clone(),
-                                    Some(image_url),
-                                    duration_episode,
-                                );
-                                podcast_inserted.push(inserted_episode);
-                            }
+                    if let Some(podcast_episode) = &opt_found_podcast_episode {
+                        let mut updated_podcast_episode = podcast_episode.clone();
+                        if let Some(title) = &item.title {
+                            updated_podcast_episode.name = title.to_string();
+                        }
+
+                        if let Some(enclosure) = &item.enclosure {
+                            updated_podcast_episode.url = enclosure.url.to_string();
+                        }
+
+                        if let Some(description) = &item.description {
+                            updated_podcast_episode.description = description.to_string();
+                        }
+
+                        if updated_podcast_episode.name != podcast_episode.name ||
+                           updated_podcast_episode.url != podcast_episode.url ||
+                           updated_podcast_episode.description != podcast_episode.description {
+                            PodcastEpisode::update_podcast_episode(updated_podcast_episode.clone());
+                        }
+
+                        // Skip already existing episodes with insert
+                        continue
+                    };
+
+                    let mut duration_of_podcast_episode = 0;
+                    let mut image_url = DEFAULT_IMAGE_URL.to_string();
+
+                    // itunes extension checking
+                    if let Some(itunes_ext) = itunes_ext.clone() {
+                        // duration
+                        if let Some(duration_from_itunes) = itunes_ext.duration {
+                            duration_of_podcast_episode = Self::parse_duration(&duration_from_itunes);
+                        }
+                        if let Some(itunes_image) = itunes_ext.image {
+                            image_url = itunes_image;
                         }
                     }
+
+                    let inserted_episode = PodcastEpisode::insert_podcast_episodes(
+                        podcast,
+                        item,
+                        &image_url,
+                        duration_of_podcast_episode as i32,
+                    );
+                    podcast_inserted.push(inserted_episode);
                 }
                 Ok(podcast_inserted)
             }
@@ -254,17 +217,6 @@ impl PodcastEpisodeService {
                 .into())
             }
         }
-    }
-
-    fn extract_itunes_url_if_present(item: &Item) -> Option<String> {
-        if let Some(itunes_data) = item.extensions.get(ITUNES)
-            && let Some(image_url_extracted) = itunes_data.get("image")
-            && let Some(i_val) = image_url_extracted.first()
-            && let Some(image_attr) = i_val.attrs.get("href")
-        {
-            return Some(image_attr.clone());
-        }
-        None
     }
 
     fn handle_podcast_image_insert(
@@ -423,7 +375,6 @@ impl PodcastEpisodeService {
             .and_then(|v| v.value.clone());
 
         if let Some(itunes) = itunes {
-            println!("GUID is {ext:?}");
             let constructed_extra_fields = PodcastBuilder::new(podcast_id)
                 .author(itunes.author)
                 .last_build_date(feed.last_build_date.clone())

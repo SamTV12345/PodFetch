@@ -15,6 +15,8 @@ import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
 import {$api, client} from '../utils/http'
 import {EditableHeading} from "../components/EditableHeading";
 import {ADMIN_ROLE} from "../models/constants";
+import {Loader2} from "lucide-react";
+import {Loading} from "../components/Loading";
 
 export const PodcastDetailPage = () => {
     const configModel = $api.useQuery('get', '/api/v1/sys/config')
@@ -24,7 +26,6 @@ export const PodcastDetailPage = () => {
     const {t} = useTranslation()
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
 
-    const [openSettingsMenu, setOpenSettingsMenu] = useState<boolean>(false)
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
     const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
@@ -58,6 +59,8 @@ export const PodcastDetailPage = () => {
             }
         }
     })
+
+    const refreshPodcastEpisodes = $api.useMutation('post','/api/v1/podcasts/{id}/refresh')
 
     useEffect(() => {
         if (params.podcastid) {
@@ -105,13 +108,11 @@ export const PodcastDetailPage = () => {
         }
     }, []);
 
-    console.log(currentPodcast.data?.podfetch_feed)
     return (
         <Fragment key={'detail'}>
             <div className="max-w-4xl">
                 <PodcastInfoModal/>
                 <PodcastEpisodeAlreadyPlayed/>
-                {currentPodcast.data && data?.role === ADMIN_ROLE && <PodcastSettingsModal open={openSettingsMenu} setOpen={setOpenSettingsMenu} podcast={currentPodcast.data}/>}
 
                 {/* Header */}
                 <div className="
@@ -139,10 +140,12 @@ export const PodcastDetailPage = () => {
 
                         {currentPodcast.data && <EditableHeading podcastId={Number(currentDetailedPodcastId)} initialText={currentPodcast.data.name} allowedToEdit={data?.role == "admin"}></EditableHeading>}
 
-                        {currentPodcast.data && data?.role === ADMIN_ROLE &&<span
+                        {currentPodcast.data && data?.role === ADMIN_ROLE && refreshPodcastEpisodes.isPending ? <Loading className="inline-block h-auto w-auto"/>:  <span
                             className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
                             onClick={() => {
-                                client.POST("/api/v1/podcasts/{id}/refresh", {
+
+
+                                refreshPodcastEpisodes.mutate({
                                     params: {
                                         path: {
                                             id: params.id!
@@ -151,11 +154,7 @@ export const PodcastDetailPage = () => {
                                 })
                             }}>refresh</span> }
                         <span>
-                            {currentPodcast.data && data?.role === ADMIN_ROLE && <button className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
-                                    onClick={() => {
-                                        setOpenSettingsMenu(true)
-                                    }}>settings</button>
-                            }
+                         {currentPodcast.data && data?.role === ADMIN_ROLE && <PodcastSettingsModal podcast={currentPodcast.data}/>}
                         </span>
                     </div>
 
