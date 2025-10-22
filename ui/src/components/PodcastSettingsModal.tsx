@@ -1,8 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import {FC, useEffect, useMemo, useState} from "react";
+import {FC, useMemo} from "react";
 import {Switcher} from "./Switcher";
-import useCommon, {Podcast} from "../store/CommonSlice";
-import useAudioPlayer from "../store/AudioPlayerSlice";
 import {PodcastSetting} from "../models/PodcastSetting";
 import {CustomButtonSecondary} from "./CustomButtonSecondary";
 import {useTranslation} from "react-i18next";
@@ -15,12 +13,10 @@ import {$api, client} from '../utils/http';
 import {useQueryClient} from "@tanstack/react-query";
 
 type PodcastSettingsModalProps = {
-    open: boolean,
-    setOpen: (open: boolean) => void,
     podcast: components["schemas"]["PodcastDto"]
 }
 
-export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open, podcast})=>{
+export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({podcast})=>{
     const {t} = useTranslation()
     const queryClient = useQueryClient()
 
@@ -31,6 +27,8 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
             }
         }
     })
+
+    const updatePodcastSettings = $api.useMutation('put', '/api/v1/podcasts/{id}/settings')
     const isSettingsEnabled = useMemo(()=>{
         if (!podcastSettings.data) {
             return false
@@ -39,10 +37,11 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
         return podcastSettings.data.activated
     }, [podcastSettings])
 
-
-    useEffect(() => {
-        if (podcastSettings.isFetched && !open && podcastSettings) {
-            client.PUT("/api/v1/podcasts/{id}/settings", {
+    console.log("DIALOG")
+    return <Dialog.Root onOpenChange={(isOpen)=>{
+        if (!isOpen) {
+            console.log("On close")
+            updatePodcastSettings.mutate({
                 body: podcastSettings.data!,
                 params: {
                     path: {
@@ -51,20 +50,19 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({setOpen,open
                 }
             })
         }
-    }, [open, podcastSettings]);
-
-
-    return <Dialog.Root open={open}>
+    }}>
+        <Dialog.Trigger asChild>
+            <button className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)">settings</button>
+        </Dialog.Trigger>
         <Dialog.Portal>
-        <Dialog.Overlay onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur-sm overflow-y-auto overflow-x-hidden z-30 transition-opacity opacity-100" />
-            <Dialog.Content onClick={()=>setOpen(false)} className="fixed inset-0 grid place-items-center z-40">
+        <Dialog.Overlay className="fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur-sm
+            overflow-y-auto overflow-x-hidden z-30 transition-opacity opacity-100" />
+            <Dialog.Content className="fixed inset-0 z-40 flex items-center justify-center p-4">
                 <div onClick={(e)=>e.stopPropagation()}
                     className={"relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] " }>
                     <Dialog.Title className="text-(--accent-color) text-2xl">{t('settings')}</Dialog.Title>
                     <Dialog.Description className="text-(--fg-color)">{t('settings-configure')}</Dialog.Description>
-                    <Dialog.Close className="top-5 absolute right-5" onClick={()=>{
-                        setOpen(false)
-                    }}> <span
+                    <Dialog.Close className="top-5 absolute right-5"> <span
                         className="material-symbols-outlined text-(--modal-close-color) hover:text-(--modal-close-color-hover)">close</span>
                         <span className="sr-only">Close modal</span></Dialog.Close>
                     <hr className="mb-5 mt-1 border-[1px] border-(--border-color)"/>

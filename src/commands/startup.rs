@@ -63,8 +63,8 @@ import_database_config!();
 
 pub fn run_poll() -> Result<(), CustomError> {
     //check for new episodes
-    let podcats_result = Podcast::get_all_podcasts()?;
-    for podcast in podcats_result {
+    let podcast_result = Podcast::get_all_podcasts()?;
+    for podcast in podcast_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
             let insert_result = PodcastEpisodeService::insert_podcast_episodes(&podcast);

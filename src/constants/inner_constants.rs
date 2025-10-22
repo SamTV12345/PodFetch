@@ -176,7 +176,6 @@ pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new(|| 
 });
 
 pub static DEFAULT_IMAGE_URL: &str = "ui/default.jpg";
-pub static ITUNES: &str = "itunes";
 
 // Reverse proxy headers
 pub const REVERSE_PROXY: &str = "REVERSE_PROXY";
