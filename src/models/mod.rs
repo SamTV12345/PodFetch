@@ -28,3 +28,4 @@ pub mod subscription_changes_from_client;
 pub mod tag;
 pub mod tags_podcast;
 pub mod user;
+mod podcast_episode_chapter;
