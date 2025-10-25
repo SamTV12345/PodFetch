@@ -24,7 +24,8 @@ use id3::{ErrorKind, Tag, TagLike, Version};
 use std::io::Read;
 use std::path::PathBuf;
 use chrono::Duration;
-use crate::service::podcastChapter::{Chapter, Link};
+use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
+use crate::service::podcast_chapter::{Chapter, Link};
 
 pub struct DownloadService {}
 
@@ -165,6 +166,21 @@ impl DownloadService {
             &ENVIRONMENT_SERVICE.default_file_handler,
         )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
+        if let Ok(chapters) = &result {
+            log::info!("Inserting chapters for episode {}", podcast_episode.id);
+            for chapter in chapters {
+                let res = PodcastEpisodeChapter
+                ::save_chapter(chapter, &podcast_episode);
+                if let Err(err) = res {
+                    log::error!(
+                                    "Error while saving chapter for episode {}: {}",
+                                    podcast_episode.id,
+                                    err
+                                );
+                }
+            }
+        }
+
         if let Err(err) = result {
             log::error!("Error handling metadata insertion: {err:?}");
         }

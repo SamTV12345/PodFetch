@@ -10,6 +10,8 @@ use diesel::{
     AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl,
 };
 use utoipa::ToSchema;
+use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
+use crate::service::podcast_chapter::Chapter;
 
 #[derive(
     Serialize,
@@ -111,8 +113,25 @@ impl PodcastSetting {
                     &e.clone(),
                     &podcast,
                 );
-                if result.is_err() {
-                    log::error!("Error while updating metadata for episode: {}", e.id);
+                match result {
+                    Ok(chapters) => {
+                        log::info!("Inserting chapters for episode {}", e.id);
+                        for chapter in chapters {
+                            let res = PodcastEpisodeChapter::save_chapter(&chapter, &e);
+                            if let Err(err) = res {
+                                log::error!(
+                                    "Error while saving chapter for episode {}: {}",
+                                    e.id,
+                                    err
+                                );
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        log::error!("Error while updating metadata for episode: {} with reason \
+                        {}", e
+                            .id, err.inner);
+                    }
                 }
             }
         }

@@ -1,14 +1,9 @@
 use chrono::Duration;
 
-/// Represents a [chapter](crate::Chapter) image.
-#[derive(Debug, PartialEq)]
-pub enum Image {
-    /// The URL of the image.
-    Url(url::Url),
-}
+pub type  Image = url::Url;
 
 /// Represents a web link for the [chapter](crate::Chapter).
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Link {
     /// The URL of the link.
     pub url: url::Url,
