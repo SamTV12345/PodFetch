@@ -14,12 +14,12 @@ import {useQueryClient} from "@tanstack/react-query";
 
 type PodcastDetailItemProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
+    currentEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],
     index: number,
-    episodesLength: number,
     onlyUnplayed: boolean
 }
 
-export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength, onlyUnplayed}) => {
+export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, currentEpisodes, onlyUnplayed}) => {
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
@@ -205,7 +205,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
             </div>
 
             {/* Infinite scroll */
-            index === (episodesLength - 5) &&
+            index === (currentEpisodes.length -5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
                     client.GET("/api/v1/podcasts/{id}/episodes", {
                         params: {
@@ -213,7 +213,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                                 id: params.id!,
                             },
                             query: {
-                                last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1]!.podcastEpisode.date_of_recording,
+                                last_podcast_episode: currentEpisodes[currentEpisodes.length - 1]!.podcastEpisode.date_of_recording,
                                 only_unlistened: onlyUnplayed
                             }
                         }

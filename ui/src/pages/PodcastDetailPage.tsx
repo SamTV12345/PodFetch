@@ -238,9 +238,9 @@ export const PodcastDetailPage = () => {
                     <Heading2 className="mb-8">{t('available-episodes')}</Heading2>
 
                     {currentPodcastEpisodes.data?.map((episode, index) => (
-                        <PodcastDetailItem episode={episode} key={episode.podcastEpisode.id} index={index}
-                                           onlyUnplayed={onlyUnplayed}
-                                           episodesLength={currentPodcastEpisodes.data.length}/>
+                        <PodcastDetailItem episode={episode} currentEpisodes={currentPodcastEpisodes.data ?? []}
+                                           key={episode.podcastEpisode.id} index={index}
+                                           onlyUnplayed={onlyUnplayed} episodesLength={0}/>
                     ))}
                 </div>
             </div>

@@ -37,7 +37,6 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({podcast})=>{
         return podcastSettings.data.activated
     }, [podcastSettings])
 
-    console.log("DIALOG")
     return <Dialog.Root onOpenChange={(isOpen)=>{
         if (!isOpen) {
             console.log("On close")
