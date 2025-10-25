@@ -2,7 +2,7 @@ use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
-use crate::models::episode::Episode;
+use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
@@ -22,7 +22,7 @@ pub struct TimelineItem {
     pub data: Vec<(
         PodcastEpisodeDto,
         PodcastDto,
-        Option<Episode>,
+        Option<EpisodeDto>,
         Option<Favorite>,
     )>,
     pub total_elements: i64,
@@ -127,10 +127,11 @@ impl TimelineItem {
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
+                    let history_dto = history.map(|h|h.convert_to_episode_dto());
                     (
                         PodcastEpisodeDto::from((podcast_episode, Some(user.clone()), fav_episode)),
                         PodcastDto::from(podcast),
-                        history,
+                        history_dto,
                         favorite,
                     )
                 },

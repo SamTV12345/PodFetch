@@ -236,21 +236,14 @@ impl Episode {
                     .eq_any(subquery),
             )
             .filter(episodes1.field(ep_dsl::action).eq("play"))
+            .order_by(episodes1.field(ep_dsl::timestamp).desc())
             .load::<(PodcastEpisode, Episode, Podcast)>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
 
         let mapped_watched_episodes = query
             .iter()
             .map(|e| PodcastWatchedEpisodeModelWithPodcastEpisode {
-                id: e.clone().1.id,
-                podcast_id: e.clone().2.id,
-                episode_id: e.0.episode_id.clone(),
-                url: e.0.url.clone(),
-                name: e.0.name.clone(),
-                image_url: e.0.image_url.clone(),
-                watched_time: e.clone().1.position.unwrap(),
-                date: e.clone().1.timestamp,
-                total_time: e.clone().0.total_time,
+                episode: e.1.clone().convert_to_episode_dto(),
                 podcast_episode: (
                     e.0.clone(),
                     Some(user).cloned(),

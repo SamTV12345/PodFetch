@@ -10,6 +10,7 @@ import useCommon from "../store/CommonSlice";
 import {Filter} from "../models/Filter";
 import {OrderCriteria} from "../models/Order";
 import {components} from "../../schema";
+import type {AudioPlayerPlay} from "../store/AudioPlayerSlice";
 
 const defaultOptions: IOptions = {
     allowedTags: ['b', 'i', 'em', 'strong', 'a'],
@@ -47,7 +48,7 @@ export const removeHTML = (html: string) => {
     }
 }
 
-export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response?: components["schemas"]["EpisodeDto"]): components["schemas"]["PodcastEpisodeWithHistory"] => {
+export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"],  chapters: components['schemas']['PodcastEpisodeChapter'][], response?: components["schemas"]["EpisodeDto"],): AudioPlayerPlay => {
     return {
         podcastEpisode: {
           ...episode,
@@ -57,11 +58,12 @@ export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpi
         podcastHistoryItem: {
             ...response!,
             position: response === null? 0: response?.position?response.position: 0
-        }
+        },
+        chapters: chapters
     }
 }
 
-export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], response?: components["schemas"]["EpisodeDto"]) : components["schemas"]["PodcastEpisodeWithHistory"] => {
+export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], chapters: components['schemas']['PodcastEpisodeChapter'][],  response?: components["schemas"]["EpisodeDto"]) : AudioPlayerPlay => {
 
     return {
         podcastEpisode: {
@@ -70,7 +72,8 @@ export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["Podc
         podcastHistoryItem: {
             ...response!,
             position: response === null? 0: response?.position?response.position: 0
-        }
+        },
+        chapters: chapters
     }
 }
 

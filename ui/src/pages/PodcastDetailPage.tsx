@@ -240,7 +240,7 @@ export const PodcastDetailPage = () => {
                     {currentPodcastEpisodes.data?.map((episode, index) => (
                         <PodcastDetailItem episode={episode} currentEpisodes={currentPodcastEpisodes.data ?? []}
                                            key={episode.podcastEpisode.id} index={index}
-                                           onlyUnplayed={onlyUnplayed} episodesLength={0}/>
+                                           onlyUnplayed={onlyUnplayed}/>
                     ))}
                 </div>
             </div>

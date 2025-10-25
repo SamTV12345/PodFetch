@@ -1,4 +1,4 @@
-import { FC, RefObject } from 'react'
+import {FC, RefObject, useEffect, useState} from 'react'
 import { createPortal } from 'react-dom'
 import useCommon from '../store/CommonSlice'
 import { removeHTML } from '../utils/Utilities'
@@ -17,8 +17,11 @@ type DetailedAudioPlayerProps = {
 
 export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
     const setDetailedAudioPlayerOpen = useCommon(state=>state.setDetailedAudioPlayerOpen)
-    const selectedPodcast = useAudioPlayer(state => state.currentPodcastEpisode)
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
+    const currentPodcastEpisode = useAudioPlayer(state=>state.loadedPodcastEpisode)
+
+
+
 
     return createPortal(
         <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 bg-(--bg-color) md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
@@ -35,22 +38,22 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
             ">
                 {/* Thumbnail and titles need special positioning to vertically align thumbnail with description */}
                 <div className="flex flex-col xs:flex-row items-center gap-4 md:block md:relative md:mb-10">
-                    <div className="aspect-square bg-center bg-cover md:mb-4 rounded-xl h-40 md:h-60 lg:h-80" style={{ backgroundImage: `url("${selectedPodcast?.podcastEpisode.local_image_url}")` }}></div>
+                    <div className="aspect-square bg-center bg-cover md:mb-4 rounded-xl h-40 md:h-60 lg:h-80" style={{ backgroundImage: `url("${currentPodcastEpisode?.podcastEpisode.local_image_url}")` }}></div>
 
                     <div className="md:absolute text-center xs:text-left">
-                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl text-(--fg-color)">{selectedPodcast?.podcastEpisode.name}</span>
+                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl text-(--fg-color)">{currentPodcastEpisode?.podcastEpisode.name}</span>
                         <span className="block lg:text-lg text-(--fg-color)">{currentPodcast && currentPodcast.name}</span>
                     </div>
                 </div>
 
                 {/* Description */}
                 <div className="md:max-h-60 lg:max-h-80 md:mb-10 overflow-y-auto xs:text-lg md:text-xl lg:text-2xl text-(--fg-color)"
-                     dangerouslySetInnerHTML={selectedPodcast?.podcastEpisode.description ? removeHTML(selectedPodcast.podcastEpisode.description) : { __html: '' }} />
+                     dangerouslySetInnerHTML={currentPodcastEpisode?.podcastEpisode.description ? removeHTML(currentPodcastEpisode.podcastEpisode.description) : { __html: '' }} />
             </div>
 
             {/* Player */}
             <div className="bg-(--bg-color) px-2 xs:p-4">
-                <PlayerProgressBar audioplayerRef={refItem} className="mb-2" />
+                <PlayerProgressBar audioplayerRef={refItem} className="mb-2" currentPodcastEpisode={currentPodcastEpisode} />
 
                 <div className="
                     grid
@@ -59,8 +62,8 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
                     px-3 xs:px-4 md:px-10
                 ">
                     <div></div>
-                    <PlayerTimeControls refItem={refItem} />
-                    <PlayerVolumeSlider refItem={refItem} audioAmplifier={audioAmplifier} />
+                    <PlayerTimeControls refItem={refItem} currentPodcastEpisode={currentPodcastEpisode} />
+                    <PlayerVolumeSlider refItem={refItem} audioAmplifier={audioAmplifier}/>
                 </div>
             </div>
 

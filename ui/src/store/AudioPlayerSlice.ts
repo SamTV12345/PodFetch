@@ -10,15 +10,20 @@ type AudioMetadata = {
     percentage: number
 }
 
+export type AudioPlayerPlay = components["schemas"]["PodcastEpisodeWithHistory"] & {
+    chapters: components['schemas']['PodcastEpisodeChapter'][]
+}
+
 type AudioPlayerProps = {
     isPlaying: boolean,
-    currentPodcastEpisode: components["schemas"]["PodcastEpisodeWithHistory"]|undefined,
+    currentPodcastEpisodeIndex: number | undefined,
     currentPodcast: components["schemas"]["PodcastDto"]|undefined,
     metadata: AudioMetadata|undefined,
     volume: number,
+    loadedPodcastEpisode?: AudioPlayerPlay
     playBackRate: number,
     setPlaying: (isPlaying: boolean) => void,
-    setCurrentPodcastEpisode: (currentPodcastEpisode: components["schemas"]["PodcastEpisodeWithHistory"]) => void,
+    setCurrentPodcastEpisode: (currentPodcastEpisode: number) => void,
     setMetadata: (metadata: AudioMetadata) => void,
     setCurrentTimeUpdate: (currentTime: number) => void,
     setCurrentTimeUpdatePercentage: (percentage: number) => void,
@@ -30,13 +35,14 @@ type AudioPlayerProps = {
 
 const useAudioPlayer = create<AudioPlayerProps>()((set, get) => ({
     isPlaying: false,
-    currentPodcastEpisode: undefined,
+    currentPodcastEpisodeIndex: undefined,
+    loadedPodcastEpisode: undefined,
     currentPodcast: undefined,
     metadata: undefined,
     volume: 100,
     playBackRate: 1,
     setPlaying: (isPlaying: boolean) => set({isPlaying}),
-    setCurrentPodcastEpisode: (currentPodcastEpisode) => set({currentPodcastEpisode}),
+    setCurrentPodcastEpisode: (currentPodcastEpisode) => set({currentPodcastEpisodeIndex: currentPodcastEpisode}),
     setMetadata: (metadata: AudioMetadata) => set({metadata}),
     setCurrentTimeUpdate: (currentTime: number) => {
         const metadata = get().metadata

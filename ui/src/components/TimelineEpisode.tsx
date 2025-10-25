@@ -13,7 +13,7 @@ type TimelineEpisodeProps = {
     totalLength: number,
     timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"],
     notListened: boolean,
-    podcastHistoryItem?: components["schemas"]["Episode"],
+    podcastHistoryItem?: components["schemas"]["EpisodeDto"],
     favoredEpisodes: boolean,
     podcast: components["schemas"]["PodcastDto"]
 }
@@ -24,7 +24,7 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podca
 
     return (
         <>
-            <EpisodeCard watchedTime={podcastHistoryItem?.position!} totalTime={podcastEpisode?.total_time} podcast={podcast} podcastEpisode={podcastEpisode} />
+            <EpisodeCard  podcastHistory={podcastHistoryItem} podcast={podcast} podcastEpisode={podcastEpisode} />
 
             {/*Infinite scroll */
             timeLineEpisodes.data.length === index + 1 &&

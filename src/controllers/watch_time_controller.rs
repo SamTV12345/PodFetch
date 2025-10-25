@@ -39,8 +39,7 @@ tag="watchtime"
 pub async fn get_last_watched(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>, CustomError> {
-    let mut episodes = Episode::get_last_watched_episodes(&requester)?;
-    episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
+    let episodes = Episode::get_last_watched_episodes(&requester)?;
     Ok(Json(episodes))
 }
 

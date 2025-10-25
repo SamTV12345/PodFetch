@@ -23,6 +23,7 @@ use axum::{Extension, Json};
 use std::thread;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 pub struct OptionalId {
@@ -36,6 +37,37 @@ pub struct PodcastEpisodeWithHistory {
     pub podcast_episode: PodcastEpisodeDto,
     pub podcast_history_item: Option<EpisodeDto>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PodcastChapterDto {
+    pub id: String,
+    pub start_time: i32,
+    pub title: String,
+    pub end_time: i32
+}
+
+
+#[utoipa::path(
+    get,
+    path="/podcasts/episodes/{id}/chapters",
+    responses(
+(status = 200, description = "Finds all chapters of the podcast episode.", body =
+[PodcastEpisodeChapter])),
+    tag = "podcast_episodes"
+)]
+pub async fn find_all_chapters_of_podcast_episode(
+    Path(id): Path<i32>,
+) -> Result<Json<Vec<PodcastEpisodeChapter>>, CustomError> {
+    // no auth needed for this endpoint
+
+    let chapters_of_podcast = PodcastEpisodeChapter::get_chapters_by_episode_id(id)?.into_iter().map
+    (|v|v
+        .into()).collect();
+
+    Ok(Json(chapters_of_podcast))
+}
+
 
 #[utoipa::path(
 get,
@@ -77,7 +109,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
 pub struct TimeLinePodcastEpisode {
     podcast_episode: PodcastEpisodeDto,
     podcast: PodcastDto,
-    history: Option<Episode>,
+    history: Option<EpisodeDto>,
     favorite: Option<Favorite>,
 }
 
@@ -303,4 +335,5 @@ pub fn get_podcast_episode_router() -> OpenApiRouter {
         .routes(routes!(download_podcast_episodes_of_podcast))
         .routes(routes!(delete_podcast_episode_locally))
         .routes(routes!(retrieve_episode_sample_format))
+        .routes(routes!(find_all_chapters_of_podcast_episode))
 }

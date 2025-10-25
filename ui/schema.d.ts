@@ -30,8 +30,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         delete: operations["delete_podcast_episode_locally"];
         options?: never;
         head?: never;
@@ -294,6 +293,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/episodes/{id}/chapters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["find_all_chapters_of_podcast_episode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/favored": {
         parameters: {
             query?: never;
@@ -494,8 +509,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         put: operations["download_podcast_episodes_of_podcast"];
         post?: never;
         delete?: never;
@@ -512,8 +526,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         put: operations["like_podcast_episode"];
         post?: never;
         delete?: never;
@@ -910,24 +923,6 @@ export interface components {
         DeletePodcast: {
             delete_files: boolean;
         };
-        Episode: {
-            action: string;
-            device: string;
-            episode: string;
-            guid?: string | null;
-            /** Format: int32 */
-            id: number;
-            podcast: string;
-            /** Format: int32 */
-            position?: number | null;
-            /** Format: int32 */
-            started?: number | null;
-            /** Format: date-time */
-            timestamp: string;
-            /** Format: int32 */
-            total?: number | null;
-            username: string;
-        };
         /** @enum {string} */
         EpisodeAction: "new" | "download" | "play" | "delete";
         EpisodeDto: {
@@ -1122,6 +1117,22 @@ export interface components {
             summary?: string | null;
             tags: components["schemas"]["Tag"][];
         };
+        PodcastEpisodeChapter: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: int32 */
+            end_time: number;
+            /** Format: int32 */
+            episode_id: number;
+            href?: string | null;
+            id: string;
+            image?: string | null;
+            /** Format: int32 */
+            start_time: number;
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
         PodcastEpisodeDto: {
             date_of_recording: string;
             deleted: boolean;
@@ -1181,22 +1192,9 @@ export interface components {
             name: string;
         };
         PodcastWatchedEpisodeModelWithPodcastEpisode: {
-            /** Format: date-time */
-            date: string;
-            episodeId: string;
-            /** Format: int32 */
-            id: number;
-            imageUrl: string;
-            name: string;
+            episode: components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcastEpisode: components["schemas"]["PodcastEpisodeDto"];
-            /** Format: int32 */
-            podcastId: number;
-            /** Format: int32 */
-            totalTime: number;
-            url: string;
-            /** Format: int32 */
-            watchedTime: number;
         };
         PodcastWatchedPostModel: {
             podcastEpisodeId: string;
@@ -1273,7 +1271,7 @@ export interface components {
         };
         TimeLinePodcastEpisode: {
             favorite?: null | components["schemas"]["Favorite"];
-            history?: null | components["schemas"]["Episode"];
+            history?: null | components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcast_episode: components["schemas"]["PodcastEpisodeDto"];
         };
@@ -1828,6 +1826,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EpisodeDto"];
+                };
+            };
+        };
+    };
+    find_all_chapters_of_podcast_episode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finds all chapters of the podcast episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeChapter"][];
                 };
             };
         };

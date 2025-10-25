@@ -1,35 +1,32 @@
 import {FC, RefObject, useEffect} from 'react'
 import {
-    prepareOnlinePodcastEpisode,
-    preparePodcastEpisode,
     SKIPPED_TIME
 } from '../utils/Utilities'
-import useAudioPlayer from '../store/AudioPlayerSlice'
+import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
 import { useKeyDown } from '../hooks/useKeyDown'
 import useCommon from "../store/CommonSlice";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
-import {client} from "../utils/http";
 
 type PlayerTimeControlsProps = {
-    refItem: RefObject<HTMLAudioElement|null>
+    refItem: RefObject<HTMLAudioElement|null>,
+    currentPodcastEpisode?: AudioPlayerPlay
 }
 
 
 const SPEED_STEPS = [0.5, 1,1.1,1.25, 1.5, 2, 2.5, 3]
 
 
-export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => {
+export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem, currentPodcastEpisode }) => {
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
-    const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
     const episodes = useCommon(state => state.selectedEpisodes)
     const isPlaying  = useAudioPlayer(state => state.isPlaying)
     const speed = useAudioPlayer(state => state.playBackRate)
     const time  = useAudioPlayer(state => state.metadata?.currentTime)
-    const selectedEpisodes = useCommon(state => state.selectedEpisodes)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setPlaying = useAudioPlayer(state => state.setPlaying)
     const setPlaybackRate = useAudioPlayer(state => state.setPlayBackRate)
+
 
     const skipToPreviousEpisode = () => {
         if (currentPodcastEpisode === undefined) return
@@ -45,8 +42,8 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
 
     useEffect(() => {
         refItem.current!.onended = () => {
-            logCurrentPlaybackTime(useAudioPlayer.getState().currentPodcastEpisode!.podcastEpisode.episode_id,
-                useAudioPlayer.getState().currentPodcastEpisode!.podcastEpisode.total_time)
+            if (currentPodcastEpisode === undefined) return
+            logCurrentPlaybackTime(currentPodcastEpisode!.podcastEpisode.episode_id, currentPodcastEpisode!.podcastEpisode.total_time)
         }
     }, []);
 
@@ -63,27 +60,12 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         switchToEpisodes(index + 1)
     }
 
-    const switchToEpisodes = (index: number) => {
+    const switchToEpisodes = async (index: number) => {
         if (refItem === undefined || refItem.current === undefined|| refItem.current === null) return
 
-        const nextEpisode = episodes[index]!
-
-        client.GET("/api/v1/podcasts/episode/{id}", {
-            params: {
-                path: {
-                    id: nextEpisode.podcastEpisode.episode_id
-                }
-            }
-        }) .then((response) => {
-            setCurrentPodcastEpisode(nextEpisode)
-            nextEpisode.podcastEpisode.status
-                ? setCurrentPodcastEpisode(preparePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
-                : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(nextEpisode.podcastEpisode, response.data!))
-            refItem.current!.src = episodes[index]!.podcastEpisode.local_url
-            refItem.current!.load()
-            refItem.current?.play()
-            setPlaying(true)
-        })
+        const nextEpisode = episodes[index]
+        if (!nextEpisode) return
+        setCurrentPodcastEpisode(index)
     }
 
     const handleButton = () => {
@@ -95,7 +77,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem }) => 
         } else {
             if (time && currentPodcastEpisode) {
                 logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, time)
-                const mappedEpisodes = selectedEpisodes.map(e=>{
+                const mappedEpisodes = episodes.map(e=>{
                     if(e.podcastEpisode.episode_id === currentPodcastEpisode.podcastEpisode.episode_id){
                         return {
                             ...e,

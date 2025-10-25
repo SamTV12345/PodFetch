@@ -9,6 +9,7 @@ use crate::service::podcast_chapter::Chapter;
 use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::error::ErrorSeverity::Critical;
 use diesel::Insertable;
+use crate::controllers::podcast_episode_controller::PodcastChapterDto;
 
 #[derive(
     Queryable,
@@ -89,5 +90,27 @@ impl PodcastEpisodeChapter {
         }
 
         Ok(())
+    }
+
+    pub fn get_chapters_by_episode_id(episode_id_to_search: i32) -> Result<Vec<PodcastEpisodeChapter>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episode_chapters::dsl::*;
+
+        let chapters = podcast_episode_chapters
+            .filter(episode_id.eq(episode_id_to_search))
+            .load::<PodcastEpisodeChapter>(&mut get_connection())
+            .map_err(|e| map_db_error(e, Critical))?;
+
+        Ok(chapters)
+    }
+}
+
+impl Into<PodcastChapterDto> for PodcastEpisodeChapter {
+    fn into(self) -> PodcastChapterDto {
+        PodcastChapterDto {
+            id: self.id,
+            title: self.title,
+            start_time: self.start_time,
+            end_time: self.end_time,
+        }
     }
 }

@@ -16,7 +16,7 @@ type DrawerAudioPlayerProps = {
 
 export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
     const playing = useAudioPlayer(state => state.isPlaying)
-    const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+    const podcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
     const podcast = $api.useQuery('get','/api/v1/podcasts/{id}', {
         params: {
             path: {

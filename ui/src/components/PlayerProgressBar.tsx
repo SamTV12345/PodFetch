@@ -1,10 +1,11 @@
 import React, { createRef, FC, useMemo, useState } from 'react'
-import useAudioPlayer from '../store/AudioPlayerSlice'
+import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 
 type PlayerProgressBarProps = {
     audioplayerRef: React.RefObject<HTMLAudioElement|null>,
-    className?: string
+    className?: string,
+    currentPodcastEpisode?: AudioPlayerPlay
 }
 
 const convertToMinutes = (time: number | undefined) => {
@@ -28,7 +29,7 @@ const convertToMinutes = (time: number | undefined) => {
     return hours_p + ':' + minutes_p + ':' + seconds_p.substring(0,2)
 }
 
-export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, className }) => {
+export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, className, currentPodcastEpisode }) => {
     window.addEventListener('mousedown', () => {
         setMousePressed(true)
     })
@@ -39,7 +40,6 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
 
     const control = createRef<HTMLElement>()
     const wrapper = createRef<HTMLDivElement>()
-    const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
     const metadata = useAudioPlayer(state => state.metadata)
     const minute = useAudioPlayer(state => state.metadata?.currentTime)
     const time = useAudioPlayer(state => state.metadata?.currentTime)

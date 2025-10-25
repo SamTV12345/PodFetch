@@ -4,6 +4,7 @@ import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import { client } from '../utils/http'
+import useCommon from "../store/CommonSlice";
 
 type HiddenAudioPlayerProps = {
     refItem: RefObject<HTMLAudioElement|null>,
@@ -11,10 +12,12 @@ type HiddenAudioPlayerProps = {
 }
 
 export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudioAmplifier }) => {
-    const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+    const podcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
     const setMetadata = useAudioPlayer(state => state.setMetadata)
     const setCurrentTimeUpdate = useAudioPlayer(state => state.setCurrentTimeUpdate)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
+    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
+    const selectedEpisodes = useCommon(state => state.selectedEpisodes)
 
     useEffect(() => {
         if (podcastEpisode && refItem && refItem.current) {
@@ -30,12 +33,15 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
                         }
                     }
                 }).then((response) => {
-                    setCurrentPodcastEpisode({
-                        ...podcastEpisode,
-                    podcastHistoryItem: {
-                      ...response.data!
-                    },
+                    const newSelectedEpisodes = selectedEpisodes.map((e)=>{
+                        if (e.podcastEpisode.id === podcastEpisode.podcastEpisode.id) {
+                            e.podcastHistoryItem = {
+                                ...response.data!
+                            }
+                        }
+                        return e
                     })
+                    setSelectedEpisodes(newSelectedEpisodes)
                     refItem.current!.currentTime = podcastEpisode.podcastHistoryItem?.position!
                 })
 
