@@ -25,7 +25,8 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({podcast})=>{
             path: {
                 id: podcast.id
             }
-        }
+        },
+        retry: false
     })
 
     const updatePodcastSettings = $api.useMutation('put', '/api/v1/podcasts/{id}/settings')

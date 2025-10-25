@@ -15,43 +15,30 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudi
     const podcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
     const setMetadata = useAudioPlayer(state => state.setMetadata)
     const setCurrentTimeUpdate = useAudioPlayer(state => state.setCurrentTimeUpdate)
-    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
-    const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
-    const selectedEpisodes = useCommon(state => state.selectedEpisodes)
+
+    const setPlaying = useAudioPlayer(state => state.setPlaying)
+
 
     useEffect(() => {
-        if (podcastEpisode && refItem && refItem.current) {
-            refItem.current.load()
+        const audio = refItem.current
+        if (!audio) return
 
-            if (podcastEpisode.podcastHistoryItem!.position === undefined) {
-                // fetch time from server
-
-                client.GET("/api/v1/podcasts/episode/{id}", {
-                    params: {
-                        path:{
-                            id: podcastEpisode.podcastEpisode.episode_id
-                        }
-                    }
-                }).then((response) => {
-                    const newSelectedEpisodes = selectedEpisodes.map((e)=>{
-                        if (e.podcastEpisode.id === podcastEpisode.podcastEpisode.id) {
-                            e.podcastHistoryItem = {
-                                ...response.data!
-                            }
-                        }
-                        return e
-                    })
-                    setSelectedEpisodes(newSelectedEpisodes)
-                    refItem.current!.currentTime = podcastEpisode.podcastHistoryItem?.position!
-                })
-
-            } else {
-                refItem.current!.currentTime = podcastEpisode.podcastHistoryItem?.position!
-            }
-
-            refItem.current.play()
+        const onPlaying = () => {
+            setPlaying(true)
         }
-    },[podcastEpisode])
+        const onPause = () => {
+            setPlaying(false)
+        }
+
+        audio.addEventListener('play', onPlaying)
+        audio.addEventListener('pause', onPause)
+
+        return () => {
+            audio.removeEventListener('playing', onPlaying)
+            audio.removeEventListener('pause', onPause)
+        }
+    }, [refItem, setPlaying])
+
 
     useOnMount(() => {
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {

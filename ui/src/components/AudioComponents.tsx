@@ -1,4 +1,4 @@
-import {createRef, useEffect, useState} from 'react'
+import {Activity, createRef, useEffect, useState} from 'react'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { AudioPlayer } from './AudioPlayer'
 import { DetailedAudioPlayer } from './DetailedAudioPlayer'
@@ -15,6 +15,7 @@ export const AudioComponents = () => {
     const currentPodcastEpisodes = useCommon(state=>state.selectedEpisodes)
 
 
+    // Todo fix audio playing on episode change
     useEffect(() => {
         async function loadEpisodeData() {
             if (!currentPodcastEpisodes[currentPodcastEpisodeIndex!]) {
@@ -34,6 +35,10 @@ export const AudioComponents = () => {
                     useAudioPlayer.setState({
                         loadedPodcastEpisode: retrievedPodcastEpisode
                     })
+                    const audioElement = (document.getElementById('hiddenaudio') as HTMLAudioElement)
+                    audioElement.currentTime = retrievedPodcastEpisode.podcastHistoryItem?.position!
+                    audioElement.load()
+                    audioElement.play()
                 }
             } catch (e) {
                 const chaptersOfEpisode = await client.GET("/api/v1/podcasts/episodes/{id}/chapters", {
@@ -44,8 +49,13 @@ export const AudioComponents = () => {
                     useAudioPlayer.setState({
                         loadedPodcastEpisode: retrievedPodcastEpisode
                     })
+                    const audioElement = (document.getElementById('hiddenaudio') as HTMLAudioElement)
+                    audioElement.currentTime = retrievedPodcastEpisode.podcastHistoryItem?.position!
+                    audioElement.load()
+                    audioElement.play()
                 }
             }
+
         }
         if (currentPodcastEpisodeIndex) {
             loadEpisodeData()
@@ -55,8 +65,7 @@ export const AudioComponents = () => {
     return (
         <>
             <AudioPlayer refItem={ref} audioAmplifier={audioAmplifier} setAudioAmplifier={setAudioAmplifier} />
-
-            {detailedAudioPodcastOpen && <DetailedAudioPlayer refItem={ref} audioAmplifier={audioAmplifier} setAudioAmplifier={setAudioAmplifier} />}
+            <Activity mode={detailedAudioPodcastOpen ? 'visible': 'hidden'}><DetailedAudioPlayer refItem={ref} audioAmplifier={audioAmplifier} setAudioAmplifier={setAudioAmplifier} /></Activity>
         </>
     )
 }

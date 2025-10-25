@@ -24,7 +24,6 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem, curre
     const speed = useAudioPlayer(state => state.playBackRate)
     const time  = useAudioPlayer(state => state.metadata?.currentTime)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
-    const setPlaying = useAudioPlayer(state => state.setPlaying)
     const setPlaybackRate = useAudioPlayer(state => state.setPlayBackRate)
 
 
@@ -72,7 +71,6 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem, curre
         if (refItem === undefined || refItem.current === undefined || refItem.current === null) return
 
         if (refItem.current.paused) {
-            setPlaying(true)
             refItem.current.play()
         } else {
             if (time && currentPodcastEpisode) {
@@ -92,7 +90,6 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ refItem, curre
                 setSelectedEpisodes(mappedEpisodes)
             }
 
-            setPlaying(false)
             refItem.current?.pause()
         }
     }

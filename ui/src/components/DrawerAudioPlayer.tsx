@@ -25,6 +25,7 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAm
         }
     })
 
+
     useEffect(() => {
         if (podcastEpisode && playing) {
             refItem.current?.play()
@@ -44,8 +45,8 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAm
             {podcast.data && <PlayerEpisodeInfo podcast={podcast.data} podcastEpisode={podcastEpisode?.podcastEpisode}/>}
 
             <div className="flex flex-col gap-2 w-full">
-                <PlayerTimeControls refItem={refItem}/>
-                <PlayerProgressBar audioplayerRef={refItem}/>
+                <PlayerTimeControls refItem={refItem} currentPodcastEpisode={podcastEpisode}/>
+                <PlayerProgressBar audioplayerRef={refItem} currentPodcastEpisode={podcastEpisode}/>
             </div>
 
             <PlayerVolumeSlider audioAmplifier={audioAmplifier} refItem={refItem}/>
