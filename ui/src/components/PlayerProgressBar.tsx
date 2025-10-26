@@ -30,11 +30,9 @@ const convertToMinutes = (time: number | undefined) => {
 }
 
 export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, currentPodcastEpisode }) => {
-    const control = createRef<HTMLElement>()
     const wrapper = createRef<HTMLDivElement>()
     const metadata = useAudioPlayer(state => state.metadata)
     const minute = useAudioPlayer(state => state.metadata?.currentTime)
-    const time = useAudioPlayer(state => state.metadata?.currentTime)
     const [isDragging, setIsDragging] = useState(false)
     const [dragPercentage, setDragPercentage] = useState<number | null>(null)
     const setCurrentTimeUpdatePercentage = useAudioPlayer(state => state.setCurrentTimeUpdatePercentage)
@@ -47,40 +45,55 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
         return convertToMinutes(minute)
     }, [minute])
 
-    const handleMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault()
+        e.stopPropagation()
         setIsDragging(true)
-    }
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isDragging && wrapper.current) {
-            if (rafRef.current) {
-                cancelAnimationFrame(rafRef.current)
-            }
-
-            rafRef.current = requestAnimationFrame(() => {
-                const offset = wrapper.current?.getBoundingClientRect()
-                if (!offset) return
-                const localX = e.clientX - offset.left
-                const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
-                setDragPercentage(percentage)
-            })
+        if (wrapper.current) {
+            const offset = wrapper.current.getBoundingClientRect()
+            const localX = e.clientX - offset.left
+            const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
+            setDragPercentage(percentage)
         }
     }
 
     const handleWrapperClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!isDragging && wrapper.current) {
+        if (isDragging || !wrapper.current || !metadata) return
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        const offset = wrapper.current.getBoundingClientRect()
+        const localX = e.clientX - offset.left
+        const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
+
+        const audioPlayer = getAudioPlayer()
+        const newTime = Math.floor((percentage / 100) * audioPlayer.duration)
+        audioPlayer.currentTime = newTime
+        setCurrentTimeUpdatePercentage(percentage)
+
+        if (currentPodcastEpisode) {
+            logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, newTime)
+        }
+    }
+
+    const rafRef = React.useRef<number | null>(null)
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging || !wrapper.current) return
+
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current)
+        }
+
+        rafRef.current = requestAnimationFrame(() => {
+            if (!wrapper.current) return
             const offset = wrapper.current.getBoundingClientRect()
             const localX = e.clientX - offset.left
-            const percentage = (localX / offset.width) * 100
-            const audioPlayer = getAudioPlayer()
-            audioPlayer.currentTime = Math.floor((percentage / 100) * audioPlayer.duration)
-            setCurrentTimeUpdatePercentage(percentage)
-
-            if (time && currentPodcastEpisode) {
-                logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, Number(audioPlayer.currentTime.toFixed(0)))
-            }
-        }
+            const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
+            setDragPercentage(percentage)
+        })
     }
 
     const handleMouseUp = () => {
@@ -99,10 +112,19 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
     }
 
     useEffect(() => {
-        const handleGlobalMouseUp = () => handleMouseUp()
-        window.addEventListener('mouseup', handleGlobalMouseUp)
-        return () => window.removeEventListener('mouseup', handleGlobalMouseUp)
-    }, [isDragging, dragPercentage, metadata, time, currentPodcastEpisode])
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove, { passive: true })
+            document.addEventListener('mouseup', handleMouseUp)
+
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove)
+                document.removeEventListener('mouseup', handleMouseUp)
+                if (rafRef.current) {
+                    cancelAnimationFrame(rafRef.current)
+                }
+            }
+        }
+    }, [isDragging, dragPercentage, currentPodcastEpisode, metadata])
 
     const displayPercentage = isDragging && dragPercentage !== null ? dragPercentage : metadata?.percentage
 
@@ -114,14 +136,12 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
                 className="grow bg-(--slider-bg-color) cursor-pointer h-1"
                 ref={wrapper}
                 onClick={handleWrapperClick}
-                onMouseMove={handleMouseMove}
+                onMouseDown={handleMouseDown}
             >
                 <div className="relative bg-(--slider-fg-color) h-1 text-right" style={{width: displayPercentage + '%'}}>
                     <span
-                        className="absolute -right-1 -top-1 bg-(--slider-fg-color) h-3 w-3 rounded-full cursor-grab active:cursor-grabbing"
-                        onMouseDown={handleMouseDown}
-                        ref={control}
-                    ></span>
+                        className="absolute -right-1 -top-1 bg-(--slider-fg-color) h-3 w-3 rounded-full cursor-grab active:cursor-grabbing">
+                    </span>
                 </div>
             </div>
 
