@@ -29,5 +29,5 @@ pub struct PodcastWatchedPostModel {
 pub struct PodcastWatchedEpisodeModelWithPodcastEpisode {
     pub podcast_episode: PodcastEpisodeDto,
     pub podcast: PodcastDto,
-    pub episode: EpisodeDto
+    pub episode: EpisodeDto,
 }

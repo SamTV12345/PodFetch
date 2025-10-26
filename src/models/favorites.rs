@@ -115,7 +115,11 @@ impl Favorite {
 
         let result: Vec<(Podcast, Favorite)> = dsl_podcast
             .inner_join(f_db)
-            .filter(favor_column.eq(true).and(user_favor.eq(&requester.username)))
+            .filter(
+                favor_column
+                    .eq(true)
+                    .and(user_favor.eq(&requester.username)),
+            )
             .load::<(Podcast, Favorite)>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
 

@@ -10,3 +10,5 @@ CREATE TABLE podcast_episode_chapters (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL ,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+CREATE UNIQUE INDEX (episode_id, start_time) ON podcast_episode_chapters;

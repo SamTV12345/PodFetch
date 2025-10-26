@@ -2,6 +2,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::podcast_settings;
 use crate::models::file_path::FilenameBuilderReturn;
 use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
@@ -10,8 +11,6 @@ use diesel::{
     AsChangeset, Identifiable, Insertable, OptionalExtension, QueryDsl, Queryable, RunQueryDsl,
 };
 use utoipa::ToSchema;
-use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
-use crate::service::podcast_chapter::Chapter;
 
 #[derive(
     Serialize,
@@ -128,9 +127,12 @@ impl PodcastSetting {
                         }
                     }
                     Err(err) => {
-                        log::error!("Error while updating metadata for episode: {} with reason \
-                        {}", e
-                            .id, err.inner);
+                        log::error!(
+                            "Error while updating metadata for episode: {} with reason \
+                        {}",
+                            e.id,
+                            err.inner
+                        );
                     }
                 }
             }

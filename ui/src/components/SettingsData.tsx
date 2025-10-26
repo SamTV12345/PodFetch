@@ -75,6 +75,13 @@ export const Settings = () => {
                         }))
                     }} type="number" value={settingsModel.data?.podcastPrefill} />
                 </div>
+                <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label className="flex gap-1">{t('rescan-audio-files')} <SettingsInfoIcon headerKey="rescan-audio-files" textKey="rescan-audio-files-description" /></label>
+                    <CustomButtonPrimary onClick={async ()=>{
+                        await client.POST('/api/v1/settings/rescan-episodes')
+                        enqueueSnackbar(t('rescan-done'), { variant: 'success' })
+                    }}>{t('rescan-audio-files')}</CustomButtonPrimary>
+                </div>
             </div>
 
             <CustomButtonPrimary loading={settingsModel.isLoading} className="float-right" onClick={() => {

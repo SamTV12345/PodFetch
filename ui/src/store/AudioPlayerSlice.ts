@@ -11,7 +11,7 @@ type AudioMetadata = {
 }
 
 export type AudioPlayerPlay = components["schemas"]["PodcastEpisodeWithHistory"] & {
-    chapters: components['schemas']['PodcastEpisodeChapter'][]
+    chapters: components['schemas']['PodcastChapterDto'][]
 }
 
 type AudioPlayerProps = {

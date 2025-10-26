@@ -10,6 +10,7 @@ use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
+use crate::models::user::User;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
@@ -22,7 +23,6 @@ use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
-use crate::models::user::User;
 
 pub struct PodcastService;
 
@@ -276,7 +276,7 @@ impl PodcastService {
         latest_pub: OrderOption,
         designated_username: String,
         tag: Option<String>,
-        requester: &User
+        requester: &User,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
             Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?
@@ -287,7 +287,15 @@ impl PodcastService {
                     }
                     true
                 })
-                .map(|p| (p.0.clone(), Option::from(p.1.clone()), p.2.clone(), requester).into())
+                .map(|p| {
+                    (
+                        p.0.clone(),
+                        Option::from(p.1.clone()),
+                        p.2.clone(),
+                        requester,
+                    )
+                        .into()
+                })
                 .collect::<Vec<PodcastDto>>();
 
         Ok(podcasts)
@@ -298,7 +306,7 @@ impl PodcastService {
         title: Option<String>,
         latest_pub: OrderOption,
         tag: Option<String>,
-        requester: &User
+        requester: &User,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts = Favorite::search_podcasts(order, title, latest_pub, &requester.username)?
             .iter()

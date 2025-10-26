@@ -137,29 +137,28 @@ impl PodcastEpisodeService {
                 Self::handle_podcast_image_insert(podcast, &channel)?;
 
                 for item in channel.items.iter() {
-
                     if item.enclosure.is_none() {
-                        log::info!("Skipping podcast episode {:?} as it has no enclosure", item.title);
+                        log::info!(
+                            "Skipping podcast episode {:?} as it has no enclosure",
+                            item.title
+                        );
                         continue;
                     }
 
                     let itunes_ext = &item.itunes_ext;
                     let opt_found_podcast_episode: Option<PodcastEpisode> = match &item.guid {
-                        Some(guid) => {
-                            Self::get_podcast_episode_by_guid(&guid.value)?
-                        }
+                        Some(guid) => Self::get_podcast_episode_by_guid(&guid.value)?,
                         None => {
-                             if let Some(enclosure) = &item.enclosure {
-                                 PodcastEpisode::get_podcast_episode_by_url(
+                            if let Some(enclosure) = &item.enclosure {
+                                PodcastEpisode::get_podcast_episode_by_url(
                                     &enclosure.url.to_string(),
                                     Some(podcast.id),
                                 )?
                             } else {
                                 None
                             }
-                        },
+                        }
                     };
-
 
                     if let Some(podcast_episode) = &opt_found_podcast_episode {
                         let mut updated_podcast_episode = podcast_episode.clone();
@@ -175,26 +174,27 @@ impl PodcastEpisodeService {
                             updated_podcast_episode.description = description.to_string();
                         }
 
-                        if updated_podcast_episode.name != podcast_episode.name ||
-                           updated_podcast_episode.url != podcast_episode.url ||
-                           updated_podcast_episode.description != podcast_episode.description {
+                        if updated_podcast_episode.name != podcast_episode.name
+                            || updated_podcast_episode.url != podcast_episode.url
+                            || updated_podcast_episode.description != podcast_episode.description
+                        {
                             PodcastEpisode::update_podcast_episode(updated_podcast_episode.clone());
                         }
 
                         // Skip already existing episodes with insert
-                        continue
+                        continue;
                     };
 
                     let mut duration_of_podcast_episode = 0;
-                    let mut image_url = format!("{}{}",ENVIRONMENT_SERVICE.server_url,
-                        DEFAULT_IMAGE_URL
-                        .to_string());
+                    let mut image_url =
+                        format!("{}{}", ENVIRONMENT_SERVICE.server_url, DEFAULT_IMAGE_URL);
 
                     // itunes extension checking
                     if let Some(itunes_ext) = &itunes_ext {
                         // duration
                         if let Some(duration_from_itunes) = &itunes_ext.duration {
-                            duration_of_podcast_episode = Self::parse_duration(&duration_from_itunes);
+                            duration_of_podcast_episode =
+                                Self::parse_duration(duration_from_itunes);
                         }
                         if let Some(itunes_image) = &itunes_ext.image {
                             image_url = itunes_image.to_string();

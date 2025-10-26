@@ -679,6 +679,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/rescan-episodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rescan_episodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/runcleanup": {
         parameters: {
             query?: never;
@@ -1113,6 +1129,14 @@ export interface components {
             /** Format: int32 */
             userId: number;
         };
+        PodcastChapterDto: {
+            /** Format: int32 */
+            endTime: number;
+            id: string;
+            /** Format: int32 */
+            startTime: number;
+            title: string;
+        };
         PodcastDto: {
             active: boolean;
             author?: string | null;
@@ -1132,22 +1156,6 @@ export interface components {
             rssfeed: string;
             summary?: string | null;
             tags: components["schemas"]["Tag"][];
-        };
-        PodcastEpisodeChapter: {
-            /** Format: date-time */
-            created_at: string;
-            /** Format: int32 */
-            end_time: number;
-            /** Format: int32 */
-            episode_id: number;
-            href?: string | null;
-            id: string;
-            image?: string | null;
-            /** Format: int32 */
-            start_time: number;
-            title: string;
-            /** Format: date-time */
-            updated_at: string;
         };
         PodcastEpisodeDto: {
             date_of_recording: string;
@@ -1863,7 +1871,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PodcastEpisodeChapter"][];
+                    "application/json": components["schemas"]["PodcastChapterDto"][];
                 };
             };
         };
@@ -2479,6 +2487,24 @@ export interface operations {
                 content: {
                     "text/plain": string;
                 };
+            };
+        };
+    };
+    rescan_episodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rescans all episodes for metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

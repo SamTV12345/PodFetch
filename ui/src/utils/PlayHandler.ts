@@ -2,7 +2,7 @@ import {prepareOnlinePodcastEpisode, preparePodcastEpisode} from "./Utilities";
 import useCommon from "../store/CommonSlice";
 import {components} from "../../schema";
 
-export const handlePlayofEpisode = (episode: components["schemas"]["PodcastEpisodeDto"],  chapters: components['schemas']['PodcastEpisodeChapter'][], response?: components["schemas"]["EpisodeDto"])=>{
+export const handlePlayofEpisode = (episode: components["schemas"]["PodcastEpisodeDto"],  chapters: components['schemas']['PodcastChapterDto'][], response?: components["schemas"]["EpisodeDto"])=>{
     if (response == null){
         return episode.status
             ? preparePodcastEpisode(episode,chapters,  response)

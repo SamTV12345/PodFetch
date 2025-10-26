@@ -10,8 +10,10 @@ use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
+use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
+use crate::service::podcast_chapter::{Chapter, Link};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::file_extension_determination::{
@@ -19,13 +21,11 @@ use crate::utils::file_extension_determination::{
 };
 use crate::utils::http_client::get_async_sync_client;
 use crate::utils::reqwest_client::get_sync_client;
+use chrono::Duration;
 use file_format::FileFormat;
-use id3::{ErrorKind, Tag, TagLike, Version};
+use id3::{ErrorKind, Tag, TagLike};
 use std::io::Read;
 use std::path::PathBuf;
-use chrono::Duration;
-use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
-use crate::service::podcast_chapter::{Chapter, Link};
 
 pub struct DownloadService {}
 
@@ -169,14 +169,13 @@ impl DownloadService {
         if let Ok(chapters) = &result {
             log::info!("Inserting chapters for episode {}", podcast_episode.id);
             for chapter in chapters {
-                let res = PodcastEpisodeChapter
-                ::save_chapter(chapter, &podcast_episode);
+                let res = PodcastEpisodeChapter::save_chapter(chapter, &podcast_episode);
                 if let Err(err) = res {
                     log::error!(
-                                    "Error while saving chapter for episode {}: {}",
-                                    podcast_episode.id,
-                                    err
-                                );
+                        "Error while saving chapter for episode {}: {}",
+                        podcast_episode.id,
+                        err
+                    );
                 }
             }
         }
@@ -247,10 +246,6 @@ impl DownloadService {
                 );
             }
         };
-
-        if let Version::Id3v22 = tag.version() {
-            tag = Tag::new();
-        }
 
         if let 0 = tag.pictures().count() {
             let mut image_file = File::open(&paths.image_filename).unwrap();
@@ -334,7 +329,7 @@ impl DownloadService {
         }
 
         let write_succesful: Result<(), CustomError> = tag
-            .write_to_path(&paths.filename, Version::Id3v24)
+            .write_to_path(&paths.filename, tag.version())
             .map(|_| ())
             .map_err(|e| CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into());
 
@@ -388,14 +383,9 @@ impl DownloadService {
         }
     }
 
-    fn read_chapters_from_mp3(path: &String) -> Result<Vec<Chapter>, CustomError> {
-        let tag = Tag::read_from_path(&path).map_err(|e| {
-            format!(
-                "Error reading ID3 tag from `{}`: {}",
-                path.to_string(),
-                e
-            )
-        });
+    pub fn read_chapters_from_mp3(path: &String) -> Result<Vec<Chapter>, CustomError> {
+        let tag = Tag::read_from_path(path)
+            .map_err(|e| format!("Error reading ID3 tag from `{}`: {}", path, e));
 
         let tag = match tag {
             Ok(tag) => tag,
@@ -428,15 +418,15 @@ impl DownloadService {
                     }
                     id3::Content::Link(url) => {
                         link = Some(Link {
-                            url: url::Url::parse(url).map_err(|e| <url::ParseError as
-                            Into<CustomError>>::into(e))?,
+                            url: url::Url::parse(url)
+                                .map_err(<url::ParseError as Into<CustomError>>::into)?,
                             title: None,
                         });
                     }
                     id3::Content::ExtendedLink(extended_link) => {
                         link = Some(Link {
-                            url: url::Url::parse(&extended_link.link).map_err(|e| <url::ParseError as
-                            Into<CustomError>>::into(e))?,
+                            url: url::Url::parse(&extended_link.link)
+                                .map_err(<url::ParseError as Into<CustomError>>::into)?,
                             title: match extended_link.description.trim() {
                                 "" => None,
                                 description => Some(description.to_string()),
@@ -462,8 +452,8 @@ impl DownloadService {
         Ok(chapters)
     }
 
-    fn read_chapters_from_mp4(path: &String) -> Vec<Chapter> {
-        let tag = mp4ameta::Tag::read_from_path(&path);
+    pub fn read_chapters_from_mp4(path: &String) -> Vec<Chapter> {
+        let tag = mp4ameta::Tag::read_from_path(path);
         let tag = match tag {
             Ok(tag) => tag,
             Err(err) => {
@@ -471,13 +461,15 @@ impl DownloadService {
                 return Vec::new();
             }
         };
-        let chapters_list: Vec<_> = tag.chapter_list().into_iter().collect();
+        let chapters_list: Vec<_> = tag.chapter_list().iter().collect();
         let mut chapters = Vec::new();
         for (index, id3_chapter) in chapters_list.iter().enumerate() {
             let start = Duration::milliseconds(id3_chapter.start.as_millis() as i64);
 
             let end = if index + 1 < chapters_list.len() {
-                Some(Duration::milliseconds(chapters_list[index + 1].start.as_millis() as i64))
+                Some(Duration::milliseconds(
+                    chapters_list[index + 1].start.as_millis() as i64,
+                ))
             } else {
                 None
             };

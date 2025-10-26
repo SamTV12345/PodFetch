@@ -1,15 +1,18 @@
-use diesel::{AsChangeset, BoolExpressionMethods};
-use diesel::{ExpressionMethods, Identifiable, OptionalExtension, QueryDsl, Queryable, QueryableByName, RunQueryDsl, Selectable};
-use utoipa::ToSchema;
-use diesel::sql_types::{Integer, Text, Nullable, Timestamp};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::*;
+use crate::controllers::podcast_episode_controller::PodcastChapterDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::podcast_chapter::Chapter;
-use crate::utils::error::{map_db_error, CustomError};
 use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::Insertable;
-use crate::controllers::podcast_episode_controller::PodcastChapterDto;
+use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
+use diesel::{AsChangeset, BoolExpressionMethods};
+use diesel::{
+    ExpressionMethods, Identifiable, OptionalExtension, QueryDsl, Queryable, QueryableByName,
+    RunQueryDsl, Selectable,
+};
+use utoipa::ToSchema;
 
 #[derive(
     Queryable,
@@ -24,7 +27,7 @@ use crate::controllers::podcast_episode_controller::PodcastChapterDto;
     Serialize,
     Deserialize,
     Default,
-    AsChangeset
+    AsChangeset,
 )]
 pub struct PodcastEpisodeChapter {
     #[diesel(sql_type = Text)]
@@ -47,7 +50,6 @@ pub struct PodcastEpisodeChapter {
     pub updated_at: chrono::NaiveDateTime,
 }
 
-
 impl PodcastEpisodeChapter {
     pub fn save_chapter(
         chapter_to_save: &Chapter,
@@ -60,14 +62,20 @@ impl PodcastEpisodeChapter {
             title: chapter_to_save.title.clone().unwrap_or_default(),
             start_time: chapter_to_save.start.num_seconds() as i32,
             end_time: chapter_to_save.end.unwrap_or_default().num_seconds() as i32,
-            href: chapter_to_save.link.clone().map(|link| link.url.to_string()),
+            href: chapter_to_save
+                .link
+                .clone()
+                .map(|link| link.url.to_string()),
             image: chapter_to_save.image.clone().map(|img| img.to_string()),
             created_at: chrono::Utc::now().naive_utc(),
             updated_at: chrono::Utc::now().naive_utc(),
         };
         let opt_chapter = podcast_episode_chapters
-            .filter(episode_id.eq(podcast_episode.id)
-            .and(start_time.eq(chapter_to_save.start.num_seconds() as i32)))
+            .filter(
+                episode_id
+                    .eq(podcast_episode.id)
+                    .and(start_time.eq(chapter_to_save.start.num_seconds() as i32)),
+            )
             .first::<PodcastEpisodeChapter>(&mut get_connection())
             .optional()
             .map_err(|e| map_db_error(e, Critical))?;
@@ -92,7 +100,9 @@ impl PodcastEpisodeChapter {
         Ok(())
     }
 
-    pub fn get_chapters_by_episode_id(episode_id_to_search: i32) -> Result<Vec<PodcastEpisodeChapter>, CustomError> {
+    pub fn get_chapters_by_episode_id(
+        episode_id_to_search: i32,
+    ) -> Result<Vec<PodcastEpisodeChapter>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episode_chapters::dsl::*;
 
         let chapters = podcast_episode_chapters
@@ -104,13 +114,13 @@ impl PodcastEpisodeChapter {
     }
 }
 
-impl Into<PodcastChapterDto> for PodcastEpisodeChapter {
-    fn into(self) -> PodcastChapterDto {
+impl From<PodcastEpisodeChapter> for PodcastChapterDto {
+    fn from(val: PodcastEpisodeChapter) -> Self {
         PodcastChapterDto {
-            id: self.id,
-            title: self.title,
-            start_time: self.start_time,
-            end_time: self.end_time,
+            id: val.id,
+            title: val.title,
+            start_time: val.start_time,
+            end_time: val.end_time,
         }
     }
 }

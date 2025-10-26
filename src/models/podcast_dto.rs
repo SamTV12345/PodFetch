@@ -4,9 +4,9 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
+use crate::models::user::User;
 use std::collections::HashSet;
 use utoipa::ToSchema;
-use crate::models::user::User;
 
 #[derive(Serialize, Deserialize, ToSchema, Clone)]
 pub struct PodcastDto {
@@ -62,17 +62,18 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>, &User)> for PodcastDto {
         });
 
         let mut podfetch_rss_feed = ENVIRONMENT_SERVICE.build_url_to_rss_feed();
-        podfetch_rss_feed.join(&format!("/{}", value.0.id)).expect
-        ("this is \
+        podfetch_rss_feed.join(&format!("/{}", value.0.id)).expect(
+            "this is \
         safe because we \
         are \
-        just joining strings");
-
+        just joining strings",
+        );
 
         if let Some(api_key) = &value.3.api_key {
-            podfetch_rss_feed.query_pairs_mut().append_pair("apiKey", api_key);
+            podfetch_rss_feed
+                .query_pairs_mut()
+                .append_pair("apiKey", api_key);
         }
-
 
         PodcastDto {
             id: value.0.id,
@@ -115,11 +116,12 @@ impl From<Podcast> for PodcastDto {
                 .join(",")
         });
         let podfetch_rss_feed = ENVIRONMENT_SERVICE.build_url_to_rss_feed();
-        podfetch_rss_feed.join(&format!("/{}", value.id)).expect
-        ("this is \
+        podfetch_rss_feed.join(&format!("/{}", value.id)).expect(
+            "this is \
         safe \
         because we \
-        are just joining strings");
+        are just joining strings",
+        );
 
         PodcastDto {
             id: value.id,

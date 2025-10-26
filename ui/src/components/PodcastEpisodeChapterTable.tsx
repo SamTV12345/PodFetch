@@ -34,8 +34,8 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
             return []
         }
         return chapters.data.map(chapter=>{
-            const start_minutes = chapter.start_time / 60 >= 1 ? `${Math.floor(chapter.start_time / 60)}:${(chapter.start_time % 60).toString().padStart(2, '0')}` : `0:${chapter.start_time.toString().padStart(2, '0')}`
-            const end_minutes = chapter.end_time / 60 >= 1 ? `${Math.floor(chapter.end_time / 60)}:${(chapter.end_time % 60).toString().padStart(2, '0')}` : `0:${chapter.end_time.toString().padStart(2, '0')}`
+            const start_minutes = chapter.startTime / 60 >= 1 ? `${Math.floor(chapter.startTime / 60)}:${(chapter.startTime % 60).toString().padStart(2, '0')}` : `0:${chapter.startTime.toString().padStart(2, '0')}`
+            const end_minutes = chapter.endTime / 60 >= 1 ? `${Math.floor(chapter.endTime / 60)}:${(chapter.endTime % 60).toString().padStart(2, '0')}` : `0:${chapter.endTime.toString().padStart(2, '0')}`
 
             return `${start_minutes} - ${end_minutes}min`
         })
@@ -78,7 +78,7 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
                                     podcastHistoryItem: null
                                 }])
                                 setCurrentEpisodeIndex(0)
-                                await startAudioPlayer(podcastEpisode.url, chapter.start_time ?? 0)
+                                await startAudioPlayer(podcastEpisode.url, chapter.startTime ?? 0)
                             }}>play_circle</span>
         </td>
     </tr>)}

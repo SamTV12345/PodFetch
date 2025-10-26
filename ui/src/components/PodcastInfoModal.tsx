@@ -62,7 +62,7 @@ export const PodcastInfoModal = () => {
                 </button>
 
                 <div className="mb-4">
-                    <Heading2 className="inline align-middle mr-2">{selectedPodcastEpisode?.name || ''}</Heading2>
+                    <Heading2 className="inline align-middle mr-2 break-all">{selectedPodcastEpisode?.name || ''}</Heading2>
 
                     <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
                         if (selectedPodcastEpisode) {

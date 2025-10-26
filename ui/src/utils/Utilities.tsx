@@ -48,7 +48,7 @@ export const removeHTML = (html: string) => {
     }
 }
 
-export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"],  chapters: components['schemas']['PodcastEpisodeChapter'][], response?: components["schemas"]["EpisodeDto"],): AudioPlayerPlay => {
+export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"],  chapters: components['schemas']['PodcastChapterDto'][], response?: components["schemas"]["EpisodeDto"],): AudioPlayerPlay => {
     return {
         podcastEpisode: {
           ...episode,
@@ -63,7 +63,7 @@ export const preparePodcastEpisode = (episode: components["schemas"]["PodcastEpi
     }
 }
 
-export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], chapters: components['schemas']['PodcastEpisodeChapter'][],  response?: components["schemas"]["EpisodeDto"]) : AudioPlayerPlay => {
+export const prepareOnlinePodcastEpisode = (episode: components["schemas"]["PodcastEpisodeDto"], chapters: components['schemas']['PodcastChapterDto'][],  response?: components["schemas"]["EpisodeDto"]) : AudioPlayerPlay => {
 
     return {
         podcastEpisode: {

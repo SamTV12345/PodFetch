@@ -77,8 +77,9 @@ belongs to",body=
 Vec<PodcastDto>)),
     tag="podcasts"
 )]
-pub async fn search_podcast_of_episode(Path(id): Path<i32>) -> Result<Json<PodcastDto>,
-    CustomError> {
+pub async fn search_podcast_of_episode(
+    Path(id): Path<i32>,
+) -> Result<Json<PodcastDto>, CustomError> {
     Podcast::get_podcast_by_episode_id(id)
 }
 
@@ -129,7 +130,7 @@ pub async fn search_podcasts(
                     _latest_pub.clone(),
                     username,
                     tag,
-                    &requester
+                    &requester,
                 )?;
             }
             Ok(Json(podcasts))
@@ -142,7 +143,7 @@ pub async fn search_podcasts(
                     query.title,
                     _latest_pub.clone(),
                     tag,
-                    &requester
+                    &requester,
                 )?;
             }
             Ok(Json(podcasts))

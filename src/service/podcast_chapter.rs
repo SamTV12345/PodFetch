@@ -1,6 +1,6 @@
 use chrono::Duration;
 
-pub type  Image = url::Url;
+pub type Image = url::Url;
 
 /// Represents a web link for the [chapter](crate::Chapter).
 #[derive(Debug, PartialEq, Clone)]

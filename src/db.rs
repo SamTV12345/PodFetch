@@ -127,7 +127,7 @@ impl TimelineItem {
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
-                    let history_dto = history.map(|h|h.convert_to_episode_dto());
+                    let history_dto = history.map(|h| h.convert_to_episode_dto());
                     (
                         PodcastEpisodeDto::from((podcast_episode, Some(user.clone()), fav_episode)),
                         PodcastDto::from(podcast),

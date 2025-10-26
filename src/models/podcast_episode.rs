@@ -4,9 +4,7 @@ use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::adapters::persistence::dbconfig::schema::*;
-use crate::constants::inner_constants::{
-    ENVIRONMENT_SERVICE, PodcastEpisodeWithFavorited,
-};
+use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PodcastEpisodeWithFavorited};
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::playlist_item::PlaylistItem;
@@ -133,6 +131,22 @@ impl PodcastEpisode {
         Ok(result)
     }
 
+    pub fn get_nth_page_of_podcast_episodes(
+        last_podcast_episode_id: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+
+        let found_podcast_episodes = podcast_episodes
+            .filter(id.gt(last_podcast_episode_id))
+            .filter(file_episode_path.is_not_null())
+            .order(id.asc())
+            .limit(100)
+            .load::<PodcastEpisode>(&mut get_connection())
+            .map_err(|e| map_db_error(e, Critical))?;
+
+        Ok(found_podcast_episodes)
+    }
+
     pub fn get_podcast_episode_by_id(
         podcas_episode_id_to_be_found: &str,
     ) -> Result<Option<PodcastEpisode>, CustomError> {
@@ -226,7 +240,11 @@ impl PodcastEpisode {
                 total_time.eq(duration),
                 podcast_id.eq(podcast.id),
                 episode_id.eq(uuid_podcast.to_string()),
-                name.eq(&item.title.clone().as_ref().unwrap_or(&"No title given".to_string())),
+                name.eq(&item
+                    .title
+                    .clone()
+                    .as_ref()
+                    .unwrap_or(&"No title given".to_string())),
                 url.eq(&item.enclosure.clone().unwrap().url),
                 guid.eq(&item.guid.clone().unwrap_or(guid_to_insert).value),
                 date_of_recording.eq(inserted_date),

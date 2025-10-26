@@ -1,5 +1,5 @@
-use axum::Json;
 use crate::adapters::persistence::dbconfig::schema::*;
+use axum::Json;
 
 use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
@@ -7,7 +7,10 @@ use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::tag::Tag;
+use crate::models::user::User;
 use crate::utils::do_retry::do_retry;
+use crate::utils::error::ErrorSeverity::{Critical, Warning};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use crate::utils::podcast_builder::PodcastExtra;
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
@@ -16,9 +19,6 @@ use diesel::sql_types::{Bool, Integer, Nullable, Text};
 use diesel::{
     BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl, delete, insert_into,
 };
-use crate::models::user::User;
-use crate::utils::error::ErrorSeverity::{Critical, Warning};
-use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 
 #[derive(
     Queryable, Identifiable, QueryableByName, Selectable, Debug, PartialEq, Clone, Default,
@@ -61,9 +61,7 @@ pub struct Podcast {
 impl Podcast {
     pub(crate) fn get_podcast_by_episode_id(p0: i32) -> Result<Json<PodcastDto>, CustomError> {
         podcasts::table
-            .inner_join(
-                podcast_episodes::table.on(podcast_episodes::podcast_id.eq(podcasts::id)),
-            )
+            .inner_join(podcast_episodes::table.on(podcast_episodes::podcast_id.eq(podcasts::id)))
             .filter(podcast_episodes::id.eq(p0))
             .select(podcasts::all_columns)
             .first::<Podcast>(&mut get_connection())
