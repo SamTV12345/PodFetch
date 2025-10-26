@@ -1,8 +1,7 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::models::podcast_dto::PodcastDto;
-use chrono::NaiveDateTime;
-use utoipa::ToSchema;
 use crate::models::episode::EpisodeDto;
+use crate::models::podcast_dto::PodcastDto;
+use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

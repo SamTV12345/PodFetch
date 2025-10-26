@@ -141,6 +141,8 @@
   "rename-podcasts": "Podcasts umbenennen",
   "use-existing-filenames": "Podfetch existierende Dateinamen verwenden",
   "replace-invalid-characters-description": "Ungültige Zeichen werden durch Unterstriche ersetzt",
+  "description": "Beschreibung",
+  "chapters": "Kapitel",
   "colon-replacement": "Doppelpunkt-Ersatz",
   "standard-episode-format": "Standard-Episodenformat",
   "dash-separated": "Bindestrich-getrennt",

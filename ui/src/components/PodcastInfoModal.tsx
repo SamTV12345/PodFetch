@@ -5,11 +5,13 @@ import useCommon from '../store/CommonSlice'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
 import {client} from "../utils/http";
+import {useState} from "react";
 
 export const PodcastInfoModal = () => {
     const infoModalOpen = useCommon(state => state.infoModalPodcastOpen)
     const selectedPodcastEpisode = useCommon(state => state.infoModalPodcast)
     const { t } =  useTranslation()
+    const [selectedTab, setSelectedTab] = useState<'description'|'chapters'>('description')
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const download = (url: string, filename: string) => {
         const element = document.createElement('a')
@@ -71,9 +73,26 @@ export const PodcastInfoModal = () => {
                     }
                 </div>
 
+                <ul className="flex flex-wrap gap-2 border-b border-(--border-color) mb-6 text-(--fg-secondary-color)">
+                    <li onClick={()=>setSelectedTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                        {t('description')}
+                    </li>
+                    <li   onClick={()=>setSelectedTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                        {t('chapters')}
+                    </li>
+
+                </ul>
+
                 {selectedPodcastEpisode &&
-                    <p className="leading-[1.75] text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}>
-                    </p>
+                    <>
+                    {
+                    selectedTab === 'description' ? (
+                        <p className="leading-[1.75] text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}/>
+                        ): (<p className="leading-[1.75] text-sm text-(--fg-color)"/>)
+
+                    }
+
+                    </>
                 }
             </div>
         </div>, document.getElementById('modal1')!

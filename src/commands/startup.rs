@@ -1,6 +1,6 @@
 use crate::adapters::api::controllers::routes::global_routes;
-use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::DBType;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
@@ -26,20 +26,20 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::middleware::from_fn;
 use axum::response::{Redirect, Response};
 use axum::routing::get;
+use axum::Router;
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
 use diesel_migrations::MigrationHarness;
 use log::info;
-use maud::{Markup, html};
+use maud::{html, Markup};
 use r2d2::Pool;
-use socketioxide::SocketIoBuilder;
 use socketioxide::extract::SocketRef;
+use socketioxide::SocketIoBuilder;
 use std::ops::DerefMut;
 use std::process::exit;
 use std::sync::OnceLock;
@@ -55,9 +55,9 @@ use utoipa_scalar::Servable as UtoipaServable;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub type DbPool = Pool<ConnectionManager<DBType>>;
-use crate::EmbeddedMigrations;
 use crate::embed_migrations;
 use crate::utils::error::ErrorSeverity::Warning;
+use crate::EmbeddedMigrations;
 
 import_database_config!();
 
@@ -143,6 +143,7 @@ pub fn transform_index_files() -> String {
             div id="modal1"{};
             div id="modal2"{};
             div id="confirm-modal"{};
+            audio id="audio-player" crossorigin="anonymous"    {};
                 }
 
         }};
@@ -434,7 +435,6 @@ pub fn handle_config_for_server_startup() -> Router {
 
 #[cfg(test)]
 pub mod tests {
-
     #[cfg(feature = "postgresql")]
     use crate::test_utils::test::setup_container;
     use axum_test::TestServer;
@@ -443,9 +443,9 @@ pub mod tests {
     #[cfg(feature = "postgresql")]
     use crate::commands::startup::handle_config_for_server_startup;
     #[cfg(feature = "postgresql")]
-    use testcontainers::ContainerAsync;
-    #[cfg(feature = "postgresql")]
     use testcontainers::runners::AsyncRunner;
+    #[cfg(feature = "postgresql")]
+    use testcontainers::ContainerAsync;
     #[cfg(feature = "postgresql")]
     use testcontainers_modules::postgres::Postgres;
 

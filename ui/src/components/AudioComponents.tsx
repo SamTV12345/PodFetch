@@ -6,16 +6,15 @@ import useAudioPlayer from "../store/AudioPlayerSlice";
 import useCommon from "../store/CommonSlice";
 import {client} from "../utils/http";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
+import {getAudioPlayer} from "../utils/audioPlayer";
 
 export const AudioComponents = () => {
-    const ref = createRef<HTMLAudioElement>()
     const detailedAudioPodcastOpen = useCommon(state => state.detailedAudioPlayerOpen)
     const [audioAmplifier,setAudioAmplifier] = useState<AudioAmplifier>()
     const currentPodcastEpisodeIndex = useAudioPlayer(state=>state.currentPodcastEpisodeIndex)
     const currentPodcastEpisodes = useCommon(state=>state.selectedEpisodes)
 
 
-    // Todo fix audio playing on episode change
     useEffect(() => {
         async function loadEpisodeData() {
             if (!currentPodcastEpisodes[currentPodcastEpisodeIndex!]) {
@@ -35,10 +34,6 @@ export const AudioComponents = () => {
                     useAudioPlayer.setState({
                         loadedPodcastEpisode: retrievedPodcastEpisode
                     })
-                    const audioElement = (document.getElementById('hiddenaudio') as HTMLAudioElement)
-                    audioElement.currentTime = retrievedPodcastEpisode.podcastHistoryItem?.position!
-                    audioElement.load()
-                    audioElement.play()
                 }
             } catch (e) {
                 const chaptersOfEpisode = await client.GET("/api/v1/podcasts/episodes/{id}/chapters", {
@@ -49,23 +44,18 @@ export const AudioComponents = () => {
                     useAudioPlayer.setState({
                         loadedPodcastEpisode: retrievedPodcastEpisode
                     })
-                    const audioElement = (document.getElementById('hiddenaudio') as HTMLAudioElement)
-                    audioElement.currentTime = retrievedPodcastEpisode.podcastHistoryItem?.position!
-                    audioElement.load()
-                    audioElement.play()
                 }
             }
-
         }
-        if (currentPodcastEpisodeIndex) {
+        if (currentPodcastEpisodeIndex != null) {
             loadEpisodeData()
         }
     }, [currentPodcastEpisodeIndex, currentPodcastEpisodes]);
 
     return (
         <>
-            <AudioPlayer refItem={ref} audioAmplifier={audioAmplifier} setAudioAmplifier={setAudioAmplifier} />
-            <Activity mode={detailedAudioPodcastOpen ? 'visible': 'hidden'}><DetailedAudioPlayer refItem={ref} audioAmplifier={audioAmplifier} setAudioAmplifier={setAudioAmplifier} /></Activity>
+            <AudioPlayer audioAmplifier={audioAmplifier} setAudioAmplifier={setAudioAmplifier} />
+            <Activity mode={detailedAudioPodcastOpen ? 'visible': 'hidden'}><DetailedAudioPlayer audioAmplifier={audioAmplifier} setAudioAmplifier={setAudioAmplifier} /></Activity>
         </>
     )
 }

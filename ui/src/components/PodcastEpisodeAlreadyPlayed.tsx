@@ -11,6 +11,7 @@ import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Episode} from "../models/Episode";
 import {components} from "../../schema";
 import {client} from "../utils/http";
+import {startAudioPlayer} from "../utils/audioPlayer";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
     const infoModalOpen = useCommon(state => state.podcastAlreadyPlayed)
@@ -18,7 +19,6 @@ export const PodcastEpisodeAlreadyPlayed = () => {
     const setSelectedPodcastEpisodes = useCommon(state => state.setSelectedEpisodes)
     const selectedPodcastEpisodes = useCommon(state => state.selectedEpisodes)
     const {t} = useTranslation()
-    const setPlaying = useAudioPlayer(state => state.setPlaying)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setPodcastAlreadyPlayed = useCommon(state => state.setPodcastAlreadyPlayed)
 
@@ -61,7 +61,6 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                 <div className="flex gap-3 float-right">
                     <CustomButtonSecondary onClick={()=>setPodcastAlreadyPlayed(false)}>{t('cancel')}</CustomButtonSecondary>
                     <CustomButtonPrimary onClick={async ()=>{
-                        setPlaying(true)
                         if(!selectedPodcastEpisode) {
                             return
                         }
@@ -84,7 +83,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                         })
                         setSelectedPodcastEpisodes(newSelectedEpisodes)
                         setCurrentPodcastEpisode(index)
-
+                        await startAudioPlayer(selectedPodcastEpisode.podcastEpisode.url, 0)
                     }}>{t('restart-playing')}</CustomButtonPrimary>
                 </div>
             </div>

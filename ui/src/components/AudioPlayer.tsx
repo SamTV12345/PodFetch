@@ -6,16 +6,15 @@ import useCommon from "../store/CommonSlice";
 import useAudioPlayer from "../store/AudioPlayerSlice";
 
 type AudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined
     setAudioAmplifier: (audioAmplifier: AudioAmplifier | undefined) => void
 }
 
-export const AudioPlayer: FC<AudioPlayerProps> = ({ refItem, audioAmplifier, setAudioAmplifier }) => {
+export const AudioPlayer: FC<AudioPlayerProps> = ({  audioAmplifier, setAudioAmplifier }) => {
     const loadedPodcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
 
     return <Activity mode={loadedPodcastEpisode ? "visible" : "hidden"}>
-        <DrawerAudioPlayer refItem={refItem} audioAmplifier={audioAmplifier} />
-        <HiddenAudioPlayer refItem={refItem} setAudioAmplifier={setAudioAmplifier} />
+        <DrawerAudioPlayer audioAmplifier={audioAmplifier} />
+        <HiddenAudioPlayer setAudioAmplifier={setAudioAmplifier} />
     </Activity>
 }

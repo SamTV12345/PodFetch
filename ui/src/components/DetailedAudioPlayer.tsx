@@ -1,4 +1,4 @@
-import {FC, RefObject, useEffect, useState} from 'react'
+import {FC} from 'react'
 import { createPortal } from 'react-dom'
 import useCommon from '../store/CommonSlice'
 import { removeHTML } from '../utils/Utilities'
@@ -10,12 +10,11 @@ import 'material-symbols/outlined.css'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 
 type DetailedAudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined,
     setAudioAmplifier: (audioAmplifier: AudioAmplifier | undefined) => void
 }
 
-export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
+export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifier }) => {
     const setDetailedAudioPlayerOpen = useCommon(state=>state.setDetailedAudioPlayerOpen)
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const currentPodcastEpisode = useAudioPlayer(state=>state.loadedPodcastEpisode)
@@ -53,7 +52,7 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
 
             {/* Player */}
             <div className="bg-(--bg-color) px-2 xs:p-4">
-                <PlayerProgressBar audioplayerRef={refItem} className="mb-2" currentPodcastEpisode={currentPodcastEpisode} />
+                <PlayerProgressBar className="mb-2" currentPodcastEpisode={currentPodcastEpisode} />
 
                 <div className="
                     grid
@@ -62,8 +61,8 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ refItem, aud
                     px-3 xs:px-4 md:px-10
                 ">
                     <div></div>
-                    <PlayerTimeControls refItem={refItem} currentPodcastEpisode={currentPodcastEpisode} />
-                    <PlayerVolumeSlider refItem={refItem} audioAmplifier={audioAmplifier}/>
+                    <PlayerTimeControls currentPodcastEpisode={currentPodcastEpisode} />
+                    <PlayerVolumeSlider audioAmplifier={audioAmplifier}/>
                 </div>
             </div>
 

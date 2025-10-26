@@ -1,9 +1,9 @@
 import React, { createRef, FC, useMemo, useState } from 'react'
 import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
+import {getAudioPlayer} from "../utils/audioPlayer";
 
 type PlayerProgressBarProps = {
-    audioplayerRef: React.RefObject<HTMLAudioElement|null>,
     className?: string,
     currentPodcastEpisode?: AudioPlayerPlay
 }
@@ -29,7 +29,7 @@ const convertToMinutes = (time: number | undefined) => {
     return hours_p + ':' + minutes_p + ':' + seconds_p.substring(0,2)
 }
 
-export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, className, currentPodcastEpisode }) => {
+export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, currentPodcastEpisode }) => {
     window.addEventListener('mousedown', () => {
         setMousePressed(true)
     })
@@ -54,10 +54,6 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
         return convertToMinutes(minute)
     }, [minute])
 
-    if (audioplayerRef === undefined || audioplayerRef.current === undefined || metadata === undefined) {
-        return <div></div>
-    }
-
     const endWrapperPosition = (e: React.MouseEvent<HTMLDivElement>) => {
         const offset = wrapper.current?.getBoundingClientRect()
 
@@ -65,20 +61,23 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
             const localX = e.clientX - offset.left
             const percentage = localX / offset.width * 100
 
-            if (percentage && audioplayerRef.current) {
-                audioplayerRef.current.currentTime = Math.floor(percentage / 100 * audioplayerRef.current.duration)
+            const audioPlayer = getAudioPlayer()
+
+            if (percentage) {
+                audioPlayer.currentTime = Math.floor(percentage / 100 * audioPlayer.duration)
 
                 if (time && currentPodcastEpisode) {
-                    logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, Number(audioplayerRef.current.currentTime.toFixed(0)))
+                    logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, Number(audioPlayer.currentTime.toFixed(0)))
                 }
             }
         }
     }
 
     const calcTotalMovement = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-        if (mousePressed && metadata && audioplayerRef.current) {
+        if (mousePressed && metadata) {
+            const audioPlayer = getAudioPlayer()
             setCurrentTimeUpdatePercentage(metadata.percentage + e.movementX)
-            audioplayerRef.current.currentTime = Math.floor(metadata.percentage + e.movementX / 100 * audioplayerRef.current.duration)
+            audioPlayer.currentTime = Math.floor(metadata.percentage + e.movementX / 100 * audioPlayer.duration)
         }
     }
 
@@ -90,7 +89,7 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
             <div className="grow bg-(--slider-bg-color) cursor-pointer h-1" ref={wrapper} onClick={(e) => {
                 endWrapperPosition(e)
             }}>
-                <div className="relative bg-(--slider-fg-color) h-1 text-right" style={{width: (metadata.percentage) + '%'}}>
+                <div className="relative bg-(--slider-fg-color) h-1 text-right" style={{width: (metadata?.percentage) + '%'}}>
                     <span className="absolute -right-1 -top-1 bg-(--slider-fg-color) h-3 w-3 rounded-full" onMouseMove={(e) => calcTotalMovement(e)} ref={control}></span>
                 </div>
             </div>

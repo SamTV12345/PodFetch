@@ -12,6 +12,7 @@ import {components, operations} from "../../schema";
 import {client} from "../utils/http";
 import {useQueryClient} from "@tanstack/react-query";
 import useAudioPlayer from "../store/AudioPlayerSlice";
+import {startAudioPlayer} from "../utils/audioPlayer";
 
 type PodcastDetailItemProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
@@ -194,6 +195,10 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     e.stopPropagation()
                     setSelectedEpisodes(currentEpisodes)
                     setSelectedEpisode(index)
+                    if (percentagePlayed < 98 && episode.podcastEpisode.total_time > 0) {
+                        await startAudioPlayer(currentEpisodes[index]!.podcastEpisode.url, currentEpisodes[index]!.podcastHistoryItem?.position ?? 0)
+                    }
+
                 }}>play_circle</span>
             </div>
 
