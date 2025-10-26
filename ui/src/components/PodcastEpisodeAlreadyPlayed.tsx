@@ -83,7 +83,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                         })
                         setSelectedPodcastEpisodes(newSelectedEpisodes)
                         setCurrentPodcastEpisode(index)
-                        await startAudioPlayer(selectedPodcastEpisode.podcastEpisode.url, 0)
+                        await startAudioPlayer(selectedPodcastEpisode.podcastEpisode.local_url, 0)
                     }}>{t('restart-playing')}</CustomButtonPrimary>
                 </div>
             </div>

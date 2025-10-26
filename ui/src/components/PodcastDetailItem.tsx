@@ -195,10 +195,10 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     e.stopPropagation()
                     setSelectedEpisodes(currentEpisodes)
                     setSelectedEpisode(index)
+                    console.log(episode.podcastEpisode.total_time)
                     if (percentagePlayed < 98 && episode.podcastEpisode.total_time > 0) {
-                        await startAudioPlayer(currentEpisodes[index]!.podcastEpisode.url, currentEpisodes[index]!.podcastHistoryItem?.position ?? 0)
+                        await startAudioPlayer(currentEpisodes[index]!.podcastEpisode.local_url, currentEpisodes[index]!.podcastHistoryItem?.position ?? 0)
                     }
-
                 }}>play_circle</span>
             </div>
 

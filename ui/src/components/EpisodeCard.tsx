@@ -30,7 +30,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode,  po
             }])
             setCurrentEpisodeIndex(0)
             if (playPercentage < 98 && podcastEpisode.total_time > 0) {
-                await startAudioPlayer(podcastEpisode.url, podcastHistory?.position ?? 0)
+                await startAudioPlayer(podcastEpisode.local_url, podcastHistory?.position ?? 0)
             }
         }}>
 

@@ -78,7 +78,7 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
                                     podcastHistoryItem: null
                                 }])
                                 setCurrentEpisodeIndex(0)
-                                await startAudioPlayer(podcastEpisode.url, chapter.startTime ?? 0)
+                                await startAudioPlayer(podcastEpisode.local_url, chapter.startTime ?? 0)
                             }}>play_circle</span>
         </td>
     </tr>)}

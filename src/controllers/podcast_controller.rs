@@ -712,6 +712,7 @@ pub(crate) async fn proxy_podcast(
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
     req: axum::extract::Request,
 ) -> Result<axum::http::response::Response<Body>, CustomError> {
+    println!("Got a request: {:?}", req);
     let mut req = req.map(|body| reqwest::Body::wrap_stream(body.into_data_stream()));
     let headers = req.headers_mut();
 
@@ -740,6 +741,8 @@ pub(crate) async fn proxy_podcast(
         headers.remove(header);
     }
 
+    let cloned_headers = headers.clone();
+
     add_basic_auth_headers_conditionally(episode.url.clone(), headers);
 
     *req.uri_mut() = episode.url.parse().unwrap();
@@ -748,8 +751,18 @@ pub(crate) async fn proxy_podcast(
     failed",
     );
 
-    let client = reqwest::Client::new();
-    let resp = client.execute(reqwest_to_make).await.unwrap();
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(50))
+        .build()
+        .unwrap();
+    let mut resp = client.execute(reqwest_to_make).await.unwrap();
+
+    if resp.status().is_redirection() && let Some(location) = resp.headers().get("Location") {
+        let redirect_url: String = location.to_str().unwrap().parse().unwrap();
+        resp = client.get(redirect_url).headers(cloned_headers).send().await.expect(
+            "http::Uri to url::Url conversion failed", );
+    }
+
 
     let mut response_builder = Response::builder().status(resp.status());
     *response_builder.headers_mut().unwrap() = resp.headers().clone();
