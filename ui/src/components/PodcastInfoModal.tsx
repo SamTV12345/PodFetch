@@ -6,6 +6,7 @@ import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
 import {client} from "../utils/http";
 import {useState} from "react";
+import {PodcastEpisodeChapterTable} from "./PodcastEpisodeChapterTable";
 
 export const PodcastInfoModal = () => {
     const infoModalOpen = useCommon(state => state.infoModalPodcastOpen)
@@ -42,11 +43,14 @@ export const PodcastInfoModal = () => {
             tabIndex={-1}
             aria-hidden="true"
             onClick={() => setInfoModalPodcastOpen(false)}
-            className={`fixed inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] backdrop-blur overflow-y-auto overflow-x-hidden transition-opacity z-30
-            ${!infoModalOpen && 'pointer-events-none'}
-            ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
+            className={`fixed inset-0 z-30 bg-[rgba(0,0,0,0.5)] backdrop-blur p-4 flex items-center justify-center transition-opacity
+        ${!infoModalOpen && 'pointer-events-none'}
+        ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
         >
-            <div className={`relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
+            <div
+                className={`relative bg-(--bg-color) w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-y-auto p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
+                onClick={e => e.stopPropagation()}
+            >
                 <button
                     type="button"
                     onClick={() => setInfoModalPodcastOpen(false)}
@@ -60,14 +64,12 @@ export const PodcastInfoModal = () => {
                 <div className="mb-4">
                     <Heading2 className="inline align-middle mr-2">{selectedPodcastEpisode?.name || ''}</Heading2>
 
-                    {/* Save icon */}
                     <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
                         if (selectedPodcastEpisode) {
                             download(selectedPodcastEpisode.local_url, selectedPodcastEpisode.name + ".mp3")
                         }
                     }}>save</span>
 
-                    {/* Delete icon */}
                     {selectedPodcastEpisode?.status &&
                         <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)" title={t('delete') as string}>delete</span>
                     }
@@ -77,24 +79,20 @@ export const PodcastInfoModal = () => {
                     <li onClick={()=>setSelectedTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
                         {t('description')}
                     </li>
-                    <li   onClick={()=>setSelectedTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                    <li onClick={()=>setSelectedTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
                         {t('chapters')}
                     </li>
-
                 </ul>
 
                 {selectedPodcastEpisode &&
                     <>
-                    {
-                    selectedTab === 'description' ? (
-                        <p className="leading-[1.75] text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}/>
-                        ): (<p className="leading-[1.75] text-sm text-(--fg-color)"/>)
-
-                    }
-
+                        {
+                            selectedTab === 'description' ? (
+                                <p className="leading-[1.75] text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}/>
+                            ): (<PodcastEpisodeChapterTable podcastEpisode={selectedPodcastEpisode} className="overflow-auto max-h-1/2"/>)
+                        }
                     </>
                 }
             </div>
-        </div>, document.getElementById('modal1')!
-    )
+        </div>, document.getElementById('modal1')!)
 }

@@ -17,14 +17,16 @@ import {EditableHeading} from "../components/EditableHeading";
 import {ADMIN_ROLE} from "../models/constants";
 import {Loader2} from "lucide-react";
 import {Loading} from "../components/Loading";
+import {useQueryClient} from "@tanstack/react-query";
+import {components} from "../../schema";
 
 export const PodcastDetailPage = () => {
-    const configModel = $api.useQuery('get', '/api/v1/sys/config')
     const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
     const params = useParams()
     const [lineClamp, setLineClamp] = useState(true)
     const {t} = useTranslation()
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const queryClient = useQueryClient()
 
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
     const {data, error, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
@@ -213,6 +215,16 @@ export const PodcastDetailPage = () => {
                                 }
                             }).then(()=>{
                                 setCurrentPodcast({...currentPodcast.data!, active: !currentPodcast.data?.active})
+                                for (const cache of queryClient.getQueryCache().getAll()) {
+                                    if (cache.queryKey[0] === 'get' && (cache.queryKey[1] as string) === '/api/v1/podcasts/{id}' && (cache.queryKey[2] as any).params.path.id == currentDetailedPodcastId) {
+                                        queryClient.setQueryData(cache.queryKey, (oldData: components["schemas"]["PodcastDto"]) => {
+                                            return {
+                                                ...oldData,
+                                                active: !oldData.active
+                                            }
+                                        })
+                                    }
+                                }
                             })
                         }}/>
                     </div>

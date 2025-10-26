@@ -1,3 +1,4 @@
+use axum::Json;
 use crate::adapters::persistence::dbconfig::schema::*;
 
 use crate::DBType as DbConnection;
@@ -55,6 +56,20 @@ pub struct Podcast {
     pub download_location: Option<String>,
     #[diesel(sql_type = Nullable<Text>)]
     pub guid: Option<String>,
+}
+
+impl Podcast {
+    pub(crate) fn get_podcast_by_episode_id(p0: i32) -> Result<Json<PodcastDto>, CustomError> {
+        podcasts::table
+            .inner_join(
+                podcast_episodes::table.on(podcast_episodes::podcast_id.eq(podcasts::id)),
+            )
+            .filter(podcast_episodes::id.eq(p0))
+            .select(podcasts::all_columns)
+            .first::<Podcast>(&mut get_connection())
+            .map_err(|e| map_db_error(e, Critical))
+            .map(|podcast| Json(PodcastDto::from(podcast)))
+    }
 }
 
 impl Podcast {

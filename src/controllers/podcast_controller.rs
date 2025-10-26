@@ -70,6 +70,20 @@ pub async fn get_filter(
 
 #[utoipa::path(
 get,
+path="/podcasts/reverse/episode/{id}",
+    responses(
+(status = 200, description = "Does a reverse search of an episode id to find out the podcast it \
+belongs to",body=
+Vec<PodcastDto>)),
+    tag="podcasts"
+)]
+pub async fn search_podcast_of_episode(Path(id): Path<i32>) -> Result<Json<PodcastDto>,
+    CustomError> {
+    Podcast::get_podcast_by_episode_id(id)
+}
+
+#[utoipa::path(
+get,
 path="/podcasts/search",
 params(PodcastSearchModelUtoipa),
 responses(
@@ -848,6 +862,7 @@ pub fn get_podcast_router() -> OpenApiRouter {
         .routes(routes!(retrieve_podcast_sample_format))
         .routes(routes!(query_for_podcast))
         .routes(routes!(update_name_of_podcast))
+        .routes(routes!(search_podcast_of_episode))
 }
 
 #[cfg(test)]

@@ -421,6 +421,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/reverse/episode/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_podcast_of_episode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/search": {
         parameters: {
             query?: never;
@@ -2023,6 +2039,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    search_podcast_of_episode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Does a reverse search of an episode id to find out the podcast it belongs to */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastDto"][];
+                };
             };
         };
     };
