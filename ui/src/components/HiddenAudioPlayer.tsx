@@ -28,7 +28,7 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
             setPlaying(false)
         }
 
-        audio.addEventListener('play', onPlaying)
+        audio.addEventListener('playing', onPlaying)
         audio.addEventListener('pause', onPause)
 
         return () => {
