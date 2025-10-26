@@ -149,7 +149,15 @@ impl EnvironmentService {
         let oidc_configured = Self::handle_oidc();
 
         let server_url = match var("DEV") {
-            Ok(_) => "http://localhost:5173/".to_string(),
+            Ok(val) => {
+                if val == "true" {
+                    "http://localhost:5173/".to_string()
+                } else {
+                    var(SERVER_URL)
+                        .map(|s| if s.ends_with('/') { s } else { s + "/" })
+                        .unwrap_or("http://localhost:8000/".to_string())
+                }
+            },
             Err(_) => var(SERVER_URL)
                 .map(|s| if s.ends_with('/') { s } else { s + "/" })
                 .unwrap_or("http://localhost:8000/".to_string()),
