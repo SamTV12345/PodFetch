@@ -10,13 +10,11 @@ import {$api, client} from "../utils/http";
 import {components} from "../../schema";
 
 type DrawerAudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined
 }
 
-export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAmplifier }) => {
-    const playing = useAudioPlayer(state => state.isPlaying)
-    const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ audioAmplifier }) => {
+    const podcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
     const podcast = $api.useQuery('get','/api/v1/podcasts/{id}', {
         params: {
             path: {
@@ -24,12 +22,6 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAm
             }
         }
     })
-
-    useEffect(() => {
-        if (podcastEpisode && playing) {
-            refItem.current?.play()
-        }
-    }, [podcastEpisode, playing])
 
     return (
         <div className="
@@ -44,11 +36,11 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ refItem, audioAm
             {podcast.data && <PlayerEpisodeInfo podcast={podcast.data} podcastEpisode={podcastEpisode?.podcastEpisode}/>}
 
             <div className="flex flex-col gap-2 w-full">
-                <PlayerTimeControls refItem={refItem}/>
-                <PlayerProgressBar audioplayerRef={refItem}/>
+                <PlayerTimeControls currentPodcastEpisode={podcastEpisode}/>
+                <PlayerProgressBar currentPodcastEpisode={podcastEpisode}/>
             </div>
 
-            <PlayerVolumeSlider audioAmplifier={audioAmplifier} refItem={refItem}/>
+            <PlayerVolumeSlider audioAmplifier={audioAmplifier}/>
         </div>
     )
 }

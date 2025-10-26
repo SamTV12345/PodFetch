@@ -42,6 +42,10 @@ export type PodcastEpisode = {
     favored?: boolean
 }
 
+type InfoModalPodcast = components["schemas"]["PodcastEpisodeDto"] & {
+    podcast: components['schemas']['PodcastDto']
+}
+
 // Define a type for the slice state
 interface CommonProps {
     selectedEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],

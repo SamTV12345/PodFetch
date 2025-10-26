@@ -76,6 +76,25 @@ impl From<CustomError> for ErrorType {
     }
 }
 
+impl From<url::ParseError> for CustomError {
+    fn from(val: url::ParseError) -> Self {
+        match val {
+            url::ParseError::EmptyHost
+            | url::ParseError::IdnaError
+            | url::ParseError::InvalidPort
+            | url::ParseError::InvalidIpv6Address
+            | url::ParseError::RelativeUrlWithoutBase
+            | url::ParseError::SetHostOnCannotBeABaseUrl
+            | url::ParseError::Overflow => CustomErrorInner::BadRequest(
+                "Invalid URL provided".to_string(),
+                ErrorSeverity::Warning,
+            )
+            .into(),
+            _ => CustomErrorInner::Unknown(ErrorSeverity::Error).into(),
+        }
+    }
+}
+
 impl From<CustomErrorInner> for ErrorType {
     fn from(value: CustomErrorInner) -> Self {
         ErrorType::CustomErrorType(value.into())

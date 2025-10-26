@@ -25,7 +25,8 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({podcast})=>{
             path: {
                 id: podcast.id
             }
-        }
+        },
+        retry: false
     })
 
     const updatePodcastSettings = $api.useMutation('put', '/api/v1/podcasts/{id}/settings')
@@ -37,7 +38,6 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({podcast})=>{
         return podcastSettings.data.activated
     }, [podcastSettings])
 
-    console.log("DIALOG")
     return <Dialog.Root onOpenChange={(isOpen)=>{
         if (!isOpen) {
             console.log("On close")

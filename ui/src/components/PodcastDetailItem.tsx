@@ -11,15 +11,17 @@ import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 import {components, operations} from "../../schema";
 import {client} from "../utils/http";
 import {useQueryClient} from "@tanstack/react-query";
+import useAudioPlayer from "../store/AudioPlayerSlice";
+import {startAudioPlayer} from "../utils/audioPlayer";
 
 type PodcastDetailItemProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
+    currentEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],
     index: number,
-    episodesLength: number,
     onlyUnplayed: boolean
 }
 
-export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,episodesLength, onlyUnplayed}) => {
+export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, currentEpisodes, onlyUnplayed}) => {
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
@@ -34,6 +36,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
     const setInfoModalPodcast = useCommon(state => state.setInfoModalPodcast)
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
+    const setSelectedEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const queryClient = useQueryClient()
 
     const playedTime = useMemo(()=>{
@@ -187,25 +190,20 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
                     self-center material-symbols-outlined cursor-pointer !text-5xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90
-                `} key={episode.podcastEpisode.episode_id + 'icon'} onClick={(e) => {
+                `} key={episode.podcastEpisode.episode_id + 'icon'} onClick={async (e) => {
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()
-                    client.GET("/api/v1/podcasts/episode/{id}", {
-                        params: {
-                            path: {
-                                id: episode.podcastEpisode.episode_id
-                            }
-                        }
-                    }).then((resp)=>{
-                        handlePlayofEpisode(episode.podcastEpisode, resp.data!,)
-                    }).catch(e=>{
-                        handlePlayofEpisode(episode.podcastEpisode, undefined)
-                    })
+                    setSelectedEpisodes(currentEpisodes)
+                    setSelectedEpisode(index)
+                    if (percentagePlayed < 98 && episode.podcastEpisode.total_time > 0) {
+                        await startAudioPlayer(currentEpisodes[index]!.podcastEpisode.url, currentEpisodes[index]!.podcastHistoryItem?.position ?? 0)
+                    }
+
                 }}>play_circle</span>
             </div>
 
             {/* Infinite scroll */
-            index === (episodesLength - 5) &&
+            index === (currentEpisodes.length -5) &&
                 <Waypoint key={index + 'waypoint'} onEnter={() => {
                     client.GET("/api/v1/podcasts/{id}/episodes", {
                         params: {
@@ -213,7 +211,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index,e
                                 id: params.id!,
                             },
                             query: {
-                                last_podcast_episode: selectedEpisodes[selectedEpisodes.length - 1]!.podcastEpisode.date_of_recording,
+                                last_podcast_episode: currentEpisodes[currentEpisodes.length - 1]!.podcastEpisode.date_of_recording,
                                 only_unlistened: onlyUnplayed
                             }
                         }

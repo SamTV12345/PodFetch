@@ -1,4 +1,4 @@
-import {defineConfig, PluginOption, ViteDevServer} from 'vite'
+import {defineConfig, PluginOption} from 'vite'
 import react from '@vitejs/plugin-react'
 import {Browser} from "happy-dom";
 

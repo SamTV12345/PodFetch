@@ -143,6 +143,7 @@ pub fn transform_index_files() -> String {
             div id="modal1"{};
             div id="modal2"{};
             div id="confirm-modal"{};
+            audio id="audio-player" crossorigin="anonymous"    {};
                 }
 
         }};
@@ -434,7 +435,6 @@ pub fn handle_config_for_server_startup() -> Router {
 
 #[cfg(test)]
 pub mod tests {
-
     #[cfg(feature = "postgresql")]
     use crate::test_utils::test::setup_container;
     use axum_test::TestServer;

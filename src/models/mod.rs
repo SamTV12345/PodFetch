@@ -17,6 +17,7 @@ pub mod playlist;
 mod playlist_item;
 pub mod podcast_dto;
 pub mod podcast_episode;
+pub(crate) mod podcast_episode_chapter;
 pub mod podcast_rssadd_model;
 pub mod podcast_settings;
 pub mod podcasts;
