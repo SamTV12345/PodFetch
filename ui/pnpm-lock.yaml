@@ -175,8 +175,8 @@ importers:
         specifier: ^19.1.0-rc.3
         version: 19.1.0-rc.3
       happy-dom:
-        specifier: ^20.0.7
-        version: 20.0.7
+        specifier: ^20.0.8
+        version: 20.0.8
       jsdom:
         specifier: ^27.0.1
         version: 27.0.1(postcss@8.5.6)
@@ -200,7 +200,7 @@ importers:
         version: 7.1.12(@types/node@24.9.1)(jiti@2.6.1)(lightningcss@1.30.2)(sass-embedded@1.92.1)(sass@1.92.1)(terser@5.31.0)(yaml@2.4.2)
       vitest:
         specifier: ^4.0.3
-        version: 4.0.3(@types/node@24.9.1)(happy-dom@20.0.7)(jiti@2.6.1)(jsdom@27.0.1(postcss@8.5.6))(lightningcss@1.30.2)(sass-embedded@1.92.1)(sass@1.92.1)(terser@5.31.0)(yaml@2.4.2)
+        version: 4.0.3(@types/node@24.9.1)(happy-dom@20.0.8)(jiti@2.6.1)(jsdom@27.0.1(postcss@8.5.6))(lightningcss@1.30.2)(sass-embedded@1.92.1)(sass@1.92.1)(terser@5.31.0)(yaml@2.4.2)
 
 packages:
 
@@ -1927,8 +1927,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  happy-dom@20.0.7:
-    resolution: {integrity: sha512-CywLfzmYxP5OYpuAG0usFY0CpxJtwYR+w8Mms5J8W29Y2Pzf6rbfQS2M523tRZTb0oLA+URopPtnAQX2fupHZQ==}
+  happy-dom@20.0.8:
+    resolution: {integrity: sha512-TlYaNQNtzsZ97rNMBAm8U+e2cUQXNithgfCizkDgc11lgmN4j9CKMhO3FPGKWQYPwwkFcPpoXYF/CqEPLgzfOg==}
     engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
@@ -4690,7 +4690,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  happy-dom@20.0.7:
+  happy-dom@20.0.8:
     dependencies:
       '@types/node': 20.19.23
       '@types/whatwg-mimetype': 3.0.2
@@ -5498,7 +5498,7 @@ snapshots:
       terser: 5.31.0
       yaml: 2.4.2
 
-  vitest@4.0.3(@types/node@24.9.1)(happy-dom@20.0.7)(jiti@2.6.1)(jsdom@27.0.1(postcss@8.5.6))(lightningcss@1.30.2)(sass-embedded@1.92.1)(sass@1.92.1)(terser@5.31.0)(yaml@2.4.2):
+  vitest@4.0.3(@types/node@24.9.1)(happy-dom@20.0.8)(jiti@2.6.1)(jsdom@27.0.1(postcss@8.5.6))(lightningcss@1.30.2)(sass-embedded@1.92.1)(sass@1.92.1)(terser@5.31.0)(yaml@2.4.2):
     dependencies:
       '@vitest/expect': 4.0.3
       '@vitest/mocker': 4.0.3(vite@7.1.12(@types/node@24.9.1)(jiti@2.6.1)(lightningcss@1.30.2)(sass-embedded@1.92.1)(sass@1.92.1)(terser@5.31.0)(yaml@2.4.2))
@@ -5522,7 +5522,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.9.1
-      happy-dom: 20.0.7
+      happy-dom: 20.0.8
       jsdom: 27.0.1(postcss@8.5.6)
     transitivePeerDependencies:
       - jiti
