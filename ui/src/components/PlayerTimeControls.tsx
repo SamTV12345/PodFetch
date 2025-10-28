@@ -7,7 +7,7 @@ import 'material-symbols/outlined.css'
 import { useKeyDown } from '../hooks/useKeyDown'
 import useCommon from "../store/CommonSlice";
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
-import {getAudioPlayer} from "../utils/audioPlayer";
+import {getAudioPlayer, startAudioPlayer} from "../utils/audioPlayer";
 import {cn} from "../lib/utils";
 
 type PlayerTimeControlsProps = {
@@ -73,6 +73,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
         const nextEpisode = episodes[index]
         if (!nextEpisode) return
         setCurrentPodcastEpisode(index)
+        startAudioPlayer(nextEpisode.podcastEpisode.local_url, nextEpisode.podcastHistoryItem?.position ?? 0)
     }
 
     const handleButton = () => {
