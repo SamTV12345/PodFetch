@@ -157,7 +157,7 @@ impl EnvironmentService {
                         .map(|s| if s.ends_with('/') { s } else { s + "/" })
                         .unwrap_or("http://localhost:8000/".to_string())
                 }
-            },
+            }
             Err(_) => var(SERVER_URL)
                 .map(|s| if s.ends_with('/') { s } else { s + "/" })
                 .unwrap_or("http://localhost:8000/".to_string()),

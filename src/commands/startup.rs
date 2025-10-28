@@ -116,11 +116,11 @@ pub fn transform_index_files() -> String {
             .collect::<Vec<&String>>()[0];
 
         /*let icon_file = found_files
-            .iter()
-            .filter(|x| x.starts_with("outlined-") && x.ends_with(".css"))
-            .collect::<Vec<&String>>()[0];
-          link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",icon_file));
-         */
+           .iter()
+           .filter(|x| x.starts_with("outlined-") && x.ends_with(".css"))
+           .collect::<Vec<&String>>()[0];
+         link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",icon_file));
+        */
 
         let config = ENVIRONMENT_SERVICE.get_config();
         let config_string = serde_json::to_string(&config).unwrap();
@@ -410,10 +410,10 @@ pub fn handle_config_for_server_startup() -> Router {
 
     let ui_dir = format!("{sub_dir}/ui/");
     let (layer, io) = SocketIoBuilder::new().build_layer();
-    io.ns("/", |socket: SocketRef| {
-        log::info!("Socket connected {}", socket.id);
+    io.ns("/", async |socket: SocketRef| {
+        info!("Socket connected {}", socket.id);
     });
-    io.ns("/".to_owned() + MAIN_ROOM, || {
+    io.ns("/".to_owned() + MAIN_ROOM, async || {
         info!("Socket connected to main room");
     });
     SOCKET_IO_LAYER.get_or_init(|| io);
