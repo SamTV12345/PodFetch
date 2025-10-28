@@ -50,10 +50,12 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 	return (
 		<Dialog.Root
 			onOpenChange={(isOpen) => {
+				if (!podcastSettings.data) {
+					return
+				}
 				if (!isOpen) {
-					console.log('On close')
 					updatePodcastSettings.mutate({
-						body: podcastSettings.data!,
+						body: podcastSettings.data,
 						params: {
 							path: {
 								id: podcast.id,
@@ -64,7 +66,10 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 			}}
 		>
 			<Dialog.Trigger asChild>
-				<button className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)">
+				<button
+					type="button"
+					className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
+				>
 					settings
 				</button>
 			</Dialog.Trigger>
@@ -127,7 +132,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 											},
 										],
 										(oldData: PodcastSetting | undefined) => {
-											return { ...oldData!, episodeNumbering: checked }
+											return { ...oldData, episodeNumbering: checked }
 										},
 									)
 								}}
@@ -193,7 +198,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 										(oldData: PodcastSetting | undefined) => {
 											return {
 												...oldData,
-												autoCleanupDays: parseInt(e.target.value),
+												autoCleanupDays: parseInt(e.target.value, 10),
 											}
 										},
 									)
@@ -311,7 +316,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 								value={
 									podcastSettings.data
 										? podcastSettings.data.replacementStrategy
-										: options[0]!.value
+										: options[0]?.value
 								}
 							/>
 							<label
@@ -340,7 +345,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 										(oldData: PodcastSetting | undefined) => {
 											return {
 												...oldData,
-												podcastPrefill: parseInt(e.target.value),
+												podcastPrefill: parseInt(e.target.value, 10),
 											}
 										},
 									)
@@ -385,7 +390,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 												autoCleanupDays: 0,
 												replaceInvalidCharacters: false,
 												useExistingFilename: false,
-												replacementStrategy: options[0]!.value,
+												replacementStrategy: options[0]?.value,
 												episodeFormat: '{}',
 												podcastFormat: '{}',
 												directPaths: false,
@@ -404,7 +409,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 											],
 											(oldData: components['schemas']['PodcastSetting']) => {
 												return {
-													...oldData!,
+													...oldData,
 													activated: !oldData?.activated,
 												}
 											},

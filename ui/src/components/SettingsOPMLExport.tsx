@@ -18,13 +18,14 @@ export const SettingsOPMLExport: FC = () => {
 				},
 			})
 			.then((response) => {
-				const blob = new Blob([response.data!], { type: 'text/plain' })
+				if (!response.data) return
+				const blob = new Blob([response.data], { type: 'text/plain' })
 				const href = URL.createObjectURL(blob)
 
 				// create "a" HTML element with href to file & click
 				const link = document.createElement('a')
 				link.href = href
-				link.setAttribute('download', 'podcast_' + exportType + '.opml') //or any other extension
+				link.setAttribute('download', `podcast_${exportType}.opml`) //or any other extension
 				document.body.appendChild(link)
 				link.click()
 

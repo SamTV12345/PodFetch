@@ -15,7 +15,7 @@ export const PlaylistSubmitViewer = () => {
 	const setPlaylist = usePlaylist((state) => state.setPlaylist)
 
 	const savePlaylist = () => {
-		const idsToMap = currentPlaylistToEdit!.items.map((item) => {
+		const idsToMap = currentPlaylistToEdit?.items.map((item) => {
 			return {
 				episode: item.podcastEpisode.id,
 			}
@@ -24,12 +24,13 @@ export const PlaylistSubmitViewer = () => {
 		client
 			.POST('/api/v1/playlist', {
 				body: {
-					name: currentPlaylistToEdit?.name!,
+					name: currentPlaylistToEdit?.name ?? '',
 					items: idsToMap,
 				},
 			})
 			.then((v) => {
-				setPlaylist([...playlists, v.data!])
+				if (!v.data) return
+				setPlaylist([...playlists, v.data])
 				setCreatePlaylistOpen(false)
 			})
 	}

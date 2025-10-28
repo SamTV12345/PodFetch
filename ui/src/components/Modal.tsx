@@ -4,7 +4,7 @@ import useModal from '../store/ModalSlice'
 import { Heading2 } from './Heading2'
 
 export interface ModalProps {
-	children: any
+	children: React.ReactNode | React.ReactNode[] | undefined
 	headerText: string | undefined
 	onCancel: () => void
 	onAccept: () => void

@@ -12,11 +12,11 @@ export const Loading: FC<LoadingSpinnerProps> = ({ className }) => {
 
 	return (
 		<div className={cn('grid place-items-center h-full w-full', className)}>
-			<div className="flex items-center gap-3" role="status">
+			<output className="flex items-center gap-3">
 				<Spinner />
 
 				<span className="text-(--fg-color)">{t('loading')}...</span>
-			</div>
+			</output>
 		</div>
 	)
 }

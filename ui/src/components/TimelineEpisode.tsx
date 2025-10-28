@@ -2,7 +2,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { FC } from 'react'
 import { Waypoint } from 'react-waypoint'
 import type { components } from '../../schema'
-import useCommon from '../store/CommonSlice'
 import { $api, client } from '../utils/http'
 import { EpisodeCard } from './EpisodeCard'
 
@@ -42,7 +41,7 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({
 				/*Infinite scroll */
 				timeLineEpisodes.data.length === index + 1 && (
 					<Waypoint
-						key={index + 'waypoint'}
+						key={`${index}waypoint`}
 						onEnter={() => {
 							client
 								.GET('/api/v1/podcasts/timeline', {

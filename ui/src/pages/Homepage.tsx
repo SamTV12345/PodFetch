@@ -39,7 +39,8 @@ export const Homepage = () => {
 				>
 					<div className="flex gap-8">
 						{lastWatched.isLoading
-							? Array.from({ length: 5 }).map((value, index, array) => (
+							? Array.from({ length: 5 }).map((_value, index, _array) => (
+									// biome-ignore lint: Skeleton
 									<LoadingPodcastCard key={index} />
 								))
 							: lastWatched.data?.map((v) => {
@@ -81,7 +82,8 @@ export const Homepage = () => {
 				>
 					<div className="flex gap-8">
 						{timeline.isLoading
-							? Array.from({ length: 10 }).map((value, index, array) => (
+							? Array.from({ length: 10 }).map((_value, index, _array) => (
+									// biome-ignore lint: Skeleton
 									<LoadingPodcastCard key={index} />
 								))
 							: timeline.data?.data.map((episode) => {

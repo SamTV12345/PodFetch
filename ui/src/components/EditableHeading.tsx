@@ -1,8 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { type FC, useState } from 'react'
 import type { components } from '../../schema'
-import useAudioPlayer from '../store/AudioPlayerSlice'
-import { $api, client } from '../utils/http'
+import { $api } from '../utils/http'
 
 export type EditableHeadingProps = {
 	initialText: string
@@ -21,7 +20,7 @@ export const EditableHeading: FC<EditableHeadingProps> = ({
 		'/api/v1/podcasts/{id}/name',
 	)
 	const queryClient = useQueryClient()
-	const queryClient2 = $api.useQuery('get', '/api/v1/podcasts/{id}', {
+	const _queryClient2 = $api.useQuery('get', '/api/v1/podcasts/{id}', {
 		params: {
 			path: {
 				id: String(podcastId),

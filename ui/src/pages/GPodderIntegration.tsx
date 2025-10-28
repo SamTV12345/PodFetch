@@ -15,7 +15,7 @@ export const GPodderIntegration = () => {
 		queryClient.setQueryData(
 			['get', '/api/v1/podcasts/available/gpodder'],
 			(oldData?: components['schemas']['GPodderAvailablePodcasts'][]) => {
-				return oldData?.filter((d) => d.podcast != feedUrl)
+				return oldData?.filter((d) => d.podcast !== feedUrl)
 			},
 		)
 		client
@@ -25,7 +25,7 @@ export const GPodderIntegration = () => {
 				},
 			})
 			.then((v) => {
-				handleAddPodcast(v.response.status, v.data!.name, t)
+				handleAddPodcast(v.response.status, v.data?.name, t)
 			})
 	}
 
@@ -50,6 +50,7 @@ export const GPodderIntegration = () => {
 			<tbody className="">
 				{gpodder.isLoading || !gpodder.data
 					? Array.from({ length: 5 }).map((_, index) => (
+							// biome-ignore lint: Skeleton
 							<tr key={index}>
 								<td className="px-2 py-4 text-(--fg-color)">
 									<LoadingSkeletonSpan
@@ -82,7 +83,7 @@ export const GPodderIntegration = () => {
 						))
 					: gpodder.data.map((int, index) => {
 							return (
-								<tr key={index}>
+								<tr key={int.device}>
 									<td className="px-2 py-4 text-(--fg-color)">{index}</td>
 									<td className="px-2 py-4  text-(--fg-color)">{int.device}</td>
 									<td className="px-2 py-4  text-(--fg-color)">

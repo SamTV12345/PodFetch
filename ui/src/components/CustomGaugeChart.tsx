@@ -25,9 +25,10 @@ function createGradient(
 	fill: string[],
 ) {
 	const gradient = ctx.createLinearGradient(area.left, 0, area.right, 0)
+	if (!fill[0] || !fill[1]) return gradient
 
-	gradient.addColorStop(0, fill[0]!)
-	gradient.addColorStop(1, fill[1]!)
+	gradient.addColorStop(0, fill[0])
+	gradient.addColorStop(1, fill[1])
 
 	return gradient
 }
@@ -64,7 +65,7 @@ export const CustomGaugeChart: FC<CustomGaugeChartProps> = ({
 				{
 					data: [value, max - value],
 					backgroundColor: [
-						fill instanceof Array
+						Array.isArray(fill)
 							? createGradient(chart.ctx, chart.chartArea, fill)
 							: fill,
 						sliderBgColor,
@@ -112,7 +113,7 @@ export const CustomGaugeChart: FC<CustomGaugeChartProps> = ({
 									)
 								}
 							} else if (labelUnit === 'percent') {
-								return label + ': ' + context.parsed.toFixed(2) + ' %'
+								return `${label}: ${context.parsed.toFixed(2)} %`
 							} else {
 								return label
 							}
@@ -126,7 +127,7 @@ export const CustomGaugeChart: FC<CustomGaugeChartProps> = ({
 
 		setChartData(chartData)
 		setChartOptions(chartOptions)
-	}, [])
+	}, [fill, labelUnit, labels, max, value])
 
 	ChartJS.register(ArcElement, Tooltip, Legend)
 

@@ -24,9 +24,11 @@ export const PlaylistDetailPage = () => {
 				},
 			})
 			.then((response) => {
-				setSelectedPlaylist(response.data!)
+				if (response.data) {
+					setSelectedPlaylist(response.data)
+				}
 			})
-	}, [])
+	}, [params.id, setSelectedPlaylist])
 
 	return (
 		selectedPlaylist && (

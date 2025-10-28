@@ -85,13 +85,14 @@ export const UserAdminInvites = () => {
 		client
 			.GET('/api/v1/invites')
 			.then((v) => {
-				setInvites(v.data!)
+				if (!v.data) return
+				setInvites(v.data)
 				setError(false)
 			})
 			.catch(() => {
 				setError(true)
 			})
-	}, [])
+	}, [setInvites])
 
 	if (error === undefined) {
 		return <Loading />
@@ -161,6 +162,7 @@ export const UserAdminInvites = () => {
 							<tr className="border-b border-(--border-color)" key={i.id}>
 								<td className="pr-2 py-4">
 									<button
+										type="button"
 										className="text-left text-(--fg-color) hover:text-(--fg-color-hover)"
 										onClick={() => {
 											client
@@ -173,7 +175,8 @@ export const UserAdminInvites = () => {
 													},
 												})
 												.then((v) => {
-													copy(v.data!)
+													if (!v.data) return
+													copy(v.data)
 													enqueueSnackbar(t('invite-link-copied'), {
 														autoHideDuration: 2000,
 														variant: 'success',
@@ -196,6 +199,7 @@ export const UserAdminInvites = () => {
 								</td>
 								<td className="pl-2 py-4">
 									<button
+										type="button"
 										className="flex items-center float-right text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)"
 										onClick={() => {
 											client

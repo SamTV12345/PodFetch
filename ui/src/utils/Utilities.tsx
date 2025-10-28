@@ -10,7 +10,6 @@ import type { components } from '../../schema'
 import type { Filter } from '../models/Filter'
 import { OrderCriteria } from '../models/Order'
 import type { AudioPlayerPlay } from '../store/AudioPlayerSlice'
-import useCommon from '../store/CommonSlice'
 
 const defaultOptions: IOptions = {
 	allowedTags: ['b', 'i', 'em', 'strong', 'a'],
@@ -52,17 +51,20 @@ export const preparePodcastEpisode = (
 	chapters: components['schemas']['PodcastChapterDto'][],
 	response?: components['schemas']['EpisodeDto'],
 ): AudioPlayerPlay => {
+	if (!response) {
+	}
+
+	const podcastHistoryItem = response
+		? { ...response, position: response.position }
+		: undefined
+
 	return {
 		podcastEpisode: {
 			...episode,
 			local_url: episode.local_url,
 			local_image_url: episode.local_image_url,
 		},
-		podcastHistoryItem: {
-			...response!,
-			position:
-				response === null ? 0 : response?.position ? response.position : 0,
-		},
+		podcastHistoryItem: podcastHistoryItem,
 		chapters: chapters,
 	}
 }
@@ -77,7 +79,7 @@ export const prepareOnlinePodcastEpisode = (
 			...episode,
 		},
 		podcastHistoryItem: {
-			...response!,
+			...response,
 			position:
 				response === null ? 0 : response?.position ? response.position : 0,
 		},

@@ -13,42 +13,30 @@ import { formatTime } from '../utils/Utilities'
 import type { LoginData } from './Login'
 
 export const AcceptInvite = () => {
-	const {
-		control,
-		handleSubmit,
-		formState: {},
-	} = useForm<LoginData>()
+	const { control, handleSubmit } = useForm<LoginData>()
 	const navigate = useNavigate()
 	const params = useParams()
 	const [invite, setInvite] = useState<components['schemas']['Invite']>()
 	const [errored, setErrored] = useState<boolean>(false)
 	const { t } = useTranslation()
 
-	type Invite = {
-		id: string
-		role: string
-		createdAt: string
-		acceptedAt: string
-		expiresAt: string
-		explicitContent: boolean
-	}
-
 	useEffect(() => {
 		client
 			.GET('/api/v1/invites/{invite_id}', {
 				params: {
 					path: {
-						invite_id: params.id!,
+						invite_id: params.id,
 					},
 				},
 			})
 			.then((resp) => {
-				setInvite(resp.data!)
+				if (!resp.data) return
+				setInvite(resp.data)
 				if (!resp.response.ok) {
 					setErrored(true)
 				}
 			})
-	}, [])
+	}, [params.id])
 
 	if (!invite && !errored) {
 		return <Loading />
@@ -60,7 +48,7 @@ export const AcceptInvite = () => {
 				body: {
 					username: data.username,
 					password: data.password,
-					inviteId: params.id!,
+					inviteId: params.id,
 				},
 			})
 			.then(() => {
@@ -126,7 +114,7 @@ export const AcceptInvite = () => {
 				<form className="flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
 					<div className="flex flex-col gap-2">
 						<label className="text-sm text-(--fg-color)" htmlFor="username">
-							{t('username')!}
+							{t('username')}
 						</label>
 
 						<Controller
@@ -139,7 +127,7 @@ export const AcceptInvite = () => {
 									id="username"
 									name={name}
 									onChange={onChange}
-									placeholder={t('your-username')!}
+									placeholder={t('your-username')}
 									value={value}
 									required
 								/>

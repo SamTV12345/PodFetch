@@ -25,7 +25,7 @@ import { setAuth, setLogin } from './utils/login'
 const config = getConfigFromHtmlFile()
 
 if (config) {
-	const postUrl = config.serverUrl + 'ui/login'
+	const postUrl = `${config.serverUrl}ui/login`
 	if (!window.location.pathname.endsWith('login')) {
 		setLogin({
 			rememberMe: false,
@@ -49,7 +49,7 @@ if (config) {
 				const array = new Uint8Array(length)
 				window.crypto.getRandomValues(array)
 				return Array.from(array, (b) =>
-					('0' + (b % 36).toString(36)).slice(-1),
+					`0${(b % 36).toString(36)}`.slice(-1),
 				).join('')
 			}
 
@@ -63,12 +63,12 @@ if (config) {
 				console.log(
 					'Redirecting to',
 					window.location.href,
-					'with client' + config.oidcConfig.clientId,
+					`with client${config.oidcConfig.clientId}`,
 				)
 				try {
 					const codeVerifier =
 						sessionStorage.getItem('pkce_code_verifier') || ''
-					const resp = await fetch(config.oidcConfig?.authority + '/../token', {
+					const resp = await fetch(`${config.oidcConfig?.authority}/../token`, {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/x-www-form-urlencoded',
@@ -93,13 +93,13 @@ if (config) {
 							params.delete('session_state')
 							const newSearch = params.toString()
 							const newUrl =
-								window.location.pathname + (newSearch ? '?' + newSearch : '')
+								window.location.pathname + (newSearch ? `?${newSearch}` : '')
 
 							window.history.replaceState({}, '', newUrl)
 						}
 						setInterval(() => {
 							if (tokenResponse.refresh_token) {
-								fetch(config.oidcConfig?.authority + '/../token', {
+								fetch(`${config.oidcConfig?.authority}/../token`, {
 									method: 'POST',
 									headers: {
 										'Content-Type': 'application/x-www-form-urlencoded',
@@ -121,16 +121,16 @@ if (config) {
 							}
 						}, config.oidcConfig.refreshInterval)
 					} else {
-						enqueueSnackbar('Error during OIDC login: ' + resp.statusText, {
+						enqueueSnackbar(`Error during OIDC login: ${resp.statusText}`, {
 							variant: 'error',
 						})
 					}
-				} catch (e) {}
+				} catch (_e) {}
 			} else {
 				const codeVerifier = generateCodeVerifier()
 				sessionStorage.setItem('pkce_code_verifier', codeVerifier)
 				const codeChallenge = await generateCodeChallenge(codeVerifier)
-				const requestUrl = `${config.oidcConfig.authority}?client_id=${config.oidcConfig.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(config.oidcConfig.scope!)}&code_challenge=${codeChallenge}&code_challenge_method=S256`
+				const requestUrl = `${config.oidcConfig.authority}?client_id=${config.oidcConfig.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(config.oidcConfig.scope)}&code_challenge=${codeChallenge}&code_challenge_method=S256`
 				console.error(requestUrl)
 				window.location.replace(requestUrl)
 			}
@@ -150,8 +150,8 @@ if (config) {
 			client
 				.POST('/api/v1/login', {
 					body: {
-						username: basicAuthDecoded.split(':')[0]!,
-						password: basicAuthDecoded.split(':')[1]!,
+						username: basicAuthDecoded.split(':')[0] ?? '',
+						password: basicAuthDecoded.split(':')[1] ?? '',
 					},
 				})
 				.then(() => {

@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { type EffectCallback, useCallback, useEffect, useRef } from 'react'
 
-type Args = any[]
-
-export const useAnimationFrame = <Fn extends (...args: Args) => void>(
-	callback: Fn,
+export const useAnimationFrame = (
+	callback: EffectCallback,
 	wait = 0,
-): ((...args: Parameters<Fn>) => void) => {
+): ((...args: Parameters<EffectCallback>) => void) => {
 	const rafId = useRef(0)
 	const render = useCallback(
-		(...args: Parameters<Fn>) => {
+		(...args: Parameters<EffectCallback>) => {
 			cancelAnimationFrame(rafId.current)
 			const timeStart = performance.now()
 

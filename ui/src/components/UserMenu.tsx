@@ -23,17 +23,13 @@ const AccountTrigger = () => {
 
 export const UserMenu: FC = () => {
 	const configModel = $api.useQuery('get', '/api/v1/sys/config')
-	const { data, error, isLoading } = $api.useQuery(
-		'get',
-		'/api/v1/users/{username}',
-		{
-			params: {
-				path: {
-					username: 'me',
-				},
+	const { data, isLoading } = $api.useQuery('get', '/api/v1/users/{username}', {
+		params: {
+			path: {
+				username: 'me',
 			},
 		},
-	)
+	})
 
 	const menuItems: Array<MenuItem> = useMemo(() => {
 		if (isLoading || !data) {
@@ -82,7 +78,7 @@ export const UserMenu: FC = () => {
 			})
 		}
 		return menuItems
-	}, [configModel, data])
+	}, [configModel, data, isLoading])
 
 	return (
 		<CustomDropdownMenu menuItems={menuItems} trigger={<AccountTrigger />} />

@@ -1,4 +1,4 @@
-import { type FC, RefObject, useState } from 'react'
+import { type FC, useState } from 'react'
 import type { IconProps } from './PlayIcon'
 import 'material-symbols/outlined.css'
 import { getAudioPlayer } from '../utils/audioPlayer'

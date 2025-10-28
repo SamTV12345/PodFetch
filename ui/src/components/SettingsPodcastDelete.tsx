@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { enqueueSnackbar } from 'notistack'
-import { type FC, Fragment, useEffect, useState } from 'react'
+import { type FC, Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { components } from '../../schema'
-import useCommon, { Podcast } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import useModal from '../store/ModalSlice'
 import { $api, client } from '../utils/http'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
@@ -44,10 +44,10 @@ export const SettingsPodcastDelete: FC = () => {
 						if (
 							(queryKey[0] === 'get' &&
 								typeof queryKey[1] === 'string' &&
-								queryKey[1] == '/api/v1/podcasts/search') ||
+								queryKey[1] === '/api/v1/podcasts/search') ||
 							(queryKey[0] === 'get' &&
 								typeof queryKey[1] === 'string' &&
-								queryKey[1] == '/api/v1/podcasts')
+								queryKey[1] === '/api/v1/podcasts')
 						) {
 							queryClient.setQueryData(
 								queryKey,
@@ -131,8 +131,9 @@ export const SettingsPodcastDelete: FC = () => {
 			</CustomButtonSecondary>
 			<hr className="col-span-1 lg:col-span-3" />
 			{podcasts.isLoading || !podcasts.data
-				? Array.from({ length: 10 }).map((value, index, array) => {
+				? Array.from({ length: 10 }).map((_value, index, _array) => {
 						return (
+							// biome-ignore lint: This is just the skeleton
 							<Fragment key={index}>
 								<LoadingSkeletonSpan
 									text={''}

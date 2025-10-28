@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { type FC, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { v4 } from 'uuid'
@@ -9,9 +9,7 @@ import { CustomInput } from '../components/CustomInput'
 import { Heading1 } from '../components/Heading1'
 import { $api } from '../utils/http'
 
-type UserManagementPageProps = {}
-
-export const UserManagementPage: FC<UserManagementPageProps> = () => {
+export const UserManagementPage = () => {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const user = $api.useQuery('get', '/api/v1/users/{username}', {
@@ -32,11 +30,11 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
 	})
 
 	useEffect(() => {
-		if (user.data && user.data.username) {
+		if (user.data?.username) {
 			setValue('username', user.data.username)
 			setValue('apiKey', user.data.apiKey)
 		}
-	}, [user])
+	}, [user, setValue])
 
 	const update_settings = (
 		data: components['schemas']['UserCoreUpdateModel'],
@@ -50,14 +48,14 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
 				body: data,
 				params: {
 					path: {
-						username: data!.username,
+						username: data?.username,
 					},
 				},
 			})
 			.then(() => {
 				queryClient.setQueryData(
 					['get', '/api/v1/users/{username}'],
-					(oldData: any) => {
+					(oldData: components['schemas']['UserWithAPiKey']) => {
 						return {
 							...oldData,
 							...data,

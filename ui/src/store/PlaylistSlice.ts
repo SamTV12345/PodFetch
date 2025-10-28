@@ -16,7 +16,7 @@ interface PlaylistState {
 	) => void
 }
 
-const usePlaylist = create<PlaylistState>((set, get) => ({
+const usePlaylist = create<PlaylistState>((set, _get) => ({
 	playlist: [],
 	createPlaylistOpen: false,
 	selectedPlaylist: undefined,

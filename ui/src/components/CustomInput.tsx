@@ -1,4 +1,4 @@
-import { ChangeEventHandler, type FC, type InputHTMLAttributes } from 'react'
+import type { FC, InputHTMLAttributes } from 'react'
 import { LoadingSkeletonSpan } from './ui/LoadingSkeletonSpan'
 
 export const CustomInput: FC<

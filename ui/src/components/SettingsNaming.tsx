@@ -38,7 +38,8 @@ export const SettingsNaming: FC = () => {
 	/* Fetch existing settings */
 	useEffect(() => {
 		client.GET('/api/v1/settings').then((res) => {
-			setSettings(res.data!)
+			if (!res.data) return
+			setSettings(res.data)
 		})
 	}, [])
 
@@ -59,14 +60,15 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
 		useState<string>('')
 	const [resultingEpisodeFormat, setResultingEpisodeFormat] =
 		useState<string>('')
-	const {
-		control,
-		formState: {},
-		handleSubmit,
-		watch,
-	} = useForm<components['schemas']['UpdateNameSettings']>({
+	const { control, handleSubmit, watch } = useForm<
+		components['schemas']['UpdateNameSettings']
+	>({
 		defaultValues: {
-			replacementStrategy: intialSettings.replacementStrategy as any,
+			replacementStrategy: intialSettings.replacementStrategy as
+				| 'replace-with-dash'
+				| 'replace-with-dash-and-underscore'
+				| 'remove'
+				| undefined,
 			episodeFormat: intialSettings.episodeFormat,
 			replaceInvalidCharacters: intialSettings.replaceInvalidCharacters,
 			useExistingFilename: intialSettings.useExistingFilename,
@@ -87,7 +89,10 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
 				.POST('/api/v1/episodes/formatting', {
 					body: content,
 				})
-				.then((v) => setResultingEpisodeFormat(v.data!))
+				.then((v) => {
+					if (!v.data) return
+					setResultingEpisodeFormat(v.data)
+				})
 				.catch((e) => setResultingEpisodeFormat(e.response.data.error))
 		},
 		2000,
@@ -103,7 +108,10 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
 				.POST('/api/v1/podcasts/formatting', {
 					body: content,
 				})
-				.then((v) => setResultingPodcastFormat(v.data!))
+				.then((v) => {
+					if (!v.data) return
+					setResultingPodcastFormat(v.data)
+				})
 				.catch((e) => setResultingPodcastFormat(e.response.data.error))
 		},
 		2000,

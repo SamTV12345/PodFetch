@@ -8,7 +8,7 @@ interface ModalProps {
 	setOpenAddModal: (openAddModal: boolean) => void
 }
 
-const useModal = create<ModalProps>((set, get) => ({
+const useModal = create<ModalProps>((set, _get) => ({
 	openModal: false,
 	openAddModal: false,
 	setOpenModal: (openModal: boolean) => set({ openModal }),

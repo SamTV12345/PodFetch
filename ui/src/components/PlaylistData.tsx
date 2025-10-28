@@ -15,8 +15,8 @@ export const PlaylistData = () => {
 		currentPlaylistToEdit &&
 			setCurrentPlaylistToEdit({
 				name: e,
-				id: currentPlaylistToEdit!.id,
-				items: currentPlaylistToEdit!.items,
+				id: currentPlaylistToEdit?.id,
+				items: currentPlaylistToEdit?.items,
 			})
 	}
 

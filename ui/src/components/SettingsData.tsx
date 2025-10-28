@@ -1,13 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useSnackbar } from 'notistack'
-import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Setting } from '../models/Setting'
 import { $api, client } from '../utils/http'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { CustomInput } from './CustomInput'
-import { Loading } from './Loading'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
 import { Switcher } from './Switcher'
 
@@ -67,7 +65,7 @@ export const Settings = () => {
 								['get', '/api/v1/settings'],
 								(oldData: Setting) => ({
 									...oldData,
-									autoCleanupDays: parseInt(e.target.value),
+									autoCleanupDays: parseInt(e.target.value, 10),
 								}),
 							)
 						}}
@@ -146,7 +144,7 @@ export const Settings = () => {
 								['get', '/api/v1/settings'],
 								(oldData: Setting) => ({
 									...oldData,
-									podcastPrefill: parseInt(e.target.value),
+									podcastPrefill: parseInt(e.target.value, 10),
 								}),
 							)
 						}}
@@ -155,13 +153,13 @@ export const Settings = () => {
 					/>
 				</div>
 				<div className="flex flex-col gap-2 xs:contents mb-4">
-					<label className="flex gap-1">
+					<span className="flex gap-1">
 						{t('rescan-audio-files')}{' '}
 						<SettingsInfoIcon
 							headerKey="rescan-audio-files"
 							textKey="rescan-audio-files-description"
 						/>
-					</label>
+					</span>
 					<CustomButtonPrimary
 						onClick={async () => {
 							await client.POST('/api/v1/settings/rescan-episodes')
@@ -177,9 +175,10 @@ export const Settings = () => {
 				loading={settingsModel.isLoading}
 				className="float-right"
 				onClick={() => {
+					if (!settingsModel.data) return
 					client
 						.PUT('/api/v1/settings', {
-							body: settingsModel.data!,
+							body: settingsModel.data,
 						})
 						.then(() => {
 							enqueueSnackbar(t('settings-saved'), { variant: 'success' })

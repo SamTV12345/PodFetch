@@ -1,6 +1,5 @@
 import type { Podcast, PodcastEpisode } from '../store/CommonSlice'
 import type { Episode } from './Episode'
-import { PodcastWatchedModel } from './PodcastWatchedModel'
 
 export type TimelineHATEOASModel = {
 	data: TimeLineModel[]

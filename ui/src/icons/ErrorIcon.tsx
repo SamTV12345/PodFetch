@@ -8,6 +8,8 @@ export const ErrorIcon: FC<ErrorIconProps> = ({ text }) => {
 	return (
 		<div className="grid place-items-center">
 			<svg
+				role="img"
+				aria-label="Error Icon"
 				viewBox="0 0 222 85"
 				fill="none"
 				version="1.1"

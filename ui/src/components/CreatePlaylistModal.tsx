@@ -29,7 +29,7 @@ export const CreatePlaylistModal = () => {
 	}, [createPlaylistOpen])
 
 	const handlePlaylistCreateOrUpdate = () => {
-		const itemsMappedToIDs = currentPlaylistToEdit!.items.map((item) => {
+		const itemsMappedToIDs = currentPlaylistToEdit?.items.map((item) => {
 			return {
 				episode: item.podcastEpisode.id,
 			} satisfies components['schemas']['PlaylistItem']
@@ -51,7 +51,7 @@ export const CreatePlaylistModal = () => {
 				})
 				.then((e) => {
 					const mapped = playlists.map((p) =>
-						p.id === e.data!.id ? e.data! : p,
+						p.id === e.data?.id ? e.data : p,
 					)
 					setPlaylist(mapped)
 					enqueueSnackbar(t('updated-playlist'), { variant: 'success' })
@@ -69,8 +69,10 @@ export const CreatePlaylistModal = () => {
 					},
 				})
 				.then((e) => {
-					setPlaylist([...playlists, e.data!])
-					enqueueSnackbar(t('created-playlist'), { variant: 'success' })
+					if (e.data) {
+						setPlaylist([...playlists, e.data])
+						enqueueSnackbar(t('created-playlist'), { variant: 'success' })
+					}
 				})
 		}
 	}
@@ -151,6 +153,6 @@ export const CreatePlaylistModal = () => {
 				</form>
 			</div>
 		</div>,
-		document.getElementById('modal')!,
+		document.getElementById('modal') as Element,
 	)
 }

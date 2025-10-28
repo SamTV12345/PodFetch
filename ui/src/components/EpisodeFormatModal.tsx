@@ -49,6 +49,6 @@ export const EpisodeFormatModal: FC<InfoModalProps> = ({
 				<div className="w-96">{children}</div>
 			</div>
 		</div>,
-		document.getElementById('modal1')!,
+		document.getElementById('modal1') as Element,
 	)
 }

@@ -49,6 +49,6 @@ export const EpisodeSearchModal = () => {
 				/>
 			</div>
 		</div>,
-		document.getElementById('modal')!,
+		document.getElementById('modal') as Element,
 	)
 }

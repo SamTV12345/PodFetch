@@ -11,14 +11,12 @@ import { Spinner } from './Spinner'
 type EpisodeSearchProps = {
 	classNameResults?: string
 	onClickResult?: (e: components['schemas']['PodcastEpisodeDto']) => void
-	resultsMaxHeight?: string
 	showBlankState?: boolean
 }
 
 export const EpisodeSearch: FC<EpisodeSearchProps> = ({
 	classNameResults = '',
 	onClickResult = () => null,
-	resultsMaxHeight = 'none',
 	showBlankState = true,
 }) => {
 	const [searching, setSearching] = useState<boolean>()
@@ -48,7 +46,8 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({
 					},
 				})
 				.then((v) => {
-					setSearchResults(v.data!)
+					if (!v.data) return
+					setSearchResults(v.data)
 					setSearching(false)
 				})
 		}
@@ -72,7 +71,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({
 					className="pl-10 w-full"
 					id="search-input"
 					onChange={(v) => setSearchName(v.target.value)}
-					placeholder={t('search-episodes')!}
+					placeholder={t('search-episodes')}
 					type="text"
 					value={searchName}
 				/>
@@ -103,10 +102,10 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({
 					<ul
 						className={`flex flex-col gap-10 overflow-y-auto my-4 px-8 py-6 scrollbox-y ${classNameResults}`}
 					>
-						{searchResults.map((episode, i) => (
+						{searchResults.map((episode) => (
 							<li
 								className="flex gap-4 cursor-pointer group"
-								key={i}
+								key={episode.id}
 								onClick={() => {
 									onClickResult(episode)
 								}}

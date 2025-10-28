@@ -1,6 +1,5 @@
-import { type FC, useEffect, useMemo, useState } from 'react'
+import { type FC, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
 import { AddPodcastModal } from '../components/AddPodcastModal'
 import { CustomButtonPrimary } from '../components/CustomButtonPrimary'
 import { CustomInput } from '../components/CustomInput'
@@ -9,21 +8,18 @@ import { Heading1 } from '../components/Heading1'
 import { PodcastCard } from '../components/PodcastCard'
 import type { Filter } from '../models/Filter'
 import { Order } from '../models/Order'
-import useCommon from '../store/CommonSlice'
 import {
-	getFiltersDefault,
 	type OrderCriteriaSortingType,
 	TIME_ASCENDING,
 	TIME_DESCENDING,
 	TITLE_ASCENDING,
 	TITLE_DESCENDING,
 } from '../utils/Utilities'
-import { useDebounce } from '../utils/useDebounce'
 import 'material-symbols/outlined.css'
 import { useQueryClient } from '@tanstack/react-query'
 import { LoadingPodcastCard } from '../components/ui/LoadingPodcastCard'
 import useModal from '../store/ModalSlice'
-import { $api, client } from '../utils/http'
+import { $api } from '../utils/http'
 
 interface PodcastsProps {
 	onlyFavorites?: boolean
@@ -124,7 +120,11 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
 							options={mappedTagsOptions}
 							value={tagsVal.value}
 							onChange={(v) => {
-								setTagVal(mappedTagsOptions.filter((e) => e.value === v)[0]!)
+								const mappedTag = mappedTagsOptions.filter((e) => e.value === v)
+								if (!mappedTag || !mappedTag[0]) {
+									return
+								}
+								setTagVal(mappedTag[0])
 							}}
 						/>
 					</div>
@@ -155,7 +155,7 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
 								title: v.target.value,
 							})
 						}
-						placeholder={t('search')!}
+						placeholder={t('search')}
 						value={filters?.data?.title || ''}
 					/>
 
@@ -183,7 +183,8 @@ export const Podcasts: FC<PodcastsProps> = ({ onlyFavorites }) => {
 			{/* Podcast list */}
 			<div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12">
 				{podcasts.isLoading || !podcasts.data
-					? Array.from({ length: 5 }).map((value, index, array) => (
+					? Array.from({ length: 5 }).map((_value, index, _array) => (
+							// biome-ignore lint: Skeleton
 							<LoadingPodcastCard key={index} />
 						))
 					: podcastsToShow.map((podcast) => {

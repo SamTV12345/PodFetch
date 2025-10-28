@@ -1,7 +1,6 @@
 import { type FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AddTypes } from '../models/AddTypes'
-import useCommon from '../store/CommonSlice'
 import { $api } from '../utils/http'
 import { AddHeader } from './AddHeader'
 import { FeedURLComponent } from './FeedURLComponent'
@@ -20,7 +19,7 @@ export const AddPodcastModal: FC = () => {
 		<Modal
 			onCancel={() => {}}
 			onAccept={() => {}}
-			headerText={t('add-podcast')!}
+			headerText={t('add-podcast')}
 			onDelete={() => {}}
 			cancelText={'Abbrechen'}
 			acceptText={'Hinzufügen'}
@@ -37,9 +36,7 @@ export const AddPodcastModal: FC = () => {
 				selectedSearchType !== AddTypes.FEED && (
 					<ProviderImportComponent selectedSearchType={selectedSearchType} />
 				)}
-			{selectedSearchType === AddTypes.OPML && (
-				<OpmlAdd selectedSearchType={selectedSearchType} />
-			)}
+			{selectedSearchType === AddTypes.OPML && <OpmlAdd />}
 			{selectedSearchType === AddTypes.FEED && <FeedURLComponent />}
 		</Modal>
 	)

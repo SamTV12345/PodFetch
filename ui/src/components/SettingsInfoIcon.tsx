@@ -4,13 +4,11 @@ import useCommon from '../store/CommonSlice'
 type SettingsInfoIconProps = {
 	headerKey: string
 	textKey: string
-	className?: string
 }
 
 export const SettingsInfoIcon: FC<SettingsInfoIconProps> = ({
 	textKey,
 	headerKey,
-	className,
 }) => {
 	const setInfoModalPodcastOpen = useCommon(
 		(state) => state.setInfoModalPodcastOpen,

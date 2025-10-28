@@ -70,7 +70,7 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({
 							{currentPodcastEpisode?.podcastEpisode.name}
 						</span>
 						<span className="block lg:text-lg text-(--fg-color)">
-							{currentPodcast && currentPodcast.name}
+							{currentPodcast?.name}
 						</span>
 					</div>
 				</div>
@@ -135,6 +135,6 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({
 				</div>
 			</div>
 		</div>,
-		document.getElementById('modal')!,
+		document.getElementById('modal') as Element,
 	)
 }

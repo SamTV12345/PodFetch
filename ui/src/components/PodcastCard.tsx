@@ -30,17 +30,13 @@ export const PodcastCard: FC<PodcastCardProps> = ({ podcast }) => {
 	}
 	const { t } = useTranslation()
 	const [newTag, setNewTag] = useState<string>('')
-	const { data, error, isLoading } = $api.useQuery(
-		'get',
-		'/api/v1/users/{username}',
-		{
-			params: {
-				path: {
-					username: 'me',
-				},
+	const { data, isLoading } = $api.useQuery('get', '/api/v1/users/{username}', {
+		params: {
+			path: {
+				username: 'me',
 			},
 		},
-	)
+	})
 
 	if (isLoading || !data) {
 		return <Loading />
@@ -54,7 +50,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({ podcast }) => {
 			}}
 		>
 			<Context.Trigger>
-				<Link className="group" to={podcast.id + '/episodes'}>
+				<Link className="group" to={`${podcast.id}/episodes`}>
 					<div className="relative mb-2">
 						<img
 							className={`rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,var(--shadow-opacity))] ${!podcast.active ? 'opacity-20' : ''}`}
@@ -156,7 +152,8 @@ export const PodcastCard: FC<PodcastCardProps> = ({ podcast }) => {
 														.then(() => {
 															const addedTag = tags.data?.filter(
 																(tag) => tag.id === t.id,
-															)[0]!
+															)[0]
+															if (!addedTag) return
 															for (const cache of queryClient
 																.getQueryCache()
 																.getAll()) {

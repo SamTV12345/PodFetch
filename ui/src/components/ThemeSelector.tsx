@@ -1,5 +1,5 @@
 import * as ToggleGroup from '@radix-ui/react-toggle-group'
-import { type FC, useEffect, useState } from 'react'
+import { type FC, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import 'material-symbols/outlined.css'
 
@@ -10,6 +10,19 @@ export const ThemeSelector: FC = () => {
 	/* Initialize state from local storage */
 	useEffect(() => {
 		setTheme(localStorage.theme || 'system')
+	}, [])
+
+	/* Update CSS class in DOM accordingly */
+	const updateDOM = useCallback(() => {
+		if (
+			localStorage.theme === 'dark' ||
+			(!('theme' in localStorage) &&
+				window.matchMedia('(prefers-color-scheme: dark)').matches)
+		) {
+			document.documentElement.classList.add('dark')
+		} else {
+			document.documentElement.classList.remove('dark')
+		}
 	}, [])
 
 	/* Update local storage whenever state changes */
@@ -27,20 +40,7 @@ export const ThemeSelector: FC = () => {
 		}
 
 		updateDOM()
-	}, [theme])
-
-	/* Update CSS class in DOM accordingly */
-	const updateDOM = () => {
-		if (
-			localStorage.theme === 'dark' ||
-			(!('theme' in localStorage) &&
-				window.matchMedia('(prefers-color-scheme: dark)').matches)
-		) {
-			document.documentElement.classList.add('dark')
-		} else {
-			document.documentElement.classList.remove('dark')
-		}
-	}
+	}, [theme, updateDOM])
 
 	const themes = [
 		{

@@ -8,7 +8,6 @@ import { CustomInput } from '../components/CustomInput'
 import { Heading2 } from '../components/Heading2'
 import { Loading } from '../components/Loading'
 import { OIDCButton } from '../components/OIDCButton'
-import useCommon from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 import { $api, client } from '../utils/http'
 import { setAuth, setLogin } from '../utils/login'
@@ -24,11 +23,7 @@ export const Login = () => {
 	const [alert, setAlert] = useState<string>()
 	const { t } = useTranslation()
 
-	const {
-		control,
-		handleSubmit,
-		formState: {},
-	} = useForm<LoginData>({
+	const { control, handleSubmit } = useForm<LoginData>({
 		defaultValues: {
 			username: '',
 			password: '',
@@ -52,7 +47,7 @@ export const Login = () => {
 				},
 			})
 			.then(() => {
-				const basicAuthString = btoa(data.username + ':' + data.password)
+				const basicAuthString = btoa(`${data.username}:${data.password}`)
 
 				setAuth(basicAuthString)
 				navigate('/')
@@ -98,7 +93,7 @@ export const Login = () => {
 
 						<div className="flex flex-col gap-2">
 							<label className="text-sm text-(--fg-color)" htmlFor="username">
-								{t('username')!}
+								{t('username')}
 							</label>
 
 							<Controller
@@ -111,7 +106,7 @@ export const Login = () => {
 										id="username"
 										name={name}
 										onChange={onChange}
-										placeholder={t('your-username')!}
+										placeholder={t('your-username')}
 										value={value}
 										required
 									/>

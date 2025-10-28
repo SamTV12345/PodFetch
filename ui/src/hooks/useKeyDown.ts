@@ -1,23 +1,25 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 
 export const useKeyDown = (
-	callback: any,
+	callback: (evt: KeyboardEvent) => void,
 	keys: string[],
 	triggerOnInputField: boolean = true,
 ) => {
-	const onKeyDown = (event: KeyboardEvent) => {
-		if (
-			!triggerOnInputField &&
-			(event.target as HTMLElement).tagName === 'INPUT'
-		) {
-			return
-		}
-		const wasAnyKeyPressed = keys.some((key: string) => event.key === key)
-		if (wasAnyKeyPressed) {
-			event.preventDefault()
-			callback()
-		}
-	}
+	const onKeyDown = useCallback(
+		(event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null
+			if (!triggerOnInputField && target?.tagName.toLowerCase() === 'input') {
+				return
+			}
+
+			const wasAnyKeyPressed = keys.some((key: string) => event.key === key)
+			if (wasAnyKeyPressed) {
+				event.preventDefault()
+				callback(event)
+			}
+		},
+		[callback, triggerOnInputField, ...keys, keys.some],
+	)
 	useEffect(() => {
 		document.addEventListener('keydown', onKeyDown)
 		return () => {
@@ -26,16 +28,19 @@ export const useKeyDown = (
 	}, [onKeyDown])
 }
 
-export const useCtrlPressed = (callback: any, keys: string[]) => {
-	const onKeyDown = (event: KeyboardEvent) => {
-		const wasAnyKeyPressed = keys.some(
-			(key: string) => event.key === key && event.ctrlKey,
-		)
-		if (wasAnyKeyPressed) {
-			event.preventDefault()
-			callback()
-		}
-	}
+export const useCtrlPressed = (callback: () => void, keys: string[]) => {
+	const onKeyDown = useCallback(
+		(event: KeyboardEvent) => {
+			const wasAnyKeyPressed = keys.some(
+				(key: string) => event.key === key && event.ctrlKey,
+			)
+			if (wasAnyKeyPressed) {
+				event.preventDefault()
+				callback()
+			}
+		},
+		[callback, ...keys, keys.some],
+	)
 	useEffect(() => {
 		document.addEventListener('keydown', onKeyDown)
 		return () => {

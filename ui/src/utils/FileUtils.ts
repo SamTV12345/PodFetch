@@ -14,7 +14,7 @@ export interface MyFile {
 }
 
 export const readFile = (file: File): Promise<FileItem> => {
-	return new Promise((res, rej) => {
+	return new Promise((res, _rej) => {
 		const fileItem: FileItem = {
 			name: file.name,
 			content: '',
@@ -26,7 +26,7 @@ export const readFile = (file: File): Promise<FileItem> => {
 
 		fr.onload = async () => {
 			const result = fr.result
-			if (typeof result == 'string') {
+			if (typeof result === 'string') {
 				fileItem.content = result
 				res(fileItem)
 			}

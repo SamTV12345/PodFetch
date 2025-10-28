@@ -116,8 +116,9 @@ export const CreateInviteModal = () => {
 								body: modifiedInvite,
 							})
 							.then((v) => {
+								if (!v.data) return
 								enqueueSnackbar(t('invite-created'), { variant: 'success' })
-								setInvites([...invites, v.data!])
+								setInvites([...invites, v.data])
 								setCreateInviteModalOpen(false)
 							})
 					}}

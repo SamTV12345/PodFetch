@@ -21,9 +21,11 @@ export const PlaylistPage = () => {
 
 	useEffect(() => {
 		if (playlist.length === 0) {
-			client.GET('/api/v1/playlist').then((resp) => setPlaylist(resp.data!))
+			client
+				.GET('/api/v1/playlist')
+				.then((resp) => resp.data && setPlaylist(resp.data))
 		}
-	}, [])
+	}, [playlist.length, setPlaylist])
 
 	return (
 		<div>
@@ -64,6 +66,7 @@ export const PlaylistPage = () => {
 								<td className="px-2 py-4 flex items-center text-(--fg-color)">
 									{i.name}
 									<button
+										type="button"
 										className="flex ml-2"
 										onClick={(e) => {
 											e.preventDefault()
@@ -71,12 +74,13 @@ export const PlaylistPage = () => {
 												.GET('/api/v1/playlist/{playlist_id}', {
 													params: {
 														path: {
-															playlist_id: String(i.id!),
+															playlist_id: String(i.id),
 														},
 													},
 												})
 												.then((response) => {
-													setCurrentPlaylistToEdit(response.data!)
+													if (!response.data) return
+													setCurrentPlaylistToEdit(response.data)
 													setCreatePlaylistOpen(true)
 												})
 										}}
@@ -89,6 +93,7 @@ export const PlaylistPage = () => {
 								</td>
 								<td className="pl-2 py-4 gap-4">
 									<button
+										type="button"
 										className="flex float-left"
 										onClick={(e) => {
 											e.preventDefault()
@@ -107,6 +112,7 @@ export const PlaylistPage = () => {
 										</span>
 									</button>
 									<button
+										type="button"
 										className="flex float-right text-red-700 hover:text-red-500"
 										onClick={(e) => {
 											e.preventDefault()
@@ -114,7 +120,7 @@ export const PlaylistPage = () => {
 												.DELETE('/api/v1/playlist/{playlist_id}', {
 													params: {
 														path: {
-															playlist_id: String(i.id!),
+															playlist_id: String(i.id),
 														},
 													},
 												})

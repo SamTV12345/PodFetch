@@ -22,6 +22,8 @@ export const EmptyResultIcon = () => {
 
 	return (
 		<svg
+			role="img"
+			aria-label="No results found"
 			width="250"
 			height="200"
 			viewBox="0 0 250 200"

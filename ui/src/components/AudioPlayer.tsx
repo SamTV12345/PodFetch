@@ -1,7 +1,6 @@
-import { Activity, type FC, RefObject } from 'react'
+import { Activity, type FC } from 'react'
 import type { AudioAmplifier } from '../models/AudioAmplifier'
 import useAudioPlayer from '../store/AudioPlayerSlice'
-import useCommon from '../store/CommonSlice'
 import { DrawerAudioPlayer } from './DrawerAudioPlayer'
 import { HiddenAudioPlayer } from './HiddenAudioPlayer'
 

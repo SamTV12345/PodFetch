@@ -1,6 +1,5 @@
-import { type FC, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AddTypes } from '../models/AddTypes'
 import useOpmlImport from '../store/opmlImportSlice'
 import { type FileItem, readFile } from '../utils/FileUtils'
 import { client } from '../utils/http'
@@ -8,11 +7,7 @@ import { CustomButtonPrimary } from './CustomButtonPrimary'
 
 type DragState = 'none' | 'allowed' | 'invalid'
 
-type OpmlAddProps = {
-	selectedSearchType: AddTypes
-}
-
-export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
+export const OpmlAdd = () => {
 	const opmlUploading = useOpmlImport((state) => state.inProgress)
 	const progress = useOpmlImport((state) => state.progress)
 	const setInProgress = useOpmlImport((state) => state.setInProgress)
@@ -26,13 +21,16 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 		if (progress.length === podcastsToUpload) {
 			setInProgress(false)
 		}
-	}, [progress])
+	}, [progress, podcastsToUpload, setInProgress])
 
 	const handleClick = () => {
 		fileInputRef.current?.click()
 	}
 
-	const handleInputChanged = (e: any) => {
+	const handleInputChanged = (e: ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files === null || !e.target.files[0]) {
+			return
+		}
 		uploadFiles(e.target.files[0])
 	}
 
@@ -50,14 +48,14 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 		if (files.length === 0) {
 			return
 		}
-		const content = files[0]!.content
-		const count = (content.match(/type="rss"/g) || []).length
+		const content = files[0]?.content
+		const count = (content?.match(/type="rss"/g) || []).length
 
 		setPodcastsToUpload(count)
 
 		client.POST('/api/v1/podcasts/opml', {
 			body: {
-				content: files[0]!.content,
+				content: files[0]?.content ?? '',
 			},
 		})
 	}
@@ -163,6 +161,8 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 								{!opmlUploading && (
 									<div>
 										<svg
+											role="img"
+											aria-label="Upload complete"
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
 											viewBox="0 0 24 24"

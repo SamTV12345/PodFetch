@@ -1,11 +1,7 @@
 import { type FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AddTypes } from '../models/AddTypes'
-import {
-	type AgnosticPodcastDataModel,
-	GeneralModel,
-	PodIndexModel,
-} from '../models/PodcastAddModel'
+import type { AgnosticPodcastDataModel } from '../models/PodcastAddModel'
 import useCommon from '../store/CommonSlice'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
 import { useDebounce } from '../utils/useDebounce'
@@ -42,21 +38,22 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({
 					.POST('/api/v1/podcasts/itunes', {
 						body: podcast,
 					})
-					.then((err: any) => {
+					.then((err) => {
 						setModalOpen(false)
 						err.response.status &&
 							handleAddPodcast(
 								err.response.status,
-								searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!,
+								searchedPodcasts?.find((v) => v.id === podcast.trackId)
+									?.title ?? '',
 								t,
 							)
 					})
 					.catch((err) => {
-						err.response &&
-							err.response.status &&
+						err.response?.status &&
 							handleAddPodcast(
 								err.response.status,
-								searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!,
+								searchedPodcasts?.find((v) => v.id === podcast.trackId)
+									?.title ?? '',
 								t,
 							)
 					})
@@ -67,21 +64,22 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({
 					.POST('/api/v1/podcasts/podindex', {
 						body: podcast,
 					})
-					.then((err: any) => {
+					.then((err) => {
 						setModalOpen(false)
 						err.response.status &&
 							handleAddPodcast(
 								err.response.status,
-								searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!,
+								searchedPodcasts?.find((v) => v.id === podcast.trackId)
+									?.title ?? '',
 								t,
 							)
 					})
 					.catch((err) => {
-						err.response &&
-							err.response.status &&
+						err.response?.status &&
 							handleAddPodcast(
 								err.response.status,
-								searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!,
+								searchedPodcasts?.find((v) => v.id === podcast.trackId)
+									?.title ?? '',
 								t,
 							)
 					})
@@ -104,16 +102,16 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({
 							},
 						})
 						.then((v) => {
-							if ('resultCount' in v.data!) {
+							if (v.data && 'resultCount' in v.data) {
 								const data = v.data
 								setLoading(false)
 								const agnosticModel: AgnosticPodcastDataModel[] =
-									data!.results.map((podcast) => {
+									data?.results.map((podcast) => {
 										return {
-											title: podcast.collectionName!,
-											artist: podcast.artistName!,
-											id: podcast.trackId!,
-											imageUrl: podcast.artworkUrl600!,
+											title: podcast.collectionName ?? '',
+											artist: podcast.artistName ?? '',
+											id: podcast.trackId ?? 0,
+											imageUrl: podcast.artworkUrl600 ?? '',
 										}
 									})
 								setSearchedPodcasts(agnosticModel)
@@ -129,15 +127,15 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({
 							},
 						})
 						.then((v) => {
-							if ('feeds' in v.data!) {
+							if (v.data && 'feeds' in v.data) {
 								setLoading(false)
 								const agnosticModel: AgnosticPodcastDataModel[] =
 									v.data.feeds.map((podcast) => {
 										return {
-											title: podcast.title!,
-											artist: podcast.author!,
-											id: podcast.id!,
-											imageUrl: podcast.artwork!,
+											title: podcast.title ?? '',
+											artist: podcast.author ?? '',
+											id: podcast.id ?? 0,
+											imageUrl: podcast.artwork ?? '',
 										}
 									})
 								setSearchedPodcasts(agnosticModel)
@@ -154,7 +152,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({
 				<CustomInput
 					type="text"
 					value={searchText}
-					placeholder={t('search-podcast')!}
+					placeholder={t('search-podcast')}
 					className="pl-10 w-full"
 					onChange={(v) => setSearchText(v.target.value)}
 				/>
@@ -171,9 +169,9 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({
 			) : (
 				searchedPodcasts && (
 					<ul className="flex flex-col gap-6 max-h-80 pr-3 overflow-y-auto">
-						{searchedPodcasts.map((podcast, index) => {
+						{searchedPodcasts.map((podcast) => {
 							return (
-								<li key={index} className="flex gap-4 items-center">
+								<li key={podcast.id} className="flex gap-4 items-center">
 									<div className="flex-1 flex flex-col gap-1">
 										<span className="font-bold leading-tight text-(--fg-color)">
 											{podcast.title}

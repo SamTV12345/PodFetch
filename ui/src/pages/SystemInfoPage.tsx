@@ -1,9 +1,8 @@
-import { type FC, useEffect, useMemo, useState } from 'react'
+import { type FC, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CustomGaugeChart } from '../components/CustomGaugeChart'
 import { Heading1 } from '../components/Heading1'
 import { Heading3 } from '../components/Heading3'
-import { Loading } from '../components/Loading'
 import 'material-symbols/outlined.css'
 import type { components } from '../../schema'
 import { ChartLoadingSkeleton } from '../components/ui/ChartLoadingSkeleton'
@@ -51,9 +50,9 @@ export const SystemInfoPage: FC = () => {
 			return ''
 		}
 		if (systemInfo.data.podcast_directory > gigaByte) {
-			return (systemInfo.data.podcast_directory / gigaByte).toFixed(2) + ' GB'
+			return `${(systemInfo.data.podcast_directory / gigaByte).toFixed(2)} GB`
 		} else if (systemInfo.data.podcast_directory < gigaByte) {
-			return (systemInfo.data.podcast_directory / megaByte).toFixed(2) + ' MB'
+			return `${(systemInfo.data.podcast_directory / megaByte).toFixed(2)} MB`
 		}
 	}, [systemInfo])
 
@@ -196,43 +195,40 @@ export const SystemInfoPage: FC = () => {
 								/>
 							</a>
 						</dd>
-						<>
-							<dt className="font-medium text-(--fg-color)">{t('version')}</dt>
-							<LoadingSkeletonDD
-								text={infoVersion?.data?.version}
-								loading={infoVersion.isLoading}
-							></LoadingSkeletonDD>
 
-							<dt className="font-medium text-(--fg-color)">{t('commit')}</dt>
-							<LoadingSkeletonDD
-								text={infoVersion.data?.commit}
-								loading={infoVersion.isLoading}
-							></LoadingSkeletonDD>
+						<dt className="font-medium text-(--fg-color)">{t('version')}</dt>
+						<LoadingSkeletonDD
+							text={infoVersion?.data?.version}
+							loading={infoVersion.isLoading}
+						></LoadingSkeletonDD>
 
-							<dt className="font-medium text-(--fg-color)">{t('ci-build')}</dt>
-							<LoadingSkeletonDD
-								text={infoVersion?.data?.ci}
-								loading={infoVersion.isLoading}
-							></LoadingSkeletonDD>
+						<dt className="font-medium text-(--fg-color)">{t('commit')}</dt>
+						<LoadingSkeletonDD
+							text={infoVersion.data?.commit}
+							loading={infoVersion.isLoading}
+						></LoadingSkeletonDD>
 
-							<dt className="font-medium text-(--fg-color)">
-								{t('build-date')}
-							</dt>
-							<LoadingSkeletonDD
-								text={infoVersion?.data?.time}
-								loading={infoVersion.isLoading}
-							></LoadingSkeletonDD>
-							<dt className="font-medium text-(--fg-color)">{t('branch')}</dt>
-							<LoadingSkeletonDD
-								text={infoVersion?.data?.ref}
-								loading={infoVersion.isLoading}
-							></LoadingSkeletonDD>
-							<dt className="font-medium text-(--fg-color)">{t('os')}</dt>
-							<LoadingSkeletonDD
-								text={infoVersion?.data?.os}
-								loading={infoVersion.isLoading}
-							></LoadingSkeletonDD>
-						</>
+						<dt className="font-medium text-(--fg-color)">{t('ci-build')}</dt>
+						<LoadingSkeletonDD
+							text={infoVersion?.data?.ci}
+							loading={infoVersion.isLoading}
+						></LoadingSkeletonDD>
+
+						<dt className="font-medium text-(--fg-color)">{t('build-date')}</dt>
+						<LoadingSkeletonDD
+							text={infoVersion?.data?.time}
+							loading={infoVersion.isLoading}
+						></LoadingSkeletonDD>
+						<dt className="font-medium text-(--fg-color)">{t('branch')}</dt>
+						<LoadingSkeletonDD
+							text={infoVersion?.data?.ref}
+							loading={infoVersion.isLoading}
+						></LoadingSkeletonDD>
+						<dt className="font-medium text-(--fg-color)">{t('os')}</dt>
+						<LoadingSkeletonDD
+							text={infoVersion?.data?.os}
+							loading={infoVersion.isLoading}
+						></LoadingSkeletonDD>
 					</dl>
 				</div>
 			</div>

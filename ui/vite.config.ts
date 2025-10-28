@@ -9,7 +9,7 @@ function chartingLibrary(): PluginOption {
 		name: 'charting-library',
 		enforce: 'pre',
 		apply: 'serve',
-		transformIndexHtml: async (html, ctx) => {
+		transformIndexHtml: async (html, _ctx) => {
 			const resp = await fetch('http://localhost:8000/ui/index.html')
 			const htmlFromServer = await resp.text()
 			const browser = new Browser()

@@ -1,12 +1,9 @@
-import io, { type Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import { create } from 'zustand'
 import type { components } from '../../schema'
 import type { ConfirmModalProps } from '../components/ConfirmModal'
 import type { AgnosticPodcastDataModel } from '../models/PodcastAddModel'
-import type {
-	ClientToServerEvents,
-	ServerToClientEvents,
-} from '../models/socketioEvents'
+import type { ServerToClientEvents } from '../models/socketioEvents'
 import type { User } from '../models/User'
 import type { LoginData } from '../pages/Login'
 
@@ -43,10 +40,6 @@ export type PodcastEpisode = {
 	status: boolean
 	time?: number
 	favored?: boolean
-}
-
-type InfoModalPodcast = components['schemas']['PodcastEpisodeDto'] & {
-	podcast: components['schemas']['PodcastDto']
 }
 
 // Define a type for the slice state
@@ -106,7 +99,7 @@ interface CommonProps {
 		podcastEpisodeAlreadyPlayed: components['schemas']['PodcastEpisodeWithHistory'],
 	) => void
 	isAuthenticated: boolean
-	socketIo: Socket<ServerToClientEvents, ClientToServerEvents> | undefined
+	socketIo: Socket<ServerToClientEvents, string> | undefined
 }
 
 const useCommon = create<CommonProps>((set, get) => ({

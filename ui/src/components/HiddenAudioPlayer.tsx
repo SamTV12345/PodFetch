@@ -1,4 +1,4 @@
-import { type FC, RefObject, SyntheticEvent, useEffect } from 'react'
+import { type FC, useEffect } from 'react'
 import useOnMount from '../hooks/useOnMount'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import useAudioPlayer from '../store/AudioPlayerSlice'
@@ -72,15 +72,19 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({
 				percentage: 0,
 			})
 
-			if (isNaN(el.duration)) {
+			if (Number.isNaN(el.duration)) {
 				client
 					.GET('/api/v1/podcasts/episode/{id}', {
-						params: { path: { id: podcastEpisode!.podcastEpisode.episode_id } },
+						params: {
+							path: {
+								id: podcastEpisode?.podcastEpisode.episode_id ?? 'undefined',
+							},
+						},
 					})
 					.then((response) => {
 						setMetadata({
 							currentTime: el.currentTime,
-							duration: response.data!.total!,
+							duration: response.data?.total ?? 0,
 							percentage: 0,
 						})
 					})
@@ -94,7 +98,11 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({
 			audioPlayer.removeEventListener('timeupdate', onTimeUpdate)
 			audioPlayer.removeEventListener('loadedmetadata', onLoadedMetadata)
 		}
-	}, [])
+	}, [
+		podcastEpisode?.podcastEpisode.episode_id,
+		setCurrentTimeUpdate,
+		setMetadata,
+	])
 
 	return <div></div>
 }

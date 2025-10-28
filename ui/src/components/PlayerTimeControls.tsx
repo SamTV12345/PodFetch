@@ -1,4 +1,4 @@
-import { type FC, RefObject, useEffect, useMemo } from 'react'
+import { type FC, useEffect, useMemo } from 'react'
 import useAudioPlayer, { type AudioPlayerPlay } from '../store/AudioPlayerSlice'
 import { SKIPPED_TIME } from '../utils/Utilities'
 import 'material-symbols/outlined.css'
@@ -50,14 +50,14 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({
 
 	useEffect(() => {
 		const audioPlayer = getAudioPlayer()
-		audioPlayer!.onended = () => {
+		audioPlayer.onended = () => {
 			if (currentPodcastEpisode === undefined) return
 			logCurrentPlaybackTime(
-				currentPodcastEpisode!.podcastEpisode.episode_id,
-				currentPodcastEpisode!.podcastEpisode.total_time,
+				currentPodcastEpisode?.podcastEpisode.episode_id,
+				currentPodcastEpisode?.podcastEpisode.total_time,
 			)
 		}
-	}, [])
+	}, [currentPodcastEpisode])
 
 	const skipToNextEpisode = () => {
 		if (currentPodcastEpisode === undefined) return
@@ -102,7 +102,11 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({
 						return {
 							...e,
 							podcastHistoryItem: {
-								...e.podcastHistoryItem!,
+								...(e.podcastHistoryItem ?? undefined),
+								action: e.podcastHistoryItem?.action ?? 'play',
+								device: e.podcastHistoryItem?.device ?? 'web',
+								episode: e.podcastHistoryItem?.episode ?? '',
+								podcast: e.podcastHistoryItem?.podcast ?? '',
 								position: time,
 							},
 						}
@@ -121,14 +125,18 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({
 
 		const currentIndex = SPEED_STEPS.indexOf(speed)
 
-		if (currentIndex === SPEED_STEPS.length - 1) {
-			audioPlayer.playbackRate = SPEED_STEPS[0]!
-			setPlaybackRate(SPEED_STEPS[0]!)
+		if (currentIndex === SPEED_STEPS.length - 1 && SPEED_STEPS[0]) {
+			audioPlayer.playbackRate = SPEED_STEPS[0]
+			setPlaybackRate(SPEED_STEPS[0])
 			return
 		}
 
-		audioPlayer.playbackRate = SPEED_STEPS[currentIndex + 1]!
-		setPlaybackRate(SPEED_STEPS[currentIndex + 1]!)
+		const nextSpeedStep = SPEED_STEPS[currentIndex + 1]
+		if (!nextSpeedStep) return
+		if (nextSpeedStep) {
+			audioPlayer.playbackRate = nextSpeedStep
+			setPlaybackRate(nextSpeedStep)
+		}
 	}
 
 	const seekForward = () => {
@@ -167,6 +175,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({
 
 			{/* Previous */}
 			<button
+				type="button"
 				disabled={!hasPrevious}
 				className={cn(
 					'material-symbols-outlined filled text-3xl lg:text-4xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90',
@@ -195,6 +204,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({
 
 			{/* Next */}
 			<button
+				type="button"
 				disabled={!hasNext}
 				className={cn(
 					'material-symbols-outlined filled text-3xl lg:text-4xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90',

@@ -7,7 +7,7 @@ export const Sidebar = () => {
 	const setSidebarCollapsed = useCommon((state) => state.setSidebarCollapsed)
 
 	return (
-		<div
+		<nav
 			className={`fixed md:static bg-stone-950 dark:bg-[#161514] h-full px-6 py-8 text-white transition-[left] w-72 z-20 ${sidebarCollapsed ? '-left-72' : 'left-0 shadow-[4px_0_16px_rgba(0,0,0,0.5)] md:shadow-none'}`}
 			id="primary-navigation"
 			aria-label="Sidebar"
@@ -60,6 +60,6 @@ export const Sidebar = () => {
 					/>
 				</span>
 			</ul>
-		</div>
+		</nav>
 	)
 }

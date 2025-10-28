@@ -1,5 +1,5 @@
 import type { FC } from 'react'
-import useCommon, { Podcast, PodcastEpisode } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 import type { components } from '../../schema'
 

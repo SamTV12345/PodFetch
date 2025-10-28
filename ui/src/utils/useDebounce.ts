@@ -23,5 +23,5 @@ export const useDebounce = (
 		}
 
 		render()
-	}, deps)
+	}, [...deps, render])
 }

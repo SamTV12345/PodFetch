@@ -26,5 +26,3 @@ export interface ServerToClientEvents {
 		podcast: components['schemas']['PodcastDto']
 	}) => void
 }
-
-export type ClientToServerEvents = {}

@@ -3,8 +3,6 @@ import type { components } from '../../schema'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import useCommon from '../store/CommonSlice'
 import { startAudioPlayer } from '../utils/audioPlayer'
-import { client } from '../utils/http'
-import { handlePlayofEpisode } from '../utils/PlayHandler'
 
 type EpisodeCardProps = {
 	podcast: components['schemas']['PodcastDto']
@@ -30,7 +28,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({
 	return (
 		<div
 			className="group cursor-pointer"
-			key={podcastEpisode.episode_id + 'dv'}
+			key={`${podcastEpisode.episode_id}dv`}
 			onClick={async (e) => {
 				// Prevent icon click from triggering info modal
 				e.stopPropagation()
@@ -58,7 +56,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({
 				<div className="absolute inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-opacity">
 					<span
 						className="material-symbols-outlined text-7xl! text-white group-active:scale-90"
-						key={podcastEpisode.episode_id + 'icon'}
+						key={`${podcastEpisode.episode_id}icon`}
 					>
 						play_circle
 					</span>
@@ -70,7 +68,7 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({
 						<div className="absolute bottom-0 inset-x-0 bg-stone-900">
 							<div
 								className="bg-(--accent-color) h-1.5"
-								style={{ width: playPercentage + '%' }}
+								style={{ width: `${playPercentage}%` }}
 							></div>
 						</div>
 					)

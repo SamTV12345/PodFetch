@@ -81,7 +81,7 @@ export const PodcastInfoModal = () => {
 							if (selectedPodcastEpisode) {
 								download(
 									selectedPodcastEpisode.local_url,
-									selectedPodcastEpisode.name + '.mp3',
+									`${selectedPodcastEpisode.name}.mp3`,
 								)
 							}
 						}}
@@ -119,25 +119,22 @@ export const PodcastInfoModal = () => {
 					</li>
 				</ul>
 
-				{selectedPodcastEpisode && (
-					<>
-						{selectedTab === 'description' ? (
-							<p
-								className="leading-[1.75] text-sm text-(--fg-color)"
-								dangerouslySetInnerHTML={removeHTML(
-									selectedPodcastEpisode.description,
-								)}
-							/>
-						) : (
-							<PodcastEpisodeChapterTable
-								podcastEpisode={selectedPodcastEpisode}
-								className="overflow-auto max-h-1/2"
-							/>
-						)}
-					</>
-				)}
+				{selectedPodcastEpisode &&
+					(selectedTab === 'description' ? (
+						<p
+							className="leading-[1.75] text-sm text-(--fg-color)"
+							dangerouslySetInnerHTML={removeHTML(
+								selectedPodcastEpisode.description,
+							)}
+						/>
+					) : (
+						<PodcastEpisodeChapterTable
+							podcastEpisode={selectedPodcastEpisode}
+							className="overflow-auto max-h-1/2"
+						/>
+					))}
 			</div>
 		</div>,
-		document.getElementById('modal1')!,
+		document.getElementById('modal1') as Element,
 	)
 }

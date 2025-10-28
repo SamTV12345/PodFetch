@@ -7,12 +7,11 @@ import { PodcastDetailItem } from '../components/PodcastDetailItem'
 import { PodcastInfoModal } from '../components/PodcastInfoModal'
 import { Switcher } from '../components/Switcher'
 import useAudioPlayer from '../store/AudioPlayerSlice'
-import useCommon, { Podcast } from '../store/CommonSlice'
+import useCommon from '../store/CommonSlice'
 import { removeHTML } from '../utils/Utilities'
 import 'material-symbols/outlined.css'
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
-import type { components } from '../../schema'
+import type { components, operations } from '../../schema'
 import { EditableHeading } from '../components/EditableHeading'
 import { Loading } from '../components/Loading'
 import { PodcastEpisodeAlreadyPlayed } from '../components/PodcastEpisodeAlreadyPlayed'
@@ -31,20 +30,16 @@ export const PodcastDetailPage = () => {
 	const queryClient = useQueryClient()
 
 	const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
-	const { data, error, isLoading } = $api.useQuery(
-		'get',
-		'/api/v1/users/{username}',
-		{
-			params: {
-				path: {
-					username: 'me',
-				},
+	const { data } = $api.useQuery('get', '/api/v1/users/{username}', {
+		params: {
+			path: {
+				username: 'me',
 			},
 		},
-	)
+	})
 
 	const currentDetailedPodcastId = useMemo(() => {
-		if (params && !isNaN(parseFloat(params.id as string))) {
+		if (params && !Number.isNaN(parseFloat(params.id as string))) {
 			return params.id ?? ''
 		}
 		return ''
@@ -79,7 +74,7 @@ export const PodcastDetailPage = () => {
 
 	useEffect(() => {
 		if (params.podcastid) {
-			const element = document.getElementById('episode_' + params.podcastid)
+			const element = document.getElementById(`episode_${params.podcastid}`)
 
 			if (element) {
 				element.scrollIntoView({
@@ -89,11 +84,11 @@ export const PodcastDetailPage = () => {
 				})
 			}
 		}
-	}, [onlyUnplayed])
+	}, [params.podcastid])
 
 	useEffect(() => {
 		if (currentPodcast.data?.summary) {
-			const summary = document.getElementById('summary')!
+			const summary = document.getElementById('summary') as HTMLElement
 
 			summary.querySelectorAll('a').forEach((a) => {
 				a.setAttribute('target', '_blank')
@@ -116,7 +111,7 @@ export const PodcastDetailPage = () => {
 
 	useEffect(() => {
 		if (params.podcastid) {
-			const element = document.getElementById('episode_' + params.podcastid)
+			const element = document.getElementById(`episode_${params.podcastid}`)
 
 			if (element) {
 				element.scrollIntoView({
@@ -132,7 +127,7 @@ export const PodcastDetailPage = () => {
 		return () => {
 			setInfoModalPodcastOpen(false)
 		}
-	}, [])
+	}, [setInfoModalPodcastOpen])
 
 	return (
 		<Fragment key={'detail'}>
@@ -177,7 +172,7 @@ export const PodcastDetailPage = () => {
 							<EditableHeading
 								podcastId={Number(currentDetailedPodcastId)}
 								initialText={currentPodcast.data.name}
-								allowedToEdit={data?.role == 'admin'}
+								allowedToEdit={data?.role === 'admin'}
 							></EditableHeading>
 						)}
 
@@ -186,20 +181,21 @@ export const PodcastDetailPage = () => {
 						refreshPodcastEpisodes.isPending ? (
 							<Loading className="inline-block h-auto w-auto" />
 						) : (
-							<span
+							<button
+								type="button"
 								className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
 								onClick={() => {
 									refreshPodcastEpisodes.mutate({
 										params: {
 											path: {
-												id: params.id!,
+												id: params.id ?? '',
 											},
 										},
 									})
 								}}
 							>
 								refresh
-							</span>
+							</button>
 						)}
 						<span>
 							{currentPodcast.data && data?.role === ADMIN_ROLE && (
@@ -222,14 +218,13 @@ export const PodcastDetailPage = () => {
 						</span>
 
 						<div className="flex gap-2">
-							{currentPodcast.data?.keywords &&
-								currentPodcast.data?.keywords
-									?.split(',')
-									.map((keyword, index) => (
-										<Chip key={'keyword' + index} index={index}>
-											{keyword}
-										</Chip>
-									))}
+							{currentPodcast.data?.keywords
+								?.split(',')
+								.map((keyword, index) => (
+									<Chip key={keyword} index={index}>
+										{keyword}
+									</Chip>
+								))}
 						</div>
 
 						<span className="grid grid-cols-2 md:grid-cols-3">
@@ -246,6 +241,7 @@ export const PodcastDetailPage = () => {
 							</a>
 
 							<button
+								type="button"
 								className="flex gap-4"
 								rel="noopener noreferrer"
 								onClick={() => window.open(currentPodcast.data?.rssfeed)}
@@ -292,13 +288,14 @@ export const PodcastDetailPage = () => {
 									.PUT('/api/v1/podcasts/{id}/active', {
 										params: {
 											path: {
-												id: params.id!,
+												id: params.id ?? '',
 											},
 										},
 									})
 									.then(() => {
+										if (!currentPodcast.data) return
 										setCurrentPodcast({
-											...currentPodcast.data!,
+											...currentPodcast.data,
 											active: !currentPodcast.data?.active,
 										})
 										for (const cache of queryClient.getQueryCache().getAll()) {
@@ -306,8 +303,11 @@ export const PodcastDetailPage = () => {
 												cache.queryKey[0] === 'get' &&
 												(cache.queryKey[1] as string) ===
 													'/api/v1/podcasts/{id}' &&
-												(cache.queryKey[2] as any).params.path.id ==
-													currentDetailedPodcastId
+												(
+													cache.queryKey[2] as {
+														params: operations['find_podcast_by_id']['parameters']
+													}
+												).params.path.id === currentDetailedPodcastId
 											) {
 												queryClient.setQueryData(
 													cache.queryKey,

@@ -1,10 +1,9 @@
 import * as Slider from '@radix-ui/react-slider'
-import { type FC, RefObject } from 'react'
+import type { FC } from 'react'
 import { useKeyDown } from '../hooks/useKeyDown'
 import { VolumeIcon } from '../icons/VolumeIcon'
 import type { AudioAmplifier } from '../models/AudioAmplifier'
 import useAudioPlayer from '../store/AudioPlayerSlice'
-import { getAudioPlayer } from '../utils/audioPlayer'
 import { VOLUME_STEP } from '../utils/Utilities'
 
 type PlayerVolumeSliderProps = {
@@ -21,7 +20,7 @@ export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({
 		() => {
 			const newVolume = Math.max(0, volume - VOLUME_STEP)
 			setVolume(newVolume)
-			audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
+			audioAmplifier?.setVolume(newVolume / 100)
 		},
 		['ArrowDown'],
 		false,
@@ -31,7 +30,7 @@ export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({
 		() => {
 			const newVolume = Math.min(300, volume + VOLUME_STEP)
 			setVolume(newVolume)
-			audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
+			audioAmplifier?.setVolume(newVolume / 100)
 		},
 		['ArrowUp'],
 		false,
@@ -47,7 +46,7 @@ export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({
 				value={[volume]}
 				max={300}
 				onValueChange={(v) => {
-					audioAmplifier && audioAmplifier.setVolume(Number(v) / 100)
+					audioAmplifier?.setVolume(Number(v) / 100)
 					setVolume(Number(v))
 				}}
 			>

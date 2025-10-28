@@ -30,7 +30,7 @@ export const FeedURLComponent: FC = () => {
 				},
 			})
 			.then((v) => {
-				handleAddPodcast(v.response.status, v.data!.name, t)
+				handleAddPodcast(v.response.status, v.data?.name ?? '', t)
 			})
 	}
 
@@ -40,7 +40,7 @@ export const FeedURLComponent: FC = () => {
 				{...register('feedUrl', {
 					pattern: /^(http|https):\/\/[^ "]+$/,
 				})}
-				placeholder={t('rss-feed-url')!}
+				placeholder={t('rss-feed-url')}
 				className={
 					'bg-(--input-bg-color) w-full px-4 py-2 rounded-lg text-sm text-(--input-fg-color) placeholder:text-(--input-fg-color-disabled)'
 				}

@@ -42,18 +42,18 @@ export const InfoModal = () => {
 				<div className="mb-4">
 					{infoHeading && (
 						<Heading2 className="inline align-middle mr-2">
-							{t(infoHeading!) || ''}
+							{t(infoHeading)}
 						</Heading2>
 					)}
 				</div>
 
 				{infoText && (
 					<p className="leading-[1.75] text-sm text-(--fg-color)">
-						{t(infoText!)}
+						{t(infoText)}
 					</p>
 				)}
 			</div>
 		</div>,
-		document.getElementById('modal1')!,
+		document.getElementById('modal1') as Element,
 	)
 }

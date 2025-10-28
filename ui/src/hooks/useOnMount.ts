@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 
-function useOnMount(callback: any) {
+function useOnMount(callback: () => void) {
 	const hasRunRef = useRef(false)
 
 	useLayoutEffect(() => {

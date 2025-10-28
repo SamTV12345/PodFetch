@@ -1,5 +1,4 @@
 import type { components } from '../../../schema'
-import { Podcast, PodcastEpisode } from '../../store/CommonSlice'
 
 export interface BroadcastMesage {
 	type_of: string

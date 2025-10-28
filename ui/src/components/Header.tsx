@@ -1,4 +1,3 @@
-import useCommon from '../store/CommonSlice'
 import { LanguageDropdown } from './I18nDropdown'
 import { Notifications } from './Notifications'
 import { ThemeSelector } from './ThemeSelector'

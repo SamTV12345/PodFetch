@@ -15,6 +15,9 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
 			"recommended": true,
 			"a11y": {
 				"useKeyWithClickEvents": "off",

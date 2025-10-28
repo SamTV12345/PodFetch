@@ -24,13 +24,13 @@ export const UserAdminUsers = () => {
 		client
 			.GET('/api/v1/users')
 			.then((resp) => {
-				setUsers(resp.data!)
+				setUsers(resp.data || [])
 				setError(false)
 			})
 			.catch(() => {
 				setError(true)
 			})
-	}, [])
+	}, [setUsers])
 
 	const deleteUser = (user: User) => {
 		client
@@ -94,6 +94,7 @@ export const UserAdminUsers = () => {
 									{t(v.role)}
 
 									<button
+										type="button"
 										className="flex ml-2"
 										onClick={() => {
 											setSelectedUser({
@@ -116,6 +117,7 @@ export const UserAdminUsers = () => {
 								<td className="px-2 py-4">{formatTime(v.createdAt)}</td>
 								<td className="pl-2 py-4">
 									<button
+										type="button"
 										className="flex items-center float-right text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)"
 										onClick={() => {
 											deleteUser(v)

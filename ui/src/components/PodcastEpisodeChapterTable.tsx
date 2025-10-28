@@ -29,7 +29,7 @@ export const PodcastEpisodeChapterTable: FC<
 			},
 		},
 	)
-	const currentPodcast = $api.useQuery(
+	const _currentPodcast = $api.useQuery(
 		'get',
 		'/api/v1/podcasts/reverse/episode/{id}',
 		{

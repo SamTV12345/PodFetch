@@ -5,7 +5,6 @@ import {
 	Suspense,
 	useEffect,
 	useRef,
-	useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -227,7 +226,7 @@ const App: FC<PropsWithChildren> = ({ children }) => {
 						(p) => p.podcastEpisode.id === downloadedPodcastEpisode.id,
 					)
 
-				if (res == undefined) {
+				if (res === undefined) {
 					// This is a completely new episode
 					useCommon.getState().setSelectedEpisodes([
 						...useCommon.getState().selectedEpisodes,
@@ -342,7 +341,13 @@ const App: FC<PropsWithChildren> = ({ children }) => {
 		socket.on('opmlAdded', () => {
 			setProgress([...useOpmlImport.getState().progress, true])
 		})
-	}, [socket])
+	}, [
+		socket,
+		queryClient.getQueryCache,
+		queryClient.setQueryData,
+		setProgress,
+		t,
+	])
 
 	return <Suspense>{children}</Suspense>
 }

@@ -12,7 +12,7 @@ export const handlePlayofEpisode = (
 			? preparePodcastEpisode(episode, chapters, response)
 			: prepareOnlinePodcastEpisode(episode, chapters, response)
 	}
-	const playedPercentage = (response.position! * 100) / episode.total_time
+	const playedPercentage = (response.position * 100) / episode.total_time
 	if (playedPercentage < 95 || episode.total_time === 0) {
 		return episode.status
 			? preparePodcastEpisode(episode, chapters, response)

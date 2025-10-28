@@ -1,7 +1,6 @@
 import { type DragEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { components } from '../../schema'
-import { PodcastEpisode } from '../store/CommonSlice'
 import usePlaylist from '../store/PlaylistSlice'
 import { EpisodeSearch } from './EpisodeSearch'
 
@@ -29,9 +28,12 @@ export const PlaylistSearchEpisode = () => {
 			<EpisodeSearch
 				onClickResult={(e) => {
 					setCurrentPlaylistToEdit({
-						id: currentPlayListToEdit!.id,
-						name: currentPlayListToEdit!.name,
-						items: [...currentPlayListToEdit!.items, { podcastEpisode: e }],
+						id: currentPlayListToEdit?.id,
+						name: currentPlayListToEdit?.name,
+						items: [
+							...(currentPlayListToEdit?.items ?? []),
+							{ podcastEpisode: e },
+						],
 					})
 				}}
 				classNameResults="max-h-[min(20rem,calc(100vh-3rem-3rem))]"
@@ -56,6 +58,7 @@ export const PlaylistSearchEpisode = () => {
 						{currentPlayListToEdit?.items.map((item, index) => {
 							return (
 								<tr
+									key={item.podcastEpisode.id}
 									className="border-2 border-white"
 									draggable
 									onDrop={(e) => {
@@ -63,20 +66,22 @@ export const PlaylistSearchEpisode = () => {
 										const dropIndex = index
 										const dragIndex = parseInt(
 											e.dataTransfer.getData('text/plain'),
+											10,
 										)
 
-										const newItems = [...currentPlayListToEdit!.items]
-										const dragItem = newItems[dragIndex]!
+										const newItems = [...(currentPlayListToEdit?.items ?? [])]
+										const dragItem = newItems[dragIndex]
+										if (!dragItem) return
 										newItems.splice(dragIndex, 1)
 										newItems.splice(dropIndex, 0, dragItem)
 										setCurrentPlaylistToEdit({
-											name: currentPlayListToEdit!.name,
-											id: currentPlayListToEdit!.id,
+											name: currentPlayListToEdit?.name,
+											id: currentPlayListToEdit?.id,
 											items: newItems,
 										})
 									}}
 									onDragOver={(e) =>
-										item.podcastEpisode.id != itemCurrentlyDragged?.id &&
+										item.podcastEpisode.id !== itemCurrentlyDragged?.id &&
 										e.preventDefault()
 									}
 									onDragStart={(e) =>
@@ -89,13 +94,14 @@ export const PlaylistSearchEpisode = () => {
 									</td>
 									<td>
 										<button
+											type="button"
 											className="flex text-red-700 hover:text-red-500"
 											onClick={(e) => {
 												e.preventDefault()
 												setCurrentPlaylistToEdit({
-													name: currentPlayListToEdit!.name,
-													id: currentPlayListToEdit!.id,
-													items: currentPlayListToEdit!.items.filter(
+													name: currentPlayListToEdit?.name,
+													id: currentPlayListToEdit?.id,
+													items: currentPlayListToEdit?.items.filter(
 														(i) =>
 															i.podcastEpisode.id !== item.podcastEpisode.id,
 													),

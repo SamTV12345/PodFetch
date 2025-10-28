@@ -1,8 +1,7 @@
-import { Activity, createRef, useEffect, useState } from 'react'
+import { Activity, useEffect, useState } from 'react'
 import type { AudioAmplifier } from '../models/AudioAmplifier'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import useCommon from '../store/CommonSlice'
-import { getAudioPlayer } from '../utils/audioPlayer'
 import { client } from '../utils/http'
 import { handlePlayofEpisode } from '../utils/PlayHandler'
 import { AudioPlayer } from './AudioPlayer'
@@ -20,11 +19,14 @@ export const AudioComponents = () => {
 
 	useEffect(() => {
 		async function loadEpisodeData() {
-			if (!currentPodcastEpisodes[currentPodcastEpisodeIndex!]) {
+			if (currentPodcastEpisodeIndex == null) {
+				return
+			}
+			if (!currentPodcastEpisodes[currentPodcastEpisodeIndex]) {
 				return
 			}
 			const currentPodcastEpisode =
-				currentPodcastEpisodes[currentPodcastEpisodeIndex!]!
+				currentPodcastEpisodes[currentPodcastEpisodeIndex]
 			try {
 				const respForPodcast = await client.GET(
 					'/api/v1/podcasts/episode/{id}',
@@ -44,14 +46,14 @@ export const AudioComponents = () => {
 				const retrievedPodcastEpisode = handlePlayofEpisode(
 					currentPodcastEpisode.podcastEpisode,
 					chaptersOfEpisode.data ?? [],
-					respForPodcast.data!,
+					respForPodcast.data,
 				)
 				if (retrievedPodcastEpisode) {
 					useAudioPlayer.setState({
 						loadedPodcastEpisode: retrievedPodcastEpisode,
 					})
 				}
-			} catch (e) {
+			} catch (_e) {
 				const chaptersOfEpisode = await client.GET(
 					'/api/v1/podcasts/episodes/{id}/chapters',
 					{

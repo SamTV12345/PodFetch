@@ -1,11 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CustomInput } from '../components/CustomInput'
 import { Heading1 } from '../components/Heading1'
 import { LoadingSkeletonSpan } from '../components/ui/LoadingSkeletonSpan'
 import type { PodcastTags } from '../models/PodcastTags'
-import useCommon from '../store/CommonSlice'
 import { $api, client } from '../utils/http'
 
 export const TagsPage = () => {
@@ -29,7 +27,8 @@ export const TagsPage = () => {
 				</thead>
 				<tbody>
 					{tags.isLoading || !tags.data
-						? Array.from({ length: 5 }).map((value, index, array) => (
+						? Array.from({ length: 5 }).map((_value, index, _array) => (
+								// biome-ignore lint: Skeleton
 								<tr key={index}>
 									<td className="px-2 py-4">
 										<LoadingSkeletonSpan
@@ -75,6 +74,7 @@ export const TagsPage = () => {
 																		name: event.target.value,
 																	}
 																}
+																return t
 															})
 														},
 													)
@@ -83,6 +83,7 @@ export const TagsPage = () => {
 										</td>
 										<td>
 											<button
+												type="button"
 												className="px-2 py-1 text-(--fg-color) rounded-md bg-red-700"
 												onClick={() => {
 													client

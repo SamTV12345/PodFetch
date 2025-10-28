@@ -4,16 +4,9 @@ import useCommon from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
 import { useMemo } from 'react'
 import type { components } from '../../schema'
-import { Episode } from '../models/Episode'
-import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { startAudioPlayer } from '../utils/audioPlayer'
-import { client } from '../utils/http'
-import {
-	prepareOnlinePodcastEpisode,
-	preparePodcastEpisode,
-	removeHTML,
-} from '../utils/Utilities'
+import { removeHTML } from '../utils/Utilities'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 
@@ -40,7 +33,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
 				__html: '',
 			}
 		}
-		return removeHTML(selectedPodcastEpisode?.podcastEpisode.name!)
+		return removeHTML(selectedPodcastEpisode?.podcastEpisode.name)
 	}, [selectedPodcastEpisode])
 
 	return createPortal(
@@ -85,12 +78,15 @@ export const PodcastEpisodeAlreadyPlayed = () => {
 					</CustomButtonSecondary>
 					<CustomButtonPrimary
 						onClick={async () => {
-							if (!selectedPodcastEpisode) {
+							if (
+								!selectedPodcastEpisode ||
+								!selectedPodcastEpisode.podcastHistoryItem
+							) {
 								return
 							}
 
 							const watchedModel: components['schemas']['EpisodeDto'] = {
-								...selectedPodcastEpisode.podcastHistoryItem!,
+								...selectedPodcastEpisode.podcastHistoryItem,
 								position: 0,
 							}
 
@@ -121,6 +117,6 @@ export const PodcastEpisodeAlreadyPlayed = () => {
 				</div>
 			</div>
 		</div>,
-		document.getElementById('modal')!,
+		document.getElementById('modal') as Element,
 	)
 }

@@ -12,7 +12,7 @@ export const LoadingSkeletonDD: FC<LoadingSkeletonProps> = ({
 }) => {
 	return (
 		<dd className="text-(--fg-secondary-color)">
-			{loading == true ? <Skeleton style={{ height: '100%' }} /> : text}
+			{loading === true ? <Skeleton style={{ height: '100%' }} /> : text}
 		</dd>
 	)
 }

@@ -1,14 +1,20 @@
 import { enqueueSnackbar } from 'notistack'
 import createClient, { type Middleware } from 'openapi-fetch'
 import createTanstackQueryClient from 'openapi-react-query'
-import { components, type paths } from '../../schema'
+import type { paths } from '../../schema'
 import i18n from '../language/i18n'
 import { getConfigFromHtmlFile } from './config'
 import { APIError } from './ErrorDefinition'
 import { getLogin } from './login'
 
 export let apiURL: string
-export let uiURL: string
+export const uiURL: string =
+	window.location.protocol +
+	'//' +
+	window.location.hostname +
+	':' +
+	window.location.port +
+	'/ui'
 if (window.location.pathname.startsWith('/ui')) {
 	apiURL =
 		window.location.protocol +
@@ -26,15 +32,8 @@ if (window.location.pathname.startsWith('/ui')) {
 		':' +
 		window.location.port +
 		'/' +
-		regex.exec(window.location.href)![1]
+		regex.exec(window.location.href)?.[1]
 }
-uiURL =
-	window.location.protocol +
-	'//' +
-	window.location.hostname +
-	':' +
-	window.location.port +
-	'/ui'
 
 export const client = createClient<paths>({ baseUrl: apiURL })
 
@@ -47,7 +46,7 @@ const configObj = getConfigFromHtmlFile()
 function isJsonString(str: string) {
 	try {
 		JSON.parse(str)
-	} catch (e) {
+	} catch (_e) {
 		return false
 	}
 	return true
@@ -56,14 +55,14 @@ function isJsonString(str: string) {
 const authMiddleware: Middleware = {
 	async onRequest({ request }) {
 		const auth = localStorage.getItem('auth') || sessionStorage.getItem('auth')
-		const login = getLogin()
+		const _login = getLogin()
 		Object.entries(HEADER_TO_USE).forEach(([key, value]) => {
 			request.headers.set(key, value)
 		})
 		if (auth && configObj && configObj.basicAuth) {
-			request.headers.set('Authorization', 'Basic ' + auth)
+			request.headers.set('Authorization', `Basic ${auth}`)
 		} else if (auth && configObj && configObj.oidcConfigured) {
-			request.headers.set('Authorization', 'Bearer ' + auth)
+			request.headers.set('Authorization', `Bearer ${auth}`)
 		}
 		return request
 	},
@@ -80,7 +79,7 @@ const authMiddleware: Middleware = {
 					throw new APIError(e)
 				} else {
 					throw new Error(
-						'Request failed: ' + response.body === null
+						`Request failed: ${response.body}` === null
 							? response.statusText
 							: textData,
 					)

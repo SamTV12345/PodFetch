@@ -2,7 +2,6 @@ import * as Popover from '@radix-ui/react-popover'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
-import useCommon from '../store/CommonSlice'
 import { removeHTML } from '../utils/Utilities'
 import 'material-symbols/outlined.css'
 import { useQueryClient } from '@tanstack/react-query'
@@ -149,6 +148,7 @@ export const Notifications: FC = () => {
 					<div className="flex w-full">
 						<div className="grow" />
 						<button
+							type="button"
 							className="border-b-(--border-color) flex active:scale-95
                          text-sm text-(--fg-color) border-[2px] rounded-2xl  pl-2 pr-2 float-right mr-3 mb-3"
 							onClick={() => {

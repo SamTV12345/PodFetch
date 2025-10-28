@@ -2,7 +2,6 @@ import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { components } from '../../schema'
 import { AddTypes } from '../models/AddTypes'
-import { ConfigModel } from '../models/SysInfo'
 
 type AddHeaderProps = {
 	selectedSearchType: AddTypes
