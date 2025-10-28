@@ -34,7 +34,7 @@ pub struct User {
 pub struct UserWithoutPassword {
     pub id: i32,
     pub username: String,
-    pub role: String,
+    pub role: Role,
     pub created_at: NaiveDateTime,
     pub explicit_consent: bool,
 }
@@ -153,7 +153,7 @@ impl User {
             id: user.id,
             explicit_consent: user.explicit_consent,
             username: user.username.clone(),
-            role: user.role.clone(),
+            role: user.role.try_into().unwrap(),
             created_at: user.created_at,
         }
     }

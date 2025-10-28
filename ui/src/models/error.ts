@@ -1,5 +1,5 @@
-type ErrorModel  = {
-    message: string,
-    error: string
-    code: number
+type ErrorModel = {
+	message: string
+	error: string
+	code: number
 }

@@ -1,3 +1,1 @@
-export class SearchLinkBuilder{
-
-}
+export class SearchLinkBuilder {}

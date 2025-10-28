@@ -1,6 +1,6 @@
-import {components} from "../../schema";
+import type { components } from '../../schema'
 
 export interface EpisodesWithOptionalTimeline {
-    podcastEpisode: components["schemas"]["PodcastEpisodeDto"],
-    podcastHistoryItem?: components["schemas"]["EpisodeDto"]
+	podcastEpisode: components['schemas']['PodcastEpisodeDto']
+	podcastHistoryItem?: components['schemas']['EpisodeDto']
 }

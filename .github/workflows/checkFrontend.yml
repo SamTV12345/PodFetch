@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         working-directory: ui
         run: pnpm install
+      - name: Check format
+        working-directory: ui
+        run: biomejs:check
       - name: Test frontend
         working-directory: ui
         run: pnpm run test

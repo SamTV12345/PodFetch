@@ -1,4 +1,4 @@
 export type PodcastSettingsUpdate = {
-    podcastId: number,
-    episodeNumbering: boolean,
+	podcastId: number
+	episodeNumbering: boolean
 }

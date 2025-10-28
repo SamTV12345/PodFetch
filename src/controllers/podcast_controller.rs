@@ -201,26 +201,23 @@ tag="podcasts"
 pub async fn find_podcast(
     Path(podcast_col): Path<(i32, String)>,
     Extension(requester): Extension<User>,
-) -> Result<Json<PodcastSearchReturn>, CustomError> {
+) -> Result<Json<PodcastSearchReturn>, ErrorType> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let (type_of, podcast) = podcast_col;
     match type_of.try_into() {
         Ok(ITunes) => {
-            let res;
-            {
-                log::debug!("Searching for podcast: {podcast}");
-                res = PodcastService::find_podcast(&podcast).await;
-            }
+            log::debug!("Searching for podcast: {podcast}");
+            let res= PodcastService::find_podcast(&podcast).await?;
             Ok(Json(PodcastSearchReturn::Itunes(res)))
         }
         Ok(Podindex) => {
             if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
                 return Err(CustomErrorInner::BadRequest(
                     "Podindex is not configured".to_string(),
-                    ErrorSeverity::Warning,
+                    Warning,
                 )
                 .into());
             }
@@ -648,7 +645,7 @@ use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error, ErrorType};
 use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
 

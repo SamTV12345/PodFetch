@@ -50,6 +50,26 @@ impl ApiError {
             status: StatusCode::UNAUTHORIZED,
         }
     }
+
+    pub fn error_retrieving_itunes() -> Self {
+        ApiError {
+            value: ApiErrorValue {
+                error_code: "ERROR_RETRIEVING_ITUNES_DATA".into(),
+                arguments: HashMap::new(),
+            },
+            status: StatusCode::BAD_GATEWAY,
+        }
+    }
+
+    pub fn error_retrieving_podindex() -> Self {
+        ApiError {
+            value: ApiErrorValue {
+                error_code: "ERROR_RETRIEVING_PODINDEX_DATA".into(),
+                arguments: HashMap::new(),
+            },
+            status: StatusCode::BAD_GATEWAY,
+        }
+    }
 }
 
 pub enum ErrorType {

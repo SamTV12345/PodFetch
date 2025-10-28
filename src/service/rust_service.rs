@@ -15,38 +15,44 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
 use crate::utils::error::ErrorSeverity::{Critical, Error};
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error, ErrorType, ApiError};
 use crate::utils::http_client::get_http_client;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use std::time::SystemTime;
+use reqwest::Response;
 use tokio::task::spawn_blocking;
 
 pub struct PodcastService;
 
 impl PodcastService {
-    pub async fn find_podcast(podcast: &str) -> ItunesWrapper {
+    pub async fn find_podcast(podcast: &str) -> Result<ItunesWrapper, ErrorType> {
         let query = vec![("term", podcast), ("entity", "podcast")];
-        let result = get_http_client()
+        let result: Response = match get_http_client()
             .get(ITUNES_URL)
             .query(&query)
             .send()
-            .await
-            .unwrap();
-        log::info!("Found podcast: {}", result.url());
-        let res_of_search = result.json().await;
+            .await {
+            Ok(res) => res,
+            Err(e)=>{
+                log::error!("Error searching for podcasts on itunes : {}", e);
+                return  Err(ApiError::error_retrieving_itunes().into());
+            }
+        };
 
-        if let Ok(res) = res_of_search {
-            res
-        } else {
-            log::error!(
-                "Error searching for podcast: {}",
-                res_of_search.err().unwrap()
-            );
-            ItunesWrapper::default()
-        }
+
+        log::info!("Found podcast: {}", result.url());
+        let res_of_search = match result.json().await {
+            Ok(res) => Ok(res),
+            Err(e)=>{
+                log::error!("Error deserializing  : {}", e);
+                return Err(ApiError::error_retrieving_itunes().into())
+            }
+        };
+
+        res_of_search
     }
 
     pub async fn find_podcast_on_podindex(podcast: &str) -> Result<PodindexResponse, CustomError> {
@@ -54,13 +60,18 @@ impl PodcastService {
 
         let query = vec![("q", podcast)];
 
-        let result = get_http_client()
+        let result = match get_http_client()
             .get("https://api.podcastindex.org/api/1.0/search/byterm")
             .query(&query)
             .headers(headers)
             .send()
-            .await
-            .map_err(map_reqwest_error)?;
+            .await {
+            Ok(resp)=>resp,
+            Err(e)=>{
+                log::error!("Error searching for podcasts on podindex : {}", e);
+                return Err(CustomErrorInner::BadRequest("Error searching for podcasts on podindex".to_string(), Error).into());
+            }
+        };
 
         log::info!("Found podcast: {}", result.url());
 
