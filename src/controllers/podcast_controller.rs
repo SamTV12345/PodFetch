@@ -757,12 +757,17 @@ pub(crate) async fn proxy_podcast(
         .unwrap();
     let mut resp = client.execute(reqwest_to_make).await.unwrap();
 
-    if resp.status().is_redirection() && let Some(location) = resp.headers().get("Location") {
+    if resp.status().is_redirection()
+        && let Some(location) = resp.headers().get("Location")
+    {
         let redirect_url: String = location.to_str().unwrap().parse().unwrap();
-        resp = client.get(redirect_url).headers(cloned_headers).send().await.expect(
-            "http::Uri to url::Url conversion failed", );
+        resp = client
+            .get(redirect_url)
+            .headers(cloned_headers)
+            .send()
+            .await
+            .expect("http::Uri to url::Url conversion failed");
     }
-
 
     let mut response_builder = Response::builder().status(resp.status());
     *response_builder.headers_mut().unwrap() = resp.headers().clone();
