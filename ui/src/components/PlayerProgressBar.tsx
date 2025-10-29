@@ -3,6 +3,7 @@ import React, {
 	useCallback,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from 'react'
 import useAudioPlayer, { type AudioPlayerPlay } from '../store/AudioPlayerSlice'
@@ -101,7 +102,7 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({
 				setDragPercentage(percentage)
 			}
 		},
-		[wrapperRef.current],
+		[],
 	)
 
 	const handleWrapperClick = useCallback(
@@ -131,11 +132,10 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({
 			}
 		},
 		[
-			isDragging,
-			metadata,
-			currentPodcastEpisode,
-			setCurrentTimeUpdatePercentage,
-			wrapperRef.current,
+			isDragging, 
+			metadata, 
+			currentPodcastEpisode, 
+			setCurrentTimeUpdatePercentage
 		],
 	)
 
@@ -160,7 +160,7 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({
 				setDragPercentage(percentage)
 			})
 		},
-		[isDragging, wrapperRef.current],
+		[isDragging],
 	)
 
 	useEffect(() => {

@@ -29,6 +29,9 @@ jobs:
       - name: Check format
         working-directory: ui
         run: biomejs:check
+      - name: Check linting
+        working-directory: ui
+        run: pnpm run biomejs:lint:check
       - name: Test frontend
         working-directory: ui
         run: pnpm run test

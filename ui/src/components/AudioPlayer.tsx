@@ -18,9 +18,11 @@ export const AudioPlayer: FC<AudioPlayerProps> = ({
 	)
 
 	return (
-		<Activity mode={loadedPodcastEpisode ? 'visible' : 'hidden'}>
-			<DrawerAudioPlayer audioAmplifier={audioAmplifier} />
+		<>
+			<Activity mode={loadedPodcastEpisode ? 'visible' : 'hidden'}>
+				<DrawerAudioPlayer audioAmplifier={audioAmplifier} />
+			</Activity>
 			<HiddenAudioPlayer setAudioAmplifier={setAudioAmplifier} />
-		</Activity>
+		</>
 	)
 }

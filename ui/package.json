@@ -15,10 +15,12 @@
 		"tsc:watch": "tsc --watch --noEmit",
 		"tsc:check": "tsc --noEmit",
 		"test": "vitest",
-		"biomejs:check": "biome check",
+		"biomejs:check": "biome check --error-on-warning",
 		"biomejs:format": "biome format",
 		"biomejs:write": "biome format --write",
 		"biomejs:fix": "biome fix",
+        "biomejs:lint": "biome lint",
+		"biomejs:lint:check": "biome lint --error-on-warning",
 		"generate:types": "npx openapi-typescript  http://localhost:8000/api-docs/openapi.json -o ./schema.d.ts"
 	},
 	"dependencies": {
