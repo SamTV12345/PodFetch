@@ -24,7 +24,7 @@ uuid = {version="1.18.1", features = ["v4", "serde"]}
 libsqlite3-sys = {version = "0.35.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.2", optional = true}
 diesel_migrations = "2.3.0"
-jsonwebtoken = {version="10.1.0", features = ["rust_crypto"]}
+jsonwebtoken = {version="10.2.0", features = ["rust_crypto"]}
 log = "0.4.28"
 futures-util = "0.3.31"
 substring = "1.4.5"
