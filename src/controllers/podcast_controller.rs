@@ -296,7 +296,7 @@ pub async fn add_podcast_by_feed(
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
     if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let mut header_map = HeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());

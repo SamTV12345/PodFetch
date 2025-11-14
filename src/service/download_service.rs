@@ -329,7 +329,9 @@ impl DownloadService {
         }
 
         let write_succesful: Result<(), CustomError> = tag
-            .write_to_path(&paths.filename, tag.version())
+            // Always write ID3v2.4 because otherwise there are compatibility issues with
+            // embedded tags
+            .write_to_path(&paths.filename, id3::Version::Id3v24)
             .map(|_| ())
             .map_err(|e| CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into());
 
