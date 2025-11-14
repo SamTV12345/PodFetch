@@ -15,7 +15,6 @@ import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
 import {$api, client} from '../utils/http'
 import {EditableHeading} from "../components/EditableHeading";
 import {ADMIN_ROLE} from "../models/constants";
-import {Loader2} from "lucide-react";
 import {Loading} from "../components/Loading";
 import {useQueryClient} from "@tanstack/react-query";
 import {components} from "../../schema";
@@ -109,6 +108,7 @@ export const PodcastDetailPage = () => {
             setInfoModalPodcastOpen(false)
         }
     }, []);
+
 
     return (
         <Fragment key={'detail'}>

@@ -4,8 +4,6 @@ import {ConfirmModalProps} from "../components/ConfirmModal";
 import {create} from "zustand";
 import {components} from "../../schema";
 import {AgnosticPodcastDataModel} from "../models/PodcastAddModel";
-import io, {Socket} from "socket.io-client";
-import {ClientToServerEvents, ServerToClientEvents} from "../models/socketioEvents";
 
 export type Podcast = {
     directory: string,
@@ -90,8 +88,7 @@ interface CommonProps {
     setInfoText: (infoText: string) => void,
     setPodcastAlreadyPlayed: (podcastAlreadyPlayed: boolean) => void,
     setPodcastEpisodeAlreadyPlayed: (podcastEpisodeAlreadyPlayed: components["schemas"]["PodcastEpisodeWithHistory"]) => void,
-    isAuthenticated: boolean,
-    socketIo: Socket<ServerToClientEvents, ClientToServerEvents> | undefined
+    isAuthenticated: boolean
 }
 
 const useCommon = create<CommonProps>((set, get) => ({
@@ -160,7 +157,6 @@ const useCommon = create<CommonProps>((set, get) => ({
     tags: [],
     setPodcastTags: (t)=>set({tags: t}),
     isAuthenticated: false,
-    socketIo: undefined
 }))
 
 export default useCommon

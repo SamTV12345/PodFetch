@@ -1,9 +1,5 @@
-import {FC, PropsWithChildren, Suspense, useEffect, useRef, useState} from 'react'
+import {FC, PropsWithChildren, Suspense} from 'react'
 import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 'react-router-dom'
-import {useTranslation} from 'react-i18next'
-import {enqueueSnackbar} from 'notistack'
-import useCommon from './store/CommonSlice'
-import useOpmlImport from './store/opmlImportSlice'
 import {
     EpisodeSearchViewLazyLoad,
     HomepageViewLazyLoad,
@@ -31,9 +27,6 @@ import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
 import {TagsPage} from "./pages/TagsPage";
-import {components} from "../schema";
-import {decodeHTMLEntities} from "./utils/decodingUtilities";
-import {useQueryClient} from "@tanstack/react-query";
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <>
@@ -89,111 +82,6 @@ export const router = createBrowserRouter(createRoutesFromElements(
 })
 
 const App: FC<PropsWithChildren> = ({ children }) => {
-    const { t } = useTranslation()
-    const socket = useCommon(state=>state.socketIo)
-    const setProgress = useOpmlImport(state => state.setProgress)
-    const wasAlreadyRequested = useRef(false);
-    const queryClient = useQueryClient()
-
-    useEffect(() => {
-        if (!socket) {
-            return
-        }
-
-        wasAlreadyRequested.current = true;
-
-
-        socket.on('offlineAvailable', (data) => {
-            if (!data) {
-                return
-            }
-            if (useCommon.getState().currentDetailedPodcastId === data.podcast.id) {
-                enqueueSnackbar(t('new-podcast-episode-added', {name: decodeHTMLEntities(data.podcast_episode.name)}), {variant: 'success'})
-
-                const downloadedPodcastEpisode = data.podcast_episode
-                let res = useCommon.getState().selectedEpisodes
-                    .find(p => p.podcastEpisode.id === downloadedPodcastEpisode.id)
-
-                if (res == undefined) {
-                    // This is a completely new episode
-                    useCommon.getState().setSelectedEpisodes([...useCommon.getState().selectedEpisodes, {
-                        podcastEpisode: downloadedPodcastEpisode
-                    }])
-                }
-
-                let podcastUpdated = useCommon.getState().selectedEpisodes
-                    .map(p => {
-                            if (p.podcastEpisode.id === downloadedPodcastEpisode.id) {
-                                const foundDownload = JSON.parse(JSON.stringify(p)) as components["schemas"]["PodcastEpisodeWithHistory"]
-
-                                foundDownload.podcastEpisode.status = true
-                                foundDownload.podcastEpisode.url = downloadedPodcastEpisode.url
-                                foundDownload.podcastEpisode.local_url = downloadedPodcastEpisode.local_url
-                                foundDownload.podcastEpisode.image_url = downloadedPodcastEpisode.image_url
-                                foundDownload.podcastEpisode.local_image_url = downloadedPodcastEpisode.local_image_url
-
-                                return foundDownload
-                            }
-
-                            return p
-                        }) satisfies  components["schemas"]["PodcastEpisodeWithHistory"][]
-
-                useCommon.getState().setSelectedEpisodes(podcastUpdated)
-            }
-        })
-
-        socket.on('opmlError', (data) => {
-
-            useOpmlImport.getState().setProgress([...useOpmlImport.getState().progress, false])
-            useOpmlImport.getState().setMessages([...useOpmlImport.getState().messages, data.message])
-        })
-
-        socket.on('refreshedPodcast', (data) => {
-            const podcast = data.podcast
-
-            enqueueSnackbar(t('podcast-refreshed', {name: decodeHTMLEntities(podcast.name)}), {variant: 'success'})
-        })
-
-        socket.on('addedEpisodes', (data) => {
-            enqueueSnackbar(t('new-podcast-episode-added', {name: decodeHTMLEntities(data.podcast.name)}), {variant: 'success'})
-        })
-
-        socket.on('addedPodcast', (data) => {
-            const podcast = data.podcast
-
-            for (const cache of queryClient.getQueryCache().getAll()) {
-                if (cache.queryKey[0] === 'get' && (cache.queryKey[1] as string) === '/api/v1/podcasts/search') {
-                    queryClient.setQueryData(cache.queryKey, (oldData: components["schemas"]["PodcastDto"][]) => {
-                        return [podcast, ...oldData]
-                    })
-                }
-            }
-            enqueueSnackbar(t('new-podcast-added', {name: decodeHTMLEntities(podcast.name)}), {variant: 'success'})
-        })
-
-        socket.on('deletedPodcastEpisodeLocally', (data) => {
-            const updatedPodcastEpisodes = useCommon.getState().selectedEpisodes.map(e => {
-                if (e.podcastEpisode.episode_id === data.podcast_episode.episode_id) {
-                    const clonedPodcast = Object.assign({}, data.podcast_episode)
-
-                    clonedPodcast.status = false
-
-                    return {
-                        podcastEpisode: clonedPodcast
-                    }
-                }
-
-                return e
-            })
-
-            enqueueSnackbar(t('podcast-episode-deleted', {name: decodeHTMLEntities(data.podcast_episode.name)}), {variant: 'success'})
-            useCommon.getState().setSelectedEpisodes(updatedPodcastEpisodes)
-        })
-
-        socket.on('opmlAdded', () => {
-            setProgress([...useOpmlImport.getState().progress, true])
-        })
-    }, [socket])
 
     return (
         <Suspense>

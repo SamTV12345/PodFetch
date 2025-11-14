@@ -18,9 +18,10 @@ import '@fontsource/poppins/700.css'
 import '@fontsource/poppins/700-italic.css'
 import './index.css'
 import {client} from "./utils/http";
-import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
+import {QueryClientProvider} from "@tanstack/react-query";
 import {setAuth, setLogin} from "./utils/login";
 import {getConfigFromHtmlFile} from "./utils/config";
+import {queryClient} from "./utils/socketio";
 
 const config = getConfigFromHtmlFile()
 
@@ -148,7 +149,7 @@ if (config) {
 }
 
 
-const queryClient = new QueryClient()
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
         <QueryClientProvider client={queryClient}>

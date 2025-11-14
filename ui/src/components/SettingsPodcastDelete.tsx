@@ -18,6 +18,7 @@ export const SettingsPodcastDelete: FC = () => {
     const queryClient = useQueryClient()
     const [selectedPodcasts, setSelectedPodcasts] = useState<components["schemas"]["PodcastDto"][]>([])
 
+    console.log(queryClient.getQueryCache().getAll())
     const deletePodcast = (withFiles: boolean) => {
         selectedPodcasts.forEach(p=>{
             client.DELETE("/api/v1/podcasts/{id}", {
@@ -32,7 +33,7 @@ export const SettingsPodcastDelete: FC = () => {
             }).then(() => {
                 enqueueSnackbar(t('podcast-deleted', { name: p.name }), { variant: 'success' })
                 for (const queryKey of queryClient.getQueryCache().getAll().map(q=>q.queryKey)) {
-                    if ((queryKey[0] === 'get' && typeof queryKey[1] === 'string' && queryKey[1] == ('/api/v1/podcasts/search'))|| (queryKey[0] === 'get' && typeof queryKey[1] === 'string' && queryKey[1] == ('/api/v1/podcasts'))) {
+                    if ((queryKey[0] === 'get' && typeof queryKey[1] === 'string' && queryKey[1] === '/api/v1/podcasts/search')|| (queryKey[0] === 'get' && typeof queryKey[1] === 'string' && queryKey[1] === '/api/v1/podcasts')) {
                         queryClient.setQueryData(queryKey, (oldData: components["schemas"]["PodcastDto"][]) => {
                             return oldData.filter(pod => pod.id !== p.id)
                         })
