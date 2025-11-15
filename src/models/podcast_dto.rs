@@ -33,23 +33,29 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>, &User)> for PodcastDto {
     fn from(value: (Podcast, Option<Favorite>, Vec<Tag>, &User)) -> Self {
         let favorite = value.1.is_some() && value.1.clone().unwrap().favored;
 
-        let image_url =
-            match FileHandlerType::from(value.0.download_location.clone().unwrap().as_str()) {
-                FileHandlerType::Local => {
-                    format!(
-                        "{}{}",
-                        ENVIRONMENT_SERVICE.get_server_url(),
-                        value.0.image_url
-                    )
-                }
-                FileHandlerType::S3 => {
-                    format!(
-                        "{}/{}",
-                        S3_BUCKET_CONFIG.endpoint.clone(),
-                        &value.0.image_url
-                    )
-                }
-            };
+        let image_url = match FileHandlerType::from(
+            value
+                .0
+                .download_location
+                .clone()
+                .unwrap_or(FileHandlerType::Local.to_string())
+                .as_str(),
+        ) {
+            FileHandlerType::Local => {
+                format!(
+                    "{}{}",
+                    ENVIRONMENT_SERVICE.get_server_url(),
+                    value.0.image_url
+                )
+            }
+            FileHandlerType::S3 => {
+                format!(
+                    "{}/{}",
+                    S3_BUCKET_CONFIG.endpoint.clone(),
+                    &value.0.image_url
+                )
+            }
+        };
 
         let keywords_to_map = value.0.keywords.clone();
         let keywords = keywords_to_map.map(|k| {
