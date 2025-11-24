@@ -93,8 +93,8 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2(csstype@3.1.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       oidc-client-ts:
-        specifier: ^3.3.0
-        version: 3.3.0
+        specifier: ^3.4.1
+        version: 3.4.1
       openapi-fetch:
         specifier: ^0.14.1
         version: 0.14.1
@@ -2197,8 +2197,8 @@ packages:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
 
-  oidc-client-ts@3.3.0:
-    resolution: {integrity: sha512-t13S540ZwFOEZKLYHJwSfITugupW4uYLwuQSSXyKH/wHwZ+7FvgHE7gnNJh1YQIZ1Yd1hKSRjqeXGSUtS0r9JA==}
+  oidc-client-ts@3.4.1:
+    resolution: {integrity: sha512-jNdst/U28Iasukx/L5MP6b274Vr7ftQs6qAhPBCvz6Wt5rPCA+Q/tUmCzfCHHWweWw5szeMy2Gfrm1rITwUKrw==}
     engines: {node: '>=18'}
 
   openapi-fetch@0.14.1:
@@ -4843,7 +4843,7 @@ snapshots:
 
   object-assign@4.1.1: {}
 
-  oidc-client-ts@3.3.0:
+  oidc-client-ts@3.4.1:
     dependencies:
       jwt-decode: 4.0.0
 
