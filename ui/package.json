@@ -46,7 +46,7 @@
     "lucide-react": "^0.553.0",
     "material-symbols": "^0.39.1",
     "notistack": "^3.0.2",
-    "oidc-client-ts": "^3.3.0",
+    "oidc-client-ts": "^3.4.1",
     "openapi-fetch": "^0.14.1",
     "openapi-react-query": "^0.5.0",
     "react": "^19.2.0",
