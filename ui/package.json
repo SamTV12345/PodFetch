@@ -44,7 +44,7 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "javascript-time-ago": "^2.5.12",
     "lucide-react": "^0.554.0",
-    "material-symbols": "^0.39.1",
+    "material-symbols": "^0.40.0",
     "notistack": "^3.0.2",
     "oidc-client-ts": "^3.4.1",
     "openapi-fetch": "^0.14.1",
