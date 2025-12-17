@@ -68,7 +68,7 @@ utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 axum-extra={version = "0.12.2", features = ["cookie", "query"]}
-axum-test = "18.3.0"
+axum-test = "18.4.1"
 socketioxide = "0.18.0"
 mime_guess = "2.0.5"
 indexmap = "2"
@@ -85,7 +85,7 @@ testcontainers-modules = { version = "0.12.1", features = ["postgres","blocking"
 derive_builder = {version = "0.20.2"}
 fake = { version = "4.4.0", features = ["chrono", "url"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
-axum-test = "18.3.0"
+axum-test = "18.4.1"
 
 [profile.release]
 debug = true
