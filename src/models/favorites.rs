@@ -184,9 +184,9 @@ impl Favorite {
             },
         }
 
-        if title.is_some() {
+        if let Some(title) = title {
             use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::name as podcasttitle;
-            query = query.filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+            query = query.filter(podcasttitle.like(format!("%{}%", title)));
         }
 
         let mut matching_podcast_ids: BTreeMap<i32, (Podcast, Favorite, Vec<Tag>)> =
