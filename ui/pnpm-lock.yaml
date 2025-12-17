@@ -87,8 +87,8 @@ importers:
         specifier: ^0.561.0
         version: 0.561.0(react@19.2.0)
       material-symbols:
-        specifier: ^0.40.1
-        version: 0.40.1
+        specifier: ^0.40.2
+        version: 0.40.2
       notistack:
         specifier: ^3.0.2
         version: 3.0.2(csstype@3.2.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -2140,8 +2140,8 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
-  material-symbols@0.40.1:
-    resolution: {integrity: sha512-QI1Lmvfo+djDu3K6N8YqGtXwLCdh3YK0IcTnhZOB77aLQgHTxE6xBXZgV4TpIlipODmz/TFy/wjgEWcl0UwafA==}
+  material-symbols@0.40.2:
+    resolution: {integrity: sha512-QUJF1HztvcpP8pXHPPNESK05Thq/Zy8ub17T2xBDf4+gqx4KBs353lKHuVzE/eCYOtiB9JBlFOU7cjAI6vVMTQ==}
 
   mdn-data@2.12.2:
     resolution: {integrity: sha512-IEn+pegP1aManZuckezWCO+XZQDplx1366JoVhTpMpBB1sPey/SbveZQUosKiKiGYjg1wH4pMlNgXbCiYgihQA==}
@@ -4791,7 +4791,7 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  material-symbols@0.40.1: {}
+  material-symbols@0.40.2: {}
 
   mdn-data@2.12.2: {}
 
