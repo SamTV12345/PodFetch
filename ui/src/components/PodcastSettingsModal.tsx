@@ -11,6 +11,7 @@ import {options} from "./SettingsNaming";
 import {components} from "../../schema";
 import {$api, client} from '../utils/http';
 import {useQueryClient} from "@tanstack/react-query";
+import {generatePodcastDefaultSettings} from "../models/PodcastDefaultSettings";
 
 type PodcastSettingsModalProps = {
     podcast: components["schemas"]["PodcastDto"]
@@ -40,7 +41,6 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({podcast})=>{
 
     return <Dialog.Root onOpenChange={(isOpen)=>{
         if (!isOpen) {
-            console.log("On close")
             updatePodcastSettings.mutate({
                 body: podcastSettings.data!,
                 params: {
@@ -171,34 +171,34 @@ export const PodcastSettingsModal:FC<PodcastSettingsModalProps> = ({podcast})=>{
                             checked={podcastSettings.data ? podcastSettings.data.activated : false}
                             className="xs:justify-self-end" id="activate"
                             onChange={() => {
-                                if (!podcastSettings.data && podcastSettings.isFetched) {
-                                    queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
-                                            params: { path: { id: podcast.id } }
-                                        }], ()=>({
-                                        podcastId: podcast.id,
-                                        episodeNumbering: false,
-                                        autoDownload: false,
-                                        autoUpdate: false,
-                                        autoCleanup: false,
-                                        autoCleanupDays: 0,
-                                        replaceInvalidCharacters: false,
-                                        useExistingFilename: false,
-                                        replacementStrategy: options[0]!.value,
-                                        episodeFormat: "{}",
-                                        podcastFormat: "{}",
-                                        directPaths: false,
-                                        activated: true,
-                                        podcastPrefill: 5,
-                                    }))
+                                if (podcastSettings.data) {
+                                    updatePodcastSettings.mutate({
+                                        body: {
+                                            ...podcastSettings.data,
+                                            activated: !podcastSettings.data.activated
+                                        },
+                                        params: {
+                                            path: {
+                                                id: podcast.id
+                                            },
+                                        }
+                                    })
                                 } else {
-                                    queryClient.setQueryData(['get', '/api/v1/podcasts/{id}/settings', {
-                                        params: { path: { id: podcast.id } }
-                                    }], (oldData: components["schemas"]["PodcastSetting"])=>{
-                                        return {
-                                            ...oldData!,
-                                            activated: !oldData?.activated
-                                        }})
+                                    updatePodcastSettings.mutate({
+                                        body: {
+                                            ...generatePodcastDefaultSettings(podcast.id),
+                                            podcastId: podcast.id,
+                                            activated: true
+                                        },
+                                        params: {
+                                            path: {
+                                                id: podcast.id
+                                            }
+                                        }
+                                    })
                                 }
+                                podcastSettings.refetch()
+
 
                             }}/>
                     </div>
