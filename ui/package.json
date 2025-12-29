@@ -58,7 +58,7 @@
     "react-router-dom": "^7.11.0",
     "react-waypoint": "^10.3.0",
     "sanitize-html": "^2.17.0",
-    "socket.io-client": "^4.8.1",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.4.0",
     "uuid": "^13.0.0",
     "zustand": "^5.0.9"
