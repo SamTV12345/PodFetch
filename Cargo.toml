@@ -57,7 +57,7 @@ id3 = "1.16.3"
 mp4ameta = "0.13.0"
 file-format = "0.28.0"
 maud = { version = "*", features = ["axum","axum-core"] }
-url = "2.5.4"
+url = "2.5.8"
 rust-s3 = { version = "0.36.0", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
 async-trait = "0.1.89"
 axum = { version = "0.8.8", features = ["macros","http2"] }
