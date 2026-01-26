@@ -70,7 +70,7 @@
     "@rsbuild/plugin-sass": "^1.4.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^25.0.9",
-    "@types/react": "^19.2.8",
+    "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@types/sanitize-html": "^2.16.0",
     "@vitejs/plugin-react": "^5.1.2",
