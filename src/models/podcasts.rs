@@ -266,7 +266,7 @@ impl Podcast {
         Ok(())
     }
 
-    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: String) {
+    pub fn update_podcast_urls_on_redirect(podcast_id_to_update: i32, new_url: &str) {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as pid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 

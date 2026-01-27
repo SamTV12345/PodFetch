@@ -308,14 +308,14 @@ impl EnvironmentService {
     fn handle_telegram_config() -> Option<TelegramConfig> {
         if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
             let telegram_bot_token = var(TELEGRAM_BOT_TOKEN).ok().unwrap_or_else(|| {
-                    log::error!("Telegram bot token not configured");
-                    std::process::exit(1);
-                });
+                log::error!("Telegram bot token not configured");
+                std::process::exit(1);
+            });
 
             let telegram_chat_id = var(TELEGRAM_BOT_CHAT_ID).ok().unwrap_or_else(|| {
-                    log::error!("Telegram chat id not configured");
-                    std::process::exit(1);
-                });
+                log::error!("Telegram chat id not configured");
+                std::process::exit(1);
+            });
 
             Some(TelegramConfig {
                 telegram_bot_token,
