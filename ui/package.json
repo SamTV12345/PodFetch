@@ -75,7 +75,7 @@
     "@types/sanitize-html": "^2.16.0",
     "@vitejs/plugin-react": "^5.1.2",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
-    "happy-dom": "^20.3.3",
+    "happy-dom": "^20.3.9",
     "jsdom": "^27.4.0",
     "openapi-typescript": "^7.10.1",
     "postcss": "^8.5.6",
