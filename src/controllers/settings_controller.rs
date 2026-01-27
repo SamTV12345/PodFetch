@@ -250,8 +250,8 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, type_of: Mode, requester: &User) -
     let mut body = add_body();
     for podcast in podcasts_found {
         let mut outline = XMLElement::new("outline");
-        if podcast.summary.is_some() {
-            outline.add_attribute("text", &podcast.summary.unwrap());
+        if let Some(summary) = podcast.summary {
+            outline.add_attribute("text", &summary);
         }
         outline.add_attribute("title", &podcast.name);
         outline.add_attribute("type", "rss");

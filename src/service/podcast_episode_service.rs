@@ -123,7 +123,7 @@ impl PodcastEpisodeService {
                     );
                     Podcast::update_podcast_urls_on_redirect(
                         podcast.id,
-                        returned_data_from_podcast_insert.url,
+                        &returned_data_from_podcast_insert.url,
                     );
                     Self::update_episodes_on_redirect(channel.items())?;
                 }
@@ -244,11 +244,9 @@ impl PodcastEpisodeService {
     }
 
     fn handle_itunes_extension(podcast: &Podcast, channel: &Channel) -> Result<(), CustomError> {
-        if channel.itunes_ext.is_some() {
-            let extension = channel.itunes_ext.clone().unwrap();
-
-            if extension.new_feed_url.is_some() {
-                let new_url = extension.new_feed_url.unwrap();
+        if let Some(extension) = &channel.itunes_ext
+            && let Some(new_feed) = &extension.new_feed_url {
+                let new_url = new_feed;
                 Podcast::update_podcast_urls_on_redirect(podcast.id, new_url);
 
                 let returned_data_from_server =
@@ -259,7 +257,6 @@ impl PodcastEpisodeService {
                 let items = channel.items();
                 Self::update_episodes_on_redirect(items)?;
             }
-        }
         Ok(())
     }
 
