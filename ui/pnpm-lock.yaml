@@ -81,8 +81,8 @@ importers:
         specifier: ^8.2.0
         version: 8.2.0
       javascript-time-ago:
-        specifier: ^2.5.12
-        version: 2.5.12
+        specifier: ^2.6.2
+        version: 2.6.2
       lucide-react:
         specifier: ^0.563.0
         version: 0.563.0(react@19.2.3)
@@ -2052,8 +2052,8 @@ packages:
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
 
-  javascript-time-ago@2.5.12:
-    resolution: {integrity: sha512-s8PPq2HQ3HIbSU0SjhNvTitf5VoXbQWof9q6k3gIX7F2il0ptjD5lONTDccpuKt/2U7RjbCp/TCHPK7eDwO7zQ==}
+  javascript-time-ago@2.6.2:
+    resolution: {integrity: sha512-gagMB4fetS1M1ZHaxQ9kX2amORXa5Los5PGh8NZzWSKrytz43KnpJlaPFTXbg/R7iPMN7U/6MoevgxqJ0QQ5lA==}
 
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
@@ -2426,8 +2426,8 @@ packages:
   regenerator-runtime@0.14.1:
     resolution: {integrity: sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==}
 
-  relative-time-format@1.1.10:
-    resolution: {integrity: sha512-COfWDanAXxT+6s33IiCac7MNIpHhSUI5qmqVDydskOiApQsoSl0PF3V+b3HLbVrc2YJKcwinF6+7K4GFN+Picg==}
+  relative-time-format@1.1.11:
+    resolution: {integrity: sha512-TH+oV/w77hjaB9xCzoFYJ/Icmr/12+02IAoCI/YGS2UBTbjCbBjHGEBxGnVy4EJvOR1qadGzyFRI6hGaJJG93Q==}
 
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
@@ -4765,9 +4765,9 @@ snapshots:
 
   is-potential-custom-element-name@1.0.1: {}
 
-  javascript-time-ago@2.5.12:
+  javascript-time-ago@2.6.2:
     dependencies:
-      relative-time-format: 1.1.10
+      relative-time-format: 1.1.11
 
   jiti@2.6.1: {}
 
@@ -5100,7 +5100,7 @@ snapshots:
 
   regenerator-runtime@0.14.1: {}
 
-  relative-time-format@1.1.10: {}
+  relative-time-format@1.1.11: {}
 
   require-from-string@2.0.2: {}
 

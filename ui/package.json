@@ -42,7 +42,7 @@
     "framer-motion": "^12.29.2",
     "i18next": "^25.8.0",
     "i18next-browser-languagedetector": "^8.2.0",
-    "javascript-time-ago": "^2.5.12",
+    "javascript-time-ago": "^2.6.2",
     "lucide-react": "^0.563.0",
     "material-symbols": "^0.40.2",
     "notistack": "^3.0.2",
