@@ -21,6 +21,7 @@ use diesel::{
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
 };
 use diesel::{ExpressionMethods, JoinOnDsl};
+use rand::RngExt;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -362,7 +363,6 @@ impl Episode {
             return Err(CustomErrorInner::NotFound(Warning).into());
         }
 
-        use rand::Rng;
         let mut rng = rand::rng();
 
         let id = rng.random_range(0..1000000);

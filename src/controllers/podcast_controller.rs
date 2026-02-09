@@ -16,7 +16,7 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json, debug_handler};
 use axum_extra::extract::OptionalQuery;
 use opml::{OPML, Outline};
-use rand::Rng;
+use rand::RngExt;
 use rand::rngs::ThreadRng;
 use rss::Channel;
 use serde_json::{Value, from_str};
