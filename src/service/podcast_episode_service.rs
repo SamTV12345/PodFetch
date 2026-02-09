@@ -245,18 +245,17 @@ impl PodcastEpisodeService {
 
     fn handle_itunes_extension(podcast: &Podcast, channel: &Channel) -> Result<(), CustomError> {
         if let Some(extension) = &channel.itunes_ext
-            && let Some(new_feed) = &extension.new_feed_url {
-                let new_url = new_feed;
-                Podcast::update_podcast_urls_on_redirect(podcast.id, new_url);
+            && let Some(new_feed) = &extension.new_feed_url
+        {
+            let new_url = new_feed;
+            Podcast::update_podcast_urls_on_redirect(podcast.id, new_url);
 
-                let returned_data_from_server =
-                    Self::do_request_to_podcast_server(podcast.clone())?;
+            let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone())?;
 
-                let channel =
-                    Channel::read_from(returned_data_from_server.content.as_bytes()).unwrap();
-                let items = channel.items();
-                Self::update_episodes_on_redirect(items)?;
-            }
+            let channel = Channel::read_from(returned_data_from_server.content.as_bytes()).unwrap();
+            let items = channel.items();
+            Self::update_episodes_on_redirect(items)?;
+        }
         Ok(())
     }
 
