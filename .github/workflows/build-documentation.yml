@@ -15,7 +15,7 @@ jobs:
         steps:
         - uses: actions/checkout@v2
         - name: Install mdBook
-          uses: peaceiris/actions-mdbook@v1
+          uses: peaceiris/actions-mdbook@v2
         - name: Build mdBook
           run: mdbook build
           working-directory: docs
