@@ -84,7 +84,7 @@ pub async fn get_podcast_episode_by_id(
 ) -> Result<Json<PodcastEpisodeWithHistory>, CustomError> {
     let res = PodcastEpisodeService::get_podcast_episode_by_id(&id)?;
     if res.is_none() {
-        return Err(CustomErrorInner::NotFound.into());
+        return Err(CustomErrorInner::NotFound(Warning).into());
     }
 
     let podcast_inner = res.clone().unwrap();
