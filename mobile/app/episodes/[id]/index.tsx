@@ -4,9 +4,13 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import {router} from "expo-router";
 import Heading2 from "@/components/text/Heading2";
 import {$api} from "@/client";
+import {useStore} from "@/store/store";
 
 export default function () {
-    const {} = $api.useQuery("get", "/api/v1/info")
+    const serverUrl = useStore((state) => state.serverUrl);
+    const {} = $api.useQuery("get", "/api/v1/info", {}, {
+        enabled: !!serverUrl,
+    })
     const podcastDetailedData = {
         data: {
             name: "test"

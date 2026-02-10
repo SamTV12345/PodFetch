@@ -9,14 +9,13 @@ import {PodcastEpisodeSlide} from "@/components/PodcastEpisodeSlide";
 import { router } from 'expo-router';
 import {useTranslation} from "react-i18next";
 import {useDetailsPodcast} from "@/hooks/useDetailsPodcast";
+import {AudioPlayer} from "@/components/AudioPlayer";
 
 export default function () {
     const {podcastDetailedData, dataEpisodes, updateFavored} = useDetailsPodcast()
     const {t} = useTranslation()
 
-
-
-    return <SafeAreaView>
+    return <SafeAreaView style={{flex: 1}}>
         <ScrollView overScrollMode="never">
                 <MaterialIcons size={40} color="white" name="chevron-left" style={{
                     position: 'absolute',
@@ -46,14 +45,14 @@ export default function () {
                     {
                         podcastDetailedData.data.favorites ? <AntDesign name="heart" size={24} color="red" onPress={()=>{
                             updateFavored.mutate({})
-                        }} /> : <AntDesign name="hearto" onPress={()=>{
+                        }} /> : <AntDesign name="heart" onPress={()=>{
                             updateFavored.mutate({})
                         }}/>
                     }
                     <Link href={{pathname: "/podcasts/[id]/info", params: {
                                 id: podcastDetailedData.data.id
                             }}}>
-                        <AntDesign name="infocirlce" size={24} color="white" />
+                        <AntDesign name="info-circle" size={24} color="white" />
                     </Link>
                     <Entypo name="share-alternative" size={24} color="white" onPress={()=>{
                        Share.share({
@@ -73,5 +72,6 @@ export default function () {
             </>
         }
         </ScrollView>
+        <AudioPlayer bottomOffset={20} />
     </SafeAreaView>
 }

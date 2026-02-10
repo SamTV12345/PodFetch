@@ -3,38 +3,31 @@ import {Image, Pressable, Text, View} from "react-native";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import {styles} from "@/styles/styles";
 import Svg, {Circle} from "react-native-svg";
-import {useCallback, useEffect, useMemo, useRef} from "react";
+import {useCallback, useMemo} from "react";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {useTranslation} from "react-i18next";
 import {router} from 'expo-router';
-import {$api} from "@/client";
-import {createAudioPlayer} from 'expo-audio';
+import {useStore} from "@/store/store";
 
 type PodcastEpisodeSlideProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
 }
 
 type ProgressCircleProps = {
-    episode: components["schemas"]["PodcastEpisodeWithHistory"]
     progress?: number,
     onPlayPress: () => void,
+    isPlaying?: boolean,
+    isCurrentEpisode?: boolean,
 }
 
-type PlaybackStatus = {
-    isLoaded: boolean;
-    error?: string;
-    isPlaying?: boolean;
-    isBuffering?: boolean;
-    didJustFinish?: boolean;
-    positionMillis?: number;
-    durationMillis?: number;
-}
-
-const ProgressCircle = ({progress = 50, episode, onPlayPress}: ProgressCircleProps) => {
+const ProgressCircle = ({progress = 50, onPlayPress, isPlaying = false, isCurrentEpisode = false}: ProgressCircleProps) => {
     const radius = 15;
     const strokeWidth = 1;
     const circumference = 2 * Math.PI * radius;
     const progressStroke = (progress / 100) * circumference;
+
+    // Zeige Pause-Icon wenn diese Episode gerade spielt
+    const showPauseIcon = isCurrentEpisode && isPlaying;
 
     return (
         <View style={{position: 'relative', height: 35, width: 35}}>
@@ -66,7 +59,7 @@ const ProgressCircle = ({progress = 50, episode, onPlayPress}: ProgressCirclePro
                 }}
                 onPress={onPlayPress}
             >
-                <FontAwesome name="play" color="white"/>
+                <FontAwesome name={showPauseIcon ? "pause" : "play"} color="white"/>
             </Pressable>
         </View>
     );
@@ -74,6 +67,13 @@ const ProgressCircle = ({progress = 50, episode, onPlayPress}: ProgressCirclePro
 
 export const PodcastEpisodeSlide = ({episode}: PodcastEpisodeSlideProps) => {
     const {t} = useTranslation();
+    const playEpisode = useStore(state => state.playEpisode);
+    const currentEpisode = useStore(state => state.podcastEpisodeRecord);
+    const isPlaying = useStore(state => state.isPlaying);
+    const audioPlayer = useStore(state => state.audioPlayer);
+    const setIsPlaying = useStore(state => state.setIsPlaying);
+
+    const isCurrentEpisode = currentEpisode?.podcastEpisode.episode_id === episode.podcastEpisode.episode_id;
 
     const totalProgressPercentage = useMemo(() => {
         return ((episode.podcastHistoryItem?.position || 0) /
@@ -97,34 +97,23 @@ export const PodcastEpisodeSlide = ({episode}: PodcastEpisodeSlideProps) => {
         };
     }, [episode]);
 
-    const episodeQuery = $api.useQuery("get", "/api/v1/podcasts/episode/{id}", {
-        params: {
-            path: {
-                id: episode.podcastEpisode.episode_id
+    const handlePlay = useCallback(() => {
+        console.log("Playing episode:", episode.podcastEpisode.name);
+
+        // Wenn diese Episode bereits geladen ist, nur Play/Pause toggeln
+        if (isCurrentEpisode && audioPlayer) {
+            if (isPlaying) {
+                audioPlayer.pause();
+                setIsPlaying(false);
+            } else {
+                audioPlayer.play();
+                setIsPlaying(true);
             }
-        },
-        enabled: false
-    });
-
-    const handlePlaybackStatus = useCallback((status: PlaybackStatus) => {
-        if (!status.isLoaded) {
-            if (status.error) {
-                console.error(`Playback error: ${status.error}`);
-            }
-            return;
+        } else {
+            // Neue Episode starten
+            playEpisode(episode.podcastEpisode);
         }
-
-        // Hier können Sie den Wiedergabestatus in Ihrem globalen Zustand aktualisieren
-    }, []);
-
-    const handlePlay = useCallback(async () => {
-        const result = await episodeQuery.refetch();
-        if (result.isSuccess) {
-            const player = createAudioPlayer(episode.podcastEpisode.local_url);
-            player.play();
-            player.addListener('playbackStatusUpdate', handlePlaybackStatus);
-        }
-    }, [episode, episodeQuery]);
+    }, [episode, playEpisode, isCurrentEpisode, audioPlayer, isPlaying, setIsPlaying]);
 
     return (
         <View style={{marginBottom: 10}}>
@@ -137,7 +126,7 @@ export const PodcastEpisodeSlide = ({episode}: PodcastEpisodeSlideProps) => {
                         />
                         {totalProgressPercentage === 100 && (
                             <AntDesign
-                                name="checkcircle"
+                                name="check-circle"
                                 size={24}
                                 color="white"
                                 style={{position: 'absolute', bottom: 1}}
@@ -175,8 +164,9 @@ export const PodcastEpisodeSlide = ({episode}: PodcastEpisodeSlideProps) => {
                     }}>
                         <ProgressCircle
                             progress={totalProgressPercentage}
-                            episode={episode}
                             onPlayPress={handlePlay}
+                            isPlaying={isPlaying}
+                            isCurrentEpisode={isCurrentEpisode}
                         />
                         <Text style={{
                             color: 'white',

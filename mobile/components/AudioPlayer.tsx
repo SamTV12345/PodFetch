@@ -1,30 +1,158 @@
-import {Image, ScrollView, Text, View} from "react-native";
+import {Image, Pressable, Text, View} from "react-native";
 import {styles} from "@/styles/styles";
 import {useStore} from "@/store/store";
-import {AntDesign} from "@expo/vector-icons";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import {Ionicons} from "@expo/vector-icons";
+import {router} from 'expo-router';
+import {useCallback, useState} from 'react';
 
-export const AudioPlayer = ()=>{
-    const selectedPodcastEpisode = useStore(state=>state.podcastEpisodeRecord)
-    const changeAudioState = useStore(state=>state.togglePlaying)
-    const playingAudio = useStore(state=>state.isPlaying)
-    const audioPercent = useStore(state=>state.audioProgress)
+type AudioPlayerProps = {
+    /** Abstand vom unteren Rand - default 80 für Tabs, 20 für andere Seiten */
+    bottomOffset?: number;
+};
 
+/**
+ * Mini Audio Player Bar - zeigt nur die UI an.
+ * Der eigentliche Audio-Player wird vom AudioProvider verwaltet.
+ */
+export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
+    const selectedPodcastEpisode = useStore(state => state.podcastEpisodeRecord);
+    const isPlaying = useStore(state => state.isPlaying);
+    const audioPercent = useStore(state => state.audioProgress);
+    const audioPlayer = useStore(state => state.audioPlayer);
+    const setIsPlaying = useStore(state => state.setIsPlaying);
 
-    return selectedPodcastEpisode?<View style={{bottom: '3%', width: '90%', backgroundColor: styles.darkColor, display: 'flex', flexDirection: 'row', position: 'relative', marginLeft: 'auto', marginRight: 'auto'}}>
-        <View style={{width: `${audioPercent}%`, backgroundColor: 'white', height: 2, position: 'absolute', borderTopLeftRadius: 20, borderTopRightRadius: 20}}></View>
-        <View style={{width: '100%', backgroundColor: styles.gray, height: 2, position: 'absolute', borderTopLeftRadius: 20, borderTopRightRadius: 20}}></View>
-        <Image src={selectedPodcastEpisode?.podcastEpisode.local_image_url} style={{width: 40, height: 40,alignSelf: 'center', marginLeft: 10, marginTop: 10}}/>
-        <View style={{flexDirection: 'column', marginTop: 10, width: '90%'}}>
-            <ScrollView horizontal style={{ marginLeft: 10, marginRight: 80}} overScrollMode="never">
-                <Text style={{color: 'white', fontSize: 15 }}>{selectedPodcastEpisode?.podcastEpisode.name}</Text>
-            </ScrollView>
-            <Text style={{color: styles.gray, fontSize: 13, marginRight: 85, marginLeft: 10, }} numberOfLines={1}>{selectedPodcastEpisode?.podcast.name}</Text>
-        </View>
-        <View style={{position: 'absolute', right: 10, alignSelf: 'center', paddingTop: 10, display: 'flex', flexDirection: 'row', gap: 3}}>
-            <MaterialIcons name="ios-share" color="white" size={20}/>
-            {playingAudio ? <AntDesign name="pause" size={20} color="white" onPress={()=>changeAudioState()}/>:  <AntDesign size={20} name="caretright" color="white" onPress={()=>changeAudioState()}/>}
-        </View>
-    </View>: <View>
-    </View>
-}
+    const [isToggling, setIsToggling] = useState(false);
+
+    const handleTogglePlay = useCallback((e: any) => {
+        e.stopPropagation();
+
+        if (isToggling || !audioPlayer) return;
+        setIsToggling(true);
+
+        if (isPlaying) {
+            audioPlayer.pause();
+            setIsPlaying(false);
+        } else {
+            audioPlayer.play();
+            setIsPlaying(true);
+        }
+
+        setTimeout(() => setIsToggling(false), 300);
+    }, [isPlaying, audioPlayer, setIsPlaying, isToggling]);
+
+    const handleOpenFullscreen = () => {
+        router.push('/player');
+    };
+
+    if (!selectedPodcastEpisode) {
+        return null;
+    }
+
+    return (
+        <Pressable
+            onPress={handleOpenFullscreen}
+            style={{
+                position: 'absolute',
+                bottom: bottomOffset,
+                left: 10,
+                right: 10,
+                backgroundColor: styles.darkColor,
+                borderRadius: 12,
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 8,
+            }}
+        >
+            {/* Progress Bar - oben */}
+            <View style={{
+                height: 3,
+                backgroundColor: styles.gray,
+                width: '100%',
+            }}>
+                <View style={{
+                    height: '100%',
+                    width: `${audioPercent}%`,
+                    backgroundColor: styles.accentColor,
+                }}/>
+            </View>
+
+            {/* Content */}
+            <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: 10,
+                paddingLeft: 12,
+                paddingRight: 12,
+            }}>
+                {/* Album Art */}
+                <Image
+                    source={{uri: selectedPodcastEpisode.podcastEpisode.local_image_url}}
+                    style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 6,
+                    }}
+                />
+
+                {/* Text Content */}
+                <View style={{
+                    flex: 1,
+                    marginLeft: 12,
+                    marginRight: 12,
+                    justifyContent: 'center',
+                }}>
+                    <Text
+                        style={{
+                            color: 'white',
+                            fontSize: 14,
+                            fontWeight: '600',
+                        }}
+                        numberOfLines={1}
+                    >
+                        {selectedPodcastEpisode.podcastEpisode.name}
+                    </Text>
+                    <Text
+                        style={{
+                            color: styles.gray,
+                            fontSize: 12,
+                            marginTop: 2,
+                        }}
+                        numberOfLines={1}
+                    >
+                        {selectedPodcastEpisode.podcast?.name || ''}
+                    </Text>
+                </View>
+
+                {/* Controls */}
+                <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 16,
+                }}>
+                    {/* Play/Pause Button */}
+                    <Pressable
+                        onPress={handleTogglePlay}
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: 'white',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}
+                    >
+                        {isPlaying ? (
+                            <Ionicons name="pause" size={20} color={styles.darkColor} />
+                        ) : (
+                            <Ionicons name="play" size={20} color={styles.darkColor} style={{marginLeft: 2}} />
+                        )}
+                    </Pressable>
+                </View>
+            </View>
+        </Pressable>
+    );
+};
+

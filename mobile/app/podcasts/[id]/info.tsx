@@ -3,15 +3,19 @@ import {$api} from "@/client";
 import {ScrollView, Text, View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import {useStore} from "@/store/store";
 
 export default function () {
     const { id } = useLocalSearchParams();
+    const serverUrl = useStore((state) => state.serverUrl);
     const {data, isLoading, error} = $api.useQuery('get', '/api/v1/podcasts/{id}', {
         params: {
             path: {
                 id: id as string
             }
         }
+    }, {
+        enabled: !!serverUrl,
     })
 
     return <SafeAreaView>

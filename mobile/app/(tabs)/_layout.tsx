@@ -44,6 +44,10 @@ export default function TabLayout() {
                   <IconSymbol size={20} name={"bookmark.fill"} color={ pathname == "/library"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
                   <ThemedText style={{color: pathname == "/library"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('library')}</ThemedText>
               </TabTrigger>
+              <TabTrigger name="settings" href="/(tabs)/settings"  style={{flexDirection: 'column', display: 'flex'}}>
+                  <IconSymbol size={20} name={"gearshape.fill"} color={ pathname == "/settings"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
+                  <ThemedText style={{color: pathname == "/settings"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('settings')}</ThemedText>
+              </TabTrigger>
           </TabList>
       </Tabs>
   );

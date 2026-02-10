@@ -9,10 +9,16 @@ import Heading2 from "@/components/text/Heading2";
 import {LoadingSkeleton} from "@/components/ui/LoadingSkeleton";
 import {PodcastCard} from "@/components/PodcastCard";
 import {PodcastEpisodeCard} from "@/components/PodcastEpisodeCard";
+import {useStore} from "@/store/store";
 
 const HomeScreen = () => {
-    const {data, isLoading} = $api.useQuery('get', '/api/v1/podcasts')
-    const lastWatchedData = $api.useQuery('get', '/api/v1/podcasts/episode/lastwatched')
+    const serverUrl = useStore((state) => state.serverUrl);
+    const {data, isLoading, error} = $api.useQuery('get', '/api/v1/podcasts', {}, {
+        enabled: !!serverUrl,
+    })
+    const lastWatchedData = $api.useQuery('get', '/api/v1/podcasts/episode/lastwatched', {}, {
+        enabled: !!serverUrl,
+    })
     const {t} = useTranslation()
 
     return (
@@ -41,7 +47,7 @@ const HomeScreen = () => {
                     <View style={{display: 'flex', gap: 10, flexDirection: 'row'}}>
                         {
                             lastWatchedData.data && lastWatchedData.data.map(d => {
-                                return <PodcastEpisodeCard podcastEpisode={d} key={d.id}/>
+                                return <PodcastEpisodeCard podcastEpisode={d} key={"lastWatched"+d.id}/>
                             })
                         }
                     </View>

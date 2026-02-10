@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -13,6 +13,8 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import {styles} from "@/styles/styles";
+import { useStore } from '@/store/store';
+import { AudioProvider } from '@/components/AudioProvider';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -22,6 +24,10 @@ const queryClient = new QueryClient()
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const segments = useSegments();
+  const serverUrl = useStore((state) => state.serverUrl);
+
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -31,6 +37,21 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // Redirect based on server URL configuration
+  useEffect(() => {
+    if (!loaded) return;
+
+    const inServerSetup = segments[0] === 'server-setup';
+
+    if (!serverUrl && !inServerSetup) {
+      // No server configured, redirect to setup
+      router.replace('/server-setup');
+    } else if (serverUrl && inServerSetup) {
+      // Server configured, redirect to main app
+      router.replace('/(tabs)');
+    }
+  }, [serverUrl, segments, loaded]);
 
   if (!loaded) {
     return null
@@ -47,13 +68,17 @@ export default function RootLayout() {
          text: styles.white,
        },
     }}>
+      <AudioProvider>
       <Stack>
+        <Stack.Screen name="server-setup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="podcasts/[id]/info" options={{headerShown: false}} />
         <Stack.Screen name="podcasts/[id]/details" options={{headerShown: false}} />
         <Stack.Screen name="episodes/[id]/index" options={{headerShown: false}} />
+        <Stack.Screen name="player" options={{headerShown: false, presentation: 'modal'}} />
       </Stack>
+      </AudioProvider>
       <StatusBar style="light" backgroundColor="#000" />
     </ThemeProvider>
       </QueryClientProvider>
