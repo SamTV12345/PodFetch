@@ -8,6 +8,8 @@ import {router} from 'expo-router';
 import {useTranslation} from "react-i18next";
 import Slider from '@react-native-community/slider';
 import {useState, useCallback} from 'react';
+import { DownloadButton, DownloadStatusIcon } from "@/components/DownloadButton";
+import { useEpisodeDownload } from "@/hooks/useDownloads";
 
 const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -144,9 +146,15 @@ export default function PlayerScreen() {
 
             {/* Episode Info */}
             <View style={{paddingHorizontal: 30, marginBottom: 20}}>
-                <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}} numberOfLines={2}>
-                    {selectedPodcastEpisode.podcastEpisode.name}
-                </Text>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                    <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold', flex: 1}} numberOfLines={2}>
+                        {selectedPodcastEpisode.podcastEpisode.name}
+                    </Text>
+                    <DownloadStatusIcon
+                        episodeId={selectedPodcastEpisode.podcastEpisode.episode_id}
+                        size={20}
+                    />
+                </View>
                 <Text style={{color: styles.gray, fontSize: 16, marginTop: 5}}>
                     {selectedPodcastEpisode.podcast?.name || ''}
                 </Text>
@@ -281,6 +289,30 @@ export default function PlayerScreen() {
 
                             {/* Options */}
                             <View style={{paddingHorizontal: 20, paddingBottom: 40}}>
+                                {/* Download */}
+                                {selectedPodcastEpisode.podcast && (
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            paddingVertical: 15,
+                                            borderTopWidth: 1,
+                                            borderTopColor: styles.gray,
+                                        }}
+                                    >
+                                        <Ionicons name="download-outline" size={22} color="white"/>
+                                        <Text style={{color: 'white', fontSize: 16, marginLeft: 15, flex: 1}}>
+                                            {t('download')}
+                                        </Text>
+                                        <DownloadButton
+                                            episode={selectedPodcastEpisode.podcastEpisode}
+                                            podcast={selectedPodcastEpisode.podcast}
+                                            size={24}
+                                            showProgress={true}
+                                        />
+                                    </View>
+                                )}
+
                                 {/* Share */}
                                 <Pressable
                                     style={{

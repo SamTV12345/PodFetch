@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -12,9 +12,11 @@ import {
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAutoSync } from '@/hooks/useSync';
 import {styles} from "@/styles/styles";
 import { useStore } from '@/store/store';
 import { AudioProvider } from '@/components/AudioProvider';
+import { AudioPlayer } from '@/components/AudioPlayer';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -26,7 +28,16 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const segments = useSegments();
+  const pathname = usePathname();
   const serverUrl = useStore((state) => state.serverUrl);
+
+  // Prüfe ob wir auf einer Tab-Seite sind (wo die TabBar sichtbar ist)
+  const isTabScreen = segments[0] === '(tabs)';
+  // Auf Tab-Seiten brauchen wir mehr Abstand für die TabBar
+  const audioPlayerBottomOffset = isTabScreen ? 85 : 30;
+
+  // Starte automatische Synchronisation für Offline-Daten
+  useAutoSync(30000); // Alle 30 Sekunden prüfen
 
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -78,6 +89,10 @@ export default function RootLayout() {
         <Stack.Screen name="episodes/[id]/index" options={{headerShown: false}} />
         <Stack.Screen name="player" options={{headerShown: false, presentation: 'modal'}} />
       </Stack>
+      {/* Globaler AudioPlayer - nur anzeigen wenn nicht im Player-Modal oder Server-Setup */}
+      {pathname !== '/player' && pathname !== '/server-setup' && (
+        <AudioPlayer bottomOffset={audioPlayerBottomOffset} />
+      )}
       </AudioProvider>
       <StatusBar style="light" backgroundColor="#000" />
     </ThemeProvider>

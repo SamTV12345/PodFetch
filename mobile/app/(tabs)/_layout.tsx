@@ -5,7 +5,6 @@ import {styles} from "@/styles/styles";
 import {IconSymbol} from "@/components/ui/IconSymbol";
 import {ThemedText} from "@/components/ThemedText";
 import {usePathname} from "expo-router";
-import {AudioPlayer} from "@/components/AudioPlayer";
 
 
 export default function TabLayout() {
@@ -17,7 +16,6 @@ export default function TabLayout() {
     return (
       <Tabs>
           <TabSlot />
-          <AudioPlayer/>
           <TabList style={{
               backgroundColor: styles.darkColor,
               width: '90%',
@@ -40,9 +38,9 @@ export default function TabLayout() {
                   <IconSymbol size={20} name={"magnifyingglass.circle"} color={ pathname == "/search"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
                   <ThemedText style={{color: pathname == "/search"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('search')}</ThemedText>
               </TabTrigger>
-              <TabTrigger name="library" href="/(tabs)/library"  style={{flexDirection: 'column', display: 'flex'}}>
-                  <IconSymbol size={20} name={"bookmark.fill"} color={ pathname == "/library"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
-                  <ThemedText style={{color: pathname == "/library"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('library')}</ThemedText>
+              <TabTrigger name="downloads" href="/(tabs)/downloads"  style={{flexDirection: 'column', display: 'flex'}}>
+                  <IconSymbol size={20} name={"arrow.down.circle.fill"} color={ pathname == "/downloads"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
+                  <ThemedText style={{color: pathname == "/downloads"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('downloads')}</ThemedText>
               </TabTrigger>
               <TabTrigger name="settings" href="/(tabs)/settings"  style={{flexDirection: 'column', display: 'flex'}}>
                   <IconSymbol size={20} name={"gearshape.fill"} color={ pathname == "/settings"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />

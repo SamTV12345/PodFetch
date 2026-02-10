@@ -22,6 +22,10 @@ type ZustandStore = {
     serverUrl: string | null,
     setServerUrl: (url: string) => void,
     clearServerUrl: () => void,
+    // Offline mode
+    offlineMode: boolean,
+    setOfflineMode: (enabled: boolean) => void,
+    toggleOfflineMode: () => void,
 }
 
 const db =  SQLite.openDatabaseSync('podfetch.db')
@@ -132,6 +136,9 @@ export const useStore = create<ZustandStore>()(
             serverUrl: null,
             setServerUrl: (url) => set({ serverUrl: url }),
             clearServerUrl: () => set({ serverUrl: null }),
+            offlineMode: false,
+            setOfflineMode: (enabled) => set({ offlineMode: enabled }),
+            toggleOfflineMode: () => set((state) => ({ offlineMode: !state.offlineMode })),
         }),
         {
             name: 'podfetch-storage', // name of the item in the storage (must be unique)
@@ -139,6 +146,7 @@ export const useStore = create<ZustandStore>()(
             // Only persist serializable fields
             partialize: (state) => ({
                 serverUrl: state.serverUrl,
+                offlineMode: state.offlineMode,
             }),
         },
     ),

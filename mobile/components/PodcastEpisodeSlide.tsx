@@ -8,9 +8,11 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import {useTranslation} from "react-i18next";
 import {router} from 'expo-router';
 import {useStore} from "@/store/store";
+import { DownloadButton, DownloadStatusIcon } from "@/components/DownloadButton";
 
 type PodcastEpisodeSlideProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
+    podcast?: components["schemas"]["PodcastDto"],
 }
 
 type ProgressCircleProps = {
@@ -65,7 +67,7 @@ const ProgressCircle = ({progress = 50, onPlayPress, isPlaying = false, isCurren
     );
 };
 
-export const PodcastEpisodeSlide = ({episode}: PodcastEpisodeSlideProps) => {
+export const PodcastEpisodeSlide = ({episode, podcast}: PodcastEpisodeSlideProps) => {
     const {t} = useTranslation();
     const playEpisode = useStore(state => state.playEpisode);
     const currentEpisode = useStore(state => state.podcastEpisodeRecord);
@@ -160,7 +162,9 @@ export const PodcastEpisodeSlide = ({episode}: PodcastEpisodeSlideProps) => {
                         marginLeft: 10,
                         marginTop: 'auto',
                         display: 'flex',
-                        flexDirection: 'row'
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
                     }}>
                         <ProgressCircle
                             progress={totalProgressPercentage}
@@ -176,6 +180,20 @@ export const PodcastEpisodeSlide = ({episode}: PodcastEpisodeSlideProps) => {
                             {t(remainingSeconds.alreadyPlaying ? 'time-left' : 'time',
                                 {time: remainingSeconds.time})}
                         </Text>
+                        {/* Download Status Icon (nur anzeigen wenn heruntergeladen) */}
+                        <DownloadStatusIcon
+                            episodeId={episode.podcastEpisode.episode_id}
+                            size={16}
+                        />
+                        {/* Download Button (nur anzeigen wenn podcast vorhanden) */}
+                        {podcast && (
+                            <DownloadButton
+                                episode={episode.podcastEpisode}
+                                podcast={podcast}
+                                size={20}
+                                showProgress={true}
+                            />
+                        )}
                     </View>
                 </View>
             </View>

@@ -22,9 +22,8 @@ export const useDetailsPodcast = ()=>{
     })
 
     const updateFavored = $api.useMutation("put", "/api/v1/podcasts/favored", {
-        body: {
-            id: id,
-            favored: !podcastDetailedData.favorites
+        onSuccess: () => {
+            podcastDetailedData.refetch()
         }
     })
 
