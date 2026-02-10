@@ -1,3 +1,4 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
@@ -10,8 +11,8 @@ use crate::models::misc_models::{
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
-use crate::DBType as DbConnection;
+use crate::utils::error::ErrorSeverity::{Critical, Warning};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use chrono::{NaiveDateTime, Utc};
 use diesel::query_dsl::methods::DistinctDsl;
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
@@ -20,6 +21,7 @@ use diesel::{
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
 };
 use diesel::{ExpressionMethods, JoinOnDsl};
+use rand::RngExt;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -191,7 +193,7 @@ impl Episode {
             .select(episodes::all_columns())
             .first::<Episode>(conn)
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn get_last_watched_episodes(
@@ -235,21 +237,14 @@ impl Episode {
                     .eq_any(subquery),
             )
             .filter(episodes1.field(ep_dsl::action).eq("play"))
+            .order_by(episodes1.field(ep_dsl::timestamp).desc())
             .load::<(PodcastEpisode, Episode, Podcast)>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         let mapped_watched_episodes = query
             .iter()
             .map(|e| PodcastWatchedEpisodeModelWithPodcastEpisode {
-                id: e.clone().1.id,
-                podcast_id: e.clone().2.id,
-                episode_id: e.0.episode_id.clone(),
-                url: e.0.url.clone(),
-                name: e.0.name.clone(),
-                image_url: e.0.image_url.clone(),
-                watched_time: e.clone().1.position.unwrap(),
-                date: e.clone().1.timestamp,
-                total_time: e.clone().0.total_time,
+                episode: e.1.clone().convert_to_episode_dto(),
                 podcast_episode: (
                     e.0.clone(),
                     Some(user).cloned(),
@@ -289,7 +284,7 @@ impl Episode {
         )
         .filter(device.ne("webview"))
         .load::<GPodderAvailablePodcasts>(&mut get_connection())
-        .map_err(map_db_error)?;
+        .map_err(|e| map_db_error(e, Critical))?;
 
         Ok(result)
     }
@@ -304,11 +299,11 @@ impl Episode {
             .filter(podcast_dsl::id.eq(podcast_id))
             .first(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         diesel::delete(ep_table.filter(ep_dsl::podcast.eq(found_podcast.unwrap().rssfeed)))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -322,7 +317,7 @@ impl Episode {
             .filter(pe_dsl::episode_id.eq(episode_id))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         let episode = ep_table
             .filter(ep_dsl::username.eq(username))
@@ -330,7 +325,7 @@ impl Episode {
             .order_by(ep_dsl::timestamp.desc())
             .first::<Episode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         Ok(episode)
     }
@@ -348,10 +343,10 @@ impl Episode {
             .filter(pe_dsl::episode_id.eq(pod_watch_model.podcast_episode_id.clone()))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         if found_episode.clone().is_none() {
-            return Err(CustomErrorInner::NotFound.into());
+            return Err(CustomErrorInner::NotFound(Warning).into());
         }
         let found_episode = found_episode.unwrap();
 
@@ -359,13 +354,12 @@ impl Episode {
             .filter(p_dsl::id.eq(found_episode.podcast_id))
             .first::<Podcast>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         if podcast.is_none() {
-            return Err(CustomErrorInner::NotFound.into());
+            return Err(CustomErrorInner::NotFound(Warning).into());
         }
 
-        use rand::Rng;
         let mut rng = rand::rng();
 
         let id = rng.random_range(0..1000000);
@@ -383,7 +377,7 @@ impl Episode {
                         episodes::timestamp.eq(Utc::now().naive_utc()),
                     ))
                     .execute(&mut get_connection())
-                    .map_err(map_db_error)?;
+                    .map_err(|e| map_db_error(e, Critical))?;
                 return Ok(());
             }
             Ok(None) => {
@@ -401,7 +395,9 @@ impl Episode {
                     position: Some(pod_watch_model.time),
                     total: Some(found_episode.total_time),
                 };
-                episode.insert_episode().map_err(map_db_error)?;
+                episode
+                    .insert_episode()
+                    .map_err(|e| map_db_error(e, Critical))?;
             }
             Err(e) => {
                 return Err(e);
@@ -423,7 +419,7 @@ impl Episode {
             .filter(ep_dsl::guid.eq(episode_guid))
             .first::<Episode>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
@@ -432,7 +428,7 @@ impl Episode {
 
         diesel::delete(ep_table.filter(ep_dsl::username.eq(username)))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 }
@@ -467,7 +463,7 @@ impl EpisodeAction {
             "download" => EpisodeAction::Download,
             "play" => EpisodeAction::Play,
             "delete" => EpisodeAction::Delete,
-            _ => panic!("Unknown episode action: {}", s),
+            _ => panic!("Unknown episode action: {s}"),
         }
     }
 }
@@ -481,13 +477,4 @@ impl fmt::Display for EpisodeAction {
             EpisodeAction::Delete => write!(f, "delete"),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum EpisodeActionRaw {
-    New,
-    Download,
-    Play,
-    Delete,
 }

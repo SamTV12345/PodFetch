@@ -1,17 +1,21 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorites;
+use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_dto::PodcastDto;
-use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::tag::Tag;
+use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
+use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use utoipa::ToSchema;
 
 #[derive(
@@ -38,6 +42,8 @@ pub struct Favorite {
     pub favored: bool,
 }
 
+type SearchPodcastType = Vec<(Podcast, Option<Favorite>, Vec<Tag>)>;
+
 impl Favorite {
     pub fn delete_by_username(
         username1: String,
@@ -62,7 +68,7 @@ impl Favorite {
             .filter(podcast_id.eq(podcast_id_1).and(username.eq(username_1)))
             .first::<Favorite>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         match res {
             Some(..) => {
@@ -71,7 +77,7 @@ impl Favorite {
                 )
                 .set(favor_column.eq(favor))
                 .execute(&mut get_connection())
-                .map_err(map_db_error)?;
+                .map_err(|e| map_db_error(e, Critical))?;
                 Ok(())
             }
             None => {
@@ -82,7 +88,7 @@ impl Favorite {
                         favor_column.eq(favor),
                     ))
                     .execute(&mut get_connection())
-                    .map_err(map_db_error)?;
+                    .map_err(|e| map_db_error(e, Critical))?;
                 Ok(())
             }
         }
@@ -97,11 +103,11 @@ impl Favorite {
             .filter(username.eq(username1).and(podcast_id.eq(podcast_id1)))
             .first::<Favorite>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(res)
     }
 
-    pub fn get_favored_podcasts(found_username: String) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_favored_podcasts(requester: &User) -> Result<Vec<PodcastDto>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as user_favor;
@@ -109,15 +115,19 @@ impl Favorite {
 
         let result: Vec<(Podcast, Favorite)> = dsl_podcast
             .inner_join(f_db)
-            .filter(favor_column.eq(true).and(user_favor.eq(&found_username)))
+            .filter(
+                favor_column
+                    .eq(true)
+                    .and(user_favor.eq(&requester.username)),
+            )
             .load::<(Podcast, Favorite)>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &found_username).unwrap();
-                (podcast.0.clone(), Some(podcast.1.clone()), tags).into()
+                let tags = Tag::get_tags_of_podcast(podcast.0.id, &requester.username).unwrap();
+                (podcast.0.clone(), Some(podcast.1.clone()), tags, requester).into()
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
@@ -128,17 +138,27 @@ impl Favorite {
         title: Option<String>,
         latest_pub: OrderOption,
         designated_username: &str,
-    ) -> Result<Vec<(Podcast, Favorite)>, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+    ) -> Result<Vec<(Podcast, Favorite, Vec<Tag>)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as podcastsid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
+        use crate::adapters::persistence::dbconfig::schema::tags_podcasts as t_join_table;
 
         let mut query = podcasts
-            .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
             .inner_join(
                 favorites::table.on(podcastsid
                     .eq(favorites::dsl::podcast_id)
                     .and(favorites::dsl::username.eq(designated_username))),
+            )
+            .left_join(tags_podcasts.on(podcastsid.eq(t_join_table::dsl::podcast_id)))
+            .left_join(
+                crate::adapters::persistence::dbconfig::schema::tags::table.on(
+                    crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tag_id
+                        .eq(crate::adapters::persistence::dbconfig::schema::tags::dsl::id)
+                        .and(
+                            crate::adapters::persistence::dbconfig::schema::tags::dsl::username
+                                .eq(designated_username),
+                        ),
+                ),
             )
             .into_boxed();
 
@@ -156,35 +176,41 @@ impl Favorite {
             }
             OrderOption::PublishedDate => match order {
                 OrderCriteria::Asc => {
-                    query = query.order_by(date_of_recording.asc());
+                    query = query.order_by(last_build_date.asc());
                 }
                 OrderCriteria::Desc => {
-                    query = query.order_by(date_of_recording.desc());
+                    query = query.order_by(last_build_date.desc());
                 }
             },
         }
 
-        if title.is_some() {
+        if let Some(title) = title {
             use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::name as podcasttitle;
-            query = query.filter(podcasttitle.like(format!("%{}%", title.unwrap())));
+            query = query.filter(podcasttitle.like(format!("%{}%", title)));
         }
 
-        let mut matching_podcast_ids = vec![];
+        let mut matching_podcast_ids: BTreeMap<i32, (Podcast, Favorite, Vec<Tag>)> =
+            BTreeMap::new();
         let pr = query
-            .load::<(Podcast, PodcastEpisode, Favorite)>(&mut get_connection())
-            .map_err(map_db_error)?;
-        let distinct_podcasts: Vec<(Podcast, Favorite)> = pr
-            .iter()
-            .filter(|c| {
-                if matching_podcast_ids.contains(&c.0.id) {
-                    return false;
+            .load::<(Podcast, Favorite, Option<TagsPodcast>, Option<Tag>)>(&mut get_connection())
+            .map_err(|e| map_db_error(e, Critical))?;
+        pr.iter().for_each(|c| {
+            if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
+                if let Some(tag) = &c.3
+                    && !existing.2.iter().any(|t| t.id == tag.id)
+                {
+                    existing.2.push(tag.clone());
                 }
-                matching_podcast_ids.push(c.0.id);
-                true
-            })
-            .map(|c| (c.clone().0, c.clone().2))
-            .collect::<Vec<(Podcast, Favorite)>>();
-        Ok(distinct_podcasts)
+            } else {
+                let mut tags = vec![];
+                if let Some(tag) = &c.3 {
+                    tags.push(tag.clone());
+                }
+                matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.1.clone(), tags));
+            }
+        });
+
+        Ok(matching_podcast_ids.values().cloned().collect())
     }
 
     pub fn search_podcasts(
@@ -192,17 +218,29 @@ impl Favorite {
         title: Option<String>,
         latest_pub: OrderOption,
         designated_username: &str,
-    ) -> Result<Vec<(Podcast, Option<Favorite>)>, CustomError> {
+    ) -> Result<SearchPodcastType, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as f_username;
-        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::*;
+
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::id as podcastsid;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::*;
 
         let mut query = podcasts
-            .inner_join(podcast_episodes.on(podcastsid.eq(podcast_id)))
-            .left_join(f_db.on(f_username.eq(designated_username).and(f_id.eq(podcast_id))))
+            .left_join(f_db.on(f_username.eq(designated_username).and(f_id.eq(podcastsid))))
+            .left_join(tags_podcasts.on(podcastsid.eq(
+                crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::podcast_id,
+            )))
+            .left_join(
+                crate::adapters::persistence::dbconfig::schema::tags::table.on(
+                    crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tag_id
+                        .eq(crate::adapters::persistence::dbconfig::schema::tags::dsl::id)
+                        .and(
+                            crate::adapters::persistence::dbconfig::schema::tags::dsl::username
+                                .eq(designated_username),
+                        ),
+                ),
+            )
             .into_boxed();
 
         match latest_pub {
@@ -219,10 +257,10 @@ impl Favorite {
             }
             OrderOption::PublishedDate => match order {
                 OrderCriteria::Asc => {
-                    query = query.order_by(date_of_recording.asc());
+                    query = query.order_by(last_build_date.asc());
                 }
                 OrderCriteria::Desc => {
-                    query = query.order_by(date_of_recording.desc());
+                    query = query.order_by(last_build_date.desc());
                 }
             },
         }
@@ -234,21 +272,28 @@ impl Favorite {
             query = query.filter(lower(podcasttitle).like(format!("%{}%", title.to_lowercase())));
         }
 
-        let mut matching_podcast_ids = vec![];
+        let mut matching_podcast_ids: IndexMap<i32, (Podcast, Option<Favorite>, Vec<Tag>)> =
+            IndexMap::new();
         let pr = query
-            .load::<(Podcast, PodcastEpisode, Option<Favorite>)>(&mut get_connection())
-            .map_err(map_db_error)?;
-        let distinct_podcasts = pr
-            .iter()
-            .filter(|c| {
-                if matching_podcast_ids.contains(&c.0.id) {
-                    return false;
+            .load::<(Podcast, Option<Favorite>, Option<TagsPodcast>, Option<Tag>)>(
+                &mut get_connection(),
+            )
+            .map_err(|e| map_db_error(e, Critical))?;
+        pr.iter().for_each(|c| {
+            if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
+                if let Some(tag) = &c.3
+                    && !existing.2.iter().any(|t| t.id == tag.id)
+                {
+                    existing.2.push(tag.clone());
                 }
-                matching_podcast_ids.push(c.0.id);
-                true
-            })
-            .map(|c| (c.clone().0, c.clone().2))
-            .collect::<Vec<(Podcast, Option<Favorite>)>>();
-        Ok(distinct_podcasts)
+            } else {
+                let mut tags = vec![];
+                if let Some(tag) = &c.3 {
+                    tags.push(tag.clone());
+                }
+                matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.1.clone(), tags));
+            }
+        });
+        Ok(matching_podcast_ids.values().cloned().collect())
     }
 }

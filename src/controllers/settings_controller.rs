@@ -7,6 +7,7 @@ use axum::extract::Path;
 use axum::http::Response;
 use axum::{Extension, Json};
 use chrono::Local;
+use file_format::FileFormat;
 use reqwest::StatusCode;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -23,13 +24,97 @@ pub async fn get_settings(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let settings = Setting::get_settings()?;
     match settings {
         Some(settings) => Ok(Json(settings)),
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
     }
+}
+
+#[utoipa::path(
+    post,
+    path="/settings/rescan-episodes",
+    responses(
+(status = 200, description = "Rescans all episodes for metadata")),
+    tag="podcast_episodes"
+)]
+pub async fn rescan_episodes(Extension(requester): Extension<User>) -> Result<(), CustomError> {
+    if !requester.is_admin() {
+        return Err(CustomErrorInner::Forbidden(Warning).into());
+    }
+    let mut current_episode_id = 0;
+    let first_page = PodcastEpisode::get_nth_page_of_podcast_episodes(0)?;
+    while !first_page.is_empty() {
+        let episodes = PodcastEpisode::get_nth_page_of_podcast_episodes(current_episode_id)?;
+        if episodes.is_empty() {
+            break;
+        }
+        for episode in &episodes {
+            if let Some(filepath_to_episode) = &episode.file_episode_path {
+                let detected_file = FileFormat::from_file(filepath_to_episode).unwrap();
+                match detected_file {
+                    FileFormat::Mpeg12AudioLayer3
+                    | FileFormat::Mpeg12AudioLayer2
+                    | FileFormat::AppleItunesAudio
+                    | FileFormat::Id3v2
+                    | FileFormat::WaveformAudio => {
+                        let chapters = DownloadService::read_chapters_from_mp3(filepath_to_episode);
+                        if let Err(err) = chapters {
+                            log::error!(
+                                "Error while reading chapters for episode {}: {}",
+                                episode.id,
+                                err
+                            );
+                            continue;
+                        }
+                        let chapters = chapters.expect("Chapters should be available here");
+                        log::info!("Inserting chapters for episode {}", episode.name);
+                        for chapter in chapters {
+                            let res = PodcastEpisodeChapter::save_chapter(&chapter, episode);
+                            if let Err(err) = res {
+                                log::error!(
+                                    "Error while saving chapter for episode {}: {}",
+                                    episode.id,
+                                    err
+                                );
+                            }
+                        }
+                    }
+                    FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio => {
+                        let chapters = DownloadService::read_chapters_from_mp4(filepath_to_episode);
+                        for chapter in chapters {
+                            let res = PodcastEpisodeChapter::save_chapter(&chapter, episode);
+                            if let Err(err) = res {
+                                log::error!(
+                                    "Error while saving chapter for episode {}: {}",
+                                    episode.id,
+                                    err
+                                );
+                            }
+                        }
+                    }
+                    _ => {
+                        log::error!("File format not supported: {detected_file:?}");
+                        return Err(CustomErrorInner::Conflict(
+                            "File format not supported".to_string(),
+                            ErrorSeverity::Error,
+                        )
+                        .into());
+                    }
+                }
+            }
+        }
+
+        if episodes.is_empty() {
+            break;
+        }
+
+        current_episode_id = episodes[episodes.len() - 1].id;
+    }
+
+    Ok(())
 }
 
 #[utoipa::path(
@@ -45,7 +130,7 @@ pub async fn update_settings(
     Json(settings): Json<Setting>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let settings = SettingsService::update_settings(settings)?;
     Ok(Json(settings))
@@ -60,7 +145,7 @@ tag="settings"
 )]
 pub async fn run_cleanup(requester: Extension<User>) -> Result<StatusCode, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let settings = SettingsService::get_settings()?;
     match settings {
@@ -70,7 +155,7 @@ pub async fn run_cleanup(requester: Extension<User>) -> Result<StatusCode, Custo
         }
         None => {
             log::error!("Error getting settings");
-            Err(CustomErrorInner::Unknown.into())
+            Err(CustomErrorInner::Unknown(Error).into())
         }
     }
 }
@@ -104,9 +189,11 @@ pub async fn get_opml(
     Path(type_of): Path<String>,
 ) -> Result<Response<String>, CustomError> {
     if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
-        return Err(
-            CustomErrorInner::UnAuthorized("Please generate an api key".to_string()).into(),
-        );
+        return Err(CustomErrorInner::UnAuthorized(
+            "Please generate an api key".to_string(),
+            Critical,
+        )
+        .into());
     }
 
     let podcasts_found = Podcast::get_all_podcasts()?;
@@ -124,8 +211,8 @@ pub async fn get_opml(
         &requester,
     ))
     .map_err(|e| {
-        log::error!("Error adding podcasts to opml: {}", e);
-        CustomErrorInner::Unknown
+        log::error!("Error adding podcasts to opml: {e}");
+        Into::<CustomError>::into(CustomErrorInner::Unknown(Error))
     })?;
 
     xml.set_root_element(opml);
@@ -163,8 +250,8 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, type_of: Mode, requester: &User) -
     let mut body = add_body();
     for podcast in podcasts_found {
         let mut outline = XMLElement::new("outline");
-        if podcast.summary.is_some() {
-            outline.add_attribute("text", &podcast.summary.unwrap());
+        if let Some(summary) = podcast.summary {
+            outline.add_attribute("text", &summary);
         }
         outline.add_attribute("title", &podcast.name);
         outline.add_attribute("type", "rss");
@@ -177,7 +264,7 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, type_of: Mode, requester: &User) -
                 );
 
                 if let Some(api_key) = &requester.api_key {
-                    local_url = format!("{}?apiKey={}", local_url, api_key);
+                    local_url = format!("{local_url}?apiKey={api_key}");
                 }
 
                 outline.add_attribute("xmlUrl", &local_url)
@@ -202,7 +289,7 @@ pub async fn update_name(
     Json(update_information): Json<UpdateNameSettings>,
 ) -> Result<Json<Setting>, CustomError> {
     if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let settings = SettingsService::update_name(update_information)?;
@@ -210,7 +297,11 @@ pub async fn update_name(
 }
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
+use crate::service::download_service::DownloadService;
+use crate::utils::error::ErrorSeverity::{Critical, Debug, Error, Warning};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -262,7 +353,7 @@ impl Display for ReplacementStrategy {
             ReplacementStrategy::Remove => "remove".to_string(),
             ReplacementStrategy::ReplaceWithDash => "replace-with-dash".to_string(),
         };
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 
@@ -288,4 +379,5 @@ pub fn get_settings_router() -> OpenApiRouter {
         .routes(routes!(run_cleanup))
         .routes(routes!(get_opml))
         .routes(routes!(update_name))
+        .routes(routes!(rescan_episodes))
 }

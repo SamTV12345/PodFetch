@@ -1,5 +1,5 @@
 use crate::models::user::User;
-use axum::Json;
+use axum::{Extension, Json};
 
 use fs_extra::dir::get_size;
 use reqwest::StatusCode;
@@ -19,7 +19,13 @@ responses(
 body = SysExtraInfo)),
 tag="sys"
 )]
-pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
+pub async fn get_sys_info(
+    Extension(requester): Extension<User>,
+) -> Result<Json<SysExtraInfo>, CustomError> {
+    if !requester.is_admin() {
+        return Err(CustomErrorInner::Forbidden(Info).into());
+    }
+
     let mut sys = System::new();
     let disks = Disks::new_with_refreshed_list();
 
@@ -41,6 +47,7 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
                         .to_string()
                         .to_string(),
                 ),
+                ErrorSeverity::Critical,
             )
         })?;
     Ok(Json(SysExtraInfo {
@@ -51,7 +58,11 @@ pub async fn get_sys_info() -> Result<Json<SysExtraInfo>, CustomError> {
 }
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::settings::ConfigModel;
-use crate::utils::error::{map_io_extra_error, CustomError, CustomErrorInner};
+use crate::utils::error::ErrorSeverity::Info;
+use crate::utils::error::ErrorType::CustomErrorType;
+use crate::utils::error::{
+    ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
+};
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -159,31 +170,38 @@ responses(
 body=String)),
 tag="sys"
 )]
-pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, CustomError> {
+pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, ErrorType> {
     use crate::ENVIRONMENT_SERVICE;
 
     let digested_password = digest(auth.0.password);
-    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
-        if admin_username == &auth.0.username {
-            if let Some(admin_password) = &ENVIRONMENT_SERVICE.password {
-                if admin_password == &digested_password {
-                    return Ok(StatusCode::OK);
-                }
-            }
-        }
+    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
+        && admin_username == &auth.0.username
+        && let Some(admin_password) = &ENVIRONMENT_SERVICE.password
+        && admin_password == &digested_password
+    {
+        return Ok(StatusCode::OK);
     }
-    let db_user = User::find_by_username(&auth.0.username)?;
+    let db_user = match User::find_by_username(&auth.0.username) {
+        Ok(user) => user,
+        Err(err) => {
+            if matches!(err.inner, CustomErrorInner::NotFound(_)) {
+                log::warn!("Login failed for user {}", auth.0.username);
+                return Err(ApiError::wrong_user_or_password().into());
+            }
+            return Err(CustomErrorType(err));
+        }
+    };
 
     if db_user.password.is_none() {
         log::warn!("Login failed for user {}", auth.0.username);
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Info).into());
     }
 
     if db_user.password.unwrap() == digested_password {
         return Ok(StatusCode::OK);
     }
     log::warn!("Login failed for user {}", auth.0.username);
-    Err(CustomErrorInner::Forbidden.into())
+    Err(CustomErrorInner::Forbidden(Info).into())
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -192,7 +210,7 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct VersionInfo {
     pub version: &'static str,
     pub r#ref: &'static str,
@@ -206,7 +224,7 @@ pub struct VersionInfo {
 get,
 path="/info",
 responses(
-(status = 200, description = "Gets the info of the server")),
+(status = 200, description = "Gets the info of the server", body=VersionInfo)),
 tag="info"
 )]
 pub async fn get_info() -> Json<VersionInfo> {

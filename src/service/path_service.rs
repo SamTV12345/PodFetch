@@ -1,3 +1,4 @@
+use crate::DBType as DbConnection;
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::models::podcast_episode::PodcastEpisode;
@@ -5,7 +6,6 @@ use crate::models::podcasts::Podcast;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::CustomError;
-use crate::DBType as DbConnection;
 
 pub struct PathService {}
 
@@ -22,7 +22,7 @@ impl PathService {
                 directory,
                 prepare_podcast_episode_title_to_directory(episode)?
             )),
-            None => Ok(format!("{}/{}", directory, filename)),
+            None => Ok(format!("{directory}/{filename}")),
         }
     }
 
@@ -30,7 +30,7 @@ impl PathService {
         directory: &str,
         suffix: &str,
     ) -> (String, String) {
-        let file_path = format!("{}/image.{}", directory, suffix);
+        let file_path = format!("{directory}/image.{suffix}");
         let url_path = format!(
             "{}/image.{}",
             PodcastEpisodeService::map_to_local_url(directory),
@@ -59,13 +59,13 @@ impl PathService {
         }
 
         while FileHandleWrapper::path_exists(
-            &format!("{}-{}", base_path, i),
+            &format!("{base_path}-{i}"),
             FileRequest::NoopS3,
             &FileHandlerType::from(_podcast.download_location.clone()),
         ) {
             i += 1;
         }
-        let final_path = format!("{}-{}", base_path, i);
+        let final_path = format!("{base_path}-{i}");
         // This is safe to insert because this directory does not exist
         FileHandleWrapper::create_dir(
             &final_path,

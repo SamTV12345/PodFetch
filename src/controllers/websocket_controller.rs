@@ -8,6 +8,7 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
@@ -47,14 +48,14 @@ pub async fn get_rss_feed(
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
             Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
-            None => Err(CustomErrorInner::Forbidden.into()),
+            None => Err(CustomErrorInner::Forbidden(Warning).into()),
         }?;
         let api_key = &api_key.api_key;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
         if !&api_key_exists {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Warning).into());
         }
     }
 
@@ -111,10 +112,10 @@ pub async fn get_rss_feed(
 
 fn add_api_key_to_url(url: String, api_key: &Option<String>) -> String {
     if let Some(api_key) = api_key {
-        if url.contains('?') {
-            return format!("{}&apiKey={}", url, api_key);
+      if url.contains('?') {
+            return format!("{url}&apiKey={api_key}");
         }
-        return format!("{}?apiKey={}", url, api_key);
+        return format!("{url}?apiKey={api_key}");
     }
     url
 }
@@ -156,14 +157,14 @@ pub async fn get_rss_feed_for_podcast(
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = match &api_key {
             Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
-            None => Err(CustomErrorInner::Forbidden.into()),
+            None => Err(CustomErrorInner::Forbidden(Warning).into()),
         }?;
         let api_key = &api_key.api_key;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
         if !&api_key_exists {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Warning).into());
         }
     }
     let api_key = api_key.map(|c| c.api_key.clone());
@@ -242,35 +243,33 @@ fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item>
     downloaded_episodes
         .iter()
         .map(|episode| {
-            let episode = episode.clone();
-
             let enclosure = EnclosureBuilder::default()
-                .url(episode.local_url.clone())
-                .length(episode.clone().total_time.to_string())
+                .url(&episode.local_url)
+                .length(episode.total_time.to_string())
                 .mime_type(format!(
                     "audio/{}",
-                    PodcastEpisodeService::get_url_file_suffix(&episode.clone().local_url).unwrap()
+                    PodcastEpisodeService::get_url_file_suffix(&episode.local_url).unwrap()
                 ))
                 .build();
 
             let itunes_extension = ITunesItemExtensionBuilder::default()
-                .duration(Some(episode.clone().total_time.to_string()))
-                .image(Some(episode.clone().local_image_url))
+                .duration(Some(episode.total_time.to_string()))
+                .image(Some(episode.local_image_url.to_string()))
                 .build();
 
             let guid = GuidBuilder::default()
                 .permalink(false)
-                .value(episode.clone().episode_id)
+                .value(&episode.episode_id)
                 .build();
-            let item = ItemBuilder::default()
+
+            ItemBuilder::default()
                 .guid(Some(guid))
-                .pub_date(Some(episode.clone().date_of_recording))
-                .title(Some(episode.clone().name))
-                .description(Some(episode.clone().description))
+                .pub_date(Some(episode.date_of_recording.to_string()))
+                .title(Some(episode.name.to_string()))
+                .description(Some(episode.description.to_string()))
                 .enclosure(Some(enclosure))
                 .itunes_ext(itunes_extension)
-                .build();
-            item
+                .build()
         })
         .collect::<Vec<Item>>()
 }

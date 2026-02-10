@@ -30,8 +30,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         delete: operations["delete_podcast_episode_locally"];
         options?: never;
         head?: never;
@@ -294,6 +293,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/episodes/{id}/chapters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["find_all_chapters_of_podcast_episode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/favored": {
         parameters: {
             query?: never;
@@ -406,6 +421,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/reverse/episode/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_podcast_of_episode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/search": {
         parameters: {
             query?: never;
@@ -494,8 +525,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         put: operations["download_podcast_episodes_of_podcast"];
         post?: never;
         delete?: never;
@@ -512,8 +542,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         put: operations["like_podcast_episode"];
         post?: never;
         delete?: never;
@@ -644,6 +673,22 @@ export interface paths {
         get: operations["get_opml"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/rescan-episodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rescan_episodes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -910,24 +955,6 @@ export interface components {
         DeletePodcast: {
             delete_files: boolean;
         };
-        Episode: {
-            action: string;
-            device: string;
-            episode: string;
-            guid?: string | null;
-            /** Format: int32 */
-            id: number;
-            podcast: string;
-            /** Format: int32 */
-            position?: number | null;
-            /** Format: int32 */
-            started?: number | null;
-            /** Format: date-time */
-            timestamp: string;
-            /** Format: int32 */
-            total?: number | null;
-            username: string;
-        };
         /** @enum {string} */
         EpisodeAction: "new" | "download" | "play" | "delete";
         EpisodeDto: {
@@ -1076,6 +1103,8 @@ export interface components {
             clientId: string;
             jwksUri: string;
             redirectUri: string;
+            /** Format: int64 */
+            refreshInterval: number;
             scope: string;
         };
         OpmlModel: {
@@ -1100,6 +1129,14 @@ export interface components {
             /** Format: int32 */
             userId: number;
         };
+        PodcastChapterDto: {
+            /** Format: int32 */
+            endTime: number;
+            id: string;
+            /** Format: int32 */
+            startTime: number;
+            title: string;
+        };
         PodcastDto: {
             active: boolean;
             author?: string | null;
@@ -1115,6 +1152,7 @@ export interface components {
             last_build_date?: string | null;
             name: string;
             original_image_url: string;
+            podfetch_feed: string;
             rssfeed: string;
             summary?: string | null;
             tags: components["schemas"]["Tag"][];
@@ -1178,22 +1216,9 @@ export interface components {
             name: string;
         };
         PodcastWatchedEpisodeModelWithPodcastEpisode: {
-            /** Format: date-time */
-            date: string;
-            episodeId: string;
-            /** Format: int32 */
-            id: number;
-            imageUrl: string;
-            name: string;
+            episode: components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcastEpisode: components["schemas"]["PodcastEpisodeDto"];
-            /** Format: int32 */
-            podcastId: number;
-            /** Format: int32 */
-            totalTime: number;
-            url: string;
-            /** Format: int32 */
-            watchedTime: number;
         };
         PodcastWatchedPostModel: {
             podcastEpisodeId: string;
@@ -1270,7 +1295,7 @@ export interface components {
         };
         TimeLinePodcastEpisode: {
             favorite?: null | components["schemas"]["Favorite"];
-            history?: null | components["schemas"]["Episode"];
+            history?: null | components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcast_episode: components["schemas"]["PodcastEpisodeDto"];
         };
@@ -1308,6 +1333,7 @@ export interface components {
             explicitConsent: boolean;
             /** Format: int32 */
             id: number;
+            readOnly: boolean;
             role: string;
             username: string;
         };
@@ -1319,6 +1345,14 @@ export interface components {
             id: number;
             role: string;
             username: string;
+        };
+        VersionInfo: {
+            ci: string;
+            commit: string;
+            os: string;
+            ref: string;
+            time: string;
+            version: string;
         };
     };
     responses: never;
@@ -1385,7 +1419,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["VersionInfo"];
+                };
             };
         };
     };
@@ -1818,6 +1854,28 @@ export interface operations {
             };
         };
     };
+    find_all_chapters_of_podcast_episode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finds all chapters of the podcast episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastChapterDto"][];
+                };
+            };
+        };
+    };
     get_favored_podcasts: {
         parameters: {
             query?: never;
@@ -1899,7 +1957,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null | components["schemas"]["Filter"];
+                    "application/json": components["schemas"]["Filter"];
                 };
             };
         };
@@ -1989,6 +2047,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    search_podcast_of_episode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Does a reverse search of an episode id to find out the podcast it belongs to */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastDto"][];
+                };
             };
         };
     };
@@ -2242,7 +2322,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PodcastSetting"];
+                };
             };
         };
     };
@@ -2266,7 +2348,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PodcastSetting"];
+                };
             };
         };
     };
@@ -2403,6 +2487,24 @@ export interface operations {
                 content: {
                     "text/plain": string;
                 };
+            };
+        };
+    };
+    rescan_episodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rescans all episodes for metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

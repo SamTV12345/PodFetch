@@ -1,7 +1,7 @@
 [package]
 name = "podfetch"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -16,61 +16,62 @@ sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "dep:libsqlite3-sys", "di
 
 [dependencies]
 rpassword = "7.4.0"
-reqwest = { version = "0.12.15", features = ["stream", "json","blocking", "rustls-tls"]}
-tokio-stream = { version = "0.1.17", features = ["sync"] }
+reqwest = { version = "0.12.28", features = ["stream", "json","blocking", "rustls-tls", "trust-dns"]}
+tokio-stream = { version = "0.1.18", features = ["sync"] }
 async-recursion = "1.1.1"
 base64 = "0.22.1"
-uuid = {version="1.17.0", features = ["v4", "serde"]}
-libsqlite3-sys = {version = "0.33.0", features = ["bundled"], optional = true}
+uuid = {version="1.20.0", features = ["v4", "serde"]}
+libsqlite3-sys = {version = "0.35.0", features = ["bundled"], optional = true}
 r2d2_postgres = {version = "0.18.2", optional = true}
-diesel_migrations = "2.2.0"
-jsonwebtoken = {version="9.3.0"}
-log = "0.4.27"
+diesel_migrations = "2.3.1"
+jsonwebtoken = {version="10.3.0", features = ["rust_crypto"]}
+log = "0.4.29"
 futures-util = "0.3.31"
 substring = "1.4.5"
 opml = "1.1.6"
-rand = "0.9.1"
-env_logger = "0.11.6"
-chrono = {version  = "0.4.41", default-features=false, features = ["serde"]}
+rand = "0.10.0"
+env_logger = "0.11.8"
+chrono = {version  = "0.4.43", default-features=false, features = ["serde"]}
 rss = "2.0.12"
-frankenstein = { version = "0.41.0", features = ["client-ureq"] }
-regex = "1.11.0"
+frankenstein = { version = "0.46.1", features = ["client-ureq"] }
+regex = "1.12.3"
 xml-builder = "0.5.2"
-diesel = { version = "2.2.10", features = ["chrono", "r2d2"] }
+diesel = { version = "2.3.6", features = ["chrono", "r2d2"] }
 r2d2 = "0.8.10"
-utoipa = { version = "5.3.1", features = ["chrono", "axum_extras"] }
+utoipa = { version = "5.4.0", features = ["chrono", "axum_extras"] }
 futures = "0.3.31"
 utoipa-swagger-ui = {version = "9.0.2", features = ["axum"] }
 clokwerk= "0.4.0"
-tokio = {version = "1.45.0", features = ["full"]}
-serde = "1.0.219"
+tokio = {version = "1.49.0", features = ["full"]}
+serde = "1.0.228"
 serde_derive = "1.0.189"
-sysinfo = {version = "0.35.1", features = ["serde"]}
+sysinfo = {version = "0.38.1", features = ["serde"]}
 fs_extra = "1.3.0"
-serde_json = "1.0.140"
-thiserror = { version = "2.0.12", features = ["std"] }
+serde_json = "1.0.149"
+thiserror = { version = "2.0.18", features = ["std"] }
 sha1 = "0.10.6"
 sha256 = "1.6.0"
-strfmt="0.2.4"
+strfmt="0.2.5"
 urlencoding="2.1.3"
-id3 = "1.16.2"
-mp4ameta = "0.12.1"
-file-format = "0.27.0"
+id3 = "1.16.4"
+mp4ameta = "0.13.0"
+file-format = "0.28.0"
 maud = { version = "*", features = ["axum","axum-core"] }
-url = "2.5.4"
-rust-s3 = { version = "0.36.0-beta.2", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
-async-trait = "0.1.88"
-axum = { version = "0.8.4", features = ["macros","http2"] }
-tower-http = { version = "0.6.4", features = ["fs"] }
-tower = { version = "0.5.2", features = ["util"] }
+url = "2.5.8"
+rust-s3 = { version = "0.36.0", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
+async-trait = "0.1.89"
+axum = { version = "0.8.8", features = ["macros","http2"] }
+tower-http = { version = "0.6.6", features = ["fs"] }
+tower = { version = "0.5.3", features = ["util"] }
 utoipa-axum = { version = "0.2.0" }
 utoipa-rapidoc = { version = "6.0.0",features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-axum-extra={version = "0.10.1", features = ["cookie", "query"]}
-axum-test = "17.3.0"
-socketioxide = "0.17.1"
+axum-extra={version = "0.12.5", features = ["cookie", "query"]}
+axum-test = "18.7.0"
+socketioxide = "0.18.1"
 mime_guess = "2.0.5"
+indexmap = "2"
 
 [target.'cfg(not(windows))'.dependencies]
 hyper-tls = {version = "0.6.0", optional = true}
@@ -78,13 +79,13 @@ native-tls = {version = "0.2.14", optional = true}
 
 
 [dev-dependencies]
-serial_test = {version="3.2.0"}
+serial_test = {version="3.3.1"}
 testcontainers = { version = "0.24.0" }
-testcontainers-modules = { version = "0.12.0", features = ["postgres","blocking"] }
+testcontainers-modules = { version = "0.12.1", features = ["postgres","blocking"] }
 derive_builder = {version = "0.20.2"}
-fake = { version = "4.3.0", features = ["chrono", "url"] }
+fake = { version = "4.4.0", features = ["chrono", "url"] }
 bollard = {version = "*", features = ["rustls", "rustls-native-certs"], default-features = false}
-axum-test = "17.3.0"
+axum-test = "18.7.0"
 
 [profile.release]
 debug = true

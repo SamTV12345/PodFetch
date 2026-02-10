@@ -6,7 +6,8 @@ on:
       - "v*.*.*"
 
 permissions:
-  contents: read
+  contents: write
+  packages: write
 
 jobs:
   build:
@@ -43,8 +44,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          default: true
-          override: true
+          components: clippy, rustfmt
 
       - name: Build
         run: cargo build --all --release && strip target/release/podfetch && mv target/release/podfetch target/release/podfetch_amd64
@@ -55,8 +55,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
-        permissions:
-          contents: write
         with:
           files: |
             podfetch-linux.zip
@@ -113,8 +111,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          default: true
-          override: true
+          components: clippy, rustfmt
 
       - name: Build
         run: cargo build --all --release
@@ -125,8 +122,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
-        permissions:
-          contents: write
         with:
           files: |
             podfetch-win.zip
@@ -185,8 +180,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
-        permissions:
-          contents: write
         with:
           files: |
             podfetch-apple.zip

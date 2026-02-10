@@ -10,16 +10,18 @@ import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "..
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Episode} from "../models/Episode";
 import {components} from "../../schema";
+import {client} from "../utils/http";
+import {startAudioPlayer} from "../utils/audioPlayer";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
     const infoModalOpen = useCommon(state => state.podcastAlreadyPlayed)
     const selectedPodcastEpisode = useCommon(state => state.podcastEpisodeAlreadyPlayed)
-    const currentPodcast = useAudioPlayer(state => state.currentPodcast)
-    const setCurrentPodcast = useAudioPlayer(state => state.setCurrentPodcast)
+    const setSelectedPodcastEpisodes = useCommon(state => state.setSelectedEpisodes)
+    const selectedPodcastEpisodes = useCommon(state => state.selectedEpisodes)
     const {t} = useTranslation()
-    const setPlaying = useAudioPlayer(state => state.setPlaying)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setPodcastAlreadyPlayed = useCommon(state => state.setPodcastAlreadyPlayed)
+
     const displayPodcastName = useMemo(() => {
         if(!selectedPodcastEpisode) {
             return {
@@ -28,6 +30,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
         }
         return removeHTML(selectedPodcastEpisode?.podcastEpisode.name!)
     }, [selectedPodcastEpisode])
+
     return createPortal(
         <div
             id="defaultModal"
@@ -57,9 +60,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
 
                 <div className="flex gap-3 float-right">
                     <CustomButtonSecondary onClick={()=>setPodcastAlreadyPlayed(false)}>{t('cancel')}</CustomButtonSecondary>
-                    <CustomButtonPrimary onClick={()=>{
-                        setCurrentPodcast(currentPodcast!)
-                        setPlaying(true)
+                    <CustomButtonPrimary onClick={async ()=>{
                         if(!selectedPodcastEpisode) {
                             return
                         }
@@ -69,11 +70,20 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                             position: 0
                         }
 
-                        selectedPodcastEpisode.podcastEpisode.status
-                            ? setCurrentPodcastEpisode(preparePodcastEpisode(selectedPodcastEpisode.podcastEpisode,
-                                watchedModel ))
-                            : setCurrentPodcastEpisode(prepareOnlinePodcastEpisode(selectedPodcastEpisode.podcastEpisode,
-                                watchedModel))
+                        let index = 0
+                        const newSelectedEpisodes = selectedPodcastEpisodes.map(e=>{
+                            if(e.podcastEpisode.episode_id === selectedPodcastEpisode.podcastEpisode.episode_id) {
+                                return {
+                                    ...e,
+                                    podcastHistoryItem: watchedModel
+                                }
+                            }
+                            index += 1
+                            return e
+                        })
+                        setSelectedPodcastEpisodes(newSelectedEpisodes)
+                        setCurrentPodcastEpisode(index)
+                        await startAudioPlayer(selectedPodcastEpisode.podcastEpisode.local_url, 0)
                     }}>{t('restart-playing')}</CustomButtonPrimary>
                 </div>
             </div>

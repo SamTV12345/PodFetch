@@ -1,8 +1,8 @@
 use crate::models::color::Color;
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
+use crate::utils::error::ErrorSeverity::Debug;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::extract::Path;
 use axum::http::StatusCode;
@@ -16,12 +16,6 @@ pub struct TagCreate {
     pub name: String,
     pub description: Option<String>,
     pub color: Color,
-}
-
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct TagWithPodcast {
-    pub tag: Tag,
-    pub podcast: PodcastDto,
 }
 
 #[utoipa::path(
@@ -75,7 +69,7 @@ pub async fn delete_tag(
             Tag::delete_tag(&tag.id)?;
             Ok(StatusCode::OK)
         }
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
     }
 }
 
@@ -102,7 +96,7 @@ pub async fn update_tag(
             )?;
             Ok(Json(updated_tag))
         }
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
     }
 }
 
@@ -124,7 +118,7 @@ pub async fn add_podcast_to_tag(
             let podcast = TagsPodcast::add_podcast_to_tag(tag.id.clone(), podcast_id)?;
             Ok(Json(podcast))
         }
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
     }
 }
 
@@ -147,7 +141,7 @@ pub async fn delete_podcast_from_tag(
             TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(podcast_id, &tag.id)?;
             Ok(StatusCode::OK)
         }
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
     }
 }
 

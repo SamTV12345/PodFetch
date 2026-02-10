@@ -3,11 +3,12 @@ use crate::models::session::Session;
 use crate::models::user::User;
 
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::extract::Path;
 use axum::http::StatusCode;
-use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::CookieJar;
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use sha256::digest;
 
 #[utoipa::path(
@@ -48,10 +49,10 @@ fn handle_proxy_auth(
         Some(auth) => {
             let auth_val = auth.to_str().unwrap();
 
-            // Block if auth and user is different
+            // Block if auth and user are different
             if auth_val != username {
                 log::error!("Error: Username and auth header are different");
-                return Err(CustomErrorInner::Forbidden.into());
+                return Err(CustomErrorInner::Forbidden(Warning).into());
             }
 
             match User::find_by_username(auth_val) {
@@ -75,13 +76,13 @@ fn handle_proxy_auth(
                         .expect("Error inserting user on auto registering");
                         handle_proxy_auth(rq, username)
                     } else {
-                        log::error!("Error finding user by username: {}", e);
-                        Err(CustomErrorInner::Forbidden.into())
+                        log::error!("Error finding user by username: {e}");
+                        Err(CustomErrorInner::Forbidden(Warning).into())
                     }
                 }
             }
         }
-        None => Err(CustomErrorInner::Forbidden.into()),
+        None => Err(CustomErrorInner::Forbidden(Warning).into()),
     }
 }
 
@@ -92,25 +93,26 @@ fn handle_gpodder_basic_auth(
     let opt_authorization = rq.headers().get("Authorization");
 
     if opt_authorization.is_none() {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let authorization = opt_authorization.unwrap().to_str().unwrap();
 
     let (username_basic, password) = AuthFilter::basic_auth_login(authorization)?;
     if username_basic != username {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
-    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username {
-        if admin_username == username {
-            return Err(CustomErrorInner::Conflict(
-                "The user you are trying to login is equal to the admin user. Please\
+    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
+        && admin_username == username
+    {
+        return Err(CustomErrorInner::Conflict(
+            "The user you are trying to login is equal to the admin user. Please\
                  use another user to login."
-                    .to_string(),
-            )
-            .into());
-        }
+                .to_string(),
+            Warning,
+        )
+        .into());
     }
 
     let user = User::find_by_username(username)?;
@@ -122,10 +124,10 @@ fn handle_gpodder_basic_auth(
                 let user_cookie = create_session_cookie(session);
                 Ok((user_cookie, StatusCode::OK))
             } else {
-                Err(CustomErrorInner::Forbidden.into())
+                Err(CustomErrorInner::Forbidden(Warning).into())
             }
         }
-        None => Err(CustomErrorInner::Forbidden.into()),
+        None => Err(CustomErrorInner::Forbidden(Warning).into()),
     }
 }
 

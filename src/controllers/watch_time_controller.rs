@@ -9,6 +9,7 @@ use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::utils::error::ErrorSeverity::Debug;
 use crate::utils::error::{CustomError, CustomErrorInner};
 
 #[utoipa::path(
@@ -24,7 +25,7 @@ pub async fn log_watchtime(
 ) -> Result<StatusCode, CustomError> {
     let podcast_episode_id = podcast_watch.podcast_episode_id.clone();
     Episode::log_watchtime(podcast_watch, requester.username.clone())?;
-    log::debug!("Logged watchtime for episode: {}", podcast_episode_id);
+    log::debug!("Logged watchtime for episode: {podcast_episode_id}");
     Ok(StatusCode::OK)
 }
 
@@ -38,8 +39,7 @@ tag="watchtime"
 pub async fn get_last_watched(
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>, CustomError> {
-    let mut episodes = Episode::get_last_watched_episodes(&requester)?;
-    episodes.sort_by(|a, b| a.date.cmp(&b.date).reverse());
+    let episodes = Episode::get_last_watched_episodes(&requester)?;
     Ok(Json(episodes))
 }
 
@@ -56,7 +56,7 @@ pub async fn get_watchtime(
 ) -> Result<Json<EpisodeDto>, CustomError> {
     let watchtime = Episode::get_watchtime(&id, &requester.username)?;
     match watchtime {
-        None => Err(CustomErrorInner::NotFound.into()),
+        None => Err(CustomErrorInner::NotFound(Debug).into()),
         Some(w) => Ok(Json(w.convert_to_episode_dto())),
     }
 }

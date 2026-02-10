@@ -2,6 +2,7 @@ import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { pluginBabel } from '@rsbuild/plugin-babel';
 import { pluginSass } from '@rsbuild/plugin-sass';
+import { pluginTypeCheck } from "@rsbuild/plugin-type-check";
 
 const ReactCompilerConfig = {
     // ReactCompilerConfig hier einfügen, falls benötigt
@@ -19,12 +20,14 @@ export default defineConfig({
             },
         }),
         pluginSass(),
+        pluginTypeCheck()
     ],
     source: {
       entry: {
         main: './src/main.tsx'
       }
     },
+
     html: {
       template: './index.html',
     },

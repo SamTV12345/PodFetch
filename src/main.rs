@@ -1,4 +1,4 @@
-use diesel_migrations::{embed_migrations, EmbeddedMigrations};
+use diesel_migrations::{EmbeddedMigrations, embed_migrations};
 
 #[macro_use]
 extern crate serde_derive;
@@ -9,8 +9,8 @@ use std::env;
 use std::env::args;
 use std::process::exit;
 mod controllers;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::command_line_runner::start_command_line;
 use crate::commands::startup::handle_config_for_server_startup;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
@@ -48,7 +48,7 @@ async fn main() -> std::io::Result<()> {
     ENVIRONMENT_SERVICE.get_environment();
     if args().len() > 1 {
         if let Err(e) = start_command_line(args()).await {
-            log::error!("Error in command line: {}", e);
+            log::error!("Error in command line: {e}");
             exit(1);
         }
         exit(0)
@@ -58,6 +58,6 @@ async fn main() -> std::io::Result<()> {
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
 
-    axum::serve(listener, router).await.unwrap();
+    axum::serve(listener, router).await?;
     Ok(())
 }

@@ -8,12 +8,13 @@ use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
-use crate::{execute_with_conn, DBType as DbConnection};
-use diesel::prelude::*;
-use diesel::sql_types::{Integer, Text};
+use crate::utils::error::ErrorSeverity::{Critical, Debug, Info, Warning};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
+use crate::{DBType as DbConnection, execute_with_conn};
 use diesel::ExpressionMethods;
 use diesel::RunQueryDsl;
+use diesel::prelude::*;
+use diesel::sql_types::{Integer, Text};
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -37,7 +38,7 @@ impl Playlist {
             .filter(name.eq(self.name.clone()))
             .first::<Playlist>(conn)
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         if let Some(unwrapped_res) = res {
             return Ok(unwrapped_res);
@@ -46,7 +47,7 @@ impl Playlist {
         execute_with_conn!(|conn| diesel::insert_into(playlists)
             .values(self)
             .get_result::<Playlist>(conn)
-            .map_err(map_db_error))
+            .map_err(|e| map_db_error(e, Critical)))
     }
 
     pub fn delete_playlist(
@@ -57,7 +58,7 @@ impl Playlist {
 
         diesel::delete(playlists.filter(id.eq(playlist_id_1)))
             .execute(conn)
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -68,13 +69,13 @@ impl Playlist {
             .filter(id.eq(playlist_id_1))
             .first::<Playlist>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         if let Some(unwrapped_res) = res {
             return Ok(unwrapped_res);
         }
 
-        Err(CustomErrorInner::NotFound.into())
+        Err(CustomErrorInner::NotFound(Debug).into())
     }
 
     pub fn get_playlist_by_user_and_id(
@@ -88,13 +89,13 @@ impl Playlist {
             .filter(user_id.eq(user.id))
             .first::<Playlist>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         if let Some(unwrapped_res) = res {
             return Ok(unwrapped_res);
         }
 
-        Err(CustomErrorInner::NotFound.into())
+        Err(CustomErrorInner::NotFound(Debug).into())
     }
 
     pub fn get_playlists(user_id1: i32) -> Result<Vec<Playlist>, CustomError> {
@@ -103,7 +104,7 @@ impl Playlist {
         playlists
             .filter(user_id.eq(user_id1))
             .load::<Playlist>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn create_new_playlist(
@@ -170,7 +171,7 @@ impl Playlist {
         )
         .set(name.eq(playlist_dto.name))
         .execute(&mut get_connection())
-        .map_err(map_db_error)
+        .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn update_playlist(
@@ -181,7 +182,7 @@ impl Playlist {
         let playlist_to_be_updated = Self::get_playlist_by_id(playlist_id.clone())?;
 
         if playlist_to_be_updated.user_id != user.id {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Info).into());
         }
 
         Self::update_playlist_fields(playlist_id.clone(), playlist_dto.clone(), user.clone())?;
@@ -211,7 +212,7 @@ impl Playlist {
         user: User,
     ) -> Result<PlaylistDto, CustomError> {
         if playlist.user_id != user.id {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Info).into());
         }
         let items_in_playlist =
             PlaylistItem::get_playlist_items_by_playlist_id(playlist_id, &user)?;
@@ -225,7 +226,7 @@ impl Playlist {
         let playlist_to_delete = Playlist::get_playlist_by_id(playlist_id.clone())?;
 
         if playlist_to_delete.user_id != user_id1 {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Info).into());
         }
 
         PlaylistItem::delete_playlist_item_by_playlist_id(playlist_id.clone())?;
@@ -235,7 +236,7 @@ impl Playlist {
                 .filter(user_id.eq(user_id1)),
         )
         .execute(&mut get_connection())
-        .map_err(map_db_error)?;
+        .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -247,7 +248,7 @@ impl Playlist {
         let found_podcast = Self::get_playlist_by_id(playlist_id_1.clone())?;
 
         if found_podcast.user_id != user_id {
-            return Err(CustomErrorInner::Forbidden.into());
+            return Err(CustomErrorInner::Forbidden(Warning).into());
         }
 
         use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::*;
@@ -258,7 +259,7 @@ impl Playlist {
                 .filter(episode.eq(episode_id)),
         )
         .execute(&mut get_connection())
-        .map_err(map_db_error)?;
+        .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 }

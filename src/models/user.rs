@@ -1,17 +1,18 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::users;
 use crate::constants::inner_constants::{
-    Role, BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, STANDARD_USER, USERNAME,
+    BASIC_AUTH, ENVIRONMENT_SERVICE, OIDC_AUTH, Role, STANDARD_USER, STANDARD_USER_ID, USERNAME,
 };
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
-use crate::DBType as DbConnection;
+use crate::utils::error::ErrorSeverity::{Critical, Debug, Info, Warning};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use axum::extract::Request;
 use chrono::NaiveDateTime;
-use diesel::associations::HasTable;
-use diesel::prelude::{Insertable, Queryable};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
+use diesel::associations::HasTable;
+use diesel::prelude::{Insertable, Queryable};
 use diesel::{AsChangeset, OptionalExtension, RunQueryDsl};
 use std::io::Error;
 use utoipa::ToSchema;
@@ -47,6 +48,7 @@ pub struct UserWithAPiKey {
     pub created_at: NaiveDateTime,
     pub explicit_consent: bool,
     pub api_key: Option<String>,
+    pub read_only: bool,
 }
 
 impl User {
@@ -71,31 +73,31 @@ impl User {
 
     pub fn find_by_username(username_to_find: &str) -> Result<User, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
-        if let Some(res) = ENVIRONMENT_SERVICE.username.clone() {
-            if res == username_to_find {
-                let admin = User::create_admin_user();
-                return Ok(admin);
-            }
+        if let Some(res) = ENVIRONMENT_SERVICE.username.clone()
+            && res == username_to_find
+        {
+            let admin = User::create_admin_user();
+            return Ok(admin);
         }
 
         let opt_user = users
             .filter(username.eq(username_to_find))
             .first::<User>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         if let Some(user) = opt_user {
             Ok(user)
         } else {
-            Err(CustomErrorInner::NotFound.into())
+            Err(CustomErrorInner::NotFound(Debug).into())
         }
     }
 
     pub fn insert_user(&mut self) -> Result<User, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
-        if let Some(res) = ENVIRONMENT_SERVICE.username.clone() {
-            if res == self.username {
-                return Err(CustomErrorInner::Forbidden.into());
-            }
+        if let Some(res) = ENVIRONMENT_SERVICE.username.clone()
+            && res == self.username
+        {
+            return Err(CustomErrorInner::Forbidden(Warning).into());
         }
 
         let res = diesel::insert_into(users::table())
@@ -113,7 +115,7 @@ impl User {
     pub fn delete_user(&self) -> Result<usize, CustomError> {
         diesel::delete(users::table.filter(users::id.eq(self.id)))
             .execute(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn update_role(&self) -> Result<UserWithoutPassword, diesel::result::Error> {
@@ -121,7 +123,7 @@ impl User {
             .set(users::role.eq(self.role.clone()))
             .get_result::<User>(&mut get_connection());
 
-        Ok(User::map_to_dto(user.unwrap()))
+        Ok(User::map_to_dto(user?))
     }
 
     pub fn update_explicit_consent(&self) -> Result<UserWithoutPassword, diesel::result::Error> {
@@ -136,7 +138,7 @@ impl User {
         let password: Option<String> = ENVIRONMENT_SERVICE.password.clone();
         let username = ENVIRONMENT_SERVICE.username.clone();
         User {
-            id: 9999,
+            id: STANDARD_USER_ID,
             username: username.unwrap_or(STANDARD_USER.to_string()),
             role: Role::Admin.to_string(),
             password,
@@ -157,14 +159,20 @@ impl User {
     }
 
     pub fn map_to_api_dto(user: Self) -> UserWithAPiKey {
-        UserWithAPiKey {
+        let mut user_with_api_key = UserWithAPiKey {
             id: user.id,
             explicit_consent: user.explicit_consent,
             username: user.username.clone(),
             role: user.role.clone(),
             created_at: user.created_at,
             api_key: user.api_key.clone(),
+            read_only: false,
+        };
+        if user.id == Self::create_standard_admin_user().id {
+            user_with_api_key.read_only = true;
         }
+
+        user_with_api_key
     }
 
     pub fn create_standard_admin_user() -> User {
@@ -220,7 +228,7 @@ impl User {
             if found_user.role.ne(&Role::Admin.to_string())
                 && found_user.role.ne(&Role::Uploader.to_string())
             {
-                return Err(CustomErrorInner::Forbidden.into());
+                return Err(CustomErrorInner::Forbidden(Warning).into());
             }
         }
         Ok(None)
@@ -231,11 +239,11 @@ impl User {
             let found_user = User::find_by_username(username_unwrapped)?;
 
             if found_user.role != Role::Admin.to_string() {
-                return Err(CustomErrorInner::Forbidden.into());
+                return Err(CustomErrorInner::Forbidden(Warning).into());
             }
             return Ok(());
         }
-        Err(CustomErrorInner::Forbidden.into())
+        Err(CustomErrorInner::Forbidden(Warning).into())
     }
 
     pub fn delete_by_username(
@@ -245,7 +253,7 @@ impl User {
         use crate::adapters::persistence::dbconfig::schema::users::dsl::*;
         diesel::delete(users.filter(username.eq(username_to_search)))
             .execute(conn)
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -254,7 +262,7 @@ impl User {
         diesel::update(users.filter(id.eq(user.clone().id)))
             .set(user)
             .get_result(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn is_privileged_user(&self) -> bool {
@@ -267,9 +275,9 @@ impl User {
             .filter(id.eq(user_id))
             .first::<User>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         if user.is_none() {
-            return Err(CustomErrorInner::NotFound.into());
+            return Err(CustomErrorInner::NotFound(Info).into());
         }
         Ok(user.unwrap())
     }
@@ -285,7 +293,7 @@ impl User {
             .filter(api_key.eq(api_key_to_find))
             .first::<User>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn update_api_key_of_user(
@@ -297,7 +305,7 @@ impl User {
         diesel::update(users.filter(username.eq(username_to_update)))
             .set(api_key.eq(api_key_to_update))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         Ok(())
     }
@@ -307,10 +315,11 @@ impl User {
             return false;
         }
 
-        if let Some(res) = ENVIRONMENT_SERVICE.api_key_admin.clone() {
-            if !res.is_empty() && res == api_key_to_find {
-                return true;
-            }
+        if let Some(res) = ENVIRONMENT_SERVICE.api_key_admin.clone()
+            && !res.is_empty()
+            && res == api_key_to_find
+        {
+            return true;
         }
 
         let result = Self::find_by_api_key(api_key_to_find);

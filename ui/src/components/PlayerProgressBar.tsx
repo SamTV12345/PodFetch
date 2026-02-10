@@ -1,10 +1,11 @@
-import React, { createRef, FC, useMemo, useState } from 'react'
-import useAudioPlayer from '../store/AudioPlayerSlice'
+import React, {createRef, FC, useEffect, useMemo, useState} from 'react'
+import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import {logCurrentPlaybackTime} from "../utils/navigationUtils";
+import {getAudioPlayer} from "../utils/audioPlayer";
 
 type PlayerProgressBarProps = {
-    audioplayerRef: React.RefObject<HTMLAudioElement|null>,
-    className?: string
+    className?: string,
+    currentPodcastEpisode?: AudioPlayerPlay
 }
 
 const convertToMinutes = (time: number | undefined) => {
@@ -28,22 +29,12 @@ const convertToMinutes = (time: number | undefined) => {
     return hours_p + ':' + minutes_p + ':' + seconds_p.substring(0,2)
 }
 
-export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, className }) => {
-    window.addEventListener('mousedown', () => {
-        setMousePressed(true)
-    })
-
-    window.addEventListener('mouseup', () => {
-        setMousePressed(false)
-    })
-
-    const control = createRef<HTMLElement>()
+export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, currentPodcastEpisode }) => {
     const wrapper = createRef<HTMLDivElement>()
-    const currentPodcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
     const metadata = useAudioPlayer(state => state.metadata)
     const minute = useAudioPlayer(state => state.metadata?.currentTime)
-    const time = useAudioPlayer(state => state.metadata?.currentTime)
-    const [mousePressed, setMousePressed] = useState(false);
+    const [isDragging, setIsDragging] = useState(false)
+    const [dragPercentage, setDragPercentage] = useState<number | null>(null)
     const setCurrentTimeUpdatePercentage = useAudioPlayer(state => state.setCurrentTimeUpdatePercentage)
 
     const totalDuration = useMemo(() => {
@@ -54,44 +45,103 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ audioplayerRef, 
         return convertToMinutes(minute)
     }, [minute])
 
-    if (audioplayerRef === undefined || audioplayerRef.current === undefined || metadata === undefined) {
-        return <div></div>
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+
+        if (wrapper.current) {
+            const offset = wrapper.current.getBoundingClientRect()
+            const localX = e.clientX - offset.left
+            const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
+            setDragPercentage(percentage)
+        }
     }
 
-    const endWrapperPosition = (e: React.MouseEvent<HTMLDivElement>) => {
-        const offset = wrapper.current?.getBoundingClientRect()
+    const handleWrapperClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isDragging || !wrapper.current || !metadata) return
 
-        if (offset) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        const offset = wrapper.current.getBoundingClientRect()
+        const localX = e.clientX - offset.left
+        const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
+
+        const audioPlayer = getAudioPlayer()
+        const newTime = Math.floor((percentage / 100) * audioPlayer.duration)
+        audioPlayer.currentTime = newTime
+        setCurrentTimeUpdatePercentage(percentage)
+
+        if (currentPodcastEpisode) {
+            logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, newTime)
+        }
+    }
+
+    const rafRef = React.useRef<number | null>(null)
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isDragging || !wrapper.current) return
+
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current)
+        }
+
+        rafRef.current = requestAnimationFrame(() => {
+            if (!wrapper.current) return
+            const offset = wrapper.current.getBoundingClientRect()
             const localX = e.clientX - offset.left
-            const percentage = localX / offset.width * 100
+            const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
+            setDragPercentage(percentage)
+        })
+    }
 
-            if (percentage && audioplayerRef.current) {
-                audioplayerRef.current.currentTime = Math.floor(percentage / 100 * audioplayerRef.current.duration)
+    const handleMouseUp = () => {
+        if (isDragging && dragPercentage !== null && metadata) {
+            const audioPlayer = getAudioPlayer()
+            const newTime = Math.floor((dragPercentage / 100) * audioPlayer.duration)
+            audioPlayer.currentTime = newTime
+            setCurrentTimeUpdatePercentage(dragPercentage)
 
-                if (time && currentPodcastEpisode) {
-                    logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, Number(audioplayerRef.current.currentTime.toFixed(0)))
+            if (currentPodcastEpisode) {
+                logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, newTime)
+            }
+        }
+        setIsDragging(false)
+        setDragPercentage(null)
+    }
+
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove, { passive: true })
+            document.addEventListener('mouseup', handleMouseUp)
+
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove)
+                document.removeEventListener('mouseup', handleMouseUp)
+                if (rafRef.current) {
+                    cancelAnimationFrame(rafRef.current)
                 }
             }
         }
-    }
+    }, [isDragging, dragPercentage, currentPodcastEpisode, metadata])
 
-    const calcTotalMovement = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-        if (mousePressed && metadata && audioplayerRef.current) {
-            setCurrentTimeUpdatePercentage(metadata.percentage + e.movementX)
-            audioplayerRef.current.currentTime = Math.floor(metadata.percentage + e.movementX / 100 * audioplayerRef.current.duration)
-        }
-    }
+    const displayPercentage = isDragging && dragPercentage !== null ? dragPercentage : metadata?.percentage
 
     return (
-        <div className="flex items-center gap-3">
-            {/* Fixed width to avoid layout shift as time progresses */}
+        <div aria-controls="playbar" className="flex items-center gap-3">
             <span className={`text-xs text-right text-(--fg-color) w-12 ${className}`}>{currentTime}</span>
 
-            <div className="grow bg-(--slider-bg-color) cursor-pointer h-1" ref={wrapper} onClick={(e) => {
-                endWrapperPosition(e)
-            }}>
-                <div className="relative bg-(--slider-fg-color) h-1 text-right" style={{width: (metadata.percentage) + '%'}}>
-                    <span className="absolute -right-1 -top-1 bg-(--slider-fg-color) h-3 w-3 rounded-full" onMouseMove={(e) => calcTotalMovement(e)} ref={control}></span>
+            <div
+                className="grow bg-(--slider-bg-color) cursor-pointer h-1"
+                ref={wrapper}
+                onClick={handleWrapperClick}
+                onMouseDown={handleMouseDown}
+            >
+                <div className="relative bg-(--slider-fg-color) h-1 text-right" style={{width: displayPercentage + '%'}}>
+                    <span
+                        className="absolute -right-1 -top-1 bg-(--slider-fg-color) h-3 w-3 rounded-full cursor-grab active:cursor-grabbing">
+                    </span>
                 </div>
             </div>
 

@@ -1,97 +1,92 @@
-import { FC, RefObject, useEffect } from 'react'
+import {FC, RefObject, SyntheticEvent, useEffect} from 'react'
 import useOnMount from '../hooks/useOnMount'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
-import { PodcastWatchedModel } from '../models/PodcastWatchedModel'
 import { client } from '../utils/http'
+import {getAudioPlayer} from "../utils/audioPlayer";
 
 type HiddenAudioPlayerProps = {
-    refItem: RefObject<HTMLAudioElement|null>,
     setAudioAmplifier: (audioAmplifier: AudioAmplifier) => void
 }
 
-export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ refItem, setAudioAmplifier }) => {
-    const podcastEpisode = useAudioPlayer(state => state.currentPodcastEpisode)
+export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifier }) => {
+    const podcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
     const setMetadata = useAudioPlayer(state => state.setMetadata)
     const setCurrentTimeUpdate = useAudioPlayer(state => state.setCurrentTimeUpdate)
-    const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
+
+    const setPlaying = useAudioPlayer(state => state.setPlaying)
+
 
     useEffect(() => {
-        if (podcastEpisode && refItem && refItem.current) {
-            refItem.current.load()
+        const audio = getAudioPlayer()
+        if (!audio) return
 
-            if (podcastEpisode.podcastHistoryItem!.position === undefined) {
-                // fetch time from server
-
-                client.GET("/api/v1/podcasts/episode/{id}", {
-                    params: {
-                        path:{
-                            id: podcastEpisode.podcastEpisode.episode_id
-                        }
-                    }
-                }).then((response) => {
-                    setCurrentPodcastEpisode({
-                        ...podcastEpisode,
-                    podcastHistoryItem: {
-                      ...response.data!
-                    },
-                    })
-                    refItem.current!.currentTime = podcastEpisode.podcastHistoryItem?.position!
-                })
-
-            } else {
-                refItem.current!.currentTime = podcastEpisode.podcastHistoryItem?.position!
-            }
-
-            refItem.current.play()
+        const onPlaying = () => {
+            setPlaying(true)
         }
-    },[podcastEpisode])
+        const onPause = () => {
+            setPlaying(false)
+        }
+
+        audio.addEventListener('playing', onPlaying)
+        audio.addEventListener('pause', onPause)
+
+        return () => {
+            audio.removeEventListener('playing', onPlaying)
+            audio.removeEventListener('pause', onPause)
+        }
+    }, [setPlaying])
+
 
     useOnMount(() => {
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
             return
         }
 
-        setAudioAmplifier(new AudioAmplifier(refItem.current!))
+        const audioPlayer = document.getElementById('audio-player') as HTMLAudioElement
+
+        setAudioAmplifier(new AudioAmplifier(audioPlayer))
     })
 
-    return (
-        <audio
-            ref={refItem}
-            crossOrigin="anonymous"
-            src={podcastEpisode?.podcastEpisode.local_url}
-            id={'hiddenaudio'}
-            onTimeUpdate={(e) => {
-               setCurrentTimeUpdate(e.currentTarget.currentTime)
-            }}
-            onLoadedMetadata={(e) => {
-                setMetadata({
-                    currentTime: e.currentTarget.currentTime,
-                    duration: e.currentTarget.duration,
-                    percentage: 0
-                })
 
-                if (isNaN(e.currentTarget.duration)) {
-                    // Need alternative method of getting duration
-                    // Firefox doesn't load the entire file before playing
-                    // causing a changing duration, but the onLoadedMetadata event
-                    // is only called once rendering the progressbar useless
-                    client.GET("/api/v1/podcasts/episode/{id}", {
-                        params: {
-                            path: {
-                                id: podcastEpisode!.podcastEpisode.episode_id
-                            }
-                        }
-                    }).then((response) => {
-                        setMetadata({
-                            currentTime: e.currentTarget.currentTime,
-                            duration: response.data!.total!,
-                            percentage: 0
-                        })
+    useEffect(() => {
+        const audioPlayer = document.getElementById('audio-player') as HTMLAudioElement
+        const onTimeUpdate = (e: Event) => {
+            const el = e.currentTarget as HTMLMediaElement
+            setCurrentTimeUpdate(el.currentTime)
+        }
+        const onLoadedMetadata = (e: Event) => {
+            const el = e.currentTarget as HTMLMediaElement
+            setMetadata({
+                currentTime: el.currentTime,
+                duration: el.duration,
+                percentage: 0
+            })
+
+            if (isNaN(el.duration)) {
+                client.GET('/api/v1/podcasts/episode/{id}', {
+                    params: { path: { id: podcastEpisode!.podcastEpisode.episode_id } }
+                }).then((response) => {
+                    setMetadata({
+                        currentTime: el.currentTime,
+                        duration: response.data!.total!,
+                        percentage: 0
                     })
+                })
+            }
+        }
 
-                }
-            }}
-        />
+
+        audioPlayer.addEventListener('timeupdate', onTimeUpdate)
+        audioPlayer.addEventListener('loadedmetadata', onLoadedMetadata)
+
+        return () => {
+            audioPlayer.removeEventListener('timeupdate', onTimeUpdate)
+            audioPlayer.removeEventListener('loadedmetadata', onLoadedMetadata)
+        }
+    }, []);
+
+    return (
+        <div></div>
     )
 }

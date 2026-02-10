@@ -10,7 +10,8 @@ import { Heading2 } from '../components/Heading2'
 import { Loading } from '../components/Loading'
 import { OIDCButton } from '../components/OIDCButton'
 import 'material-symbols/outlined.css'
-import {client} from "../utils/http";
+import {$api, client} from "../utils/http";
+import {setAuth, setLogin} from "../utils/login";
 
 export type LoginData = {
     username: string,
@@ -18,8 +19,7 @@ export type LoginData = {
     rememberMe: boolean
 }
 export const Login = () => {
-    const configModel = useCommon(state => state.configModel)
-    const setLoginData = useCommon(state => state.setLoginData)
+    const configModel = $api.useQuery('get', '/api/v1/sys/config')
     const navigate = useNavigate()
     const [alert, setAlert] = useState<string>()
     const { t } = useTranslation()
@@ -35,6 +35,11 @@ export const Login = () => {
     const onSubmit: SubmitHandler<LoginData> = (data, p) => {
         p?.preventDefault()
 
+        setLogin({
+            rememberMe: data.rememberMe,
+            loginType: 'basic'
+        })
+
         client.POST("/api/v1/login", {
             body: {
                 username: data.username,
@@ -43,17 +48,8 @@ export const Login = () => {
         }).then(()=>{
             const basicAuthString = btoa(data.username + ':' + data.password)
 
-            if (data.rememberMe) {
-                localStorage.setItem('auth', basicAuthString)
-            } else {
-                sessionStorage.setItem('auth', basicAuthString)
-            }
-
-            setLoginData(data)
-
-            useCommon.getState().setHeaders({ Authorization: 'Basic ' + basicAuthString })
-
-            setTimeout(() => navigate('/'), 100)
+            setAuth(basicAuthString)
+            navigate('/')
         }).catch((e)=>{
             setAlert(e.toString())
         })
@@ -75,7 +71,7 @@ export const Login = () => {
                     {t('sign-in')}
                 </Heading2>
 
-                {configModel?.basicAuth && (
+                {configModel?.data?.basicAuth && (
                     <form className="flex flex-col gap-6" onSubmit={handleSubmit(onSubmit)}>
 
                         {alert && (
@@ -118,11 +114,10 @@ export const Login = () => {
                         </div>
 
                         <CustomButtonPrimary className="self-end" type="submit">{t('sign-in')}</CustomButtonPrimary>
-
                     </form>
                 )}
 
-                {configModel.oidcConfigured && configModel.oidcConfig && (
+                {configModel.data?.oidcConfigured && configModel.data?.oidcConfig && (
                     <OIDCButton />
                 )}
             </div>

@@ -1,5 +1,6 @@
 use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::session::Session;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
 use crate::utils::time::get_current_timestamp;
@@ -45,7 +46,7 @@ pub async fn get_episode_actions(
 ) -> Result<Json<EpisodeActionResponse>, CustomError> {
     let username = trim_from_path(&username);
     if flag.username != username.0 {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let since_date = DateTime::from_timestamp(since.since, 0).map(|v| v.naive_utc());
@@ -88,7 +89,7 @@ pub async fn upload_episode_actions(
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     let username = trim_from_path(&username);
     if flag.username != username.0 {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let mut inserted_episodes: Vec<Episode> = vec![];
     podcast_episode.iter().for_each(|episode| {

@@ -2,7 +2,7 @@ use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::controllers::podcast_episode_controller::TimelineQueryParams;
-use crate::models::episode::Episode;
+use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
 use crate::models::filter::Filter;
@@ -10,10 +10,11 @@ use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::models::user::User;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
+use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
-use diesel::RunQueryDsl;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,7 +22,7 @@ pub struct TimelineItem {
     pub data: Vec<(
         PodcastEpisodeDto,
         PodcastDto,
-        Option<Episode>,
+        Option<EpisodeDto>,
         Option<Favorite>,
     )>,
     pub total_elements: i64,
@@ -113,7 +114,7 @@ impl TimelineItem {
 
         let results = total_count
             .get_result::<i64>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         let result = query
             .load::<(
                 PodcastEpisode,
@@ -122,14 +123,15 @@ impl TimelineItem {
                 Option<Episode>,
                 Option<Favorite>,
             )>(&mut get_connection())
-            .map_err(map_db_error)?
+            .map_err(|e| map_db_error(e, Critical))?
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
+                    let history_dto = history.map(|h| h.convert_to_episode_dto());
                     (
                         PodcastEpisodeDto::from((podcast_episode, Some(user.clone()), fav_episode)),
                         PodcastDto::from(podcast),
-                        history,
+                        history_dto,
                         favorite,
                     )
                 },

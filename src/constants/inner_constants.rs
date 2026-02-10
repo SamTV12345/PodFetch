@@ -1,6 +1,8 @@
 use crate::service::environment_service::EnvironmentService;
+use std::convert::Into;
 use std::fmt;
 use std::fmt::Formatter;
+use std::string::ToString;
 use std::sync::LazyLock;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search";
@@ -45,6 +47,7 @@ use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::logging_service::init_logging;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use utoipa::ToSchema;
 
@@ -84,7 +87,7 @@ impl TryFrom<String> for Role {
             "Admin" => Ok(Role::Admin),
             "Uploader" => Ok(Role::Uploader),
             "User" => Ok(Role::User),
-            _ => Err(CustomErrorInner::BadRequest("Invalid role".to_string()).into()),
+            _ => Err(CustomErrorInner::BadRequest("Invalid role".to_string(), Warning).into()),
         }
     }
 }
@@ -112,6 +115,7 @@ pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
 pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 
 pub const STANDARD_USER: &str = "user123";
+pub const STANDARD_USER_ID: i32 = 9999;
 
 pub const PODCAST_FILENAME: &str = "podcast";
 pub const PODCAST_IMAGENAME: &str = "image";
@@ -138,6 +142,8 @@ pub const COMMON_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) A
 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36";
 
 pub const OIDC_JWKS: &str = "OIDC_JWKS";
+pub const OIDC_REFRESH_INTERVAL: &str = "OIDC_REFRESH_INTERVAL";
+pub const DEFAULT_OIDC_REFRESH_INTERVAL: u64 = 1000 * 60 * 2; // 2 minutes
 
 // Default device when viewing via web interface
 pub const DEFAULT_DEVICE: &str = "webview";
@@ -170,7 +176,6 @@ pub static ENVIRONMENT_SERVICE: LazyLock<EnvironmentService> = LazyLock::new(|| 
 });
 
 pub static DEFAULT_IMAGE_URL: &str = "ui/default.jpg";
-pub static ITUNES: &str = "itunes";
 
 // Reverse proxy headers
 pub const REVERSE_PROXY: &str = "REVERSE_PROXY";

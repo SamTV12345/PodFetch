@@ -10,17 +10,20 @@ use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME};
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
+use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
+use crate::service::podcast_chapter::{Chapter, Link};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::file_extension_determination::{
-    determine_file_extension, DetermineFileExtensionReturn, FileType,
+    DetermineFileExtensionReturn, FileType, determine_file_extension,
 };
 use crate::utils::http_client::get_async_sync_client;
 use crate::utils::reqwest_client::get_sync_client;
+use chrono::Duration;
 use file_format::FileFormat;
-use id3::{ErrorKind, Tag, TagLike, Version};
+use id3::{ErrorKind, Tag, TagLike};
 use std::io::Read;
 use std::path::PathBuf;
 
@@ -123,17 +126,17 @@ impl DownloadService {
             )?;
         }
 
-        if let Some(p) = PathBuf::from(&paths.filename).parent() {
-            if !FileHandleWrapper::path_exists(
+        if let Some(p) = PathBuf::from(&paths.filename).parent()
+            && !FileHandleWrapper::path_exists(
                 p.to_str().unwrap(),
                 FileRequest::Directory,
                 &ENVIRONMENT_SERVICE.default_file_handler,
-            ) {
-                FileHandleWrapper::create_dir(
-                    p.to_str().unwrap(),
-                    &ENVIRONMENT_SERVICE.default_file_handler,
-                )?;
-            }
+            )
+        {
+            FileHandleWrapper::create_dir(
+                p.to_str().unwrap(),
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
         }
 
         if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
@@ -163,8 +166,22 @@ impl DownloadService {
             &ENVIRONMENT_SERVICE.default_file_handler,
         )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
+        if let Ok(chapters) = &result {
+            log::info!("Inserting chapters for episode {}", podcast_episode.id);
+            for chapter in chapters {
+                let res = PodcastEpisodeChapter::save_chapter(chapter, &podcast_episode);
+                if let Err(err) = res {
+                    log::error!(
+                        "Error while saving chapter for episode {}: {}",
+                        podcast_episode.id,
+                        err
+                    );
+                }
+            }
+        }
+
         if let Err(err) = result {
-            log::error!("Error handling metadata insertion: {:?}", err);
+            log::error!("Error handling metadata insertion: {err:?}");
         }
         Ok(())
     }
@@ -173,10 +190,12 @@ impl DownloadService {
         paths: &FilenameBuilderReturn,
         podcast_episode: &PodcastEpisode,
         podcast: &Podcast,
-    ) -> Result<(), CustomError> {
+    ) -> Result<Vec<Chapter>, CustomError> {
         if ENVIRONMENT_SERVICE.default_file_handler == FileHandlerType::S3 {
-            return Ok(());
+            return Ok(vec![]);
         }
+
+        let chapters: Vec<Chapter>;
 
         let detected_file = FileFormat::from_file(&paths.filename).unwrap();
         match detected_file {
@@ -185,25 +204,29 @@ impl DownloadService {
             | FileFormat::AppleItunesAudio
             | FileFormat::Id3v2
             | FileFormat::WaveformAudio => {
+                chapters = Self::read_chapters_from_mp3(&paths.filename)?;
                 let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
-                    log::error!("Error updating metadata: {:?}", err);
+                    log::error!("Error updating metadata: {err:?}");
                 }
             }
             FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio => {
+                chapters = Self::read_chapters_from_mp4(&paths.filename);
                 let result_of_update = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
-                    log::error!("Error updating metadata: {:?}", err);
+                    log::error!("Error updating metadata: {err:?}");
                 }
             }
             _ => {
-                log::error!("File format not supported: {:?}", detected_file);
-                return Err(
-                    CustomErrorInner::Conflict("File format not supported".to_string()).into(),
-                );
+                log::error!("File format not supported: {detected_file:?}");
+                return Err(CustomErrorInner::Conflict(
+                    "File format not supported".to_string(),
+                    ErrorSeverity::Error,
+                )
+                .into());
             }
         }
-        Ok(())
+        Ok(chapters)
     }
 
     fn update_meta_data_mp3(
@@ -217,12 +240,12 @@ impl DownloadService {
                 kind: ErrorKind::NoTag,
                 ..
             }) => Tag::new(),
-            Err(err) => return Err(CustomErrorInner::Conflict(err.to_string()).into()),
+            Err(err) => {
+                return Err(
+                    CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into(),
+                );
+            }
         };
-
-        if let Version::Id3v22 = tag.version() {
-            tag = Tag::new();
-        }
 
         if let 0 = tag.pictures().count() {
             let mut image_file = File::open(&paths.image_filename).unwrap();
@@ -272,22 +295,18 @@ impl DownloadService {
             )
         }
 
-        if tag.artist().is_none() {
-            if let Some(author) = &podcast.author {
-                tag.set_artist(author);
-            }
+        if let Some(author) = &podcast.author {
+            tag.set_artist(author);
         }
 
-        if tag.album().is_none() {
-            tag.set_album(&podcast.name);
-        }
+        tag.set_album(&podcast.name);
 
         tag.set_date_recorded(podcast_episode.date_of_recording.parse().unwrap());
 
-        if tag.genres().is_none() {
-            if let Some(keywords) = &podcast.keywords {
-                tag.set_genre(keywords);
-            }
+        if tag.genres().is_none()
+            && let Some(keywords) = &podcast.keywords
+        {
+            tag.set_genre(keywords);
         }
 
         if tag.clone().comments().next().is_none() {
@@ -303,16 +322,18 @@ impl DownloadService {
             &podcast_episode.date_of_recording,
         );
 
-        if tag.track().is_none() {
-            if let Ok(track_number) = track_number {
-                tag.set_track(track_number as u32);
-            }
+        if tag.track().is_none()
+            && let Ok(track_number) = track_number
+        {
+            tag.set_track(track_number as u32);
         }
 
         let write_succesful: Result<(), CustomError> = tag
-            .write_to_path(&paths.filename, Version::Id3v24)
+            // Always write ID3v2.4 because otherwise there are compatibility issues with
+            // embedded tags
+            .write_to_path(&paths.filename, id3::Version::Id3v24)
             .map(|_| ())
-            .map_err(|e| CustomErrorInner::Conflict(e.to_string()).into());
+            .map_err(|e| CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into());
 
         if write_succesful.is_err() {
             log::error!(
@@ -347,7 +368,7 @@ impl DownloadService {
                         tag.set_track_number(track_number as u16);
                     }
                     Err(e) => {
-                        log::error!("Error getting track number: {:?}", e);
+                        log::error!("Error getting track number: {e:?}");
                         e.to_string();
                     }
                 }
@@ -356,10 +377,119 @@ impl DownloadService {
                 Ok(())
             }
             Err(e) => {
-                log::error!("Error reading metadata: {:?}", e);
-                let err: CustomError = CustomErrorInner::Conflict(e.to_string()).into();
+                log::error!("Error reading metadata: {e:?}");
+                let err: CustomError =
+                    CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into();
                 Err(err)
             }
         }
+    }
+
+    pub fn read_chapters_from_mp3(path: &String) -> Result<Vec<Chapter>, CustomError> {
+        let tag = Tag::read_from_path(path)
+            .map_err(|e| format!("Error reading ID3 tag from `{}`: {}", path, e));
+
+        let tag = match tag {
+            Ok(tag) => tag,
+            Err(err) => {
+                log::error!("Error reading ID3 tag: {}", err);
+                return Ok(Vec::new());
+            }
+        };
+
+        let mut chapters = Vec::new();
+
+        for id3_chapter in tag.chapters() {
+            let start = Duration::milliseconds(id3_chapter.start_time as i64);
+
+            let temp_end = Duration::milliseconds(id3_chapter.end_time as i64);
+            // Some programs might encode chapters as instants, i.e., with the start and end time being the same.
+            let end = if temp_end == start {
+                None
+            } else {
+                Some(temp_end)
+            };
+
+            let mut title = None;
+            let mut link = None;
+
+            for subframe in &id3_chapter.frames {
+                match subframe.content() {
+                    id3::Content::Text(text) => {
+                        title = Some(text.clone());
+                    }
+                    id3::Content::Link(url) => {
+                        link = Some(Link {
+                            url: url::Url::parse(url)
+                                .map_err(<url::ParseError as Into<CustomError>>::into)?,
+                            title: None,
+                        });
+                    }
+                    id3::Content::ExtendedLink(extended_link) => {
+                        link = Some(Link {
+                            url: url::Url::parse(&extended_link.link)
+                                .map_err(<url::ParseError as Into<CustomError>>::into)?,
+                            title: match extended_link.description.trim() {
+                                "" => None,
+                                description => Some(description.to_string()),
+                            },
+                        });
+                    }
+                    _ => {}
+                }
+            }
+
+            chapters.push(Chapter {
+                title,
+                link,
+                start,
+                end,
+                ..Default::default()
+            });
+        }
+
+        // Order chapters by start time.
+        chapters.sort_by(|a, b| a.start.cmp(&b.start));
+
+        Ok(chapters)
+    }
+
+    pub fn read_chapters_from_mp4(path: &String) -> Vec<Chapter> {
+        let tag = mp4ameta::Tag::read_from_path(path);
+        let tag = match tag {
+            Ok(tag) => tag,
+            Err(err) => {
+                log::error!("Error reading MP4 tag: {}", err);
+                return Vec::new();
+            }
+        };
+        let chapters_list: Vec<_> = tag.chapter_list().iter().collect();
+        let mut chapters = Vec::new();
+        for (index, id3_chapter) in chapters_list.iter().enumerate() {
+            let start = Duration::milliseconds(id3_chapter.start.as_millis() as i64);
+
+            let end = if index + 1 < chapters_list.len() {
+                Some(Duration::milliseconds(
+                    chapters_list[index + 1].start.as_millis() as i64,
+                ))
+            } else {
+                None
+            };
+
+            let title = if id3_chapter.title.is_empty() {
+                None
+            } else {
+                Some(id3_chapter.title.clone())
+            };
+
+            chapters.push(Chapter {
+                title,
+                link: None,
+                start,
+                end,
+                ..Default::default()
+            });
+        }
+        chapters
     }
 }

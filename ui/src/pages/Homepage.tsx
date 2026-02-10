@@ -1,33 +1,23 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { PodcastWatchedEpisodeModel } from '../models/PodcastWatchedEpisodeModel'
 import { EpisodeCard } from '../components/EpisodeCard'
 import { Heading2 } from '../components/Heading2'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
-import {client} from "../utils/http";
-import {components} from "../../schema";
+import {$api} from "../utils/http";
+import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
 
 export const Homepage = () => {
-    const [podcastWatched, setPodcastWatched] = useState<components["schemas"]["PodcastWatchedEpisodeModelWithPodcastEpisode"][]>([])
-    const [latestEpisodes, setLatestEpisodes] = useState<components["schemas"]["TimeLinePodcastItem"]["data"]>([])
     const { t } = useTranslation()
-
-    useEffect(()=>{
-        client.GET("/api/v1/podcasts/episode/lastwatched")
-            .then(response=>setPodcastWatched(response.data!))
-        client.GET("/api/v1/podcasts/timeline", {
-            params:{
-                query: {
-                    favoredOnly: false,
-                    notListened: false,
-                    favoredEpisodes: false
-                }
-            },
-
-        })
-            .then(response=>setLatestEpisodes(response.data!.data))
-    }, [])
+    const lastWatched = $api.useQuery('get', '/api/v1/podcasts/episode/lastwatched')
+    const timeline = $api.useQuery('get', '/api/v1/podcasts/timeline', {
+        params:{
+            query: {
+                favoredOnly: false,
+                notListened: false,
+                favoredEpisodes: false
+            }
+        }
+    })
 
     return (
         <>
@@ -43,13 +33,16 @@ export const Homepage = () => {
                     md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
                 `}>
                     <div className="flex gap-8">
-                        {podcastWatched.map((v)=>{
-                            return (
-                                <div className="basis-40 shrink-0 whitespace-normal" key={v.episodeId}>
-                                    <EpisodeCard podcast={v.podcast} podcastEpisode={v.podcastEpisode} watchedTime={v.watchedTime} totalTime={v.totalTime} />
-                                </div>
-                            )
-                        })}
+                        {
+                            lastWatched.isLoading ? Array.from({length: 5}).map((value, index, array)=><LoadingPodcastCard key={index}/>)  :lastWatched.data?.map((v)=>{
+                                    return (
+                                        <div className="basis-40 shrink-0 whitespace-normal" key={v.podcastEpisode.episode_id}>
+                                            <EpisodeCard podcast={v.podcast} podcastEpisode={v.podcastEpisode} podcastHistory={v.episode} />
+                                        </div>
+                                    )
+                                })
+                        }
+
                     </div>
                 </div>
             </div>
@@ -67,10 +60,10 @@ export const Homepage = () => {
                     md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
                 `}>
                     <div className="flex gap-8">
-                        {latestEpisodes.map((episode)=>{
+                        {timeline.isLoading ? Array.from({length: 10}).map((value, index, array)=><LoadingPodcastCard key={index}/>):timeline.data?.data.map((episode)=>{
                             return (
                                 <div className="basis-40 shrink-0 whitespace-normal" key={episode.podcast_episode.episode_id}>
-                                    <EpisodeCard podcast={episode.podcast} podcastEpisode={episode.podcast_episode} />
+                                    <EpisodeCard podcast={episode.podcast} podcastEpisode={episode.podcast_episode} podcastHistory={episode.history} />
                                 </div>
                             )
                         })}

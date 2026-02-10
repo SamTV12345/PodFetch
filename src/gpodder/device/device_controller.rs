@@ -5,6 +5,7 @@ use crate::application::usecases::devices::create_use_case::CreateUseCase;
 use crate::application::usecases::devices::query_use_case::QueryUseCase;
 use crate::gpodder::device::dto::device_post::DevicePost;
 use crate::models::session::Session;
+use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
 use axum::extract::Path;
@@ -27,10 +28,10 @@ pub async fn post_device(
     Extension(flag): Extension<Session>,
     Json(device_post): Json<DevicePost>,
 ) -> Result<Json<DeviceResponse>, CustomError> {
-    let username = &query.0 .0;
-    let deviceid = trim_from_path(&query.0 .1);
+    let username = &query.0.0;
+    let deviceid = trim_from_path(&query.0.1);
     if &flag.username != username {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
     let device_create = DeviceCreate {
@@ -61,7 +62,7 @@ pub async fn get_devices_of_user(
     let query = trim_from_path(&query);
     let user_query = query.0;
     if flag.username != user_query {
-        return Err(CustomErrorInner::Forbidden.into());
+        return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     let devices = DeviceService::query_by_username(user_query)?;
 

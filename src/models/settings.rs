@@ -3,7 +3,8 @@ use crate::adapters::persistence::dbconfig::schema::*;
 use crate::constants::inner_constants::DEFAULT_SETTINGS;
 use crate::service::environment_service::OidcConfig;
 use crate::utils::do_retry::do_retry;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{OptionalExtension, RunQueryDsl};
@@ -57,7 +58,7 @@ impl Setting {
         settings
             .first::<Setting>(&mut get_connection())
             .optional()
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn update_settings(setting: Setting) -> Result<Setting, CustomError> {
@@ -70,7 +71,7 @@ impl Setting {
                 .set(setting.clone())
                 .get_result::<Setting>(&mut get_connection())
         })
-        .map_err(map_db_error)
+        .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn insert_default_settings() -> Result<(), CustomError> {
@@ -88,7 +89,7 @@ impl Setting {
                 ))
                 .execute(&mut get_connection())
         })
-        .map_err(map_db_error)?;
+        .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 }

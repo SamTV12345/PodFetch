@@ -1,5 +1,5 @@
 use crate::adapters::file::file_handler::{FileHandler, FileRequest};
-use crate::utils::error::{map_io_error, CustomError};
+use crate::utils::error::{CustomError, ErrorSeverity, map_io_error};
 use std::fs::File;
 use std::future::Future;
 use std::io;
@@ -14,16 +14,17 @@ impl FileHandler for LocalFileHandler {
     }
 
     fn write_file(file_path: &str, content: &mut [u8]) -> Result<(), CustomError> {
-        let mut file_to_create =
-            File::create(file_path).map_err(|s| map_io_error(s, Some(file_path.to_string())))?;
+        let mut file_to_create = File::create(file_path)
+            .map_err(|s| map_io_error(s, Some(file_path.to_string()), ErrorSeverity::Critical))?;
         io::copy::<&[u8], File>(&mut &*content, &mut file_to_create)
-            .map_err(|s| map_io_error(s, Some(file_path.to_string())))?;
+            .map_err(|s| map_io_error(s, Some(file_path.to_string()), ErrorSeverity::Critical))?;
 
         Ok(())
     }
 
     fn create_dir(path: &str) -> Result<(), CustomError> {
-        std::fs::create_dir(path).map_err(|s| map_io_error(s, Some(path.to_string())))?;
+        std::fs::create_dir(path)
+            .map_err(|s| map_io_error(s, Some(path.to_string()), ErrorSeverity::Critical))?;
         Ok(())
     }
 
@@ -31,11 +32,13 @@ impl FileHandler for LocalFileHandler {
         std::path::Path::new(path).exists()
     }
     fn remove_dir(path: &str) -> Result<(), CustomError> {
-        std::fs::remove_dir_all(path).map_err(|e| map_io_error(e, Some(path.to_string())))
+        std::fs::remove_dir_all(path)
+            .map_err(|e| map_io_error(e, Some(path.to_string()), ErrorSeverity::Critical))
     }
 
     fn remove_file(path: &str) -> Result<(), CustomError> {
-        std::fs::remove_file(path).map_err(|e| map_io_error(e, Some(path.to_string())))
+        std::fs::remove_file(path)
+            .map_err(|e| map_io_error(e, Some(path.to_string()), ErrorSeverity::Critical))
     }
 
     fn write_file_async<'a>(

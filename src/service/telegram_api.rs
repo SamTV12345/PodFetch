@@ -14,7 +14,7 @@ pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: P
     was downloaded successfully and is ready to be listened to.",
         podcast_episode.name, podcast.name
     );
-    let message_to_send = format!(r"<strong>New episode available</strong>: {}", episode_text);
+    let message_to_send = format!(r"<strong>New episode available</strong>: {episode_text}");
 
     let message = SendMessageParams::builder()
         .chat_id(telegram_config.telegram_chat_id.to_string())
@@ -25,7 +25,7 @@ pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: P
     match telegram_res {
         Ok(_) => {}
         Err(e) => {
-            log::error!("Error sending telegram message: {}", e);
+            log::error!("Error sending telegram message: {e}");
         }
     }
 }

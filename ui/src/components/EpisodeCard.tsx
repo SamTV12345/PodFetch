@@ -1,27 +1,37 @@
-import {FC} from 'react'
+import {FC, useMemo} from 'react'
 import {handlePlayofEpisode} from "../utils/PlayHandler";
 import {client} from "../utils/http";
 import {components} from "../../schema";
+import useCommon from "../store/CommonSlice";
+import useAudioPlayer from "../store/AudioPlayerSlice";
+import {startAudioPlayer} from "../utils/audioPlayer";
 
 type EpisodeCardProps = {
     podcast: components["schemas"]["PodcastDto"],
     podcastEpisode: components["schemas"]["PodcastEpisodeDto"],
-    totalTime?: number,
-    watchedTime?: number
+    podcastHistory?: components['schemas']['EpisodeDto'] | null
 }
 
-export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, totalTime, watchedTime }) => {
+export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode,  podcastHistory }) => {
+    const setCurrentEpisodeIndex = useAudioPlayer(state=>state.setCurrentPodcastEpisode)
+    const setCurrentEpisodes = useCommon(state=>state.setSelectedEpisodes)
+    const playPercentage = useMemo(()=>{
+        return podcastHistory?.total ? (podcastHistory.position ?? 0) * 100 / podcastHistory.total : 0
+    }, [podcastHistory])
+
 
     return (
-        <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={()=>{
-            client.GET("/api/v1/podcasts/episode/{id}", {
-                params: {
-                    path:{
-                        id: podcastEpisode.episode_id
-                    }
-                }
-            }).then(resp => handlePlayofEpisode(podcastEpisode, resp.data!))
-                .catch(() => handlePlayofEpisode(podcastEpisode, undefined))
+        <div className="group cursor-pointer" key={podcastEpisode.episode_id+"dv"} onClick={async (e)=>{
+            // Prevent icon click from triggering info modal
+            e.stopPropagation()
+            setCurrentEpisodes([{
+                podcastEpisode,
+                podcastHistoryItem: podcastHistory
+            }])
+            setCurrentEpisodeIndex(0)
+            if (playPercentage < 98 && podcastEpisode.total_time > 0) {
+                await startAudioPlayer(podcastEpisode.local_url, podcastHistory?.position ?? 0)
+            }
         }}>
 
             {/* Thumbnail */}
@@ -31,16 +41,16 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode, tot
                 </div>
 
                 {/* Progress bar */
-                totalTime && watchedTime && (
+                    podcastHistory?.total && podcastHistory.position && (
                     <div className="absolute bottom-0 inset-x-0 bg-stone-900">
-                        <div className="bg-(--accent-color) h-1.5" style={{width: (watchedTime/totalTime)*100+"%"}}></div>
+                        <div className="bg-(--accent-color) h-1.5" style={{width: (playPercentage + "%")}}></div>
                     </div>
                 )}
             </div>
 
             {/* Titles */}
             <div>
-                <span className="block font-bold leading-[1.2] mb-2 text-sm text-(--fg-color) transition-colors group-hover:text-(--fg-color-hover)">{podcastEpisode.name}</span>
+                <span className="block font-bold leading-[1.2] mb-2 text-sm text-(--fg-color) transition-colors group-hover:text-(--fg-color-hover) break-all">{podcastEpisode.name}</span>
                 <span className="block leading-[1.2] text-xs text-(--fg-color)">{podcast.name}</span>
             </div>
         </div>

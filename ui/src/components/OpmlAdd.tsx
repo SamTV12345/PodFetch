@@ -47,6 +47,9 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
     }
 
     const uploadOpml = () => {
+        if (files.length === 0) {
+            return
+        }
         let content = files[0]!.content
         const count = (content.match(/type="rss"/g) || []).length
 
@@ -117,7 +120,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
                 <div className="leading-[1.75] text-sm text-(--fg-color) w-full">
                     {t('following-file-uploaded')}
                     <div className="" onClick={() => {setFiles([])}}>
-                        {files[0]!.name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i>
+                        {files[0]?.name}<i className="ml-5 fa-solid cursor-pointer active:scale-90 fa-x text-red-700"></i>
                     </div>
                 </div>
             }

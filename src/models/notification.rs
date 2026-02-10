@@ -1,8 +1,9 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::utils::do_retry::do_retry;
-use crate::utils::error::{map_db_error, CustomError};
-use diesel::insert_into;
+use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
 use diesel::Queryable;
+use diesel::insert_into;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, Queryable, Clone, ToSchema)]
@@ -26,7 +27,7 @@ impl Notification {
             .filter(status.eq("unread"))
             .order(created_at.desc())
             .load::<Notification>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(result)
     }
 
@@ -44,7 +45,7 @@ impl Notification {
                 created_at.eq(notification.clone().created_at),
             ))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -61,7 +62,7 @@ impl Notification {
                 .set(status.eq(status_update))
                 .execute(&mut get_connection())
         })
-        .map_err(map_db_error)?;
+        .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 }

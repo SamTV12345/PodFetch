@@ -1,14 +1,15 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::playlist_items;
 use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::user::User;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::DBType as DbConnection;
+use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
+use diesel::ExpressionMethods;
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
-use diesel::ExpressionMethods;
 use diesel::{Queryable, QueryableByName};
 use utoipa::ToSchema;
 
@@ -39,7 +40,7 @@ impl PlaylistItem {
             )
             .first::<PlaylistItem>(conn)
             .optional()
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         if let Some(unwrapped_res) = res {
             return Ok(unwrapped_res);
@@ -52,7 +53,7 @@ impl PlaylistItem {
                 position.eq(&self.position),
             ))
             .get_result::<PlaylistItem>(conn)
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn delete_playlist_item(
@@ -74,7 +75,7 @@ impl PlaylistItem {
 
         diesel::delete(playlist_items.filter(playlist_id.eq(playlist_id_1)))
             .execute(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
@@ -105,7 +106,7 @@ impl PlaylistItem {
             .filter(ph1.field(phistory_date).nullable().eq_any(subquery))
             .order(position.asc())
             .load::<(PlaylistItem, PodcastEpisode, Option<Episode>)>(&mut get_connection())
-            .map_err(map_db_error)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn delete_playlist_item_by_episode_id(
@@ -116,7 +117,7 @@ impl PlaylistItem {
 
         diesel::delete(playlist_items.filter(episode.eq(episode_id_1)))
             .execute(conn)
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 }

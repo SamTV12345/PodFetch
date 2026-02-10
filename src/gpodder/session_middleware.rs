@@ -3,7 +3,8 @@ use crate::models::session::Session;
 use axum_extra::extract::cookie::CookieJar;
 use std::convert::Infallible;
 
-use crate::utils::error::{map_db_error, CustomError, CustomErrorInner};
+use crate::utils::error::ErrorSeverity::{Critical, Warning};
+use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use axum::extract::Request;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
@@ -17,7 +18,7 @@ pub async fn handle_cookie_session(
     let jar = CookieJar::from_headers(req.headers());
     let cookie = jar.get("sessionid");
     if cookie.is_none() {
-        let inner_error = CustomErrorInner::Forbidden;
+        let inner_error = CustomErrorInner::Forbidden(Warning);
         let error: CustomError = inner_error.into();
         return Err(error);
     }
@@ -29,10 +30,10 @@ pub async fn handle_cookie_session(
         .filter(session_id.eq(extracted_cookie))
         .first::<Session>(&mut get_connection())
         .optional()
-        .map_err(map_db_error)
+        .map_err(|e| map_db_error(e, Critical))
         .map_err(<CustomError as Into<Infallible>>::into)?;
     if session.is_none() {
-        let inner_error = CustomErrorInner::Forbidden;
+        let inner_error = CustomErrorInner::Forbidden(Warning);
         let error: CustomError = inner_error.into();
         return Err(error);
     }

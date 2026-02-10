@@ -1,7 +1,8 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::sessions;
-use crate::utils::error::{map_db_error, CustomError};
-use crate::{execute_with_conn, DBType as DbConnection};
+use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
+use crate::{DBType as DbConnection, execute_with_conn};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel::QueryDsl;
@@ -32,7 +33,7 @@ impl Session {
         execute_with_conn!(|conn| diesel::insert_into(sessions::table)
             .values(self)
             .get_result(conn)
-            .map_err(map_db_error))
+            .map_err(|e| map_db_error(e, Critical)))
     }
 
     pub fn cleanup_sessions(conn: &mut DbConnection) -> Result<usize, diesel::result::Error> {

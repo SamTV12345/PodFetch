@@ -1,6 +1,6 @@
 use crate::adapters::api::controllers::routes::global_routes;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::DBType;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
@@ -26,20 +26,20 @@ use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::middleware::from_fn;
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{Redirect, Response};
 use axum::routing::get;
-use axum::Router;
 use clokwerk::{Scheduler, TimeUnits};
 use diesel::r2d2::ConnectionManager;
 use diesel_migrations::MigrationHarness;
 use log::info;
-use maud::{html, Markup};
+use maud::{Markup, html};
 use r2d2::Pool;
-use socketioxide::extract::SocketRef;
 use socketioxide::SocketIoBuilder;
+use socketioxide::extract::SocketRef;
 use std::ops::DerefMut;
 use std::process::exit;
 use std::sync::OnceLock;
@@ -55,15 +55,16 @@ use utoipa_scalar::Servable as UtoipaServable;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub type DbPool = Pool<ConnectionManager<DBType>>;
-use crate::embed_migrations;
 use crate::EmbeddedMigrations;
+use crate::embed_migrations;
+use crate::utils::error::ErrorSeverity::Warning;
 
 import_database_config!();
 
 pub fn run_poll() -> Result<(), CustomError> {
     //check for new episodes
-    let podcats_result = Podcast::get_all_podcasts()?;
-    for podcast in podcats_result {
+    let podcast_result = Podcast::get_all_podcasts()?;
+    for podcast in podcast_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
             let insert_result = PodcastEpisodeService::insert_podcast_episodes(&podcast);
@@ -96,8 +97,7 @@ fn fix_links(content: &str) -> String {
 
 pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
 
-#[utoipa::path(get, path = "/index.html")]
-async fn index() -> Result<Response<String>, CustomError> {
+pub fn transform_index_files() -> String {
     let html = INDEX_HTML.get_or_init(|| {
         let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
         let manifest_json_location =
@@ -115,6 +115,15 @@ async fn index() -> Result<Response<String>, CustomError> {
             .filter(|x| x.starts_with("index") && x.ends_with(".css"))
             .collect::<Vec<&String>>()[0];
 
+        /*let icon_file = found_files
+           .iter()
+           .filter(|x| x.starts_with("outlined-") && x.ends_with(".css"))
+           .collect::<Vec<&String>>()[0];
+         link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",icon_file));
+        */
+
+        let config = ENVIRONMENT_SERVICE.get_config();
+        let config_string = serde_json::to_string(&config).unwrap();
         let html = html! {
             html {
                 head {
@@ -129,21 +138,28 @@ async fn index() -> Result<Response<String>, CustomError> {
                     link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",css_file));
                 }
             body {
+            div id="config" data-config=(config_string)    {};
             div id="root" {};
             div id="modal" {};
             div id="modal1"{};
             div id="modal2"{};
             div id="confirm-modal"{};
+            audio id="audio-player" crossorigin="anonymous"    {};
                 }
 
         }};
         html
     });
 
+    html.0.to_string()
+}
+
+#[utoipa::path(get, path = "/index.html")]
+async fn index() -> Result<Response<String>, CustomError> {
     let response = Response::builder()
         .header("Content-Type", "text/html")
         .status(200)
-        .body(html.0.to_string())
+        .body(transform_index_files())
         .unwrap();
     Ok(response)
 }
@@ -166,7 +182,9 @@ pub fn check_server_config() {
     if ENVIRONMENT_SERVICE.http_basic
         && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
     {
-        eprintln!("BASIC_AUTH activated but no username or password set. Please set username and password in the .env file.");
+        eprintln!(
+            "BASIC_AUTH activated but no username or password set. Please set username and password in the .env file."
+        );
         exit(1);
     }
 
@@ -175,12 +193,16 @@ pub fn check_server_config() {
             || ENVIRONMENT_SERVICE.oidc_configured
             || ENVIRONMENT_SERVICE.reverse_proxy)
     {
-        eprintln!("GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file.");
+        eprintln!(
+            "GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file."
+        );
         exit(1);
     }
 
     if check_if_multiple_auth_is_configured() {
-        eprintln!("You cannot have oidc and basic auth enabled at the same time. Please disable one of them.");
+        eprintln!(
+            "You cannot have oidc and basic auth enabled at the same time. Please disable one of them."
+        );
         exit(1);
     }
 }
@@ -209,20 +231,20 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
     }
 }
 
-async fn handle_ui_access(req: Request) -> Result<impl IntoResponse, CustomError> {
+async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
     let (req_parts, _) = req.into_parts();
     let path = req_parts.uri.path();
 
     if path.contains("..") {
-        return Err(CustomErrorInner::NotFound.into());
+        return Err(CustomErrorInner::NotFound(Warning).into());
     }
     let mut file_path = format!("{}{}", "./static", path);
 
     let mut content = match fs::read(&file_path).await {
         Ok(e) => Ok::<Vec<u8>, CustomError>(e),
         Err(_) => {
-            file_path = "./static/index.html".to_string();
-            Ok(fs::read("./static/index.html").await.unwrap())
+            file_path = format!("{}{}", "./static", "/ui/index.html");
+            Ok(transform_index_files().as_bytes().to_vec())
         }
     }?;
     let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
@@ -322,8 +344,8 @@ pub fn handle_config_for_server_startup() -> Router {
     match FileService::create_podcast_root_directory_exists() {
         Ok(_) => {}
         Err(e) => {
-            log::error!("Could not create podcast root directory: {}", e);
-            panic!("Could not create podcast root directory: {}", e);
+            log::error!("Could not create podcast root directory: {e}");
+            panic!("Could not create podcast root directory: {e}");
         }
     }
 
@@ -344,7 +366,7 @@ pub fn handle_config_for_server_startup() -> Router {
                                 info!("Polling for new episodes successful");
                             }
                             Err(e) => {
-                                log::error!("Error polling for new episodes: {}", e);
+                                log::error!("Error polling for new episodes: {e}");
                             }
                         }
                     }
@@ -386,12 +408,12 @@ pub fn handle_config_for_server_startup() -> Router {
         .clone()
         .unwrap_or("/".to_string());
 
-    let ui_dir = format!("{}/ui/", sub_dir);
+    let ui_dir = format!("{sub_dir}/ui/");
     let (layer, io) = SocketIoBuilder::new().build_layer();
-    io.ns("/", |socket: SocketRef| {
-        log::info!("Socket connected {}", socket.id);
+    io.ns("/", async |socket: SocketRef| {
+        info!("Socket connected {}", socket.id);
     });
-    io.ns("/".to_owned() + MAIN_ROOM, || {
+    io.ns("/".to_owned() + MAIN_ROOM, async || {
         info!("Socket connected to main room");
     });
     SOCKET_IO_LAYER.get_or_init(|| io);
@@ -414,7 +436,6 @@ pub fn handle_config_for_server_startup() -> Router {
 
 #[cfg(test)]
 pub mod tests {
-
     #[cfg(feature = "postgresql")]
     use crate::test_utils::test::setup_container;
     use axum_test::TestServer;
@@ -423,9 +444,9 @@ pub mod tests {
     #[cfg(feature = "postgresql")]
     use crate::commands::startup::handle_config_for_server_startup;
     #[cfg(feature = "postgresql")]
-    use testcontainers::runners::AsyncRunner;
-    #[cfg(feature = "postgresql")]
     use testcontainers::ContainerAsync;
+    #[cfg(feature = "postgresql")]
+    use testcontainers::runners::AsyncRunner;
     #[cfg(feature = "postgresql")]
     use testcontainers_modules::postgres::Postgres;
 

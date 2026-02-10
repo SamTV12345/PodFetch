@@ -1,0 +1,37 @@
+name: checkFrontend.yml
+permissions:
+  contents: read
+on:
+  pull_request: {}
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  check-frontend:
+    name: Check Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+      - name: Install dependencies
+        working-directory: ui
+        run: pnpm install
+      - name: Test frontend
+        working-directory: ui
+        run: pnpm run test
+      - name: Run tsc
+        working-directory: ui
+        run: pnpm run tsc:check
+      - name: Build project
+        working-directory: ui
+        run: pnpm run build

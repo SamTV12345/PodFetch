@@ -3,8 +3,6 @@ on:
   push:
     branches:
      - main
-    paths:
-      - 'docs/**'
 
 permissions:
   contents: read
@@ -17,15 +15,15 @@ jobs:
         steps:
         - uses: actions/checkout@v2
         - name: Install mdBook
-          uses: peaceiris/actions-mdbook@v1
+          uses: peaceiris/actions-mdbook@v2
         - name: Build mdBook
           run: mdbook build
           working-directory: docs
         - name: Upload artifact
-          uses: actions/upload-pages-artifact@v1
+          uses: actions/upload-pages-artifact@v3
           with:
             # Upload entire repository
             path: './docs/book'
         - name: Deploy to GitHub Pages
           id: deployment
-          uses: actions/deploy-pages@v2
+          uses: actions/deploy-pages@v4

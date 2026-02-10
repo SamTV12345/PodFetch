@@ -5,6 +5,7 @@ use crate::models::podcasts::Podcast;
 use std::path::Path;
 use std::str::FromStr;
 
+use crate::DBType as DbConnection;
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
@@ -17,11 +18,10 @@ use crate::models::settings::Setting;
 use crate::service::download_service::DownloadService;
 use crate::service::path_service::PathService;
 use crate::service::settings_service::SettingsService;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::file_extension_determination::{determine_file_extension, FileType};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use crate::utils::file_extension_determination::{FileType, determine_file_extension};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
 use crate::utils::rss_feed_parser::RSSFeedParser;
-use crate::DBType as DbConnection;
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
@@ -69,7 +69,7 @@ impl FileService {
     ) -> Result<String, CustomError> {
         let escaped_title =
             prepare_podcast_title_to_directory(podcast_insert_model, channel).await?;
-        let escaped_path = format!("podcasts/{}", escaped_title);
+        let escaped_path = format!("podcasts/{escaped_title}");
 
         if !FileHandleWrapper::path_exists(
             &escaped_path,
@@ -95,15 +95,15 @@ impl FileService {
                 None => {
                     // has not been inserted into the database yet
                     let mut i = 1;
-                    while Path::new(&format!("podcasts/{}-{}", escaped_title, i)).exists() {
+                    while Path::new(&format!("podcasts/{escaped_title}-{i}")).exists() {
                         i += 1;
                     }
                     // This is save to insert because this directory does not exist
                     FileHandleWrapper::create_dir(
-                        &format!("podcasts/{}-{}", escaped_title, i),
+                        &format!("podcasts/{escaped_title}-{i}"),
                         &ENVIRONMENT_SERVICE.default_file_handler,
                     )?;
-                    Ok(format!("podcasts/{}-{}", escaped_title, i))
+                    Ok(format!("podcasts/{escaped_title}-{i}"))
                 }
             }
         }
@@ -259,8 +259,8 @@ pub fn perform_podcast_variable_replacement(
     match result {
         Ok(res) => Ok(sanitizer.sanitize(res)),
         Err(err) => {
-            log::error!("Error formatting podcast title: {}", err);
-            Err(CustomErrorInner::Conflict(err.to_string()).into())
+            log::error!("Error formatting podcast title: {err}");
+            Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
         }
     }
 }
@@ -338,8 +338,8 @@ pub fn perform_episode_variable_replacement(
     match result {
         Ok(res) => Ok(res.to_string()),
         Err(err) => {
-            log::error!("Error formatting episode title: {}", err);
-            Err(CustomErrorInner::Conflict(err.to_string()).into())
+            log::error!("Error formatting episode title: {err}");
+            Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
         }
     }
 }

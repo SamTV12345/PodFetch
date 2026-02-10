@@ -1,14 +1,15 @@
+use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::subscriptions;
 use crate::gpodder::subscription::subscriptions::SubscriptionUpdateRequest;
-use crate::utils::error::{map_db_error, CustomError};
+use crate::utils::error::ErrorSeverity::Critical;
+use crate::utils::error::{CustomError, map_db_error};
 use crate::utils::time::get_current_timestamp;
-use crate::DBType as DbConnection;
 use axum::Json;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::ExpressionMethods;
 use diesel::OptionalExtension;
+use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::{AsChangeset, Insertable, Queryable, QueryableByName};
 use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::{Deserialize, Serialize};
@@ -125,7 +126,7 @@ impl SubscriptionChangesToClient {
             .filter(subscriptions::username.eq(username))
             .filter(subscriptions::created.gt(since))
             .load::<Subscription>(&mut get_connection())
-            .map_err(map_db_error)?;
+            .map_err(|e| map_db_error(e, Critical))?;
 
         let (deleted_subscriptions, created_subscriptions): (Vec<Subscription>, Vec<Subscription>) =
             res.into_iter().partition(|c| c.deleted.is_some());

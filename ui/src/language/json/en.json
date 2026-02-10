@@ -20,14 +20,23 @@
   "podcast-size": "Podcast directory size",
   "cpu-usage": "CPU",
   "used-cpu": "Used CPU",
+  "rescan-audio-files": "Rescan audio files",
+  "rescan-audio-files-description": "PodFetch will rescan all audio files to update metadata like chapters. This can take a while depending on the number of podcast episodes.",
+  "rescan-done": "Rescan done",
   "free-cpu": "Available CPU",
   "loading": "Loading",
   "memory-usage": "Memory",
   "used-memory": "Used memory",
   "free-memory": "Available memory",
   "disk-usage": "Disk",
+  "description": "Description",
   "used-disk": "Used disk",
   "free-disk": "Available disk",
+  "chapters": "Chapters",
+  "title": "Title",
+  "timeslot": "Zeitfenster",
+  "start-time": "Start time",
+    "end-time": "End time",
   "system-info": "System information",
   "add-podcast": "Add Podcast",
   "search-podcast": "Search podcast",
@@ -190,5 +199,9 @@
   "tag_other": "Tags",
   "device": "Device",
   "add": "Add",
-  "unplayed": "Unplayed"
+  "unplayed": "Unplayed",
+
+
+  "UPDATE_OF_ADMIN_NOT_ALLOWED": "Changing the admin account {{username}} is not allowed",
+  "WRONG_USER_OR_PASSWORD": "Wrong username or password"
 }

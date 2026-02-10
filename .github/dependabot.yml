@@ -9,7 +9,9 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 30
   - package-ecosystem: "npm"
     directory: "/ui"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 30

@@ -10,11 +10,12 @@ use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
 use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_settings::PodcastSetting;
 use crate::models::settings::Setting;
-use crate::models::tag::Tag;
+use crate::models::user::User;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::unwrap_string;
-use crate::utils::error::{map_reqwest_error, CustomError, CustomErrorInner};
+use crate::utils::error::ErrorSeverity::{Critical, Error};
+use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::http_client::get_http_client;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
@@ -68,8 +69,8 @@ impl PodcastService {
         let possible_json = result.text().await.map_err(map_reqwest_error)?;
 
         if status.is_client_error() || status.is_server_error() {
-            log::error!("Error searching for podcast: {}", possible_json);
-            Err(CustomErrorInner::BadRequest(possible_json).into())
+            log::error!("Error searching for podcast: {possible_json}");
+            Err(CustomErrorInner::BadRequest(possible_json, Error).into())
         } else {
             let res_of_search = serde_json::from_str(&possible_json);
 
@@ -96,7 +97,7 @@ impl PodcastService {
             .await
             .unwrap();
 
-        println!("Result: {:?}", resp);
+        println!("Result: {resp:?}");
 
         let podcast = resp.json::<Value>().await.unwrap();
 
@@ -118,10 +119,13 @@ impl PodcastService {
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = Podcast::find_by_rss_feed_url(&podcast_insert.feed_url.clone());
         if opt_podcast.is_some() {
-            return Err(CustomErrorInner::Conflict(format!(
-                "Podcast with feed url {} already exists",
-                podcast_insert.feed_url
-            ))
+            return Err(CustomErrorInner::Conflict(
+                format!(
+                    "Podcast with feed url {} already exists",
+                    podcast_insert.feed_url
+                ),
+                ErrorSeverity::Warning,
+            )
             .into());
         }
 
@@ -156,7 +160,7 @@ impl PodcastService {
                         inserted_podcasts.clone(),
                     );
                     if let Err(e) = Self::schedule_episode_download(&podcast) {
-                        log::error!("Error scheduling episode download: {}", e);
+                        log::error!("Error scheduling episode download: {e}");
                     }
                 })
                 .await
@@ -180,22 +184,21 @@ impl PodcastService {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
                     for podcast_episode in result {
-                        if !podcast_episode.deleted {
-                            if let Err(e) =
+                        if !podcast_episode.deleted
+                            && let Err(e) =
                             PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
                                     podcast_episode,
                                     podcast.clone(),
                                 ){
-                                log::error!("Error downloading podcast episode: {}", e);
+                                log::error!("Error downloading podcast episode: {e}");
                             }
-                        }
                     }
                 }
                 Ok(())
             }
             None => {
                 log::error!("Error getting settings");
-                Err(CustomErrorInner::Unknown.into())
+                Err(CustomErrorInner::Unknown(Critical).into())
             }
         }
     }
@@ -214,8 +217,8 @@ impl PodcastService {
         Podcast::get_podcast(id).unwrap()
     }
 
-    pub fn get_favored_podcasts(found_username: String) -> Result<Vec<PodcastDto>, CustomError> {
-        Favorite::get_favored_podcasts(found_username)
+    pub fn get_favored_podcasts(requester: User) -> Result<Vec<PodcastDto>, CustomError> {
+        Favorite::get_favored_podcasts(&requester)
     }
 
     pub fn update_active_podcast(id: i32) -> Result<(), CustomError> {
@@ -264,7 +267,7 @@ impl PodcastService {
         Podcast::get_podcast(podcast_id_to_be_searched)
     }
 
-    pub fn get_podcasts(u: &str) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: &User) -> Result<Vec<PodcastDto>, CustomError> {
         Podcast::get_podcasts(u)
     }
 
@@ -274,62 +277,48 @@ impl PodcastService {
         latest_pub: OrderOption,
         designated_username: String,
         tag: Option<String>,
+        requester: &User,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts =
-            Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?;
-        let mut podcast_dto_vec: Vec<PodcastDto> = Vec::new();
-        for podcast in podcasts {
-            let tags_of_podcast = Tag::get_tags_of_podcast(podcast.0.id, &designated_username)?;
-            podcast_dto_vec.push(
-                (
-                    podcast.0.clone(),
-                    Some(podcast.1.clone()),
-                    tags_of_podcast.clone(),
-                )
-                    .into(),
-            );
-        }
+            Favorite::search_podcasts_favored(order, title, latest_pub, &designated_username)?
+                .iter()
+                .filter(|podcast| {
+                    if let Some(tag) = &tag {
+                        return podcast.2.iter().filter(|p| p.name == *tag).count() > 0;
+                    }
+                    true
+                })
+                .map(|p| {
+                    (
+                        p.0.clone(),
+                        Option::from(p.1.clone()),
+                        p.2.clone(),
+                        requester,
+                    )
+                        .into()
+                })
+                .collect::<Vec<PodcastDto>>();
 
-        if let Some(tag) = tag {
-            let found_tag = Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
-
-            if let Some(foud_tag) = found_tag {
-                podcast_dto_vec = podcast_dto_vec
-                    .into_iter()
-                    .filter(|p| p.tags.iter().any(|t| t.id == foud_tag.id))
-                    .collect::<Vec<PodcastDto>>()
-            }
-        }
-
-        Ok(podcast_dto_vec)
+        Ok(podcasts)
     }
 
     pub fn search_podcasts(
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: String,
         tag: Option<String>,
+        requester: &User,
     ) -> Result<Vec<PodcastDto>, CustomError> {
-        let podcasts = Favorite::search_podcasts(order, title, latest_pub, &designated_username)?;
-        let mut mapped_result = podcasts
+        let podcasts = Favorite::search_podcasts(order, title, latest_pub, &requester.username)?
             .iter()
-            .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &designated_username).unwrap();
-                (podcast.0.clone(), podcast.1.clone(), tags).into()
+            .filter(|podcast| {
+                if let Some(tag) = &tag {
+                    return podcast.2.iter().filter(|p| p.id == *tag).count() > 0;
+                }
+                true
             })
+            .map(|p| (p.0.clone(), p.1.clone(), p.2.clone(), requester).into())
             .collect::<Vec<PodcastDto>>();
-
-        if let Some(tag) = tag {
-            let found_tag = Tag::get_tag_by_id_and_username(&tag, &designated_username)?;
-
-            if let Some(foud_tag) = found_tag {
-                mapped_result = mapped_result
-                    .into_iter()
-                    .filter(|p| p.tags.iter().any(|t| t.id == foud_tag.id))
-                    .collect::<Vec<PodcastDto>>()
-            }
-        }
-        Ok(mapped_result)
+        Ok(podcasts)
     }
 }

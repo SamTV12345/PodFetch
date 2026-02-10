@@ -5,43 +5,36 @@ import { AudioAmplifier } from '../models/AudioAmplifier'
 import { VolumeIcon } from '../icons/VolumeIcon'
 import { useKeyDown } from '../hooks/useKeyDown'
 import { VOLUME_STEP } from '../utils/Utilities';
+import {getAudioPlayer} from "../utils/audioPlayer";
 
 type PlayerVolumeSliderProps = {
-    refItem: RefObject<HTMLAudioElement|null>,
     audioAmplifier: AudioAmplifier | undefined
 }
 
-export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ refItem, audioAmplifier }) => {
+export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ audioAmplifier }) => {
     const volume = useAudioPlayer(state => state.volume)
     const setVolume = useAudioPlayer(state => state.setVolume)
 
     useKeyDown(() => {
-        if (refItem.current) {
             const newVolume = Math.max(0, volume - VOLUME_STEP)
             setVolume(newVolume)
             audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
-        }
     }, ['ArrowDown'], false)
 
     useKeyDown(() => {
-        if (refItem.current) {
             const newVolume = Math.min(300, volume + VOLUME_STEP)
             setVolume(newVolume)
             audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
-        }
     }, ['ArrowUp'], false)
 
     return (
         <div className="flex items-center gap-2 w-40 sm:w-full sm:px-0">
-            <VolumeIcon audio={refItem} max={300} volume={volume}/>
+            <VolumeIcon max={300} volume={volume}/>
 
             {/*  Volume max 300 as some podcast providers have inconsistent sound profiles */}
             <Slider.Root className="relative flex items-center cursor-pointer h-2 w-full" value={[volume]} max={300} onValueChange={(v) => {
                 audioAmplifier && audioAmplifier.setVolume(Number(v) / 100)
-
-                if (refItem && refItem.current) {
-                    setVolume(Number(v))
-                }
+                setVolume(Number(v))
             }}>
                 <Slider.Track className="relative grow bg-(--slider-bg-color) h-0.5">
                     <Slider.Range className="absolute bg-(--slider-fg-color) h-full"/>

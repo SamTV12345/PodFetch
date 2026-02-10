@@ -17,7 +17,7 @@
   "hardware": "Hardware",
   "cpu-brand": "CPU Marke",
   "cpu-cores": "CPU Kerne",
-  "podcast-size": "Podcast Verzeichnis Größe",
+  "podcast-size": "Podcastverzeichnisgröße",
   "cpu-usage": "CPU",
   "used-cpu": "Verwendete CPU",
   "free-cpu": "Freie CPU",
@@ -28,7 +28,7 @@
   "disk-usage": "Festplattenauslastung",
   "used-disk": "Verwendete Festplatte",
   "free-disk": "Freie Festplatte",
-  "system-info": "System information",
+  "system-info": "Systeminformation",
   "add-podcast": "Podcast hinzufügen",
   "search-podcast": "Podcast suchen",
   "favorites": "Favoriten",
@@ -88,6 +88,9 @@
   "podcast-deleted": "Podcast {{name}} gelöscht",
   "manage-podcasts": "Podcasts verwalten",
   "data-retention": "Podcastaufbewahrung",
+  "rescan-audio-files": "Audiodateien neu scannen",
+  "rescan-audio-files-description": "PodFetch wird alle lokalen Audiodateien im Podcast-Verzeichnis neu scannen und Metadaten wie Kapitel ergänzen.",
+  "rescan-done": "Neuscan abgeschlossen",
   "opml-export": "OPML-Export",
   "local": "Lokal",
   "online": "Online",
@@ -141,6 +144,10 @@
   "rename-podcasts": "Podcasts umbenennen",
   "use-existing-filenames": "Podfetch existierende Dateinamen verwenden",
   "replace-invalid-characters-description": "Ungültige Zeichen werden durch Unterstriche ersetzt",
+  "description": "Beschreibung",
+  "chapters": "Kapitel",
+  "timeslot": "Zeitfenster",
+  "title": "Titel",
   "colon-replacement": "Doppelpunkt-Ersatz",
   "standard-episode-format": "Standard-Episodenformat",
   "dash-separated": "Bindestrich-getrennt",
@@ -179,6 +186,8 @@
   "not-yet-played": "Noch nicht gespielt",
   "podcast-episode-played": "{{percentage}} abgespielt",
   "restart-playing": "Erneut abspielen",
+  "start-time": "Startzeit",
+    "end-time": "Endzeit",
   "you-already-listened": "Die Episode <name/> wurde bereits abgespielt. Möchtest du sie nochmal anhören oder eine andere Episode auswählen?",
   "podcast-not-found": "Podcast nicht gefunden",
   "original-rss-feed": "Original RSS Feed",
@@ -193,5 +202,10 @@
   "add": "Hinzufügen",
   "tag_one": "Tag",
   "tag_other": "Tags",
-  "unplayed": "Ungehört"
+  "unplayed": "Ungehört",
+
+
+
+  "UPDATE_OF_ADMIN_NOT_ALLOWED": "Das Ändern des Administratoraccounts {{username}} ist nicht erlaubt",
+  "WRONG_USER_OR_PASSWORD": "Falscher Benutzername oder Passwort"
 }
