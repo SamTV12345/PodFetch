@@ -1,8 +1,9 @@
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from "@/store/store";
 import { syncService } from '@/store/syncService';
 import { downloadManager } from '@/store/downloadManager';
+import { getAuthenticatedMediaUrl } from '@/utils/mediaUrl';
 
 /**
  * Globaler Audio-Provider - wird nur einmal im Root-Layout gemountet.
@@ -15,17 +16,16 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     const setAudioProgress = useStore(state => state.setAudioProgress);
     const setIsPlaying = useStore(state => state.setIsPlaying);
     const serverUrl = useStore(state => state.serverUrl);
+    const authType = useStore(state => state.authType);
+    const userApiKey = useStore(state => state.userApiKey);
 
-    // Track welche URL bereits gestartet wurde um Doppelstart zu verhindern
     const lastPlayedUrlRef = useRef<string | null>(null);
     const isInitializingRef = useRef(false);
     const hasRegisteredPlayerRef = useRef(false);
     const lastSaveTimeRef = useRef<number>(0);
 
-    // Speichere effektive URL (lokal heruntergeladen oder Server)
     const [effectiveUrl, setEffectiveUrl] = useState<string>('');
 
-    // Bestimme die beste verfügbare URL (lokal wenn heruntergeladen, sonst Server)
     useEffect(() => {
         const determineUrl = async () => {
             if (!selectedPodcastEpisode?.podcastEpisode) {
@@ -35,7 +35,6 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
 
             const episode = selectedPodcastEpisode.podcastEpisode;
 
-            // Prüfe ob Episode lokal heruntergeladen ist
             const localPath = await downloadManager.getLocalPath(episode.episode_id);
             if (localPath) {
                 console.log('Using local downloaded file:', localPath);
@@ -43,12 +42,12 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
                 return;
             }
 
-            // Sonst verwende Server-URL
+            const apiKey = authType === 'basic' ? userApiKey : null;
+
             if (episode.local_url && serverUrl) {
-                const fullUrl = serverUrl.replace(/\/$/, '') + episode.local_url;
+                const fullUrl = getAuthenticatedMediaUrl(episode.local_url, serverUrl, apiKey);
                 setEffectiveUrl(fullUrl);
             } else if (episode.url) {
-                // Fallback auf Original-URL
                 setEffectiveUrl(episode.url);
             } else {
                 setEffectiveUrl('');
@@ -56,7 +55,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         determineUrl();
-    }, [selectedPodcastEpisode?.podcastEpisode?.episode_id, selectedPodcastEpisode?.podcastEpisode?.local_url, serverUrl]);
+    }, [selectedPodcastEpisode?.podcastEpisode?.episode_id, selectedPodcastEpisode?.podcastEpisode?.local_url, serverUrl, authType, userApiKey]);
 
     const audioUrl = effectiveUrl;
 
@@ -115,8 +114,16 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
             isInitializingRef.current = true;
             lastPlayedUrlRef.current = audioUrl;
 
+            // Hole die gespeicherte Position (vom Server in Sekunden)
+            const savedPosition = selectedPodcastEpisode.episode?.position ?? 0;
+
             // Kurze Verzögerung um sicherzustellen, dass der Player bereit ist
             const timeout = setTimeout(() => {
+                // Springe zur gespeicherten Position wenn vorhanden
+                if (savedPosition > 0) {
+                    console.log('Seeking to saved position:', savedPosition, 'seconds');
+                    player.seekTo(savedPosition);
+                }
                 player.play();
                 setIsPlaying(true);
                 isInitializingRef.current = false;

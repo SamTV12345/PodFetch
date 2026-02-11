@@ -21,7 +21,7 @@ export default function TabLayout() {
               width: '90%',
               marginLeft: 'auto',
               marginRight: 'auto',
-              bottom: '3%',
+              bottom: 20,
               paddingBottom: 10,
               paddingTop: 10,
               paddingLeft: 20,
@@ -33,10 +33,6 @@ export default function TabLayout() {
               <TabTrigger name="home" href="/(tabs)" style={{flexDirection: 'column', display: 'flex'}}>
                   <IconSymbol size={20} name={"house.fill"} color={ pathname == "/"? styles.accentColor: 'white'} style={{alignSelf: 'center',}} />
                   <ThemedText style={{color: pathname == "/"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('home')}</ThemedText>
-              </TabTrigger>
-              <TabTrigger name="search" href="/(tabs)/search"  style={{flexDirection: 'column', display: 'flex'}}>
-                  <IconSymbol size={20} name={"magnifyingglass.circle"} color={ pathname == "/search"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />
-                  <ThemedText style={{color: pathname == "/search"? styles.accentColor: 'white', fontSize: 15, marginTop: 'auto',  marginLeft: 'auto', marginBottom: 'auto'}}>{t('search')}</ThemedText>
               </TabTrigger>
               <TabTrigger name="downloads" href="/(tabs)/downloads"  style={{flexDirection: 'column', display: 'flex'}}>
                   <IconSymbol size={20} name={"arrow.down.circle.fill"} color={ pathname == "/downloads"? styles.accentColor: 'white'}  style={{alignSelf: 'center'}} />

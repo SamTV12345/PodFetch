@@ -1,4 +1,3 @@
-// Offline-Funktionalität Exports
 export { offlineDB } from './offlineStore';
 export type { LocalWatchProgress, DownloadedEpisode, SyncQueueItem } from './offlineStore';
 

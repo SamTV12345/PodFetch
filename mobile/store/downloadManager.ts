@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { offlineDB, DownloadedEpisode } from '@/store/offlineStore';
 import { components } from '@/schema';
 import { useStore } from '@/store/store';
+import { getAuthenticatedMediaUrl } from '@/utils/mediaUrl';
 
 /**
  * DownloadManager - Verwaltet Episode-Downloads für Offline-Nutzung
@@ -28,7 +29,6 @@ class DownloadManagerClass {
     }
 
     private getEpisodeFilePath(episodeId: string, extension: string = 'mp3'): string {
-        // Sanitize episodeId for filesystem
         const safeId = episodeId.replace(/[^a-zA-Z0-9-_]/g, '_');
         return `${this.getEpisodeDirectory()}${safeId}.${extension}`;
     }
@@ -49,7 +49,6 @@ class DownloadManagerClass {
     ): Promise<void> {
         const episodeId = episode.episode_id;
 
-        // Prüfe ob bereits heruntergeladen
         const existing = await offlineDB.getDownloadedEpisode(episodeId);
         if (existing) {
             const fileInfo = await FileSystem.getInfoAsync(existing.localPath);
@@ -57,11 +56,9 @@ class DownloadManagerClass {
                 console.log(`Episode ${episodeId} already downloaded`);
                 return;
             }
-            // Datei existiert nicht mehr, entferne DB-Eintrag
             await offlineDB.deleteDownloadedEpisode(episodeId);
         }
 
-        // Prüfe ob bereits ein Download läuft
         if (this.activeDownloads.has(episodeId)) {
             console.log(`Download for ${episodeId} already in progress`);
             return;
@@ -69,12 +66,10 @@ class DownloadManagerClass {
 
         await this.ensureDirectoryExists();
 
-        // Bestimme Dateiendung aus URL
         const urlParts = episode.url.split('.');
         const extension = urlParts[urlParts.length - 1]?.split('?')[0] || 'mp3';
         const localPath = this.getEpisodeFilePath(episodeId, extension);
 
-        // Initialer Status
         this.updateProgress(episodeId, {
             episodeId,
             progress: 0,
@@ -83,24 +78,22 @@ class DownloadManagerClass {
             status: 'pending'
         });
 
-        // Erstelle Download URL - entweder direkt oder über den Server
         const serverUrl = useStore.getState().serverUrl;
+        const authType = useStore.getState().authType;
+        const userApiKey = useStore.getState().userApiKey;
         let downloadUrl = episode.url;
 
-        // Hilfsfunktion um zu prüfen ob URL bereits vollständig ist
         const isAbsoluteUrl = (url: string) => url.startsWith('http://') || url.startsWith('https://');
 
-        // Wenn die URL relativ ist (vom Server), mache sie absolut
+        const apiKey = authType === 'basic' ? userApiKey : null;
+
         if (episode.local_url && serverUrl && !isAbsoluteUrl(episode.local_url)) {
-            // Bevorzuge local_url wenn verfügbar (Server-gecachte Version)
-            downloadUrl = serverUrl.replace(/\/$/, '') + episode.local_url;
+            downloadUrl = getAuthenticatedMediaUrl(episode.local_url, serverUrl, apiKey);
         } else if (episode.local_url && isAbsoluteUrl(episode.local_url)) {
-            // local_url ist bereits eine vollständige URL
             downloadUrl = episode.local_url;
         } else if (episode.url.startsWith('/') && serverUrl) {
-            downloadUrl = serverUrl.replace(/\/$/, '') + episode.url;
+            downloadUrl = getAuthenticatedMediaUrl(episode.url, serverUrl, apiKey);
         } else if (isAbsoluteUrl(episode.url)) {
-            // episode.url ist bereits eine vollständige URL
             downloadUrl = episode.url;
         }
 
@@ -136,7 +129,6 @@ class DownloadManagerClass {
             const result = await downloadResumable.downloadAsync();
 
             if (result?.uri) {
-                // Speichere in Offline-DB
                 const fileInfo = await FileSystem.getInfoAsync(result.uri);
 
                 await offlineDB.saveDownloadedEpisode({
@@ -188,7 +180,6 @@ class DownloadManagerClass {
             await download.pauseAsync();
             this.activeDownloads.delete(episodeId);
 
-            // Lösche teilweise heruntergeladene Datei
             const partialPath = this.getEpisodeFilePath(episodeId);
             try {
                 const fileInfo = await FileSystem.getInfoAsync(partialPath);
@@ -196,7 +187,7 @@ class DownloadManagerClass {
                     await FileSystem.deleteAsync(partialPath);
                 }
             } catch (e) {
-                // Ignoriere Fehler beim Löschen
+                console.log(e)
             }
 
             this.updateProgress(episodeId, {

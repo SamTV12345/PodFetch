@@ -9,7 +9,6 @@ import {useTranslation} from "react-i18next";
 import Slider from '@react-native-community/slider';
 import {useState, useCallback} from 'react';
 import { DownloadButton, DownloadStatusIcon } from "@/components/DownloadButton";
-import { useEpisodeDownload } from "@/hooks/useDownloads";
 
 const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -29,7 +28,7 @@ export default function PlayerScreen() {
     const [isOptionsVisible, setIsOptionsVisible] = useState(false);
     const [isSeeking, setIsSeeking] = useState(false);
     const [seekValue, setSeekValue] = useState(0);
-    const [isToggling, setIsToggling] = useState(false); // Verhindert Doppelklicks
+    const [isToggling, setIsToggling] = useState(false);
 
     const handleSeekStart = useCallback(() => {
         setIsSeeking(true);
@@ -78,7 +77,6 @@ export default function PlayerScreen() {
     };
 
     const handleTogglePlay = useCallback(() => {
-        // Verhindere Doppelklicks
         if (isToggling || !audioPlayer) return;
 
         setIsToggling(true);
@@ -91,7 +89,6 @@ export default function PlayerScreen() {
             setIsPlaying(true);
         }
 
-        // Erlaube erneutes Klicken nach 300ms
         setTimeout(() => setIsToggling(false), 300);
     }, [isPlaying, audioPlayer, setIsPlaying, isToggling]);
 

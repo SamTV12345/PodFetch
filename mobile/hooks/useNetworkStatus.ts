@@ -11,7 +11,6 @@ export function useNetworkStatus() {
     useEffect(() => {
         let mounted = true;
 
-        // Initial check
         syncService.isOnline().then((online) => {
             if (mounted) {
                 setIsOnline(online);

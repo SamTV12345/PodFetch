@@ -113,7 +113,25 @@ export default function EpisodeDetailScreen() {
             id: offlineEpisode.id || 0,
             status: true,
         };
-        playEpisode(offlineDto);
+
+        // Erstelle History-Objekt mit gespeicherter Position
+        const historyItem: components["schemas"]["EpisodeDto"] | undefined = onlineWatchData ? {
+            ...onlineWatchData,
+            // Position von Server oder lokalem Progress (in Sekunden)
+            position: onlineWatchData.position ?? Math.floor(watchProgress / 1000),
+        } : watchProgress > 0 ? {
+            podcast: '',
+            episode: offlineEpisode.localPath,
+            timestamp: new Date().toISOString(),
+            guid: offlineEpisode.episodeId,
+            action: 'play',
+            started: 0,
+            position: Math.floor(watchProgress / 1000),
+            total: offlineEpisode.totalTime,
+            device: 'mobile',
+        } : undefined;
+
+        playEpisode(offlineDto, undefined, historyItem);
     };
 
     // Progress-Prozent berechnen

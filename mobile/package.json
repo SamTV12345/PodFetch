@@ -28,6 +28,7 @@
     "expo-asset": "^12.0.12",
     "expo-audio": "~1.1.1",
     "expo-blur": "~15.0.8",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",

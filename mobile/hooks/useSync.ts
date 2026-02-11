@@ -12,7 +12,6 @@ export function useWatchProgress(episodeId: string | undefined) {
     const [isSyncing, setIsSyncing] = useState<boolean>(false);
     const lastSaveRef = useRef<number>(0);
 
-    // Lade Progress beim Mount
     useEffect(() => {
         if (!episodeId) {
             setProgress(null);
@@ -48,7 +47,6 @@ export function useWatchProgress(episodeId: string | undefined) {
         totalTimeMs: number
     ) => {
         const now = Date.now();
-        // Nur alle 5 Sekunden speichern
         if (now - lastSaveRef.current < 5000) {
             return;
         }

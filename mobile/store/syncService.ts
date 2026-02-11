@@ -1,7 +1,8 @@
 import * as Network from 'expo-network';
 import { offlineDB, LocalWatchProgress } from '@/store/offlineStore';
 import { useStore } from '@/store/store';
-import { components } from '@/schema';
+import { components, paths } from '@/schema';
+import createFetchClient from 'openapi-fetch';
 
 /**
  * SyncService - Synchronisiert lokale Daten mit dem PodFetch-Server
@@ -24,6 +25,28 @@ class SyncServiceClass {
     private syncInterval: ReturnType<typeof setInterval> | null = null;
     private listeners: Set<(isOnline: boolean) => void> = new Set();
     private lastOnlineState: boolean | null = null;
+
+
+    private getAuthenticatedClient() {
+        const state = useStore.getState();
+        const serverUrl = state.serverUrl;
+
+        if (!serverUrl) return null;
+
+        const headers: Record<string, string> = {};
+
+        if (state.authType === 'basic' && state.basicAuthUsername && state.basicAuthPassword) {
+            const credentials = btoa(`${state.basicAuthUsername}:${state.basicAuthPassword}`);
+            headers['Authorization'] = `Basic ${credentials}`;
+        } else if (state.authType === 'oidc' && state.oidcAccessToken) {
+            headers['Authorization'] = `Bearer ${state.oidcAccessToken}`;
+        }
+
+        return createFetchClient<paths>({
+            baseUrl: serverUrl.replace(/\/$/, ''),
+            headers,
+        });
+    }
 
     /**
      * Prüft ob das Gerät online ist
@@ -58,7 +81,6 @@ class SyncServiceClass {
 
         await offlineDB.saveWatchProgress(progress);
 
-        // Versuche sofort zu synchronisieren wenn online
         if (await this.isOnline()) {
             this.syncProgressToServer(episode.episode_id, watchedTimeMs).catch(console.error);
         }
@@ -68,26 +90,22 @@ class SyncServiceClass {
      * Synchronisiert einen einzelnen Progress-Eintrag mit dem Server
      */
     private async syncProgressToServer(episodeId: string, watchedTimeMs: number): Promise<boolean> {
-        const serverUrl = useStore.getState().serverUrl;
-        if (!serverUrl) return false;
+        const client = this.getAuthenticatedClient();
+        if (!client) return false;
 
         try {
-            const response = await fetch(`${serverUrl.replace(/\/$/, '')}/api/v1/podcasts/episode`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            const { error } = await client.POST('/api/v1/podcasts/episode', {
+                body: {
                     podcastEpisodeId: episodeId,
                     time: Math.floor(watchedTimeMs / 1000) // Server erwartet Sekunden
-                } satisfies components['schemas']['PodcastWatchedPostModel'])
+                }
             });
 
-            if (response.ok) {
+            if (!error) {
                 await offlineDB.markProgressSynced(episodeId);
                 return true;
             } else {
-                console.warn(`Failed to sync progress for ${episodeId}: ${response.status}`);
+                console.warn(`Failed to sync progress for ${episodeId}:`, error);
                 return false;
             }
         } catch (error) {
@@ -151,39 +169,26 @@ class SyncServiceClass {
      * @param podcastId Optional: Die Podcast-ID (wird für neue Server-Daten benötigt)
      */
     async pullProgressFromServer(episodeId: string, podcastId?: number): Promise<LocalWatchProgress | null> {
-        const serverUrl = useStore.getState().serverUrl;
-        if (!serverUrl || !(await this.isOnline())) {
-            // Offline: Gib lokalen Stand zurück
+        const client = this.getAuthenticatedClient();
+        if (!client || !(await this.isOnline())) {
             return offlineDB.getWatchProgress(episodeId);
         }
 
         try {
-            const response = await fetch(
-                `${serverUrl.replace(/\/$/, '')}/api/v1/podcasts/episode/${episodeId}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+            const { data: serverData, error } = await client.GET('/api/v1/podcasts/episode/{id}', {
+                params: {
+                    path: { id: episodeId }
                 }
-            );
+            });
 
-            if (response.ok) {
-                const serverData: components['schemas']['EpisodeDto'] = await response.json();
-
-                // Hole lokalen Stand
+            if (!error && serverData) {
                 const localProgress = await offlineDB.getWatchProgress(episodeId);
 
-                // Merge: Nehme den neueren Stand
                 if (localProgress && localProgress.needsSync) {
-                    // Lokale Änderung noch nicht synchronisiert - lokaler Stand gewinnt
                     return localProgress;
                 }
 
-                // Server-Stand übernehmen wenn vorhanden
-                // EpisodeDto verwendet 'position' für die aktuelle Position und 'total' für die Gesamtlänge
                 if (serverData.position !== undefined && serverData.position !== null) {
-                    // Bestimme die podcastId: Parameter > lokaler Stand > 0 als Fallback
                     const resolvedPodcastId = podcastId ?? localProgress?.podcastId ?? 0;
 
                     const serverProgress: Omit<LocalWatchProgress, 'id'> = {
@@ -258,7 +263,6 @@ class SyncServiceClass {
     subscribeToOnlineStatus(callback: (isOnline: boolean) => void): () => void {
         this.listeners.add(callback);
 
-        // Sende aktuellen Status
         this.isOnline().then(callback);
 
         return () => {

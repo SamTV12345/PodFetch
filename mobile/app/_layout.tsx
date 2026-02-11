@@ -13,6 +13,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAutoSync } from '@/hooks/useSync';
+import { useAuthRefresh } from '@/hooks/useAuthRefresh';
 import {styles} from "@/styles/styles";
 import { useStore } from '@/store/store';
 import { AudioProvider } from '@/components/AudioProvider';
@@ -31,13 +32,12 @@ export default function RootLayout() {
   const pathname = usePathname();
   const serverUrl = useStore((state) => state.serverUrl);
 
-  // Prüfe ob wir auf einer Tab-Seite sind (wo die TabBar sichtbar ist)
   const isTabScreen = segments[0] === '(tabs)';
-  // Auf Tab-Seiten brauchen wir mehr Abstand für die TabBar
-  const audioPlayerBottomOffset = isTabScreen ? 85 : 30;
+  const audioPlayerBottomOffset = isTabScreen ? 95 : 30;
 
-  // Starte automatische Synchronisation für Offline-Daten
-  useAutoSync(30000); // Alle 30 Sekunden prüfen
+  useAutoSync(30000); // Check all 30 seconds
+
+  useAuthRefresh();
 
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -49,17 +49,14 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Redirect based on server URL configuration
   useEffect(() => {
     if (!loaded) return;
 
     const inServerSetup = segments[0] === 'server-setup';
 
     if (!serverUrl && !inServerSetup) {
-      // No server configured, redirect to setup
       router.replace('/server-setup');
     } else if (serverUrl && inServerSetup) {
-      // Server configured, redirect to main app
       router.replace('/(tabs)');
     }
   }, [serverUrl, segments, loaded]);

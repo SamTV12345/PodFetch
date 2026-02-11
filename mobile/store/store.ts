@@ -4,11 +4,12 @@ import { AudioPlayer } from 'expo-audio';
 import {createJSONStorage, persist} from "zustand/middleware";
 import * as SQLite from 'expo-sqlite';
 
+export type AuthType = 'none' | 'basic' | 'oidc';
 
 type ZustandStore = {
     podcastEpisodeRecord: components["schemas"]["PodcastWatchedEpisodeModelWithPodcastEpisode"]|undefined,
     setPodcastEpisodeRecord: (comp: components["schemas"]["PodcastWatchedEpisodeModelWithPodcastEpisode"])=>void,
-    playEpisode: (episode: components["schemas"]["PodcastEpisodeDto"], podcast?: components["schemas"]["PodcastDto"]) => void,
+    playEpisode: (episode: components["schemas"]["PodcastEpisodeDto"], podcast?: components["schemas"]["PodcastDto"], history?: components["schemas"]["EpisodeDto"] | null) => void,
     audioPlayer: AudioPlayer|undefined,
     setAudioPlayer: (player: AudioPlayer) => void,
     stopAndClearPlayer: () => void,
@@ -22,6 +23,31 @@ type ZustandStore = {
     serverUrl: string | null,
     setServerUrl: (url: string) => void,
     clearServerUrl: () => void,
+    // Authentication
+    authType: AuthType,
+    setAuthType: (type: AuthType) => void,
+    authToken: string | null,
+    setAuthToken: (token: string | null) => void,
+    // Basic Auth credentials
+    basicAuthUsername: string | null,
+    setBasicAuthUsername: (username: string | null) => void,
+    basicAuthPassword: string | null,
+    setBasicAuthPassword: (password: string | null) => void,
+    // OIDC tokens
+    oidcAccessToken: string | null,
+    setOidcAccessToken: (token: string | null) => void,
+    oidcRefreshToken: string | null,
+    setOidcRefreshToken: (token: string | null) => void,
+    oidcTokenExpiry: number | null,
+    setOidcTokenExpiry: (expiry: number | null) => void,
+    serverConfig: components["schemas"]["ConfigModel"] | null,
+    setServerConfig: (config: components["schemas"]["ConfigModel"] | null) => void,
+    clearAuth: () => void,
+    // User profile
+    userApiKey: string | null,
+    setUserApiKey: (apiKey: string | null) => void,
+    userProfile: components["schemas"]["UserWithAPiKey"] | null,
+    setUserProfile: (profile: components["schemas"]["UserWithAPiKey"] | null) => void,
     // Offline mode
     offlineMode: boolean,
     setOfflineMode: (enabled: boolean) => void,
@@ -54,15 +80,16 @@ export const useStore = create<ZustandStore>()(
                 const podcastEpisodeRecord = get().podcastEpisodeRecord
                 const audioPlayer = get().audioPlayer
                 if (podcastEpisodeRecord && podcastEpisodeRecord.podcastEpisode.local_url == e.podcastEpisode.local_url && audioPlayer) {
-                    audioPlayer.seekTo(e.watchedTime / 1000) // expo-audio uses seconds
+                    // Use position from episode object (in seconds) for seeking
+                    const position = e.episode?.position ?? 0
+                    audioPlayer.seekTo(position)
                     return
                 }
                 set({
                     podcastEpisodeRecord: e
                 })
-                // Note: Audio player will be created and managed in the AudioPlayer component using useAudioPlayer hook
             },
-            playEpisode: (episode, podcast) => {
+            playEpisode: (episode, podcast, history) => {
                 const oldPlayer = get().audioPlayer
                 if (oldPlayer) {
                     try {
@@ -73,23 +100,24 @@ export const useStore = create<ZustandStore>()(
                 }
 
                 const record: components["schemas"]["PodcastWatchedEpisodeModelWithPodcastEpisode"] = {
-                    date: new Date().toISOString(),
-                    episodeId: episode.episode_id,
-                    id: episode.id,
-                    imageUrl: episode.image_url,
-                    name: episode.name,
-                    podcast: podcast || {} as components["schemas"]["PodcastDto"],
                     podcastEpisode: episode,
-                    podcastId: episode.podcast_id,
-                    totalTime: episode.total_time,
-                    url: episode.url,
-                    watchedTime: 0,
+                    podcast: podcast || {} as components["schemas"]["PodcastDto"],
+                    episode: history || {
+                        podcast: podcast?.rssfeed || '',
+                        episode: episode.url,
+                        timestamp: new Date().toISOString(),
+                        guid: episode.guid,
+                        action: 'play',
+                        started: 0,
+                        position: 0,
+                        total: episode.total_time,
+                        device: 'mobile',
+                    },
                 };
                 set({ podcastEpisodeRecord: record, audioPlayer: undefined, isPlaying: false });
             },
             audioPlayer: undefined,
             setAudioPlayer: (player) => {
-                // Stoppe den alten Player bevor ein neuer gesetzt wird
                 const oldPlayer = get().audioPlayer
                 if (oldPlayer && oldPlayer !== player) {
                     try {
@@ -136,6 +164,47 @@ export const useStore = create<ZustandStore>()(
             serverUrl: null,
             setServerUrl: (url) => set({ serverUrl: url }),
             clearServerUrl: () => set({ serverUrl: null }),
+            // Authentication
+            authType: 'none' as AuthType,
+            setAuthType: (type) => set({ authType: type }),
+            authToken: null,
+            setAuthToken: (token) => set({ authToken: token }),
+            // Basic Auth credentials
+            basicAuthUsername: null,
+            setBasicAuthUsername: (username) => set({ basicAuthUsername: username }),
+            basicAuthPassword: null,
+            setBasicAuthPassword: (password) => set({ basicAuthPassword: password }),
+            // OIDC tokens
+            oidcAccessToken: null,
+            setOidcAccessToken: (token) => set({ oidcAccessToken: token }),
+            oidcRefreshToken: null,
+            setOidcRefreshToken: (token) => set({ oidcRefreshToken: token }),
+            oidcTokenExpiry: null,
+            setOidcTokenExpiry: (expiry) => set({ oidcTokenExpiry: expiry }),
+            // Server config
+            serverConfig: null,
+            setServerConfig: (config) => set({ serverConfig: config }),
+            clearAuth: () => set({
+                authType: 'none',
+                authToken: null,
+                basicAuthUsername: null,
+                basicAuthPassword: null,
+                oidcAccessToken: null,
+                oidcRefreshToken: null,
+                oidcTokenExpiry: null,
+                serverConfig: null,
+                userApiKey: null,
+                userProfile: null,
+            }),
+            // User profile
+            userApiKey: null,
+            setUserApiKey: (apiKey) => set({ userApiKey: apiKey }),
+            userProfile: null,
+            setUserProfile: (profile) => set({
+                userProfile: profile,
+                userApiKey: profile?.apiKey ?? null,
+            }),
+            // Offline mode
             offlineMode: false,
             setOfflineMode: (enabled) => set({ offlineMode: enabled }),
             toggleOfflineMode: () => set((state) => ({ offlineMode: !state.offlineMode })),
@@ -147,6 +216,15 @@ export const useStore = create<ZustandStore>()(
             partialize: (state) => ({
                 serverUrl: state.serverUrl,
                 offlineMode: state.offlineMode,
+                authType: state.authType,
+                basicAuthUsername: state.basicAuthUsername,
+                basicAuthPassword: state.basicAuthPassword,
+                oidcAccessToken: state.oidcAccessToken,
+                oidcRefreshToken: state.oidcRefreshToken,
+                oidcTokenExpiry: state.oidcTokenExpiry,
+                serverConfig: state.serverConfig,
+                userApiKey: state.userApiKey,
+                userProfile: state.userProfile,
             }),
         },
     ),

@@ -13,7 +13,6 @@ export function useEpisodeDownload(episodeId: string) {
     const [localPath, setLocalPath] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
-    // Initiale Prüfung
     useEffect(() => {
         let mounted = true;
 

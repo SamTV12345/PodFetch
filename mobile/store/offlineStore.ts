@@ -10,16 +10,15 @@ import { components } from '@/schema';
  * - Sync-Queue für spätere Server-Synchronisation
  */
 
-// Typen
 export interface LocalWatchProgress {
     id?: number;
     episodeId: string;
     podcastId: number;
-    watchedTime: number;          // In Millisekunden
-    totalTime: number;            // In Millisekunden
-    updatedAt: string;            // ISO timestamp
-    syncedAt: string | null;      // Wann zuletzt mit Server synchronisiert
-    needsSync: boolean;           // Muss noch synchronisiert werden
+    watchedTime: number;
+    totalTime: number;
+    updatedAt: string;
+    syncedAt: string | null;
+    needsSync: boolean;
 }
 
 export interface DownloadedEpisode {
@@ -27,12 +26,12 @@ export interface DownloadedEpisode {
     episodeId: string;
     podcastId: number;
     name: string;
-    localPath: string;            // Lokaler Dateipfad
-    originalUrl: string;          // Original-URL vom Server
+    localPath: string;
+    originalUrl: string;
     imageUrl: string;
     totalTime: number;
-    downloadedAt: string;         // ISO timestamp
-    fileSize: number;             // Bytes
+    downloadedAt: string;
+    fileSize: number;
     podcastName: string;
     podcastImageUrl: string;
 }
@@ -40,7 +39,7 @@ export interface DownloadedEpisode {
 export interface SyncQueueItem {
     id?: number;
     type: 'watchtime' | 'download_complete';
-    payload: string;              // JSON string
+    payload: string;
     createdAt: string;
     attempts: number;
     lastAttempt: string | null;

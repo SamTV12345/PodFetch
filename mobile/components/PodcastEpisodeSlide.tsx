@@ -112,10 +112,10 @@ export const PodcastEpisodeSlide = ({episode, podcast}: PodcastEpisodeSlideProps
                 setIsPlaying(true);
             }
         } else {
-            // Neue Episode starten
-            playEpisode(episode.podcastEpisode);
+            // Neue Episode starten - mit History für die gespeicherte Position
+            playEpisode(episode.podcastEpisode, podcast, episode.podcastHistoryItem);
         }
-    }, [episode, playEpisode, isCurrentEpisode, audioPlayer, isPlaying, setIsPlaying]);
+    }, [episode, podcast, playEpisode, isCurrentEpisode, audioPlayer, isPlaying, setIsPlaying]);
 
     return (
         <View style={{marginBottom: 10}}>

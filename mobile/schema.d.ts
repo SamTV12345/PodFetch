@@ -4,102 +4,6 @@
  */
 
 export interface paths {
-    "/api/2/auth/{username}/login.json": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/2/devices/{username}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_devices_of_user"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/2/devices/{username}/{deviceid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["post_device"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/2/episodes/{username}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_episode_actions"];
-        put?: never;
-        post: operations["upload_episode_actions"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/2/subscriptions/{username}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_subscriptions_all"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/2/subscriptions/{username}/{deviceid}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_subscriptions"];
-        put?: never;
-        post: operations["upload_subscription_changes"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/episodes/formatting": {
         parameters: {
             query?: never;
@@ -116,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/episodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_podcast_episode_by_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/episodes/{id}/download": {
         parameters: {
             query?: never;
@@ -126,8 +46,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         delete: operations["delete_podcast_episode_locally"];
         options?: never;
         head?: never;
@@ -390,6 +309,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/episodes/{id}/chapters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["find_all_chapters_of_podcast_episode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/favored": {
         parameters: {
             query?: never;
@@ -502,6 +437,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/reverse/episode/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["search_podcast_of_episode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/search": {
         parameters: {
             query?: never;
@@ -590,8 +541,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         put: operations["download_podcast_episodes_of_podcast"];
         post?: never;
         delete?: never;
@@ -608,9 +558,24 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         *      * id is the episode id (uuid) */
+        /** * id is the episode id (uuid) */
         put: operations["like_podcast_episode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/podcasts/{id}/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_name_of_podcast"];
         post?: never;
         delete?: never;
         options?: never;
@@ -724,6 +689,22 @@ export interface paths {
         get: operations["get_opml"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/rescan-episodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rescan_episodes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -890,38 +871,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["login_audiobookshelf"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ping": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ping"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/proxy/podcast": {
         parameters: {
             query?: never;
@@ -1021,35 +970,6 @@ export interface components {
         };
         DeletePodcast: {
             delete_files: boolean;
-        };
-        DevicePost: {
-            caption: string;
-            type: string;
-        };
-        DeviceResponse: {
-            caption: string;
-            id: string;
-            /** Format: int32 */
-            subscriptions: number;
-            type: string;
-        };
-        Episode: {
-            action: string;
-            device: string;
-            episode: string;
-            guid?: string | null;
-            /** Format: int32 */
-            id: number;
-            podcast: string;
-            /** Format: int32 */
-            position?: number | null;
-            /** Format: int32 */
-            started?: number | null;
-            /** Format: date-time */
-            timestamp: string;
-            /** Format: int32 */
-            total?: number | null;
-            username: string;
         };
         /** @enum {string} */
         EpisodeAction: "new" | "download" | "play" | "delete";
@@ -1178,10 +1098,6 @@ export interface components {
             resultCount: number;
             results: components["schemas"]["ItunesModel"][];
         };
-        LoginData: {
-            password: string;
-            username: string;
-        };
         LoginRequest: {
             password: string;
             username: string;
@@ -1203,13 +1119,12 @@ export interface components {
             clientId: string;
             jwksUri: string;
             redirectUri: string;
+            /** Format: int64 */
+            refreshInterval: number;
             scope: string;
         };
         OpmlModel: {
             content: string;
-        };
-        PingResponse: {
-            success: boolean;
         };
         PlaylistDto: {
             id: string;
@@ -1230,6 +1145,14 @@ export interface components {
             /** Format: int32 */
             userId: number;
         };
+        PodcastChapterDto: {
+            /** Format: int32 */
+            endTime: number;
+            id: string;
+            /** Format: int32 */
+            startTime: number;
+            title: string;
+        };
         PodcastDto: {
             active: boolean;
             author?: string | null;
@@ -1245,6 +1168,7 @@ export interface components {
             last_build_date?: string | null;
             name: string;
             original_image_url: string;
+            podfetch_feed: string;
             rssfeed: string;
             summary?: string | null;
             tags: components["schemas"]["Tag"][];
@@ -1304,23 +1228,13 @@ export interface components {
             replacementStrategy: string;
             useExistingFilename: boolean;
         };
-        PodcastWatchedEpisodeModelWithPodcastEpisode: {
-            /** Format: date-time */
-            date: string;
-            episodeId: string;
-            /** Format: int32 */
-            id: number;
-            imageUrl: string;
+        PodcastUpdateNameRequest: {
             name: string;
+        };
+        PodcastWatchedEpisodeModelWithPodcastEpisode: {
+            episode: components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcastEpisode: components["schemas"]["PodcastEpisodeDto"];
-            /** Format: int32 */
-            podcastId: number;
-            /** Format: int32 */
-            totalTime: number;
-            url: string;
-            /** Format: int32 */
-            watchedTime: number;
         };
         PodcastWatchedPostModel: {
             podcastEpisodeId: string;
@@ -1358,14 +1272,6 @@ export interface components {
             name: string;
             /** Format: int64 */
             total_space: number;
-        };
-        SubscriptionRetrieveRequest: {
-            /** Format: int32 */
-            since: number;
-        };
-        SubscriptionUpdateRequest: {
-            add: string[];
-            remove: string[];
         };
         SysExtraInfo: {
             disks: components["schemas"]["SimplifiedDisk"][];
@@ -1405,7 +1311,7 @@ export interface components {
         };
         TimeLinePodcastEpisode: {
             favorite?: null | components["schemas"]["Favorite"];
-            history?: null | components["schemas"]["Episode"];
+            history?: null | components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcast_episode: components["schemas"]["PodcastEpisodeDto"];
         };
@@ -1443,6 +1349,7 @@ export interface components {
             explicitConsent: boolean;
             /** Format: int32 */
             id: number;
+            readOnly: boolean;
             role: string;
             username: string;
         };
@@ -1455,6 +1362,14 @@ export interface components {
             role: string;
             username: string;
         };
+        VersionInfo: {
+            ci: string;
+            commit: string;
+            os: string;
+            ref: string;
+            time: string;
+            version: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1464,215 +1379,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_devices_of_user: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Gets all devices of a user. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeviceResponse"][];
-                };
-            };
-        };
-    };
-    post_device: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-                deviceid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DevicePost"];
-            };
-        };
-        responses: {
-            /** @description Creates a new device. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeviceResponse"];
-                };
-            };
-            /** @description Forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    get_episode_actions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Gets the episode actions of a user. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    upload_episode_actions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EpisodeDto"][];
-            };
-        };
-        responses: {
-            /** @description Uploads episode actions. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    get_subscriptions_all: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubscriptionRetrieveRequest"];
-            };
-        };
-        responses: {
-            /** @description Gets all subscriptions */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    get_subscriptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-                deviceid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubscriptionRetrieveRequest"];
-            };
-        };
-        responses: {
-            /** @description Gets all subscriptions for a device */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    upload_subscription_changes: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                username: string;
-                deviceid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubscriptionUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description Uploads subscription changes */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     retrieve_episode_sample_format: {
         parameters: {
             query?: never;
@@ -1692,6 +1398,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_podcast_episode_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                last_podcast_episode: string | null;
+                only_unlistened: boolean | null;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finds all podcast episodes of a given podcast id. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
             };
         };
     };
@@ -1729,7 +1459,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["VersionInfo"];
+                };
             };
         };
     };
@@ -2162,6 +1894,28 @@ export interface operations {
             };
         };
     };
+    find_all_chapters_of_podcast_episode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finds all chapters of the podcast episode. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastChapterDto"][];
+                };
+            };
+        };
+    };
     get_favored_podcasts: {
         parameters: {
             query?: never;
@@ -2243,7 +1997,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null | components["schemas"]["Filter"];
+                    "application/json": components["schemas"]["Filter"];
                 };
             };
         };
@@ -2333,6 +2087,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    search_podcast_of_episode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Does a reverse search of an episode id to find out the podcast it belongs to */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastDto"][];
+                };
             };
         };
     };
@@ -2524,6 +2300,32 @@ export interface operations {
             };
         };
     };
+    update_name_of_podcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PodcastUpdateNameRequest"];
+            };
+        };
+        responses: {
+            /** @description Updates the name of a podcast. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+        };
+    };
     download_podcast: {
         parameters: {
             query?: never;
@@ -2560,7 +2362,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PodcastSetting"];
+                };
             };
         };
     };
@@ -2584,7 +2388,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PodcastSetting"];
+                };
             };
         };
     };
@@ -2721,6 +2527,24 @@ export interface operations {
                 content: {
                     "text/plain": string;
                 };
+            };
+        };
+    };
+    rescan_episodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rescans all episodes for metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3048,40 +2872,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": null | components["schemas"]["UserWithoutPassword"];
-                };
-            };
-        };
-    };
-    login_audiobookshelf: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginData"];
-            };
-        };
-        responses: never;
-    };
-    ping: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Creates a new tag */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PingResponse"];
                 };
             };
         };
