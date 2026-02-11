@@ -2,9 +2,9 @@ import {paths, components} from "@/schema";
 import createClient from "openapi-react-query";
 import createFetchClient, { Middleware } from "openapi-fetch";
 import { useStore } from "@/store/store";
+import uuid from 'react-native-uuid';
 
 
-// Hauptclient mit Auth-Middleware
 const fetchClient = createFetchClient<paths>({
     baseUrl: "",
 });
@@ -237,12 +237,7 @@ export const updateUserProfile = async (
 };
 
 export const generateNewApiKey = (): string => {
-    // Generate UUID and remove all dashes
-    const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-    return uuid.replace(/-/g, '');
+    const generatedUUID = uuid.v4()
+    return generatedUUID.replace(/-/g, '');
 };
 
