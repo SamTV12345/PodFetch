@@ -107,6 +107,16 @@ export default function RootLayout() {
             headerTitleStyle: { fontWeight: '600' },
           }}
         />
+        <Stack.Screen
+            name="add-podcast"
+            options={{
+              title: t('add-podcast', { defaultValue: 'Podcast hinzufügen' }),
+              headerBackTitle: t('settings', { defaultValue: 'Einstellungen' }),
+              headerStyle: { backgroundColor: styles.darkColor },
+              headerTintColor: styles.white,
+              headerTitleStyle: { fontWeight: '600' },
+            }}
+        />
       </Stack>
       {pathname !== '/player' && pathname !== '/server-setup' && (
         <AudioPlayer bottomOffset={audioPlayerBottomOffset} />

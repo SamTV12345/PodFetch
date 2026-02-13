@@ -315,6 +315,39 @@ const SettingsScreen = () => {
                             </View>
                         )}
 
+                        {/* Add Podcast */}
+                        <TouchableOpacity
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 12,
+                                paddingVertical: 12,
+                                borderTopWidth: 1,
+                                borderTopColor: 'rgba(255,255,255,0.1)',
+                            }}
+                            onPress={() => router.push('/add-podcast')}
+                            disabled={offlineMode}
+                        >
+                            <Ionicons name="add-circle" size={20} color={offlineMode ? 'rgba(255,255,255,0.3)' : styles.gray} />
+                            <View style={{ flex: 1 }}>
+                                <ThemedText style={{
+                                    fontSize: 15,
+                                    color: offlineMode ? 'rgba(255,255,255,0.3)' : styles.white,
+                                }}>
+                                    {t('add-podcast', { defaultValue: 'Podcast hinzufügen' })}
+                                </ThemedText>
+                                <ThemedText style={{
+                                    fontSize: 12,
+                                    color: offlineMode ? 'rgba(255,255,255,0.2)' : styles.gray,
+                                    marginTop: 2,
+                                }}>
+                                    {t('add-podcast-description', { defaultValue: 'Suche oder importiere neue Podcasts' })}
+                                </ThemedText>
+                            </View>
+                            {!offlineMode && <Ionicons name="chevron-forward" size={16} color={styles.gray} />}
+                            {offlineMode && <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.3)" />}
+                        </TouchableOpacity>
+
                         {/* Users Management */}
                         <TouchableOpacity
                             style={{
