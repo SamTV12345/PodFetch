@@ -41,7 +41,6 @@ function isJsonString(str: string) {
 const authMiddleware: Middleware = {
     async onRequest({ request}) {
         const auth = localStorage.getItem('auth') || sessionStorage.getItem('auth')
-        const login = getLogin()
         Object.entries(HEADER_TO_USE).forEach(([key, value]) => {
             request.headers.set(key, value)
         })

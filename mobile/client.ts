@@ -4,38 +4,31 @@ import createFetchClient, { Middleware } from "openapi-fetch";
 import { useStore } from "@/store/store";
 import uuid from 'react-native-uuid';
 
+// Create a function that returns the current baseUrl from store
+const getBaseUrl = () => {
+    const serverUrl = useStore.getState().serverUrl;
+    return serverUrl ? serverUrl.replace(/\/$/, '') : '';
+};
 
 const fetchClient = createFetchClient<paths>({
-    baseUrl: "",
+    baseUrl: getBaseUrl(),
 });
 
 const baseUrlMiddleware: Middleware = {
     async onRequest({ request }) {
         const state = useStore.getState();
-        const serverUrl = state.serverUrl;
 
-        if (serverUrl) {
-            let pathname: string;
-            try {
-                const url = new URL(request.url);
-                pathname = url.pathname + url.search;
-            } catch {
-                pathname = request.url;
-            }
-
-            const fullUrl = serverUrl.replace(/\/$/, '') + pathname;
-            const newRequest = new Request(fullUrl, request);
-
-            if (state.authType === 'basic' && state.basicAuthUsername && state.basicAuthPassword) {
-                const credentials = btoa(`${state.basicAuthUsername}:${state.basicAuthPassword}`);
-                newRequest.headers.set('Authorization', `Basic ${credentials}`);
-            } else if (state.authType === 'oidc' && state.oidcAccessToken) {
-                newRequest.headers.set('Authorization', `Bearer ${state.oidcAccessToken}`);
-            }
-
-            return newRequest;
+        if (state.authType === 'basic' && state.basicAuthUsername && state.basicAuthPassword) {
+            const credentials = btoa(`${state.basicAuthUsername}:${state.basicAuthPassword}`);
+            request.headers.set('Authorization', `Basic ${credentials}`);
+        } else if (state.authType === 'oidc' && state.oidcAccessToken) {
+            request.headers.set('Authorization', `Bearer ${state.oidcAccessToken}`);
         }
+
         return request;
+    },
+    onResponse: async ({ response }) => {
+        return response
     },
 };
 
@@ -69,7 +62,6 @@ export const validatePodFetchServer = async (url: string): Promise<ServerConfigR
         }
         normalizedUrl = normalizedUrl.replace(/\/$/, '');
 
-        // Verwende baseFetchClient ohne Auth
         const tempClient = createFetchClient<paths>({
             baseUrl: normalizedUrl,
         });

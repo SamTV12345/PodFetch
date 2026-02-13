@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import "../i18n/i18n"
 import {
   QueryClient,
@@ -31,6 +32,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const pathname = usePathname();
   const serverUrl = useStore((state) => state.serverUrl);
+  const { t } = useTranslation();
 
   const isTabScreen = segments[0] === '(tabs)';
   const audioPlayerBottomOffset = isTabScreen ? 95 : 30;
@@ -85,8 +87,27 @@ export default function RootLayout() {
         <Stack.Screen name="podcasts/[id]/details" options={{headerShown: false}} />
         <Stack.Screen name="episodes/[id]/index" options={{headerShown: false}} />
         <Stack.Screen name="player" options={{headerShown: false, presentation: 'modal'}} />
+        <Stack.Screen
+          name="users"
+          options={{
+            title: t('users', { defaultValue: 'Benutzer' }),
+            headerBackTitle: t('settings', { defaultValue: 'Einstellungen' }),
+            headerStyle: { backgroundColor: styles.darkColor },
+            headerTintColor: styles.white,
+            headerTitleStyle: { fontWeight: '600' },
+          }}
+        />
+        <Stack.Screen
+          name="invites"
+          options={{
+            title: t('invites', { defaultValue: 'Einladungen' }),
+            headerBackTitle: t('settings', { defaultValue: 'Einstellungen' }),
+            headerStyle: { backgroundColor: styles.darkColor },
+            headerTintColor: styles.white,
+            headerTitleStyle: { fontWeight: '600' },
+          }}
+        />
       </Stack>
-      {/* Globaler AudioPlayer - nur anzeigen wenn nicht im Player-Modal oder Server-Setup */}
       {pathname !== '/player' && pathname !== '/server-setup' && (
         <AudioPlayer bottomOffset={audioPlayerBottomOffset} />
       )}

@@ -265,6 +265,124 @@ const SettingsScreen = () => {
                 </View>
 
 
+                {authType === 'basic' && userProfile && userProfile.role === 'admin' && (
+                    <View style={{
+                        backgroundColor: styles.darkColor,
+                        borderRadius: 10,
+                        padding: 15,
+                        marginTop: 20,
+                        opacity: offlineMode ? 0.6 : 1,
+                    }}>
+                        <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 12,
+                            marginBottom: 15,
+                        }}>
+                            <Ionicons name="shield-checkmark" size={24} color={offlineMode ? styles.gray : styles.accentColor} />
+                            <ThemedText style={{
+                                fontSize: 18,
+                                color: styles.white,
+                                fontWeight: '600'
+                            }}>
+                                {t('admin-functions', { defaultValue: 'Administrator-Funktionen' })}
+                            </ThemedText>
+                        </View>
+
+                        {/* Offline Mode Warning */}
+                        {offlineMode && (
+                            <View style={{
+                                backgroundColor: 'rgba(255,152,0,0.1)',
+                                borderLeftWidth: 3,
+                                borderLeftColor: '#ff9800',
+                                padding: 12,
+                                borderRadius: 8,
+                                marginBottom: 12,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 10,
+                            }}>
+                                <Ionicons name="warning" size={20} color="#ff9800" />
+                                <ThemedText style={{
+                                    fontSize: 13,
+                                    color: '#ff9800',
+                                    flex: 1,
+                                }}>
+                                    {t('admin-offline-warning', {
+                                        defaultValue: 'Im Offline-Modus sind Admin-Funktionen nicht verfügbar. Bitte verbinde dich mit dem Server.'
+                                    })}
+                                </ThemedText>
+                            </View>
+                        )}
+
+                        {/* Users Management */}
+                        <TouchableOpacity
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 12,
+                                paddingVertical: 12,
+                                borderTopWidth: 1,
+                                borderTopColor: 'rgba(255,255,255,0.1)',
+                            }}
+                            onPress={() => router.push('/users')}
+                            disabled={offlineMode}
+                        >
+                            <Ionicons name="people" size={20} color={offlineMode ? 'rgba(255,255,255,0.3)' : styles.gray} />
+                            <View style={{ flex: 1 }}>
+                                <ThemedText style={{
+                                    fontSize: 15,
+                                    color: offlineMode ? 'rgba(255,255,255,0.3)' : styles.white,
+                                }}>
+                                    {t('manage-users', { defaultValue: 'Benutzer verwalten' })}
+                                </ThemedText>
+                                <ThemedText style={{
+                                    fontSize: 12,
+                                    color: offlineMode ? 'rgba(255,255,255,0.2)' : styles.gray,
+                                    marginTop: 2,
+                                }}>
+                                    {t('manage-users-description', { defaultValue: 'Alle Benutzer anzeigen und verwalten' })}
+                                </ThemedText>
+                            </View>
+                            {!offlineMode && <Ionicons name="chevron-forward" size={16} color={styles.gray} />}
+                            {offlineMode && <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.3)" />}
+                        </TouchableOpacity>
+
+                        {/* Invites Management */}
+                        <TouchableOpacity
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 12,
+                                paddingVertical: 12,
+                                borderTopWidth: 1,
+                                borderTopColor: 'rgba(255,255,255,0.1)',
+                            }}
+                            onPress={() => router.push('/invites')}
+                            disabled={offlineMode}
+                        >
+                            <Ionicons name="mail" size={20} color={offlineMode ? 'rgba(255,255,255,0.3)' : styles.gray} />
+                            <View style={{ flex: 1 }}>
+                                <ThemedText style={{
+                                    fontSize: 15,
+                                    color: offlineMode ? 'rgba(255,255,255,0.3)' : styles.white,
+                                }}>
+                                    {t('manage-invites', { defaultValue: 'Einladungen verwalten' })}
+                                </ThemedText>
+                                <ThemedText style={{
+                                    fontSize: 12,
+                                    color: offlineMode ? 'rgba(255,255,255,0.2)' : styles.gray,
+                                    marginTop: 2,
+                                }}>
+                                    {t('manage-invites-description', { defaultValue: 'Neue Benutzer einladen und Einladungen verwalten' })}
+                                </ThemedText>
+                            </View>
+                            {!offlineMode && <Ionicons name="chevron-forward" size={16} color={styles.gray} />}
+                            {offlineMode && <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.3)" />}
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {/* User Profile Section - nur bei Basic Auth anzeigen */}
                 {authType === 'basic' && userProfile && (
                     <View style={{
