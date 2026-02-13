@@ -16,7 +16,19 @@ const MAPPING = {
   "magnifyingglass.circle": "search",
   "bookmark.fill":"book",
   'chevron.right': 'chevron-right',
-  'play.button': 'caretright'
+  'chevron.left': 'chevron-left',
+  'play.button': 'caretright',
+  // Tab icons
+  'arrow.down.circle.fill': 'file-download',
+  'gearshape.fill': 'settings',
+  // Server setup / Auth icons
+  'antenna.radiowaves.left.and.right': 'cell-tower',
+  'lock.fill': 'lock',
+  'person.fill': 'person',
+  'key.fill': 'vpn-key',
+  'eye.fill': 'visibility',
+  'eye.slash.fill': 'visibility-off',
+  'power': 'power-settings-new',
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
