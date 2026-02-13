@@ -15,6 +15,7 @@ import {Ionicons} from "@expo/vector-icons";
 import {useEffect, useState, useCallback} from "react";
 import {offlineDB, DownloadedEpisode} from "@/store/offlineStore";
 import {TimelineEpisodeCard} from "@/components/TimelineEpisodeCard";
+import {useAudioPlayerPadding} from "@/hooks/useAudioPlayerPadding";
 
 const HomeScreen = () => {
     const serverUrl = useStore((state) => state.serverUrl);
@@ -24,6 +25,7 @@ const HomeScreen = () => {
     const clearAuth = useStore((state) => state.clearAuth);
     const router = useRouter();
     const {t} = useTranslation();
+    const { contentPaddingBottom } = useAudioPlayerPadding();
 
     const [connectionError, setConnectionError] = useState<'auth-required' | 'connection-failed' | null>(null);
 
@@ -40,7 +42,6 @@ const HomeScreen = () => {
         }
     }, [offlineMode]);
 
-    // Check server auth status on mount
     useEffect(() => {
         const checkServerAuth = async () => {
             if (!serverUrl || offlineMode) return;
@@ -301,7 +302,7 @@ const HomeScreen = () => {
                     paddingTop: 20,
                     paddingLeft: 10,
                     paddingRight: 10,
-                    paddingBottom: 120,
+                    paddingBottom: contentPaddingBottom,
                 }}
                 refreshControl={
                     <RefreshControl

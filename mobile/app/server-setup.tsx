@@ -11,6 +11,7 @@ import { styles } from '@/styles/styles';
 import { useStore } from '@/store/store';
 import { validatePodFetchServer, validateBasicAuth, exchangeOidcCode, fetchUserProfile } from '@/client';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { PodFetchLogo } from '@/components/PodFetchLogo';
 import { components } from '@/schema';
 
 type AuthStep = 'url' | 'auth-choice' | 'basic-auth' | 'oidc';
@@ -202,7 +203,6 @@ const ServerSetupScreen = () => {
         setPassword('');
     };
 
-    // Header with back button (only shown when not on URL step)
     const renderHeader = () => {
         if (authStep === 'url') return null;
 
@@ -239,11 +239,7 @@ const ServerSetupScreen = () => {
         <>
             {/* Logo/Icon */}
             <View style={{ alignItems: 'center', marginBottom: 40 }}>
-                <IconSymbol
-                    name="antenna.radiowaves.left.and.right"
-                    size={80}
-                    color={styles.accentColor}
-                />
+                <PodFetchLogo size={100} />
                 <ThemedText style={{
                     fontSize: 28,
                     fontWeight: 'bold',

@@ -9,13 +9,17 @@ import {PodcastEpisodeSlide} from "@/components/PodcastEpisodeSlide";
 import { router } from 'expo-router';
 import {useTranslation} from "react-i18next";
 import {useDetailsPodcast} from "@/hooks/useDetailsPodcast";
+import {useAudioPlayerPadding} from "@/hooks/useAudioPlayerPadding";
 
 export default function () {
     const {podcastDetailedData, dataEpisodes, updateFavored} = useDetailsPodcast()
     const {t} = useTranslation()
+    const { isPlayerActive } = useAudioPlayerPadding();
+
+    const contentPaddingBottom = isPlayerActive ? 100 : 20;
 
     return <SafeAreaView style={{flex: 1}}>
-        <ScrollView overScrollMode="never">
+        <ScrollView overScrollMode="never" contentContainerStyle={{ paddingBottom: contentPaddingBottom }}>
                 <MaterialIcons size={40} color="white" name="chevron-left" style={{
                     position: 'absolute',
                     top: 20,

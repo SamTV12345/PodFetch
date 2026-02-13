@@ -1,4 +1,4 @@
-import {Image, Pressable, Text, View} from "react-native";
+import {Image, Pressable, Text, View, useWindowDimensions} from "react-native";
 import {styles} from "@/styles/styles";
 import {useStore} from "@/store/store";
 import {Ionicons} from "@expo/vector-icons";
@@ -6,15 +6,14 @@ import {router} from 'expo-router';
 import {useCallback, useState} from 'react';
 
 type AudioPlayerProps = {
-    /** Abstand vom unteren Rand - default 80 für Tabs, 20 für andere Seiten */
     bottomOffset?: number;
 };
 
-/**
- * Mini Audio Player Bar - zeigt nur die UI an.
- * Der eigentliche Audio-Player wird vom AudioProvider verwaltet.
- */
+export const AUDIO_PLAYER_HEIGHT = 70;
+
+
 export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
+    const { width: screenWidth } = useWindowDimensions();
     const selectedPodcastEpisode = useStore(state => state.podcastEpisodeRecord);
     const isPlaying = useStore(state => state.isPlaying);
     const audioPercent = useStore(state => state.audioProgress);
@@ -22,6 +21,13 @@ export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
     const setIsPlaying = useStore(state => state.setIsPlaying);
 
     const [isToggling, setIsToggling] = useState(false);
+
+    const isSmallScreen = screenWidth < 375;
+    const albumArtSize = isSmallScreen ? 40 : 48;
+    const playButtonSize = isSmallScreen ? 32 : 36;
+    const iconSize = isSmallScreen ? 18 : 20;
+    const titleFontSize = isSmallScreen ? 13 : 14;
+    const subtitleFontSize = isSmallScreen ? 11 : 12;
 
     const handleTogglePlay = useCallback((e: any) => {
         e.stopPropagation();
@@ -83,16 +89,16 @@ export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
             <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                padding: 10,
-                paddingLeft: 12,
-                paddingRight: 12,
+                padding: isSmallScreen ? 8 : 10,
+                paddingLeft: isSmallScreen ? 10 : 12,
+                paddingRight: isSmallScreen ? 10 : 12,
             }}>
                 {/* Album Art */}
                 <Image
                     source={{uri: selectedPodcastEpisode.podcastEpisode.local_image_url}}
                     style={{
-                        width: 48,
-                        height: 48,
+                        width: albumArtSize,
+                        height: albumArtSize,
                         borderRadius: 6,
                     }}
                 />
@@ -100,14 +106,14 @@ export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
                 {/* Text Content */}
                 <View style={{
                     flex: 1,
-                    marginLeft: 12,
-                    marginRight: 12,
+                    marginLeft: isSmallScreen ? 10 : 12,
+                    marginRight: isSmallScreen ? 10 : 12,
                     justifyContent: 'center',
                 }}>
                     <Text
                         style={{
                             color: 'white',
-                            fontSize: 14,
+                            fontSize: titleFontSize,
                             fontWeight: '600',
                         }}
                         numberOfLines={1}
@@ -117,7 +123,7 @@ export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
                     <Text
                         style={{
                             color: styles.gray,
-                            fontSize: 12,
+                            fontSize: subtitleFontSize,
                             marginTop: 2,
                         }}
                         numberOfLines={1}
@@ -130,24 +136,24 @@ export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
                 <View style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 16,
+                    gap: isSmallScreen ? 12 : 16,
                 }}>
                     {/* Play/Pause Button */}
                     <Pressable
                         onPress={handleTogglePlay}
                         style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 18,
+                            width: playButtonSize,
+                            height: playButtonSize,
+                            borderRadius: playButtonSize / 2,
                             backgroundColor: 'white',
                             justifyContent: 'center',
                             alignItems: 'center',
                         }}
                     >
                         {isPlaying ? (
-                            <Ionicons name="pause" size={20} color={styles.darkColor} />
+                            <Ionicons name="pause" size={iconSize} color={styles.darkColor} />
                         ) : (
-                            <Ionicons name="play" size={20} color={styles.darkColor} style={{marginLeft: 2}} />
+                            <Ionicons name="play" size={iconSize} color={styles.darkColor} style={{marginLeft: 2}} />
                         )}
                     </Pressable>
                 </View>

@@ -10,6 +10,7 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { DownloadedEpisode } from '@/store/offlineStore';
 import { styles as appStyles } from '@/styles/styles';
 import { useStore } from '@/store/store';
+import { useAudioPlayerPadding } from '@/hooks/useAudioPlayerPadding';
 
 export default function DownloadsScreen() {
     const router = useRouter();
@@ -17,6 +18,7 @@ export default function DownloadsScreen() {
     const { isOnline } = useNetworkStatus();
     const { pendingCount, syncAll, isSyncing } = useSync();
     const offlineMode = useStore((state) => state.offlineMode);
+    const { listPaddingBottom } = useAudioPlayerPadding();
 
     const handlePlayEpisode = (episode: DownloadedEpisode) => {
         // TODO: Hier müsste man die Episode in den Player laden
@@ -160,7 +162,7 @@ export default function DownloadsScreen() {
                 keyExtractor={(item) => item.episodeId}
                 renderItem={renderEpisode}
                 ListEmptyComponent={!isLoading ? renderEmpty : null}
-                contentContainerStyle={episodes.length === 0 ? styles.emptyList : styles.list}
+                contentContainerStyle={episodes.length === 0 ? styles.emptyList : [styles.list, { paddingBottom: listPaddingBottom }]}
                 onRefresh={refresh}
                 refreshing={isLoading}
             />
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
     },
     list: {
         paddingHorizontal: 16,
-        paddingBottom: 100,
+        paddingBottom: 180, // Wird dynamisch überschrieben
     },
     emptyList: {
         flex: 1,

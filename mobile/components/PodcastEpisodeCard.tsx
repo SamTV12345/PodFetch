@@ -1,4 +1,4 @@
-import {Image, Pressable, View, Text} from "react-native";
+import {Image, Pressable, View, Text, useWindowDimensions} from "react-native";
 import {ThemedText} from "@/components/ThemedText";
 import {FC, useMemo} from "react";
 import {components} from "@/schema";
@@ -7,13 +7,16 @@ import { DownloadStatusIcon } from "@/components/DownloadButton";
 import {styles} from "@/styles/styles";
 
 export const PodcastEpisodeCard: FC<{podcastEpisode: components["schemas"]["PodcastWatchedEpisodeModelWithPodcastEpisode"]}> = ({podcastEpisode})=>{
-    // Fortschritt berechnen (episode enthält position und total)
+    const { width: screenWidth } = useWindowDimensions();
+
+    const cardSize = Math.min(Math.max(screenWidth * 0.24, 80), 120);
+    const isSmallCard = cardSize < 100;
+
     const progressData = useMemo(() => {
         const position = podcastEpisode.episode?.position ?? 0;
         const total = podcastEpisode.episode?.total ?? podcastEpisode.podcastEpisode.total_time ?? 0;
         const progressPercent = total > 0 ? Math.min((position / total) * 100, 100) : 0;
 
-        // Verbleibende Zeit in Minuten
         const remainingSeconds = total - position;
         const remainingMinutes = Math.max(0, Math.floor(remainingSeconds / 60));
 
@@ -25,11 +28,11 @@ export const PodcastEpisodeCard: FC<{podcastEpisode: components["schemas"]["Podc
         };
     }, [podcastEpisode]);
 
-    return <Pressable style={{maxWidth: 100}} onPress={()=>{
+    return <Pressable style={{maxWidth: cardSize}} onPress={()=>{
         useStore.getState().setPodcastEpisodeRecord(podcastEpisode)
     }}>
         <View style={{position: 'relative'}}>
-            <Image style={{width: 100, height: 100, borderRadius: 8}}
+            <Image style={{width: cardSize, height: cardSize, borderRadius: 8}}
                    src={podcastEpisode.podcastEpisode.local_image_url}/>
 
             {/* Fortschrittsbalken unten am Bild */}
@@ -39,7 +42,7 @@ export const PodcastEpisodeCard: FC<{podcastEpisode: components["schemas"]["Podc
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    height: 4,
+                    height: isSmallCard ? 3 : 4,
                     backgroundColor: 'rgba(0,0,0,0.5)',
                     borderBottomLeftRadius: 8,
                     borderBottomRightRadius: 8,
@@ -54,20 +57,20 @@ export const PodcastEpisodeCard: FC<{podcastEpisode: components["schemas"]["Podc
             )}
 
             {/* Download-Indikator in der Ecke */}
-            <View style={{position: 'absolute', bottom: progressData.hasProgress ? 8 : 4, right: 4}}>
+            <View style={{position: 'absolute', bottom: progressData.hasProgress ? (isSmallCard ? 6 : 8) : 4, right: 4}}>
                 <DownloadStatusIcon
                     episodeId={podcastEpisode.podcastEpisode.episode_id}
-                    size={14}
+                    size={isSmallCard ? 12 : 14}
                 />
             </View>
         </View>
-        <ThemedText style={{color: 'white'}} numberOfLines={2}>{podcastEpisode.podcastEpisode.name}</ThemedText>
+        <ThemedText style={{color: 'white', fontSize: isSmallCard ? 12 : 14}} numberOfLines={2}>{podcastEpisode.podcastEpisode.name}</ThemedText>
 
         {/* Verbleibende Zeit anzeigen */}
         {progressData.hasProgress && (
             <Text style={{
                 color: styles.gray,
-                fontSize: 11,
+                fontSize: isSmallCard ? 10 : 11,
                 marginTop: 2,
             }}>
                 {progressData.remainingMinutes} Min übrig

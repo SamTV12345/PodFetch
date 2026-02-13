@@ -9,7 +9,6 @@ import * as FileSystem from 'expo-file-system';
 import { ThemedText } from '@/components/ThemedText';
 import { styles } from '@/styles/styles';
 import { useStore } from '@/store/store';
-import Heading1 from '@/components/text/Heading1';
 import { $api } from '@/client';
 import { components } from '@/schema';
 

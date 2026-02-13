@@ -1,4 +1,4 @@
-import {Image, Pressable, View, Text} from "react-native";
+import {Image, Pressable, View, Text, useWindowDimensions} from "react-native";
 import {ThemedText} from "@/components/ThemedText";
 import {FC, useMemo} from "react";
 import {components} from "@/schema";
@@ -11,6 +11,10 @@ type TimelineEpisodeCardProps = {
 };
 
 export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => {
+    const { width: screenWidth } = useWindowDimensions();
+
+    const cardSize = Math.min(Math.max(screenWidth * 0.24, 80), 120);
+    const isSmallCard = cardSize < 100;
 
     const progressData = useMemo(() => {
         const position = episode.history?.position ?? 0;
@@ -52,10 +56,10 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
     };
 
     return (
-        <Pressable style={{maxWidth: 100}} onPress={handlePress}>
+        <Pressable style={{maxWidth: cardSize}} onPress={handlePress}>
             <View style={{position: 'relative'}}>
                 <Image
-                    style={{width: 100, height: 100, borderRadius: 8}}
+                    style={{width: cardSize, height: cardSize, borderRadius: 8}}
                     source={{uri: episode.podcast_episode.local_image_url || episode.podcast?.image_url}}
                 />
 
@@ -66,11 +70,11 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
                         top: 4,
                         left: 4,
                         backgroundColor: styles.accentColor,
-                        paddingHorizontal: 6,
+                        paddingHorizontal: isSmallCard ? 4 : 6,
                         paddingVertical: 2,
                         borderRadius: 4,
                     }}>
-                        <Text style={{color: '#fff', fontSize: 9, fontWeight: '700'}}>NEU</Text>
+                        <Text style={{color: '#fff', fontSize: isSmallCard ? 8 : 9, fontWeight: '700'}}>NEU</Text>
                     </View>
                 )}
 
@@ -81,7 +85,7 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
                         bottom: 0,
                         left: 0,
                         right: 0,
-                        height: 4,
+                        height: isSmallCard ? 3 : 4,
                         backgroundColor: 'rgba(0,0,0,0.5)',
                         borderBottomLeftRadius: 8,
                         borderBottomRightRadius: 8,
@@ -96,21 +100,21 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
                 )}
 
                 {/* Download-Indikator in der Ecke */}
-                <View style={{position: 'absolute', bottom: progressData.hasProgress ? 8 : 4, right: 4}}>
+                <View style={{position: 'absolute', bottom: progressData.hasProgress ? (isSmallCard ? 6 : 8) : 4, right: 4}}>
                     <DownloadStatusIcon
                         episodeId={episode.podcast_episode.episode_id}
-                        size={14}
+                        size={isSmallCard ? 12 : 14}
                     />
                 </View>
             </View>
-            <ThemedText style={{color: 'white'}} numberOfLines={2}>
+            <ThemedText style={{color: 'white', fontSize: isSmallCard ? 12 : 14}} numberOfLines={2}>
                 {episode.podcast_episode.name}
             </ThemedText>
 
             {/* Podcast-Name */}
             <Text style={{
                 color: styles.gray,
-                fontSize: 11,
+                fontSize: isSmallCard ? 10 : 11,
                 marginTop: 2,
             }} numberOfLines={1}>
                 {episode.podcast?.name}
@@ -120,7 +124,7 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
             {progressData.hasProgress ? (
                 <Text style={{
                     color: styles.accentColor,
-                    fontSize: 10,
+                    fontSize: isSmallCard ? 9 : 10,
                     marginTop: 2,
                 }}>
                     {progressData.remainingMinutes} Min übrig
@@ -128,7 +132,7 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
             ) : !progressData.isCompleted && progressData.totalMinutes > 0 && (
                 <Text style={{
                     color: styles.gray,
-                    fontSize: 10,
+                    fontSize: isSmallCard ? 9 : 10,
                     marginTop: 2,
                 }}>
                     {progressData.totalMinutes} Min

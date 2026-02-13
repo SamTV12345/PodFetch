@@ -1,4 +1,4 @@
-import {Image, Modal, Pressable, ScrollView, Text, View, Share} from "react-native";
+import {Image, Modal, Pressable, ScrollView, Text, View, Share, useWindowDimensions} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {styles} from "@/styles/styles";
 import {useStore} from "@/store/store";
@@ -18,6 +18,7 @@ const formatTime = (seconds: number): string => {
 
 export default function PlayerScreen() {
     const {t} = useTranslation();
+    const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const selectedPodcastEpisode = useStore(state => state.podcastEpisodeRecord);
     const audioPlayer = useStore(state => state.audioPlayer);
     const isPlaying = useStore(state => state.isPlaying);
@@ -29,6 +30,18 @@ export default function PlayerScreen() {
     const [isSeeking, setIsSeeking] = useState(false);
     const [seekValue, setSeekValue] = useState(0);
     const [isToggling, setIsToggling] = useState(false);
+
+    const isSmallScreen = screenWidth < 375;
+    const isShortScreen = screenHeight < 700;
+
+    const albumArtSize = Math.min(screenWidth * 0.7, 300);
+
+    const playButtonSize = isSmallScreen ? 60 : 70;
+    const skipButtonSize = isSmallScreen ? 28 : 35;
+    const controlGap = isSmallScreen ? 30 : 40;
+
+    const titleFontSize = isSmallScreen ? 18 : 22;
+    const subtitleFontSize = isSmallScreen ? 14 : 16;
 
     const handleSeekStart = useCallback(() => {
         setIsSeeking(true);
@@ -126,12 +139,12 @@ export default function PlayerScreen() {
             </View>
 
             {/* Album Art */}
-            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40}}>
+            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: isSmallScreen ? 20 : 40}}>
                 <Image
                     source={{uri: selectedPodcastEpisode.podcastEpisode.local_image_url}}
                     style={{
-                        width: 300,
-                        height: 300,
+                        width: albumArtSize,
+                        height: albumArtSize,
                         borderRadius: 10,
                         shadowColor: '#000',
                         shadowOffset: {width: 0, height: 10},
@@ -142,25 +155,25 @@ export default function PlayerScreen() {
             </View>
 
             {/* Episode Info */}
-            <View style={{paddingHorizontal: 30, marginBottom: 20}}>
+            <View style={{paddingHorizontal: isSmallScreen ? 20 : 30, marginBottom: isShortScreen ? 10 : 20}}>
                 <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                    <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold', flex: 1}} numberOfLines={2}>
+                    <Text style={{color: 'white', fontSize: titleFontSize, fontWeight: 'bold', flex: 1}} numberOfLines={2}>
                         {selectedPodcastEpisode.podcastEpisode.name}
                     </Text>
                     <DownloadStatusIcon
                         episodeId={selectedPodcastEpisode.podcastEpisode.episode_id}
-                        size={20}
+                        size={isSmallScreen ? 18 : 20}
                     />
                 </View>
-                <Text style={{color: styles.gray, fontSize: 16, marginTop: 5}}>
+                <Text style={{color: styles.gray, fontSize: subtitleFontSize, marginTop: 5}}>
                     {selectedPodcastEpisode.podcast?.name || ''}
                 </Text>
             </View>
 
             {/* Progress Bar */}
-            <View style={{paddingHorizontal: 20}}>
+            <View style={{paddingHorizontal: isSmallScreen ? 15 : 20}}>
                 <Slider
-                    style={{width: '100%', height: 40}}
+                    style={{width: '100%', height: isSmallScreen ? 35 : 40}}
                     minimumValue={0}
                     maximumValue={status?.duration || 1}
                     value={isSeeking ? seekValue : (status?.currentTime || 0)}
@@ -172,10 +185,10 @@ export default function PlayerScreen() {
                     thumbTintColor="white"
                 />
                 <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: -5, paddingHorizontal: 10}}>
-                    <Text style={{color: styles.gray, fontSize: 12}}>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 11 : 12}}>
                         {formatTime(isSeeking ? seekValue : (status?.currentTime || 0))}
                     </Text>
-                    <Text style={{color: styles.gray, fontSize: 12}}>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 11 : 12}}>
                         -{formatTime((status?.duration || 0) - (isSeeking ? seekValue : (status?.currentTime || 0)))}
                     </Text>
                 </View>
@@ -186,13 +199,13 @@ export default function PlayerScreen() {
                 flexDirection: 'row',
                 justifyContent: 'center',
                 alignItems: 'center',
-                paddingVertical: 30,
-                gap: 40,
+                paddingVertical: isShortScreen ? 20 : 30,
+                gap: controlGap,
             }}>
                 {/* Skip Backward 15s */}
                 <Pressable onPress={handleSkipBackward} style={{alignItems: 'center'}}>
-                    <Ionicons name="play-back" size={35} color="white"/>
-                    <Text style={{color: styles.gray, fontSize: 10, marginTop: 2}}>15</Text>
+                    <Ionicons name="play-back" size={skipButtonSize} color="white"/>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 9 : 10, marginTop: 2}}>15</Text>
                 </Pressable>
 
                 {/* Play/Pause */}
@@ -200,29 +213,29 @@ export default function PlayerScreen() {
                     onPress={handleTogglePlay}
                     style={{
                         backgroundColor: 'white',
-                        width: 70,
-                        height: 70,
-                        borderRadius: 35,
+                        width: playButtonSize,
+                        height: playButtonSize,
+                        borderRadius: playButtonSize / 2,
                         justifyContent: 'center',
                         alignItems: 'center',
                     }}
                 >
                     <AntDesign
                         name={isPlaying ? "pause" : "caret-right"}
-                        size={30}
+                        size={isSmallScreen ? 26 : 30}
                         color={styles.darkColor}
                     />
                 </Pressable>
 
                 {/* Skip Forward 30s */}
                 <Pressable onPress={handleSkipForward} style={{alignItems: 'center'}}>
-                    <Ionicons name="play-forward" size={35} color="white"/>
-                    <Text style={{color: styles.gray, fontSize: 10, marginTop: 2}}>30</Text>
+                    <Ionicons name="play-forward" size={skipButtonSize} color="white"/>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 9 : 10, marginTop: 2}}>30</Text>
                 </Pressable>
             </View>
 
             {/* Bottom spacing */}
-            <View style={{height: 30}}/>
+            <View style={{height: isShortScreen ? 15 : 30}}/>
 
             {/* Options Modal */}
             <Modal

@@ -11,6 +11,7 @@ import { useStore } from '@/store/store';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import Heading1 from '@/components/text/Heading1';
 import { fetchUserProfile, updateUserProfile, generateNewApiKey } from "@/client";
+import { useAudioPlayerPadding } from '@/hooks/useAudioPlayerPadding';
 
 const SettingsScreen = () => {
     const { t } = useTranslation();
@@ -18,6 +19,7 @@ const SettingsScreen = () => {
     const serverUrl = useStore((state) => state.serverUrl);
     const clearServerUrl = useStore((state) => state.clearServerUrl);
     const clearAuth = useStore((state) => state.clearAuth);
+    const { contentPaddingBottom } = useAudioPlayerPadding();
     const offlineMode = useStore((state) => state.offlineMode);
     const toggleOfflineMode = useStore((state) => state.toggleOfflineMode);
     const authType = useStore((state) => state.authType);
@@ -184,7 +186,7 @@ const SettingsScreen = () => {
             <ScrollView style={{
                 flex: 1,
                 backgroundColor: styles.lightDarkColor,
-            }} contentContainerStyle={{ paddingTop: 20, paddingHorizontal: 10, paddingBottom: 40 }}>
+            }} contentContainerStyle={{ paddingTop: 20, paddingHorizontal: 10, paddingBottom: contentPaddingBottom }}>
                 <Heading1>{t('settings')}</Heading1>
 
                 {/* Offline Mode Section */}
