@@ -28,7 +28,7 @@ const config = getConfigFromHtmlFile()
 
 if (config) {
     const postUrl = config.serverUrl + "ui/login"
-    if (!window.location.pathname.endsWith('login')) {
+    if (!window.location.pathname.endsWith('login') && !window.location.pathname.includes('/invite/')) {
         setLogin({
             rememberMe: false,
             loginType: 'oidc'

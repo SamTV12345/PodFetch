@@ -307,10 +307,7 @@ impl Episode {
         Ok(())
     }
 
-    pub fn get_watchtime(
-        episode_id: String,
-        username: String,
-    ) -> Result<Option<Episode>, CustomError> {
+    pub fn get_watchtime(episode_id: &str, username: &str) -> Result<Option<Episode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
@@ -321,6 +318,11 @@ impl Episode {
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
             .map_err(|e| map_db_error(e, Critical))?;
+
+
+        if podcast_episode.is_none() {
+            return Ok(None);
+        }
 
         let episode = ep_table
             .filter(ep_dsl::username.eq(username))

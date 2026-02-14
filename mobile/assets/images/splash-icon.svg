@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient für das P - von Lila zu Orange/Gold -->
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="30%" stop-color="#A855F7"/>
+      <stop offset="60%" stop-color="#D946EF"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <!-- Gradient für die Wellen -->
+    <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <!-- Text Gradient -->
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D4A574"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hintergrund -->
+  <rect width="512" height="512" fill="#0a1628"/>
+
+  <!-- Logo zentriert -->
+  <g transform="translate(106, 80) scale(3)">
+    <!-- Das "P" -->
+    <path
+      d="M30 20 L30 80 Q30 85 35 85 Q40 85 40 80 L40 55"
+      stroke="url(#logoGradient)"
+      stroke-width="8"
+      stroke-linecap="round"
+      fill="none"
+    />
+    <path
+      d="M40 20 Q70 20 70 37.5 Q70 55 40 55"
+      stroke="url(#logoGradient)"
+      stroke-width="8"
+      stroke-linecap="round"
+      fill="none"
+    />
+    <circle cx="52" cy="38" r="6" fill="url(#logoGradient)"/>
+
+    <!-- Linke Radiowellen -->
+    <path
+      d="M18 30 Q8 50 18 70"
+      stroke="url(#waveGradient)"
+      stroke-width="4"
+      stroke-linecap="round"
+      fill="none"
+      opacity="0.9"
+    />
+    <path
+      d="M10 25 Q-5 50 10 75"
+      stroke="url(#waveGradient)"
+      stroke-width="3"
+      stroke-linecap="round"
+      fill="none"
+      opacity="0.6"
+    />
+
+    <!-- Rechte Radiowellen -->
+    <path
+      d="M78 30 Q88 50 78 70"
+      stroke="url(#waveGradient)"
+      stroke-width="4"
+      stroke-linecap="round"
+      fill="none"
+      opacity="0.9"
+    />
+    <path
+      d="M86 25 Q101 50 86 75"
+      stroke="url(#waveGradient)"
+      stroke-width="3"
+      stroke-linecap="round"
+      fill="none"
+      opacity="0.6"
+    />
+  </g>
+
+  <!-- Text "PodFetch" -->
+  <text x="256" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold">
+    <tspan fill="#F59E0B">Pod</tspan><tspan fill="#D4A574">Fetch</tspan>
+  </text>
+</svg>
+

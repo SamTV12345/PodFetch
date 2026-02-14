@@ -1,0 +1,425 @@
+import {Image, Modal, Pressable, ScrollView, Text, View, Share, useWindowDimensions} from "react-native";
+import {SafeAreaView} from "react-native-safe-area-context";
+import {styles} from "@/styles/styles";
+import {useStore} from "@/store/store";
+import {AntDesign, MaterialIcons, Ionicons, Feather} from "@expo/vector-icons";
+import {useAudioPlayerStatus} from 'expo-audio';
+import {router} from 'expo-router';
+import {useTranslation} from "react-i18next";
+import Slider from '@react-native-community/slider';
+import {useState, useCallback} from 'react';
+import { DownloadButton, DownloadStatusIcon } from "@/components/DownloadButton";
+import WebView from "react-native-webview";
+
+const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+export default function PlayerScreen() {
+    const {t} = useTranslation();
+    const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+    const selectedPodcastEpisode = useStore(state => state.podcastEpisodeRecord);
+    const audioPlayer = useStore(state => state.audioPlayer);
+    const isPlaying = useStore(state => state.isPlaying);
+    const setIsPlaying = useStore(state => state.setIsPlaying);
+
+    const status = audioPlayer ? useAudioPlayerStatus(audioPlayer) : null;
+
+    const [isOptionsVisible, setIsOptionsVisible] = useState(false);
+    const [isSeeking, setIsSeeking] = useState(false);
+    const [seekValue, setSeekValue] = useState(0);
+    const [isToggling, setIsToggling] = useState(false);
+
+    const isSmallScreen = screenWidth < 375;
+    const isShortScreen = screenHeight < 700;
+
+    const albumArtSize = Math.min(screenWidth * 0.7, 300);
+
+    const playButtonSize = isSmallScreen ? 60 : 70;
+    const skipButtonSize = isSmallScreen ? 28 : 35;
+    const controlGap = isSmallScreen ? 30 : 40;
+
+    const titleFontSize = isSmallScreen ? 18 : 22;
+    const subtitleFontSize = isSmallScreen ? 14 : 16;
+
+    const handleSeekStart = useCallback(() => {
+        setIsSeeking(true);
+        setSeekValue(status?.currentTime || 0);
+    }, [status?.currentTime]);
+
+    const handleSeekChange = useCallback((value: number) => {
+        setSeekValue(value);
+    }, []);
+
+    const handleSeekComplete = useCallback((value: number) => {
+        if (audioPlayer) {
+            audioPlayer.seekTo(value);
+        }
+        setIsSeeking(false);
+    }, [audioPlayer]);
+
+    const handleShare = useCallback(async () => {
+        if (selectedPodcastEpisode) {
+            try {
+                await Share.share({
+                    message: t('share-podcast', {
+                        podcast: selectedPodcastEpisode.podcastEpisode.name,
+                        url: selectedPodcastEpisode.podcastEpisode.url
+                    }),
+                });
+            } catch (error) {
+                console.error('Error sharing:', error);
+            }
+        }
+        setIsOptionsVisible(false);
+    }, [selectedPodcastEpisode, t]);
+
+    const handleSkipBackward = () => {
+        if (audioPlayer && status) {
+            const newTime = Math.max(0, status.currentTime - 15);
+            audioPlayer.seekTo(newTime);
+        }
+    };
+
+    const handleSkipForward = () => {
+        if (audioPlayer && status) {
+            const newTime = Math.min(status.duration, status.currentTime + 30);
+            audioPlayer.seekTo(newTime);
+        }
+    };
+
+    const handleTogglePlay = useCallback(() => {
+        if (isToggling || !audioPlayer) return;
+
+        setIsToggling(true);
+
+        if (isPlaying) {
+            audioPlayer.pause();
+            setIsPlaying(false);
+        } else {
+            audioPlayer.play();
+            setIsPlaying(true);
+        }
+
+        setTimeout(() => setIsToggling(false), 300);
+    }, [isPlaying, audioPlayer, setIsPlaying, isToggling]);
+
+    if (!selectedPodcastEpisode) {
+        return (
+            <SafeAreaView style={{flex: 1, backgroundColor: styles.lightDarkColor}}>
+                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                    <Text style={{color: 'white'}}>{t('no-episode-selected')}</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <SafeAreaView style={{flex: 1, backgroundColor: styles.lightDarkColor}}>
+            {/* Header */}
+            <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 20,
+                paddingTop: 10,
+            }}>
+                <Pressable onPress={() => router.back()}>
+                    <MaterialIcons name="keyboard-arrow-down" size={35} color="white"/>
+                </Pressable>
+                <View style={{flex: 1, alignItems: 'center'}}>
+                    <Text style={{color: styles.gray, fontSize: 12}}>{t('now-playing')}</Text>
+                    <Text style={{color: 'white', fontSize: 14}} numberOfLines={1}>
+                        {selectedPodcastEpisode.podcast?.name || ''}
+                    </Text>
+                </View>
+                <Pressable onPress={() => setIsOptionsVisible(true)}>
+                    <MaterialIcons name="more-vert" size={24} color="white"/>
+                </Pressable>
+            </View>
+
+            {/* Album Art */}
+            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: isSmallScreen ? 20 : 40}}>
+                <Image
+                    source={{uri: selectedPodcastEpisode.podcastEpisode.local_image_url}}
+                    style={{
+                        width: albumArtSize,
+                        height: albumArtSize,
+                        borderRadius: 10,
+                        shadowColor: '#000',
+                        shadowOffset: {width: 0, height: 10},
+                        shadowOpacity: 0.5,
+                        shadowRadius: 20,
+                    }}
+                />
+            </View>
+
+            {/* Episode Info */}
+            <View style={{paddingHorizontal: isSmallScreen ? 20 : 30, marginBottom: isShortScreen ? 10 : 20}}>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                    <Text style={{color: 'white', fontSize: titleFontSize, fontWeight: 'bold', flex: 1}} numberOfLines={2}>
+                        {selectedPodcastEpisode.podcastEpisode.name}
+                    </Text>
+                    <DownloadStatusIcon
+                        episodeId={selectedPodcastEpisode.podcastEpisode.episode_id}
+                        size={isSmallScreen ? 18 : 20}
+                    />
+                </View>
+                <Text style={{color: styles.gray, fontSize: subtitleFontSize, marginTop: 5}}>
+                    {selectedPodcastEpisode.podcast?.name || ''}
+                </Text>
+            </View>
+
+            {/* Progress Bar */}
+            <View style={{paddingHorizontal: isSmallScreen ? 15 : 20}}>
+                <Slider
+                    style={{width: '100%', height: isSmallScreen ? 35 : 40}}
+                    minimumValue={0}
+                    maximumValue={status?.duration || 1}
+                    value={isSeeking ? seekValue : (status?.currentTime || 0)}
+                    onSlidingStart={handleSeekStart}
+                    onValueChange={handleSeekChange}
+                    onSlidingComplete={handleSeekComplete}
+                    minimumTrackTintColor={styles.accentColor}
+                    maximumTrackTintColor={styles.gray}
+                    thumbTintColor="white"
+                />
+                <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: -5, paddingHorizontal: 10}}>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 11 : 12}}>
+                        {formatTime(isSeeking ? seekValue : (status?.currentTime || 0))}
+                    </Text>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 11 : 12}}>
+                        -{formatTime((status?.duration || 0) - (isSeeking ? seekValue : (status?.currentTime || 0)))}
+                    </Text>
+                </View>
+            </View>
+
+            {/* Controls */}
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingVertical: isShortScreen ? 20 : 30,
+                gap: controlGap,
+            }}>
+                {/* Skip Backward 15s */}
+                <Pressable onPress={handleSkipBackward} style={{alignItems: 'center'}}>
+                    <Ionicons name="play-back" size={skipButtonSize} color="white"/>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 9 : 10, marginTop: 2}}>15</Text>
+                </Pressable>
+
+                {/* Play/Pause */}
+                <Pressable
+                    onPress={handleTogglePlay}
+                    style={{
+                        backgroundColor: 'white',
+                        width: playButtonSize,
+                        height: playButtonSize,
+                        borderRadius: playButtonSize / 2,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                >
+                    <AntDesign
+                        name={isPlaying ? "pause" : "caret-right"}
+                        size={isSmallScreen ? 26 : 30}
+                        color={styles.darkColor}
+                    />
+                </Pressable>
+
+                {/* Skip Forward 30s */}
+                <Pressable onPress={handleSkipForward} style={{alignItems: 'center'}}>
+                    <Ionicons name="play-forward" size={skipButtonSize} color="white"/>
+                    <Text style={{color: styles.gray, fontSize: isSmallScreen ? 9 : 10, marginTop: 2}}>30</Text>
+                </Pressable>
+            </View>
+
+            {/* Bottom spacing */}
+            <View style={{height: isShortScreen ? 15 : 30}}/>
+
+            {/* Options Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isOptionsVisible}
+                onRequestClose={() => setIsOptionsVisible(false)}
+            >
+                <Pressable
+                    style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.5)'}}
+                    onPress={() => setIsOptionsVisible(false)}
+                >
+                    <Pressable
+                        style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            backgroundColor: styles.darkColor,
+                            borderTopLeftRadius: 20,
+                            borderTopRightRadius: 20,
+                            maxHeight: '95%',
+                        }}
+                        onPress={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: 20,
+                            borderBottomWidth: 1,
+                            borderBottomColor: styles.gray,
+                        }}>
+                            <Image
+                                source={{uri: selectedPodcastEpisode.podcastEpisode.local_image_url}}
+                                style={{width: 50, height: 50, borderRadius: 5}}
+                            />
+                            <View style={{flex: 1, marginLeft: 15}}>
+                                <Text style={{color: 'white', fontSize: 16, fontWeight: 'bold'}} numberOfLines={1}>
+                                    {selectedPodcastEpisode.podcastEpisode.name}
+                                </Text>
+                                <Text style={{color: styles.gray, fontSize: 14}} numberOfLines={1}>
+                                    {selectedPodcastEpisode.podcast?.name || ''}
+                                </Text>
+                            </View>
+                            <Pressable onPress={() => setIsOptionsVisible(false)}>
+                                <AntDesign name="close" size={24} color="white"/>
+                            </Pressable>
+                        </View>
+
+                        <ScrollView style={{flex: 1}} contentContainerStyle={{paddingBottom: 20}}>
+                            {/* Description Section */}
+                            <View style={{padding: 20}}>
+                                <Text style={{color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 10}}>
+                                    {t('description')}
+                                </Text>
+                                <View style={{height: 200}}>
+                                    <WebView
+                                        originWhitelist={['*']}
+                                        style={{backgroundColor: 'transparent'}}
+                                        source={{
+                                            html: `
+                                                <html lang="en">
+                                                    <head>
+                                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                                        <style>
+                                                            body {
+                                                                color: ${styles.whiteSubText};
+                                                                font-size: 14px;
+                                                                line-height: 22px;
+                                                                background-color: ${styles.darkColor};
+                                                                margin: 0;
+                                                                padding: 0;
+                                                                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                                                            }
+                                                            a { color: ${styles.accentColor}; }
+                                                        </style>
+                                                    </head>
+                                                    <body>
+                                                        ${selectedPodcastEpisode.podcastEpisode.description || t('no-description')}
+                                                    </body>
+                                                </html>
+                                            `
+                                        }}
+                                        scrollEnabled={true}
+                                        nestedScrollEnabled={true}
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Options */}
+                            <View style={{paddingHorizontal: 20, paddingBottom: 40}}>
+                                {/* Download */}
+                                {selectedPodcastEpisode.podcast && (
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            paddingVertical: 15,
+                                            borderTopWidth: 1,
+                                            borderTopColor: styles.gray,
+                                        }}
+                                    >
+                                        <Ionicons name="download-outline" size={22} color="white"/>
+                                        <Text style={{color: 'white', fontSize: 16, marginLeft: 15, flex: 1}}>
+                                            {t('download')}
+                                        </Text>
+                                        <DownloadButton
+                                            episode={selectedPodcastEpisode.podcastEpisode}
+                                            podcast={selectedPodcastEpisode.podcast}
+                                            size={24}
+                                            showProgress={true}
+                                        />
+                                    </View>
+                                )}
+
+                                {/* Share */}
+                                <Pressable
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingVertical: 15,
+                                        borderTopWidth: 1,
+                                        borderTopColor: styles.gray,
+                                    }}
+                                    onPress={handleShare}
+                                >
+                                    <Feather name="share" size={22} color="white"/>
+                                    <Text style={{color: 'white', fontSize: 16, marginLeft: 15}}>
+                                        {t('share')}
+                                    </Text>
+                                </Pressable>
+
+                                {/* Go to Podcast */}
+                                <Pressable
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingVertical: 15,
+                                        borderTopWidth: 1,
+                                        borderTopColor: styles.gray,
+                                    }}
+                                    onPress={() => {
+                                        setIsOptionsVisible(false);
+                                        router.back();
+                                        router.push({
+                                            pathname: '/podcasts/[id]/details',
+                                            params: {id: selectedPodcastEpisode.podcastEpisode.podcast_id}
+                                        });
+                                    }}
+                                >
+                                    <MaterialIcons name="podcasts" size={22} color="white"/>
+                                    <Text style={{color: 'white', fontSize: 16, marginLeft: 15}}>
+                                        {t('go-to-podcast')}
+                                    </Text>
+                                </Pressable>
+
+                                {/* Episode Info */}
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 15,
+                                    borderTopWidth: 1,
+                                    borderTopColor: styles.gray,
+                                }}>
+                                    <AntDesign name="info-circle" size={22} color="white"/>
+                                    <View style={{marginLeft: 15}}>
+                                        <Text style={{color: 'white', fontSize: 16}}>
+                                            {t('episode-info')}
+                                        </Text>
+                                        <Text style={{color: styles.gray, fontSize: 12, marginTop: 2}}>
+                                            {t('duration')}: {formatTime(selectedPodcastEpisode.podcastEpisode.total_time)}
+                                        </Text>
+                                        <Text style={{color: styles.gray, fontSize: 12}}>
+                                            {t('published')}: {selectedPodcastEpisode.podcastEpisode.date_of_recording}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+        </SafeAreaView>
+    );
+}

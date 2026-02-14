@@ -395,14 +395,17 @@ impl PodcastEpisodeService {
             }
             let days;
 
-            if let Some(podcast_settings) = podcast_settings.unwrap() {
-                if podcast_settings.auto_cleanup {
-                    days = podcast_settings.auto_cleanup_days;
-                } else {
+            match podcast_settings.unwrap() {
+                Some(podcast_settings) => {
+                    if podcast_settings.auto_cleanup {
+                        days = podcast_settings.auto_cleanup_days;
+                    } else {
+                        days = days_from_settings;
+                    }
+                }
+                _ => {
                     days = days_from_settings;
                 }
-            } else {
-                days = days_from_settings;
             }
 
             let old_podcast_episodes =

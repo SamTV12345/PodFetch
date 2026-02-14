@@ -54,7 +54,7 @@ pub async fn get_watchtime(
     Path(id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<EpisodeDto>, CustomError> {
-    let watchtime = Episode::get_watchtime(id, requester.username)?;
+    let watchtime = Episode::get_watchtime(&id, &requester.username)?;
     match watchtime {
         None => Err(CustomErrorInner::NotFound(Debug).into()),
         Some(w) => Ok(Json(w.convert_to_episode_dto())),
