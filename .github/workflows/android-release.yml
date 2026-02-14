@@ -44,7 +44,7 @@ jobs:
         run: pnpm install -g @expo/cli@latest
 
       - name: Generate native code with expo prebuild
-        run: npx expo prebuild --platform android --clear
+        run: npx expo prebuild --platform android
 
       - name: Generate unsigned APK
         run: |
