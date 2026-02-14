@@ -12,6 +12,9 @@ permissions:
 jobs:
     build:
         runs-on: ubuntu-latest
+        env:
+          IMAGE_NAME: ghcr.io/github.com/samtv12345/podfetch/mdbook-deploy
+          IMAGE_TAG: docs-${{ github.sha }}
         steps:
         - uses: actions/checkout@v2
         - name: Install mdBook
@@ -19,11 +22,27 @@ jobs:
         - name: Build mdBook
           run: mdbook build
           working-directory: docs
-        - name: Upload artifact
-          uses: actions/upload-pages-artifact@v3
+        - name: Log in to GHCR
+          uses: docker/login-action@v2
           with:
-            # Upload entire repository
-            path: './docs/book'
-        - name: Deploy to GitHub Pages
-          id: deployment
-          uses: actions/deploy-pages@v4
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+        - name: Build and push Docker image for docs
+          uses: docker/build-push-action@v4
+          with:
+            context: docs
+            push: true
+            tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:docs-latest
+        - name: Update PodFetch charts
+          run: |
+            git clone https://$PODFETCH_PUSH_USER:$PODFETCH_PUSH_PASSWORD@github.com/SamTV12345/podfetch-charts.git ./podfetch-charts || true
+            cd ./podfetch-charts
+            git pull
+            sed -i "s|tag: .*|tag: \"$currentTag\"|g" ./values-docs-dynamic.yaml
+            git config user.name "PodFetch Support Bot"
+            git config user.email "noreply@samtv.fyi"
+            git add --all
+            git commit -m "Updating values docs dynamic yaml"
+            git push origin main 
+
