@@ -9,6 +9,7 @@ import {useTranslation} from "react-i18next";
 import Slider from '@react-native-community/slider';
 import {useState, useCallback} from 'react';
 import { DownloadButton, DownloadStatusIcon } from "@/components/DownloadButton";
+import WebView from "react-native-webview";
 
 const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -257,7 +258,7 @@ export default function PlayerScreen() {
                             backgroundColor: styles.darkColor,
                             borderTopLeftRadius: 20,
                             borderTopRightRadius: 20,
-                            maxHeight: '80%',
+                            maxHeight: '95%',
                         }}
                         onPress={(e) => e.stopPropagation()}
                     >
@@ -286,15 +287,44 @@ export default function PlayerScreen() {
                             </Pressable>
                         </View>
 
-                        <ScrollView style={{maxHeight: 400}}>
+                        <ScrollView style={{flex: 1}} contentContainerStyle={{paddingBottom: 20}}>
                             {/* Description Section */}
                             <View style={{padding: 20}}>
                                 <Text style={{color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 10}}>
                                     {t('description')}
                                 </Text>
-                                <Text style={{color: styles.whiteSubText, fontSize: 14, lineHeight: 22}}>
-                                    {selectedPodcastEpisode.podcastEpisode.description || t('no-description')}
-                                </Text>
+                                <View style={{height: 200}}>
+                                    <WebView
+                                        originWhitelist={['*']}
+                                        style={{backgroundColor: 'transparent'}}
+                                        source={{
+                                            html: `
+                                                <html lang="en">
+                                                    <head>
+                                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                                        <style>
+                                                            body {
+                                                                color: ${styles.whiteSubText};
+                                                                font-size: 14px;
+                                                                line-height: 22px;
+                                                                background-color: ${styles.darkColor};
+                                                                margin: 0;
+                                                                padding: 0;
+                                                                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                                                            }
+                                                            a { color: ${styles.accentColor}; }
+                                                        </style>
+                                                    </head>
+                                                    <body>
+                                                        ${selectedPodcastEpisode.podcastEpisode.description || t('no-description')}
+                                                    </body>
+                                                </html>
+                                            `
+                                        }}
+                                        scrollEnabled={true}
+                                        nestedScrollEnabled={true}
+                                    />
+                                </View>
                             </View>
 
                             {/* Options */}

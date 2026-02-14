@@ -350,6 +350,40 @@ const SettingsScreen = () => {
                             {offlineMode && <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.3)" />}
                         </TouchableOpacity>
 
+                        {/* Podcast verwalten */}
+                        <TouchableOpacity
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 12,
+                                paddingVertical: 12,
+                                borderTopWidth: 1,
+                                borderTopColor: 'rgba(255,255,255,0.1)',
+                            }}
+                            onPress={() => router.push('/managePodcasts')}
+                            disabled={offlineMode}
+                        >
+                            <Ionicons name="mic-outline" size={20} color={offlineMode ? 'rgba(255,255,255,0.3)' : styles.gray} />
+                            <View style={{ flex: 1 }}>
+                                <ThemedText style={{
+                                    fontSize: 15,
+                                    color: offlineMode ? 'rgba(255,255,255,0.3)' : styles.white,
+                                }}>
+                                    {t('manage-invites', { defaultValue: 'Podcasts verwalten' })}
+                                </ThemedText>
+                                <ThemedText style={{
+                                    fontSize: 12,
+                                    color: offlineMode ? 'rgba(255,255,255,0.2)' : styles.gray,
+                                    marginTop: 2,
+                                }}>
+                                    {t('manage-invites-description', { defaultValue: 'Podcasts verwalten und' +
+                                            ' aktualisieren' })}
+                                </ThemedText>
+                            </View>
+                            {!offlineMode && <Ionicons name="chevron-forward" size={16} color={styles.gray} />}
+                            {offlineMode && <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.3)" />}
+                        </TouchableOpacity>
+
                         {/* Users Management */}
                         <TouchableOpacity
                             style={{
@@ -415,10 +449,11 @@ const SettingsScreen = () => {
                             {!offlineMode && <Ionicons name="chevron-forward" size={16} color={styles.gray} />}
                             {offlineMode && <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.3)" />}
                         </TouchableOpacity>
+
+
                     </View>
                 )}
 
-                {/* User Profile Section - nur bei Basic Auth anzeigen */}
                 {authType === 'basic' && userProfile && (
                     <View style={{
                         backgroundColor: styles.darkColor,
@@ -450,11 +485,11 @@ const SettingsScreen = () => {
                                         : t('role-user', { defaultValue: 'Benutzer' })
                                     }
                                     {userProfile.readOnly && (
-                                        <Text style={{ color: styles.gray }}> • {t('read-only', { defaultValue: 'Nur Lesen' })}</Text>
+                                        <Text style={{ color: styles.gray }}> • {t('read-only', { defaultValue: 'Lesemodus' })}</Text>
                                     )}
                                 </ThemedText>
                             </View>
-                            <TouchableOpacity
+                            {!userProfile.readOnly && <TouchableOpacity
                                 style={{
                                     backgroundColor: 'rgba(255,255,255,0.1)',
                                     borderRadius: 8,
@@ -468,7 +503,7 @@ const SettingsScreen = () => {
                                 ) : (
                                     <Ionicons name="refresh" size={20} color={styles.accentColor} />
                                 )}
-                            </TouchableOpacity>
+                            </TouchableOpacity>}
                         </View>
 
                         {/* Password Change Section - nur wenn nicht readOnly */}

@@ -365,8 +365,7 @@ const HomeScreen = () => {
                     </View>
                 </ScrollView>
 
-                <Heading2 more onMore={() => {
-                }}>{t('your-podcasts')}</Heading2>
+                <Heading2>{t('your-podcasts')}</Heading2>
                 <ScrollView horizontal={true} style={{paddingBottom: 20, display: 'flex', gap: 10}}
                             overScrollMode="never">
                     {isLoading && <><LoadingSkeleton/>

@@ -25,7 +25,7 @@ export default function () {
                     top: 20,
                     left: 20,
                 }} onPress={()=>{
-                    router.push('/(tabs)')
+                    router.back()
                 }} />
         {
             !podcastDetailedData.isLoading && podcastDetailedData.data? <>

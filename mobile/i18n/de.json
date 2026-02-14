@@ -82,5 +82,7 @@
   "opml-tip-content": "Die meisten Podcast-Apps bieten eine Export-Funktion für OPML-Dateien an. Suche in den Einstellungen deiner aktuellen App nach \"Export\" oder \"OPML\".",
   "select-file": "Datei auswählen",
   "success": "Erfolg",
-  "error": "Fehler"
+  "error": "Fehler",
+  "download": "Download",
+  "manage-podcast": "Podcast verwalten"
 }

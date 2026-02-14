@@ -147,7 +147,7 @@ const UsersScreen = () => {
                                                 {user.role === 'admin'
                                                     ? t('role-admin', { defaultValue: 'Admin' })
                                                     : user.role === 'uploader'
-                                                    ? t('role-readonly', { defaultValue: 'Nur Lesen' })
+                                                    ? t('role-readonly', { defaultValue: 'Lesemodus' })
                                                     : t('role-user', { defaultValue: 'Benutzer' })
                                                 }
                                             </Text>

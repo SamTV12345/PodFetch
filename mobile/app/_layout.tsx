@@ -117,6 +117,16 @@ export default function RootLayout() {
               headerTitleStyle: { fontWeight: '600' },
             }}
         />
+          <Stack.Screen
+              name="managePodcasts"
+              options={{
+                  title: t('manage-podcast', { defaultValue: 'Podcast verwalten' }),
+                  headerBackTitle: t('settings', { defaultValue: 'Einstellungen' }),
+                  headerStyle: { backgroundColor: styles.darkColor },
+                  headerTintColor: styles.white,
+                  headerTitleStyle: { fontWeight: '600' },
+              }}
+          />
       </Stack>
       {pathname !== '/player' && pathname !== '/server-setup' && (
         <AudioPlayer bottomOffset={audioPlayerBottomOffset} />
