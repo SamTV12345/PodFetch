@@ -40,9 +40,6 @@ class DownloadManagerClass {
         }
     }
 
-    /**
-     * Startet den Download einer Episode
-     */
     async downloadEpisode(
         episode: components['schemas']['PodcastEpisodeDto'],
         podcast: components['schemas']['PodcastDto']
@@ -171,9 +168,6 @@ class DownloadManagerClass {
         }
     }
 
-    /**
-     * Bricht einen laufenden Download ab
-     */
     async cancelDownload(episodeId: string): Promise<void> {
         const download = this.activeDownloads.get(episodeId);
         if (download) {
@@ -200,14 +194,10 @@ class DownloadManagerClass {
         }
     }
 
-    /**
-     * Löscht eine heruntergeladene Episode
-     */
+
     async deleteDownload(episodeId: string): Promise<void> {
-        // Breche laufenden Download ab falls vorhanden
         await this.cancelDownload(episodeId);
 
-        // Hole Datei-Info aus DB
         const episode = await offlineDB.getDownloadedEpisode(episodeId);
         if (episode) {
             try {
@@ -225,9 +215,6 @@ class DownloadManagerClass {
         this.downloadStatuses.delete(episodeId);
     }
 
-    /**
-     * Prüft ob eine Episode heruntergeladen wurde
-     */
     async isDownloaded(episodeId: string): Promise<boolean> {
         const episode = await offlineDB.getDownloadedEpisode(episodeId);
         if (!episode) return false;
@@ -243,9 +230,7 @@ class DownloadManagerClass {
         return true;
     }
 
-    /**
-     * Holt den lokalen Pfad einer heruntergeladenen Episode
-     */
+
     async getLocalPath(episodeId: string): Promise<string | null> {
         const episode = await offlineDB.getDownloadedEpisode(episodeId);
         if (!episode) return null;
@@ -331,40 +316,15 @@ class DownloadManagerClass {
         }
     }
 
-    /**
-     * Löscht alle Downloads
-     */
     async clearAllDownloads(): Promise<void> {
-        // Breche alle laufenden Downloads ab
         for (const [episodeId] of this.activeDownloads) {
             await this.cancelDownload(episodeId);
         }
 
-        // Lösche alle Dateien
         const downloads = await this.getAllDownloads();
         for (const download of downloads) {
-            try {
-                const fileInfo = await FileSystem.getInfoAsync(download.localPath);
-                if (fileInfo.exists) {
-                    await FileSystem.deleteAsync(download.localPath);
-                }
-            } catch (e) {
-                console.warn(`Could not delete file:`, e);
-            }
+            await this.deleteDownload(download.episodeId)
         }
-
-        // Lösche Verzeichnis
-        try {
-            const dirInfo = await FileSystem.getInfoAsync(this.getEpisodeDirectory());
-            if (dirInfo.exists) {
-                await FileSystem.deleteAsync(this.getEpisodeDirectory());
-            }
-        } catch (e) {
-            console.warn('Could not delete episodes directory:', e);
-        }
-
-        // Bereinige DB würde über offlineDB gemacht werden
-        // Hier müsste man eine clearAllDownloads Methode in offlineDB hinzufügen
     }
 }
 

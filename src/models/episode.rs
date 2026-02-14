@@ -319,6 +319,11 @@ impl Episode {
             .optional()
             .map_err(|e| map_db_error(e, Critical))?;
 
+
+        if podcast_episode.is_none() {
+            return Ok(None);
+        }
+
         let episode = ep_table
             .filter(ep_dsl::username.eq(username))
             .filter(ep_dsl::guid.eq(podcast_episode.unwrap().guid))

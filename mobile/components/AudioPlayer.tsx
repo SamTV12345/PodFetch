@@ -12,7 +12,7 @@ type AudioPlayerProps = {
 export const AUDIO_PLAYER_HEIGHT = 70;
 
 
-export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
+export const AudioPlayer = ({ bottomOffset = 30 }: AudioPlayerProps) => {
     const { width: screenWidth } = useWindowDimensions();
     const selectedPodcastEpisode = useStore(state => state.podcastEpisodeRecord);
     const isPlaying = useStore(state => state.isPlaying);
@@ -85,7 +85,6 @@ export const AudioPlayer = ({ bottomOffset = 80 }: AudioPlayerProps) => {
                 }}/>
             </View>
 
-            {/* Content */}
             <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',

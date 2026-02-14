@@ -21,8 +21,6 @@ export default function DownloadsScreen() {
     const { listPaddingBottom } = useAudioPlayerPadding();
 
     const handlePlayEpisode = (episode: DownloadedEpisode) => {
-        // TODO: Hier müsste man die Episode in den Player laden
-        // Für jetzt navigieren wir zur Episode-Detail-Seite
         router.push(`/episodes/${episode.episodeId}`);
     };
 

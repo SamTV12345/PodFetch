@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -19,6 +19,7 @@ import {styles} from "@/styles/styles";
 import { useStore } from '@/store/store';
 import { AudioProvider } from '@/components/AudioProvider';
 import { AudioPlayer } from '@/components/AudioPlayer';
+import {useIsAudioPlayerShown} from "@/hooks/useIsAudioPlayerShown";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -27,17 +28,12 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient()
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
-  const segments = useSegments();
-  const pathname = usePathname();
+  const isAudioPlayerShown = useIsAudioPlayerShown()
+  const segments = useSegments()
   const serverUrl = useStore((state) => state.serverUrl);
   const { t } = useTranslation();
-
-  const isTabScreen = segments[0] === '(tabs)';
-  const audioPlayerBottomOffset = isTabScreen ? 95 : 30;
-
-  useAutoSync(30000); // Check all 30 seconds
+  useAutoSync(30000);
 
   useAuthRefresh();
 
@@ -128,8 +124,8 @@ export default function RootLayout() {
               }}
           />
       </Stack>
-      {pathname !== '/player' && pathname !== '/server-setup' && (
-        <AudioPlayer bottomOffset={audioPlayerBottomOffset} />
+      {isAudioPlayerShown && (
+        <AudioPlayer />
       )}
       </AudioProvider>
       <StatusBar style="light" backgroundColor="#000" />
