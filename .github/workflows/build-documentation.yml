@@ -39,6 +39,7 @@ jobs:
           run: |
             git clone https://$PODFETCH_PUSH_USER:$PODFETCH_PUSH_PASSWORD@github.com/SamTV12345/podfetch-charts.git ./podfetch-charts || true
             cd ./podfetch-charts
+            git remote set-url origin https://$PODFETCH_PUSH_USER:$PODFETCH_PUSH_PASSWORD@github.com/SamTV12345/podfetch-charts.git
             git pull
             sed -i "s|tag: .*|tag: \"$currentTag\"|g" ./values-docs-dynamic.yaml
             git config user.name "PodFetch Support Bot"
