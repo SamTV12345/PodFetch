@@ -168,6 +168,9 @@ importers:
       '@types/react-test-renderer':
         specifier: 19.0.0
         version: 19.0.0
+      babel-preset-expo:
+        specifier: ^54.0.10
+        version: 54.0.10(@babel/core@7.29.0)(@babel/runtime@7.28.6)(expo@54.0.33)(react-refresh@0.14.2)
       jest:
         specifier: ^29.2.1
         version: 29.7.0(@types/node@25.2.3)
