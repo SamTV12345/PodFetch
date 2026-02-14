@@ -3,6 +3,7 @@
 - [Introduction](./Introduction.md)
 - [S3](./S3.md)
 - [Installation](./Installation.md)
+- [Mobile Apps](./Mobile.md)
 - [Authorization](./AUTH.md)
 - [UI Walkthrough](./UIWalkthrough.md)
 - [Hosting](./HOSTING.md)
