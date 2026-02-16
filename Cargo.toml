@@ -30,7 +30,7 @@ futures-util = "0.3.31"
 substring = "1.4.5"
 opml = "1.1.6"
 rand = "0.10.0"
-env_logger = "0.11.8"
+env_logger = "0.11.9"
 chrono = {version  = "0.4.43", default-features=false, features = ["serde"]}
 rss = "2.0.12"
 frankenstein = { version = "0.46.1", features = ["client-ureq"] }
