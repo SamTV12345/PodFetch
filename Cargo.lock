@@ -3832,9 +3832,9 @@ dependencies = [
 
 [[package]]
 name = "socketioxide"
-version = "0.18.1"
+version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5845497aeff11cd3b9d831e8fe924ce538cbb17c668a810d216d382732b6e3b0"
+checksum = "6029712903ab8849c63f19482fd837f2f8b4a33d0221b9ec612c4db910053da1"
 dependencies = [
  "bytes",
  "engineioxide",
