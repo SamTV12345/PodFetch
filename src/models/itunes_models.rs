@@ -10,7 +10,7 @@ pub struct ItunesWrapper {
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodindexResponse {
-    pub status: bool,
+    pub status: String,
     pub feeds: Vec<Feed>,
 }
 
