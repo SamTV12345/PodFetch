@@ -31,7 +31,7 @@ substring = "1.4.5"
 opml = "1.1.6"
 rand = "0.10.0"
 env_logger = "0.11.9"
-chrono = {version  = "0.4.43", default-features=false, features = ["serde"]}
+chrono = {version  = "0.4.44", default-features=false, features = ["serde"]}
 rss = "2.0.12"
 frankenstein = { version = "0.47.0", features = ["client-ureq"] }
 regex = "1.12.3"
