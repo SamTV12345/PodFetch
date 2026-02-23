@@ -11,8 +11,10 @@ import { DownloadedEpisode } from '@/store/offlineStore';
 import { styles as appStyles } from '@/styles/styles';
 import { useStore } from '@/store/store';
 import { useAudioPlayerPadding } from '@/hooks/useAudioPlayerPadding';
+import { useTranslation } from 'react-i18next';
 
 export default function DownloadsScreen() {
+    const { t } = useTranslation();
     const router = useRouter();
     const { episodes, isLoading, totalSize, deleteEpisode, clearAll, refresh } = useDownloadedEpisodes();
     const { isOnline } = useNetworkStatus();
@@ -26,12 +28,12 @@ export default function DownloadsScreen() {
 
     const handleDeleteEpisode = (episode: DownloadedEpisode) => {
         Alert.alert(
-            'Download löschen',
-            `Möchtest du "${episode.name}" wirklich löschen?`,
+            t('download-delete-title'),
+            t('download-delete-episode-confirm', { name: episode.name }),
             [
-                { text: 'Abbrechen', style: 'cancel' },
+                { text: t('cancel'), style: 'cancel' },
                 {
-                    text: 'Löschen',
+                    text: t('delete'),
                     style: 'destructive',
                     onPress: () => deleteEpisode(episode.episodeId)
                 }
@@ -43,12 +45,12 @@ export default function DownloadsScreen() {
         if (episodes.length === 0) return;
 
         Alert.alert(
-            'Alle Downloads löschen',
-            `Möchtest du wirklich alle ${episodes.length} heruntergeladenen Episoden löschen?`,
+            t('downloads-delete-all-title'),
+            t('downloads-delete-all-message', { count: episodes.length }),
             [
-                { text: 'Abbrechen', style: 'cancel' },
+                { text: t('cancel'), style: 'cancel' },
                 {
-                    text: 'Alle löschen',
+                    text: t('delete-all'),
                     style: 'destructive',
                     onPress: clearAll
                 }
@@ -95,9 +97,12 @@ export default function DownloadsScreen() {
     const renderHeader = () => (
         <View style={styles.header}>
             <View style={styles.headerInfo}>
-                <Text style={styles.headerTitle}>Downloads</Text>
+                <Text style={styles.headerTitle}>{t('downloads')}</Text>
                 <Text style={styles.headerSubtitle}>
-                    {episodes.length} {episodes.length === 1 ? 'Episode' : 'Episoden'} • {formatBytes(totalSize)}
+                    {t('downloads-count', {
+                        count: episodes.length,
+                        itemLabel: episodes.length === 1 ? t('episode-singular') : t('episode-plural'),
+                    })} • {formatBytes(totalSize)}
                 </Text>
             </View>
 
@@ -112,9 +117,9 @@ export default function DownloadsScreen() {
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <Ionicons name="cloud-download-outline" size={64} color="rgba(255,255,255,0.3)" />
-            <Text style={styles.emptyTitle}>Keine Downloads</Text>
+            <Text style={styles.emptyTitle}>{t('no-downloads')}</Text>
             <Text style={styles.emptySubtitle}>
-                Lade Episoden herunter um sie offline anzuhören
+                {t('no-downloads-hint')}
             </Text>
         </View>
     );
@@ -128,7 +133,7 @@ export default function DownloadsScreen() {
                 <View style={styles.offlineModeBanner}>
                     <Ionicons name="cloud-offline" size={18} color={appStyles.accentColor} />
                     <Text style={styles.offlineModeBannerText}>
-                        Offline-Modus aktiv – nur Downloads verfügbar
+                        {t('offline-downloads-only')}
                     </Text>
                 </View>
             )}
@@ -148,8 +153,8 @@ export default function DownloadsScreen() {
                     />
                     <Text style={styles.syncText}>
                         {isSyncing
-                            ? 'Synchronisiere...'
-                            : `${pendingCount} Wiedergabe-Fortschritte synchronisieren`
+                            ? t('syncing')
+                            : t('sync-progress-items', { count: pendingCount })
                         }
                     </Text>
                 </Pressable>

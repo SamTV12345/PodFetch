@@ -369,14 +369,14 @@ const SettingsScreen = () => {
                                     fontSize: 15,
                                     color: offlineMode ? 'rgba(255,255,255,0.3)' : styles.white,
                                 }}>
-                                    {t('manage-invites', { defaultValue: 'Podcasts verwalten' })}
+                                    {t('manage-podcasts', { defaultValue: 'Podcasts verwalten' })}
                                 </ThemedText>
                                 <ThemedText style={{
                                     fontSize: 12,
                                     color: offlineMode ? 'rgba(255,255,255,0.2)' : styles.gray,
                                     marginTop: 2,
                                 }}>
-                                    {t('manage-invites-description', { defaultValue: 'Podcasts verwalten und' +
+                                    {t('manage-podcasts-description', { defaultValue: 'Podcasts verwalten und' +
                                             ' aktualisieren' })}
                                 </ThemedText>
                             </View>

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useSync } from '@/hooks/useSync';
 import { styles as appStyles } from '@/styles/styles';
+import { useTranslation } from 'react-i18next';
 
 interface OfflineIndicatorProps {
     showSyncButton?: boolean;
@@ -13,6 +14,7 @@ interface OfflineIndicatorProps {
  * Zeigt den Offline-Status und Sync-Informationen an
  */
 export function OfflineIndicator({ showSyncButton = true }: OfflineIndicatorProps) {
+    const { t } = useTranslation();
     const { isOnline } = useNetworkStatus();
     const { pendingCount, isSyncing, syncAll } = useSync();
 
@@ -33,14 +35,17 @@ export function OfflineIndicator({ showSyncButton = true }: OfflineIndicatorProp
                     color={isOnline ? '#4ade80' : '#fbbf24'}
                 />
                 <Text style={styles.statusText}>
-                    {isOnline ? 'Online' : 'Offline'}
+                    {isOnline ? t('online') : t('offline')}
                 </Text>
             </View>
 
             {pendingCount > 0 && (
                 <View style={styles.syncSection}>
                     <Text style={styles.pendingText}>
-                        {pendingCount} {pendingCount === 1 ? 'Eintrag' : 'Einträge'} zu synchronisieren
+                        {t('sync-pending-items', {
+                            count: pendingCount,
+                            itemLabel: pendingCount === 1 ? t('sync-item-singular') : t('sync-item-plural'),
+                        })}
                     </Text>
 
                     {showSyncButton && isOnline && (

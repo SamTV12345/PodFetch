@@ -11,6 +11,7 @@ import React, { useCallback, useState } from "react";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { styles as appStyles } from "@/styles/styles";
 import { $api } from "@/client";
+import { useTranslation } from "react-i18next";
 
 const SUMMARY_BASE_HTML = `
   <html>
@@ -77,6 +78,7 @@ function HtmlSummary({ html }: { html: string }) {
 }
 
 export default function () {
+    const { t } = useTranslation();
     const podcasts = $api.useQuery("get", "/api/v1/podcasts");
     const deletePodcast = $api.useMutation("delete", "/api/v1/podcasts/{id}")
 
@@ -141,12 +143,12 @@ export default function () {
                         </View>
                         <Pressable style={styles.deleteButton} hitSlop={8} onPress={()=>{
                             Alert.alert(
-                                'Podcast löschen',
-                                `Möchtest du "${p.name}" wirklich löschen?`,
+                                t('podcast-delete-title'),
+                                t('podcast-delete-message', { name: p.name }),
                                 [
-                                    { text: 'Abbrechen', style: 'cancel' },
+                                    { text: t('cancel'), style: 'cancel' },
                                     {
-                                        text: 'Löschen',
+                                        text: t('delete'),
                                         style: 'destructive',
                                         onPress: () => {
                                             deletePodcast.mutateAsync({

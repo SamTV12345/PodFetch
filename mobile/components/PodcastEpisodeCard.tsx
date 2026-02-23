@@ -5,8 +5,10 @@ import {components} from "@/schema";
 import {useStore} from "@/store/store";
 import { DownloadStatusIcon } from "@/components/DownloadButton";
 import {styles} from "@/styles/styles";
+import { useTranslation } from "react-i18next";
 
 export const PodcastEpisodeCard: FC<{podcastEpisode: components["schemas"]["PodcastWatchedEpisodeModelWithPodcastEpisode"]}> = ({podcastEpisode})=>{
+    const { t } = useTranslation();
     const { width: screenWidth } = useWindowDimensions();
 
     const cardSize = Math.min(Math.max(screenWidth * 0.24, 80), 120);
@@ -73,7 +75,7 @@ export const PodcastEpisodeCard: FC<{podcastEpisode: components["schemas"]["Podc
                 fontSize: isSmallCard ? 10 : 11,
                 marginTop: 2,
             }}>
-                {progressData.remainingMinutes} Min übrig
+                {t('minutes-remaining-short', { minutes: progressData.remainingMinutes })}
             </Text>
         )}
     </Pressable>
