@@ -3,6 +3,7 @@ import { View, Pressable, StyleSheet, ActivityIndicator, Alert, Text } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { useEpisodeDownload } from '@/hooks/useDownloads';
 import { components } from '@/schema';
+import { useTranslation } from 'react-i18next';
 
 interface DownloadButtonProps {
     episode: components['schemas']['PodcastEpisodeDto'];
@@ -23,6 +24,7 @@ export function DownloadButton({
     color = '#fff',
     showProgress = true
 }: DownloadButtonProps) {
+    const { t } = useTranslation();
     const {
         isDownloaded,
         isDownloading,
@@ -45,21 +47,21 @@ export function DownloadButton({
         if (isDownloading) {
             // Frage ob abbrechen
             Alert.alert(
-                'Download abbrechen?',
-                'Möchtest du den Download abbrechen?',
+                t('download-cancel-title'),
+                t('download-cancel-message'),
                 [
-                    { text: 'Nein', style: 'cancel' },
-                    { text: 'Ja', onPress: cancelDownload, style: 'destructive' }
+                    { text: t('no'), style: 'cancel' },
+                    { text: t('yes'), onPress: cancelDownload, style: 'destructive' }
                 ]
             );
         } else if (isDownloaded) {
             // Frage ob löschen
             Alert.alert(
-                'Download löschen?',
-                'Möchtest du die heruntergeladene Episode löschen?',
+                t('download-delete-title'),
+                t('download-delete-message'),
                 [
-                    { text: 'Nein', style: 'cancel' },
-                    { text: 'Löschen', onPress: deleteDownload, style: 'destructive' }
+                    { text: t('no'), style: 'cancel' },
+                    { text: t('delete'), onPress: deleteDownload, style: 'destructive' }
                 ]
             );
         } else {
@@ -68,8 +70,8 @@ export function DownloadButton({
                 await startDownload(episode, podcast);
             } catch (error) {
                 Alert.alert(
-                    'Download fehlgeschlagen',
-                    error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten'
+                    t('download-failed'),
+                    error instanceof Error ? error.message : t('unknown-error')
                 );
             }
         }

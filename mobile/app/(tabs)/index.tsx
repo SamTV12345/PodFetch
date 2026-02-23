@@ -219,7 +219,10 @@ const HomeScreen = () => {
                     ) : offlineEpisodes.length > 0 ? (
                         <ScrollView style={{marginTop: 10}}>
                             <Text style={{color: styles.gray, marginBottom: 16}}>
-                                {offlineEpisodes.length} {offlineEpisodes.length === 1 ? 'Episode' : 'Episoden'} verfügbar
+                                {t('downloads-available-count', {
+                                    count: offlineEpisodes.length,
+                                    itemLabel: offlineEpisodes.length === 1 ? t('episode-singular') : t('episode-plural'),
+                                })}
                             </Text>
                             {offlineEpisodes.map(episode => (
                                 <Pressable

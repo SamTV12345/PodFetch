@@ -5,12 +5,14 @@ import {components} from "@/schema";
 import {useStore} from "@/store/store";
 import {DownloadStatusIcon} from "@/components/DownloadButton";
 import {styles} from "@/styles/styles";
+import { useTranslation } from "react-i18next";
 
 type TimelineEpisodeCardProps = {
     episode: components["schemas"]["TimeLinePodcastEpisode"];
 };
 
 export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => {
+    const { t } = useTranslation();
     const { width: screenWidth } = useWindowDimensions();
 
     const cardSize = Math.min(Math.max(screenWidth * 0.24, 80), 120);
@@ -74,7 +76,7 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
                         paddingVertical: 2,
                         borderRadius: 4,
                     }}>
-                        <Text style={{color: '#fff', fontSize: isSmallCard ? 8 : 9, fontWeight: '700'}}>NEU</Text>
+                        <Text style={{color: '#fff', fontSize: isSmallCard ? 8 : 9, fontWeight: '700'}}>{t('new')}</Text>
                     </View>
                 )}
 
@@ -127,7 +129,7 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
                     fontSize: isSmallCard ? 9 : 10,
                     marginTop: 2,
                 }}>
-                    {progressData.remainingMinutes} Min übrig
+                    {t('minutes-remaining-short', { minutes: progressData.remainingMinutes })}
                 </Text>
             ) : !progressData.isCompleted && progressData.totalMinutes > 0 && (
                 <Text style={{
@@ -135,7 +137,7 @@ export const TimelineEpisodeCard: FC<TimelineEpisodeCardProps> = ({episode}) => 
                     fontSize: isSmallCard ? 9 : 10,
                     marginTop: 2,
                 }}>
-                    {progressData.totalMinutes} Min
+                    {t('minutes-short', { minutes: progressData.totalMinutes })}
                 </Text>
             )}
         </Pressable>

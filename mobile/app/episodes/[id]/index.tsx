@@ -11,6 +11,7 @@ import { offlineDB, DownloadedEpisode } from "@/store/offlineStore";
 import { formatBytes, useEpisodeDownload } from "@/hooks/useDownloads";
 import { components } from "@/schema";
 import { $api } from "@/client";
+import { useTranslation } from "react-i18next";
 
 // Hilfsfunktion: Sekunden zu mm:ss Format
 const formatDuration = (seconds: number): string => {
@@ -21,6 +22,7 @@ const formatDuration = (seconds: number): string => {
 };
 
 export default function EpisodeDetailScreen() {
+    const { t } = useTranslation();
     const { id } = useLocalSearchParams<{ id: string }>();
     const offlineMode = useStore((state) => state.offlineMode);
     const serverUrl = useStore((state) => state.serverUrl);
@@ -180,18 +182,18 @@ export default function EpisodeDetailScreen() {
                 <View style={styles.emptyContainer}>
                     <Ionicons name="alert-circle-outline" size={64} color="rgba(255,255,255,0.3)" />
                     <Text style={styles.emptyTitle}>
-                        {offlineMode ? 'Episode nicht verfügbar' : 'Episode nicht gefunden'}
+                        {offlineMode ? t('episode-not-available') : t('episode-not-found')}
                     </Text>
                     <Text style={styles.emptySubtitle}>
                         {offlineMode
-                            ? 'Diese Episode wurde nicht heruntergeladen und ist im Offline-Modus nicht verfügbar.'
-                            : 'Diese Episode wurde nicht heruntergeladen. Lade sie zuerst in der Podcast-Übersicht herunter.'}
+                            ? t('episode-not-available-offline-message')
+                            : t('episode-download-first-message')}
                     </Text>
                     <Pressable
                         style={styles.backButton}
                         onPress={() => router.back()}
                     >
-                        <Text style={styles.backButtonText}>Zurück</Text>
+                        <Text style={styles.backButtonText}>{t('back')}</Text>
                     </Pressable>
                 </View>
             </SafeAreaView>
@@ -212,7 +214,7 @@ export default function EpisodeDetailScreen() {
                     {offlineMode && (
                         <View style={styles.offlineBadge}>
                             <Ionicons name="cloud-offline" size={14} color="#fff" />
-                            <Text style={styles.offlineBadgeText}>Offline</Text>
+                            <Text style={styles.offlineBadgeText}>{t('offline')}</Text>
                         </View>
                     )}
                 </View>
@@ -286,10 +288,10 @@ export default function EpisodeDetailScreen() {
                     />
                     <Text style={styles.playButtonText}>
                         {isCurrentEpisode && isPlaying
-                            ? "Pausieren"
+                            ? t('pause')
                             : progressPercent > 0
-                                ? "Fortsetzen"
-                                : "Abspielen"}
+                                ? t('resume')
+                                : t('play')}
                     </Text>
                 </Pressable>
 
@@ -297,7 +299,7 @@ export default function EpisodeDetailScreen() {
                 <View style={styles.offlineHint}>
                     <Ionicons name="information-circle-outline" size={20} color={appStyles.gray} />
                     <Text style={styles.offlineHintText}>
-                        Diese Episode ist lokal gespeichert. Dein Wiedergabe-Fortschritt wird automatisch synchronisiert, sobald du wieder online bist.
+                        {t('offline-sync-hint')}
                     </Text>
                 </View>
             </ScrollView>
