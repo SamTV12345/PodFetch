@@ -152,7 +152,12 @@ export const UserAdminInvites = () => {
                                                 }
                                             }
                                         }).then((v)=>{
-                                            const inviteLink = typeof v === 'string' ? v : (v.data ?? '')
+                                            let inviteLink = ''
+                                            if (typeof v === 'string') {
+                                                inviteLink = v
+                                            } else if (v && typeof v === 'object') {
+                                                inviteLink = (v as {data?: string | null}).data ?? ''
+                                            }
                                             if (!inviteLink) {
                                                 return
                                             }
