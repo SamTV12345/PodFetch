@@ -242,15 +242,14 @@ impl DownloadService {
             )?;
         }
 
-        if should_download_main_image {
-            if let Some(image_data) = image_data.as_mut() {
+        if should_download_main_image
+            && let Some(image_data) = image_data.as_mut() {
                 FileHandleWrapper::write_file(
                     &paths.image_filename,
                     image_data.1.as_mut_slice(),
                     &ENVIRONMENT_SERVICE.default_file_handler,
                 )?;
             }
-        }
 
         FileHandleWrapper::write_file(
             &paths.filename,
