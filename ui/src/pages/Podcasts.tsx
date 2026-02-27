@@ -21,7 +21,7 @@ import {Heading1} from '../components/Heading1'
 import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
 import {useQueryClient} from "@tanstack/react-query";
 

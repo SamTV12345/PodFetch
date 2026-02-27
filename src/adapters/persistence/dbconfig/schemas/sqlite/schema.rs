@@ -74,6 +74,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    listening_events (id) {
+        id -> Integer,
+        username -> Text,
+        device -> Text,
+        podcast_episode_id -> Text,
+        podcast_id -> Integer,
+        podcast_episode_db_id -> Integer,
+        delta_seconds -> Integer,
+        start_position -> Integer,
+        end_position -> Integer,
+        listened_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     playlist_items (playlist_id, episode) {
         playlist_id -> Text,
         episode -> Integer,
@@ -231,6 +246,8 @@ diesel::table! {
 }
 
 diesel::joinable!(favorite_podcast_episodes -> podcast_episodes (episode_id));
+diesel::joinable!(listening_events -> podcast_episodes (podcast_episode_db_id));
+diesel::joinable!(listening_events -> podcasts (podcast_id));
 diesel::joinable!(favorites -> podcasts (podcast_id));
 diesel::joinable!(playlist_items -> playlists (playlist_id));
 diesel::joinable!(playlist_items -> podcast_episodes (episode));
@@ -246,6 +263,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     favorites,
     filters,
     invites,
+    listening_events,
     notifications,
     playlist_items,
     playlists,

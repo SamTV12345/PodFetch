@@ -9,7 +9,7 @@ import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 export const UserAdminUsers = () => {
     const setSelectedUser = useCommon(state => state.setSelectedUser)
@@ -19,19 +19,22 @@ export const UserAdminUsers = () => {
     const {enqueueSnackbar} = useSnackbar()
     const { t } = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
+    const usersQuery = $api.useQuery('get', '/api/v1/users', {}, {retry: false})
+    const deleteUserMutation = $api.useMutation('delete', '/api/v1/users/{username}')
 
     useEffect(() => {
-        client.GET("/api/v1/users")
-            .then((resp)=>{
-                setUsers(resp.data!)
-                setError(false)
-            }).catch(()=>{
+        if (usersQuery.isError) {
             setError(true)
-        })
-    }, [])
+            return
+        }
+        if (usersQuery.data) {
+            setUsers(usersQuery.data)
+            setError(false)
+        }
+    }, [setUsers, usersQuery.data, usersQuery.isError])
 
     const deleteUser = (user: User) => {
-        client.DELETE("/api/v1/users/{username}", {
+        deleteUserMutation.mutateAsync({
             params: {
                 path: {
                     username: user.username

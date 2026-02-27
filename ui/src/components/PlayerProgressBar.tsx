@@ -1,7 +1,7 @@
-import React, {createRef, FC, useEffect, useMemo, useState} from 'react'
+import React, {FC, useEffect, useMemo, useRef, useState} from 'react'
 import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
-import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 import {getAudioPlayer} from "../utils/audioPlayer";
+import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
 
 type PlayerProgressBarProps = {
     className?: string,
@@ -30,7 +30,8 @@ const convertToMinutes = (time: number | undefined) => {
 }
 
 export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, currentPodcastEpisode }) => {
-    const wrapper = createRef<HTMLDivElement>()
+    const logCurrentPlaybackTime = usePlaybackLogger()
+    const wrapper = useRef<HTMLDivElement>(null)
     const metadata = useAudioPlayer(state => state.metadata)
     const minute = useAudioPlayer(state => state.metadata?.currentTime)
     const [isDragging, setIsDragging] = useState(false)
@@ -72,7 +73,10 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
         if (!audioPlayer) {
             return
         }
-        const newTime = Math.floor((percentage / 100) * audioPlayer.duration)
+        const knownDuration = Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0
+            ? audioPlayer.duration
+            : metadata.duration
+        const newTime = Math.floor((percentage / 100) * knownDuration)
         audioPlayer.currentTime = newTime
         setCurrentTimeUpdatePercentage(percentage)
 
@@ -105,7 +109,10 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
             if (!audioPlayer) {
                 return
             }
-            const newTime = Math.floor((dragPercentage / 100) * audioPlayer.duration)
+            const knownDuration = Number.isFinite(audioPlayer.duration) && audioPlayer.duration > 0
+                ? audioPlayer.duration
+                : metadata.duration
+            const newTime = Math.floor((dragPercentage / 100) * knownDuration)
             audioPlayer.currentTime = newTime
             setCurrentTimeUpdatePercentage(dragPercentage)
 
@@ -132,7 +139,7 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
         }
     }, [isDragging, dragPercentage, currentPodcastEpisode, metadata])
 
-    const displayPercentage = isDragging && dragPercentage !== null ? dragPercentage : metadata?.percentage
+    const displayPercentage = Math.max(0, Math.min(100, isDragging && dragPercentage !== null ? dragPercentage : (metadata?.percentage ?? 0)))
 
     return (
         <div aria-controls="playbar" className="flex items-center gap-3">

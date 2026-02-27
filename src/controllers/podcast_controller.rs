@@ -783,10 +783,9 @@ pub(crate) async fn proxy_podcast(
         is_env_var_present_and_true(BASIC_AUTH) || is_env_var_present_and_true(OIDC_AUTH);
 
     if is_auth_enabled {
-        if api_key.is_none() {
-            return Err(CustomErrorInner::Forbidden(Debug).into());
-        }
-        let api_key = api_key.unwrap().api_key;
+        let api_key = api_key
+            .and_then(|q| q.api_key)
+            .ok_or_else(|| CustomError::from(CustomErrorInner::Forbidden(Debug)))?;
 
         let api_key_exists = User::check_if_api_key_exists(&api_key);
 
@@ -1044,5 +1043,16 @@ pub mod tests {
             resp.json::<String>(),
             "A podcast about homelabing-2021-01-01"
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_proxy_podcast_without_api_key_does_not_fail_deserialization() {
+        let ts_server = handle_test_startup().await;
+        let resp = ts_server
+            .test_server
+            .get("/proxy/podcast?episodeId=does-not-exist")
+            .await;
+        assert_eq!(resp.status_code(), 404);
     }
 }

@@ -8,7 +8,7 @@ import {CustomCheckbox} from "./CustomCheckbox";
 import {LuTags} from "react-icons/lu";
 import {useTranslation} from "react-i18next";
 import {components} from "../../schema";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {Loading} from "./Loading";
 import {useQueryClient} from "@tanstack/react-query";
 
@@ -20,8 +20,12 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
     const likeButton = createRef<HTMLElement>()
     const tags = $api.useQuery('get', '/api/v1/tags')
     const queryClient = useQueryClient()
+    const toggleFavoriteMutation = $api.useMutation('put', '/api/v1/podcasts/favored')
+    const addTagToPodcastMutation = $api.useMutation('post', '/api/v1/tags/{tag_id}/{podcast_id}')
+    const removeTagFromPodcastMutation = $api.useMutation('delete', '/api/v1/tags/{tag_id}/{podcast_id}')
+    const createTagMutation = $api.useMutation('post', '/api/v1/tags')
     const likePodcast = () => {
-        client.PUT("/api/v1/podcasts/favored", {
+        toggleFavoriteMutation.mutate({
             body: {
                 id: podcast.id,
                 favored: !podcast.favorites
@@ -108,7 +112,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                              <span className="grid grid-cols-[auto_1fr] gap-5">
                                  <CustomCheckbox value={podcast.tags.filter(e=>e.name=== t.name).length>0} onChange={(v)=>{
                                      if (v.valueOf() === true) {
-                                         client.POST("/api/v1/tags/{tag_id}/{podcast_id}", {
+                                         addTagToPodcastMutation.mutateAsync({
                                              params: {
                                                  path: {
                                                         tag_id: t.id,
@@ -135,7 +139,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                                  }}
                                          })
                                      } else {
-                                         client.DELETE("/api/v1/tags/{tag_id}/{podcast_id}", {
+                                         removeTagFromPodcastMutation.mutateAsync({
                                              params: {
                                                  path: {
                                                      tag_id: t.id,
@@ -175,7 +179,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                                 return
                             }
 
-                            client.POST('/api/v1/tags', {
+                            createTagMutation.mutateAsync({
                                 body: {
                                     name: newTag,
                                     color: 'Green'

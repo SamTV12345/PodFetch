@@ -1,6 +1,6 @@
 import {FC, useState} from "react";
 import useAudioPlayer from "../store/AudioPlayerSlice";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {useQueryClient} from "@tanstack/react-query";
 import {components} from "../../schema";
 

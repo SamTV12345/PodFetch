@@ -10,7 +10,7 @@ import { CustomCheckbox } from './CustomCheckbox'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
 import {EpisodeFormatModal} from "./EpisodeFormatModal";
 import {useDebounce} from "../utils/useDebounce";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 
 type SettingsProps = {
@@ -33,21 +33,13 @@ export const options = [
 ]
 
 export const SettingsNaming: FC = () => {
-    const [settings, setSettings] = useState<components["schemas"]["Setting"]>()
+    const settings = $api.useQuery('get', '/api/v1/settings')
 
-    /* Fetch existing settings */
-    useEffect(() => {
-        client.GET("/api/v1/settings")
-            .then(res=>{
-                setSettings(res.data!)
-            })
-    }, [])
-
-    if (settings === undefined) {
+    if (!settings.data) {
         return <Loading />
     }
 
-    return <Settings intialSettings={settings} />
+    return <Settings intialSettings={settings.data} />
 }
 
 const Settings: FC<SettingsProps> = ({ intialSettings }) => {
@@ -56,6 +48,9 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     const [infoPodcastModalOpen, setInfoPodcastModalOpen] = useState<boolean>(false)
     const [resultingPodcastFormat, setResultingPodcastFormat] = useState<string>('')
     const [resultingEpisodeFormat, setResultingEpisodeFormat] = useState<string>('')
+    const previewEpisodeFormatMutation = $api.useMutation('post', '/api/v1/episodes/formatting')
+    const previewPodcastFormatMutation = $api.useMutation('post', '/api/v1/podcasts/formatting')
+    const saveNamingSettingsMutation = $api.useMutation('put', '/api/v1/settings/name')
     const { control, formState: {}, handleSubmit, watch}
         = useForm<components["schemas"]["UpdateNameSettings"]>({
         defaultValues: {
@@ -76,10 +71,10 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: episodeFormat
         }
-        client.POST( '/api/v1/episodes/formatting', {
+        previewEpisodeFormatMutation.mutateAsync({
             body: content
         })
-            .then((v)=>setResultingEpisodeFormat(v.data!))
+            .then((v)=>setResultingEpisodeFormat(v ?? ''))
             .catch(e=>setResultingEpisodeFormat(e.response.data.error))
 
     },2000,[episodeFormat])
@@ -88,14 +83,14 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: podcastFormat
         }
-        client.POST("/api/v1/podcasts/formatting", {
+        previewPodcastFormatMutation.mutateAsync({
             body: content
-        }).then((v)=>setResultingPodcastFormat(v.data!))
+        }).then((v)=>setResultingPodcastFormat(v ?? ''))
             .catch(e=>setResultingPodcastFormat(e.response.data.error))
     },2000,[podcastFormat])
 
     const update_settings: SubmitHandler<components["schemas"]["UpdateNameSettings"]> = (data) => {
-        client.PUT("/api/v1/settings/name", {
+        saveNamingSettingsMutation.mutateAsync({
             body: data
         }).then(() => {
             enqueueSnackbar(t('settings-saved'), { variant: 'success' })

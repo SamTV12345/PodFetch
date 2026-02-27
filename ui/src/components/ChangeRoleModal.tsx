@@ -7,7 +7,7 @@ import { CustomSelect } from './CustomSelect'
 import { Modal } from './Modal'
 import { Switcher } from './Switcher'
 import useModal from "../store/ModalSlice";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 const roleOptions = [
     { translationKey: 'admin', value: 'admin' },
@@ -22,10 +22,11 @@ export const ChangeRoleModal = () => {
     const setModalOpen = useModal(state => state.setOpenModal)
     const setSelectedUser = useCommon(state => state.setSelectedUser)
     const setUsers = useCommon(state => state.setUsers)
+    const changeRoleMutation = $api.useMutation('put', '/api/v1/users/{username}/role')
 
     //setSelectedUser, setUsers
     const changeRole = () => {
-        client.PUT("/api/v1/users/{username}/role", {
+        changeRoleMutation.mutateAsync({
             params: {
                 path: {
                     username: selectedUser?.username as string

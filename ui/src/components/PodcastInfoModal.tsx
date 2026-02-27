@@ -4,7 +4,7 @@ import {  removeHTML } from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 import {useState} from "react";
 import {PodcastEpisodeChapterTable} from "./PodcastEpisodeChapterTable";
 
@@ -25,6 +25,7 @@ export const PodcastInfoModal = () => {
     const { t } =  useTranslation()
     const [selectedTab, setSelectedTab] = useState<'description'|'chapters'>('description')
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const deleteEpisodeDownloadMutation = $api.useMutation('delete', '/api/v1/episodes/{id}/download')
     const download = (url: string, filename: string) => {
         const element = document.createElement('a')
         element.setAttribute('href', url)
@@ -37,7 +38,7 @@ export const PodcastInfoModal = () => {
     }
 
     const deleteEpisodeDownloadOnServer = (episodeId: string) => {
-        client.DELETE("/api/v1/episodes/{id}/download", {
+        deleteEpisodeDownloadMutation.mutateAsync({
             params: {
                 path: {
                     id: episodeId

@@ -1,7 +1,7 @@
 import {useTranslation} from "react-i18next";
 import {handleAddPodcast} from "../utils/ErrorSnackBarResponses";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {useQueryClient} from "@tanstack/react-query";
 import {LoadingSkeletonSpan} from "../components/ui/LoadingSkeletonSpan";
@@ -10,18 +10,19 @@ export const GPodderIntegration = ()=> {
     const {t} = useTranslation()
     const queryClient = useQueryClient()
     const gpodder = $api.useQuery('get', '/api/v1/podcasts/available/gpodder')
+    const addPodcastMutation = $api.useMutation('post', '/api/v1/podcasts/feed')
 
 
     const addPodcast = (feedUrl: string)=>{
         queryClient.setQueryData(['get', '/api/v1/podcasts/available/gpodder'], (oldData?: components["schemas"]["GPodderAvailablePodcasts"][])=>{
            return oldData?.filter(d=>d.podcast!=feedUrl)
         })
-        client.POST(  "/api/v1/podcasts/feed", {
+        addPodcastMutation.mutateAsync({
             body: {
                 rssFeedUrl: feedUrl
             }
-        }).then((v) => {
-            handleAddPodcast(v.response.status, v.data!.name, t)
+        }).then((v: any) => {
+            handleAddPodcast(200, v.name, t)
         })
     }
 

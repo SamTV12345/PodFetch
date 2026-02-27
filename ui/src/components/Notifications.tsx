@@ -5,7 +5,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { removeHTML} from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
 import {useQueryClient} from "@tanstack/react-query";
@@ -28,6 +28,7 @@ export const Notifications: FC = () => {
     const notifications = $api.useQuery('get','/api/v1/notifications/unread')
     const queryClient = useQueryClient()
     const { t }  = useTranslation()
+    const dismissNotificationMutation = $api.useMutation('put', '/api/v1/notifications/dismiss')
 
     const trigger = () => (
         <div className="flex items-center relative">
@@ -38,7 +39,7 @@ export const Notifications: FC = () => {
     )
 
     const dismissNotification = (notification: components["schemas"]["Notification"]) => {
-        client.PUT("/api/v1/notifications/dismiss", {
+        dismissNotificationMutation.mutateAsync({
             body: {
                 id: notification.id
             }

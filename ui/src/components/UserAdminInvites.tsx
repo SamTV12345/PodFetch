@@ -10,7 +10,7 @@ import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
 import copy from 'copy-text-to-clipboard'
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 export type Invite = {
     id: string,
@@ -61,6 +61,9 @@ export const UserAdminInvites = () => {
     const { t } = useTranslation()
     const setCreateInviteModalOpen = useCommon(state => state.setCreateInviteModalOpen)
     const setInvites = useCommon(state => state.setInvites)
+    const invitesQuery = $api.useQuery('get', '/api/v1/invites', {}, {retry: false})
+    const inviteLinkMutation = $api.useMutation('get', '/api/v1/invites/{invite_id}/link')
+    const deleteInviteMutation = $api.useMutation('delete', '/api/v1/invites/{invite_id}')
 
     const filteredInvites = useMemo(() => {
        switch (selectedInviteType) {
@@ -76,13 +79,15 @@ export const UserAdminInvites = () => {
     }, [invites, selectedInviteType])
 
     useEffect(() => {
-        client.GET("/api/v1/invites").then((v)=>{
-            setInvites(v.data!)
-            setError(false)
-        }).catch(()=>{
+        if (invitesQuery.isError) {
             setError(true)
-        })
-    }, [])
+            return
+        }
+        if (invitesQuery.data) {
+            setInvites(invitesQuery.data)
+            setError(false)
+        }
+    }, [invitesQuery.data, invitesQuery.isError, setInvites])
 
     if (error === undefined) {
         return <Loading />
@@ -139,7 +144,7 @@ export const UserAdminInvites = () => {
                             <tr className="border-b border-(--border-color)" key={i.id}>
                                 <td className="pr-2 py-4">
                                     <button className="text-left text-(--fg-color) hover:text-(--fg-color-hover)" onClick={() => {
-                                        client.GET("/api/v1/invites/{invite_id}/link", {
+                                        inviteLinkMutation.mutateAsync({
                                             parseAs: "text",
                                             params: {
                                                 path: {
@@ -147,7 +152,11 @@ export const UserAdminInvites = () => {
                                                 }
                                             }
                                         }).then((v)=>{
-                                            copy(v.data!)
+                                            const inviteLink = typeof v === 'string' ? v : (v.data ?? '')
+                                            if (!inviteLink) {
+                                                return
+                                            }
+                                            copy(inviteLink)
                                             enqueueSnackbar(t('invite-link-copied'), { autoHideDuration: 2000, variant: 'success'})
                                         })
                                     }} title={t('copy-link')}>
@@ -173,7 +182,7 @@ export const UserAdminInvites = () => {
                                 </td>
                                 <td className="pl-2 py-4">
                                     <button className="flex items-center float-right text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)" onClick={() => {
-                                        client.DELETE("/api/v1/invites/{invite_id}", {
+                                        deleteInviteMutation.mutateAsync({
                                             params: {
                                                 path: {
                                                     invite_id: i.id

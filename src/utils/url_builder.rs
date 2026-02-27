@@ -60,6 +60,8 @@ pub fn rewrite_env_server_url_prefix(url: &str, resolved_server_url: &str) -> St
         format!("{new_base}{remainder}")
     } else if url.starts_with('/') && is_local_path(url) {
         format!("{}{}", new_base, url.trim_start_matches('/'))
+    } else if let Some(local_relative_path) = normalize_relative_local_path(url) {
+        format!("{}{}", new_base, local_relative_path)
     } else if let Ok(parsed) = Url::parse(url) {
         if is_local_host(parsed.host_str()) && is_local_path(parsed.path()) {
             let mut rewritten = format!("{}{}", new_base, parsed.path().trim_start_matches('/'));
@@ -73,6 +75,20 @@ pub fn rewrite_env_server_url_prefix(url: &str, resolved_server_url: &str) -> St
         }
     } else {
         url.to_string()
+    }
+}
+
+fn normalize_relative_local_path(path: &str) -> Option<String> {
+    let normalized = path.trim().trim_start_matches("./").trim_start_matches('/');
+    if normalized.is_empty() {
+        return None;
+    }
+
+    let normalized_with_slash = format!("/{normalized}");
+    if is_local_path(&normalized_with_slash) {
+        Some(normalized.to_string())
+    } else {
+        None
     }
 }
 
@@ -202,6 +218,24 @@ mod tests {
         assert_eq!(
             rewrite_env_server_url_prefix(remote, "http://localhost:5173/"),
             remote
+        );
+    }
+
+    #[test]
+    fn test_rewrite_env_server_url_prefix_for_relative_ui_path() {
+        let rewritten = rewrite_env_server_url_prefix("ui/default.jpg", "http://localhost:5173/");
+        assert_eq!(rewritten, "http://localhost:5173/ui/default.jpg");
+    }
+
+    #[test]
+    fn test_rewrite_env_server_url_prefix_for_relative_podcast_path() {
+        let rewritten = rewrite_env_server_url_prefix(
+            "./podcasts/test-podcast/image.jpg",
+            "https://mobile.example.com/ui/",
+        );
+        assert_eq!(
+            rewritten,
+            "https://mobile.example.com/ui/podcasts/test-podcast/image.jpg"
         );
     }
 

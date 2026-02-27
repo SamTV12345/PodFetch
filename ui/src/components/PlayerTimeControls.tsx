@@ -6,9 +6,9 @@ import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
 import { useKeyDown } from '../hooks/useKeyDown'
 import useCommon from "../store/CommonSlice";
-import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 import {getAudioPlayer, startAudioPlayer} from "../utils/audioPlayer";
 import {cn} from "../lib/utils";
+import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
 
 type PlayerTimeControlsProps = {
     currentPodcastEpisode?: AudioPlayerPlay
@@ -19,6 +19,7 @@ const SPEED_STEPS = [0.5, 1,1.1,1.25, 1.5, 2, 2.5, 3]
 
 
 export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcastEpisode }) => {
+    const logCurrentPlaybackTime = usePlaybackLogger()
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const episodes = useCommon(state => state.selectedEpisodes)
     const isPlaying  = useAudioPlayer(state => state.isPlaying)
@@ -76,7 +77,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
         const nextEpisode = episodes[index]
         if (!nextEpisode) return
         setCurrentPodcastEpisode(index)
-        startAudioPlayer(nextEpisode.podcastEpisode.local_url, nextEpisode.podcastHistoryItem?.position ?? 0)
+        await startAudioPlayer(nextEpisode.podcastEpisode.local_url, nextEpisode.podcastHistoryItem?.position ?? 0)
     }
 
     const handleButton = () => {
@@ -86,7 +87,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
         }
 
         if (audioPlayer.paused) {
-            audioPlayer.play()
+            void audioPlayer.play().catch(() => {})
         } else {
             if (time && currentPodcastEpisode) {
                 logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, time)

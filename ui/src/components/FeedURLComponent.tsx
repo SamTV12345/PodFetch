@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { handleAddPodcast } from '../utils/ErrorSnackBarResponses'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 type FeedURLFormData = {
     feedUrl: string
@@ -11,6 +11,7 @@ type FeedURLFormData = {
 
 export const FeedURLComponent: FC = () => {
     const { t } = useTranslation()
+    const addFeedMutation = $api.useMutation('post', '/api/v1/podcasts/feed')
 
     const { register, handleSubmit, formState: {
         isDirty, isValid
@@ -22,13 +23,13 @@ export const FeedURLComponent: FC = () => {
 
 
     const onSubmit = (data: FeedURLFormData) => {
-        client.POST("/api/v1/podcasts/feed", {
+        addFeedMutation.mutateAsync({
             body: {
                 rssFeedUrl: data.feedUrl
             }
         })
-            .then((v) => {
-                handleAddPodcast(v.response.status, v.data!.name, t)
+            .then((v: any) => {
+                handleAddPodcast(200, v.name, t)
             })
     }
 

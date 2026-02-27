@@ -4,7 +4,7 @@ import { FileItem, readFile } from '../utils/FileUtils'
 import useOpmlImport from '../store/opmlImportSlice'
 import { AddTypes } from '../models/AddTypes'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 type DragState = "none" | "allowed" | "invalid"
 
@@ -21,6 +21,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
     const [files, setFiles] = useState<FileItem[]>([])
     const [podcastsToUpload, setPodcastsToUpload] = useState<number>(0)
     const { t } = useTranslation()
+    const uploadOpmlMutation = $api.useMutation('post', '/api/v1/podcasts/opml')
 
     useEffect(() => {
         if (progress.length === podcastsToUpload) {
@@ -55,7 +56,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 
         setPodcastsToUpload(count)
 
-        client.POST("/api/v1/podcasts/opml", {
+        uploadOpmlMutation.mutate({
             body: {
                 content: files[0]!.content
             }

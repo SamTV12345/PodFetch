@@ -29,6 +29,7 @@ export const Sidebar = () => {
                 <SidebarItem iconName="podcasts" path="podcasts" translationKey="all-subscriptions"/>
                 <SidebarItem iconName="favorite" path="favorites" translationKey="favorites"/>
                 <SidebarItem iconName="magic_button" path="timeline" translationKey="timeline"/>
+                <SidebarItem iconName="query_stats" path="stats" translationKey="stats-title"/>
                 <SidebarItem path="tags" translationKey="tag_other" iconName="sell"/>
 
                 <span className="display-only-mobile">

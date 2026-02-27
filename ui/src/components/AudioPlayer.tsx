@@ -23,9 +23,9 @@ export const AudioPlayer: FC<AudioPlayerProps> = ({  audioAmplifier, setAudioAmp
                 className="hidden"
             />
         </div>
+        <HiddenAudioPlayer setAudioAmplifier={setAudioAmplifier} />
         <Activity mode={loadedPodcastEpisode ? "visible" : "hidden"}>
             <DrawerAudioPlayer audioAmplifier={audioAmplifier} />
-            <HiddenAudioPlayer setAudioAmplifier={setAudioAmplifier} />
         </Activity>
     </>
 }

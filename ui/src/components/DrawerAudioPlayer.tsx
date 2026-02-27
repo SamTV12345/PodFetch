@@ -6,7 +6,7 @@ import { PlayerProgressBar } from './PlayerProgressBar'
 import { PlayerVolumeSlider } from './PlayerVolumeSlider'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {Podcast} from "../store/CommonSlice";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 
 type DrawerAudioPlayerProps = {

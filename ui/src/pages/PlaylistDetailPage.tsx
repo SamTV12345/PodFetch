@@ -9,7 +9,7 @@ import usePlaylist from "../store/PlaylistSlice";
 import useCommon from "../store/CommonSlice";
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {startAudioPlayer} from "../utils/audioPlayer";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {CustomButtonSecondary} from "../components/CustomButtonSecondary";
 
@@ -20,18 +20,19 @@ export const PlaylistDetailPage = () => {
     const setSelectedPlaylist = usePlaylist(state => state.setSelectedPlaylist)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const setSelectedEpisodeIndex = useAudioPlayer(state => state.setCurrentPodcastEpisode)
+    const playlistQuery = $api.useQuery('get', '/api/v1/playlist/{playlist_id}', {
+        params: {
+            path: {
+                playlist_id: String(params.id)
+            }
+        }
+    }, {enabled: !!params.id})
 
     useEffect(() => {
-        client.GET("/api/v1/playlist/{playlist_id}", {
-            params: {
-                path: {
-                    playlist_id: String(params.id)
-                }
-            }
-        }).then((response) => {
-            setSelectedPlaylist(response.data!)
-        })
-    }, [params.id, setSelectedPlaylist])
+        if (playlistQuery.data) {
+            setSelectedPlaylist(playlistQuery.data)
+        }
+    }, [playlistQuery.data, setSelectedPlaylist])
 
     const playFromIndex = async (index: number) => {
         if (!selectedPlaylist?.items?.[index]) {

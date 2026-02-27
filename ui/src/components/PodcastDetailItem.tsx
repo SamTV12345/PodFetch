@@ -1,18 +1,18 @@
 import {FC, Fragment, useMemo} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
-import {Waypoint} from 'react-waypoint'
 import {useSnackbar} from 'notistack'
 import {formatTime, removeHTML} from '../utils/Utilities'
 import 'material-symbols/outlined.css'
 import useCommon from "../store/CommonSlice";
 import {handlePlayofEpisode} from "../utils/PlayHandler";
-import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 import {components, operations} from "../../schema";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 import {useQueryClient} from "@tanstack/react-query";
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {startAudioPlayer} from "../utils/audioPlayer";
+import {InfiniteScrollSentinel} from "./InfiniteScrollSentinel";
+import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
 
 type PodcastDetailItemProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
@@ -37,7 +37,12 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const setSelectedEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
+    const setMetadata = useAudioPlayer(state => state.setMetadata)
     const queryClient = useQueryClient()
+    const logCurrentPlaybackTime = usePlaybackLogger()
+    const fetchPodcastEpisodes = $api.useMutation('get', '/api/v1/podcasts/{id}/episodes')
+    const downloadEpisodeMutation = $api.useMutation('put', '/api/v1/podcasts/{id}/episodes/download')
+    const favorEpisodeMutation = $api.useMutation('put', '/api/v1/podcasts/{id}/episodes/favor')
 
     const waitForDownloadCompletion = async (episodeId: string) => {
         if (!params.id) {
@@ -46,7 +51,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
         const maxAttempts = 20
         for (let i = 0; i < maxAttempts; i++) {
             await new Promise(resolve => setTimeout(resolve, 1500))
-            const resp = await client.GET("/api/v1/podcasts/{id}/episodes", {
+            const resp = await fetchPodcastEpisodes.mutateAsync({
                 params: {
                     path: {
                         id: params.id
@@ -57,7 +62,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 }
             })
 
-            const dto = resp.data?.find(item => item.podcastEpisode.episode_id === episodeId)?.podcastEpisode
+            const dto = resp?.find(item => item.podcastEpisode.episode_id === episodeId)?.podcastEpisode
             if (!dto || !dto.status) {
                 continue
             }
@@ -96,6 +101,41 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
         })
     },[percentagePlayed])
 
+    const loadMoreEpisodes = () => {
+        if (!params.id || currentEpisodes.length === 0) {
+            return
+        }
+
+        const lastEpisode = currentEpisodes[currentEpisodes.length - 1]
+        if (!lastEpisode) {
+            return
+        }
+
+        fetchPodcastEpisodes.mutateAsync({
+            params: {
+                path: {
+                    id: params.id,
+                },
+                query: {
+                    last_podcast_episode: lastEpisode.podcastEpisode.date_of_recording,
+                    only_unlistened: onlyUnplayed
+                }
+            }
+        }).then((response) => {
+            for (const cache of queryClient.getQueryCache().getAll()) {
+                if (cache.queryKey[0] == "get" && (cache.queryKey[1] as string) === ("/api/v1/podcasts/{id}/episodes")
+                    && (cache.queryKey[2] as {params: operations['find_all_podcast_episodes_of_podcast']['parameters']}).params.path.id === params.id) {
+                    queryClient.setQueryData(cache.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
+                        if (!oldData) {
+                            return response ?? []
+                        }
+                        return [...oldData, ...(response ?? [])]
+                    })
+                }
+            }
+        })
+    }
+
     return (
         <Fragment key={'episode_' + episode.podcastEpisode.id}>
             <div id={'episode_' + episode.podcastEpisode.id} className="
@@ -133,7 +173,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                             return
                         }
 
-                        client.PUT("/api/v1/podcasts/{id}/episodes/download", {
+                        downloadEpisodeMutation.mutateAsync({
                             params: {
                                 path: {
                                     id: episode.podcastEpisode.episode_id
@@ -174,7 +214,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                         }}>check</span>
                         <span className={"material-symbols-outlined text-(--fg-color) " + (episode.podcastEpisode.favored && 'filled')}
                               onClick={async () => {
-                                  await client.PUT(  "/api/v1/podcasts/{id}/episodes/favor", {
+                                  await favorEpisodeMutation.mutateAsync({
                                       params: {
                                           path: {
                                                 id: episode.podcastEpisode.id
@@ -243,41 +283,32 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     e.stopPropagation()
                     setSelectedEpisodes(currentEpisodes)
                     setSelectedEpisode(index)
-                    console.log(episode.podcastEpisode.total_time)
-                    if (percentagePlayed < 98 && episode.podcastEpisode.total_time > 0) {
-                        await startAudioPlayer(currentEpisodes[index]!.podcastEpisode.local_url, currentEpisodes[index]!.podcastHistoryItem?.position ?? 0)
+                    const selectedEpisode = currentEpisodes[index]
+                    if (!selectedEpisode) {
+                        return
                     }
+                    const duration = selectedEpisode.podcastEpisode.total_time
+                    const savedPosition = selectedEpisode.podcastHistoryItem?.position ?? 0
+                    const isCompleted = duration > 0 && savedPosition >= duration * 0.98
+                    const startPosition = isCompleted ? 0 : savedPosition
+
+                    setMetadata({
+                        currentTime: startPosition,
+                        duration,
+                        percentage: duration > 0 ? (startPosition / duration) * 100 : 0
+                    })
+
+                    await startAudioPlayer(selectedEpisode.podcastEpisode.local_url, startPosition)
                 }}>play_circle</span>
             </div>
 
             {/* Infinite scroll */
             index === (currentEpisodes.length -5) &&
-                <Waypoint key={index + 'waypoint'} onEnter={() => {
-                    client.GET("/api/v1/podcasts/{id}/episodes", {
-                        params: {
-                            path: {
-                                id: params.id!,
-                            },
-                            query: {
-                                last_podcast_episode: currentEpisodes[currentEpisodes.length - 1]!.podcastEpisode.date_of_recording,
-                                only_unlistened: onlyUnplayed
-                            }
-                        }
-                    })
-                        .then((response) => {
-                            for (const cache of queryClient.getQueryCache().getAll()) {
-                                if (cache.queryKey[0] == "get" && (cache.queryKey[1] as string) === ("/api/v1/podcasts/{id}/episodes")
-                                    && (cache.queryKey[2] as {params: operations['find_all_podcast_episodes_of_podcast']['parameters']}).params.path.id === params.id) {
-                                    queryClient.setQueryData(cache.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
-                                        if (!oldData) {
-                                            return response.data!
-                                        }
-                                        return [...oldData, ...response.data!]
-                                    })
-                                }
-                            }
-                        })
-                }} />
+                <InfiniteScrollSentinel
+                    className="h-1 w-full"
+                    onEnter={loadMoreEpisodes}
+                    disabled={fetchPodcastEpisodes.isPending || !params.id}
+                />
             }
         </Fragment>
     )

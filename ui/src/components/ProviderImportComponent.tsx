@@ -10,7 +10,7 @@ import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 type ProviderImportComponent = {
     selectedSearchType: AddTypes
@@ -28,16 +28,19 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     const [searchText, setSearchText] = useState<string>('')
     const { t } = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
+    const addPodcastFromItunes = $api.useMutation('post', '/api/v1/podcasts/itunes')
+    const addPodcastFromPodindex = $api.useMutation('post', '/api/v1/podcasts/podindex')
+    const searchProviderMutation = $api.useMutation('get', '/api/v1/podcasts/{type_of}/{podcast}/search')
 
     const addPodcast = (podcast: AddPostPostModel) => {
         switch (selectedSearchType) {
             case "itunes": {
-                client.POST("/api/v1/podcasts/itunes", {
+                addPodcastFromItunes.mutateAsync({
                     body: podcast
                 })
-                    .then((err: any) => {
+                    .then(() => {
                         setModalOpen(false)
-                        err.response.status && handleAddPodcast(err.response.status,
+                        handleAddPodcast(200,
                             searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
                     })
                     .catch((err) => {
@@ -47,12 +50,12 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                 break
             }
             case "podindex": {
-                client.POST("/api/v1/podcasts/podindex", {
+                addPodcastFromPodindex.mutateAsync({
                     body: podcast
                 })
-                    .then((err: any) => {
+                    .then(() => {
                         setModalOpen(false)
-                        err.response.status && handleAddPodcast(err.response.status,
+                        handleAddPodcast(200,
                             searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
                     })
                     .catch((err) => {
@@ -67,7 +70,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
     useDebounce(() => {
         setLoading(true)
         selectedSearchType === 'itunes' ?
-            client.GET("/api/v1/podcasts/{type_of}/{podcast}/search", {
+            searchProviderMutation.mutateAsync({
                 params: {
                     path: {
                         type_of: 0,
@@ -75,8 +78,8 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     }
                 }
             }).then((v) => {
-                    if ("resultCount" in v.data!) {
-                        const data = v.data
+                    if (v && "resultCount" in v) {
+                        const data = v
                         setLoading(false)
                         const agnosticModel: AgnosticPodcastDataModel[] = data!.results.map((podcast) => {
                             return {
@@ -90,7 +93,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     }
 
             })
-            : client.GET("/api/v1/podcasts/{type_of}/{podcast}/search", {
+            : searchProviderMutation.mutateAsync({
                 params: {
                     path: {
                         type_of: 1,
@@ -98,9 +101,9 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     }
                 }
             }).then((v) => {
-                        if ("feeds" in v.data!) {
+                        if (v && "feeds" in v) {
                             setLoading(false)
-                            let agnosticModel: AgnosticPodcastDataModel[] = v.data.feeds.map((podcast) => {
+                            let agnosticModel: AgnosticPodcastDataModel[] = v.feeds.map((podcast) => {
                                 return {
                                     title: podcast.title!,
                                     artist: podcast.author!,

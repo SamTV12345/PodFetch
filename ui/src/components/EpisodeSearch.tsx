@@ -5,7 +5,7 @@ import { useDebounce } from '../utils/useDebounce'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import { EmptyResultIcon } from '../icons/EmptyResultIcon'
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 
 type EpisodeSearchProps = {
@@ -21,6 +21,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
     const [searching, setSearching] = useState<boolean>()
     const [searchName, setSearchName] = useState<string>('')
     const [searchResults, setSearchResults] = useState<components["schemas"]["PodcastEpisodeDto"][]>([])
+    const searchEpisodesMutation = $api.useMutation('get', '/api/v1/podcasts/{podcast}/query')
     const { t } = useTranslation()
     const {data, isLoading} = $api.useQuery('get', '/api/v1/users/{username}', {
         params: {
@@ -36,14 +37,14 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
         if (searchName.trim().length > 0) {
             setSearching(true)
 
-            client.GET("/api/v1/podcasts/{podcast}/query", {
+            searchEpisodesMutation.mutateAsync({
                 params: {
                     path: {
                         podcast: searchName
                     }
                 }
             }).then((v) => {
-                setSearchResults(v.data!)
+                setSearchResults(v ?? [])
                 setSearching(false)
             })
         }

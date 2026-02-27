@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -9,47 +8,30 @@ import { CustomInput } from '../components/CustomInput'
 import { Heading2 } from '../components/Heading2'
 import { Loading } from '../components/Loading'
 import { LoginData } from './Login'
-import {client} from "../utils/http";
-import {components} from "../../schema";
+import {$api} from "../utils/http";
 
 export const AcceptInvite = () => {
     const { control, handleSubmit, formState: {} } = useForm<LoginData>()
     const navigate = useNavigate()
     const params = useParams()
-    const [invite, setInvite] = useState<components["schemas"]["Invite"]>()
-    const [errored, setErrored] = useState<boolean>(false)
     const { t } = useTranslation()
-
-    type Invite = {
-        id: string,
-        role: string,
-        createdAt: string,
-        acceptedAt: string,
-        expiresAt: string,
-        explicitContent: boolean
-    }
-
-    useEffect(() => {
-        client.GET("/api/v1/invites/{invite_id}", {
-            params: {
-                path: {
-                    invite_id: params.id!
-                }
+    const inviteQuery = $api.useQuery('get', '/api/v1/invites/{invite_id}', {
+        params: {
+            path: {
+                invite_id: params.id!
             }
-        }).then((resp)=>{
-            setInvite(resp.data!)
-            if (!resp.response.ok) {
-                setErrored(true)
-            }
-        })
-    }, [])
+        }
+    }, {retry: false})
+    const createUserMutation = $api.useMutation('post', '/api/v1/users/')
 
-    if (!invite && !errored) {
+    if (inviteQuery.isLoading) {
         return <Loading />
     }
 
+    const invite = inviteQuery.data
+
     const onSubmit: SubmitHandler<LoginData> = (data) => {
-        client.POST("/api/v1/users/", {
+        createUserMutation.mutateAsync({
             body: {
                 username: data.username,
                 password: data.password,

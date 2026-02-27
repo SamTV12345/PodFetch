@@ -10,7 +10,6 @@ import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "..
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Episode} from "../models/Episode";
 import {components} from "../../schema";
-import {client} from "../utils/http";
 import {startAudioPlayer} from "../utils/audioPlayer";
 
 export const PodcastEpisodeAlreadyPlayed = () => {

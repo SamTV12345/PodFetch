@@ -2,23 +2,26 @@ import {FC, useEffect} from 'react'
 import useOnMount from '../hooks/useOnMount'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
-import { client } from '../utils/http'
+import { $api } from '../utils/http'
 import {getAudioPlayer} from "../utils/audioPlayer";
 import useCommon from "../store/CommonSlice";
 import {SKIPPED_TIME} from "../utils/Utilities";
-import {logCurrentPlaybackTime} from "../utils/navigationUtils";
+import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
 
 type HiddenAudioPlayerProps = {
-    setAudioAmplifier: (audioAmplifier: AudioAmplifier) => void
+    setAudioAmplifier: (audioAmplifier: AudioAmplifier | undefined) => void
 }
 
 export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifier }) => {
+    const logCurrentPlaybackTime = usePlaybackLogger()
+    const episodeDurationQuery = $api.useMutation('get', '/api/v1/podcasts/episode/{id}')
     const podcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const currentPodcastEpisodeIndex = useAudioPlayer(state => state.currentPodcastEpisodeIndex)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setMetadata = useAudioPlayer(state => state.setMetadata)
     const setCurrentTimeUpdate = useAudioPlayer(state => state.setCurrentTimeUpdate)
+    const volume = useAudioPlayer(state => state.volume)
     const selectedEpisodes = useCommon(state => state.selectedEpisodes)
     const setPlaying = useAudioPlayer(state => state.setPlaying)
 
@@ -42,6 +45,14 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
             audio.removeEventListener('pause', onPause)
         }
     }, [setPlaying])
+
+    useEffect(() => {
+        const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
+        audioPlayer.volume = Math.min(1, Math.max(0, volume / 100))
+    }, [volume])
 
     useEffect(() => {
         if (!('mediaSession' in navigator)) {
@@ -157,16 +168,9 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
 
 
     useOnMount(() => {
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            return
-        }
-
-        const audioPlayer = getAudioPlayer()
-        if (!audioPlayer) {
-            return
-        }
-
-        setAudioAmplifier(new AudioAmplifier(audioPlayer))
+        // Keep default HTMLMediaElement output path as baseline.
+        // WebAudio amplification can be enabled again later if needed.
+        setAudioAmplifier(undefined)
     })
 
 
@@ -185,15 +189,21 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
         }
 
         const updateMetadata = (el: HTMLMediaElement) => {
+            const duration = normalizeDuration(el.duration)
+            const percentage = duration > 0 ? (el.currentTime / duration) * 100 : 0
             setMetadata({
                 currentTime: el.currentTime,
-                duration: normalizeDuration(el.duration),
-                percentage: 0
+                duration,
+                percentage
             })
         }
 
         const onTimeUpdate = (e: Event) => {
             const el = e.currentTarget as HTMLMediaElement
+            if (!useAudioPlayer.getState().metadata) {
+                updateMetadata(el)
+                return
+            }
             setCurrentTimeUpdate(el.currentTime)
         }
         const onLoadedMetadata = (e: Event) => {
@@ -205,12 +215,18 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
                 if (!currentEpisodeId) {
                     return
                 }
-                client.GET('/api/v1/podcasts/episode/{id}', {
+                episodeDurationQuery.mutateAsync({
                     params: { path: { id: currentEpisodeId } }
                 }).then((response) => {
                     setMetadata({
                         currentTime: el.currentTime,
-                        duration: response.data?.total || normalizeDuration(el.duration),
+                        duration: response.total || normalizeDuration(el.duration),
+                        percentage: 0
+                    })
+                }).catch(() => {
+                    setMetadata({
+                        currentTime: el.currentTime,
+                        duration: normalizeDuration(el.duration),
                         percentage: 0
                     })
                 })
@@ -226,6 +242,7 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
         }
 
 
+        updateMetadata(audioPlayer)
         audioPlayer.addEventListener('timeupdate', onTimeUpdate)
         audioPlayer.addEventListener('loadedmetadata', onLoadedMetadata)
         audioPlayer.addEventListener('durationchange', onDurationChange)

@@ -7,7 +7,7 @@ import { Heading1 } from '../components/Heading1'
 import { Loading } from '../components/Loading'
 import { Switcher } from '../components/Switcher'
 import { TimelineEpisode } from '../components/TimelineEpisode'
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 
 export const Timeline = () => {

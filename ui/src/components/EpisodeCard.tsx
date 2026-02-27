@@ -1,6 +1,5 @@
 import {FC, useMemo} from 'react'
 import {handlePlayofEpisode} from "../utils/PlayHandler";
-import {client} from "../utils/http";
 import {components} from "../../schema";
 import useCommon from "../store/CommonSlice";
 import useAudioPlayer from "../store/AudioPlayerSlice";

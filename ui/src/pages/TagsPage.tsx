@@ -4,7 +4,7 @@ import useCommon from "../store/CommonSlice";
 import {useEffect} from "react";
 import {PodcastTags} from "../models/PodcastTags";
 import {CustomInput} from "../components/CustomInput";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {LoadingSkeletonSpan} from "../components/ui/LoadingSkeletonSpan";
 import {useQueryClient} from "@tanstack/react-query";
 
@@ -12,6 +12,8 @@ export const TagsPage = ()=>{
     const {t}  = useTranslation()
     const tags = $api.useQuery('get', '/api/v1/tags')
     const queryClient = useQueryClient()
+    const updateTagMutation = $api.useMutation('put', '/api/v1/tags/{tag_id}')
+    const deleteTagMutation = $api.useMutation('delete', '/api/v1/tags/{tag_id}')
 
     return (
         <>
@@ -43,7 +45,7 @@ export const TagsPage = ()=>{
                         return <tr className="border-b border-stone-300 " key={tag.id}>
                             <td className="px-2 py-4 flex items-center text-(--fg-color)">
                                 <CustomInput onBlur={()=>{
-                                    client.PUT("/api/v1/tags/{tag_id}", {
+                                    updateTagMutation.mutate({
                                         params: {
                                             path: {
                                                 tag_id: tag.id
@@ -68,7 +70,7 @@ export const TagsPage = ()=>{
                             </td>
                             <td>
                                 <button className="px-2 py-1 text-(--fg-color) rounded-md bg-red-700" onClick={() => {
-                                    client.DELETE("/api/v1/tags/{tag_id}", {
+                                    deleteTagMutation.mutateAsync({
                                         params: {
                                             path: {
                                                 tag_id: tag.id

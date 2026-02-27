@@ -2,13 +2,14 @@ import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import 'material-symbols/outlined.css'
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 export const SettingsOPMLExport: FC = () => {
     const { t } = useTranslation()
+    const exportOpmlMutation = $api.useMutation('get', '/api/v1/settings/opml/{type_of}')
 
     const downloadOPML = (exportType: string) => {
-        client.request("get","/api/v1/settings/opml/{type_of}", {
+        exportOpmlMutation.mutateAsync({
             parseAs: "text",
             params: {
                 path: {
@@ -16,7 +17,7 @@ export const SettingsOPMLExport: FC = () => {
                 }
             }
         }).then((response) => {
-            const blob = new Blob([response.data!], { type: "text/plain" })
+            const blob = new Blob([response], { type: "text/plain" })
             const href = URL.createObjectURL(blob)
 
             // create "a" HTML element with href to file & click

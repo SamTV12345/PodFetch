@@ -8,7 +8,7 @@ import { CustomSelect } from './CustomSelect'
 import { Heading2 } from './Heading2'
 import { Switcher } from './Switcher'
 import 'material-symbols/outlined.css'
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 
 const roleOptions = [
@@ -24,6 +24,7 @@ export const CreateInviteModal = () => {
     const { t } = useTranslation()
     const setCreateInviteModalOpen = useCommon(state => state.setCreateInviteModalOpen)
     const setInvites = useCommon(state => state.setInvites)
+    const createInviteMutation = $api.useMutation('post', '/api/v1/invites')
 
     return createPortal(
         <div aria-hidden="true" id="defaultModal" onClick={() => setCreateInviteModalOpen(false)} className={`grid place-items-center fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-sm overflow-x-hidden overflow-y-auto z-30 ${inviteModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} tabIndex={-1}>
@@ -57,11 +58,11 @@ export const CreateInviteModal = () => {
                         explicitConsent: invite.explicitConsent
                     } satisfies components["schemas"]["InvitePostModel"]
 
-                    client.POST("/api/v1/invites", {
+                    createInviteMutation.mutateAsync({
                         body: modifiedInvite
                     }).then((v) => {
                         enqueueSnackbar(t('invite-created'), { variant: 'success' })
-                        setInvites([...invites,v.data!])
+                        setInvites([...invites,v])
                         setCreateInviteModalOpen(false)
                     })
                 }}>{t('create-invite')}</CustomButtonPrimary>

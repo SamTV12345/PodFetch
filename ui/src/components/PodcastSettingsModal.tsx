@@ -9,7 +9,7 @@ import { CustomInput } from './CustomInput'
 import { CustomSelect } from './CustomSelect'
 import { options } from './SettingsNaming'
 import { components } from '../../schema'
-import { $api, client } from '../utils/http'
+import { $api } from '../utils/http'
 import { generatePodcastDefaultSettings } from '../models/PodcastDefaultSettings'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 
@@ -35,6 +35,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
         'put',
         '/api/v1/podcasts/{id}/settings'
     )
+    const runCleanupMutation = $api.useMutation('put', '/api/v1/settings/runcleanup')
 
     const [draft, setDraft] = useState<PodcastSetting | null>(null)
 
@@ -112,9 +113,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 {t('auto-cleanup')}
                             </label>
                             <CustomButtonSecondary
-                                onClick={() =>
-                                    client.PUT('/api/v1/settings/runcleanup')
-                                }
+                                onClick={() => runCleanupMutation.mutate({})}
                             >
                                 {t('run-cleanup')}
                             </CustomButtonSecondary>

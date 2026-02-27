@@ -12,7 +12,7 @@ import {Switcher} from '../components/Switcher'
 import 'material-symbols/outlined.css'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
-import {$api, client} from '../utils/http'
+import {$api} from '../utils/http'
 import {EditableHeading} from "../components/EditableHeading";
 import {ADMIN_ROLE} from "../models/constants";
 import {Loading} from "../components/Loading";
@@ -62,6 +62,7 @@ export const PodcastDetailPage = () => {
     })
 
     const refreshPodcastEpisodes = $api.useMutation('post','/api/v1/podcasts/{id}/refresh')
+    const togglePodcastActive = $api.useMutation('put', '/api/v1/podcasts/{id}/active')
 
     useEffect(() => {
         if (params.podcastid) {
@@ -207,7 +208,7 @@ export const PodcastDetailPage = () => {
                         <span className="text-xs text-(--fg-secondary-color)">{t('active')}</span>
 
                         <Switcher checked={currentPodcast.data?.active} onChange={() => {
-                            client.PUT("/api/v1/podcasts/{id}/active", {
+                            togglePodcastActive.mutateAsync({
                                 params: {
                                     path: {
                                         id: params.id!

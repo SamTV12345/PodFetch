@@ -10,7 +10,7 @@ import { Heading2 } from '../components/Heading2'
 import { Loading } from '../components/Loading'
 import { OIDCButton } from '../components/OIDCButton'
 import 'material-symbols/outlined.css'
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {setAuth, setLogin} from "../utils/login";
 
 export type LoginData = {
@@ -20,6 +20,7 @@ export type LoginData = {
 }
 export const Login = () => {
     const configModel = $api.useQuery('get', '/api/v1/sys/config')
+    const loginMutation = $api.useMutation('post', '/api/v1/login')
     const navigate = useNavigate()
     const [alert, setAlert] = useState<string>()
     const { t } = useTranslation()
@@ -40,7 +41,7 @@ export const Login = () => {
             loginType: 'basic'
         })
 
-        client.POST("/api/v1/login", {
+        loginMutation.mutateAsync({
             body: {
                 username: data.username,
                 password: data.password

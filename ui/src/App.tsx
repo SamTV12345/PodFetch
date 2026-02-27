@@ -8,6 +8,7 @@ import {
     PodcastInfoViewLazyLoad,
     PodcastViewLazyLoad,
     SettingsViewLazyLoad,
+    StatisticsViewLazyLoad,
     TimeLineViewLazyLoad,
     UserAdminViewLazyLoad
 } from "./utils/LazyLoading"
@@ -48,6 +49,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
             </Route>
 
             <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad /></Suspense>} />
+            <Route path="stats" element={<Suspense><StatisticsViewLazyLoad /></Suspense>} />
             <Route path={"favorites"}>
                 <Route element={<PodcastViewLazyLoad onlyFavorites={true} />} index />
                 <Route path={":id/episodes"} element={<Suspense><PodcastDetailViewLazyLoad /></Suspense>} />

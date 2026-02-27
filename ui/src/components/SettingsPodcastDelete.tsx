@@ -6,7 +6,7 @@ import { CustomButtonSecondary } from './CustomButtonSecondary'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import useModal from "../store/ModalSlice";
 import {CustomCheckbox} from "./CustomCheckbox";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
 import {useQueryClient} from "@tanstack/react-query";
@@ -19,10 +19,11 @@ export const SettingsPodcastDelete: FC = () => {
     const setConfirmModalData  = useCommon(state => state.setConfirmModalData)
     const queryClient = useQueryClient()
     const [selectedPodcasts, setSelectedPodcasts] = useState<components["schemas"]["PodcastDto"][]>([])
+    const deletePodcastMutation = $api.useMutation('delete', '/api/v1/podcasts/{id}')
 
     const deletePodcast = (withFiles: boolean) => {
         selectedPodcasts.forEach(p=>{
-            client.DELETE("/api/v1/podcasts/{id}", {
+            deletePodcastMutation.mutateAsync({
                 body: {
                     delete_files: withFiles
                 },

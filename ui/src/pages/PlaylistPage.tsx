@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
 import {useNavigate} from "react-router-dom";
@@ -6,7 +6,7 @@ import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {CustomButtonSecondary} from "../components/CustomButtonSecondary";
 import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
 import usePlaylist from "../store/PlaylistSlice";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 export const PlaylistPage = () => {
     const {t} = useTranslation()
@@ -15,21 +15,13 @@ export const PlaylistPage = () => {
     const setPlaylist = usePlaylist(state => state.setPlaylist)
     const setCreatePlaylistOpen = usePlaylist(state => state.setCreatePlaylistOpen)
     const setCurrentPlaylistToEdit = usePlaylist(state => state.setCurrentPlaylistToEdit)
-    const [loading, setLoading] = useState(false)
-
-    const loadPlaylists = async () => {
-        setLoading(true)
-        try {
-            const response = await client.GET("/api/v1/playlist")
-            setPlaylist(response.data ?? [])
-        } finally {
-            setLoading(false)
-        }
-    }
+    const playlistsQuery = $api.useQuery('get', '/api/v1/playlist')
+    const playlistDetailQuery = $api.useMutation('get', '/api/v1/playlist/{playlist_id}')
+    const deletePlaylistMutation = $api.useMutation('delete', '/api/v1/playlist/{playlist_id}')
 
     useEffect(() => {
-        void loadPlaylists()
-    }, [])
+        setPlaylist(playlistsQuery.data ?? [])
+    }, [playlistsQuery.data, setPlaylist])
 
     return (
         <div>
@@ -54,13 +46,13 @@ export const PlaylistPage = () => {
                 </CustomButtonPrimary>
             </div>
 
-            {loading && (
+            {playlistsQuery.isLoading && (
                 <div className="rounded-xl border border-(--border-color) p-6 text-(--fg-secondary-color)">
                     {t('loading-playlists')}
                 </div>
             )}
 
-            {!loading && playlist.length === 0 && (
+            {!playlistsQuery.isLoading && playlist.length === 0 && (
                 <div className="rounded-xl border border-dashed border-(--border-color) p-8 text-center">
                     <div className="text-(--fg-secondary-color)">{t('no-playlists-yet')}</div>
                     <CustomButtonSecondary
@@ -97,12 +89,12 @@ export const PlaylistPage = () => {
                             <CustomButtonSecondary
                                 className="px-3 py-2"
                                 onClick={async () => {
-                                    const response = await client.GET("/api/v1/playlist/{playlist_id}", {
+                                    const response = await playlistDetailQuery.mutateAsync({
                                         params: {
                                             path: {playlist_id: String(item.id)}
                                         }
                                     })
-                                    setCurrentPlaylistToEdit(response.data!)
+                                    setCurrentPlaylistToEdit(response)
                                     setCreatePlaylistOpen(true)
                                 }}
                             >
@@ -111,7 +103,7 @@ export const PlaylistPage = () => {
                             <button
                                 className="ml-auto flex items-center text-sm text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)"
                                 onClick={async () => {
-                                    await client.DELETE("/api/v1/playlist/{playlist_id}", {
+                                    await deletePlaylistMutation.mutateAsync({
                                         params: {
                                             path: {playlist_id: String(item.id)}
                                         }
