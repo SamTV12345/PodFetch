@@ -114,17 +114,21 @@ impl FileService {
         image_url: String,
         podcast_id: &str,
     ) -> Result<(), CustomError> {
-        let image_url_cloned = image_url.clone();
-        let mut image_suffix = DownloadService::handle_suffix_response_async(
-            spawn_blocking(move || {
-                let client = reqwest::blocking::Client::new();
-                determine_file_extension(&image_url_cloned, &client, FileType::Image)
-            })
-            .await
-            .unwrap(),
-            &image_url,
-        )
-        .await?;
+        let mut image_suffix = if DownloadService::is_default_fallback_image_url(&image_url) {
+            DownloadService::get_default_fallback_image_data()
+        } else {
+            let image_url_cloned = image_url.clone();
+            DownloadService::handle_suffix_response_async(
+                spawn_blocking(move || {
+                    let client = reqwest::blocking::Client::new();
+                    determine_file_extension(&image_url_cloned, &client, FileType::Image)
+                })
+                .await
+                .unwrap(),
+                &image_url,
+            )
+            .await?
+        };
 
         let file_path =
             PathService::get_image_podcast_path_with_podcast_prefix(podcast_path, &image_suffix.0);

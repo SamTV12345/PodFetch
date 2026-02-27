@@ -7,7 +7,7 @@ use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::{
-    COMMON_USER_AGENT, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
+    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
 };
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
@@ -31,8 +31,24 @@ use std::thread::sleep;
 use std::time::Duration as StdDuration;
 
 pub struct DownloadService {}
+const DEFAULT_FALLBACK_IMAGE_BYTES: &[u8] = include_bytes!("../../ui/public/default.jpg");
 
 impl DownloadService {
+    pub fn is_default_fallback_image_url(url: &str) -> bool {
+        let trimmed = url.trim();
+        if trimmed.is_empty() {
+            return true;
+        }
+
+        trimmed == DEFAULT_IMAGE_URL
+            || trimmed == format!("/{DEFAULT_IMAGE_URL}")
+            || trimmed.ends_with(&format!("/{DEFAULT_IMAGE_URL}"))
+    }
+
+    pub fn get_default_fallback_image_data() -> (String, Vec<u8>) {
+        ("jpg".to_string(), DEFAULT_FALLBACK_IMAGE_BYTES.to_vec())
+    }
+
     fn build_binary_sync_client() -> Result<reqwest::blocking::Client, CustomError> {
         get_sync_client()
             .no_gzip()
@@ -179,10 +195,14 @@ impl DownloadService {
         );
 
         let mut image_data = if should_download_main_image {
-            Some(Self::handle_suffix_response(
-                determine_file_extension(&podcast_episode.image_url, &client, FileType::Image),
-                &podcast_episode.image_url,
-            )?)
+            if Self::is_default_fallback_image_url(&podcast_episode.image_url) {
+                Some(Self::get_default_fallback_image_data())
+            } else {
+                Some(Self::handle_suffix_response(
+                    determine_file_extension(&podcast_episode.image_url, &client, FileType::Image),
+                    &podcast_episode.image_url,
+                )?)
+            }
         } else {
             None
         };
