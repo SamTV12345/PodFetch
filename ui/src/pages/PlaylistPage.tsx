@@ -1,106 +1,132 @@
-import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
+import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
-import usePlaylist from "../store/PlaylistSlice";
-import {useEffect} from "react";
-import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
 import {useNavigate} from "react-router-dom";
+import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
+import {CustomButtonSecondary} from "../components/CustomButtonSecondary";
+import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
+import usePlaylist from "../store/PlaylistSlice";
 import {client} from "../utils/http";
 
-export const PlaylistPage = ()=>{
+export const PlaylistPage = () => {
     const {t} = useTranslation()
-    const setCreatePlaylistOpen = usePlaylist(state=>state.setCreatePlaylistOpen)
-    const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
-    const setPlaylist = usePlaylist(state=>state.setPlaylist)
-    const playlist = usePlaylist(state=>state.playlist)
     const navigate = useNavigate()
+    const playlist = usePlaylist(state => state.playlist)
+    const setPlaylist = usePlaylist(state => state.setPlaylist)
+    const setCreatePlaylistOpen = usePlaylist(state => state.setCreatePlaylistOpen)
+    const setCurrentPlaylistToEdit = usePlaylist(state => state.setCurrentPlaylistToEdit)
+    const [loading, setLoading] = useState(false)
 
-    useEffect(()=>{
-        if (playlist.length ===0){
-            client.GET("/api/v1/playlist").then((resp)=>setPlaylist(resp.data!))
+    const loadPlaylists = async () => {
+        setLoading(true)
+        try {
+            const response = await client.GET("/api/v1/playlist")
+            setPlaylist(response.data ?? [])
+        } finally {
+            setLoading(false)
         }
-    },[])
+    }
+
+    useEffect(() => {
+        void loadPlaylists()
+    }, [])
 
     return (
         <div>
-           <CreatePlaylistModal/>
+            <CreatePlaylistModal/>
 
-            <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={()=>{
-               setCurrentPlaylistToEdit({name: '',items:[],id: String(-1)})
-                setCreatePlaylistOpen(true)
-            }}>
-                <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
-            </CustomButtonPrimary>
-
-            <div className={`
-                scrollbox-x 
-                w-[calc(100vw-2rem)] ${/* viewport - padding */ ''}
-                xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
-                md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
-            `}>
-                <table className="text-left text-sm text-stone-900 w-full text-(--fg-color)">
-                    <thead>
-                    <tr className="border-b border-stone-300">
-                        <th scope="col" className="pr-2 py-3 text-(--fg-color)">
-                            {t('playlist-name')}
-                        </th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {playlist.map(i=>
-                        <tr className="border-b border-stone-300 " key={i.id}>
-                            <td className="px-2 py-4 flex items-center text-(--fg-color)">
-                                {i.name}
-                                <button className="flex ml-2" onClick={(e)=>{
-                                    e.preventDefault()
-                                    client.GET("/api/v1/playlist/{playlist_id}", {
-                                        params: {
-                                            path: {
-                                                playlist_id: String(i.id!)
-                                            }
-                                        }
-                                    })
-                                        .then((response)=>{
-                                            setCurrentPlaylistToEdit(response.data!)
-                                            setCreatePlaylistOpen(true)
-                                        })
-                                }} title={t('change-role')}>
-                                    <span className="material-symbols-outlined text-(--fg-color) hover:text-stone-600">edit</span>
-                                </button>
-                            </td>
-                            <td className="pl-2 py-4 gap-4">
-                                <button className="flex float-left" onClick={(e)=>{
-                                    e.preventDefault()
-                                    setCurrentPlaylistToEdit(i)
-                                   setCreatePlaylistOpen(true)
-
-                                }} title={t('change-role')}>
-                                    <span className="material-symbols-outlined hover:text-stone-600 text-(--fg-color)"
-                                          onClick={()=>{
-                                        navigate(i.id)
-                                    }}>visibility</span>
-                                </button>
-                                <button className="flex float-right text-red-700 hover:text-red-500" onClick={(e)=>{
-                                    e.preventDefault()
-                                    client.DELETE("/api/v1/playlist/{playlist_id}", {
-                                        params: {
-                                            path: {
-                                                playlist_id: String(i.id!)
-                                            }
-                                        }
-                                    }).then(()=>{
-                                        enqueueSnackbar(t('invite-deleted'), {variant: "success"})
-                                        setPlaylist(playlist.filter(v=>v.id !== i.id))
-                                    })
-                                }}>
-                                    <span className="material-symbols-outlined mr-1">delete</span>
-                                    {t('delete')}
-                                </button>
-                            </td>
-                        </tr>
-                    )}
-                    </tbody>
-                </table>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 className="text-xl font-semibold text-(--fg-color)">{t('playlists')}</h2>
+                    <div className="text-sm text-(--fg-secondary-color)">
+                        {t('playlist-page-description')}
+                    </div>
+                </div>
+                <CustomButtonPrimary
+                    className="flex items-center"
+                    onClick={() => {
+                        setCurrentPlaylistToEdit({name: '', items: [], id: String(-1)})
+                        setCreatePlaylistOpen(true)
+                    }}
+                >
+                    <span className="material-symbols-outlined leading-[0.875rem] mr-1">add</span>
+                    {t('add-new')}
+                </CustomButtonPrimary>
             </div>
-        </div>)
+
+            {loading && (
+                <div className="rounded-xl border border-(--border-color) p-6 text-(--fg-secondary-color)">
+                    {t('loading-playlists')}
+                </div>
+            )}
+
+            {!loading && playlist.length === 0 && (
+                <div className="rounded-xl border border-dashed border-(--border-color) p-8 text-center">
+                    <div className="text-(--fg-secondary-color)">{t('no-playlists-yet')}</div>
+                    <CustomButtonSecondary
+                        className="mt-4"
+                        onClick={() => {
+                            setCurrentPlaylistToEdit({name: '', items: [], id: String(-1)})
+                            setCreatePlaylistOpen(true)
+                        }}
+                    >
+                        {t('create-playlist')}
+                    </CustomButtonSecondary>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {playlist.map(item => (
+                    <div
+                        key={item.id}
+                        className="rounded-xl border border-(--border-color) bg-(--bg-color) p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+                    >
+                        <div className="mb-3">
+                            <div className="line-clamp-1 text-lg font-semibold text-(--fg-color)">{item.name}</div>
+                            <div className="text-xs text-(--fg-secondary-color)">
+                                {t('item_other', {count: item.items.length})}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CustomButtonPrimary
+                                className="px-3 py-2"
+                                onClick={() => navigate(item.id)}
+                            >
+                                {t('open')}
+                            </CustomButtonPrimary>
+                            <CustomButtonSecondary
+                                className="px-3 py-2"
+                                onClick={async () => {
+                                    const response = await client.GET("/api/v1/playlist/{playlist_id}", {
+                                        params: {
+                                            path: {playlist_id: String(item.id)}
+                                        }
+                                    })
+                                    setCurrentPlaylistToEdit(response.data!)
+                                    setCreatePlaylistOpen(true)
+                                }}
+                            >
+                                {t('edit')}
+                            </CustomButtonSecondary>
+                            <button
+                                className="ml-auto flex items-center text-sm text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)"
+                                onClick={async () => {
+                                    await client.DELETE("/api/v1/playlist/{playlist_id}", {
+                                        params: {
+                                            path: {playlist_id: String(item.id)}
+                                        }
+                                    })
+                                    enqueueSnackbar(t('invite-deleted'), {variant: "success"})
+                                    setPlaylist(playlist.filter(v => v.id !== item.id))
+                                }}
+                            >
+                                <span className="material-symbols-outlined mr-1">delete</span>
+                                {t('delete')}
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
 }

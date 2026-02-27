@@ -1,38 +1,23 @@
-import {CustomButtonPrimary} from "./CustomButtonPrimary";
-import usePlaylist from "../store/PlaylistSlice";
 import {useTranslation} from "react-i18next";
-import {client} from "../utils/http";
 
-export const PlaylistSubmitViewer = ()=>{
+type PlaylistSubmitViewerProps = {
+    playlistName: string
+    episodeCount: number
+}
+
+export const PlaylistSubmitViewer = ({playlistName, episodeCount}: PlaylistSubmitViewerProps)=>{
     const {t} = useTranslation()
-    const currentPlaylistToEdit = usePlaylist(state=>state.currentPlaylistToEdit)
-    const playlists = usePlaylist(state=>state.playlist)
-    const setCreatePlaylistOpen = usePlaylist(state=>state.setCreatePlaylistOpen)
-    const setPlaylist = usePlaylist(state=>state.setPlaylist)
 
-    const savePlaylist = ()=>{
-        const idsToMap = currentPlaylistToEdit!.items.map(item=>{
-            return{
-                episode: item.podcastEpisode.id
-            }})
-
-        client.POST("/api/v1/playlist", {
-            body: {
-                name: currentPlaylistToEdit?.name!,
-                items: idsToMap
-            }
-        })
-            .then((v)=>{
-                setPlaylist([...playlists,v.data!])
-                setCreatePlaylistOpen(false)
-            })
-    }
-
-
-    return <>
-        <CustomButtonPrimary type="submit" className="float-right" onClick={()=>{
-            savePlaylist()
-        }}>{currentPlaylistToEdit?.id==="-1"?t('create-playlist'):t('update-playlist')}</CustomButtonPrimary>
-        <br/>
-    </>
+    return (
+        <div className="mt-4 rounded-xl border border-(--border-color) p-4">
+            <div className="text-xs text-(--fg-secondary-color)">{t('playlist-name')}</div>
+            <div className="mt-1 text-base text-(--fg-color) font-medium">
+                {playlistName.length > 0 ? playlistName : "—"}
+            </div>
+            <div className="mt-4 text-xs text-(--fg-secondary-color)">{t('available-episodes')}</div>
+            <div className="mt-1 text-base text-(--fg-color) font-medium">
+                {episodeCount}
+            </div>
+        </div>
+    )
 }

@@ -69,34 +69,38 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
 
             {/* Results */
             searching ? (
-                <div className="grid place-items-center p-10">
+                <div className="grid place-items-center p-6">
                     <Spinner className="w-12 h-12"/>
                 </div>
             ) : searchResults.length === 0 ? (
-                <div className="grid place-items-center">
+                <div className="grid place-items-center py-4">
                     {searchName ? (
-                        <span className="p-8 text-(--fg-secondary-color)">{t('no-results-found-for')} "<span className="text-(--fg-color)">{searchName}</span>"</span>
+                        <span className="p-3 text-(--fg-secondary-color)">{t('no-results-found-for')} "<span className="text-(--fg-color)">{searchName}</span>"</span>
                     ) : (
                         showBlankState && <EmptyResultIcon />
                     )}
                 </div>
             ) : (
-                <ul className={`flex flex-col gap-10 overflow-y-auto my-4 px-8 py-6 scrollbox-y ${classNameResults}`}>
+                <ul
+                    className={`flex min-w-0 flex-col gap-10 overflow-y-auto overflow-x-hidden my-4 px-6 py-6 scrollbox-y ${classNameResults}`}
+                    style={{maxHeight: resultsMaxHeight}}
+                >
                     {searchResults.map((episode, i) => (
-                        <li className="flex gap-4 cursor-pointer group" key={i} onClick={() => {
+                        <li className="flex min-w-0 min-h-24 gap-4 cursor-pointer group overflow-hidden" key={i} onClick={() => {
                             onClickResult(episode)
                         }}>
                             {/* Thumbnail */}
                             <img alt={episode.name} className="
                                 hidden xs:block
+                                shrink-0
                                 rounded-lg w-32 transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]
                             " src={episode.image_url} />
 
                             {/* Information */}
-                            <div className="flex flex-col gap-2">
+                            <div className="flex min-w-0 flex-col gap-2">
                                 <span className="text-sm text-(--fg-secondary-color)">{formatTime(episode.date_of_recording)}</span>
-                                <span className="font-bold leading-tight text-(--fg-color) transition-color group-hover:text-(--fg-color-hover)">{episode.name}</span>
-                                <div className="leading-[1.75] line-clamp-3 text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
+                                <span className="font-bold leading-tight text-(--fg-color) transition-color group-hover:text-(--fg-color-hover) break-words [overflow-wrap:anywhere]">{episode.name}</span>
+                                <div className="leading-[1.75] line-clamp-3 text-sm text-(--fg-color) break-words [overflow-wrap:anywhere]" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
                             </div>
                         </li>
                     ))}

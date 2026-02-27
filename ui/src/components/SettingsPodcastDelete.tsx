@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { enqueueSnackbar } from 'notistack'
 import useCommon, { Podcast} from '../store/CommonSlice'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
+import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import useModal from "../store/ModalSlice";
 import {CustomCheckbox} from "./CustomCheckbox";
 import {$api, client} from "../utils/http";
 import {components} from "../../schema";
 import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
 import {useQueryClient} from "@tanstack/react-query";
+import {AddPodcastModal} from "./AddPodcastModal";
 
 export const SettingsPodcastDelete: FC = () => {
     const { t } = useTranslation()
@@ -18,7 +20,6 @@ export const SettingsPodcastDelete: FC = () => {
     const queryClient = useQueryClient()
     const [selectedPodcasts, setSelectedPodcasts] = useState<components["schemas"]["PodcastDto"][]>([])
 
-    console.log(queryClient.getQueryCache().getAll())
     const deletePodcast = (withFiles: boolean) => {
         selectedPodcasts.forEach(p=>{
             client.DELETE("/api/v1/podcasts/{id}", {
@@ -45,7 +46,18 @@ export const SettingsPodcastDelete: FC = () => {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto] items-center gap-6">
+        <div>
+            <AddPodcastModal/>
+
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-(--fg-color)">{t('manage-podcasts')}</h2>
+                <CustomButtonPrimary className="flex items-center" onClick={() => setModalOpen(true)}>
+                    <span className="material-symbols-outlined leading-[0.875rem] mr-1">add</span>
+                    {t('add-podcast')}
+                </CustomButtonPrimary>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto] items-center gap-6">
             {(podcasts.isLoading) ||!podcasts.data ?<LoadingSkeletonSpan height="30px" text={""} loading={podcasts.isLoading}/> :<CustomCheckbox value={selectedPodcasts.length === podcasts.data.length} onChange={(v)=>{
                 if (v.valueOf() === true) {
                     setSelectedPodcasts(podcasts.data)
@@ -111,6 +123,7 @@ export const SettingsPodcastDelete: FC = () => {
                     <span className="xs:col-span-2 lg:col-span-2 text-(--fg-color)">{p.name}</span>
                         </Fragment>
             ))}
+            </div>
         </div>
     )
 }
