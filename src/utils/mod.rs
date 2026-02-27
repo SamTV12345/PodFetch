@@ -13,3 +13,4 @@ pub mod reqwest_client;
 pub(crate) mod rss_feed_parser;
 pub mod test_builder;
 pub mod time;
+pub mod url_builder;

@@ -1,0 +1,29 @@
+{
+  "name": "Podfetch",
+  "short_name": "Podfetch",
+  "description": "Open source podcast manager and player.",
+  "start_url": "/ui/",
+  "scope": "/ui/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#101010",
+  "background_color": "#101010",
+  "icons": [
+    {
+      "src": "/ui/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/ui/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/ui/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}

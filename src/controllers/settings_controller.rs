@@ -3,7 +3,9 @@ use crate::models::settings::Setting;
 use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::settings_service::SettingsService;
+use crate::utils::url_builder::resolve_server_url_from_headers;
 use axum::extract::Path;
+use axum::http::HeaderMap;
 use axum::http::Response;
 use axum::{Extension, Json};
 use chrono::Local;
@@ -187,6 +189,7 @@ tag="settings"
 pub async fn get_opml(
     Extension(requester): Extension<User>,
     Path(type_of): Path<String>,
+    headers: HeaderMap,
 ) -> Result<Response<String>, CustomError> {
     if ENVIRONMENT_SERVICE.any_auth_enabled && requester.api_key.is_none() {
         return Err(CustomErrorInner::UnAuthorized(
@@ -205,10 +208,12 @@ pub async fn get_opml(
     let mut opml = XMLElement::new("opml");
     opml.add_attribute("version", "2.0");
     opml.add_child(add_header()).expect("TODO: panic message");
+    let server_url = resolve_server_url_from_headers(&headers);
     opml.add_child(add_podcasts(
         podcasts_found,
         Mode::from(type_of),
         &requester,
+        &server_url,
     ))
     .map_err(|e| {
         log::error!("Error adding podcasts to opml: {e}");
@@ -246,7 +251,12 @@ fn add_body() -> XMLElement {
     XMLElement::new("body")
 }
 
-fn add_podcasts(podcasts_found: Vec<Podcast>, type_of: Mode, requester: &User) -> XMLElement {
+fn add_podcasts(
+    podcasts_found: Vec<Podcast>,
+    type_of: Mode,
+    requester: &User,
+    server_url: &str,
+) -> XMLElement {
     let mut body = add_body();
     for podcast in podcasts_found {
         let mut outline = XMLElement::new("outline");
@@ -257,11 +267,7 @@ fn add_podcasts(podcasts_found: Vec<Podcast>, type_of: Mode, requester: &User) -
         outline.add_attribute("type", "rss");
         match type_of {
             Mode::Local => {
-                let mut local_url = format!(
-                    "{}rss/{}",
-                    &*ENVIRONMENT_SERVICE.get_server_url(),
-                    podcast.id
-                );
+                let mut local_url = format!("{}rss/{}", server_url, podcast.id);
 
                 if let Some(api_key) = &requester.api_key {
                     local_url = format!("{local_url}?apiKey={api_key}");

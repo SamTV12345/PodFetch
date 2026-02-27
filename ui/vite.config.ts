@@ -1,6 +1,7 @@
 import {defineConfig, PluginOption} from 'vite'
 import react from '@vitejs/plugin-react'
 import {Browser} from "happy-dom";
+import type {IncomingMessage} from "node:http";
 
 const ReactCompilerConfig = {
 
@@ -37,6 +38,31 @@ function chartingLibrary(): PluginOption {
   };
 }
 
+function forwardRequestOrigin(proxyReq: any, req: IncomingMessage) {
+  const host = req.headers.host;
+  if (host) {
+    proxyReq.setHeader('x-forwarded-host', host);
+    proxyReq.setHeader('x-forwarded-proto', 'http');
+  }
+}
+
+function createBackendProxy(ws = false) {
+  return {
+    target: 'http://127.0.0.1:8000',
+    changeOrigin: true,
+    secure: false,
+    ws,
+    configure: (proxy: any) => {
+      proxy.on('proxyReq', (proxyReq: any, req: IncomingMessage) => {
+        forwardRequestOrigin(proxyReq, req);
+      });
+      proxy.on('proxyReqWs', (proxyReq: any, req: IncomingMessage) => {
+        forwardRequestOrigin(proxyReq, req);
+      });
+    }
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base:'/ui/',
@@ -51,32 +77,12 @@ export default defineConfig({
   server:{
       host: '0.0.0.0',
     proxy:{
-      '/api':{
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/socket.io': {
-        target: 'http://127.0.0.1:8000',
-        ws: true,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/podcasts':{
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/proxy':{
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/manifest.json': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
-      }
+      '/api': createBackendProxy(),
+      '/socket.io': createBackendProxy(true),
+      '/podcasts': createBackendProxy(),
+      '/proxy': createBackendProxy(),
+      '/rss': createBackendProxy(),
+      '/manifest.json': createBackendProxy(),
     }
   },
 })

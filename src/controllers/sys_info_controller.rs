@@ -63,6 +63,10 @@ use crate::utils::error::ErrorType::CustomErrorType;
 use crate::utils::error::{
     ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
 };
+use crate::utils::url_builder::{
+    build_ws_url_from_server_url, resolve_server_url_from_headers, rewrite_env_server_url_prefix,
+};
+use axum::http::HeaderMap;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -156,8 +160,16 @@ body=ConfigModel)),
 tag="sys"
 )]
 
-pub async fn get_public_config() -> Json<ConfigModel> {
-    let config = ENVIRONMENT_SERVICE.get_config();
+pub async fn get_public_config(headers: HeaderMap) -> Json<ConfigModel> {
+    let resolved_server_url = resolve_server_url_from_headers(&headers);
+    let mut config = ENVIRONMENT_SERVICE.get_config();
+    config.server_url = resolved_server_url.clone();
+    config.rss_feed = format!("{}rss", resolved_server_url);
+    config.ws_url = build_ws_url_from_server_url(&resolved_server_url);
+    if let Some(oidc_config) = config.oidc_config.as_mut() {
+        oidc_config.redirect_uri =
+            rewrite_env_server_url_prefix(&oidc_config.redirect_uri, &resolved_server_url);
+    }
     Json(config)
 }
 

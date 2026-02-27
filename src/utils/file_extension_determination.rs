@@ -67,10 +67,7 @@ pub fn determine_file_extension(
             } else {
                 extension_by_content_type.unwrap_or_else(|| file_type.to_string())
             };
-            DetermineFileExtensionReturn::FileExtension(
-                final_extension,
-                bytes.as_ref().to_vec(),
-            )
+            DetermineFileExtensionReturn::FileExtension(final_extension, bytes.as_ref().to_vec())
         })
 }
 

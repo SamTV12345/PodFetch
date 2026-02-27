@@ -22,8 +22,10 @@ import {QueryClientProvider} from "@tanstack/react-query";
 import {setAuth, setLogin} from "./utils/login";
 import {getConfigFromHtmlFile} from "./utils/config";
 import {queryClient} from "./utils/socketio";
+import {registerPwaServiceWorker} from "./utils/pwa";
 
 const config = getConfigFromHtmlFile()
+registerPwaServiceWorker()
 
 
 if (config) {

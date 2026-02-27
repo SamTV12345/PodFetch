@@ -173,8 +173,10 @@ impl DownloadService {
             &podcast_episode.url,
         )?;
         let settings_in_db = Setting::get_settings()?.unwrap();
-        let should_download_main_image =
-            !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn);
+        let should_download_main_image = !FileService::check_if_podcast_main_image_downloaded(
+            &podcast.clone().directory_id,
+            conn,
+        );
 
         let mut image_data = if should_download_main_image {
             Some(Self::handle_suffix_response(
@@ -242,14 +244,13 @@ impl DownloadService {
             )?;
         }
 
-        if should_download_main_image
-            && let Some(image_data) = image_data.as_mut() {
-                FileHandleWrapper::write_file(
-                    &paths.image_filename,
-                    image_data.1.as_mut_slice(),
-                    &ENVIRONMENT_SERVICE.default_file_handler,
-                )?;
-            }
+        if should_download_main_image && let Some(image_data) = image_data.as_mut() {
+            FileHandleWrapper::write_file(
+                &paths.image_filename,
+                image_data.1.as_mut_slice(),
+                &ENVIRONMENT_SERVICE.default_file_handler,
+            )?;
+        }
 
         FileHandleWrapper::write_file(
             &paths.filename,
