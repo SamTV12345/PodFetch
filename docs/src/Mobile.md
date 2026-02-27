@@ -18,3 +18,12 @@ Podfetch also has a mobile app for Android and iOS. For Android you can download
 [![Screenshot of player](./images/mobile2.jpeg)]
 
 [![Screenshot of player detail](./images/mobile3.jpeg)]
+
+## Progressive Web App (PWA) on Android and iOS
+
+You can also use the web UI as an installable PWA. This enables a standalone app-like experience and lock-screen media controls.
+
+1. Open your Podfetch web UI in the mobile browser (`https://your-server/ui/`).
+2. Android (Chrome/Edge): open browser menu and choose `Install app` / `Add to Home screen`.
+3. iOS (Safari): open Share menu and choose `Add to Home Screen`.
+4. Start playback once from the installed app. The media controls are then available from lock screen and notification controls.

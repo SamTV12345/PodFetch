@@ -18,7 +18,9 @@ use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::settings::Setting;
 use crate::service::file_service::perform_episode_variable_replacement;
 use crate::utils::error::ErrorSeverity::Warning;
+use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
 use axum::extract::{Path, Query};
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use utoipa_axum::router::OpenApiRouter;
@@ -80,6 +82,7 @@ pub async fn find_all_chapters_of_podcast_episode(
 pub async fn get_podcast_episode_by_id(
     Path(id): Path<String>,
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<PodcastEpisodeWithHistory>, CustomError> {
     let res = PodcastEpisodeService::get_podcast_episode_by_id(&id)?;
     if res.is_none() {
@@ -89,7 +92,13 @@ pub async fn get_podcast_episode_by_id(
     let podcast_inner = res.clone().unwrap();
 
     let episode = Episode::get_watchtime(&id, &requester.username)?;
-    let mapped_podcast_episode: PodcastEpisodeDto = (podcast_inner, Some(requester), None).into();
+    let server_url = resolve_server_url_from_headers(&headers);
+    let mut mapped_podcast_episode: PodcastEpisodeDto =
+        (podcast_inner, Some(requester), None).into();
+    mapped_podcast_episode.local_url =
+        rewrite_env_server_url_prefix(&mapped_podcast_episode.local_url, &server_url);
+    mapped_podcast_episode.local_image_url =
+        rewrite_env_server_url_prefix(&mapped_podcast_episode.local_image_url, &server_url);
 
     Ok(Json(PodcastEpisodeWithHistory {
         podcast_history_item: episode.map(|e| e.convert_to_episode_dto()),
@@ -110,6 +119,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
     Path(id): Path<String>,
     Extension(user): Extension<User>,
     last_podcast_episode: Query<OptionalId>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
     let id_num = from_str(&id).unwrap();
 
@@ -119,11 +129,16 @@ pub async fn find_all_podcast_episodes_of_podcast(
         last_podcast_episode.only_unlistened,
         &user,
     )?;
+    let server_url = resolve_server_url_from_headers(&headers);
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast_inner| {
-            let mapped_podcast_episode: PodcastEpisodeDto =
+            let mut mapped_podcast_episode: PodcastEpisodeDto =
                 (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
+            mapped_podcast_episode.local_url =
+                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_url, &server_url);
+            mapped_podcast_episode.local_image_url =
+                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_image_url, &server_url);
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast_inner.1.map(|e| e.convert_to_episode_dto()),
@@ -187,8 +202,10 @@ tag = "podcasts"
 pub async fn get_timeline(
     Extension(requester): Extension<User>,
     Query(favored_only): Query<TimelineQueryParams>,
+    headers: HeaderMap,
 ) -> Result<Json<TimeLinePodcastItem>, CustomError> {
     let res = TimelineItem::get_timeline(requester, favored_only)?;
+    let server_url = resolve_server_url_from_headers(&headers);
 
     let mapped_timeline = res
         .data
@@ -196,9 +213,20 @@ pub async fn get_timeline(
         .map(|podcast_episode| {
             let (podcast_episode, podcast_extracted, history, favorite) = podcast_episode.clone();
 
+            let mut mapped_podcast_episode = podcast_episode;
+            mapped_podcast_episode.local_url =
+                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_url, &server_url);
+            mapped_podcast_episode.local_image_url =
+                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_image_url, &server_url);
+            let mut mapped_podcast = podcast_extracted;
+            mapped_podcast.image_url =
+                rewrite_env_server_url_prefix(&mapped_podcast.image_url, &server_url);
+            mapped_podcast.podfetch_feed =
+                rewrite_env_server_url_prefix(&mapped_podcast.podfetch_feed, &server_url);
+
             TimeLinePodcastEpisode {
-                podcast_episode,
-                podcast: podcast_extracted,
+                podcast_episode: mapped_podcast_episode,
+                podcast: mapped_podcast,
                 history,
                 favorite,
             }
@@ -254,8 +282,8 @@ pub async fn download_podcast_episodes_of_podcast(
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
-    tokio::task::spawn_blocking(move || {
-        match PodcastEpisode::get_podcast_episode_by_id(&id) {
+    tokio::task::spawn_blocking(
+        move || match PodcastEpisode::get_podcast_episode_by_id(&id) {
             Ok(Some(podcast_episode)) => match Podcast::get_podcast(podcast_episode.podcast_id) {
                 Ok(podcast_found) => {
                     if let Err(err) =
@@ -297,8 +325,8 @@ pub async fn download_podcast_episodes_of_podcast(
             Err(err) => {
                 log::error!("Error retrieving episode {}: {}", id, err);
             }
-        }
-    });
+        },
+    );
 
     Ok(StatusCode::from_u16(200).unwrap())
 }

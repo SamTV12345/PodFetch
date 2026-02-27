@@ -319,7 +319,6 @@ impl Episode {
             .optional()
             .map_err(|e| map_db_error(e, Critical))?;
 
-
         if podcast_episode.is_none() {
             return Ok(None);
         }

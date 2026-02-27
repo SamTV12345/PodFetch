@@ -26,12 +26,12 @@ use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
-use std::ffi::OsStr;
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::io::Error;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use std::sync::LazyLock;
+use std::sync::{Arc, Mutex};
 use url::Url;
 
 pub struct PodcastEpisodeService;
@@ -94,7 +94,9 @@ impl PodcastEpisodeService {
             }
         };
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
-        if let Err(err) = DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned) {
+        if let Err(err) =
+            DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)
+        {
             if let Err(notification_err) = Notification::insert_notification(Notification {
                 id: 0,
                 message: format!("{} ({})", podcast_episode.name, err.inner),

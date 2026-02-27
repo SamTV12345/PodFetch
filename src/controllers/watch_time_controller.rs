@@ -4,6 +4,7 @@ use crate::models::misc_models::{
 };
 use crate::models::user::User;
 use axum::extract::Path;
+use axum::http::HeaderMap;
 use axum::{Extension, Json};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
@@ -11,6 +12,7 @@ use utoipa_axum::routes;
 
 use crate::utils::error::ErrorSeverity::Debug;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
 
 #[utoipa::path(
 post,
@@ -38,8 +40,23 @@ tag="watchtime"
 )]
 pub async fn get_last_watched(
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>, CustomError> {
-    let episodes = Episode::get_last_watched_episodes(&requester)?;
+    let server_url = resolve_server_url_from_headers(&headers);
+    let episodes = Episode::get_last_watched_episodes(&requester)?
+        .into_iter()
+        .map(|mut item| {
+            item.podcast_episode.local_url =
+                rewrite_env_server_url_prefix(&item.podcast_episode.local_url, &server_url);
+            item.podcast_episode.local_image_url =
+                rewrite_env_server_url_prefix(&item.podcast_episode.local_image_url, &server_url);
+            item.podcast.image_url =
+                rewrite_env_server_url_prefix(&item.podcast.image_url, &server_url);
+            item.podcast.podfetch_feed =
+                rewrite_env_server_url_prefix(&item.podcast.podfetch_feed, &server_url);
+            item
+        })
+        .collect();
     Ok(Json(episodes))
 }
 

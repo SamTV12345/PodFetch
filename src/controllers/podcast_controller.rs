@@ -11,6 +11,7 @@ use crate::{get_default_image, unwrap_string};
 use async_recursion::async_recursion;
 use axum::body::Body;
 use axum::extract::{Path, Query};
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json, debug_handler};
@@ -31,7 +32,8 @@ use crate::models::podcasts::Podcast;
 use crate::models::user::User;
 use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use reqwest::header::HeaderMap;
+use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
 
 #[derive(Serialize, Deserialize, IntoParams)]
@@ -79,8 +81,13 @@ Vec<PodcastDto>)),
 )]
 pub async fn search_podcast_of_episode(
     Path(id): Path<i32>,
+    headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    Podcast::get_podcast_by_episode_id(id)
+    let server_url = resolve_server_url_from_headers(&headers);
+    let mut dto = Podcast::get_podcast_by_episode_id(id)?.0;
+    dto.image_url = rewrite_env_server_url_prefix(&dto.image_url, &server_url);
+    dto.podfetch_feed = rewrite_env_server_url_prefix(&dto.podfetch_feed, &server_url);
+    Ok(Json(dto))
 }
 
 #[utoipa::path(
@@ -95,7 +102,9 @@ tag="podcasts"
 pub async fn search_podcasts(
     Query(query): Query<PodcastSearchModelUtoipa>,
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
+    let server_url = resolve_server_url_from_headers(&headers);
     let _order = query.order.map(|o| o.into()).unwrap_or(OrderCriteria::Asc);
     let _latest_pub = query
         .order_option
@@ -133,6 +142,16 @@ pub async fn search_podcasts(
                     &requester,
                 )?;
             }
+            let podcasts = podcasts
+                .into_iter()
+                .map(|mut podcast| {
+                    podcast.image_url =
+                        rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
+                    podcast.podfetch_feed =
+                        rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
+                    podcast
+                })
+                .collect();
             Ok(Json(podcasts))
         }
         false => {
@@ -146,6 +165,16 @@ pub async fn search_podcasts(
                     &requester,
                 )?;
             }
+            let podcasts = podcasts
+                .into_iter()
+                .map(|mut podcast| {
+                    podcast.image_url =
+                        rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
+                    podcast.podfetch_feed =
+                        rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
+                    podcast
+                })
+                .collect();
             Ok(Json(podcasts))
         }
     }
@@ -162,6 +191,7 @@ tag="podcasts"
 pub async fn find_podcast_by_id(
     Path(id): Path<String>,
     Extension(user): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
     let username = &user.username;
@@ -169,7 +199,11 @@ pub async fn find_podcast_by_id(
     let podcast = PodcastService::get_podcast(id_num)?;
     let tags = Tag::get_tags_of_podcast(id_num, username)?;
     let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?;
-    let podcast_dto: PodcastDto = (podcast, favorite, tags, &user).into();
+    let server_url = resolve_server_url_from_headers(&headers);
+    let mut podcast_dto: PodcastDto = (podcast, favorite, tags, &user).into();
+    podcast_dto.image_url = rewrite_env_server_url_prefix(&podcast_dto.image_url, &server_url);
+    podcast_dto.podfetch_feed =
+        rewrite_env_server_url_prefix(&podcast_dto.podfetch_feed, &server_url);
     Ok(Json(podcast_dto))
 }
 
@@ -183,8 +217,18 @@ tag="podcasts"
 )]
 pub async fn find_all_podcasts(
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let podcasts = PodcastService::get_podcasts(&requester)?;
+    let server_url = resolve_server_url_from_headers(&headers);
+    let podcasts = PodcastService::get_podcasts(&requester)?
+        .into_iter()
+        .map(|mut podcast| {
+            podcast.image_url = rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
+            podcast.podfetch_feed =
+                rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
+            podcast
+        })
+        .collect();
 
     Ok(Json(podcasts))
 }
@@ -298,7 +342,7 @@ pub async fn add_podcast_by_feed(
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
-    let mut header_map = HeaderMap::new();
+    let mut header_map = ReqwestHeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
     let result = get_http_client()
@@ -413,10 +457,19 @@ responses(
 tag="podcasts",)]
 pub async fn query_for_podcast(
     podcast: Path<String>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeDto>>, CustomError> {
+    let server_url = resolve_server_url_from_headers(&headers);
     let res = PodcastEpisodeService::query_for_podcast(&podcast)?
         .into_iter()
-        .map(|p| (p, None::<User>, None::<FavoritePodcastEpisode>).into())
+        .map(|p| {
+            let mut episode: PodcastEpisodeDto =
+                (p, None::<User>, None::<FavoritePodcastEpisode>).into();
+            episode.local_url = rewrite_env_server_url_prefix(&episode.local_url, &server_url);
+            episode.local_image_url =
+                rewrite_env_server_url_prefix(&episode.local_image_url, &server_url);
+            episode
+        })
         .collect::<Vec<PodcastEpisodeDto>>();
 
     Ok(Json(res))
@@ -546,8 +599,18 @@ tag="podcasts"
 )]
 pub async fn get_favored_podcasts(
     Extension(requester): Extension<User>,
+    headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let podcasts = PodcastService::get_favored_podcasts(requester)?;
+    let server_url = resolve_server_url_from_headers(&headers);
+    let podcasts = PodcastService::get_favored_podcasts(requester)?
+        .into_iter()
+        .map(|mut podcast| {
+            podcast.image_url = rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
+            podcast.podfetch_feed =
+                rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
+            podcast
+        })
+        .collect();
     Ok(Json(podcasts))
 }
 
