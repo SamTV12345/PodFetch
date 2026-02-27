@@ -1,84 +1,123 @@
-import {EpisodeSearch} from "./EpisodeSearch";
-import {DragEvent, useState} from "react";
-import {PodcastEpisode} from "../store/CommonSlice";
+import {DragEvent, useMemo, useState} from "react";
 import {useTranslation} from "react-i18next";
-import usePlaylist from "../store/PlaylistSlice";
 import {components} from "../../schema";
+import {EpisodeSearch} from "./EpisodeSearch";
 
+type PlaylistSearchEpisodeProps = {
+    items: components["schemas"]["PodcastEpisodeWithHistory"][]
+    setItems: (items: components["schemas"]["PodcastEpisodeWithHistory"][]) => void
+}
 
-
-export const PlaylistSearchEpisode = ()=>{
-    const [itemCurrentlyDragged,setItemCurrentlyDragged] = useState<components["schemas"]["PodcastEpisodeDto"]>()
+export const PlaylistSearchEpisode = ({items, setItems}: PlaylistSearchEpisodeProps)=> {
     const {t} = useTranslation()
-    const currentPlayListToEdit = usePlaylist(state => state.currentPlaylistToEdit)
-    const setCurrentPlaylistToEdit = usePlaylist(state=>state.setCurrentPlaylistToEdit)
-    const handleDragStart = (dragItem: components["schemas"]["PodcastEpisodeDto"], index: number, event: DragEvent<HTMLTableRowElement> )=>{
-        event.dataTransfer.setData("text/plain", index.toString())
-        setItemCurrentlyDragged(dragItem)
+    const [itemCurrentlyDragged, setItemCurrentlyDragged] = useState<components["schemas"]["PodcastEpisodeDto"]>()
+
+    const episodeIds = useMemo(() => {
+        return new Set(items.map(item => item.podcastEpisode.id))
+    }, [items])
+
+    const moveItem = (from: number, to: number) => {
+        if (from < 0 || to < 0 || from >= items.length || to >= items.length) {
+            return
+        }
+        const newItems = [...items]
+        const dragged = newItems[from]!
+        newItems.splice(from, 1)
+        newItems.splice(to, 0, dragged)
+        setItems(newItems)
     }
 
-    return        <>
-        <EpisodeSearch onClickResult={e=>{
-            setCurrentPlaylistToEdit({
-                id: currentPlayListToEdit!.id,
-                name: currentPlayListToEdit!.name,
-                items: [...currentPlayListToEdit!.items, {podcastEpisode: e}]
-            })
-        }} classNameResults="max-h-[min(20rem,calc(100vh-3rem-3rem))]"
-                                                  showBlankState={false} />
-    <div className={`scrollbox-x  p-2`}>
-        <table className="text-left text-sm text-stone-900 w-full overflow-y-auto text-(--fg-color)">
-            <thead>
-            <tr className="border-b border-stone-300">
-                <th scope="col" className="pr-2 py-3 text-(--fg-color)">
-                    #
-                </th>
-                <th scope="col" className="px-2 py-3 text-(--fg-color)">
-                    {t('episode-name')}
-                </th>
-                <th scope="col" className="px-2 py-3 text-(--fg-color)">
-                    {t('actions')}
-                </th>
-            </tr>
-            </thead>
-            <tbody className="">
-            {currentPlayListToEdit?.items.map((item, index) => {
-                return <tr className="border-2 border-white" draggable onDrop={e=>{
-                    e.preventDefault()
-                    const dropIndex = index
-                    const dragIndex = parseInt(e.dataTransfer.getData("text/plain"))
+    const addEpisode = (episode: components["schemas"]["PodcastEpisodeDto"]) => {
+        if (episodeIds.has(episode.id)) {
+            return
+        }
+        setItems([...items, {podcastEpisode: episode}])
+    }
 
-                    const newItems = [...currentPlayListToEdit!.items]
-                    const dragItem = newItems[dragIndex]!
-                    newItems.splice(dragIndex, 1)
-                    newItems.splice(dropIndex, 0, dragItem)
-                    setCurrentPlaylistToEdit({
-                        name: currentPlayListToEdit!.name,
-                        id: currentPlayListToEdit!.id,
-                        items: newItems
-                    })
-                }} onDragOver={(e)=>item.podcastEpisode.id!=itemCurrentlyDragged?.id&&e.preventDefault()} onDragStart={e=>handleDragStart(item.podcastEpisode, index, e)}>
-                    <td className="text-(--fg-color) p-2">
-                        {index}
-                    </td>
-                    <td className="text-(--fg-color)">
-                        {item.podcastEpisode.name}
-                    </td>
-                    <td>
-                        <button className="flex text-red-700 hover:text-red-500" onClick={e=>{
-                            e.preventDefault()
-                            setCurrentPlaylistToEdit({
-                                name: currentPlayListToEdit!.name,
-                                id: currentPlayListToEdit!.id,
-                                items: currentPlayListToEdit!.items.filter(i=>i.podcastEpisode.id!==item.podcastEpisode.id)
-                            })
-                        }}><span className="material-symbols-outlined mr-1">delete</span>
-                            {t('delete')}</button>
-                    </td>
-                </tr>
-            })}
-            </tbody>
-        </table>
-    </div>
-    </>
+    return (
+        <>
+            <EpisodeSearch
+                onClickResult={addEpisode}
+                classNameResults="min-h-[12rem]"
+                resultsMaxHeight="16rem"
+                showBlankState={false}
+            />
+
+            <div className="mt-4 rounded-xl border border-(--border-color)">
+                <div className="flex items-center justify-between border-b border-(--border-color) px-4 py-3">
+                    <span className="font-medium">{t('playlists')}</span>
+                    <span className="text-xs text-(--fg-secondary-color)">
+                        {t('item_other', {count: items.length})}
+                    </span>
+                </div>
+                <div className="max-h-[18rem] overflow-y-auto">
+                    {!items.length && (
+                        <div className="p-4 text-sm text-(--fg-secondary-color)">
+                            {t('playlist-search-help')}
+                        </div>
+                    )}
+                    {items.map((item, index) => (
+                        <div
+                            key={`${item.podcastEpisode.id}-${index}`}
+                            className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 border-b border-(--border-color) px-3 py-2"
+                            draggable
+                            onDragStart={(event: DragEvent<HTMLDivElement>) => {
+                                event.dataTransfer.setData("text/plain", index.toString())
+                                setItemCurrentlyDragged(item.podcastEpisode)
+                            }}
+                            onDragOver={(event) => {
+                                if (item.podcastEpisode.id !== itemCurrentlyDragged?.id) {
+                                    event.preventDefault()
+                                }
+                            }}
+                            onDrop={(event) => {
+                                event.preventDefault()
+                                const dragIndex = parseInt(event.dataTransfer.getData("text/plain"))
+                                moveItem(dragIndex, index)
+                            }}
+                        >
+                            <span className="text-xs text-(--fg-secondary-color)">{index + 1}</span>
+                            <div className="min-w-0">
+                                <div className="line-clamp-1 text-sm font-medium">{item.podcastEpisode.name}</div>
+                            </div>
+                            <div className="flex items-center gap-1 self-center">
+                                <button
+                                    type="button"
+                                    className="h-7 w-7 grid place-items-center material-symbols-outlined leading-none text-(--fg-secondary-icon-color) hover:text-(--fg-color)"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        moveItem(index, index - 1)
+                                    }}
+                                    disabled={index === 0}
+                                >
+                                    arrow_upward
+                                </button>
+                                <button
+                                    type="button"
+                                    className="h-7 w-7 grid place-items-center material-symbols-outlined leading-none text-(--fg-secondary-icon-color) hover:text-(--fg-color)"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        moveItem(index, index + 1)
+                                    }}
+                                    disabled={index === items.length - 1}
+                                >
+                                    arrow_downward
+                                </button>
+                                <button
+                                    type="button"
+                                    className="h-7 w-7 grid place-items-center material-symbols-outlined leading-none text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        setItems(items.filter((_, i) => i !== index))
+                                    }}
+                                >
+                                    delete
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    )
 }
