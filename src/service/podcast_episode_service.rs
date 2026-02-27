@@ -23,42 +23,58 @@ use crate::utils::error::{
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use log::error;
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
 use std::ffi::OsStr;
+use std::collections::HashSet;
 use std::io::Error;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::sync::LazyLock;
 use url::Url;
 
 pub struct PodcastEpisodeService;
+static IN_PROGRESS_DOWNLOADS: LazyLock<Mutex<HashSet<String>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+
+struct InProgressDownloadGuard {
+    episode_id: String,
+}
+
+impl Drop for InProgressDownloadGuard {
+    fn drop(&mut self) {
+        let mut guard = IN_PROGRESS_DOWNLOADS.lock().ignore_poison();
+        guard.remove(&self.episode_id);
+    }
+}
 
 impl PodcastEpisodeService {
+    fn try_acquire_download_guard(episode_id: &str) -> Option<InProgressDownloadGuard> {
+        let mut downloads = IN_PROGRESS_DOWNLOADS.lock().ignore_poison();
+        if downloads.contains(episode_id) {
+            return None;
+        }
+        downloads.insert(episode_id.to_string());
+        Some(InProgressDownloadGuard {
+            episode_id: episode_id.to_string(),
+        })
+    }
+
     pub fn download_podcast_episode_if_not_locally_available(
         podcast_episode: PodcastEpisode,
         podcast: Podcast,
     ) -> Result<(), CustomError> {
         let podcast_episode_cloned = podcast_episode.clone();
 
-        match PodcastEpisode::check_if_downloaded(&podcast_episode.url) {
-            Ok(true) => {}
-            Ok(false) => {
-                let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
-                ChatServerHandle::broadcast_podcast_episode_offline_available(
-                    &podcast_inserted,
-                    &podcast,
-                );
+        if podcast_episode.is_downloaded() {
+            return Ok(());
+        }
+        let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
+        ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
 
-                if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
-                    send_new_episode_notification(podcast_episode, podcast)
-                }
-            }
-
-            _ => {
-                error!("Error checking if podcast episode is downloaded.");
-            }
+        if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
+            send_new_episode_notification(podcast_episode, podcast)
         }
         Ok(())
     }
@@ -67,8 +83,33 @@ impl PodcastEpisodeService {
         podcast_episode: &PodcastEpisode,
         podcast_cloned: &Podcast,
     ) -> Result<PodcastEpisode, CustomError> {
+        let _guard = match Self::try_acquire_download_guard(&podcast_episode.episode_id) {
+            Some(guard) => guard,
+            None => {
+                log::info!(
+                    "Skipping download for episode {} because a download is already running",
+                    podcast_episode.episode_id
+                );
+                return Ok(podcast_episode.clone());
+            }
+        };
         log::info!("Downloading podcast episode: {}", podcast_episode.name);
-        DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)?;
+        if let Err(err) = DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned) {
+            if let Err(notification_err) = Notification::insert_notification(Notification {
+                id: 0,
+                message: format!("{} ({})", podcast_episode.name, err.inner),
+                created_at: chrono::Utc::now().naive_utc().to_string(),
+                type_of_message: "DownloadFailed".to_string(),
+                status: "unread".to_string(),
+            }) {
+                log::error!(
+                    "Failed to insert failed-download notification for episode {}: {}",
+                    podcast_episode.episode_id,
+                    notification_err
+                );
+            }
+            return Err(err);
+        }
         let podcast = PodcastEpisode::update_podcast_episode_status(
             &podcast_episode.url,
             Some(ENVIRONMENT_SERVICE.default_file_handler.clone()),

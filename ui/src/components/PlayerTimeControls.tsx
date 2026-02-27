@@ -1,4 +1,4 @@
-import {FC, RefObject, useEffect, useMemo} from 'react'
+import {FC, useEffect, useMemo} from 'react'
 import {
     SKIPPED_TIME
 } from '../utils/Utilities'
@@ -50,11 +50,14 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
 
     useEffect(() => {
         const audioPlayer = getAudioPlayer()
-        audioPlayer!.onended = () => {
+        if (!audioPlayer) {
+            return
+        }
+        audioPlayer.onended = () => {
             if (currentPodcastEpisode === undefined) return
             logCurrentPlaybackTime(currentPodcastEpisode!.podcastEpisode.episode_id, currentPodcastEpisode!.podcastEpisode.total_time)
         }
-    }, []);
+    }, [currentPodcastEpisode]);
 
 
     const skipToNextEpisode = () => {
@@ -78,6 +81,9 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
 
     const handleButton = () => {
         const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
 
         if (audioPlayer.paused) {
             audioPlayer.play()
@@ -105,6 +111,9 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
 
     const changeSpeed = () => {
         const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
 
         const currentIndex = SPEED_STEPS.indexOf(speed)
 
@@ -120,6 +129,9 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
 
     const seekForward = () => {
         const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
 
         if (audioPlayer.currentTime + SKIPPED_TIME < audioPlayer.duration) {
             audioPlayer.currentTime += SKIPPED_TIME
@@ -128,6 +140,9 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
 
     const seekBackward = () => {
         const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
 
         if (audioPlayer.currentTime - SKIPPED_TIME > 0 ) {
             audioPlayer.currentTime -= SKIPPED_TIME

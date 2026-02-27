@@ -119,15 +119,33 @@ impl ChatServerHandle {
         T: ?Sized + Serialize,
     {
         let room_id = "/".to_owned() + room_id.as_str();
-        block_on(
-            SOCKET_IO_LAYER
-                .get()
-                .unwrap()
-                .of(room_id)
-                .unwrap()
-                .emit(event, &msg),
-        )
-        .unwrap();
+        let socket = match SOCKET_IO_LAYER.get() {
+            Some(socket) => socket,
+            None => {
+                log::warn!(
+                    "Skipping websocket broadcast for event '{}' because socket layer is not initialized",
+                    event.as_ref()
+                );
+                return;
+            }
+        };
+        let namespace = match socket.of(room_id) {
+            Some(namespace) => namespace,
+            None => {
+                log::warn!(
+                    "Skipping websocket broadcast for event '{}' because namespace is unavailable",
+                    event.as_ref()
+                );
+                return;
+            }
+        };
+        if let Err(err) = block_on(namespace.emit(event.as_ref(), msg)) {
+            log::warn!(
+                "Websocket broadcast failed for event '{}': {}",
+                event.as_ref(),
+                err
+            );
+        }
     }
 
     pub fn broadcast_podcast_episode_offline_available(

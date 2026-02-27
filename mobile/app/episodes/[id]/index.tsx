@@ -1,5 +1,5 @@
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ScrollView, Text, View, Image, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { ScrollView, Text, View, Image, Pressable, StyleSheet, ActivityIndicator, Linking } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -19,6 +19,17 @@ const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const inferExtension = (url: string): string => {
+    const cleanPath = url.split('?')[0] || '';
+    const ext = cleanPath.split('.').pop()?.toLowerCase() || '';
+    return /^[a-z0-9]{2,8}$/.test(ext) ? ext : '';
+};
+
+const isVideoUrl = (url: string): boolean => {
+    const extension = inferExtension(url);
+    return ['mp4', 'm4v', 'mov', 'webm'].includes(extension);
 };
 
 export default function EpisodeDetailScreen() {
@@ -149,6 +160,8 @@ export default function EpisodeDetailScreen() {
     const displayTotalTime = offlineEpisode?.totalTime || onlineWatchData?.total || 0;
     const displayFileSize = offlineEpisode?.fileSize;
     const displayDownloadedAt = offlineEpisode?.downloadedAt;
+    const displayMediaPath = offlineEpisode?.localPath || '';
+    const showVideoButton = !!displayMediaPath && isVideoUrl(displayMediaPath);
 
     if (combinedLoading) {
         return (
@@ -294,6 +307,16 @@ export default function EpisodeDetailScreen() {
                                 : t('play')}
                     </Text>
                 </Pressable>
+
+                {showVideoButton && (
+                    <Pressable
+                        style={styles.videoButton}
+                        onPress={() => Linking.openURL(displayMediaPath)}
+                    >
+                        <Ionicons name="videocam-outline" size={20} color="#fff" />
+                        <Text style={styles.videoButtonText}>Watch Video</Text>
+                    </Pressable>
+                )}
 
                 {/* Hinweis-Box */}
                 <View style={styles.offlineHint}>
@@ -454,6 +477,22 @@ const styles = StyleSheet.create({
         marginTop: 24,
         paddingVertical: 16,
         borderRadius: 30,
+    },
+    videoButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        marginHorizontal: 20,
+        marginTop: 12,
+        paddingVertical: 14,
+        borderRadius: 24,
+    },
+    videoButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#fff',
     },
     playButtonText: {
         fontSize: 18,

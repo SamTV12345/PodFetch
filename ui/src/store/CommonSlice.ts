@@ -53,6 +53,7 @@ interface CommonProps {
     infoModalPodcastOpen: boolean,
     podcastAlreadyPlayed: boolean,
     detailedAudioPlayerOpen: boolean,
+    detailedAudioPlayerTab: 'description' | 'chapters' | 'video',
     currentDetailedPodcastId: number|undefined,
     loginData: Partial<LoginData>|undefined,
     confirmModalData: ConfirmModalProps|undefined
@@ -74,6 +75,7 @@ interface CommonProps {
     setInfoModalPodcastOpen: (infoModalPodcastOpen: boolean) => void,
     setEpisodeDownloaded: (episode_id: string) => void,
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => void,
+    setDetailedAudioPlayerTab: (tab: 'description' | 'chapters' | 'video') => void,
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => void,
     setLoginData: (loginData: Partial<LoginData>) => void,
     setConfirmModalData: (confirmModalData: ConfirmModalProps) => void,
@@ -99,6 +101,7 @@ const useCommon = create<CommonProps>((set, get) => ({
     infoModalPodcast: undefined,
     infoModalPodcastOpen: false,
     detailedAudioPlayerOpen: false,
+    detailedAudioPlayerTab: 'description',
     currentDetailedPodcastId: undefined,
     loginData: undefined,
     confirmModalData: undefined,
@@ -129,6 +132,7 @@ const useCommon = create<CommonProps>((set, get) => ({
         }
     },
     setDetailedAudioPlayerOpen: (detailedAudioPlayerOpen: boolean) => set({detailedAudioPlayerOpen}),
+    setDetailedAudioPlayerTab: (tab) => set({detailedAudioPlayerTab: tab}),
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => set({currentDetailedPodcastId}),
     setLoginData: (loginData: Partial<LoginData>) => set({loginData}),
     setConfirmModalData: (confirmModalData: ConfirmModalProps) => set({confirmModalData}),

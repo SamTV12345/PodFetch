@@ -3,12 +3,12 @@ use crate::models::podcasts::Podcast;
 use crate::service::file_service::FileService;
 use std::fs::File;
 
-use reqwest::blocking::ClientBuilder;
-
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME};
+use crate::constants::inner_constants::{
+    COMMON_USER_AGENT, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
+};
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::podcast_settings::PodcastSetting;
@@ -24,12 +24,108 @@ use crate::utils::reqwest_client::get_sync_client;
 use chrono::Duration;
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike};
+use reqwest::header::{ACCEPT_ENCODING, HeaderMap, HeaderValue, USER_AGENT};
 use std::io::Read;
 use std::path::PathBuf;
+use std::thread::sleep;
+use std::time::Duration as StdDuration;
 
 pub struct DownloadService {}
 
 impl DownloadService {
+    fn build_binary_sync_client() -> Result<reqwest::blocking::Client, CustomError> {
+        get_sync_client()
+            .no_gzip()
+            .no_brotli()
+            .no_deflate()
+            .no_zstd()
+            .build()
+            .map_err(map_reqwest_error)
+    }
+
+    async fn build_binary_async_client() -> Result<reqwest::Client, CustomError> {
+        get_async_sync_client()
+            .no_gzip()
+            .no_brotli()
+            .no_deflate()
+            .no_zstd()
+            .build()
+            .map_err(map_reqwest_error)
+    }
+
+    fn fetch_bytes_with_retries(url: &str) -> Result<Vec<u8>, CustomError> {
+        const MAX_RETRIES: usize = 3;
+        for attempt in 1..=MAX_RETRIES {
+            let result = Self::build_binary_sync_client()?
+                .get(url)
+                .header(ACCEPT_ENCODING, "identity")
+                .send()
+                .map_err(map_reqwest_error)
+                .and_then(|resp| resp.bytes().map_err(map_reqwest_error))
+                .map(|bytes| bytes.as_ref().to_vec());
+
+            match result {
+                Ok(bytes) => return Ok(bytes),
+                Err(err) if attempt == MAX_RETRIES => return Err(err),
+                Err(err) => {
+                    log::warn!(
+                        "Download attempt {}/{} failed for {}: {}",
+                        attempt,
+                        MAX_RETRIES,
+                        url,
+                        err
+                    );
+                    sleep(StdDuration::from_millis(250 * attempt as u64));
+                }
+            }
+        }
+        Err(CustomErrorInner::Conflict(
+            "Download failed after retries".to_string(),
+            ErrorSeverity::Error,
+        )
+        .into())
+    }
+
+    async fn fetch_bytes_with_retries_async(url: &str) -> Result<Vec<u8>, CustomError> {
+        const MAX_RETRIES: usize = 3;
+        for attempt in 1..=MAX_RETRIES {
+            let client = Self::build_binary_async_client().await?;
+            let result = match client
+                .get(url)
+                .header(ACCEPT_ENCODING, "identity")
+                .send()
+                .await
+            {
+                Ok(resp) => resp
+                    .bytes()
+                    .await
+                    .map(|bytes| bytes.as_ref().to_vec())
+                    .map_err(map_reqwest_error),
+                Err(err) => Err(map_reqwest_error(err)),
+            };
+
+            match result {
+                Ok(bytes) => return Ok(bytes),
+                Err(err) if attempt == MAX_RETRIES => return Err(err),
+                Err(err) => {
+                    log::warn!(
+                        "Async download attempt {}/{} failed for {}: {}",
+                        attempt,
+                        MAX_RETRIES,
+                        url,
+                        err
+                    );
+                    tokio::time::sleep(StdDuration::from_millis(250 * attempt as u64)).await;
+                }
+            }
+        }
+        Err(CustomErrorInner::Conflict(
+            "Download failed after retries".to_string(),
+            ErrorSeverity::Error,
+        )
+        .into())
+    }
+
     pub fn handle_suffix_response(
         dt: DetermineFileExtensionReturn,
         podcast_episode_url: &str,
@@ -37,16 +133,7 @@ impl DownloadService {
         match dt {
             DetermineFileExtensionReturn::FileExtension(suffix, bytes) => Ok((suffix, bytes)),
             DetermineFileExtensionReturn::String(suffix) => {
-                let resp = get_sync_client()
-                    .build()
-                    .map_err(map_reqwest_error)?
-                    .get(podcast_episode_url)
-                    .send()
-                    .map_err(map_reqwest_error)?
-                    .bytes()
-                    .map_err(map_reqwest_error)?
-                    .as_ref()
-                    .to_vec();
+                let resp = Self::fetch_bytes_with_retries(podcast_episode_url)?;
                 Ok((suffix, resp))
             }
         }
@@ -59,18 +146,7 @@ impl DownloadService {
         match dt {
             DetermineFileExtensionReturn::FileExtension(suffix, bytes) => Ok((suffix, bytes)),
             DetermineFileExtensionReturn::String(suffix) => {
-                let resp = get_async_sync_client()
-                    .build()
-                    .map_err(map_reqwest_error)?
-                    .get(podcast_episode_url)
-                    .send()
-                    .await
-                    .map_err(map_reqwest_error)?
-                    .bytes()
-                    .await
-                    .map_err(map_reqwest_error)?
-                    .as_ref()
-                    .to_vec();
+                let resp = Self::fetch_bytes_with_retries_async(podcast_episode_url).await?;
                 Ok((suffix, resp))
             }
         }
@@ -80,17 +156,34 @@ impl DownloadService {
         podcast_episode: PodcastEpisode,
         podcast: &Podcast,
     ) -> Result<(), CustomError> {
-        let client = ClientBuilder::new().build().unwrap();
+        let mut header_map = HeaderMap::new();
+        header_map.insert(USER_AGENT, HeaderValue::from_static(COMMON_USER_AGENT));
+        header_map.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
+        let client = get_sync_client()
+            .default_headers(header_map)
+            .no_gzip()
+            .no_brotli()
+            .no_deflate()
+            .no_zstd()
+            .build()
+            .map_err(map_reqwest_error)?;
         let conn = &mut get_connection();
         let mut podcast_data = Self::handle_suffix_response(
             determine_file_extension(&podcast_episode.url, &client, FileType::Audio),
             &podcast_episode.url,
         )?;
         let settings_in_db = Setting::get_settings()?.unwrap();
-        let mut image_data = Self::handle_suffix_response(
-            determine_file_extension(&podcast_episode.image_url, &client, FileType::Image),
-            &podcast_episode.image_url,
-        )?;
+        let should_download_main_image =
+            !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn);
+
+        let mut image_data = if should_download_main_image {
+            Some(Self::handle_suffix_response(
+                determine_file_extension(&podcast_episode.image_url, &client, FileType::Image),
+                &podcast_episode.image_url,
+            )?)
+        } else {
+            None
+        };
 
         let paths = match settings_in_db.use_existing_filename {
             true => FilenameBuilder::default()
@@ -100,13 +193,23 @@ impl DownloadService {
                 .with_episode(podcast_episode.clone())?
                 .with_filename(PODCAST_FILENAME)
                 .with_image_filename(PODCAST_IMAGENAME)
-                .with_image_suffix(&image_data.0)
+                .with_image_suffix(
+                    &image_data
+                        .as_ref()
+                        .map(|data| data.0.clone())
+                        .unwrap_or_else(|| "jpg".to_string()),
+                )
                 .with_raw_directory()?
                 .build(conn)?,
             false => FilenameBuilder::default()
                 .with_suffix(&podcast_data.0)
                 .with_settings(settings_in_db)
-                .with_image_suffix(&image_data.0)
+                .with_image_suffix(
+                    &image_data
+                        .as_ref()
+                        .map(|data| data.0.clone())
+                        .unwrap_or_else(|| "jpg".to_string()),
+                )
                 .with_episode(podcast_episode.clone())?
                 .with_podcast_directory(&podcast.directory_name)
                 .with_podcast(podcast.clone())
@@ -139,14 +242,14 @@ impl DownloadService {
             )?;
         }
 
-        if !FileService::check_if_podcast_main_image_downloaded(&podcast.clone().directory_id, conn)
-        {
-            FileHandleWrapper::write_file(
-                &paths.image_filename,
-                image_data.1.as_mut_slice(),
-                &ENVIRONMENT_SERVICE.default_file_handler,
-            )?;
-        }
+        if should_download_main_image
+            && let Some(image_data) = image_data.as_mut() {
+                FileHandleWrapper::write_file(
+                    &paths.image_filename,
+                    image_data.1.as_mut_slice(),
+                    &ENVIRONMENT_SERVICE.default_file_handler,
+                )?;
+            }
 
         FileHandleWrapper::write_file(
             &paths.filename,
@@ -159,11 +262,6 @@ impl DownloadService {
             &paths.image_filename,
             &paths.filename,
             conn,
-        )?;
-        FileHandleWrapper::write_file(
-            &paths.image_filename,
-            image_data.1.as_mut_slice(),
-            &ENVIRONMENT_SERVICE.default_file_handler,
         )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Ok(chapters) = &result {

@@ -39,6 +39,54 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
     const setSelectedEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const queryClient = useQueryClient()
 
+    const waitForDownloadCompletion = async (episodeId: string) => {
+        if (!params.id) {
+            return
+        }
+        const maxAttempts = 20
+        for (let i = 0; i < maxAttempts; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1500))
+            const resp = await client.GET("/api/v1/podcasts/{id}/episodes", {
+                params: {
+                    path: {
+                        id: params.id
+                    },
+                    query: {
+                        only_unlistened: false
+                    }
+                }
+            })
+
+            const dto = resp.data?.find(item => item.podcastEpisode.episode_id === episodeId)?.podcastEpisode
+            if (!dto || !dto.status) {
+                continue
+            }
+
+            for (const cache of queryClient.getQueryCache().getAll()) {
+                if (cache.queryKey[0] == "get" && (cache.queryKey[1] as string) === ("/api/v1/podcasts/{id}/episodes")
+                    && (cache.queryKey[2] as {params: operations['find_all_podcast_episodes_of_podcast']['parameters']}).params.path.id === params.id) {
+                    queryClient.setQueryData(cache.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
+                        if (!oldData) {
+                            return oldData
+                        }
+                        return oldData.map(item => {
+                            if (item.podcastEpisode.episode_id !== episodeId) {
+                                return item
+                            }
+                            return {
+                                ...item,
+                                podcastEpisode: dto
+                            }
+                        })
+                    })
+                }
+            }
+
+            setEpisodeDownloaded(episodeId)
+            return
+        }
+    }
+
     const playedTime = useMemo(()=>{
         if(percentagePlayed === -1){
             return t('not-yet-played')
@@ -91,9 +139,9 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                                     id: episode.podcastEpisode.episode_id
                                 }
                             }
-                        }).then(()=>{
+                        }).then(async ()=>{
                             enqueueSnackbar(t('episode-downloaded-to-server'), {variant: "success"})
-                            setEpisodeDownloaded(episode.podcastEpisode.episode_id)
+                            await waitForDownloadCompletion(episode.podcastEpisode.episode_id)
                         })
                     }}>cloud_download</span>
                         {/* Check icon */}

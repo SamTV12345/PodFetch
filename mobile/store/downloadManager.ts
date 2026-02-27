@@ -21,6 +21,7 @@ type DownloadProgressCallback = (progress: DownloadProgress) => void;
 
 class DownloadManagerClass {
     private activeDownloads: Map<string, FileSystem.DownloadResumable> = new Map();
+    private activeDownloadPaths: Map<string, string> = new Map();
     private progressCallbacks: Map<string, Set<DownloadProgressCallback>> = new Map();
     private downloadStatuses: Map<string, DownloadProgress> = new Map();
 
@@ -31,6 +32,18 @@ class DownloadManagerClass {
     private getEpisodeFilePath(episodeId: string, extension: string = 'mp3'): string {
         const safeId = episodeId.replace(/[^a-zA-Z0-9-_]/g, '_');
         return `${this.getEpisodeDirectory()}${safeId}.${extension}`;
+    }
+
+    private inferExtension(...urls: Array<string | null | undefined>): string {
+        for (const url of urls) {
+            if (!url) continue;
+            const cleanPath = url.split('?')[0] || '';
+            const ext = cleanPath.split('.').pop()?.toLowerCase();
+            if (ext && /^[a-z0-9]{2,8}$/.test(ext)) {
+                return ext;
+            }
+        }
+        return 'mp3';
     }
 
     async ensureDirectoryExists(): Promise<void> {
@@ -63,8 +76,7 @@ class DownloadManagerClass {
 
         await this.ensureDirectoryExists();
 
-        const urlParts = episode.url.split('.');
-        const extension = urlParts[urlParts.length - 1]?.split('?')[0] || 'mp3';
+        const extension = this.inferExtension(episode.local_url, episode.url);
         const localPath = this.getEpisodeFilePath(episodeId, extension);
 
         this.updateProgress(episodeId, {
@@ -115,6 +127,7 @@ class DownloadManagerClass {
             );
 
             this.activeDownloads.set(episodeId, downloadResumable);
+            this.activeDownloadPaths.set(episodeId, localPath);
             this.updateProgress(episodeId, {
                 episodeId,
                 progress: 0,
@@ -165,6 +178,7 @@ class DownloadManagerClass {
             throw error;
         } finally {
             this.activeDownloads.delete(episodeId);
+            this.activeDownloadPaths.delete(episodeId);
         }
     }
 
@@ -174,7 +188,7 @@ class DownloadManagerClass {
             await download.pauseAsync();
             this.activeDownloads.delete(episodeId);
 
-            const partialPath = this.getEpisodeFilePath(episodeId);
+            const partialPath = this.activeDownloadPaths.get(episodeId) || this.getEpisodeFilePath(episodeId);
             try {
                 const fileInfo = await FileSystem.getInfoAsync(partialPath);
                 if (fileInfo.exists) {

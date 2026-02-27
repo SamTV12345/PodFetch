@@ -1,5 +1,5 @@
 export class AudioAmplifier {
-    constructor(private audioElement: HTMLAudioElement) {
+    constructor(private audioElement: HTMLMediaElement) {
         this.source = this.audioContext.createMediaElementSource(this.audioElement);
         this.source.connect(this.gainNode);
         this.gainNode.connect(this.audioContext.destination);

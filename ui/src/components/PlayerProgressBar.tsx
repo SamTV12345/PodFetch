@@ -69,6 +69,9 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
         const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
 
         const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
         const newTime = Math.floor((percentage / 100) * audioPlayer.duration)
         audioPlayer.currentTime = newTime
         setCurrentTimeUpdatePercentage(percentage)
@@ -99,6 +102,9 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
     const handleMouseUp = () => {
         if (isDragging && dragPercentage !== null && metadata) {
             const audioPlayer = getAudioPlayer()
+            if (!audioPlayer) {
+                return
+            }
             const newTime = Math.floor((dragPercentage / 100) * audioPlayer.duration)
             audioPlayer.currentTime = newTime
             setCurrentTimeUpdatePercentage(dragPercentage)

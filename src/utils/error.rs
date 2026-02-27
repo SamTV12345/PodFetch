@@ -395,7 +395,7 @@ pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
     error!("Error during reqwest: {e}");
 
     CustomErrorInner::BadRequest(
-        "Error requesting resource from server".to_string(),
+        format!("Error requesting resource from server: {e}"),
         ErrorSeverity::Warning,
     )
     .into()

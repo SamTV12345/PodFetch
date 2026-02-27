@@ -8,6 +8,17 @@ import {client} from "../utils/http";
 import {useState} from "react";
 import {PodcastEpisodeChapterTable} from "./PodcastEpisodeChapterTable";
 
+const inferExtension = (url: string): string => {
+    try {
+        const cleanPath = url.split('?')[0] || '';
+        const parts = cleanPath.split('.');
+        const ext = parts[parts.length - 1]?.toLowerCase() || '';
+        return /^[a-z0-9]{2,8}$/.test(ext) ? ext : 'mp3';
+    } catch {
+        return 'mp3';
+    }
+}
+
 export const PodcastInfoModal = () => {
     const infoModalOpen = useCommon(state => state.infoModalPodcastOpen)
     const selectedPodcastEpisode = useCommon(state => state.infoModalPodcast)
@@ -66,7 +77,9 @@ export const PodcastInfoModal = () => {
 
                     <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
                         if (selectedPodcastEpisode) {
-                            download(selectedPodcastEpisode.local_url, selectedPodcastEpisode.name + ".mp3")
+                            const extension = inferExtension(selectedPodcastEpisode.local_url || selectedPodcastEpisode.url)
+                            const downloadUrl = selectedPodcastEpisode.status ? selectedPodcastEpisode.local_url : selectedPodcastEpisode.url
+                            download(downloadUrl, `${selectedPodcastEpisode.name}.${extension}`)
                         }
                     }}>save</span>
 

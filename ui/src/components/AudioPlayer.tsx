@@ -1,4 +1,4 @@
-import {Activity, FC, RefObject} from 'react'
+import {Activity, FC} from 'react'
 import { AudioAmplifier } from '../models/AudioAmplifier'
 import { DrawerAudioPlayer } from './DrawerAudioPlayer'
 import { HiddenAudioPlayer } from './HiddenAudioPlayer'
@@ -13,8 +13,19 @@ type AudioPlayerProps = {
 export const AudioPlayer: FC<AudioPlayerProps> = ({  audioAmplifier, setAudioAmplifier }) => {
     const loadedPodcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
 
-    return <Activity mode={loadedPodcastEpisode ? "visible" : "hidden"}>
-        <DrawerAudioPlayer audioAmplifier={audioAmplifier} />
-        <HiddenAudioPlayer setAudioAmplifier={setAudioAmplifier} />
-    </Activity>
+    return <>
+        <div id="media-player-parking-slot" className="hidden">
+            <video
+                id="audio-player"
+                crossOrigin="anonymous"
+                playsInline
+                controls={false}
+                className="hidden"
+            />
+        </div>
+        <Activity mode={loadedPodcastEpisode ? "visible" : "hidden"}>
+            <DrawerAudioPlayer audioAmplifier={audioAmplifier} />
+            <HiddenAudioPlayer setAudioAmplifier={setAudioAmplifier} />
+        </Activity>
+    </>
 }
