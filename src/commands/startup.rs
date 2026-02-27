@@ -144,7 +144,6 @@ pub fn transform_index_files() -> String {
             div id="modal1"{};
             div id="modal2"{};
             div id="confirm-modal"{};
-            audio id="audio-player" crossorigin="anonymous"    {};
                 }
 
         }};

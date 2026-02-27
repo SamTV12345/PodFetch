@@ -1,5 +1,6 @@
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use file_format::FileFormat;
+use reqwest::header::CONTENT_TYPE;
 use std::fmt::Display;
 use std::io::Error;
 
@@ -35,28 +36,65 @@ pub fn determine_file_extension(
     file_type: FileType,
 ) -> DetermineFileExtensionReturn {
     get_suffix_by_url(url)
+        .ok()
+        .filter(|suffix| !suffix.is_empty())
         .map(DetermineFileExtensionReturn::String)
-        .unwrap_or_else(|_| {
+        .unwrap_or_else(|| {
             let response = match client.get(url).send() {
                 Ok(response) => response,
                 Err(_) => {
                     return DetermineFileExtensionReturn::String(file_type.to_string());
                 }
             };
+            let extension_by_content_type = response
+                .headers()
+                .get(CONTENT_TYPE)
+                .and_then(|c| c.to_str().ok())
+                .and_then(map_content_type_to_extension);
 
             let bytes = match response.bytes() {
                 Ok(bytes) => bytes,
                 Err(_) => {
-                    return DetermineFileExtensionReturn::String(file_type.to_string());
+                    return DetermineFileExtensionReturn::String(
+                        extension_by_content_type.unwrap_or_else(|| file_type.to_string()),
+                    );
                 }
             };
 
-            let file_extension = FileFormat::from(bytes.as_ref()).to_string();
+            let file_extension = FileFormat::from(bytes.as_ref()).to_string().to_lowercase();
+            let final_extension = if is_valid_extension(&file_extension) {
+                file_extension
+            } else {
+                extension_by_content_type.unwrap_or_else(|| file_type.to_string())
+            };
             DetermineFileExtensionReturn::FileExtension(
-                file_extension.to_string(),
+                final_extension,
                 bytes.as_ref().to_vec(),
             )
         })
+}
+
+fn map_content_type_to_extension(content_type: &str) -> Option<String> {
+    let mime_type = content_type
+        .split(';')
+        .next()
+        .unwrap_or(content_type)
+        .trim()
+        .to_ascii_lowercase();
+    let extension = match mime_type.as_str() {
+        "audio/mpeg" | "audio/mp3" => "mp3",
+        "audio/mp4" | "audio/x-m4a" => "m4a",
+        "video/mp4" => "mp4",
+        "audio/aac" => "aac",
+        "audio/ogg" => "ogg",
+        "audio/wav" | "audio/x-wav" | "audio/wave" => "wav",
+        _ => return None,
+    };
+    Some(extension.to_string())
+}
+
+fn is_valid_extension(ext: &str) -> bool {
+    !ext.is_empty() && ext.len() <= 8 && ext.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
 fn get_suffix_by_url(url: &str) -> Result<String, Error> {

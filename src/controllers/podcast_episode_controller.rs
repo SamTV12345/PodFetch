@@ -21,7 +21,6 @@ use crate::utils::error::ErrorSeverity::Warning;
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use std::thread;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -255,17 +254,49 @@ pub async fn download_podcast_episodes_of_podcast(
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
-    thread::spawn(move || {
-        let res = PodcastEpisode::get_podcast_episode_by_id(&id).unwrap();
-        if let Some(podcast_episode) = res {
-            let podcast_found = Podcast::get_podcast(podcast_episode.podcast_id).unwrap();
-            PodcastEpisodeService::perform_download(&podcast_episode.clone(), &podcast_found)
-                .unwrap();
-            PodcastEpisode::update_deleted(&podcast_episode.clone().episode_id, false).unwrap();
-            ChatServerHandle::broadcast_podcast_episode_offline_available(
-                &podcast_episode,
-                &podcast_found,
-            );
+    tokio::task::spawn_blocking(move || {
+        match PodcastEpisode::get_podcast_episode_by_id(&id) {
+            Ok(Some(podcast_episode)) => match Podcast::get_podcast(podcast_episode.podcast_id) {
+                Ok(podcast_found) => {
+                    if let Err(err) =
+                        PodcastEpisodeService::perform_download(&podcast_episode, &podcast_found)
+                    {
+                        log::error!(
+                            "Error downloading episode {}: {}",
+                            podcast_episode.episode_id,
+                            err
+                        );
+                        return;
+                    }
+                    if let Err(err) =
+                        PodcastEpisode::update_deleted(&podcast_episode.episode_id, false)
+                    {
+                        log::error!(
+                            "Error updating deleted status for episode {}: {}",
+                            podcast_episode.episode_id,
+                            err
+                        );
+                    }
+                    ChatServerHandle::broadcast_podcast_episode_offline_available(
+                        &podcast_episode,
+                        &podcast_found,
+                    );
+                }
+                Err(err) => {
+                    log::error!(
+                        "Could not load podcast {} for episode {}: {}",
+                        podcast_episode.podcast_id,
+                        podcast_episode.episode_id,
+                        err
+                    );
+                }
+            },
+            Ok(None) => {
+                log::error!("Episode with id {} not found", id);
+            }
+            Err(err) => {
+                log::error!("Error retrieving episode {}: {}", id, err);
+            }
         }
     });
 

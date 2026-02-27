@@ -21,6 +21,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
+use std::thread;
 use std::time::SystemTime;
 use tokio::task::spawn_blocking;
 
@@ -174,6 +175,7 @@ impl PodcastService {
     }
 
     pub fn schedule_episode_download(podcast: &Podcast) -> Result<(), CustomError> {
+        const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let settings = Setting::get_settings()?;
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
         match settings {
@@ -183,15 +185,32 @@ impl PodcastService {
                 {
                     let result =
                         PodcastEpisodeService::get_last_n_podcast_episodes(podcast.clone())?;
-                    for podcast_episode in result {
-                        if !podcast_episode.deleted
-                            && let Err(e) =
-                            PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
-                                    podcast_episode,
-                                    podcast.clone(),
-                                ){
-                                log::error!("Error downloading podcast episode: {e}");
+                    for chunk in result.chunks(MAX_PARALLEL_DOWNLOADS) {
+                        let mut handles = Vec::with_capacity(chunk.len());
+                        for podcast_episode in chunk.iter().cloned() {
+                            if podcast_episode.deleted {
+                                continue;
                             }
+                            let podcast_for_thread = podcast.clone();
+                            handles.push(thread::spawn(move || {
+                                if let Err(err) = PodcastEpisodeService::download_podcast_episode_if_not_locally_available(
+                                    podcast_episode,
+                                    podcast_for_thread,
+                                ) {
+                                    log::error!("Error downloading podcast episode: {err}");
+                                }
+                            }));
+                        }
+
+                        for handle in handles {
+                            if let Err(err) = handle.join() {
+                                log::error!(
+                                    "Error joining download worker for podcast {}: {:?}",
+                                    podcast.id,
+                                    err
+                                );
+                            }
+                        }
                     }
                 }
                 Ok(())

@@ -1,4 +1,4 @@
-import {FC, RefObject, SyntheticEvent, useEffect} from 'react'
+import {FC, useEffect} from 'react'
 import useOnMount from '../hooks/useOnMount'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
@@ -43,48 +43,83 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
             return
         }
 
-        const audioPlayer = document.getElementById('audio-player') as HTMLAudioElement
+        const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
 
         setAudioAmplifier(new AudioAmplifier(audioPlayer))
     })
 
 
     useEffect(() => {
-        const audioPlayer = document.getElementById('audio-player') as HTMLAudioElement
+        const audioPlayer = getAudioPlayer()
+        if (!audioPlayer) {
+            return
+        }
+
+        const fallbackDuration = Number(podcastEpisode?.podcastEpisode.total_time || 0)
+        const normalizeDuration = (duration: number) => {
+            if (Number.isFinite(duration) && duration > 0) {
+                return duration
+            }
+            return fallbackDuration > 0 ? fallbackDuration : 0
+        }
+
+        const updateMetadata = (el: HTMLMediaElement) => {
+            setMetadata({
+                currentTime: el.currentTime,
+                duration: normalizeDuration(el.duration),
+                percentage: 0
+            })
+        }
+
         const onTimeUpdate = (e: Event) => {
             const el = e.currentTarget as HTMLMediaElement
             setCurrentTimeUpdate(el.currentTime)
         }
         const onLoadedMetadata = (e: Event) => {
             const el = e.currentTarget as HTMLMediaElement
-            setMetadata({
-                currentTime: el.currentTime,
-                duration: el.duration,
-                percentage: 0
-            })
+            updateMetadata(el)
 
             if (isNaN(el.duration)) {
+                const currentEpisodeId = podcastEpisode?.podcastEpisode.episode_id
+                if (!currentEpisodeId) {
+                    return
+                }
                 client.GET('/api/v1/podcasts/episode/{id}', {
-                    params: { path: { id: podcastEpisode!.podcastEpisode.episode_id } }
+                    params: { path: { id: currentEpisodeId } }
                 }).then((response) => {
                     setMetadata({
                         currentTime: el.currentTime,
-                        duration: response.data!.total!,
+                        duration: response.data?.total || normalizeDuration(el.duration),
                         percentage: 0
                     })
                 })
             }
         }
+        const onDurationChange = (e: Event) => {
+            const el = e.currentTarget as HTMLMediaElement
+            updateMetadata(el)
+        }
+        const onCanPlay = (e: Event) => {
+            const el = e.currentTarget as HTMLMediaElement
+            updateMetadata(el)
+        }
 
 
         audioPlayer.addEventListener('timeupdate', onTimeUpdate)
         audioPlayer.addEventListener('loadedmetadata', onLoadedMetadata)
+        audioPlayer.addEventListener('durationchange', onDurationChange)
+        audioPlayer.addEventListener('canplay', onCanPlay)
 
         return () => {
             audioPlayer.removeEventListener('timeupdate', onTimeUpdate)
             audioPlayer.removeEventListener('loadedmetadata', onLoadedMetadata)
+            audioPlayer.removeEventListener('durationchange', onDurationChange)
+            audioPlayer.removeEventListener('canplay', onCanPlay)
         }
-    }, []);
+    }, [podcastEpisode?.podcastEpisode.episode_id, podcastEpisode?.podcastEpisode.total_time, setCurrentTimeUpdate, setMetadata]);
 
     return (
         <div></div>

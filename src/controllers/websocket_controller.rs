@@ -243,13 +243,11 @@ fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item>
     downloaded_episodes
         .iter()
         .map(|episode| {
+            let mime_type = get_mime_type_for_episode(&episode.local_url);
             let enclosure = EnclosureBuilder::default()
                 .url(&episode.local_url)
                 .length(episode.total_time.to_string())
-                .mime_type(format!(
-                    "audio/{}",
-                    PodcastEpisodeService::get_url_file_suffix(&episode.local_url).unwrap()
-                ))
+                .mime_type(mime_type)
                 .build();
 
             let itunes_extension = ITunesItemExtensionBuilder::default()
@@ -272,6 +270,22 @@ fn get_podcast_items_rss(downloaded_episodes: &[PodcastEpisodeDto]) -> Vec<Item>
                 .build()
         })
         .collect::<Vec<Item>>()
+}
+
+fn get_mime_type_for_episode(url: &str) -> String {
+    let extension = PodcastEpisodeService::get_url_file_suffix(url)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    match extension.as_str() {
+        "mp4" | "m4v" | "mov" | "webm" => format!("video/{extension}"),
+        "m4a" => "audio/mp4".to_string(),
+        "mp3" => "audio/mpeg".to_string(),
+        "aac" => "audio/aac".to_string(),
+        "ogg" => "audio/ogg".to_string(),
+        "wav" => "audio/wav".to_string(),
+        _ if extension.is_empty() => "application/octet-stream".to_string(),
+        _ => format!("audio/{extension}"),
+    }
 }
 
 fn get_categories(categories: Vec<String>) -> Vec<ITunesCategory> {
