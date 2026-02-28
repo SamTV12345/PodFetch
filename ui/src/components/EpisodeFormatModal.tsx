@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
 import {FC, ReactNode} from "react";
@@ -12,6 +13,7 @@ type InfoModalProps = {
 
 
 export const EpisodeFormatModal:FC<InfoModalProps> = ({open,setOpen, children, heading}) => {
+    const { t } = useTranslation()
 
     return createPortal(
         <div
@@ -30,7 +32,7 @@ export const EpisodeFormatModal:FC<InfoModalProps> = ({open,setOpen, children, h
                     className="absolute top-4 right-4 bg-transparent"
                     data-modal-hide="defaultModal">
                     <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
-                    <span className="sr-only">Close modal</span>
+                    <span className="sr-only">{t('closeModal')}</span>
                 </button>
 
                 <div className="mb-4">

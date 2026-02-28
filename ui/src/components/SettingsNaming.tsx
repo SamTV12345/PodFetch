@@ -191,7 +191,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <span className="ui-text">Sample episode format</span>
+                        <span className="ui-text">{t('sample-episode-format')}</span>
                         <CustomInput value={resultingEpisodeFormat} disabled={true}></CustomInput>
                     </div>
 
@@ -215,7 +215,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <span className="ui-text">Sample podcast format</span>
+                        <span className="ui-text">{t('sample-podcast-format')}</span>
                         <CustomInput value={resultingPodcastFormat} disabled={true}></CustomInput>
                     </div>
 

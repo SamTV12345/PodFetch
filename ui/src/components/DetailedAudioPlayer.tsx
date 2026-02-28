@@ -109,7 +109,7 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
                     <ul className="flex flex-wrap gap-2 border-b ui-border mb-6 ui-text-muted">
                         {isVideoEpisode && (
                             <li onClick={()=>setDetailedAudioPlayerTab('video')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'video' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
-                                Video
+                                {t('video')}
                             </li>
                         )}
                         <li onClick={()=>setDetailedAudioPlayerTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
@@ -130,7 +130,7 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
                                         className="w-full max-w-[960px] aspect-video rounded-xl bg-black/40 border ui-border overflow-hidden"
                                     />
                                     <p className="text-sm ui-text-muted">
-                                        Use the controls below for play/pause, seek and speed.
+                                        {t('media-controls-hint')}
                                     </p>
                                 </div>
                             )}

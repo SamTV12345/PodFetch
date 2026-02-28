@@ -113,7 +113,7 @@ if (config) {
                         }
                     }, config.oidcConfig.refreshInterval)
                 } else {
-                    enqueueSnackbar('Error during OIDC login: ' + resp.statusText, {variant: 'error'})
+                    enqueueSnackbar(i18n.t('oidc-login-error', { status: resp.statusText }), {variant: 'error'})
                 }
                 } catch (e) {
 

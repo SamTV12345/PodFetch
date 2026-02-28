@@ -48,7 +48,7 @@ export const PodcastEpisodeAlreadyPlayed = () => {
                     data-modal-hide="defaultModal"
                 >
                     <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
-                    <span className="sr-only">Close modal</span>
+                    <span className="sr-only">{t('closeModal')}</span>
                 </button>
 
                 <div className="ui-text mb-5">

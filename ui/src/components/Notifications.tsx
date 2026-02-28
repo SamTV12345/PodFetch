@@ -34,7 +34,7 @@ export const Notifications: FC = () => {
         <div className="flex items-center relative">
             <span className="material-symbols-outlined cursor-pointer ui-text hover:ui-text-hover">notifications</span>
 
-            {(notifications.isLoading || !notifications.data) ? <span>Loading</span> :notifications.data.length > 0 && <div className="absolute top-0 right-0 border-2 ui-border-contrast bg-red-700 h-3 w-3 rounded-full"/>}
+            {(notifications.isLoading || !notifications.data) ? <span>{t('loading')}</span> :notifications.data.length > 0 && <div className="absolute top-0 right-0 border-2 ui-border-contrast bg-red-700 h-3 w-3 rounded-full"/>}
         </div>
     )
 

@@ -58,7 +58,7 @@ export const ChangeRoleModal = () => {
     }
 
     return (
-        <Modal headerText={t('change-role-user', {name: selectedUser?.username})!} onCancel={() => {}} onAccept={() => {}} onDelete={() => {}} cancelText="Test" acceptText="Test123">
+        <Modal headerText={t('change-role-user', {name: selectedUser?.username})!} onCancel={() => {}} onAccept={() => {}} onDelete={() => {}} cancelText={t('cancel')} acceptText={t('change-role')}>
 
             {/* Role select */}
             <div className="mb-6">

@@ -3,7 +3,6 @@
   "system": "System",
   "light": "Licht",
   "dark": "Dunkel",
-
   "homepage": "Startseite",
   "podcasts": "Podcast",
   "all-subscriptions": "Alle Abonnements",
@@ -57,7 +56,7 @@
   "logout": "Abmelden",
   "oidc-login": "OIDC Login",
   "settings-saved": "Einstellungen gespeichert",
-  "settings-configure": "Podcast Einstellungen bearbeiten",
+  "settings-configure": "Einstellungen konfigurieren",
   "settings-not-enabled": "Einstellungen sind nicht für diesen Podcast aktiviert",
   "podcast-name": "Name des Podcasts",
   "new-podcast-added": "Neuer Podcast {{name}} hinzugefügt",
@@ -159,22 +158,19 @@
   "onlyFavored": "Nur favorisierte Podcasts",
   "onlyFavoredEpisodes": "Nur favorisierte Episoden",
   "available-episodes": "Verfügbare Episoden",
-
   "days-to-keep-explanation": "Gibt die Anzahl an Tage wieder, die ein Podcast aufbewahrt, d.h., auf dem Server gespeichert wird. Diese Einstellung ist nur aktiv, wenn die automatische Bereinigung aktiviert ist oder auf Bereinigung jetzt ausführen geklickt wird.",
   "auto-update-explanation": "PodFetch wird automatisch nach neuen Episoden suchen, wenn die Seite besucht wird. Wenn diese Option deaktiviert wird, müssen die Podcasts manuell aktualisiert werden, um nach neuen Episoden zu suchen. Das Update Intervall kann per Environment Variable konfiguriert werden.",
   "number-of-podcasts-to-download-explanation": "Gibt die Anzahl an Podcast Episoden wieder, die beim initialen hinzufügen eines Podcasts heruntergeladen werden. Bei 0 werden nur die Datenbankeinträge erstellt. Eine Option wie 10000 archiviert sämtliche Podcast Epsioden.",
   "auto-download-explanation": "Wenn diese Option aktiviert ist, so werden die Episoden automatisch heruntergeladen, wenn ein Podcast hinzugefügt wird.",
-  "standard-episode-format-explanation":"Gibt das Standardformat für die Episoden an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
-  "standard-podcast-format-explanation":"Gibt das Standardformat für die Podcasts an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
+  "standard-episode-format-explanation": "Gibt das Standardformat für die Episoden an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
+  "standard-podcast-format-explanation": "Gibt das Standardformat für die Podcasts an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benamung aus.",
   "colon-replacement-explanation": "Gibt an, durch welches Zeichen der Doppelpunkt ersetzt werden soll. Dies ist nützlich, da der Doppelpunkt nicht im Dateinamen verwendet werden kann.",
   "already-added": "Podcast {{name}} bereits hinzugefügt",
   "podcast-episode-deleted": "Podcast-Episode {{name}} gelöscht",
-
   "invite-status-all": "Alle Einladungsstatus",
   "invite-status-accepted": "Akzeptierte Einladungen",
   "invite-status-pending": "Ausstehende Einladungen",
   "invite-status-expired": "Abgelaufene Einladungen",
-
   "playlists": "Playlisten",
   "add-playlist": "Playlist hinzufügen",
   "create-playlist": "Playlist erstellen",
@@ -200,7 +196,7 @@
   "podcast-episode-played": "{{percentage}} abgespielt",
   "restart-playing": "Erneut abspielen",
   "start-time": "Startzeit",
-    "end-time": "Endzeit",
+  "end-time": "Endzeit",
   "you-already-listened": "Die Episode <name/> wurde bereits abgespielt. Möchtest du sie nochmal anhören oder eine andere Episode auswählen?",
   "podcast-not-found": "Podcast nicht gefunden",
   "original-rss-feed": "Original RSS Feed",
@@ -215,6 +211,10 @@
   "add": "Hinzufügen",
   "tag_one": "Tag",
   "tag_other": "Tags",
+  "tag-add-placeholder": "Tag hinzufügen",
+  "color-green": "Grün",
+  "color-red": "Rot",
+  "color-blue": "Blau",
   "unplayed": "Ungehört",
   "stats-title": "Statistiken",
   "stats-subtitle": "Deine Höraktivität im Zeitverlauf.",
@@ -234,9 +234,16 @@
   "weekday-friday": "Freitag",
   "weekday-saturday": "Samstag",
   "weekday-sunday": "Sonntag",
-
-
-
   "UPDATE_OF_ADMIN_NOT_ALLOWED": "Das Ändern des Administratoraccounts {{username}} ist nicht erlaubt",
-  "WRONG_USER_OR_PASSWORD": "Falscher Benutzername oder Passwort"
+  "WRONG_USER_OR_PASSWORD": "Falscher Benutzername oder Passwort",
+  "closeModal": "Modal schließen",
+  "error": "Fehler",
+  "sample-episode-format": "Beispiel Episodenformat",
+  "sample-podcast-format": "Beispiel Podcastformat",
+  "sidebar-navigation": "Seitenleisten-Navigation",
+  "oidc-login-error": "Fehler bei OIDC-Anmeldung: {{status}}",
+  "default-episode-format-explanation": "Gibt das Standardformat für die Episoden an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benennung aus.",
+  "video": "Video",
+  "media-controls-hint": "Nutze die Steuerung unten für Wiedergabe/Pause, Spulen und Geschwindigkeit.",
+  "playlist-name-description": "Gib deiner Playlist einen Namen, damit du sie später schnell wiederfindest."
 }
