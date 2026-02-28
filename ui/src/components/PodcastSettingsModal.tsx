@@ -69,7 +69,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
     return (
         <Dialog.Root>
             <Dialog.Trigger asChild>
-                <button className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)">
+                <button className="material-symbols-outlined inline cursor-pointer align-middle ui-icon hover:ui-icon-hover">
                     settings
                 </button>
             </Dialog.Trigger>
@@ -80,13 +80,13 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                 <Dialog.Content className="fixed inset-0 z-40 flex items-center justify-center p-4">
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))]"
+                        className="relative ui-surface max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))]"
                     >
-                        <Dialog.Title className="text-(--accent-color) text-2xl">
+                        <Dialog.Title className="ui-text-accent text-2xl">
                             {t('settings')}
                         </Dialog.Title>
 
-                        <Dialog.Description className="text-(--fg-color)">
+                        <Dialog.Description className="ui-text">
                             {t('settings-configure')}
                         </Dialog.Description>
 
@@ -96,10 +96,10 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             </span>
                         </Dialog.Close>
 
-                        <hr className="mb-5 mt-1 border-(--border-color)" />
+                        <hr className="mb-5 mt-1 ui-border" />
 
                         <div className="grid grid-cols-3 gap-5">
-                            <label className="col-span-2 text-(--fg-color)">
+                            <label className="col-span-2 ui-text">
                                 {t('episode-numbering')}
                             </label>
                             <Switcher
@@ -109,7 +109,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
 
-                            <label className="text-(--fg-color)">
+                            <label className="ui-text">
                                 {t('auto-cleanup')}
                             </label>
                             <CustomButtonSecondary
@@ -124,7 +124,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
 
-                            <label className="col-span-2 text-(--fg-color)">
+                            <label className="col-span-2 ui-text">
                                 {t('days-to-keep')}
                                 <SettingsInfoIcon
                                     headerKey="days-to-keep"
@@ -142,7 +142,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
 
-                            <label className="col-span-2 text-(--fg-color)">
+                            <label className="col-span-2 ui-text">
                                 {t('auto-update')}
                             </label>
                             <Switcher
@@ -152,7 +152,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
 
-                            <label className="col-span-2 text-(--fg-color)">
+                            <label className="col-span-2 ui-text">
                                 {t('auto-download')}
                             </label>
                             <Switcher
@@ -162,7 +162,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
 
-                            <label className="col-span-2 text-(--fg-color)">
+                            <label className="col-span-2 ui-text">
                                 {t('colon-replacement')}
                                 <SettingsInfoIcon
                                     headerKey="colon-replacement"
@@ -177,7 +177,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
 
-                            <label className="col-span-2 text-(--fg-color)">
+                            <label className="col-span-2 ui-text">
                                 {t('activated')}
                             </label>
                             <Switcher
@@ -190,7 +190,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 
                         <div className="mt-6 flex justify-end gap-3">
                             <Dialog.Close asChild>
-                                <button className="text-(--fg-color)">
+                                <button className="ui-text">
                                     {t('cancel')}
                                 </button>
                             </Dialog.Close>

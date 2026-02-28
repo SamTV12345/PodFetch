@@ -23,7 +23,7 @@ export const Settings = () => {
 
     return (
         <div>
-            <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10 text-(--fg-color)">
+            <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10 ui-text">
                 <div className="flex flex-col gap-2 xs:contents mb-4">
                     <div>
                         <label className="mr-6" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>

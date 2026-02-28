@@ -143,22 +143,22 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
 
     return (
         <div aria-controls="playbar" className="flex items-center gap-3">
-            <span className={`text-xs text-right text-(--fg-color) w-12 ${className}`}>{currentTime}</span>
+            <span className={`text-xs text-right ui-text w-12 ${className}`}>{currentTime}</span>
 
             <div
-                className="grow bg-(--slider-bg-color) cursor-pointer h-1"
+                className="grow ui-slider-surface cursor-pointer h-1"
                 ref={wrapper}
                 onClick={handleWrapperClick}
                 onMouseDown={handleMouseDown}
             >
-                <div className="relative bg-(--slider-fg-color) h-1 text-right" style={{width: displayPercentage + '%'}}>
+                <div className="relative ui-slider-fill h-1 text-right" style={{width: displayPercentage + '%'}}>
                     <span
-                        className="absolute -right-1 -top-1 bg-(--slider-fg-color) h-3 w-3 rounded-full cursor-grab active:cursor-grabbing">
+                        className="absolute -right-1 -top-1 ui-slider-fill h-3 w-3 rounded-full cursor-grab active:cursor-grabbing">
                     </span>
                 </div>
             </div>
 
-            <div className={`text-xs text-(--fg-color) w-12 ${className}`}>{totalDuration}</div>
+            <div className={`text-xs ui-text w-12 ${className}`}>{totalDuration}</div>
         </div>
     )
 }

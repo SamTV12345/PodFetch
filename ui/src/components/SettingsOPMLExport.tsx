@@ -34,7 +34,7 @@ export const SettingsOPMLExport: FC = () => {
     }
 
     return (
-        <div className="grid grid-cols-1 xs:grid-cols-[auto_1fr] items-center justify-items-start gap-x-20 gap-y-4 xs:gap-y-6 mb-10 text-(--fg-color)">
+        <div className="grid grid-cols-1 xs:grid-cols-[auto_1fr] items-center justify-items-start gap-x-20 gap-y-4 xs:gap-y-6 mb-10 ui-text">
             <span>{t('export-with-local-urls')}</span>
             <CustomButtonSecondary className="flex items-center" onClick={() => {
                 downloadOPML('local')

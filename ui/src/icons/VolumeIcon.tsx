@@ -12,7 +12,7 @@ export const VolumeIcon: FC<VolumeProps> = ({ max, volume }) => {
     const [muted, setMuted] = useState(false)
 
     return muted ? (
-        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl text-(--fg-color) hover:text-(--fg-color-hover)" onClick={() => {
+        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl ui-text hover:ui-text-hover" onClick={() => {
             const audioPlayer = getAudioPlayer()
             if (!audioPlayer) {
                 return
@@ -21,7 +21,7 @@ export const VolumeIcon: FC<VolumeProps> = ({ max, volume }) => {
             setMuted(false)
         }}>volume_off</span>
     ) : (
-        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl text-(--fg-color) hover:text-(--fg-color-hover) inline-block" onClick={() => {
+        <span className="material-symbols-outlined filled cursor-pointer text-xl lg:text-2xl ui-text hover:ui-text-hover inline-block" onClick={() => {
             const audioPlayer = getAudioPlayer()
             if (!audioPlayer) {
                 return

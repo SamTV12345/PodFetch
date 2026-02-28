@@ -28,7 +28,7 @@ export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultVal
 
     return (
         <Select.Root disabled={disabled} defaultValue={defaultValue} name={name} onValueChange={onChange} value={value}>
-            <Select.Trigger className={`flex items-center border border-(--border-color) pl-6 pr-2 py-2 rounded-full text-sm text-(--select-text-color) ${className}`} id={id}>
+            <Select.Trigger className={`flex items-center border ui-border pl-6 pr-2 py-2 rounded-full text-sm text-(--select-text-color) ${className}`} id={id}>
                 {iconName &&
                     <span className="icon material-symbols-outlined align-middle leading-[1.25rem]! -ml-2 mr-1 text-(--select-icon-color)">{iconName}</span>
                 }
@@ -43,12 +43,12 @@ export const CustomSelect: FC<CustomSelectProps> = ({ className = '', defaultVal
             </Select.Trigger>
 
             <Select.Portal>
-                <Select.Content className="overflow-hidden bg-(--bg-color) rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-50">
+                <Select.Content className="overflow-hidden ui-surface rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-50">
                     <Select.ScrollUpButton />
 
                     <Select.Viewport className="p-2">
                         {options.map((option) =>
-                            <Select.Item className="relative pl-6 pr-4 py-1.5 rounded-sm text-sm text-(--select-text-color) hover:bg-(--accent-color) hover:text-(--bg-color)" key={option.value} value={option.value}>
+                            <Select.Item className="relative pl-6 pr-4 py-1.5 rounded-sm text-sm text-(--select-text-color) hover:ui-bg-accent hover:ui-text-inverse" key={option.value} value={option.value}>
                                 <Select.ItemIndicator className="absolute left-0">
                                     <span className="material-symbols-outlined align-middle leading-none! text-xl!">check</span>
                                 </Select.ItemIndicator>

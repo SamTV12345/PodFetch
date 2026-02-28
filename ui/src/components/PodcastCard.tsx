@@ -90,20 +90,20 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
 
                     <div>
                         <span
-                            className="block font-bold leading-[1.2] mb-2 text-(--fg-color) transition-colors group-hover:text-(--fg-color-hover)">{podcast.name}</span>
+                            className="block font-bold leading-[1.2] mb-2 ui-text transition-colors group-hover:ui-text-hover">{podcast.name}</span>
                         <span
-                            className="block leading-[1.2] text-sm text-(--fg-secondary-color)">{podcast.author}</span>
-                        <span className="flex gap-2 mb-2 text-(--fg-color)"><LuTags className="text-(--fg-secondary-color) text-2xl"/> <span className="self-center mb-2 text-(--fg-color)">{podcast.tags.length}</span> {t('tag', {count: tags.data?.length ?? 0})}</span>
+                            className="block leading-[1.2] text-sm ui-text-muted">{podcast.author}</span>
+                        <span className="flex gap-2 mb-2 ui-text"><LuTags className="ui-text-muted text-2xl"/> <span className="self-center mb-2 ui-text">{podcast.tags.length}</span> {t('tag', {count: tags.data?.length ?? 0})}</span>
                     </div>
                 </Link>
             </Context.Trigger>
             <Context.Portal>
-                <Context.Content className="bg-(--bg-color) p-5" onClick={(e)=>{
+                <Context.Content className="ui-surface p-5" onClick={(e)=>{
                     e.preventDefault()
                 }}>
-                    <h2 className="text-(--fg-color)">Tags</h2>
-                    <hr className="mt-1 border-[1px] border-(--border-color) mb-2"/>
-                    <div className="flex gap-3 flex-col text-(--fg-color)">
+                    <h2 className="ui-text">Tags</h2>
+                    <hr className="mt-1 border-[1px] ui-border mb-2"/>
+                    <div className="flex gap-3 flex-col ui-text">
                     {
                      tags.data?.map(t=>{
                          return <Context.Item key={t.id} onClick={(e)=>{

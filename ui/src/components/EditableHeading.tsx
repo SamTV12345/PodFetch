@@ -40,7 +40,7 @@ export const EditableHeading: FC<EditableHeadingProps> = ({initialText, allowedT
                     }
                 }}], (oldData: components['schemas']['PodcastDto'])=>({...oldData, name: text}))
             })
-        }} className="inline align-middle mr-2 font-bold leading-none! text-3xl xs:text-4xl text-(--fg-color)" contentEditable={allowedToEdit} suppressContentEditableWarning={allowedToEdit} onInput={(event)=>{
+        }} className="inline align-middle mr-2 font-bold leading-none! text-3xl xs:text-4xl ui-text" contentEditable={allowedToEdit} suppressContentEditableWarning={allowedToEdit} onInput={(event)=>{
             // @ts-ignore
             setText(event.target.textContent)
         }}>

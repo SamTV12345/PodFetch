@@ -12,7 +12,7 @@ export const UserAdminPage = () => {
                 <Heading1 className="">{t('administration')}</Heading1>
 
                 {/* Tabs */}
-                <ul className="flex gap-2 border-b lg:border-none border-(--border-color) text-sm text-(--fg-secondary-color) w-full lg:w-auto  settings-selector">
+                <ul className="flex gap-2 border-b lg:border-none ui-border text-sm ui-text-muted w-full lg:w-auto  settings-selector">
                     <li className={`cursor-pointer inline-block px-2 py-3`}>
                         <NavLink to="users" className="block pb-1">
                                 <span className="flex items-center gap-2">

@@ -117,9 +117,9 @@ export const UserAdminInvites = () => {
                 xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
                 md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
             `}>
-                <table className="text-left text-sm text-(--fg-color) w-full">
+                <table className="text-left text-sm ui-text w-full">
                     <thead>
-                        <tr className="border-b border-(--border-color)">
+                        <tr className="border-b ui-border">
                             <th scope="col" className="pr-2 py-3">
                                 ID
                             </th>
@@ -141,9 +141,9 @@ export const UserAdminInvites = () => {
                     </thead>
                     <tbody>
                         {filteredInvites.map(i=>
-                            <tr className="border-b border-(--border-color)" key={i.id}>
+                            <tr className="border-b ui-border" key={i.id}>
                                 <td className="pr-2 py-4">
-                                    <button className="text-left text-(--fg-color) hover:text-(--fg-color-hover)" onClick={() => {
+                                    <button className="text-left ui-text hover:ui-text-hover" onClick={() => {
                                         inviteLinkMutation.mutateAsync({
                                             parseAs: "text",
                                             params: {
@@ -186,7 +186,7 @@ export const UserAdminInvites = () => {
                                     )}
                                 </td>
                                 <td className="pl-2 py-4">
-                                    <button className="flex items-center float-right text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)" onClick={() => {
+                                    <button className="flex items-center float-right ui-text-danger hover:ui-text-danger-hover" onClick={() => {
                                         deleteInviteMutation.mutateAsync({
                                             params: {
                                                 path: {

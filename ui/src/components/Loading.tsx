@@ -15,7 +15,7 @@ export const Loading: FC<LoadingSpinnerProps> = ({className}) => {
             <div className="flex items-center gap-3" role="status">
                 <Spinner/>
 
-                <span className="text-(--fg-color)">{t('loading')}...</span>
+                <span className="ui-text">{t('loading')}...</span>
             </div>
         </div>
     )

@@ -29,8 +29,8 @@ export const PlaylistPage = () => {
 
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 className="text-xl font-semibold text-(--fg-color)">{t('playlists')}</h2>
-                    <div className="text-sm text-(--fg-secondary-color)">
+                    <h2 className="text-xl font-semibold ui-text">{t('playlists')}</h2>
+                    <div className="text-sm ui-text-muted">
                         {t('playlist-page-description')}
                     </div>
                 </div>
@@ -47,14 +47,14 @@ export const PlaylistPage = () => {
             </div>
 
             {playlistsQuery.isLoading && (
-                <div className="rounded-xl border border-(--border-color) p-6 text-(--fg-secondary-color)">
+                <div className="rounded-xl border ui-border p-6 ui-text-muted">
                     {t('loading-playlists')}
                 </div>
             )}
 
             {!playlistsQuery.isLoading && playlist.length === 0 && (
-                <div className="rounded-xl border border-dashed border-(--border-color) p-8 text-center">
-                    <div className="text-(--fg-secondary-color)">{t('no-playlists-yet')}</div>
+                <div className="rounded-xl border border-dashed ui-border p-8 text-center">
+                    <div className="ui-text-muted">{t('no-playlists-yet')}</div>
                     <CustomButtonSecondary
                         className="mt-4"
                         onClick={() => {
@@ -71,11 +71,11 @@ export const PlaylistPage = () => {
                 {playlist.map(item => (
                     <div
                         key={item.id}
-                        className="rounded-xl border border-(--border-color) bg-(--bg-color) p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+                        className="rounded-xl border ui-border ui-surface p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
                     >
                         <div className="mb-3">
-                            <div className="line-clamp-1 text-lg font-semibold text-(--fg-color)">{item.name}</div>
-                            <div className="text-xs text-(--fg-secondary-color)">
+                            <div className="line-clamp-1 text-lg font-semibold ui-text">{item.name}</div>
+                            <div className="text-xs ui-text-muted">
                                 {t('item_other', {count: item.items.length})}
                             </div>
                         </div>
@@ -101,7 +101,7 @@ export const PlaylistPage = () => {
                                 {t('edit')}
                             </CustomButtonSecondary>
                             <button
-                                className="ml-auto flex items-center text-sm text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)"
+                                className="ml-auto flex items-center text-sm ui-text-danger hover:ui-text-danger-hover"
                                 onClick={async () => {
                                     await deletePlaylistMutation.mutateAsync({
                                         params: {

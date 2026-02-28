@@ -10,7 +10,7 @@ export const Header = () => {
             <LanguageDropdown />
             <ThemeSelector />
             <Notifications />
-            <div className="hidden xs:block border-r border-r-(--border-color) h-full w-1"></div>
+            <div className="hidden xs:block border-r ui-border-r h-full w-1"></div>
             <UserMenu />
         </div>
     )

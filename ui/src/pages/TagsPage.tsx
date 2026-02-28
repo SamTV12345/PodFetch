@@ -18,13 +18,13 @@ export const TagsPage = ()=>{
     return (
         <>
         <Heading1>{t('tag_other')}</Heading1>
-            <table className="text-left text-sm text-(--fg-color)">
+            <table className="text-left text-sm ui-text">
                 <thead>
                 <tr className="border-b border-stone-300">
-                    <th scope="col" className="px-2 py-3 text-(--fg-color)">
+                    <th scope="col" className="px-2 py-3 ui-text">
                         {t('tag_one')}
                     </th>
-                    <th scope="col" className="px-2 py-3 text-(--fg-color)">
+                    <th scope="col" className="px-2 py-3 ui-text">
                         {t('actions')}
                     </th>
                 </tr>
@@ -43,7 +43,7 @@ export const TagsPage = ()=>{
                         :
                     tags.data.map(tag=> {
                         return <tr className="border-b border-stone-300 " key={tag.id}>
-                            <td className="px-2 py-4 flex items-center text-(--fg-color)">
+                            <td className="px-2 py-4 flex items-center ui-text">
                                 <CustomInput onBlur={()=>{
                                     updateTagMutation.mutate({
                                         params: {
@@ -69,7 +69,7 @@ export const TagsPage = ()=>{
                                 }}/>
                             </td>
                             <td>
-                                <button className="px-2 py-1 text-(--fg-color) rounded-md bg-red-700" onClick={() => {
+                                <button className="px-2 py-1 ui-text rounded-md bg-red-700" onClick={() => {
                                     deleteTagMutation.mutateAsync({
                                         params: {
                                             path: {

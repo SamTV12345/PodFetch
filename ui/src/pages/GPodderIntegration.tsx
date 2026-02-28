@@ -27,35 +27,35 @@ export const GPodderIntegration = ()=> {
     }
 
 
-    return <table className="text-left text-sm w-full overflow-y-auto text-(--fg-color)">
+    return <table className="text-left text-sm w-full overflow-y-auto ui-text">
         <thead>
         <tr className="border-b border-stone-300">
-            <th scope="col" className="pr-2 py-3 text-(--fg-color)">
+            <th scope="col" className="pr-2 py-3 ui-text">
                 #
             </th>
-            <th scope="col" className="px-2 py-3 text-(--fg-color)">
+            <th scope="col" className="px-2 py-3 ui-text">
                 {t('device')}
             </th>
-            <th scope="col" className="px-2 py-3 text-(--fg-color)">
+            <th scope="col" className="px-2 py-3 ui-text">
                 {t('podcasts')}
             </th>
-            <th scope="col" className="px-2 py-3 text-(--fg-color)">
+            <th scope="col" className="px-2 py-3 ui-text">
                 {t('actions')}
             </th>
         </tr>
         </thead>
         <tbody className="">
         {(gpodder.isLoading || !gpodder.data)? Array.from({length: 5}).map((_, index)=><tr key={index}>
-                <td className="px-2 py-4 text-(--fg-color)"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
-                <td className="px-2 py-4  text-(--fg-color)"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
-                <td className="px-2 py-4  text-(--fg-color)"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
+                <td className="px-2 py-4 ui-text"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
+                <td className="px-2 py-4  ui-text"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
+                <td className="px-2 py-4  ui-text"><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading}/></td>
                 <td><CustomButtonPrimary><LoadingSkeletonSpan height="30px" loading={gpodder.isLoading} width="100px"/></CustomButtonPrimary></td>
             </tr>):
             gpodder.data.map((int, index)=>{
                 return <tr key={index}>
-                    <td className="px-2 py-4 text-(--fg-color)">{index}</td>
-                    <td className="px-2 py-4  text-(--fg-color)">{int.device}</td>
-                    <td className="px-2 py-4  text-(--fg-color)">{int.podcast}</td>
+                    <td className="px-2 py-4 ui-text">{index}</td>
+                    <td className="px-2 py-4  ui-text">{int.device}</td>
+                    <td className="px-2 py-4  ui-text">{int.podcast}</td>
                     <td><CustomButtonPrimary onClick={()=>addPodcast(int.podcast)}>{t('add')}</CustomButtonPrimary></td>
                 </tr>
                 }

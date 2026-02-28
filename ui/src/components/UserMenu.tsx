@@ -11,8 +11,8 @@ import {ADMIN_ROLE} from "../models/constants";
 const AccountTrigger = ()=>{
     const username = useCommon(state => state.loginData)
 
-    return <><span className="hidden md:block text-(--fg-color)">{username?.username}</span><span
-        className="material-symbols-outlined text-(--fg-color) hover:text-(--fg-color-hover)">account_circle</span></>
+    return <><span className="hidden md:block ui-text">{username?.username}</span><span
+        className="material-symbols-outlined ui-text hover:ui-text-hover">account_circle</span></>
 }
 
 export const UserMenu: FC = () => {

@@ -159,12 +159,12 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     self-center
                     grid grid-cols-[7rem_1fr_3fr] gap-x-4 items-center
                 ">
-                    <span className="text-sm text-(--fg-secondary-color)">{formatTime(episode.podcastEpisode.date_of_recording)}</span>
-                    <span className="text-sm text-(--fg-secondary-color)">{playedTime}</span>
+                    <span className="text-sm ui-text-muted">{formatTime(episode.podcastEpisode.date_of_recording)}</span>
+                    <span className="text-sm ui-text-muted">{playedTime}</span>
 
                     <span className="flex gap-5">
-                    <span title={t('download-to-server') as string} className={`material-symbols-outlined text-(--fg-icon-color)
-                     ${episode.podcastEpisode.status ? 'cursor-auto filled' : 'cursor-pointer hover:text-(--fg-icon-color-hover)'}`} onClick={(e)=>{
+                    <span title={t('download-to-server') as string} className={`material-symbols-outlined ui-icon
+                     ${episode.podcastEpisode.status ? 'cursor-auto filled' : 'cursor-pointer hover:ui-icon-hover'}`} onClick={(e)=>{
                         // Prevent icon click from triggering info modal
                         e.stopPropagation()
 
@@ -185,7 +185,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                         })
                     }}>cloud_download</span>
                         {/* Check icon */}
-                        <span className="material-symbols-outlined text-(--fg-icon-color) active:scale-95" onClick={(e)=>{
+                        <span className="material-symbols-outlined ui-icon active:scale-95" onClick={(e)=>{
                             // Prevent icon click from triggering info modal
                             e.stopPropagation()
                             logCurrentPlaybackTime(episode.podcastEpisode.episode_id, episode.podcastHistoryItem?.total || 0)
@@ -212,7 +212,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                             })
                             setSelectedEpisodes(mappedEpisodes)
                         }}>check</span>
-                        <span className={"material-symbols-outlined text-(--fg-color) " + (episode.podcastEpisode.favored && 'filled')}
+                        <span className={"material-symbols-outlined ui-text " + (episode.podcastEpisode.favored && 'filled')}
                               onClick={async () => {
                                   await favorEpisodeMutation.mutateAsync({
                                       params: {
@@ -256,7 +256,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 <span className="
                     col-start-1 col-end-2 row-start-2 row-end-3
                     xs:col-start-2 xs:col-end-3
-                    font-bold leading-tight  text-(--fg-color) transition-color group-hover:text-(--fg-color-hover)
+                    font-bold leading-tight  ui-text transition-color group-hover:ui-text-hover
                 "  onClick={() => {
                     setInfoModalPodcast(episode.podcastEpisode)
                     setInfoModalPodcastOpen(true)
@@ -267,7 +267,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     line-clamp-3
                     col-start-1 col-end-3 row-start-3 row-end-4
                     xs:col-start-2 xs:col-end-3
-                    leading-[1.75] text-sm text-(--fg-color) transition-color group-hover:text-(--fg-color-hover)
+                    leading-[1.75] text-sm ui-text transition-color group-hover:ui-text-hover
                 "  onClick={() => {
                     setInfoModalPodcast(episode.podcastEpisode)
                     setInfoModalPodcastOpen(true)
@@ -277,7 +277,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 <span className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'text-gray-500'}
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
-                    self-center material-symbols-outlined cursor-pointer !text-5xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90
+                    self-center material-symbols-outlined cursor-pointer !text-5xl ui-text hover:ui-text-hover active:scale-90
                 `} key={episode.podcastEpisode.episode_id + 'icon'} onClick={async (e) => {
                     // Prevent icon click from triggering info modal
                     e.stopPropagation()

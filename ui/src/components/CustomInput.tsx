@@ -9,7 +9,7 @@ export const CustomInput: FC<InputHTMLAttributes<HTMLInputElement> &  {
         return <LoadingSkeletonSpan height="30px" width="100px" text={""} loading={props.loading}/>
     }
     return (
-        <input onBlur={onBlur} autoComplete={autoComplete} disabled={disabled} className={"bg-(--input-bg-color)" +
-            " px-4 py-2 rounded-lg text-sm text-(--input-fg-color) placeholder:text-(--input-fg-color-disabled) " + className} id={id} name={name} placeholder={placeholder} onChange={onChange} value={value} type={type} required={required} {...props} />
+        <input onBlur={onBlur} autoComplete={autoComplete} disabled={disabled} className={"ui-input-surface" +
+            " px-4 py-2 rounded-lg text-sm ui-input-text placeholder:ui-input-text-disabled " + className} id={id} name={name} placeholder={placeholder} onChange={onChange} value={value} type={type} required={required} {...props} />
     )
 }

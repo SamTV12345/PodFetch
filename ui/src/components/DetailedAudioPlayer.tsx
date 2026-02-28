@@ -81,8 +81,8 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
 
 
     return createPortal(
-        <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 bg-(--bg-color) md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
-        <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl text-(--fg-color) hover:text-(--fg-color-hover)"
+        <div tabIndex={-1} aria-hidden="true" className="grid grid-rows-[1fr_auto] fixed inset-0 ui-surface md:h-full overflow-x-hidden overflow-y-auto z-30" onClick={event => event.stopPropagation()}>
+        <span className="material-symbols-outlined absolute top-2 left-2 cursor-pointer text-4xl ui-text hover:ui-text-hover"
               onClick={() => setDetailedAudioPlayerOpen(false)}>close_fullscreen</span>
 
             {/* Episode information */}
@@ -99,23 +99,23 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
                     <div className="aspect-square bg-center bg-cover md:mb-4 rounded-xl h-40 md:h-60 lg:h-80" style={{ backgroundImage: `url("${currentPodcastEpisode?.podcastEpisode.local_image_url}")` }}></div>
 
                     <div className="text-center xs:text-left">
-                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl text-(--fg-color)">{currentPodcastEpisode?.podcastEpisode.name}</span>
-                        <span className="block lg:text-lg text-(--fg-color)">{currentPodcast && currentPodcast.name}</span>
+                        <span className="block font-bold leading-tight mb-2 text-xl lg:text-2xl ui-text">{currentPodcastEpisode?.podcastEpisode.name}</span>
+                        <span className="block lg:text-lg ui-text">{currentPodcast && currentPodcast.name}</span>
                     </div>
                 </div>
 
                 {/* Description with scroll */}
                 <div className="">
-                    <ul className="flex flex-wrap gap-2 border-b border-(--border-color) mb-6 text-(--fg-secondary-color)">
+                    <ul className="flex flex-wrap gap-2 border-b ui-border mb-6 ui-text-muted">
                         {isVideoEpisode && (
-                            <li onClick={()=>setDetailedAudioPlayerTab('video')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'video' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                            <li onClick={()=>setDetailedAudioPlayerTab('video')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'video' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
                                 Video
                             </li>
                         )}
-                        <li onClick={()=>setDetailedAudioPlayerTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                        <li onClick={()=>setDetailedAudioPlayerTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
                             {t('description')}
                         </li>
-                        <li onClick={()=>setDetailedAudioPlayerTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                        <li onClick={()=>setDetailedAudioPlayerTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
                             {t('chapters')}
                         </li>
                     </ul>
@@ -127,15 +127,15 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
                                 <div className={selectedTab === 'video' ? "space-y-4 mb-4" : "hidden"}>
                                     <div
                                         id="video-player-slot"
-                                        className="w-full max-w-[960px] aspect-video rounded-xl bg-black/40 border border-(--border-color) overflow-hidden"
+                                        className="w-full max-w-[960px] aspect-video rounded-xl bg-black/40 border ui-border overflow-hidden"
                                     />
-                                    <p className="text-sm text-(--fg-secondary-color)">
+                                    <p className="text-sm ui-text-muted">
                                         Use the controls below for play/pause, seek and speed.
                                     </p>
                                 </div>
                             )}
                         {selectedTab === 'description' ? (
-                            <div className="text-sm md:text-base leading-7 text-(--fg-color) max-w-full break-words [overflow-wrap:anywhere] [word-break:break-word] [&_a]:text-(--accent-color) [&_a:hover]:text-(--fg-color) [&_p]:mb-4 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1"
+                            <div className="text-sm md:text-base leading-7 ui-text max-w-full break-words [overflow-wrap:anywhere] [word-break:break-word] [&_a]:ui-text-accent [&_a:hover]:ui-text [&_p]:mb-4 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:mb-1"
                                  dangerouslySetInnerHTML={currentPodcastEpisode?.podcastEpisode.description ? removeHTML(currentPodcastEpisode.podcastEpisode.description) : { __html: '' }} />
                         ): selectedTab === 'chapters' ? (<PodcastEpisodeChapterTable podcastEpisode={currentPodcastEpisode.podcastEpisode}/>) : null}
                         </>
@@ -145,7 +145,7 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
             </div>
 
             {/* Player */}
-            <div className="bg-(--bg-color) px-2 xs:p-4">
+            <div className="ui-surface px-2 xs:p-4">
                 <PlayerProgressBar className="mb-2" currentPodcastEpisode={currentPodcastEpisode} />
 
                 <div className="

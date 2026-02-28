@@ -59,15 +59,15 @@ export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ audioAmplifier
                 setVolume(newVolume)
                 applyVolumeToPlayer(newVolume)
             }}>
-                <Slider.Track className="relative grow bg-(--slider-bg-color) h-0.5">
-                    <Slider.Range className="absolute bg-(--slider-fg-color) h-full"/>
+                <Slider.Track className="relative grow ui-slider-surface h-0.5">
+                    <Slider.Range className="absolute ui-slider-fill h-full"/>
                 </Slider.Track>
 
-                <Slider.Thumb className="block bg-(--slider-fg-color) h-2 w-2 rounded-full"/>
+                <Slider.Thumb className="block ui-slider-fill h-2 w-2 rounded-full"/>
             </Slider.Root>
 
             {/* Fixed width to avoid layout shift when volume changes */}
-            <span className="inline-block text-xs text-(--fg-color) w-16">{volume}%</span>
+            <span className="inline-block text-xs ui-text w-16">{volume}%</span>
         </div>
     )
 }

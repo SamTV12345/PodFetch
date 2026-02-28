@@ -32,9 +32,9 @@ export const Notifications: FC = () => {
 
     const trigger = () => (
         <div className="flex items-center relative">
-            <span className="material-symbols-outlined cursor-pointer text-(--fg-color) hover:text-(--fg-color-hover)">notifications</span>
+            <span className="material-symbols-outlined cursor-pointer ui-text hover:ui-text-hover">notifications</span>
 
-            {(notifications.isLoading || !notifications.data) ? <span>Loading</span> :notifications.data.length > 0 && <div className="absolute top-0 right-0 border-2 border-(--bg-color) bg-red-700 h-3 w-3 rounded-full"/>}
+            {(notifications.isLoading || !notifications.data) ? <span>Loading</span> :notifications.data.length > 0 && <div className="absolute top-0 right-0 border-2 ui-border-contrast bg-red-700 h-3 w-3 rounded-full"/>}
         </div>
     )
 
@@ -60,7 +60,7 @@ export const Notifications: FC = () => {
 
         if (notifications.data.length === 0) {
             return (
-                <div className="text-center place-items-center flex px-5 text-sm text-(--fg-color-disabled)">
+                <div className="text-center place-items-center flex px-5 text-sm ui-text-disabled">
                     {t('no-notifications')}
                 </div>
             )
@@ -68,7 +68,7 @@ export const Notifications: FC = () => {
             return (
                 <AnimatePresence>
                     {notifications.data.map((notification) => (
-                        <motion.div className="grid grid-cols-[1fr_auto] gap-2 last-of-type:border-b-0! border-b-(--border-color) px-5 text-sm text-(--fg-color)"
+                        <motion.div className="grid grid-cols-[1fr_auto] gap-2 last-of-type:border-b-0! ui-border-b px-5 text-sm ui-text"
                         key={notification.id}
                         initial={false}
                         animate={{ borderBottomWidth: '1px', maxHeight: '100%',  opacity: 1, paddingTop: '0.75rem', paddingBottom: '0.75rem' }}
@@ -82,7 +82,7 @@ export const Notifications: FC = () => {
                         }}>
                             <NotificationFormatter {...notification} />
 
-                            <span className="material-symbols-outlined cursor-pointer text-(--modal-close-color) hover:text-(--modal-close-color-hover)" onClick={()=>{dismissNotification(notification)}}>close</span>
+                            <span className="material-symbols-outlined cursor-pointer ui-modal-close hover:ui-modal-close-hover" onClick={()=>{dismissNotification(notification)}}>close</span>
                         </motion.div>
                     ))}
                 </AnimatePresence>
@@ -97,11 +97,11 @@ export const Notifications: FC = () => {
             </Popover.Trigger>
 
             <Popover.Portal>
-                <Popover.Content className="relative bg-(--bg-color) max-h-80 max-w-xs overflow-y-auto py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
+                <Popover.Content className="relative ui-surface max-h-80 max-w-xs overflow-y-auto py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
                     <div className="flex w-full">
                         <div className="grow"/>
-                         <button className="border-b-(--border-color) flex active:scale-95
-                         text-sm text-(--fg-color) border-[2px] rounded-2xl  pl-2 pr-2 float-right mr-3 mb-3" onClick={()=>{
+                         <button className="ui-border-b flex active:scale-95
+                         text-sm ui-text border-[2px] rounded-2xl  pl-2 pr-2 float-right mr-3 mb-3" onClick={()=>{
                              notifications.data?.forEach(n=>{
                                     dismissNotification(n)
                              })
@@ -111,7 +111,7 @@ export const Notifications: FC = () => {
                     <div>
                        <DisplayNotification />
                     </div>
-                    <Popover.Arrow className="fill-(--bg-color)" />
+                    <Popover.Arrow className="ui-fill-inverse" />
                 </Popover.Content>
             </Popover.Portal>
         </Popover.Root>

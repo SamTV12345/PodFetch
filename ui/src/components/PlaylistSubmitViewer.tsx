@@ -9,13 +9,13 @@ export const PlaylistSubmitViewer = ({playlistName, episodeCount}: PlaylistSubmi
     const {t} = useTranslation()
 
     return (
-        <div className="mt-4 rounded-xl border border-(--border-color) p-4">
-            <div className="text-xs text-(--fg-secondary-color)">{t('playlist-name')}</div>
-            <div className="mt-1 text-base text-(--fg-color) font-medium">
+        <div className="mt-4 rounded-xl border ui-border p-4">
+            <div className="text-xs ui-text-muted">{t('playlist-name')}</div>
+            <div className="mt-1 text-base ui-text font-medium">
                 {playlistName.length > 0 ? playlistName : "—"}
             </div>
-            <div className="mt-4 text-xs text-(--fg-secondary-color)">{t('available-episodes')}</div>
-            <div className="mt-1 text-base text-(--fg-color) font-medium">
+            <div className="mt-4 text-xs ui-text-muted">{t('available-episodes')}</div>
+            <div className="mt-1 text-base ui-text font-medium">
                 {episodeCount}
             </div>
         </div>

@@ -42,15 +42,15 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode,  po
                 {/* Progress bar */
                     podcastHistory?.total && podcastHistory.position && (
                     <div className="absolute bottom-0 inset-x-0 bg-stone-900">
-                        <div className="bg-(--accent-color) h-1.5" style={{width: (playPercentage + "%")}}></div>
+                        <div className="ui-bg-accent h-1.5" style={{width: (playPercentage + "%")}}></div>
                     </div>
                 )}
             </div>
 
             {/* Titles */}
             <div>
-                <span className="block font-bold leading-[1.2] mb-2 text-sm text-(--fg-color) transition-colors group-hover:text-(--fg-color-hover) break-all">{podcastEpisode.name}</span>
-                <span className="block leading-[1.2] text-xs text-(--fg-color)">{podcast.name}</span>
+                <span className="block font-bold leading-[1.2] mb-2 text-sm ui-text transition-colors group-hover:ui-text-hover break-all">{podcastEpisode.name}</span>
+                <span className="block leading-[1.2] text-xs ui-text">{podcast.name}</span>
             </div>
         </div>
     )

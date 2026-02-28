@@ -65,7 +65,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
                 <CustomInput className="pl-10 w-full" id="search-input" onChange={(v) =>
                     setSearchName(v.target.value)} placeholder={t('search-episodes')!} type="text" value={searchName} />
 
-                <span className="material-symbols-outlined absolute left-2 text-(--input-icon-color)">search</span>
+                <span className="material-symbols-outlined absolute left-2 ui-input-icon">search</span>
             </div>
 
             {/* Results */
@@ -76,7 +76,7 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
             ) : searchResults.length === 0 ? (
                 <div className="grid place-items-center py-4">
                     {searchName ? (
-                        <span className="p-3 text-(--fg-secondary-color)">{t('no-results-found-for')} "<span className="text-(--fg-color)">{searchName}</span>"</span>
+                        <span className="p-3 ui-text-muted">{t('no-results-found-for')} "<span className="ui-text">{searchName}</span>"</span>
                     ) : (
                         showBlankState && <EmptyResultIcon />
                     )}
@@ -99,9 +99,9 @@ export const EpisodeSearch: FC<EpisodeSearchProps> = ({ classNameResults = '', o
 
                             {/* Information */}
                             <div className="flex min-w-0 flex-col gap-2">
-                                <span className="text-sm text-(--fg-secondary-color)">{formatTime(episode.date_of_recording)}</span>
-                                <span className="font-bold leading-tight text-(--fg-color) transition-color group-hover:text-(--fg-color-hover) break-words [overflow-wrap:anywhere]">{episode.name}</span>
-                                <div className="leading-[1.75] line-clamp-3 text-sm text-(--fg-color) break-words [overflow-wrap:anywhere]" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
+                                <span className="text-sm ui-text-muted">{formatTime(episode.date_of_recording)}</span>
+                                <span className="font-bold leading-tight ui-text transition-color group-hover:ui-text-hover break-words [overflow-wrap:anywhere]">{episode.name}</span>
+                                <div className="leading-[1.75] line-clamp-3 text-sm ui-text break-words [overflow-wrap:anywhere]" dangerouslySetInnerHTML={removeHTML(episode.description)}></div>
                             </div>
                         </li>
                     ))}

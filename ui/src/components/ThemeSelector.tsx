@@ -2,41 +2,23 @@ import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as ToggleGroup from '@radix-ui/react-toggle-group'
 import 'material-symbols/outlined.css'
+import { applyThemeToDOM, getStoredThemePreference, onSystemThemeChange, setThemePreference, ThemePreference } from '../utils/theme'
 
 export const ThemeSelector: FC = () => {
-    const [theme, setTheme] = useState<string>()
+    const [theme, setTheme] = useState<ThemePreference>(getStoredThemePreference())
     const { t } = useTranslation()
 
-    /* Initialize state from local storage */
+    /* Persist selection and sync DOM class */
     useEffect(() => {
-        setTheme(localStorage.theme || 'system')
-    }, [])
-
-    /* Update local storage whenever state changes */
-    useEffect(() => {
-        switch (theme) {
-            case 'system':
-                localStorage.removeItem('theme')
-                break
-            case 'light':
-                localStorage.theme = 'light'
-                break
-            case 'dark':
-                localStorage.theme = 'dark'
-                break
-        }
-
-        updateDOM()
+        setThemePreference(theme)
     }, [theme])
 
-    /* Update CSS class in DOM accordingly */
-    const updateDOM = () => {
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark')
-        } else {
-            document.documentElement.classList.remove('dark')
+    /* Keep `system` in sync with OS preference changes */
+    useEffect(() => onSystemThemeChange(() => {
+        if (getStoredThemePreference() === 'system') {
+            applyThemeToDOM('system')
         }
-    }
+    }), [])
 
     const themes = [
         {
@@ -57,9 +39,13 @@ export const ThemeSelector: FC = () => {
     ]
 
     return (
-        <ToggleGroup.Root className="flex items-center border border-(--border-color) p-0.5 rounded-full" defaultValue="" onValueChange={(v) => { if (v) setTheme(v) }} value={theme} type="single" aria-label={t('theme')}>
+        <ToggleGroup.Root className="flex items-center border ui-border p-0.5 rounded-full" defaultValue="" onValueChange={(v) => {
+            if (v === 'system' || v === 'light' || v === 'dark') {
+                setTheme(v)
+            }
+        }} value={theme} type="single" aria-label={t('theme')}>
             {themes.map((theme) =>
-                <ToggleGroup.Item aria-label={t(theme.translationKey)} className="aspect-square p-2 rounded-full text-(--fg-color) hover:text-(--fg-color-hover) data-[state=on]:bg-(--border-color) data-[state=on]:text-(--fg-color)" key={theme.value} value={theme.value}>
+                <ToggleGroup.Item aria-label={t(theme.translationKey)} className="aspect-square p-2 rounded-full ui-text hover:ui-text-hover data-[state=on]:ui-surface-muted data-[state=on]:ui-text" key={theme.value} value={theme.value}>
                     <span className="material-symbols-outlined leading-none text-xl">{theme.icon}</span>
                 </ToggleGroup.Item>
             )}

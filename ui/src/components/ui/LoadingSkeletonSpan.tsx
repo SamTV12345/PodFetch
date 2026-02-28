@@ -14,6 +14,6 @@ export const LoadingSkeletonSpan: FC<LoadingSkeletonProps> = ({
     height, width
                                                             }) => {
     return (
-        <span className="text-(--fg-secondary-color)">{loading == true ? <Skeleton style={{height: height??'100%', width: width?? '100%'}}/>: text}</span>
+        <span className="ui-text-muted">{loading == true ? <Skeleton style={{height: height??'100%', width: width?? '100%'}}/>: text}</span>
     )
 }

@@ -23,8 +23,10 @@ import {setAuth, setLogin} from "./utils/login";
 import {getConfigFromHtmlFile} from "./utils/config";
 import {queryClient} from "./utils/socketio";
 import {registerPwaServiceWorker} from "./utils/pwa";
+import {applyThemeToDOM} from "./utils/theme";
 
 const config = getConfigFromHtmlFile()
+applyThemeToDOM()
 registerPwaServiceWorker()
 
 

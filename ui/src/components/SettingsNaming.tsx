@@ -103,7 +103,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     return (
         <>
             <EpisodeFormatModal heading={t('standard-episode-format')} open={infoEpisodeModalOpen} setOpen={(v) => setInfoEpisodeModalOpen(v)}>
-                <ul className="list-disc text-(--fg-color)">
+                <ul className="list-disc ui-text">
                     <li>{'{title}'}</li>
                     <li>{'{date}'}</li>
                     <li>{'{description}'}</li>
@@ -113,7 +113,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                 </ul>
             </EpisodeFormatModal>
             <EpisodeFormatModal heading={t('standard-podcast-format')} open={infoPodcastModalOpen} setOpen={(v) => setInfoPodcastModalOpen(v)}>
-                <ul className="list-disc text-(--fg-color)">
+                <ul className="list-disc ui-text">
                     <li>{'{title}'}</li>
                     <li>{'{description}'}</li>
                     <li>{'{language}'}</li>
@@ -124,7 +124,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
             <form onSubmit={handleSubmit(update_settings)}>
                 <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10">
                     <fieldset className="xs:contents mb-4">
-                        <legend className="self-start mb-2 xs:mb-0 text-(--fg-color)">{t('rename-podcasts')}</legend>
+                        <legend className="self-start mb-2 xs:mb-0 ui-text">{t('rename-podcasts')}</legend>
 
                         <div className="flex flex-col gap-2">
                             <div className="flex">
@@ -136,7 +136,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                                                         value={value}/>
                                     )}/>
 
-                                <label className="ml-2 text-sm text-(--fg-secondary-color)"
+                                <label className="ml-2 text-sm ui-text-muted"
                                        htmlFor="use-existing-filenames">{t('use-existing-filenames')}</label>
                             </div>
                             <div className="flex">
@@ -148,14 +148,14 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                                                         value={value}/>
                                     )}/>
 
-                                <label className="ml-2 text-sm text-(--fg-secondary-color)"
+                                <label className="ml-2 text-sm ui-text-muted"
                                        htmlFor="replace-invalid-characters">{t('replace-invalid-characters-description')}</label>
                             </div>
                         </div>
                     </fieldset>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <label className="text-(--fg-color) flex gap-1"
+                        <label className="ui-text flex gap-1"
                                htmlFor="colon-replacement">{t('colon-replacement')}
                             <SettingsInfoIcon headerKey="colon-replacement" textKey="colon-replacement-explanation"/>
                         </label>
@@ -170,7 +170,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <label className="text-(--fg-color) flex gap-1"
+                        <label className="ui-text flex gap-1"
                                htmlFor="episode-format">{t('standard-episode-format')}
                             <button type="button">
                                     <span
@@ -191,12 +191,12 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <span className="text-(--fg-color)">Sample episode format</span>
+                        <span className="ui-text">Sample episode format</span>
                         <CustomInput value={resultingEpisodeFormat} disabled={true}></CustomInput>
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <label className="text-(--fg-color) flex gap-1"
+                        <label className="ui-text flex gap-1"
                                htmlFor="podcast-format">{t('standard-podcast-format')}
                             <button type="button">
                                     <span
@@ -215,13 +215,13 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <span className="text-(--fg-color)">Sample podcast format</span>
+                        <span className="ui-text">Sample podcast format</span>
                         <CustomInput value={resultingPodcastFormat} disabled={true}></CustomInput>
                     </div>
 
 
                     <fieldset className="xs:contents mb-4">
-                        <legend className="self-start mb-2 xs:mb-0 text-(--fg-color)">{t('use-direct-paths')}</legend>
+                        <legend className="self-start mb-2 xs:mb-0 ui-text">{t('use-direct-paths')}</legend>
 
                         <div className="flex flex-col gap-2">
                             <div className="flex">

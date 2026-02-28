@@ -57,9 +57,9 @@ export const PlaylistDetailPage = () => {
             <PodcastInfoModal/>
             <PodcastEpisodeAlreadyPlayed/>
 
-            <div className="mb-6 rounded-xl border border-(--border-color) p-4">
+            <div className="mb-6 rounded-xl border ui-border p-4">
                 <Heading2 className="mb-2">{selectedPlaylist.name}</Heading2>
-                <div className="text-sm text-(--fg-secondary-color)">
+                <div className="text-sm ui-text-muted">
                     {t('item_other', {count: selectedPlaylist.items.length})}
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -94,7 +94,7 @@ export const PlaylistDetailPage = () => {
                             currentEpisodes={selectedPlaylist.items}
                         />
                         <button
-                            className="absolute right-0 top-0 text-xs text-(--accent-color) hover:text-(--accent-color-hover)"
+                            className="absolute right-0 top-0 text-xs ui-text-accent hover:ui-text-accent-hover"
                             onClick={() => {
                                 void playFromIndex(index)
                             }}
