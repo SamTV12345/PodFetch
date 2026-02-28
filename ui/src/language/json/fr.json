@@ -243,5 +243,13 @@
   "WRONG_USER_OR_PASSWORD": "Nom d'utilisateur ou mot de passe incorrect",
   "video": "Vidéo",
   "media-controls-hint": "Utilisez les commandes ci-dessous pour lecture/pause, recherche et vitesse.",
-  "playlist-name-description": "Donnez un nom à votre playlist pour la retrouver rapidement plus tard."
+  "playlist-name-description": "Donnez un nom à votre playlist pour la retrouver rapidement plus tard.",
+  "notifications-title": "Notifications",
+  "notifications-open": "Ouvrir les notifications",
+  "notifications-refresh": "Actualiser les notifications",
+  "notifications-dismiss": "Ignorer la notification",
+  "notifications-empty-description": "Vous êtes à jour.",
+  "notifications-unread_one": "{{count}} notification non lue",
+  "notifications-unread_other": "{{count}} notifications non lues",
+  "notifications-unread": "{{count}} notifications non lues"
 }

@@ -1,116 +1,257 @@
-import { FC } from 'react'
+import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as Popover from '@radix-ui/react-popover'
-import { removeHTML} from '../utils/Utilities'
-import useCommon from '../store/CommonSlice'
 import 'material-symbols/outlined.css'
-import {$api} from "../utils/http";
-import {components} from "../../schema";
-import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
-import {useQueryClient} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { components } from "../../schema";
+import { cn } from "../lib/utils";
+import { formatTime, removeHTML } from '../utils/Utilities'
+import { $api } from "../utils/http";
+import { Skeleton } from "./ui/skeleton";
 
+type NotificationModel = components["schemas"]["Notification"]
 
-const NotificationFormatter = (notification: components["schemas"]["Notification"]) => {
-    const {t} = useTranslation()
+const unreadNotificationsQueryKey = ['get', '/api/v1/notifications/unread'] as const
+const maxBadgeCount = 99
 
-    const decideMessage = ()=>{
-        switch(notification.typeOfMessage) {
-            case "Download":
-                return <span dangerouslySetInnerHTML={removeHTML(t('notification.episode-now-available', {episode: notification.message}))}/>
-        }
+const notificationIcon = (type: string) => {
+    switch (type) {
+        case "Download":
+            return 'download_done'
+        default:
+            return 'notifications'
     }
-
-    return decideMessage()
 }
 
-export const Notifications: FC = () => {
-    const notifications = $api.useQuery('get','/api/v1/notifications/unread')
-    const queryClient = useQueryClient()
-    const { t }  = useTranslation()
-    const dismissNotificationMutation = $api.useMutation('put', '/api/v1/notifications/dismiss')
+const NotificationText: FC<{ notification: NotificationModel }> = ({ notification }) => {
+    const { t } = useTranslation()
 
-    const trigger = () => (
-        <div className="flex items-center relative">
-            <span className="material-symbols-outlined cursor-pointer ui-text hover:ui-text-hover">notifications</span>
-
-            {(notifications.isLoading || !notifications.data) ? <span>{t('loading')}</span> :notifications.data.length > 0 && <div className="absolute top-0 right-0 border-2 ui-border-contrast bg-red-700 h-3 w-3 rounded-full"/>}
-        </div>
-    )
-
-    const dismissNotification = (notification: components["schemas"]["Notification"]) => {
-        dismissNotificationMutation.mutateAsync({
-            body: {
-                id: notification.id
-            }
-        }).then(() => {
-            queryClient.setQueryData(['get','/api/v1/notifications/unread'], (oldData: components["schemas"]["Notification"][]) => {
-                return oldData.filter(n => n.id !== notification.id)
-            })
-        })
+    if (notification.typeOfMessage === "Download") {
+        return <span dangerouslySetInnerHTML={removeHTML(t('notification.episode-now-available', { episode: notification.message }))} />
     }
 
-    const DisplayNotification = () => {
+    return <span dangerouslySetInnerHTML={removeHTML(notification.message)} />
+}
 
-        if (notifications.isLoading || !notifications.data) {
-            return (
-                <><LoadingSkeletonSpan/><LoadingSkeletonSpan/></>
-            )
-        }
-
-        if (notifications.data.length === 0) {
-            return (
-                <div className="text-center place-items-center flex px-5 text-sm ui-text-disabled">
-                    {t('no-notifications')}
+const NotificationLoadingState = () => (
+    <div className="p-4 space-y-3">
+        {[0, 1, 2].map((row) => (
+            <div className="grid grid-cols-[auto_1fr] items-center gap-3" key={row}>
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="space-y-2">
+                    <Skeleton className="h-3 w-full max-w-[14rem]" />
+                    <Skeleton className="h-3 w-16" />
                 </div>
-            )
-        } else {
-            return (
-                <AnimatePresence>
-                    {notifications.data.map((notification) => (
-                        <motion.div className="grid grid-cols-[1fr_auto] gap-2 last-of-type:border-b-0! ui-border-b px-5 text-sm ui-text"
-                        key={notification.id}
-                        initial={false}
-                        animate={{ borderBottomWidth: '1px', maxHeight: '100%',  opacity: 1, paddingTop: '0.75rem', paddingBottom: '0.75rem' }}
-                        exit={{ borderBottomWidth: 0, maxHeight: 0, opacity: 0, paddingBottom: 0, paddingTop: 0 }}
-                        transition={{
-                            opacity: { ease: 'linear', duration: 0.1 },
-                            borderBottomWidth: { delay: 0.15, ease: 'easeOut', duration: 0.1 },
-                            maxHeight: { delay: 0.15, ease: 'easeOut', duration: 0.1 },
-                            paddingBottom: { delay: 0.15, ease: 'easeOut', duration: 0.1 },
-                            paddingTop: { delay: 0.15, ease: 'easeOut', duration: 0.1 }
-                        }}>
-                            <NotificationFormatter {...notification} />
+            </div>
+        ))}
+    </div>
+)
 
-                            <span className="material-symbols-outlined cursor-pointer ui-modal-close hover:ui-modal-close-hover" onClick={()=>{dismissNotification(notification)}}>close</span>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            )
+export const Notifications: FC = () => {
+    const queryClient = useQueryClient()
+    const { t } = useTranslation()
+    const [open, setOpen] = useState(false)
+    const [bellPulse, setBellPulse] = useState(false)
+    const [isClearingAll, setIsClearingAll] = useState(false)
+    const previousUnreadCount = useRef(0)
+
+    const notificationsQuery = $api.useQuery('get', '/api/v1/notifications/unread', {}, {
+        refetchInterval: 45_000,
+        refetchOnWindowFocus: true
+    })
+    const dismissNotificationMutation = $api.useMutation('put', '/api/v1/notifications/dismiss')
+
+    const notifications = notificationsQuery.data ?? []
+    const unreadCount = notifications.length
+    const unreadCountLabel = unreadCount > maxBadgeCount ? `${maxBadgeCount}+` : `${unreadCount}`
+
+    const orderedNotifications = useMemo(() => {
+        return [...notifications].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    }, [notifications])
+
+    useEffect(() => {
+        if (open) {
+            notificationsQuery.refetch()
         }
+    }, [open])
+
+    useEffect(() => {
+        if (unreadCount > previousUnreadCount.current) {
+            setBellPulse(true)
+            const timeout = setTimeout(() => setBellPulse(false), 900)
+            previousUnreadCount.current = unreadCount
+            return () => clearTimeout(timeout)
+        }
+        previousUnreadCount.current = unreadCount
+    }, [unreadCount])
+
+    const dismissNotification = async (notificationId: number) => {
+        const previous = queryClient.getQueryData<NotificationModel[]>(unreadNotificationsQueryKey) ?? []
+
+        queryClient.setQueryData<NotificationModel[]>(unreadNotificationsQueryKey, (oldData) => {
+            return (oldData ?? []).filter(v => v.id !== notificationId)
+        })
+
+        try {
+            await dismissNotificationMutation.mutateAsync({
+                body: { id: notificationId }
+            })
+        } catch {
+            queryClient.setQueryData(unreadNotificationsQueryKey, previous)
+        }
+    }
+
+    const clearAllNotifications = async () => {
+        if (orderedNotifications.length === 0 || isClearingAll) {
+            return
+        }
+
+        setIsClearingAll(true)
+
+        const previous = queryClient.getQueryData<NotificationModel[]>(unreadNotificationsQueryKey) ?? []
+        queryClient.setQueryData(unreadNotificationsQueryKey, [])
+
+        const result = await Promise.allSettled(
+            previous.map((notification) => dismissNotificationMutation.mutateAsync({
+                body: { id: notification.id }
+            }))
+        )
+
+        if (result.some(v => v.status === 'rejected')) {
+            queryClient.setQueryData(unreadNotificationsQueryKey, previous)
+        }
+
+        setIsClearingAll(false)
     }
 
     return (
-        <Popover.Root>
-            <Popover.Trigger>
-                {trigger()}
+        <Popover.Root open={open} onOpenChange={setOpen}>
+            <Popover.Trigger asChild>
+                <button
+                    type="button"
+                    className={cn(
+                        "relative grid h-10 w-10 place-items-center rounded-full border ui-border ui-surface ui-text transition-all",
+                        "hover:ui-text-accent hover:shadow-[0_0_0_4px_rgba(0,0,0,0.05)]",
+                        "focus-visible:outline-none focus-visible:ring-2 ui-ring-accent",
+                        unreadCount > 0 && "ui-text-accent ui-border-accent"
+                    )}
+                    aria-label={t('notifications-open')}
+                    title={t('notifications-open') as string}
+                >
+                    <span className={cn("material-symbols-outlined leading-none", unreadCount > 0 && "filled")}>notifications</span>
+
+                    {bellPulse && unreadCount > 0 && (
+                        <span className="pointer-events-none absolute inset-0 rounded-full border-2 ui-border-accent animate-ping" />
+                    )}
+
+                    {unreadCount > 0 && (
+                        <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full px-1 text-[0.625rem] font-semibold text-white ui-bg-accent">
+                            {unreadCountLabel}
+                        </span>
+                    )}
+                </button>
             </Popover.Trigger>
 
             <Popover.Portal>
-                <Popover.Content className="relative ui-surface max-h-80 max-w-xs overflow-y-auto py-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] z-30">
-                    <div className="flex w-full">
-                        <div className="grow"/>
-                         <button className="ui-border-b flex active:scale-95
-                         text-sm ui-text border-[2px] rounded-2xl  pl-2 pr-2 float-right mr-3 mb-3" onClick={()=>{
-                             notifications.data?.forEach(n=>{
-                                    dismissNotification(n)
-                             })
-                             queryClient.setQueryData(['get','/api/v1/notifications/unread'], []);
-                         }}>{t('clear-all')}</button>
+                <Popover.Content
+                    align="end"
+                    sideOffset={12}
+                    className="relative z-30 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border ui-border ui-surface shadow-[0_12px_36px_rgba(0,0,0,var(--shadow-opacity))]"
+                >
+                    <div className="border-b ui-border-b px-4 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-sm font-semibold ui-text">{t('notifications-title')}</div>
+                                <div className="text-xs ui-text-muted">
+                                    {unreadCount > 0 ? t('notifications-unread', { count: unreadCount }) : t('no-notifications')}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    className={cn("grid h-8 w-8 place-items-center rounded-full ui-text hover:ui-text-accent hover:ui-surface-muted transition-colors")}
+                                    onClick={() => notificationsQuery.refetch()}
+                                    aria-label={t('notifications-refresh')}
+                                    title={t('notifications-refresh') as string}
+                                >
+                                    <span className={cn("material-symbols-outlined leading-none text-lg", notificationsQuery.isFetching && "animate-spin")}>refresh</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={orderedNotifications.length === 0 || isClearingAll}
+                                    onClick={clearAllNotifications}
+                                    className={cn(
+                                        "text-xs px-2.5 py-1.5 rounded-full border ui-border ui-text transition-colors",
+                                        "hover:ui-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                                    )}
+                                >
+                                    {t('clear-all')}
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                       <DisplayNotification />
+
+                    <div className="max-h-[24rem] overflow-y-auto">
+                        {(notificationsQuery.isLoading || (notificationsQuery.isFetching && !notificationsQuery.data)) && <NotificationLoadingState />}
+
+                        {notificationsQuery.isError && (
+                            <div className="px-4 py-8 text-center">
+                                <span className="material-symbols-outlined text-2xl ui-text-danger mb-2">error</span>
+                                <p className="text-sm ui-text">{t('error-occured')}</p>
+                            </div>
+                        )}
+
+                        {!notificationsQuery.isLoading && !notificationsQuery.isError && orderedNotifications.length === 0 && (
+                            <div className="px-4 py-10 text-center">
+                                <span className="material-symbols-outlined text-3xl ui-icon-muted mb-1">notifications_off</span>
+                                <p className="text-sm ui-text">{t('no-notifications')}</p>
+                                <p className="text-xs ui-text-muted mt-1">{t('notifications-empty-description')}</p>
+                            </div>
+                        )}
+
+                        {!notificationsQuery.isLoading && !notificationsQuery.isError && orderedNotifications.length > 0 && (
+                            <AnimatePresence initial={false}>
+                                {orderedNotifications.map((notification) => (
+                                    <motion.div
+                                        key={notification.id}
+                                        className="grid grid-cols-[auto_1fr_auto] items-start gap-3 px-4 py-3 border-b ui-border-b last:border-b-0"
+                                        initial={{ opacity: 0, y: -6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -4, height: 0, paddingTop: 0, paddingBottom: 0 }}
+                                        transition={{ duration: 0.14, ease: 'easeOut' }}
+                                    >
+                                        <span className="material-symbols-outlined text-[1.1rem] leading-none mt-0.5 ui-text-accent">
+                                            {notificationIcon(notification.typeOfMessage)}
+                                        </span>
+
+                                        <div className="min-w-0">
+                                            <p className="text-sm leading-5 ui-text break-words">
+                                                <NotificationText notification={notification} />
+                                            </p>
+                                            <p className="text-xs ui-text-muted mt-1">{formatTime(notification.createdAt)}</p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className={cn(
+                                                "grid h-7 w-7 place-items-center rounded-full ui-modal-close hover:ui-modal-close-hover",
+                                                "hover:ui-surface-muted transition-colors"
+                                            )}
+                                            onClick={() => dismissNotification(notification.id)}
+                                            aria-label={t('notifications-dismiss')}
+                                            title={t('notifications-dismiss') as string}
+                                        >
+                                            <span className="material-symbols-outlined text-lg leading-none">close</span>
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        )}
                     </div>
+
                     <Popover.Arrow className="ui-fill-inverse" />
                 </Popover.Content>
             </Popover.Portal>

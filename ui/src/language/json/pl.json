@@ -243,5 +243,13 @@
   "WRONG_USER_OR_PASSWORD": "Nieprawidłowa nazwa użytkownika lub hasło",
   "video": "Wideo",
   "media-controls-hint": "Użyj poniższych kontrolek do odtwarzania/pauzy, przewijania i zmiany prędkości.",
-  "playlist-name-description": "Nadaj playliście nazwę, aby później łatwo ją znaleźć."
+  "playlist-name-description": "Nadaj playliście nazwę, aby później łatwo ją znaleźć.",
+  "notifications-title": "Powiadomienia",
+  "notifications-open": "Otwórz powiadomienia",
+  "notifications-refresh": "Odśwież powiadomienia",
+  "notifications-dismiss": "Odrzuć powiadomienie",
+  "notifications-empty-description": "Wszystko nadrobione.",
+  "notifications-unread_one": "{{count}} nieprzeczytane powiadomienie",
+  "notifications-unread_other": "{{count}} nieprzeczytane powiadomienia",
+  "notifications-unread": "{{count}} nieprzeczytane powiadomienia"
 }

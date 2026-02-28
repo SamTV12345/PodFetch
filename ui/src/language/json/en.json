@@ -243,5 +243,13 @@
   "oidc-login-error": "Error during OIDC login: {{status}}",
   "video": "Video",
   "media-controls-hint": "Use the controls below for play/pause, seek and speed.",
-  "playlist-name-description": "Give your playlist a name so you can quickly find it later."
+  "playlist-name-description": "Give your playlist a name so you can quickly find it later.",
+  "notifications-title": "Notifications",
+  "notifications-open": "Open notifications",
+  "notifications-refresh": "Refresh notifications",
+  "notifications-dismiss": "Dismiss notification",
+  "notifications-empty-description": "You're all caught up.",
+  "notifications-unread_one": "{{count}} unread notification",
+  "notifications-unread_other": "{{count}} unread notifications",
+  "notifications-unread": "{{count}} unread notifications"
 }

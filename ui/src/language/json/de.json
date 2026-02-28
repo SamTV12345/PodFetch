@@ -245,5 +245,13 @@
   "default-episode-format-explanation": "Gibt das Standardformat für die Episoden an. Dies wirkt sich lediglich auf die Ordnerstruktur und deren Benennung aus.",
   "video": "Video",
   "media-controls-hint": "Nutze die Steuerung unten für Wiedergabe/Pause, Spulen und Geschwindigkeit.",
-  "playlist-name-description": "Gib deiner Playlist einen Namen, damit du sie später schnell wiederfindest."
+  "playlist-name-description": "Gib deiner Playlist einen Namen, damit du sie später schnell wiederfindest.",
+  "notifications-title": "Benachrichtigungen",
+  "notifications-open": "Benachrichtigungen öffnen",
+  "notifications-refresh": "Benachrichtigungen aktualisieren",
+  "notifications-dismiss": "Benachrichtigung verwerfen",
+  "notifications-empty-description": "Du bist auf dem neuesten Stand.",
+  "notifications-unread_one": "{{count}} ungelesene Benachrichtigung",
+  "notifications-unread_other": "{{count}} ungelesene Benachrichtigungen",
+  "notifications-unread": "{{count}} ungelesene Benachrichtigungen"
 }

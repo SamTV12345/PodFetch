@@ -243,5 +243,13 @@
   "WRONG_USER_OR_PASSWORD": "Forkert brugernavn eller adgangskode",
   "video": "Video",
   "media-controls-hint": "Brug kontrollerne nedenfor til afspil/pause, søgning og hastighed.",
-  "playlist-name-description": "Giv din playliste et navn, så du nemt kan finde den senere."
+  "playlist-name-description": "Giv din playliste et navn, så du nemt kan finde den senere.",
+  "notifications-title": "Notifikationer",
+  "notifications-open": "Åbn notifikationer",
+  "notifications-refresh": "Opdater notifikationer",
+  "notifications-dismiss": "Afvis notifikation",
+  "notifications-empty-description": "Du er helt opdateret.",
+  "notifications-unread_one": "{{count}} ulæst notifikation",
+  "notifications-unread_other": "{{count}} ulæste notifikationer",
+  "notifications-unread": "{{count}} ulæste notifikationer"
 }
