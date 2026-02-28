@@ -9,7 +9,7 @@ import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 export const UserAdminUsers = () => {
     const setSelectedUser = useCommon(state => state.setSelectedUser)
@@ -19,19 +19,22 @@ export const UserAdminUsers = () => {
     const {enqueueSnackbar} = useSnackbar()
     const { t } = useTranslation()
     const setModalOpen = useModal(state => state.setOpenModal)
+    const usersQuery = $api.useQuery('get', '/api/v1/users', {}, {retry: false})
+    const deleteUserMutation = $api.useMutation('delete', '/api/v1/users/{username}')
 
     useEffect(() => {
-        client.GET("/api/v1/users")
-            .then((resp)=>{
-                setUsers(resp.data!)
-                setError(false)
-            }).catch(()=>{
+        if (usersQuery.isError) {
             setError(true)
-        })
-    }, [])
+            return
+        }
+        if (usersQuery.data) {
+            setUsers(usersQuery.data)
+            setError(false)
+        }
+    }, [setUsers, usersQuery.data, usersQuery.isError])
 
     const deleteUser = (user: User) => {
-        client.DELETE("/api/v1/users/{username}", {
+        deleteUserMutation.mutateAsync({
             params: {
                 path: {
                     username: user.username
@@ -63,9 +66,9 @@ export const UserAdminUsers = () => {
                 xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
                 md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
             `}>
-                <table className="text-left text-sm text-(--fg-color) w-full">
+                <table className="text-left text-sm ui-text w-full">
                     <thead>
-                        <tr className="border-b border-(--border-color)">
+                        <tr className="border-b ui-border">
                             <th scope="col" className="pr-2 py-3">
                                 {t('username')}
                             </th>
@@ -81,7 +84,7 @@ export const UserAdminUsers = () => {
                     </thead>
                     <tbody>
                         {users.map((v) => (
-                            <tr className="border-b border-(--border-color)" key={v.id}>
+                            <tr className="border-b ui-border" key={v.id}>
                                 <td className="pr-2 py-4">
                                     {v.username}
                                 </td>
@@ -99,14 +102,14 @@ export const UserAdminUsers = () => {
 
                                         setModalOpen(true)
                                     }} title={t('change-role') || ''}>
-                                        <span className="material-symbols-outlined text-(--fg-color) hover:text-(--fg-color-hover)">edit</span>
+                                        <span className="material-symbols-outlined ui-text hover:ui-text-hover">edit</span>
                                     </button>
                                 </td>
                                 <td className="px-2 py-4">
                                     {formatTime(v.createdAt)}
                                 </td>
                                 <td className="pl-2 py-4">
-                                    <button className="flex items-center float-right text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)" onClick={() => {
+                                    <button className="flex items-center float-right ui-text-danger hover:ui-text-danger-hover" onClick={() => {
                                         deleteUser(v)
                                     }}>
                                         <span className="material-symbols-outlined mr-1">delete</span>

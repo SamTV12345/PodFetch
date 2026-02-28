@@ -11,6 +11,6 @@ export const LoadingSkeletonDD: FC<LoadingSkeletonProps> = ({
     text
                                                           }) => {
     return (
-        <dd className="text-(--fg-secondary-color)">{loading == true ? <Skeleton style={{height: '100%'}}/>: text}</dd>
+        <dd className="ui-text-muted">{loading == true ? <Skeleton style={{height: '100%'}}/>: text}</dd>
     )
 }

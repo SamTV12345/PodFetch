@@ -1,6 +1,6 @@
 import {FC, useState} from "react";
 import useAudioPlayer from "../store/AudioPlayerSlice";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {useQueryClient} from "@tanstack/react-query";
 import {components} from "../../schema";
 
@@ -40,7 +40,7 @@ export const EditableHeading: FC<EditableHeadingProps> = ({initialText, allowedT
                     }
                 }}], (oldData: components['schemas']['PodcastDto'])=>({...oldData, name: text}))
             })
-        }} className="inline align-middle mr-2 font-bold leading-none! text-3xl xs:text-4xl text-(--fg-color)" contentEditable={allowedToEdit} suppressContentEditableWarning={allowedToEdit} onInput={(event)=>{
+        }} className="inline align-middle mr-2 font-bold leading-none! text-3xl xs:text-4xl ui-text" contentEditable={allowedToEdit} suppressContentEditableWarning={allowedToEdit} onInput={(event)=>{
             // @ts-ignore
             setText(event.target.textContent)
         }}>

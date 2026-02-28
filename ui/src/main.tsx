@@ -17,14 +17,16 @@ import '@fontsource/poppins/500-italic.css'
 import '@fontsource/poppins/700.css'
 import '@fontsource/poppins/700-italic.css'
 import './index.css'
-import {client} from "./utils/http";
+import {$api} from "./utils/http";
 import {QueryClientProvider} from "@tanstack/react-query";
 import {setAuth, setLogin} from "./utils/login";
 import {getConfigFromHtmlFile} from "./utils/config";
 import {queryClient} from "./utils/socketio";
 import {registerPwaServiceWorker} from "./utils/pwa";
+import {applyThemeToDOM} from "./utils/theme";
 
 const config = getConfigFromHtmlFile()
+applyThemeToDOM()
 registerPwaServiceWorker()
 
 
@@ -111,7 +113,7 @@ if (config) {
                         }
                     }, config.oidcConfig.refreshInterval)
                 } else {
-                    enqueueSnackbar('Error during OIDC login: ' + resp.statusText, {variant: 'error'})
+                    enqueueSnackbar(i18n.t('oidc-login-error', { status: resp.statusText }), {variant: 'error'})
                 }
                 } catch (e) {
 
@@ -136,12 +138,12 @@ if (config) {
                 throw new Error('No basic auth found')
             }
             const basicAuthDecoded = atob(basicAuth)
-            client.POST('/api/v1/login', {
+            queryClient.fetchQuery($api.queryOptions('post', '/api/v1/login', {
                 body: {
                     username: basicAuthDecoded.split(':')[0]!,
                     password: basicAuthDecoded.split(':')[1]!
                 }
-            }).then(()=>{
+            }, {retry: false})).then(()=>{
                 console.log('Logged in successfully')
             }).catch(()=>{
                 window.location.href = postUrl

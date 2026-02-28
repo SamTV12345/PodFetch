@@ -29,7 +29,7 @@ pub struct RSSQuery {
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RSSAPiKey {
-    pub api_key: String,
+    pub api_key: Option<String>,
 }
 
 #[utoipa::path(
@@ -46,11 +46,10 @@ pub async fn get_rss_feed(
 
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
-        let api_key = match &api_key {
-            Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
-            None => Err(CustomErrorInner::Forbidden(Warning).into()),
-        }?;
-        let api_key = &api_key.api_key;
+        let api_key = api_key
+            .as_ref()
+            .and_then(|q| q.api_key.as_deref())
+            .ok_or_else(|| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
@@ -67,7 +66,7 @@ pub async fn get_rss_feed(
         None => PodcastEpisodeService::find_all_downloaded_podcast_episodes()?,
     };
 
-    let api_key = api_key.map(|c| c.api_key.to_string());
+    let api_key = api_key.and_then(|c| c.api_key);
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> = downloaded_episodes
         .into_iter()
@@ -155,11 +154,10 @@ pub async fn get_rss_feed_for_podcast(
     let server_url = ENVIRONMENT_SERVICE.server_url.clone();
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
-        let api_key = match &api_key {
-            Some(q) => Ok::<&RSSAPiKey, CustomError>(q),
-            None => Err(CustomErrorInner::Forbidden(Warning).into()),
-        }?;
-        let api_key = &api_key.api_key;
+        let api_key = api_key
+            .as_ref()
+            .and_then(|q| q.api_key.as_deref())
+            .ok_or_else(|| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
 
         let api_key_exists = User::check_if_api_key_exists(api_key);
 
@@ -167,7 +165,7 @@ pub async fn get_rss_feed_for_podcast(
             return Err(CustomErrorInner::Forbidden(Warning).into());
         }
     }
-    let api_key = api_key.map(|c| c.api_key.clone());
+    let api_key = api_key.and_then(|c| c.api_key);
     let podcast = Podcast::get_podcast(id)?;
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> =

@@ -7,6 +7,7 @@ pub mod podcast_controller;
 pub mod podcast_episode_controller;
 pub mod server;
 pub mod settings_controller;
+pub mod stats_controller;
 pub mod sys_info_controller;
 pub mod tags_controller;
 pub mod user_controller;

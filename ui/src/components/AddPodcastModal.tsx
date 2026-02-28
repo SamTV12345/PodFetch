@@ -15,7 +15,7 @@ export const AddPodcastModal: FC = () => {
     const configModel = $api.useQuery('get', '/api/v1/sys/config')
 
     return (
-        <Modal onCancel={() => {}} onAccept={() => {}} headerText={t('add-podcast')!} onDelete={() => {}}  cancelText={"Abbrechen"} acceptText={"Hinzufügen"}>
+        <Modal onCancel={() => {}} onAccept={() => {}} headerText={t('add-podcast')!} onDelete={() => {}}  cancelText={t('cancel')} acceptText={t('add')}>
             {configModel.data && <AddHeader selectedSearchType={selectedSearchType} setSelectedSearchType={setSelectedSearchType} configModel={configModel.data} />}
 
             {selectedSearchType !== AddTypes.OPML && selectedSearchType !== AddTypes.FEED &&

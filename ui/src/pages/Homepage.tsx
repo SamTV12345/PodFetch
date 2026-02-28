@@ -49,7 +49,7 @@ export const Homepage = () => {
             <div>
                 <div className="flex items-center gap-4 mb-2">
                     <Heading2>{t('latest-episodes')}</Heading2>
-                    <Link className="text-sm text-(--accent-color) hover:text-(--accent-color-hover)" to="/timeline">{t('view-more')}</Link>
+                    <Link className="text-sm ui-text-accent hover:ui-text-accent-hover" to="/timeline">{t('view-more')}</Link>
                 </div>
 
                 <div className={`

@@ -7,6 +7,6 @@ type Heading3Props = {
 
 export const Heading3: FC<Heading3Props> = ({ children, className = '' }) => {
   return (
-    <h3 className={`font-bold leading-tight! text-(--fg-color) ${className}`}>{children}</h3>
+    <h3 className={`font-bold leading-tight! ui-text ${className}`}>{children}</h3>
   )
 }

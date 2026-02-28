@@ -23,7 +23,7 @@ export const SidebarItem: FC<SidebarItemProps> = ({ path, translationKey, iconNa
 
     return (
         <li onClick={() => minimizeOnMobile()} className={spaceBefore ? "space-before" : ""}>
-            <NavLink className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-colors [&.active]:text-(--accent-color) hover:bg-[rgba(192,124,3,0.1)] [&.active]:bg-[rgba(192,124,3,0.1)]" to={path}>
+            <NavLink className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-colors [&.active]:ui-text-accent hover:bg-[rgba(192,124,3,0.1)] [&.active]:bg-[rgba(192,124,3,0.1)]" to={path}>
                 <span className="material-symbols-outlined">{iconName}</span>
                 <span>{t(translationKey)}</span>
             </NavLink>

@@ -7,7 +7,7 @@ import { Heading1 } from '../components/Heading1'
 import { Loading } from '../components/Loading'
 import { Switcher } from '../components/Switcher'
 import { TimelineEpisode } from '../components/TimelineEpisode'
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 
 export const Timeline = () => {
@@ -35,7 +35,7 @@ export const Timeline = () => {
 
                 <div className="flex flex-row gap-5">
                     <div className="flex items-center gap-3">
-                        <span className="text-xs text-(--fg-secondary-color)">{t('onlyFavored')}</span>
+                        <span className="text-xs ui-text-muted">{t('onlyFavored')}</span>
 
                         <Switcher loading={filter.isLoading} checked={filter.data?.onlyFavored}
                                   onChange={() => {
@@ -45,12 +45,12 @@ export const Timeline = () => {
                                       }))}}/>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="text-xs text-(--fg-secondary-color)">{t('not-yet-played')}</span>
+                        <span className="text-xs ui-text-muted">{t('not-yet-played')}</span>
 
                         <Switcher checked={notListened} onChange={() => setNotListened(!notListened)}/>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="text-xs text-(--fg-secondary-color)">{t('onlyFavoredEpisodes')}</span>
+                        <span className="text-xs ui-text-muted">{t('onlyFavoredEpisodes')}</span>
 
                         <Switcher checked={notFavored} onChange={() => setFavored(!notFavored)}/>
                     </div>
@@ -64,13 +64,13 @@ export const Timeline = () => {
                         {/* Section start */
                         index === 0 || (formatTime(e.podcast_episode.date_of_recording) !== formatTime(timeline.data.data[index-1]!.podcast_episode.date_of_recording)) ? (<>
                             {/* Date */}
-                            <span className="col-span-full bg-(--bg-color) -mb-4 -ml-6 py-2">
-                                <span className="inline-block bg-(--accent-color) mr-4 outline outline-2 outline-offset-2 outline-(--accent-color) h-2 w-2 rounded-full"></span>
-                                <span className="text-xs text-(--accent-color)">{formatTime(e.podcast_episode.date_of_recording)}</span>
+                            <span className="col-span-full ui-surface -mb-4 -ml-6 py-2">
+                                <span className="inline-block ui-bg-accent mr-4 outline outline-2 outline-offset-2 ui-outline-accent h-2 w-2 rounded-full"></span>
+                                <span className="text-xs ui-text-accent">{formatTime(e.podcast_episode.date_of_recording)}</span>
                             </span>
 
                             {/* Left line */}
-                            <div className="absolute h-full bg-(--border-color) ml-[0.1875rem] w-px -z-10"></div>
+                            <div className="absolute h-full ui-surface-muted ml-[0.1875rem] w-px -z-10"></div>
                         </>) : ''}
 
                         <TimelineEpisode

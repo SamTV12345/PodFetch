@@ -21,7 +21,7 @@ import {Heading1} from '../components/Heading1'
 import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
 import useModal from "../store/ModalSlice";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
 import {useQueryClient} from "@tanstack/react-query";
 
@@ -109,7 +109,7 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
                     }
 
                     <span
-                        className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
+                        className="material-symbols-outlined cursor-pointer ui-icon hover:ui-icon-hover"
                         onClick={() => {
                             refreshAllPodcasts.mutate({})
                         }}>refresh</span>
@@ -139,7 +139,7 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
                         })} placeholder={t('search')!} value={filters?.data?.title || ''}/>
 
                     <span
-                        className="material-symbols-outlined absolute left-2 top-2 text-(--input-icon-color)">search</span>
+                        className="material-symbols-outlined absolute left-2 top-2 ui-input-icon">search</span>
                 </span>
 
                 <CustomSelect iconName="sort" onChange={(v) => {

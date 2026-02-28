@@ -12,7 +12,7 @@ import {Switcher} from '../components/Switcher'
 import 'material-symbols/outlined.css'
 import {PodcastEpisodeAlreadyPlayed} from "../components/PodcastEpisodeAlreadyPlayed";
 import {PodcastSettingsModal} from "../components/PodcastSettingsModal";
-import {$api, client} from '../utils/http'
+import {$api} from '../utils/http'
 import {EditableHeading} from "../components/EditableHeading";
 import {ADMIN_ROLE} from "../models/constants";
 import {Loading} from "../components/Loading";
@@ -62,6 +62,7 @@ export const PodcastDetailPage = () => {
     })
 
     const refreshPodcastEpisodes = $api.useMutation('post','/api/v1/podcasts/{id}/refresh')
+    const togglePodcastActive = $api.useMutation('put', '/api/v1/podcasts/{id}/active')
 
     useEffect(() => {
         if (params.podcastid) {
@@ -143,7 +144,7 @@ export const PodcastDetailPage = () => {
                         {currentPodcast.data && <EditableHeading podcastId={Number(currentDetailedPodcastId)} initialText={currentPodcast.data.name} allowedToEdit={data?.role == "admin"}></EditableHeading>}
 
                         {currentPodcast.data && data?.role === ADMIN_ROLE && refreshPodcastEpisodes.isPending ? <Loading className="inline-block h-auto w-auto"/>:  <span
-                            className="material-symbols-outlined inline cursor-pointer align-middle text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
+                            className="material-symbols-outlined inline cursor-pointer align-middle ui-icon hover:ui-icon-hover"
                             onClick={() => {
 
 
@@ -167,7 +168,7 @@ export const PodcastDetailPage = () => {
                         sm:col-start-2 sm:col-end-3
                         self-start flex flex-col items-start gap-2
                     ">
-                        <span className="block text-(--fg-secondary-color)">{currentPodcast.data?.author}</span>
+                        <span className="block ui-text-muted">{currentPodcast.data?.author}</span>
 
                         <div className="flex gap-2">
                             {currentPodcast.data?.keywords && currentPodcast.data?.keywords?.split(',').map((keyword, index) => (
@@ -179,19 +180,19 @@ export const PodcastDetailPage = () => {
                         <a className="flex gap-4" rel="noopener noreferrer" href={currentPodcast.data?.podfetch_feed}
                            target="_blank">
                             <span
-                               className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)">rss_feed</span>
-                            <span className="text-(--fg-color)">PodFetch</span>
+                               className="material-symbols-outlined cursor-pointer ui-icon hover:ui-icon-hover">rss_feed</span>
+                            <span className="ui-text">PodFetch</span>
                         </a>
 
                         <button className="flex gap-4" rel="noopener noreferrer"
                                 onClick={() => window.open(currentPodcast.data?.rssfeed)}>
-                            <a className="material-symbols-outlined cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)"
+                            <a className="material-symbols-outlined cursor-pointer ui-icon hover:ui-icon-hover"
                                target="_blank" rel="noopener noreferrer" href={currentPodcast.data?.rssfeed}>rss_feed</a>
-                            <span className="text-(--fg-color)">{t('original-rss-feed')}</span>
+                            <span className="ui-text">{t('original-rss-feed')}</span>
                         </button>
                             <div className="flex gap-4 justify-end">
                                 <Switcher checked={onlyUnplayed} onChange={setOnlyUnplayed}/>
-                                <span className=" text-(--fg-color) mt-auto">{t('unplayed')}</span>
+                                <span className=" ui-text mt-auto">{t('unplayed')}</span>
                             </div>
                         </span>
                     </div>
@@ -204,10 +205,10 @@ export const PodcastDetailPage = () => {
                         justify-self-end self-end sm:self-start
                         flex gap-3 items-center
                     ">
-                        <span className="text-xs text-(--fg-secondary-color)">{t('active')}</span>
+                        <span className="text-xs ui-text-muted">{t('active')}</span>
 
                         <Switcher checked={currentPodcast.data?.active} onChange={() => {
-                            client.PUT("/api/v1/podcasts/{id}/active", {
+                            togglePodcastActive.mutateAsync({
                                 params: {
                                     path: {
                                         id: params.id!
@@ -232,11 +233,11 @@ export const PodcastDetailPage = () => {
 
                 {/* Description */
                     currentPodcast.data?.summary &&
-                    <div className="relative leading-[1.75] mb-8 text-sm text-(--fg-color)">
+                    <div className="relative leading-[1.75] mb-8 text-sm ui-text">
                         <div id="summary" className={lineClamp ? 'line-clamp-3' : ''}
                              dangerouslySetInnerHTML={removeHTML(currentPodcast.data.summary)}/>
                         {(isOverflown('summary') || lineClamp) && <div
-                            className="cursor-pointer underline text-(--accent-color) hover:text-(--accent-color-hover)"
+                            className="cursor-pointer underline ui-text-accent hover:ui-text-accent-hover"
                             onClick={() => {
                                 setLineClamp(!lineClamp)
                             }}>

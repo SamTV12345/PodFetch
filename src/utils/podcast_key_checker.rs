@@ -22,7 +22,7 @@ pub async fn check_permissions_for_files(
     mut req: Request,
     next: Next,
 ) -> Result<Response, CustomError> {
-    let request = query.map(|rss_api_key| rss_api_key.api_key.to_string());
+    let request = query.and_then(|rss_api_key| rss_api_key.api_key);
     let extracted_podcast = check_auth(req.uri().clone(), request)?;
 
     req.extensions_mut().insert(extracted_podcast);

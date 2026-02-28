@@ -4,7 +4,7 @@ import {  removeHTML } from '../utils/Utilities'
 import useCommon from '../store/CommonSlice'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 import {useState} from "react";
 import {PodcastEpisodeChapterTable} from "./PodcastEpisodeChapterTable";
 
@@ -25,6 +25,7 @@ export const PodcastInfoModal = () => {
     const { t } =  useTranslation()
     const [selectedTab, setSelectedTab] = useState<'description'|'chapters'>('description')
     const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const deleteEpisodeDownloadMutation = $api.useMutation('delete', '/api/v1/episodes/{id}/download')
     const download = (url: string, filename: string) => {
         const element = document.createElement('a')
         element.setAttribute('href', url)
@@ -37,7 +38,7 @@ export const PodcastInfoModal = () => {
     }
 
     const deleteEpisodeDownloadOnServer = (episodeId: string) => {
-        client.DELETE("/api/v1/episodes/{id}/download", {
+        deleteEpisodeDownloadMutation.mutateAsync({
             params: {
                 path: {
                     id: episodeId
@@ -59,7 +60,7 @@ export const PodcastInfoModal = () => {
         ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
         >
             <div
-                className={`relative bg-(--bg-color) w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-y-auto p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
+                className={`relative ui-surface w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-y-auto p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
                 onClick={e => e.stopPropagation()}
             >
                 <button
@@ -68,14 +69,14 @@ export const PodcastInfoModal = () => {
                     className="absolute top-4 right-4 bg-transparent"
                     data-modal-hide="defaultModal"
                 >
-                    <span className="material-symbols-outlined text-(--modal-close-color) hover:text-(--modal-close-color-hover)">close</span>
-                    <span className="sr-only">Close modal</span>
+                    <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
+                    <span className="sr-only">{t('closeModal')}</span>
                 </button>
 
                 <div className="mb-4">
                     <Heading2 className="inline align-middle mr-2 break-all">{selectedPodcastEpisode?.name || ''}</Heading2>
 
-                    <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer text-(--fg-icon-color) hover:text-(--fg-icon-color-hover)' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
+                    <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer ui-icon hover:ui-icon-hover' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
                         if (selectedPodcastEpisode) {
                             const extension = inferExtension(selectedPodcastEpisode.local_url || selectedPodcastEpisode.url)
                             const downloadUrl = selectedPodcastEpisode.status ? selectedPodcastEpisode.local_url : selectedPodcastEpisode.url
@@ -84,15 +85,15 @@ export const PodcastInfoModal = () => {
                     }}>save</span>
 
                     {selectedPodcastEpisode?.status &&
-                        <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)" title={t('delete') as string}>delete</span>
+                        <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer ui-text-danger hover:ui-text-danger-hover" title={t('delete') as string}>delete</span>
                     }
                 </div>
 
-                <ul className="flex flex-wrap gap-2 border-b border-(--border-color) mb-6 text-(--fg-secondary-color)">
-                    <li onClick={()=>setSelectedTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                <ul className="flex flex-wrap gap-2 border-b ui-border mb-6 ui-text-muted">
+                    <li onClick={()=>setSelectedTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
                         {t('description')}
                     </li>
-                    <li onClick={()=>setSelectedTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 border-(--accent-color) text-(--accent-color)'}`}>
+                    <li onClick={()=>setSelectedTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
                         {t('chapters')}
                     </li>
                 </ul>
@@ -101,7 +102,7 @@ export const PodcastInfoModal = () => {
                     <>
                         {
                             selectedTab === 'description' ? (
-                                <p className="leading-[1.75] text-sm text-(--fg-color)" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}/>
+                                <p className="leading-[1.75] text-sm ui-text" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}/>
                             ): (<PodcastEpisodeChapterTable podcastEpisode={selectedPodcastEpisode} className="overflow-auto max-h-1/2"/>)
                         }
                     </>

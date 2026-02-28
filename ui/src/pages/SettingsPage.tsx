@@ -20,7 +20,7 @@ export const SettingsPage = () => {
                 xs:w-[calc(100vw-4rem)] ${/* viewport - padding */ ''}
                 md:w-[calc(100vw-18rem-4rem)] ${/* viewport - sidebar - padding */ ''}
             `}>
-                <ul className="flex gap-2 border-b border-(--border-color) min-w-fit text-(--fg-secondary-color) settings-selector ">
+                <ul className="flex gap-2 border-b ui-border min-w-fit ui-text-muted settings-selector ">
                     <li className={`cursor-pointer inline-block px-2 py-4`}>
                         <NavLink to="retention" className="">
                             {t('data-retention')}

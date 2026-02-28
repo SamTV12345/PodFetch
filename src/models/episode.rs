@@ -5,6 +5,7 @@ use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as e
 use crate::constants::inner_constants::DEFAULT_DEVICE;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
+use crate::models::listening_event::{ListeningEvent, NewListeningEvent};
 use crate::models::misc_models::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
 };
@@ -64,6 +65,8 @@ pub struct Episode {
     #[diesel(sql_type = Nullable<Integer>)]
     pub total: Option<i32>,
 }
+
+const LISTENING_DELTA_GRACE_SECONDS: i64 = 15;
 
 impl Episode {
     pub fn insert_episode(&self) -> Result<Episode, diesel::result::Error> {
@@ -263,6 +266,12 @@ impl Episode {
     ) -> Result<(), Error> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
         use crate::adapters::persistence::dbconfig::schema::episodes::username;
+        use crate::adapters::persistence::dbconfig::schema::listening_events::dsl as le_dsl;
+        use crate::adapters::persistence::dbconfig::schema::listening_events::table as le_table;
+
+        diesel::delete(le_table.filter(le_dsl::username.eq(username1)))
+            .execute(conn)
+            .expect("");
         diesel::delete(episodes.filter(username.eq(username1)))
             .execute(conn)
             .expect("");
@@ -292,6 +301,8 @@ impl Episode {
     pub fn delete_watchtime(podcast_id: i32) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
+        use crate::adapters::persistence::dbconfig::schema::listening_events::dsl as le_dsl;
+        use crate::adapters::persistence::dbconfig::schema::listening_events::table as le_table;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl as podcast_dsl;
         use crate::adapters::persistence::dbconfig::schema::podcasts::table as podcast_table;
 
@@ -301,6 +312,9 @@ impl Episode {
             .optional()
             .map_err(|e| map_db_error(e, Critical))?;
 
+        diesel::delete(le_table.filter(le_dsl::podcast_id.eq(podcast_id)))
+            .execute(&mut get_connection())
+            .map_err(|e| map_db_error(e, Critical))?;
         diesel::delete(ep_table.filter(ep_dsl::podcast.eq(found_podcast.unwrap().rssfeed)))
             .execute(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
@@ -364,35 +378,55 @@ impl Episode {
             return Err(CustomErrorInner::NotFound(Warning).into());
         }
 
-        let mut rng = rand::rng();
-
-        let id = rng.random_range(0..1000000);
+        let now = Utc::now().naive_utc();
 
         match Self::get_watchlog_by_device_and_episode(
-            found_episode.guid.clone(),
-            DEFAULT_DEVICE.to_string(),
+            &username,
+            &found_episode.guid,
+            DEFAULT_DEVICE,
         ) {
             Ok(Some(mut episode)) => {
+                let listened_delta_seconds = Self::calculate_listened_delta(
+                    episode.position,
+                    Some(episode.timestamp),
+                    pod_watch_model.time,
+                    now,
+                );
+                if listened_delta_seconds > 0 {
+                    ListeningEvent::insert_event(NewListeningEvent {
+                        username: username.clone(),
+                        device: DEFAULT_DEVICE.to_string(),
+                        podcast_episode_id: found_episode.episode_id.clone(),
+                        podcast_id: found_episode.podcast_id,
+                        podcast_episode_db_id: found_episode.id,
+                        delta_seconds: listened_delta_seconds,
+                        start_position: pod_watch_model.time.saturating_sub(listened_delta_seconds),
+                        end_position: pod_watch_model.time,
+                        listened_at: now,
+                    })?;
+                }
+
                 episode.position = Some(pod_watch_model.time);
                 diesel::update(episodes_dsl.filter(episodes::id.eq(episode.id)))
                     .set((
                         episodes::started.eq(pod_watch_model.time),
                         episodes::position.eq(pod_watch_model.time),
-                        episodes::timestamp.eq(Utc::now().naive_utc()),
+                        episodes::timestamp.eq(now),
                     ))
                     .execute(&mut get_connection())
                     .map_err(|e| map_db_error(e, Critical))?;
                 return Ok(());
             }
             Ok(None) => {
-                let naive_date = Utc::now().naive_utc();
+                let mut rng = rand::rng();
+                let id = rng.random_range(0..1000000);
                 let episode = Episode {
                     id,
                     username,
                     device: DEFAULT_DEVICE.to_string(),
                     podcast: podcast.unwrap().rssfeed,
                     episode: found_episode.url.clone(),
-                    timestamp: naive_date,
+                    timestamp: now,
                     guid: Some(found_episode.guid.clone()),
                     action: "play".to_string(),
                     started: Some(pod_watch_model.time),
@@ -412,24 +446,59 @@ impl Episode {
     }
 
     pub fn get_watchlog_by_device_and_episode(
-        episode_guid: String,
-        device_id: String,
+        username_to_find: &str,
+        episode_guid: &str,
+        device_id: &str,
     ) -> Result<Option<Episode>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
 
         ep_table
+            .filter(ep_dsl::username.eq(username_to_find))
             .filter(ep_dsl::device.eq(device_id))
             .filter(ep_dsl::guid.eq(episode_guid))
+            .order_by(ep_dsl::timestamp.desc())
             .first::<Episode>(&mut get_connection())
             .optional()
             .map_err(|e| map_db_error(e, Critical))
     }
 
+    fn calculate_listened_delta(
+        previous_position: Option<i32>,
+        previous_timestamp: Option<NaiveDateTime>,
+        current_position: i32,
+        now: NaiveDateTime,
+    ) -> i32 {
+        let Some(previous_position) = previous_position else {
+            return 0;
+        };
+
+        if current_position <= previous_position {
+            return 0;
+        }
+
+        let raw_delta = current_position.saturating_sub(previous_position);
+        let Some(previous_timestamp) = previous_timestamp else {
+            return raw_delta;
+        };
+
+        let elapsed = now
+            .signed_duration_since(previous_timestamp)
+            .num_seconds()
+            .max(0);
+        let max_allowed = elapsed.saturating_add(LISTENING_DELTA_GRACE_SECONDS);
+        raw_delta.min(max_allowed.min(i64::from(i32::MAX)) as i32)
+    }
+
     pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
+        use crate::adapters::persistence::dbconfig::schema::listening_events::dsl as le_dsl;
+        use crate::adapters::persistence::dbconfig::schema::listening_events::table as le_table;
 
+        diesel::delete(le_table.filter(le_dsl::username.eq(username)))
+            .execute(&mut get_connection())
+            .map_err(|e| map_db_error(e, Critical))?;
         diesel::delete(ep_table.filter(ep_dsl::username.eq(username)))
             .execute(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
@@ -480,5 +549,45 @@ impl fmt::Display for EpisodeAction {
             EpisodeAction::Play => write!(f, "play"),
             EpisodeAction::Delete => write!(f, "delete"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Episode;
+    use chrono::{NaiveDate, NaiveDateTime};
+
+    fn dt(hour: u32, minute: u32, second: u32) -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2026, 2, 27)
+            .unwrap()
+            .and_hms_opt(hour, minute, second)
+            .unwrap()
+    }
+
+    #[test]
+    fn calculate_listened_delta_returns_zero_without_previous_position() {
+        let delta = Episode::calculate_listened_delta(None, None, 10, dt(10, 0, 0));
+        assert_eq!(delta, 0);
+    }
+
+    #[test]
+    fn calculate_listened_delta_returns_zero_for_seek_back() {
+        let delta =
+            Episode::calculate_listened_delta(Some(30), Some(dt(10, 0, 0)), 20, dt(10, 0, 4));
+        assert_eq!(delta, 0);
+    }
+
+    #[test]
+    fn calculate_listened_delta_caps_large_forward_seek() {
+        let delta =
+            Episode::calculate_listened_delta(Some(10), Some(dt(10, 0, 0)), 400, dt(10, 0, 5));
+        assert_eq!(delta, 20);
+    }
+
+    #[test]
+    fn calculate_listened_delta_keeps_regular_progress() {
+        let delta =
+            Episode::calculate_listened_delta(Some(100), Some(dt(10, 0, 0)), 108, dt(10, 0, 3));
+        assert_eq!(delta, 8);
     }
 }

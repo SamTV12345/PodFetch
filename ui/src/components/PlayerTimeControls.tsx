@@ -6,9 +6,9 @@ import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import 'material-symbols/outlined.css'
 import { useKeyDown } from '../hooks/useKeyDown'
 import useCommon from "../store/CommonSlice";
-import {logCurrentPlaybackTime} from "../utils/navigationUtils";
 import {getAudioPlayer, startAudioPlayer} from "../utils/audioPlayer";
 import {cn} from "../lib/utils";
+import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
 
 type PlayerTimeControlsProps = {
     currentPodcastEpisode?: AudioPlayerPlay
@@ -19,6 +19,7 @@ const SPEED_STEPS = [0.5, 1,1.1,1.25, 1.5, 2, 2.5, 3]
 
 
 export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcastEpisode }) => {
+    const logCurrentPlaybackTime = usePlaybackLogger()
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const episodes = useCommon(state => state.selectedEpisodes)
     const isPlaying  = useAudioPlayer(state => state.isPlaying)
@@ -76,7 +77,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
         const nextEpisode = episodes[index]
         if (!nextEpisode) return
         setCurrentPodcastEpisode(index)
-        startAudioPlayer(nextEpisode.podcastEpisode.local_url, nextEpisode.podcastHistoryItem?.position ?? 0)
+        await startAudioPlayer(nextEpisode.podcastEpisode.local_url, nextEpisode.podcastHistoryItem?.position ?? 0)
     }
 
     const handleButton = () => {
@@ -86,7 +87,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
         }
 
         if (audioPlayer.paused) {
-            audioPlayer.play()
+            void audioPlayer.play().catch(() => {})
         } else {
             if (time && currentPodcastEpisode) {
                 logCurrentPlaybackTime(currentPodcastEpisode.podcastEpisode.episode_id, time)
@@ -160,27 +161,27 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
     return (
         <div className="flex items-center justify-center gap-6">
             {/* Skip back */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90 " onClick={() => seekBackward()}>replay_30</span>
+            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl ui-text hover:ui-text-hover active:scale-90 " onClick={() => seekBackward()}>replay_30</span>
 
             {/* Previous */}
-            <button disabled={!hasPrevious} className={cn("material-symbols-outlined filled text-3xl lg:text-4xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90", hasPrevious ? '':'opacity-10')} onClick={() => skipToPreviousEpisode()}>skip_previous</button>
+            <button disabled={!hasPrevious} className={cn("material-symbols-outlined filled text-3xl lg:text-4xl ui-text hover:ui-text-hover active:scale-90", hasPrevious ? '':'opacity-10')} onClick={() => skipToPreviousEpisode()}>skip_previous</button>
 
             {/* Play/pause */}
-            <span className="flex items-center justify-center bg-(--fg-color) hover:bg-(--fg-color-hover) cursor-pointer h-10 w-10 lg:h-12 lg:w-12 rounded-full active:scale-90" onClick={() => handleButton()}>
+            <span className="flex items-center justify-center ui-bg-foreground hover:bg-(--fg-color-hover) cursor-pointer h-10 w-10 lg:h-12 lg:w-12 rounded-full active:scale-90" onClick={() => handleButton()}>
                 {isPlaying?
-                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl text-(--bg-color)">pause</span>:
-                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl text-(--bg-color)">play_arrow</span>
+                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl ui-text-inverse">pause</span>:
+                    <span className="material-symbols-outlined filled text-2xl lg:text-4xl ui-text-inverse">play_arrow</span>
                 }
             </span>
 
             {/* Next */}
-            <button disabled={!hasNext} className={cn("material-symbols-outlined filled text-3xl lg:text-4xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90", hasNext ? '':'opacity-10')} onClick={() => skipToNextEpisode()}>skip_next</button>
+            <button disabled={!hasNext} className={cn("material-symbols-outlined filled text-3xl lg:text-4xl ui-text hover:ui-text-hover active:scale-90", hasNext ? '':'opacity-10')} onClick={() => skipToNextEpisode()}>skip_next</button>
 
             {/* Skip forward */}
-            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90" onClick={() => seekForward()}>forward_30</span>
+            <span className="material-symbols-outlined cursor-pointer text-2xl lg:text-3xl ui-text hover:ui-text-hover active:scale-90" onClick={() => seekForward()}>forward_30</span>
 
             {/* Speed fixed width to prevent layout shift when value changes */}
-            <span className="cursor-pointer text-sm text-(--fg-color) hover:text-(--fg-color-hover) w-8" onClick={() => changeSpeed()}>{speed}x</span>
+            <span className="cursor-pointer text-sm ui-text hover:ui-text-hover w-8" onClick={() => changeSpeed()}>{speed}x</span>
         </div>
     )
 }

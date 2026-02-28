@@ -75,7 +75,7 @@ export const SystemInfoPage: FC = () => {
                 {/* CPU */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-(--fg-icon-color)">memory</span>
+                        <span className="material-symbols-outlined ui-icon">memory</span>
                         <Heading3>{t('cpu-usage')}</Heading3>
                     </span>
                     {
@@ -88,7 +88,7 @@ export const SystemInfoPage: FC = () => {
                 {/* Memory */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-(--fg-icon-color)">memory_alt</span>
+                        <span className="material-symbols-outlined ui-icon">memory_alt</span>
                         <Heading3>{t('memory-usage')}</Heading3>
                     </span>
                     {
@@ -102,7 +102,7 @@ export const SystemInfoPage: FC = () => {
                 {/* Disk */}
                 <div className="p-8 rounded-xl shadow-[0_4px_32px_rgba(0,0,0,calc(var(--shadow-opacity)-0.1))]">
                     <span className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-(--fg-icon-color)">hard_drive</span>
+                        <span className="material-symbols-outlined ui-icon">hard_drive</span>
                         <Heading3>{t('disk-usage')}</Heading3>
                     </span>
                     {
@@ -117,14 +117,14 @@ export const SystemInfoPage: FC = () => {
                     <Heading3 className="mb-6">{t('hardware')}</Heading3>
 
                     <dl className="grid lg:grid-cols-2 gap-2 lg:gap-6 text-sm">
-                        <dt className="font-medium text-(--fg-color)">{t('cpu-brand')}</dt>
+                        <dt className="font-medium ui-text">{t('cpu-brand')}</dt>
                         <LoadingSkeletonDD text={systemInfo.data?.system.cpus.cpus[0]?.brand} loading={systemInfo.isLoading}/>
-                        <dt className="font-medium text-(--fg-color)">{t('cpu-cores')}</dt>
+                        <dt className="font-medium ui-text">{t('cpu-cores')}</dt>
 
                         <LoadingSkeletonDD text={systemInfo.data?.system.cpus.cpus.length} loading={systemInfo.isLoading}/>
 
 
-                        <dt className="font-medium text-(--fg-color)">{t('podcast-size')}</dt>
+                        <dt className="font-medium ui-text">{t('podcast-size')}</dt>
                         <LoadingSkeletonDD loading={systemInfo.isLoading} text={calcedPodcastSize}/>
                     </dl>
                 </div>
@@ -134,33 +134,33 @@ export const SystemInfoPage: FC = () => {
                     <Heading3 className="mb-6">{t('system-configuration')}</Heading3>
 
                     <dl className="grid grid-cols-1 xs:grid-cols-[auto_auto] gap-2 xs:gap-6 text-sm">
-                        <dt className="font-medium text-(--fg-color)">{t('podindex-configured')}</dt>
-                        <dd className="text-(--fg-secondary-color)">
+                        <dt className="font-medium ui-text">{t('podindex-configured')}</dt>
+                        <dd className="ui-text-muted">
                             {configModel?.data?.podindexConfigured ? (
                                 <span className="material-symbols-outlined text-(--success-fg-color)">check_circle</span>
                             ) : (
-                                <span className="material-symbols-outlined text-(--danger-fg-color)">block</span>
+                                <span className="material-symbols-outlined ui-text-danger">block</span>
                             )}
                         </dd>
 
 
-                        <dt className="font-medium text-(--fg-color)">{t('rss-feed')}</dt>
-                        <dd className="text-(--fg-secondary-color)"><a className="text-(--accent-color) hover:text-(--accent-color-hover)" href={linkToRSSFeed} target="_blank" rel="noopener noreferrer"><LoadingSkeletonSpan text={linkToRSSFeed} loading={user.isLoading}/></a></dd>
+                        <dt className="font-medium ui-text">{t('rss-feed')}</dt>
+                        <dd className="ui-text-muted"><a className="ui-text-accent hover:ui-text-accent-hover" href={linkToRSSFeed} target="_blank" rel="noopener noreferrer"><LoadingSkeletonSpan text={linkToRSSFeed} loading={user.isLoading}/></a></dd>
                             <>
-                                <dt className="font-medium text-(--fg-color)">{t('version')}</dt>
+                                <dt className="font-medium ui-text">{t('version')}</dt>
                                 <LoadingSkeletonDD text={infoVersion?.data?.version} loading={infoVersion.isLoading}></LoadingSkeletonDD>
 
-                                <dt className="font-medium text-(--fg-color)">{t('commit')}</dt>
+                                <dt className="font-medium ui-text">{t('commit')}</dt>
                                 <LoadingSkeletonDD text={infoVersion.data?.commit} loading={infoVersion.isLoading}></LoadingSkeletonDD>
 
-                                <dt className="font-medium text-(--fg-color)">{t('ci-build')}</dt>
+                                <dt className="font-medium ui-text">{t('ci-build')}</dt>
                                 <LoadingSkeletonDD text={infoVersion?.data?.ci} loading={infoVersion.isLoading}></LoadingSkeletonDD>
 
-                                <dt className="font-medium text-(--fg-color)">{t('build-date')}</dt>
+                                <dt className="font-medium ui-text">{t('build-date')}</dt>
                                 <LoadingSkeletonDD text={infoVersion?.data?.time} loading={infoVersion.isLoading}></LoadingSkeletonDD>
-                                <dt className="font-medium text-(--fg-color)">{t('branch')}</dt>
+                                <dt className="font-medium ui-text">{t('branch')}</dt>
                                 <LoadingSkeletonDD text={infoVersion?.data?.ref} loading={infoVersion.isLoading}></LoadingSkeletonDD>
-                                <dt className="font-medium text-(--fg-color)">{t('os')}</dt>
+                                <dt className="font-medium ui-text">{t('os')}</dt>
                                 <LoadingSkeletonDD text={infoVersion?.data?.os} loading={infoVersion.isLoading}></LoadingSkeletonDD>
                             </>
                     </dl>

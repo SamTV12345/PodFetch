@@ -42,6 +42,9 @@
 }
 
 :root {
+    color-scheme: light;
+    --date-picker-indicator-filter: none;
+
     --bg-color: var(--color-white);
     --fg-color: var(--color-stone-900);
     --fg-color-hover: var(--color-stone-600);
@@ -71,8 +74,13 @@
     --modal-close-color: var(--color-stone-400);
     --modal-close-color-hover: var(--color-stone-500);
 
+    --sidebar-bg-color: var(--color-stone-950);
+    --sidebar-fg-color: var(--color-white);
+
     --shadow-opacity: 0.2;
     --shadow-opacity-hover: 0.5;
+    --sidebar-shadow-color: rgba(0, 0, 0, 0.5);
+    --drawer-shadow-color: rgba(0, 0, 0, 0.15);
 
     --danger-bg-color: var(--color-red-100);
     --danger-fg-color: var(--color-red-700);
@@ -80,9 +88,20 @@
 
     --success-fg-color: var(--color-green-700);
     --success-fg-color-hover: var(--color-green-500);
+
+    --chip-indigo-color: var(--color-indigo-700);
+    --chip-slate-color: var(--color-slate-700);
+    --chip-sky-color: var(--color-sky-700);
+    --chip-orange-color: var(--color-orange-700);
+    --chip-emerald-color: var(--color-emerald-700);
+    --chip-gray-color: var(--color-gray-700);
+    --chip-zinc-color: var(--color-zinc-700);
 }
 
 :root.dark {
+    color-scheme: dark;
+    --date-picker-indicator-filter: invert(1) brightness(0.5);
+
     --bg-color: var(--color-stone-900);
     --fg-color: var(--color-stone-300);
     --fg-color-hover: var(--color-stone-500);
@@ -112,8 +131,13 @@
     --modal-action-color: var(--color-stone-600);
     --modal-action-color-hover: var(--color-stone-500);
 
+    --sidebar-bg-color: #161514;
+    --sidebar-fg-color: var(--color-white);
+
     --shadow-opacity: 0.8;
     --shadow-opacity-hover: 1;
+    --sidebar-shadow-color: rgba(0, 0, 0, 0.7);
+    --drawer-shadow-color: rgba(0, 0, 0, 0.35);
 
     --danger-bg-color: var(--color-red-950);
     --danger-fg-color: var(--color-red-600);
@@ -121,6 +145,14 @@
 
     --success-fg-color: var(--color-green-600);
     --success-fg-color-hover: var(--color-green-700);
+
+    --chip-indigo-color: var(--color-indigo-400);
+    --chip-slate-color: var(--color-slate-400);
+    --chip-sky-color: var(--color-sky-400);
+    --chip-orange-color: var(--color-orange-400);
+    --chip-emerald-color: var(--color-emerald-400);
+    --chip-gray-color: var(--color-gray-400);
+    --chip-zinc-color: var(--color-zinc-400);
 }
 
 * {
@@ -129,6 +161,52 @@
 
 html {
     background-color: var(--bg-color);
+}
+
+.ui-date-input {
+    color-scheme: light;
+}
+
+:root.dark .ui-date-input {
+    color-scheme: dark;
+}
+
+.ui-date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.85;
+    color: var(--fg-color);
+}
+
+:root.dark .ui-date-input::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.25) contrast(1.1);
+    opacity: 1;
+}
+
+:root.dark .ui-date-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+.ui-date-input::-moz-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.9;
+}
+
+:root.dark .ui-date-input::-moz-calendar-picker-indicator {
+    filter: invert(1) brightness(1.25) contrast(1.1);
+    opacity: 1;
+}
+
+/* Global fallback: ensure native date-like picker indicators are visible in dark mode */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: var(--date-picker-indicator-filter) !important;
+}
+
+:root.dark input[type="date"],
+:root.dark input[type="month"],
+:root.dark input[type="datetime-local"] {
+    color-scheme: dark;
 }
 
 /* Icons */
@@ -324,4 +402,193 @@ html {
 
 .settings-selector .active {
     @apply border-b-2 border-(--accent-color) text-(--accent-color);
+}
+
+@utility ui-sidebar-surface {
+    background-color: var(--sidebar-bg-color);
+    color: var(--sidebar-fg-color);
+}
+
+@utility ui-sidebar-shadow {
+    box-shadow: 4px 0 16px var(--sidebar-shadow-color);
+}
+
+@utility ui-player-drawer-shadow {
+    box-shadow: 0 -4px 16px var(--drawer-shadow-color);
+}
+
+@utility ui-chip-label {
+    @apply block bg-(--bg-color) leading-none p-1.5 rounded-sm text-center text-xs whitespace-nowrap;
+}
+
+@utility ui-chip-text-indigo {
+    color: var(--chip-indigo-color);
+}
+
+@utility ui-chip-text-slate {
+    color: var(--chip-slate-color);
+}
+
+@utility ui-chip-text-sky {
+    color: var(--chip-sky-color);
+}
+
+@utility ui-chip-text-orange {
+    color: var(--chip-orange-color);
+}
+
+@utility ui-chip-text-emerald {
+    color: var(--chip-emerald-color);
+}
+
+@utility ui-chip-text-gray {
+    color: var(--chip-gray-color);
+}
+
+@utility ui-chip-text-zinc {
+    color: var(--chip-zinc-color);
+}
+
+@utility ui-surface {
+    background-color: var(--bg-color);
+}
+
+@utility ui-text {
+    color: var(--fg-color);
+}
+
+@utility ui-text-hover {
+    color: var(--fg-color-hover);
+}
+
+@utility ui-text-muted {
+    color: var(--fg-secondary-color);
+}
+
+@utility ui-border {
+    border-color: var(--border-color);
+}
+
+@utility ui-border-b {
+    border-bottom-color: var(--border-color);
+}
+
+@utility ui-border-r {
+    border-right-color: var(--border-color);
+}
+
+@utility ui-text-accent {
+    color: var(--accent-color);
+}
+
+@utility ui-text-accent-hover {
+    color: var(--accent-color-hover);
+}
+
+@utility ui-icon {
+    color: var(--fg-icon-color);
+}
+
+@utility ui-icon-hover {
+    color: var(--fg-icon-color-hover);
+}
+
+@utility ui-text-danger {
+    color: var(--danger-fg-color);
+}
+
+@utility ui-text-danger-hover {
+    color: var(--danger-fg-color-hover);
+}
+
+@utility ui-input-surface {
+    background-color: var(--input-bg-color);
+}
+
+@utility ui-input-text {
+    color: var(--input-fg-color);
+}
+
+@utility ui-input-icon {
+    color: var(--input-icon-color);
+}
+
+@utility ui-bg-accent {
+    background-color: var(--accent-color);
+}
+
+@utility ui-bg-accent-hover {
+    background-color: var(--accent-color-hover);
+}
+
+@utility ui-bg-foreground {
+    background-color: var(--fg-color);
+}
+
+@utility ui-border-accent {
+    border-color: var(--accent-color);
+}
+
+@utility ui-border-danger {
+    border-color: var(--danger-fg-color);
+}
+
+@utility ui-ring-accent {
+    --tw-ring-color: var(--accent-color);
+}
+
+@utility ui-modal-close {
+    color: var(--modal-close-color);
+}
+
+@utility ui-modal-close-hover {
+    color: var(--modal-close-color-hover);
+}
+
+@utility ui-slider-surface {
+    background-color: var(--slider-bg-color);
+}
+
+@utility ui-slider-fill {
+    background-color: var(--slider-fg-color);
+}
+
+@utility ui-text-inverse {
+    color: var(--bg-color);
+}
+
+@utility ui-border-contrast {
+    border-color: var(--bg-color);
+}
+
+@utility ui-surface-muted {
+    background-color: var(--border-color);
+}
+
+@utility ui-icon-muted {
+    color: var(--fg-secondary-icon-color);
+}
+
+@utility ui-danger-surface {
+    background-color: var(--danger-bg-color);
+}
+
+@utility ui-outline-accent {
+    outline-color: var(--accent-color);
+}
+
+@utility ui-text-disabled {
+    color: var(--fg-color-disabled);
+}
+
+@utility ui-input-text-disabled {
+    color: var(--input-fg-color-disabled);
+}
+
+@utility ui-fill {
+    fill: var(--fg-color);
+}
+
+@utility ui-fill-inverse {
+    fill: var(--bg-color);
 }

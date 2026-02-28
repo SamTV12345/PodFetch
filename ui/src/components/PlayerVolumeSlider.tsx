@@ -18,14 +18,36 @@ export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ audioAmplifier
     useKeyDown(() => {
             const newVolume = Math.max(0, volume - VOLUME_STEP)
             setVolume(newVolume)
-            audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
+            const audioPlayer = getAudioPlayer()
+            if (audioPlayer) {
+                audioPlayer.volume = Math.min(1, newVolume / 100)
+            }
+            if (audioAmplifier) {
+                audioAmplifier.setVolume(newVolume / 100)
+            }
     }, ['ArrowDown'], false)
 
     useKeyDown(() => {
             const newVolume = Math.min(300, volume + VOLUME_STEP)
             setVolume(newVolume)
-            audioAmplifier && audioAmplifier.setVolume(newVolume / 100)
+            const audioPlayer = getAudioPlayer()
+            if (audioPlayer) {
+                audioPlayer.volume = Math.min(1, newVolume / 100)
+            }
+            if (audioAmplifier) {
+                audioAmplifier.setVolume(newVolume / 100)
+            }
     }, ['ArrowUp'], false)
+
+    const applyVolumeToPlayer = (newVolume: number) => {
+        const audioPlayer = getAudioPlayer()
+        if (audioPlayer) {
+            audioPlayer.volume = Math.min(1, newVolume / 100)
+        }
+        if (audioAmplifier) {
+            audioAmplifier.setVolume(newVolume / 100)
+        }
+    }
 
     return (
         <div className="flex items-center gap-2 w-40 sm:w-full sm:px-0">
@@ -33,18 +55,19 @@ export const PlayerVolumeSlider: FC<PlayerVolumeSliderProps> = ({ audioAmplifier
 
             {/*  Volume max 300 as some podcast providers have inconsistent sound profiles */}
             <Slider.Root className="relative flex items-center cursor-pointer h-2 w-full" value={[volume]} max={300} onValueChange={(v) => {
-                audioAmplifier && audioAmplifier.setVolume(Number(v) / 100)
-                setVolume(Number(v))
+                const newVolume = Number(v)
+                setVolume(newVolume)
+                applyVolumeToPlayer(newVolume)
             }}>
-                <Slider.Track className="relative grow bg-(--slider-bg-color) h-0.5">
-                    <Slider.Range className="absolute bg-(--slider-fg-color) h-full"/>
+                <Slider.Track className="relative grow ui-slider-surface h-0.5">
+                    <Slider.Range className="absolute ui-slider-fill h-full"/>
                 </Slider.Track>
 
-                <Slider.Thumb className="block bg-(--slider-fg-color) h-2 w-2 rounded-full"/>
+                <Slider.Thumb className="block ui-slider-fill h-2 w-2 rounded-full"/>
             </Slider.Root>
 
             {/* Fixed width to avoid layout shift when volume changes */}
-            <span className="inline-block text-xs text-(--fg-color) w-16">{volume}%</span>
+            <span className="inline-block text-xs ui-text w-16">{volume}%</span>
         </div>
     )
 }

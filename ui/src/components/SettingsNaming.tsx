@@ -10,7 +10,7 @@ import { CustomCheckbox } from './CustomCheckbox'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
 import {EpisodeFormatModal} from "./EpisodeFormatModal";
 import {useDebounce} from "../utils/useDebounce";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 
 type SettingsProps = {
@@ -33,21 +33,13 @@ export const options = [
 ]
 
 export const SettingsNaming: FC = () => {
-    const [settings, setSettings] = useState<components["schemas"]["Setting"]>()
+    const settings = $api.useQuery('get', '/api/v1/settings')
 
-    /* Fetch existing settings */
-    useEffect(() => {
-        client.GET("/api/v1/settings")
-            .then(res=>{
-                setSettings(res.data!)
-            })
-    }, [])
-
-    if (settings === undefined) {
+    if (!settings.data) {
         return <Loading />
     }
 
-    return <Settings intialSettings={settings} />
+    return <Settings intialSettings={settings.data} />
 }
 
 const Settings: FC<SettingsProps> = ({ intialSettings }) => {
@@ -56,6 +48,9 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     const [infoPodcastModalOpen, setInfoPodcastModalOpen] = useState<boolean>(false)
     const [resultingPodcastFormat, setResultingPodcastFormat] = useState<string>('')
     const [resultingEpisodeFormat, setResultingEpisodeFormat] = useState<string>('')
+    const previewEpisodeFormatMutation = $api.useMutation('post', '/api/v1/episodes/formatting')
+    const previewPodcastFormatMutation = $api.useMutation('post', '/api/v1/podcasts/formatting')
+    const saveNamingSettingsMutation = $api.useMutation('put', '/api/v1/settings/name')
     const { control, formState: {}, handleSubmit, watch}
         = useForm<components["schemas"]["UpdateNameSettings"]>({
         defaultValues: {
@@ -76,10 +71,10 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: episodeFormat
         }
-        client.POST( '/api/v1/episodes/formatting', {
+        previewEpisodeFormatMutation.mutateAsync({
             body: content
         })
-            .then((v)=>setResultingEpisodeFormat(v.data!))
+            .then((v)=>setResultingEpisodeFormat(v ?? ''))
             .catch(e=>setResultingEpisodeFormat(e.response.data.error))
 
     },2000,[episodeFormat])
@@ -88,14 +83,14 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
         const content = {
             content: podcastFormat
         }
-        client.POST("/api/v1/podcasts/formatting", {
+        previewPodcastFormatMutation.mutateAsync({
             body: content
-        }).then((v)=>setResultingPodcastFormat(v.data!))
+        }).then((v)=>setResultingPodcastFormat(v ?? ''))
             .catch(e=>setResultingPodcastFormat(e.response.data.error))
     },2000,[podcastFormat])
 
     const update_settings: SubmitHandler<components["schemas"]["UpdateNameSettings"]> = (data) => {
-        client.PUT("/api/v1/settings/name", {
+        saveNamingSettingsMutation.mutateAsync({
             body: data
         }).then(() => {
             enqueueSnackbar(t('settings-saved'), { variant: 'success' })
@@ -108,7 +103,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
     return (
         <>
             <EpisodeFormatModal heading={t('standard-episode-format')} open={infoEpisodeModalOpen} setOpen={(v) => setInfoEpisodeModalOpen(v)}>
-                <ul className="list-disc text-(--fg-color)">
+                <ul className="list-disc ui-text">
                     <li>{'{title}'}</li>
                     <li>{'{date}'}</li>
                     <li>{'{description}'}</li>
@@ -118,7 +113,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                 </ul>
             </EpisodeFormatModal>
             <EpisodeFormatModal heading={t('standard-podcast-format')} open={infoPodcastModalOpen} setOpen={(v) => setInfoPodcastModalOpen(v)}>
-                <ul className="list-disc text-(--fg-color)">
+                <ul className="list-disc ui-text">
                     <li>{'{title}'}</li>
                     <li>{'{description}'}</li>
                     <li>{'{language}'}</li>
@@ -129,7 +124,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
             <form onSubmit={handleSubmit(update_settings)}>
                 <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10">
                     <fieldset className="xs:contents mb-4">
-                        <legend className="self-start mb-2 xs:mb-0 text-(--fg-color)">{t('rename-podcasts')}</legend>
+                        <legend className="self-start mb-2 xs:mb-0 ui-text">{t('rename-podcasts')}</legend>
 
                         <div className="flex flex-col gap-2">
                             <div className="flex">
@@ -141,7 +136,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                                                         value={value}/>
                                     )}/>
 
-                                <label className="ml-2 text-sm text-(--fg-secondary-color)"
+                                <label className="ml-2 text-sm ui-text-muted"
                                        htmlFor="use-existing-filenames">{t('use-existing-filenames')}</label>
                             </div>
                             <div className="flex">
@@ -153,14 +148,14 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                                                         value={value}/>
                                     )}/>
 
-                                <label className="ml-2 text-sm text-(--fg-secondary-color)"
+                                <label className="ml-2 text-sm ui-text-muted"
                                        htmlFor="replace-invalid-characters">{t('replace-invalid-characters-description')}</label>
                             </div>
                         </div>
                     </fieldset>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <label className="text-(--fg-color) flex gap-1"
+                        <label className="ui-text flex gap-1"
                                htmlFor="colon-replacement">{t('colon-replacement')}
                             <SettingsInfoIcon headerKey="colon-replacement" textKey="colon-replacement-explanation"/>
                         </label>
@@ -175,7 +170,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <label className="text-(--fg-color) flex gap-1"
+                        <label className="ui-text flex gap-1"
                                htmlFor="episode-format">{t('standard-episode-format')}
                             <button type="button">
                                     <span
@@ -196,12 +191,12 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <span className="text-(--fg-color)">Sample episode format</span>
+                        <span className="ui-text">{t('sample-episode-format')}</span>
                         <CustomInput value={resultingEpisodeFormat} disabled={true}></CustomInput>
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <label className="text-(--fg-color) flex gap-1"
+                        <label className="ui-text flex gap-1"
                                htmlFor="podcast-format">{t('standard-podcast-format')}
                             <button type="button">
                                     <span
@@ -220,13 +215,13 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     </div>
 
                     <div className="flex flex-col gap-2 xs:contents mb-4">
-                        <span className="text-(--fg-color)">Sample podcast format</span>
+                        <span className="ui-text">{t('sample-podcast-format')}</span>
                         <CustomInput value={resultingPodcastFormat} disabled={true}></CustomInput>
                     </div>
 
 
                     <fieldset className="xs:contents mb-4">
-                        <legend className="self-start mb-2 xs:mb-0 text-(--fg-color)">{t('use-direct-paths')}</legend>
+                        <legend className="self-start mb-2 xs:mb-0 ui-text">{t('use-direct-paths')}</legend>
 
                         <div className="flex flex-col gap-2">
                             <div className="flex">

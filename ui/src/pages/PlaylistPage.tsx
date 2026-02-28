@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
 import {useNavigate} from "react-router-dom";
@@ -6,7 +6,7 @@ import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {CustomButtonSecondary} from "../components/CustomButtonSecondary";
 import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
 import usePlaylist from "../store/PlaylistSlice";
-import {client} from "../utils/http";
+import {$api} from "../utils/http";
 
 export const PlaylistPage = () => {
     const {t} = useTranslation()
@@ -15,21 +15,13 @@ export const PlaylistPage = () => {
     const setPlaylist = usePlaylist(state => state.setPlaylist)
     const setCreatePlaylistOpen = usePlaylist(state => state.setCreatePlaylistOpen)
     const setCurrentPlaylistToEdit = usePlaylist(state => state.setCurrentPlaylistToEdit)
-    const [loading, setLoading] = useState(false)
-
-    const loadPlaylists = async () => {
-        setLoading(true)
-        try {
-            const response = await client.GET("/api/v1/playlist")
-            setPlaylist(response.data ?? [])
-        } finally {
-            setLoading(false)
-        }
-    }
+    const playlistsQuery = $api.useQuery('get', '/api/v1/playlist')
+    const playlistDetailQuery = $api.useMutation('get', '/api/v1/playlist/{playlist_id}')
+    const deletePlaylistMutation = $api.useMutation('delete', '/api/v1/playlist/{playlist_id}')
 
     useEffect(() => {
-        void loadPlaylists()
-    }, [])
+        setPlaylist(playlistsQuery.data ?? [])
+    }, [playlistsQuery.data, setPlaylist])
 
     return (
         <div>
@@ -37,8 +29,8 @@ export const PlaylistPage = () => {
 
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 className="text-xl font-semibold text-(--fg-color)">{t('playlists')}</h2>
-                    <div className="text-sm text-(--fg-secondary-color)">
+                    <h2 className="text-xl font-semibold ui-text">{t('playlists')}</h2>
+                    <div className="text-sm ui-text-muted">
                         {t('playlist-page-description')}
                     </div>
                 </div>
@@ -54,15 +46,15 @@ export const PlaylistPage = () => {
                 </CustomButtonPrimary>
             </div>
 
-            {loading && (
-                <div className="rounded-xl border border-(--border-color) p-6 text-(--fg-secondary-color)">
+            {playlistsQuery.isLoading && (
+                <div className="rounded-xl border ui-border p-6 ui-text-muted">
                     {t('loading-playlists')}
                 </div>
             )}
 
-            {!loading && playlist.length === 0 && (
-                <div className="rounded-xl border border-dashed border-(--border-color) p-8 text-center">
-                    <div className="text-(--fg-secondary-color)">{t('no-playlists-yet')}</div>
+            {!playlistsQuery.isLoading && playlist.length === 0 && (
+                <div className="rounded-xl border border-dashed ui-border p-8 text-center">
+                    <div className="ui-text-muted">{t('no-playlists-yet')}</div>
                     <CustomButtonSecondary
                         className="mt-4"
                         onClick={() => {
@@ -79,11 +71,11 @@ export const PlaylistPage = () => {
                 {playlist.map(item => (
                     <div
                         key={item.id}
-                        className="rounded-xl border border-(--border-color) bg-(--bg-color) p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+                        className="rounded-xl border ui-border ui-surface p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
                     >
                         <div className="mb-3">
-                            <div className="line-clamp-1 text-lg font-semibold text-(--fg-color)">{item.name}</div>
-                            <div className="text-xs text-(--fg-secondary-color)">
+                            <div className="line-clamp-1 text-lg font-semibold ui-text">{item.name}</div>
+                            <div className="text-xs ui-text-muted">
                                 {t('item_other', {count: item.items.length})}
                             </div>
                         </div>
@@ -97,21 +89,21 @@ export const PlaylistPage = () => {
                             <CustomButtonSecondary
                                 className="px-3 py-2"
                                 onClick={async () => {
-                                    const response = await client.GET("/api/v1/playlist/{playlist_id}", {
+                                    const response = await playlistDetailQuery.mutateAsync({
                                         params: {
                                             path: {playlist_id: String(item.id)}
                                         }
                                     })
-                                    setCurrentPlaylistToEdit(response.data!)
+                                    setCurrentPlaylistToEdit(response)
                                     setCreatePlaylistOpen(true)
                                 }}
                             >
                                 {t('edit')}
                             </CustomButtonSecondary>
                             <button
-                                className="ml-auto flex items-center text-sm text-(--danger-fg-color) hover:text-(--danger-fg-color-hover)"
+                                className="ml-auto flex items-center text-sm ui-text-danger hover:ui-text-danger-hover"
                                 onClick={async () => {
-                                    await client.DELETE("/api/v1/playlist/{playlist_id}", {
+                                    await deletePlaylistMutation.mutateAsync({
                                         params: {
                                             path: {playlist_id: String(item.id)}
                                         }

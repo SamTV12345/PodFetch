@@ -8,6 +8,13 @@ export const handleAddPodcast = (resp: number|null, podcast: string, t: TFunctio
         return
     }
     switch (resp) {
+        case 200:
+        case 201:
+        case 202:
+            enqueueSnackbar(t('new-podcast-added', {
+                name: podcast
+            }), {variant: "success"})
+            break
         case 409:
             enqueueSnackbar(t('already-added',{
                 name:podcast

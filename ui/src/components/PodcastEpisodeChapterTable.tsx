@@ -43,9 +43,9 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
 
 
   return <div className={className}>
-      <table className="text-left text-sm text-(--fg-color) w-full">
+      <table className="text-left text-sm ui-text w-full">
         <thead>
-        <tr className="border-b border-(--border-color)">
+        <tr className="border-b ui-border">
             <th scope="col" className="pr-2 py-3">
                 {t('title')}
             </th>
@@ -58,7 +58,7 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
 </tr>
 </thead>
     <tbody>
-    {chapters.data?.map((chapter, index)=><tr className="border-b border-(--border-color)" key={chapter.id}>
+    {chapters.data?.map((chapter, index)=><tr className="border-b ui-border" key={chapter.id}>
         <td className="pr-2 py-4 break-words">
             {chapter.title}
         </td>
@@ -69,7 +69,7 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
                             <span className={`
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
-                    self-center material-symbols-outlined cursor-pointer !text-5xl text-(--fg-color) hover:text-(--fg-color-hover) active:scale-90
+                    self-center material-symbols-outlined cursor-pointer !text-5xl ui-text hover:ui-text-hover active:scale-90
               `} onClick={async (e) => {
                                 // Prevent icon click from triggering info modal
                                 e.stopPropagation()

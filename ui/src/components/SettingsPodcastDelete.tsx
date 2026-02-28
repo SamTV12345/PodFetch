@@ -6,7 +6,7 @@ import { CustomButtonSecondary } from './CustomButtonSecondary'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import useModal from "../store/ModalSlice";
 import {CustomCheckbox} from "./CustomCheckbox";
-import {$api, client} from "../utils/http";
+import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
 import {useQueryClient} from "@tanstack/react-query";
@@ -19,10 +19,11 @@ export const SettingsPodcastDelete: FC = () => {
     const setConfirmModalData  = useCommon(state => state.setConfirmModalData)
     const queryClient = useQueryClient()
     const [selectedPodcasts, setSelectedPodcasts] = useState<components["schemas"]["PodcastDto"][]>([])
+    const deletePodcastMutation = $api.useMutation('delete', '/api/v1/podcasts/{id}')
 
     const deletePodcast = (withFiles: boolean) => {
         selectedPodcasts.forEach(p=>{
-            client.DELETE("/api/v1/podcasts/{id}", {
+            deletePodcastMutation.mutateAsync({
                 body: {
                     delete_files: withFiles
                 },
@@ -50,7 +51,7 @@ export const SettingsPodcastDelete: FC = () => {
             <AddPodcastModal/>
 
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-(--fg-color)">{t('manage-podcasts')}</h2>
+                <h2 className="text-lg font-semibold ui-text">{t('manage-podcasts')}</h2>
                 <CustomButtonPrimary className="flex items-center" onClick={() => setModalOpen(true)}>
                     <span className="material-symbols-outlined leading-[0.875rem] mr-1">add</span>
                     {t('add-podcast')}
@@ -120,7 +121,7 @@ export const SettingsPodcastDelete: FC = () => {
                             setSelectedPodcasts(selectedPodcasts.filter(pod=>pod !== p))
                         }
                     }}/>
-                    <span className="xs:col-span-2 lg:col-span-2 text-(--fg-color)">{p.name}</span>
+                    <span className="xs:col-span-2 lg:col-span-2 ui-text">{p.name}</span>
                         </Fragment>
             ))}
             </div>

@@ -10,7 +10,6 @@ import {prepareOnlinePodcastEpisode, preparePodcastEpisode, removeHTML} from "..
 import {PodcastWatchedModel} from "../models/PodcastWatchedModel";
 import {Episode} from "../models/Episode";
 import {components} from "../../schema";
-import {client} from "../utils/http";
 import {startAudioPlayer} from "../utils/audioPlayer";
 
 export const PodcastEpisodeAlreadyPlayed = () => {
@@ -41,18 +40,18 @@ export const PodcastEpisodeAlreadyPlayed = () => {
             ${!infoModalOpen && 'pointer-events-none'}
             ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
         >
-            <div className={`relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
+            <div className={`relative ui-surface max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
                 <button
                     type="button"
                     onClick={() => setPodcastAlreadyPlayed(false)}
                     className="absolute top-4 right-4 bg-transparent"
                     data-modal-hide="defaultModal"
                 >
-                    <span className="material-symbols-outlined text-(--modal-close-color) hover:text-(--modal-close-color-hover)">close</span>
-                    <span className="sr-only">Close modal</span>
+                    <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
+                    <span className="sr-only">{t('closeModal')}</span>
                 </button>
 
-                <div className="text-(--fg-color) mb-5">
+                <div className="ui-text mb-5">
                     <Trans t={t} i18nKey={'you-already-listened'} components={{
                         name: <span dangerouslySetInnerHTML={displayPodcastName}/>
                     }}/>

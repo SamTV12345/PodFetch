@@ -35,3 +35,7 @@ export const PlaylistViewLazyLoad = lazy(()=>import('../pages/PlaylistDetailPage
 export const HomepageViewLazyLoad = lazy(()=>import('../pages/Homepage').then(module=> {
     return{default:module["Homepage"]}
 }))
+
+export const StatisticsViewLazyLoad = lazy(()=>import('../pages/StatisticsPage').then(module=> {
+    return{default:module["StatisticsPage"]}
+}))

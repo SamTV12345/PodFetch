@@ -13,6 +13,7 @@ use crate::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
 use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
 use crate::controllers::server::SOCKET_IO_LAYER;
 use crate::controllers::settings_controller::get_settings_router;
+use crate::controllers::stats_controller::get_stats_router;
 use crate::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
 use crate::controllers::tags_controller::get_tags_router;
 use crate::controllers::user_controller::{get_invite, get_user_router, onboard_user};
@@ -292,6 +293,7 @@ fn get_private_api() -> OpenApiRouter {
         .merge(get_podcast_router())
         .merge(get_sys_info_router())
         .merge(get_watchtime_router())
+        .merge(get_stats_router())
         .merge(get_notification_router())
         .merge(get_podcast_episode_router())
         .merge(get_settings_router())
@@ -491,6 +493,36 @@ pub mod tests {
         fn drop(&mut self) {
             use crate::adapters::persistence::dbconfig::db::get_connection;
             use diesel::RunQueryDsl;
+            {
+                use crate::adapters::persistence::dbconfig::schema::listening_events::dsl::listening_events;
+                diesel::delete(listening_events)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::playlist_items;
+                diesel::delete(playlist_items)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
+                diesel::delete(favorite_podcast_episodes)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
+                diesel::delete(episodes)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+                diesel::delete(podcast_episodes)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
             {
                 use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
                 diesel::delete(podcasts)

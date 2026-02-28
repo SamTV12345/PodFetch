@@ -47,13 +47,15 @@ const useAudioPlayer = create<AudioPlayerProps>()((set, get) => ({
     setCurrentTimeUpdate: (currentTime: number) => {
         const metadata = get().metadata
         if(metadata){
-                set({metadata: {...metadata, currentTime, percentage: (currentTime/metadata.duration)*100}})
+                const percentage = metadata.duration > 0 ? (currentTime / metadata.duration) * 100 : 0
+                set({metadata: {...metadata, currentTime, percentage}})
         }
     },
     setCurrentTimeUpdatePercentage: (percentage: number) => {
         const metadata = get().metadata
         if(metadata){
-            set({metadata: {...metadata, percentage, currentTime: (percentage/100)*metadata.duration}})
+            const currentTime = metadata.duration > 0 ? (percentage / 100) * metadata.duration : 0
+            set({metadata: {...metadata, percentage, currentTime}})
         }
     },
     setCurrentPodcast: (currentPodcast: components["schemas"]["PodcastDto"]) => set({currentPodcast}),

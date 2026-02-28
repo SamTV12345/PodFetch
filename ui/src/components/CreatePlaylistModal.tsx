@@ -157,7 +157,7 @@ export const CreatePlaylistModal = () => {
             tabIndex={-1}
         >
             <div
-                className="relative mx-auto bg-(--bg-color) text-(--fg-color) max-w-5xl w-full md:w-[70%] p-6 md:p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)] max-h-[92vh] overflow-hidden"
+                className="relative mx-auto ui-surface ui-text max-w-5xl w-full md:w-[70%] p-6 md:p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)] max-h-[92vh] overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
                 <button
@@ -186,8 +186,8 @@ export const CreatePlaylistModal = () => {
                     className="flex flex-col"
                 >
                     <div className="mt-5 mb-5">
-                        <Heading2 className="mb-2 text-(--fg-color)">{t('add-playlist')}</Heading2>
-                        <div className="text-xs text-(--fg-secondary-color)">{stage + 1} / 3</div>
+                        <Heading2 className="mb-2 ui-text">{t('add-playlist')}</Heading2>
+                        <div className="text-xs ui-text-muted">{stage + 1} / 3</div>
                     </div>
 
                     <div className="overflow-y-auto pr-1 max-h-[62vh] md:max-h-[58vh]">
@@ -227,11 +227,11 @@ export const CreatePlaylistModal = () => {
                         )}
                         {stage === 2 && <PlaylistSubmitViewer playlistName={watchedName?.trim() ?? ""} episodeCount={watchedItems?.length ?? 0}/>}
                         {(errors.name?.message || errors.items?.message) && (
-                            <div className="mt-3 text-xs text-(--danger-fg-color)">{errors.name?.message || errors.items?.message}</div>
+                            <div className="mt-3 text-xs ui-text-danger">{errors.name?.message || errors.items?.message}</div>
                         )}
                     </div>
 
-                    <div className="mt-4 pt-3 flex items-center justify-between border-t border-(--border-color)">
+                    <div className="mt-4 pt-3 flex items-center justify-between border-t ui-border">
                         {stage === 0 ? (
                             <CustomButtonSecondary type="button" onClick={closeModal}>
                                 {t('cancel')}

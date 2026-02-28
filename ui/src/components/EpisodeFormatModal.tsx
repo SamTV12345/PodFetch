@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
 import {FC, ReactNode} from "react";
@@ -12,6 +13,7 @@ type InfoModalProps = {
 
 
 export const EpisodeFormatModal:FC<InfoModalProps> = ({open,setOpen, children, heading}) => {
+    const { t } = useTranslation()
 
     return createPortal(
         <div
@@ -23,14 +25,14 @@ export const EpisodeFormatModal:FC<InfoModalProps> = ({open,setOpen, children, h
             ${!open && 'pointer-events-none'}
             ${open ? 'opacity-100' : 'opacity-0'}`}
         >
-            <div className={`relative bg-(--bg-color) max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${open ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
+            <div className={`relative ui-surface max-w-2xl p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${open ? 'opacity-100' : 'opacity-0'}`} onClick={e => e.stopPropagation()}>
                 <button
                     type="button"
                     onClick={() => setOpen(false)}
                     className="absolute top-4 right-4 bg-transparent"
                     data-modal-hide="defaultModal">
-                    <span className="material-symbols-outlined text-(--modal-close-color) hover:text-(--modal-close-color-hover)">close</span>
-                    <span className="sr-only">Close modal</span>
+                    <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
+                    <span className="sr-only">{t('closeModal')}</span>
                 </button>
 
                 <div className="mb-4">

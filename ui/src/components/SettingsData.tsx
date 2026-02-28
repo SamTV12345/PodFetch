@@ -1,31 +1,32 @@
-import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSnackbar } from 'notistack'
 import { Setting } from '../models/Setting'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { CustomInput } from './CustomInput'
-import { Loading } from './Loading'
 import { Switcher } from './Switcher'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
-import {$api, client} from '../utils/http'
+import {$api} from '../utils/http'
 import {useQueryClient} from "@tanstack/react-query";
 
 
 export const Settings = () => {
     const {enqueueSnackbar} = useSnackbar()
     const settingsModel = $api.useQuery('get', '/api/v1/settings')
+    const runCleanupMutation = $api.useMutation('put', '/api/v1/settings/runcleanup')
+    const rescanEpisodesMutation = $api.useMutation('post', '/api/v1/settings/rescan-episodes')
+    const saveSettingsMutation = $api.useMutation('put', '/api/v1/settings')
     const { t } = useTranslation()
     const queryClient = useQueryClient()
 
     return (
         <div>
-            <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10 text-(--fg-color)">
+            <div className="grid grid-cols-1 xs:grid-cols-[1fr_auto] items-center gap-2 xs:gap-6 mb-10 ui-text">
                 <div className="flex flex-col gap-2 xs:contents mb-4">
                     <div>
                         <label className="mr-6" htmlFor="auto-cleanup">{t('auto-cleanup')}</label>
                         <CustomButtonSecondary onClick={() => {
-                            client.PUT("/api/v1/settings/runcleanup")
+                            runCleanupMutation.mutate({})
                         }}>{t('run-cleanup')}</CustomButtonSecondary>
                     </div>
                     <Switcher checked={settingsModel.data?.autoCleanup} loading={settingsModel.isLoading} className="xs:justify-self-end" id="auto-cleanup" onChange={() => {
@@ -78,14 +79,14 @@ export const Settings = () => {
                 <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="flex gap-1">{t('rescan-audio-files')} <SettingsInfoIcon headerKey="rescan-audio-files" textKey="rescan-audio-files-description" /></label>
                     <CustomButtonPrimary onClick={async ()=>{
-                        await client.POST('/api/v1/settings/rescan-episodes')
+                        await rescanEpisodesMutation.mutateAsync({})
                         enqueueSnackbar(t('rescan-done'), { variant: 'success' })
                     }}>{t('rescan-audio-files')}</CustomButtonPrimary>
                 </div>
             </div>
 
             <CustomButtonPrimary loading={settingsModel.isLoading} className="float-right" onClick={() => {
-                client.PUT("/api/v1/settings", {
+                saveSettingsMutation.mutateAsync({
                     body: settingsModel.data!
                 }).then(() => {
                     enqueueSnackbar(t('settings-saved'), { variant: 'success' })
