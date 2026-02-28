@@ -85,8 +85,8 @@ importers:
         specifier: ^8.2.1
         version: 8.2.1
       javascript-time-ago:
-        specifier: ^2.6.2
-        version: 2.6.2
+        specifier: ^2.6.3
+        version: 2.6.3
       lucide-react:
         specifier: ^0.575.0
         version: 0.575.0(react@19.2.4)
@@ -2066,8 +2066,8 @@ packages:
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
 
-  javascript-time-ago@2.6.2:
-    resolution: {integrity: sha512-gagMB4fetS1M1ZHaxQ9kX2amORXa5Los5PGh8NZzWSKrytz43KnpJlaPFTXbg/R7iPMN7U/6MoevgxqJ0QQ5lA==}
+  javascript-time-ago@2.6.3:
+    resolution: {integrity: sha512-IZNvIO7XNLHGbeh39nVrN7A9Nus7FUvIIXOs3dRVt0mpXpaYMDHSi9Yi+0bJpRROqcs5ia37YAGAISOZqLeULQ==}
 
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
@@ -2410,8 +2410,8 @@ packages:
   reduce-configs@1.1.1:
     resolution: {integrity: sha512-EYtsVGAQarE8daT54cnaY1PIknF2VB78ug6Zre2rs36EsJfC40EG6hmTU2A2P1ZuXnKAt2KI0fzOGHcX7wzdPw==}
 
-  relative-time-format@1.1.11:
-    resolution: {integrity: sha512-TH+oV/w77hjaB9xCzoFYJ/Icmr/12+02IAoCI/YGS2UBTbjCbBjHGEBxGnVy4EJvOR1qadGzyFRI6hGaJJG93Q==}
+  relative-time-format@1.1.12:
+    resolution: {integrity: sha512-qaZBjmRIuXLfuLnzgqpFdBPa5W0euSX1tMnoMUHGPphLwJmrt8xbNiOIHrlvYOD6oNJ0M5owPCZyPibI8de5pQ==}
 
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
@@ -4728,9 +4728,9 @@ snapshots:
 
   is-potential-custom-element-name@1.0.1: {}
 
-  javascript-time-ago@2.6.2:
+  javascript-time-ago@2.6.3:
     dependencies:
-      relative-time-format: 1.1.11
+      relative-time-format: 1.1.12
 
   jiti@2.6.1: {}
 
@@ -5038,7 +5038,7 @@ snapshots:
 
   reduce-configs@1.1.1: {}
 
-  relative-time-format@1.1.11: {}
+  relative-time-format@1.1.12: {}
 
   require-from-string@2.0.2: {}
 
