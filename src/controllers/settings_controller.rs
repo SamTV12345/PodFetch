@@ -387,3 +387,72 @@ pub fn get_settings_router() -> OpenApiRouter {
         .routes(routes!(update_name))
         .routes(routes!(rescan_episodes))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::commands::startup::tests::handle_test_startup;
+    use crate::models::settings::Setting;
+    use serde_json::json;
+    use serial_test::serial;
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_settings_returns_defaults() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/api/v1/settings").await;
+        assert_eq!(response.status_code(), 200);
+
+        let settings = response.json::<Setting>();
+        assert_eq!(settings.id, 1);
+        assert!(settings.auto_download);
+        assert!(settings.auto_update);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_name_updates_settings_values() {
+        let server = handle_test_startup().await;
+
+        let update_response = server
+            .test_server
+            .put("/api/v1/settings/name")
+            .json(&json!({
+                "useExistingFilename": true,
+                "replaceInvalidCharacters": true,
+                "replacementStrategy": "replace-with-dash",
+                "episodeFormat": "{episodeTitle}-{episodeDate}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": true
+            }))
+            .await;
+        assert_eq!(update_response.status_code(), 200);
+        let updated = update_response.json::<Setting>();
+        assert!(updated.use_existing_filename);
+        assert!(updated.replace_invalid_characters);
+        assert_eq!(updated.replacement_strategy, "replace-with-dash");
+        assert_eq!(updated.episode_format, "{episodeTitle}-{episodeDate}");
+        assert_eq!(updated.podcast_format, "{podcastTitle}");
+        assert!(updated.direct_paths);
+
+        let get_response = server.test_server.get("/api/v1/settings").await;
+        assert_eq!(get_response.status_code(), 200);
+        let persisted = get_response.json::<Setting>();
+        assert_eq!(persisted.replacement_strategy, "replace-with-dash");
+        assert_eq!(persisted.episode_format, "{episodeTitle}-{episodeDate}");
+        assert_eq!(persisted.podcast_format, "{podcastTitle}");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_opml_local_returns_xml() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/api/v1/settings/opml/local").await;
+        assert_eq!(response.status_code(), 200);
+        assert_eq!(response.maybe_content_type().unwrap(), "application/xml");
+        let xml = response.text();
+        assert!(xml.contains("<opml"));
+        assert!(xml.contains("PodFetch Feed Export"));
+    }
+}

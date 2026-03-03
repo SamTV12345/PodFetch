@@ -137,3 +137,162 @@ pub fn get_playlist_router() -> OpenApiRouter {
         .routes(routes!(delete_playlist_by_id))
         .routes(routes!(delete_playlist_item))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::adapters::persistence::dbconfig::db::get_connection;
+    use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl as pli_dsl;
+    use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
+    use crate::commands::startup::tests::handle_test_startup;
+    use crate::models::podcast_episode::PodcastEpisode;
+    use crate::models::podcasts::Podcast;
+    use diesel::ExpressionMethods;
+    use diesel::QueryDsl;
+    use diesel::RunQueryDsl;
+    use diesel::dsl::count_star;
+    use serde_json::json;
+    use serial_test::serial;
+
+    fn insert_episode(
+        podcast_id: i32,
+        episode_id: &str,
+        guid: &str,
+        title: &str,
+    ) -> PodcastEpisode {
+        diesel::insert_into(pe_dsl::podcast_episodes)
+            .values((
+                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::episode_id.eq(episode_id.to_string()),
+                pe_dsl::name.eq(title.to_string()),
+                pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
+                pe_dsl::date_of_recording.eq("2026-03-01T00:00:00Z".to_string()),
+                pe_dsl::image_url.eq("http://localhost:8080/ui/default.jpg".to_string()),
+                pe_dsl::total_time.eq(1800),
+                pe_dsl::description.eq("playlist test".to_string()),
+                pe_dsl::guid.eq(guid.to_string()),
+                pe_dsl::deleted.eq(false),
+                pe_dsl::episode_numbering_processed.eq(false),
+            ))
+            .get_result::<PodcastEpisode>(&mut get_connection())
+            .unwrap()
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_playlist_lifecycle_with_empty_items() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": "Morning Playlist",
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let created = create_response.json::<serde_json::Value>();
+        let playlist_id = created["id"].as_str().unwrap().to_string();
+        assert_eq!(created["name"], json!("Morning Playlist"));
+
+        let list_response = server.test_server.get("/api/v1/playlist").await;
+        assert_eq!(list_response.status_code(), 200);
+        let playlists = list_response.json::<serde_json::Value>();
+        assert_eq!(playlists.as_array().unwrap().len(), 1);
+        assert_eq!(playlists[0]["id"], json!(playlist_id.clone()));
+
+        let get_response = server
+            .test_server
+            .get(&format!("/api/v1/playlist/{playlist_id}"))
+            .await;
+        assert_eq!(get_response.status_code(), 200);
+        let fetched = get_response.json::<serde_json::Value>();
+        assert_eq!(fetched["name"], json!("Morning Playlist"));
+
+        let update_response = server
+            .test_server
+            .put(&format!("/api/v1/playlist/{playlist_id}"))
+            .json(&json!({
+                "name": "Updated Playlist",
+                "items": []
+            }))
+            .await;
+        assert_eq!(update_response.status_code(), 200);
+        let updated = update_response.json::<serde_json::Value>();
+        assert_eq!(updated["name"], json!("Updated Playlist"));
+
+        let delete_response = server
+            .test_server
+            .delete(&format!("/api/v1/playlist/{playlist_id}"))
+            .await;
+        assert_eq!(delete_response.status_code(), 200);
+
+        let list_after_delete = server.test_server.get("/api/v1/playlist").await;
+        assert_eq!(list_after_delete.status_code(), 200);
+        assert!(
+            list_after_delete
+                .json::<serde_json::Value>()
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_item_endpoint_removes_row() {
+        let server = handle_test_startup().await;
+
+        let podcast = Podcast::add_podcast_to_database(
+            "Playlist Podcast",
+            "playlist-podcast",
+            "https://example.com/playlist.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "playlist-podcast",
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            "playlist-episode-1",
+            "playlist-guid-1",
+            "Playlist Episode 1",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": "Single Item Playlist",
+                "items": [{"episode": episode.id}]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let created = create_response.json::<serde_json::Value>();
+        let playlist_id = created["id"].as_str().unwrap();
+
+        let rows_before = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id))
+            .filter(pli_dsl::episode.eq(episode.id))
+            .select(count_star())
+            .get_result::<i64>(&mut get_connection())
+            .unwrap();
+        assert_eq!(rows_before, 1);
+
+        let delete_item_response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{}/episode/{}",
+                playlist_id, episode.id
+            ))
+            .await;
+        assert_eq!(delete_item_response.status_code(), 200);
+
+        let rows_after = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id))
+            .filter(pli_dsl::episode.eq(episode.id))
+            .select(count_star())
+            .get_result::<i64>(&mut get_connection())
+            .unwrap();
+        assert_eq!(rows_after, 0);
+    }
+}

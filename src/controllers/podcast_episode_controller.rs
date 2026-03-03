@@ -426,3 +426,255 @@ pub fn get_podcast_episode_router() -> OpenApiRouter {
         .routes(routes!(retrieve_episode_sample_format))
         .routes(routes!(find_all_chapters_of_podcast_episode))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::adapters::persistence::dbconfig::db::get_connection;
+    use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
+    use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl as subs_dsl;
+    use crate::commands::startup::tests::handle_test_startup;
+    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+    use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
+    use crate::models::podcast_episode::PodcastEpisode;
+    use crate::models::podcasts::Podcast;
+    use chrono::Utc;
+    use diesel::ExpressionMethods;
+    use diesel::RunQueryDsl;
+    use serde_json::json;
+    use serial_test::serial;
+
+    fn admin_username() -> String {
+        ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "postgres".to_string())
+    }
+
+    fn insert_episode(
+        podcast_id: i32,
+        episode_id: &str,
+        guid: &str,
+        title: &str,
+    ) -> PodcastEpisode {
+        diesel::insert_into(pe_dsl::podcast_episodes)
+            .values((
+                pe_dsl::podcast_id.eq(podcast_id),
+                pe_dsl::episode_id.eq(episode_id.to_string()),
+                pe_dsl::name.eq(title.to_string()),
+                pe_dsl::url.eq(format!("https://example.com/{episode_id}.mp3")),
+                pe_dsl::date_of_recording.eq("2026-03-01T00:00:00Z".to_string()),
+                pe_dsl::image_url.eq("http://localhost:8080/ui/default.jpg".to_string()),
+                pe_dsl::total_time.eq(1800),
+                pe_dsl::description.eq("podcast episode test".to_string()),
+                pe_dsl::guid.eq(guid.to_string()),
+                pe_dsl::deleted.eq(false),
+                pe_dsl::episode_numbering_processed.eq(false),
+            ))
+            .get_result::<PodcastEpisode>(&mut get_connection())
+            .unwrap()
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_retrieve_episode_sample_format() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .post("/api/v1/episodes/formatting")
+            .json(&json!({
+                "content": "{episodeTitle}-{episodeDate}"
+            }))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        assert_eq!(response.text(), "My Homelab-2023-12-24");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_find_all_podcast_episodes_and_get_single_by_id() {
+        let server = handle_test_startup().await;
+
+        let podcast = Podcast::add_podcast_to_database(
+            "Episode Query Podcast",
+            "episode-query",
+            "https://example.com/episode-query.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "episode-query",
+        )
+        .unwrap();
+        let inserted_episode = insert_episode(
+            podcast.id,
+            "episode-query-1",
+            "episode-query-guid-1",
+            "Episode Query 1",
+        );
+
+        let list_response = server
+            .test_server
+            .get(&format!("/api/v1/podcasts/{}/episodes", podcast.id))
+            .await;
+        assert_eq!(list_response.status_code(), 200);
+        let payload = list_response.json::<serde_json::Value>();
+        assert_eq!(payload.as_array().unwrap().len(), 1);
+        assert_eq!(
+            payload[0]["podcastEpisode"]["episode_id"],
+            json!("episode-query-1")
+        );
+
+        let get_response = server
+            .test_server
+            .get(&format!("/api/v1/episodes/{}", inserted_episode.episode_id))
+            .await;
+        assert_eq!(get_response.status_code(), 200);
+        let single_payload = get_response.json::<serde_json::Value>();
+        assert_eq!(
+            single_payload["podcastEpisode"]["episode_id"],
+            json!("episode-query-1")
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_podcast_episode_by_id_returns_not_found_for_unknown_id() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .get("/api/v1/episodes/does-not-exist")
+            .await;
+        assert_eq!(response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_like_podcast_episode_persists_favorite() {
+        let server = handle_test_startup().await;
+
+        let podcast = Podcast::add_podcast_to_database(
+            "Like Podcast",
+            "like-podcast",
+            "https://example.com/like.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "like-podcast",
+        )
+        .unwrap();
+        let inserted_episode = insert_episode(
+            podcast.id,
+            "like-episode-1",
+            "like-guid-1",
+            "Like Episode 1",
+        );
+
+        let response = server
+            .test_server
+            .put(&format!(
+                "/api/v1/podcasts/{}/episodes/favor",
+                inserted_episode.id
+            ))
+            .json(&json!({"favored": true}))
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        let favorite = FavoritePodcastEpisode::get_by_user_id_and_episode_id(
+            &admin_username(),
+            inserted_episode.id,
+        )
+        .unwrap();
+        assert!(favorite.is_some());
+        assert!(favorite.unwrap().favorite);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_available_podcasts_not_in_webview_uses_local_subscriptions() {
+        let server = handle_test_startup().await;
+
+        diesel::insert_into(subs_dsl::subscriptions)
+            .values((
+                subs_dsl::username.eq(admin_username()),
+                subs_dsl::device.eq("phone".to_string()),
+                subs_dsl::podcast.eq("https://example.com/not-present.xml".to_string()),
+                subs_dsl::created.eq(Utc::now().naive_utc()),
+                subs_dsl::deleted.eq::<Option<chrono::NaiveDateTime>>(None),
+            ))
+            .execute(&mut get_connection())
+            .unwrap();
+
+        let response = server
+            .test_server
+            .get("/api/v1/podcasts/available/gpodder")
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        let available = response.json::<serde_json::Value>();
+        assert_eq!(available.as_array().unwrap().len(), 1);
+        assert_eq!(available[0]["device"], json!("phone"));
+        assert_eq!(
+            available[0]["podcast"],
+            json!("https://example.com/not-present.xml")
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_timeline_returns_items_without_external_calls() {
+        let server = handle_test_startup().await;
+
+        let podcast = Podcast::add_podcast_to_database(
+            "Timeline Podcast",
+            "timeline-podcast",
+            "https://example.com/timeline.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "timeline-podcast",
+        )
+        .unwrap();
+        insert_episode(
+            podcast.id,
+            "timeline-episode-1",
+            "timeline-guid-1",
+            "Timeline Episode 1",
+        );
+
+        let response = server
+            .test_server
+            .get("/api/v1/podcasts/timeline?favoredOnly=false&notListened=false&favoredEpisodes=false")
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let payload = response.json::<serde_json::Value>();
+        assert!(payload["totalElements"].as_i64().unwrap() >= 1);
+        assert!(!payload["data"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_find_all_chapters_of_episode_returns_empty_when_none_exist() {
+        let server = handle_test_startup().await;
+
+        let podcast = Podcast::add_podcast_to_database(
+            "Chapter Podcast",
+            "chapter-podcast",
+            "https://example.com/chapter.xml",
+            "http://localhost:8080/ui/default.jpg",
+            "chapter-podcast",
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            "chapter-episode-1",
+            "chapter-guid-1",
+            "Chapter Episode 1",
+        );
+
+        let response = server
+            .test_server
+            .get(&format!(
+                "/api/v1/podcasts/episodes/{}/chapters",
+                episode.id
+            ))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let payload = response.json::<serde_json::Value>();
+        assert!(payload.as_array().unwrap().is_empty());
+    }
+}

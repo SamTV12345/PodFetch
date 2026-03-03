@@ -317,3 +317,76 @@ pub fn get_user_router() -> OpenApiRouter {
         .routes(routes!(create_invite))
         .routes(routes!(get_invites))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::commands::startup::tests::handle_test_startup;
+    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+    use crate::models::invite::Invite;
+    use crate::models::user::UserWithAPiKey;
+    use serde_json::json;
+    use serial_test::serial;
+
+    fn admin_username() -> String {
+        ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "postgres".to_string())
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_current_user_with_me_alias() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/api/v1/users/me").await;
+        assert_eq!(response.status_code(), 200);
+
+        let user = response.json::<UserWithAPiKey>();
+        assert_eq!(user.username, admin_username());
+        assert_eq!(user.role, "admin");
+        assert!(user.read_only);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_invite_create_get_and_delete_lifecycle() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/invites")
+            .json(&json!({
+                "role": "user",
+                "explicitConsent": true
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let created_invite = create_response.json::<Invite>();
+
+        let get_single_response = server
+            .test_server
+            .get(&format!("/api/v1/invites/{}", created_invite.id))
+            .await;
+        assert_eq!(get_single_response.status_code(), 200);
+        let invite = get_single_response.json::<Invite>();
+        assert_eq!(invite.id, created_invite.id);
+        assert_eq!(invite.role, "user");
+
+        let list_response = server.test_server.get("/api/v1/invites").await;
+        assert_eq!(list_response.status_code(), 200);
+        let invites = list_response.json::<Vec<Invite>>();
+        assert_eq!(invites.len(), 1);
+        assert_eq!(invites[0].id, created_invite.id);
+
+        let delete_response = server
+            .test_server
+            .delete(&format!("/api/v1/invites/{}", created_invite.id))
+            .await;
+        assert_eq!(delete_response.status_code(), 200);
+
+        let list_after_delete = server.test_server.get("/api/v1/invites").await;
+        assert_eq!(list_after_delete.status_code(), 200);
+        assert!(list_after_delete.json::<Vec<Invite>>().is_empty());
+    }
+}
