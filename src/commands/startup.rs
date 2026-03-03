@@ -464,7 +464,7 @@ pub mod tests {
         #[cfg(feature = "postgresql")]
         let test_server = {
             let container = AsyncRunner::start(setup_container()).await.unwrap();
-            let mut test_server = TestServer::new(handle_config_for_server_startup()).unwrap();
+            let mut test_server = TestServer::new(handle_config_for_server_startup());
             test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
             TestServerWrapper {
                 test_server,
@@ -475,8 +475,7 @@ pub mod tests {
         #[cfg(not(feature = "postgresql"))]
         let test_server = {
             let mut test_server =
-                TestServer::new(crate::commands::startup::handle_config_for_server_startup())
-                    .unwrap();
+                TestServer::new(crate::commands::startup::handle_config_for_server_startup());
             test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
             TestServerWrapper {
                 test_server,
