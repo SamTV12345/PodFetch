@@ -146,8 +146,8 @@ importers:
         specifier: ^1.7.3
         version: 1.7.3
       '@rsbuild/plugin-babel':
-        specifier: ^1.1.0
-        version: 1.1.0(@rsbuild/core@1.7.3)
+        specifier: ^1.1.1
+        version: 1.1.1(@rsbuild/core@1.7.3)
       '@rsbuild/plugin-react':
         specifier: ^1.4.5
         version: 1.4.5(@rsbuild/core@1.7.3)
@@ -1418,8 +1418,8 @@ packages:
     engines: {node: '>=18.12.0'}
     hasBin: true
 
-  '@rsbuild/plugin-babel@1.1.0':
-    resolution: {integrity: sha512-stkd2Gc9ruXDNKnPt75BORteuMFZz3s3GzuDprbldOzU0r0+56seQ2JhWGd4NhJMnJvviKxNkiTISsYU+LlVEg==}
+  '@rsbuild/plugin-babel@1.1.1':
+    resolution: {integrity: sha512-aPMYlBRfMDM/yahd5cb9Y13Bz5RaPrASQRF62VQNbOQ+EoNOJl3IjQRpiC1OQGZqPaGHV0JE/Wo8hgRLPDvx6g==}
     peerDependencies:
       '@rsbuild/core': ^1.0.0 || ^2.0.0-0
 
@@ -2697,10 +2697,6 @@ packages:
   undici@7.22.0:
     resolution: {integrity: sha512-RqslV2Us5BrllB+JeiZnK4peryVTndy9Dnqq62S3yYRRTj0tFQCwEniUy2167skdGOy3vqRzEvl1Dm4sV2ReDg==}
     engines: {node: '>=20.18.1'}
-
-  upath@2.0.1:
-    resolution: {integrity: sha512-1uEe95xksV1O0CYKXo8vQvN1JEbtJp7lb7C5U9HMsIp6IVwntkH/oNUzyVNQSd4S1sYk2FpSSW44FqMc8qee5w==}
-    engines: {node: '>=4'}
 
   update-browserslist-db@1.2.3:
     resolution: {integrity: sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==}
@@ -4074,7 +4070,7 @@ snapshots:
       core-js: 3.47.0
       jiti: 2.6.1
 
-  '@rsbuild/plugin-babel@1.1.0(@rsbuild/core@1.7.3)':
+  '@rsbuild/plugin-babel@1.1.1(@rsbuild/core@1.7.3)':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-proposal-decorators': 7.29.0(@babel/core@7.29.0)
@@ -4082,9 +4078,7 @@ snapshots:
       '@babel/preset-typescript': 7.28.5(@babel/core@7.29.0)
       '@rsbuild/core': 1.7.3
       '@types/babel__core': 7.20.5
-      deepmerge: 4.3.1
       reduce-configs: 1.1.1
-      upath: 2.0.1
     transitivePeerDependencies:
       - supports-color
 
@@ -5317,8 +5311,6 @@ snapshots:
   undici-types@7.18.2: {}
 
   undici@7.22.0: {}
-
-  upath@2.0.1: {}
 
   update-browserslist-db@1.2.3(browserslist@4.28.1):
     dependencies:
