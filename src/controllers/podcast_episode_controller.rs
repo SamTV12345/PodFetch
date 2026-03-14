@@ -437,17 +437,39 @@ mod tests {
     use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
+    use crate::models::user::User;
+    use crate::utils::error::CustomErrorInner;
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use axum::Extension;
+    use axum::extract::Path;
     use chrono::Utc;
     use diesel::ExpressionMethods;
+    use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use serde_json::json;
     use serial_test::serial;
+    use uuid::Uuid;
 
     fn admin_username() -> String {
         ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "postgres".to_string())
+    }
+
+    fn unique_name(prefix: &str) -> String {
+        format!("{prefix}-{}", Uuid::new_v4())
+    }
+
+    fn non_admin_user() -> User {
+        UserTestDataBuilder::new().build()
+    }
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
     }
 
     fn insert_episode(
@@ -676,5 +698,123 @@ mod tests {
         assert_eq!(response.status_code(), 200);
         let payload = response.json::<serde_json::Value>();
         assert!(payload.as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_podcast_episode_locally_marks_episode_deleted() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("delete-local-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &unique_name("Delete Local Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("delete-local-episode-{unique}"),
+            &format!("delete-local-guid-{unique}"),
+            "Delete Local Episode",
+        );
+
+        let response = server
+            .test_server
+            .delete(&format!("/api/v1/episodes/{}/download", episode.episode_id))
+            .await;
+        assert_eq!(response.status_code(), 204);
+
+        let persisted = pe_dsl::podcast_episodes
+            .filter(pe_dsl::episode_id.eq(episode.episode_id))
+            .first::<PodcastEpisode>(&mut get_connection())
+            .unwrap();
+        assert!(persisted.deleted);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_podcast_episode_locally_returns_not_found_for_unknown_id() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .delete("/api/v1/episodes/does-not-exist/download")
+            .await;
+        assert_eq!(response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_like_podcast_episode_rejects_invalid_payload() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("invalid-like-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &unique_name("Invalid Like Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("invalid-like-episode-{unique}"),
+            &format!("invalid-like-guid-{unique}"),
+            "Invalid Like Episode",
+        );
+
+        let response = server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/episodes/favor", episode.id))
+            .json(&json!({ "favored": "yes" }))
+            .await;
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_admin_episode_handlers_return_forbidden_for_non_admin_user() {
+        let non_admin = non_admin_user();
+
+        let available_result = super::get_available_podcasts_not_in_webview(Extension(non_admin.clone())).await;
+        match available_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for get_available_podcasts_not_in_webview"),
+        }
+
+        let download_result = super::download_podcast_episodes_of_podcast(
+            Extension(non_admin.clone()),
+            Path("episode-id".to_string()),
+        )
+        .await;
+        match download_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for download_podcast_episodes_of_podcast"),
+        }
+
+        let delete_result =
+            super::delete_podcast_episode_locally(Path("episode-id".to_string()), Extension(non_admin)).await;
+        match delete_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for delete_podcast_episode_locally"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_download_unknown_episode_is_noop_and_returns_ok() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .put("/api/v1/podcasts/does-not-exist/episodes/download")
+            .await;
+        assert_eq!(response.status_code(), 200);
     }
 }

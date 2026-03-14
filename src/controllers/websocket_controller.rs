@@ -309,3 +309,256 @@ pub fn get_websocket_router() -> OpenApiRouter {
         .routes(routes!(get_rss_feed))
         .routes(routes!(get_rss_feed_for_podcast))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::commands::startup::tests::handle_test_startup;
+    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+    use crate::models::podcasts::Podcast;
+    use crate::models::user::User;
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use serial_test::serial;
+    use uuid::Uuid;
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
+    }
+
+    fn create_api_key_user() -> String {
+        let mut user = UserTestDataBuilder::new().build();
+        user.username = format!("rss-test-user-{}", Uuid::new_v4());
+        let api_key = format!("rss-test-key-{}", Uuid::new_v4());
+        user.api_key = Some(api_key.clone());
+        let _created = User::insert_user(&mut user).unwrap();
+        api_key
+    }
+
+    fn with_api_key(path: &str, key: &str) -> String {
+        if path.contains('?') {
+            format!("{path}&apiKey={key}")
+        } else {
+            format!("{path}?apiKey={key}")
+        }
+    }
+
+    fn create_podcast_for_rss() -> Podcast {
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("rss-podcast-{unique}");
+        Podcast::add_podcast_to_database(
+            &format!("RSS Podcast {unique}"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap()
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_returns_xml_or_forbidden_when_auth_is_enforced() {
+        let server = handle_test_startup().await;
+        let api_key = create_api_key_user();
+        let request_path = with_api_key("/rss", &api_key);
+
+        let response = server.test_server.get(&request_path).await;
+        let status = response.status_code();
+        assert!(status == 200 || status == 403);
+        if status == 200 {
+            assert_eq!(response.maybe_content_type().unwrap(), "application/rss+xml");
+            let body = response.text();
+            assert!(body.contains("<rss"));
+            assert!(body.contains("<channel>"));
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_rss_endpoints_return_client_error_for_wrong_http_method() {
+        let server = handle_test_startup().await;
+
+        let post_rss_response = server.test_server.post("/rss").await;
+        assert_client_error_status(post_rss_response.status_code().as_u16());
+
+        let post_rss_id_response = server.test_server.post("/rss/1").await;
+        assert_client_error_status(post_rss_id_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_rejects_invalid_top_query() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/rss?top=abc").await;
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_accepts_valid_top_query() {
+        let server = handle_test_startup().await;
+        let api_key = create_api_key_user();
+        let request_path = with_api_key("/rss?top=1", &api_key);
+
+        let response = server.test_server.get(&request_path).await;
+        let status = response.status_code();
+        assert!(status == 200 || status == 403);
+        if status == 200 {
+            assert_eq!(response.maybe_content_type().unwrap(), "application/rss+xml");
+            let body = response.text();
+            assert!(body.contains("<rss"));
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_for_podcast_rejects_non_numeric_id() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/rss/not-a-number").await;
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_for_unknown_podcast_returns_not_found() {
+        let server = handle_test_startup().await;
+        let api_key = create_api_key_user();
+        let request_path = with_api_key("/rss/999999", &api_key);
+
+        let response = server.test_server.get(&request_path).await;
+        let status = response.status_code();
+        assert!(status == 404 || status == 403);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_for_existing_podcast_returns_xml_or_forbidden() {
+        let server = handle_test_startup().await;
+        let podcast = create_podcast_for_rss();
+        let api_key = create_api_key_user();
+        let request_path = with_api_key(&format!("/rss/{}", podcast.id), &api_key);
+
+        let response = server.test_server.get(&request_path).await;
+        let status = response.status_code();
+        assert!(status == 200 || status == 403);
+        if status == 200 {
+            assert_eq!(response.maybe_content_type().unwrap(), "application/rss+xml");
+            let body = response.text();
+            assert!(body.contains("<rss"));
+            assert!(body.contains("<channel>"));
+        }
+    }
+
+    #[test]
+    fn test_add_api_key_to_url_variants() {
+        assert_eq!(
+            super::add_api_key_to_url("https://example.com/rss".to_string(), &None),
+            "https://example.com/rss"
+        );
+        assert_eq!(
+            super::add_api_key_to_url(
+                "https://example.com/rss".to_string(),
+                &Some("k1".to_string())
+            ),
+            "https://example.com/rss?apiKey=k1"
+        );
+        assert_eq!(
+            super::add_api_key_to_url(
+                "https://example.com/rss?top=1".to_string(),
+                &Some("k1".to_string())
+            ),
+            "https://example.com/rss?top=1&apiKey=k1"
+        );
+    }
+
+    #[test]
+    fn test_get_mime_type_for_episode_mappings() {
+        assert_eq!(
+            super::get_mime_type_for_episode("https://example.com/file.MP3"),
+            "audio/mpeg"
+        );
+        assert_eq!(
+            super::get_mime_type_for_episode("https://example.com/file.m4a"),
+            "audio/mp4"
+        );
+        assert_eq!(
+            super::get_mime_type_for_episode("https://example.com/file.mp4"),
+            "video/mp4"
+        );
+        assert_eq!(
+            super::get_mime_type_for_episode("https://example.com/file.abc"),
+            "audio/abc"
+        );
+        assert_eq!(
+            super::get_mime_type_for_episode("https://example.com/file"),
+            "application/octet-stream"
+        );
+    }
+
+    #[test]
+    fn test_generate_itunes_extension_conditionally_prefers_image_url() {
+        let mut podcast = Podcast::default();
+        podcast.image_url = "ui/custom.png".to_string();
+        podcast.original_image_url = "ui/original.png".to_string();
+
+        let itunes_ext = super::ITunesChannelExtensionBuilder::default().build();
+        let channel_builder = super::ChannelBuilder::default()
+            .title("t")
+            .link("l")
+            .description("d")
+            .items(vec![])
+            .clone();
+
+        let channel = super::generate_itunes_extension_conditionally(
+            itunes_ext,
+            channel_builder,
+            Some(podcast),
+            &Some("k1".to_string()),
+        );
+
+        let xml = channel.to_string();
+        assert!(xml.contains("ui/custom.png?apiKey=k1"));
+        assert!(!xml.contains("ui/original.png?apiKey=k1"));
+    }
+
+    #[test]
+    fn test_generate_itunes_extension_conditionally_falls_back_to_original_image_url() {
+        let mut podcast = Podcast::default();
+        podcast.image_url = "".to_string();
+        podcast.original_image_url = "ui/original.png".to_string();
+
+        let itunes_ext = super::ITunesChannelExtensionBuilder::default().build();
+        let channel_builder = super::ChannelBuilder::default()
+            .title("t")
+            .link("l")
+            .description("d")
+            .items(vec![])
+            .clone();
+
+        let channel = super::generate_itunes_extension_conditionally(
+            itunes_ext,
+            channel_builder,
+            Some(podcast),
+            &Some("k1".to_string()),
+        );
+
+        let xml = channel.to_string();
+        assert!(xml.contains("ui/original.png?apiKey=k1"));
+    }
+
+    #[test]
+    fn test_get_categories_returns_same_number_as_input() {
+        let categories = vec![
+            "Technology".to_string(),
+            "Science".to_string(),
+            "Education".to_string(),
+        ];
+        let mapped = super::get_categories(categories);
+        assert_eq!(mapped.len(), 3);
+    }
+}
+

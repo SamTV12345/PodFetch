@@ -390,10 +390,28 @@ pub fn get_settings_router() -> OpenApiRouter {
 
 #[cfg(test)]
 mod tests {
+    use crate::adapters::persistence::dbconfig::db::get_connection;
+    use crate::adapters::persistence::dbconfig::schema::settings::dsl as s_dsl;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::models::settings::Setting;
+    use crate::utils::error::CustomErrorInner;
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use axum::Extension;
+    use axum::Json;
+    use diesel::RunQueryDsl;
     use serde_json::json;
     use serial_test::serial;
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
+    }
+
+    fn non_admin_user() -> crate::models::user::User {
+        UserTestDataBuilder::new().build()
+    }
 
     #[tokio::test]
     #[serial]
@@ -454,5 +472,224 @@ mod tests {
         let xml = response.text();
         assert!(xml.contains("<opml"));
         assert!(xml.contains("PodFetch Feed Export"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_settings_persists_values() {
+        let server = handle_test_startup().await;
+
+        let update_response = server
+            .test_server
+            .put("/api/v1/settings")
+            .json(&json!({
+                "id": 1,
+                "autoDownload": false,
+                "autoUpdate": false,
+                "autoCleanup": true,
+                "autoCleanupDays": 14,
+                "podcastPrefill": 25,
+                "replaceInvalidCharacters": true,
+                "useExistingFilename": true,
+                "replacementStrategy": "replace-with-dash",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": true
+            }))
+            .await;
+        assert_eq!(update_response.status_code(), 200);
+        let updated = update_response.json::<Setting>();
+        assert!(!updated.auto_download);
+        assert!(!updated.auto_update);
+        assert!(updated.auto_cleanup);
+        assert_eq!(updated.auto_cleanup_days, 14);
+        assert!(updated.direct_paths);
+
+        let get_response = server.test_server.get("/api/v1/settings").await;
+        assert_eq!(get_response.status_code(), 200);
+        let persisted = get_response.json::<Setting>();
+        assert!(!persisted.auto_download);
+        assert!(!persisted.auto_update);
+        assert!(persisted.auto_cleanup);
+        assert_eq!(persisted.auto_cleanup_days, 14);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_settings_rejects_invalid_payload() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .put("/api/v1/settings")
+            .json(&json!({
+                "id": 1,
+                "autoDownload": "nope",
+                "autoUpdate": true,
+                "autoCleanup": true,
+                "autoCleanupDays": 7,
+                "podcastPrefill": 10,
+                "replaceInvalidCharacters": false,
+                "useExistingFilename": false,
+                "replacementStrategy": "remove",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": false
+            }))
+            .await;
+
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_name_rejects_invalid_replacement_strategy() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .put("/api/v1/settings/name")
+            .json(&json!({
+                "useExistingFilename": true,
+                "replaceInvalidCharacters": true,
+                "replacementStrategy": "invalid-value",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": false
+            }))
+            .await;
+
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_run_cleanup_and_rescan_endpoints_return_ok() {
+        let server = handle_test_startup().await;
+
+        let cleanup_response = server.test_server.put("/api/v1/settings/runcleanup").await;
+        assert_eq!(cleanup_response.status_code(), 200);
+
+        let rescan_response = server
+            .test_server
+            .post("/api/v1/settings/rescan-episodes")
+            .await;
+        assert_eq!(rescan_response.status_code(), 200);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_settings_returns_not_found_when_settings_missing() {
+        let server = handle_test_startup().await;
+
+        diesel::delete(s_dsl::settings)
+            .execute(&mut get_connection())
+            .unwrap();
+
+        let response = server.test_server.get("/api/v1/settings").await;
+        assert_eq!(response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_admin_settings_handlers_return_forbidden_for_non_admin_user() {
+        let user = non_admin_user();
+
+        let get_result = super::get_settings(Extension(user.clone())).await;
+        match get_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for get_settings"),
+        }
+
+        let run_cleanup_result = super::run_cleanup(Extension(user.clone())).await;
+        match run_cleanup_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for run_cleanup"),
+        }
+
+        let update_result = super::update_settings(
+            Extension(user.clone()),
+            Json(Setting {
+                id: 1,
+                auto_download: true,
+                auto_update: true,
+                auto_cleanup: false,
+                auto_cleanup_days: 10,
+                podcast_prefill: 12,
+                replace_invalid_characters: false,
+                use_existing_filename: false,
+                replacement_strategy: "remove".to_string(),
+                episode_format: "{episodeTitle}".to_string(),
+                podcast_format: "{podcastTitle}".to_string(),
+                direct_paths: false,
+            }),
+        )
+        .await;
+        match update_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for update_settings"),
+        }
+
+        let update_name_result = super::update_name(
+            Extension(user.clone()),
+            Json(super::UpdateNameSettings {
+                use_existing_filename: true,
+                replace_invalid_characters: true,
+                replacement_strategy: super::ReplacementStrategy::ReplaceWithDash,
+                episode_format: "{episodeTitle}".to_string(),
+                podcast_format: "{podcastTitle}".to_string(),
+                direct_paths: false,
+            }),
+        )
+        .await;
+        match update_name_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for update_name"),
+        }
+
+        let rescan_result = super::rescan_episodes(Extension(user)).await;
+        match rescan_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for rescan_episodes"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_settings_endpoints_return_client_error_for_wrong_http_methods() {
+        let server = handle_test_startup().await;
+
+        let post_settings = server.test_server.post("/api/v1/settings").await;
+        assert_client_error_status(post_settings.status_code().as_u16());
+
+        let get_update_name = server.test_server.get("/api/v1/settings/name").await;
+        assert_client_error_status(get_update_name.status_code().as_u16());
+
+        let post_run_cleanup = server.test_server.post("/api/v1/settings/runcleanup").await;
+        assert_client_error_status(post_run_cleanup.status_code().as_u16());
+
+        let get_rescan = server
+            .test_server
+            .get("/api/v1/settings/rescan-episodes")
+            .await;
+        assert_client_error_status(get_rescan.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_settings_endpoints_return_not_found_for_invalid_paths() {
+        let server = handle_test_startup().await;
+
+        let wrong_base = server.test_server.get("/api/v1/setting").await;
+        assert_eq!(wrong_base.status_code(), 404);
+
+        let typo_route = server.test_server.get("/api/v1/settings/runcleanups").await;
+        assert_eq!(typo_route.status_code(), 404);
+
+        let extra_segment = server
+            .test_server
+            .get("/api/v1/settings/opml/local/extra")
+            .await;
+        assert_eq!(extra_segment.status_code(), 404);
     }
 }

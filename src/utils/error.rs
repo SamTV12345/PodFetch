@@ -261,7 +261,7 @@ impl CustomError {
             CustomErrorInner::NotFound(_) => 404,
             CustomErrorInner::Forbidden(_) => 403,
             CustomErrorInner::UnAuthorized(_, _) => 401,
-            CustomErrorInner::BadRequest(_, _) => 404,
+            CustomErrorInner::BadRequest(_, _) => 400,
             CustomErrorInner::Conflict(_, _) => 409,
             CustomErrorInner::Unknown(_) => 500,
             CustomErrorInner::DatabaseError(_, _) => 500,
@@ -272,10 +272,27 @@ impl CustomError {
             error: self.inner.name(),
         }
     }
+
+    fn is_client_error(&self) -> bool {
+        matches!(
+            self.inner,
+            CustomErrorInner::NotFound(_)
+                | CustomErrorInner::Forbidden(_)
+                | CustomErrorInner::UnAuthorized(_, _)
+                | CustomErrorInner::BadRequest(_, _)
+                | CustomErrorInner::Conflict(_, _)
+        )
+    }
 }
 
 impl Drop for CustomError {
     fn drop(&mut self) {
+        if self.is_client_error() {
+            // Expected 4xx style errors are client-facing and should not flood server logs.
+            debug!("Client error: {}", self.inner);
+            return;
+        }
+
         match self.error_severity {
             ErrorSeverity::Critical | ErrorSeverity::Error => {
                 error!("Error {}: {} with error", self.inner, self.backtrace);
@@ -339,19 +356,20 @@ pub fn map_io_error(
     path: Option<String>,
     error_severity: ErrorSeverity,
 ) -> CustomError {
-    error!(
-        "IO error: {} for path {}",
-        e,
-        path.unwrap_or("".to_string())
-    );
+    let path = path.unwrap_or_default();
     match e.kind() {
         std::io::ErrorKind::NotFound => {
+            debug!("IO not found: {} for path {}", e, path);
             CustomError::from(CustomErrorInner::NotFound(error_severity))
         }
         std::io::ErrorKind::PermissionDenied => {
+            debug!("IO permission denied: {} for path {}", e, path);
             CustomError::from(CustomErrorInner::Forbidden(error_severity))
         }
-        _ => CustomError::from(CustomErrorInner::Unknown(error_severity)),
+        _ => {
+            error!("IO error: {} for path {}", e, path);
+            CustomError::from(CustomErrorInner::Unknown(error_severity))
+        }
     }
 }
 
@@ -374,15 +392,23 @@ pub fn map_io_extra_error(
 }
 
 pub fn map_db_error(e: diesel::result::Error, severity: ErrorSeverity) -> CustomError {
-    error!("Database error: {e}");
     match e {
+        diesel::result::Error::NotFound => {
+            debug!("Database not found");
+            CustomError::from(CustomErrorInner::NotFound(severity))
+        }
         diesel::result::Error::InvalidCString(_) => {
+            debug!("Database invalid C string mapped as not found");
             CustomError::from(CustomErrorInner::NotFound(severity))
         }
         diesel::result::Error::DatabaseError(_, _) => {
+            error!("Database error: {e}");
             CustomError::from(CustomErrorInner::DatabaseError(e, severity))
         }
-        _ => CustomError::from(CustomErrorInner::Unknown(severity)),
+        _ => {
+            error!("Database error: {e}");
+            CustomError::from(CustomErrorInner::Unknown(severity))
+        }
     }
 }
 
@@ -392,7 +418,7 @@ pub fn map_r2d2_error(e: r2d2::Error, error_severity: ErrorSeverity) -> CustomEr
 }
 
 pub fn map_reqwest_error(e: reqwest::Error) -> CustomError {
-    error!("Error during reqwest: {e}");
+    debug!("Reqwest client error: {e}");
 
     CustomErrorInner::BadRequest(
         format!("Error requesting resource from server: {e}"),
@@ -410,7 +436,10 @@ struct ErrorResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::error::{CustomErrorInner, ErrorSeverity, map_db_error, map_io_error};
+    use crate::utils::error::{
+        CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_io_error,
+    };
+    use axum::response::IntoResponse;
 
     use diesel::result::Error;
     use serial_test::serial;
@@ -432,8 +461,12 @@ mod tests {
     #[serial]
     fn test_map_db_error() {
         let db_error = Error::NotFound;
-        let custom_error = map_db_error(db_error, ErrorSeverity::Warning);
-        assert!(custom_error.to_string().starts_with("Initial error"));
+        let custom_error = map_db_error(db_error, ErrorSeverity::Debug);
+        assert!(
+            custom_error
+                .to_string()
+                .contains("Requested file was not found")
+        );
     }
 
     #[test]
@@ -455,5 +488,33 @@ mod tests {
             custom_error.to_string(),
             "The following error occurred: An error occured"
         );
+    }
+
+    #[test]
+    #[serial]
+    fn test_client_errors_are_classified_correctly() {
+        let client_error: CustomError = CustomErrorInner::Forbidden(ErrorSeverity::Info).into();
+        assert!(client_error.is_client_error());
+
+        let server_error: CustomError = CustomErrorInner::Unknown(ErrorSeverity::Error).into();
+        assert!(!server_error.is_client_error());
+    }
+
+    #[test]
+    #[serial]
+    fn test_bad_request_into_response_returns_400() {
+        let error: CustomError =
+            CustomErrorInner::BadRequest("payload invalid".to_string(), ErrorSeverity::Warning)
+                .into();
+        let response = error.into_response();
+        assert_eq!(response.status().as_u16(), 400);
+    }
+
+    #[test]
+    #[serial]
+    fn test_not_found_into_response_returns_404() {
+        let error: CustomError = CustomErrorInner::NotFound(ErrorSeverity::Info).into();
+        let response = error.into_response();
+        assert_eq!(response.status().as_u16(), 404);
     }
 }

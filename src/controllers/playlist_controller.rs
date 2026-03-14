@@ -144,14 +144,21 @@ mod tests {
     use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl as pli_dsl;
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
     use crate::commands::startup::tests::handle_test_startup;
+    use crate::controllers::playlist_controller::PlaylistDtoPost;
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
+    use crate::models::user::User;
+    use crate::utils::error::CustomErrorInner;
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use axum::extract::Path;
+    use axum::{Extension, Json};
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use diesel::dsl::count_star;
     use serde_json::json;
     use serial_test::serial;
+    use uuid::Uuid;
 
     fn insert_episode(
         podcast_id: i32,
@@ -177,29 +184,51 @@ mod tests {
             .unwrap()
     }
 
+    fn build_other_user() -> User {
+        let mut user = UserTestDataBuilder::new().build();
+        user.id = 999_999;
+        user
+    }
+
+    fn unique_name(prefix: &str) -> String {
+        format!("{prefix}-{}", Uuid::new_v4())
+    }
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_playlist_lifecycle_with_empty_items() {
         let server = handle_test_startup().await;
+        let playlist_name = unique_name("Morning Playlist");
+        let updated_playlist_name = unique_name("Updated Playlist");
 
         let create_response = server
             .test_server
             .post("/api/v1/playlist")
             .json(&json!({
-                "name": "Morning Playlist",
+                "name": playlist_name,
                 "items": []
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
         let created = create_response.json::<serde_json::Value>();
         let playlist_id = created["id"].as_str().unwrap().to_string();
-        assert_eq!(created["name"], json!("Morning Playlist"));
+        assert_eq!(created["name"], json!(playlist_name.clone()));
 
         let list_response = server.test_server.get("/api/v1/playlist").await;
         assert_eq!(list_response.status_code(), 200);
         let playlists = list_response.json::<serde_json::Value>();
-        assert_eq!(playlists.as_array().unwrap().len(), 1);
-        assert_eq!(playlists[0]["id"], json!(playlist_id.clone()));
+        assert!(playlists
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["id"] == json!(playlist_id.clone())));
 
         let get_response = server
             .test_server
@@ -207,19 +236,19 @@ mod tests {
             .await;
         assert_eq!(get_response.status_code(), 200);
         let fetched = get_response.json::<serde_json::Value>();
-        assert_eq!(fetched["name"], json!("Morning Playlist"));
+        assert_eq!(fetched["name"], json!(playlist_name));
 
         let update_response = server
             .test_server
             .put(&format!("/api/v1/playlist/{playlist_id}"))
             .json(&json!({
-                "name": "Updated Playlist",
+                "name": updated_playlist_name,
                 "items": []
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
         let updated = update_response.json::<serde_json::Value>();
-        assert_eq!(updated["name"], json!("Updated Playlist"));
+        assert_eq!(updated["name"], json!(updated_playlist_name));
 
         let delete_response = server
             .test_server
@@ -230,31 +259,185 @@ mod tests {
         let list_after_delete = server.test_server.get("/api/v1/playlist").await;
         assert_eq!(list_after_delete.status_code(), 200);
         assert!(
-            list_after_delete
+            !list_after_delete
                 .json::<serde_json::Value>()
                 .as_array()
                 .unwrap()
-                .is_empty()
+                .iter()
+                .any(|p| p["id"] == json!(playlist_id))
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_playlist_endpoints_return_not_found_for_unknown_playlist() {
+        let server = handle_test_startup().await;
+        let unknown_playlist_id = "playlist-does-not-exist";
+
+        let get_response = server
+            .test_server
+            .get(&format!("/api/v1/playlist/{unknown_playlist_id}"))
+            .await;
+        assert_eq!(get_response.status_code(), 404);
+
+        let update_response = server
+            .test_server
+            .put(&format!("/api/v1/playlist/{unknown_playlist_id}"))
+            .json(&json!({
+                "name": "Nope",
+                "items": []
+            }))
+            .await;
+        assert_eq!(update_response.status_code(), 404);
+
+        let delete_response = server
+            .test_server
+            .delete(&format!("/api/v1/playlist/{unknown_playlist_id}"))
+            .await;
+        assert_eq!(delete_response.status_code(), 404);
+
+        let delete_item_response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{unknown_playlist_id}/episode/1"
+            ))
+            .await;
+        assert_eq!(delete_item_response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_playlist_returns_forbidden_for_other_user() {
+        let server = handle_test_startup().await;
+        let playlist_name = unique_name("Owner Playlist");
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let result = super::update_playlist(
+            Extension(build_other_user()),
+            Path(playlist_id),
+            Json(PlaylistDtoPost {
+                name: "Hacker Rename".to_string(),
+                items: vec![],
+            }),
+        )
+        .await;
+
+        match result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_by_id_returns_forbidden_for_other_user() {
+        let server = handle_test_startup().await;
+        let playlist_name = unique_name("Owner Delete Playlist");
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let result = super::delete_playlist_by_id(Extension(build_other_user()), Path(playlist_id)).await;
+
+        match result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_item_returns_forbidden_for_other_user() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("forbidden-item-podcast-{unique}");
+        let playlist_name = unique_name("Owner Item Playlist");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Forbidden Item Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("forbidden-item-episode-{unique}"),
+            &format!("forbidden-item-guid-{unique}"),
+            "Forbidden Item Episode 1",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": [{"episode": episode.id}]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let result = super::delete_playlist_item(
+            Extension(build_other_user()),
+            Path((playlist_id, episode.id)),
+        )
+        .await;
+
+        match result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error"),
+        }
     }
 
     #[tokio::test]
     #[serial]
     async fn test_delete_playlist_item_endpoint_removes_row() {
         let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("playlist-podcast-{unique}");
+        let playlist_name = unique_name("Single Item Playlist");
 
         let podcast = Podcast::add_podcast_to_database(
-            "Playlist Podcast",
-            "playlist-podcast",
-            "https://example.com/playlist.xml",
+            &format!("Playlist Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
             "http://localhost:8080/ui/default.jpg",
-            "playlist-podcast",
+            &podcast_slug,
         )
         .unwrap();
         let episode = insert_episode(
             podcast.id,
-            "playlist-episode-1",
-            "playlist-guid-1",
+            &format!("playlist-episode-{unique}"),
+            &format!("playlist-guid-{unique}"),
             "Playlist Episode 1",
         );
 
@@ -262,7 +445,7 @@ mod tests {
             .test_server
             .post("/api/v1/playlist")
             .json(&json!({
-                "name": "Single Item Playlist",
+                "name": playlist_name,
                 "items": [{"episode": episode.id}]
             }))
             .await;
@@ -286,6 +469,612 @@ mod tests {
             ))
             .await;
         assert_eq!(delete_item_response.status_code(), 200);
+
+        let rows_after = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id))
+            .filter(pli_dsl::episode.eq(episode.id))
+            .select(count_star())
+            .get_result::<i64>(&mut get_connection())
+            .unwrap();
+        assert_eq!(rows_after, 0);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_playlist_with_same_name_returns_existing_playlist() {
+        let server = handle_test_startup().await;
+        let playlist_name = unique_name("Duplicate Name Playlist");
+
+        let first_create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": []
+            }))
+            .await;
+        assert_eq!(first_create_response.status_code(), 200);
+        let first_playlist_id = first_create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let second_create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": []
+            }))
+            .await;
+        assert_eq!(second_create_response.status_code(), 200);
+        let second_create_body = second_create_response.json::<serde_json::Value>();
+        assert_eq!(second_create_body["id"], json!(first_playlist_id.clone()));
+
+        let list_response = server.test_server.get("/api/v1/playlist").await;
+        assert_eq!(list_response.status_code(), 200);
+        let playlists = list_response.json::<serde_json::Value>();
+        let matching_count = playlists
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|p| p["id"] == json!(first_playlist_id.clone()))
+            .count();
+        assert_eq!(matching_count, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_playlist_replaces_playlist_items() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("update-items-podcast-{unique}");
+        let playlist_name = unique_name("Replace Items Playlist");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Update Items Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+
+        let first_episode = insert_episode(
+            podcast.id,
+            &format!("update-item-episode-1-{unique}"),
+            &format!("update-item-guid-1-{unique}"),
+            "Update Item Episode 1",
+        );
+        let second_episode = insert_episode(
+            podcast.id,
+            &format!("update-item-episode-2-{unique}"),
+            &format!("update-item-guid-2-{unique}"),
+            "Update Item Episode 2",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": [{"episode": first_episode.id}]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let update_response = server
+            .test_server
+            .put(&format!("/api/v1/playlist/{playlist_id}"))
+            .json(&json!({
+                "name": unique_name("Replace Items Playlist Updated"),
+                "items": [{"episode": second_episode.id}]
+            }))
+            .await;
+        assert_eq!(update_response.status_code(), 200);
+
+        let first_episode_rows = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id.clone()))
+            .filter(pli_dsl::episode.eq(first_episode.id))
+            .select(count_star())
+            .get_result::<i64>(&mut get_connection())
+            .unwrap();
+        assert_eq!(first_episode_rows, 0);
+
+        let second_episode_rows = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id))
+            .filter(pli_dsl::episode.eq(second_episode.id))
+            .select(count_star())
+            .get_result::<i64>(&mut get_connection())
+            .unwrap();
+        assert_eq!(second_episode_rows, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_item_endpoint_with_unknown_episode_is_noop() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("noop-delete-item-podcast-{unique}");
+        let playlist_name = unique_name("Noop Delete Item Playlist");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Noop Delete Item Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("noop-delete-item-episode-{unique}"),
+            &format!("noop-delete-item-guid-{unique}"),
+            "Noop Delete Item Episode",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": [{"episode": episode.id}]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let delete_missing_item_response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{}/episode/{}",
+                playlist_id,
+                episode.id + 1_000_000
+            ))
+            .await;
+        assert_eq!(delete_missing_item_response.status_code(), 200);
+
+        let rows_after = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id))
+            .filter(pli_dsl::episode.eq(episode.id))
+            .select(count_star())
+            .get_result::<i64>(&mut get_connection())
+            .unwrap();
+        assert_eq!(rows_after, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_playlist_with_item_returns_item_in_response() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("add-item-playlist-podcast-{unique}");
+        let playlist_name = unique_name("Add Item Response Playlist");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Add Item Response Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("add-item-response-episode-{unique}"),
+            &format!("add-item-response-guid-{unique}"),
+            "Add Item Response Episode",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": [{"episode": episode.id}]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let created = create_response.json::<serde_json::Value>();
+        let playlist_id = created["id"].as_str().unwrap();
+
+        let inserted_rows = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id))
+            .filter(pli_dsl::episode.eq(episode.id))
+            .select(count_star())
+            .get_result::<i64>(&mut get_connection())
+            .unwrap();
+        assert_eq!(inserted_rows, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_playlist_by_id_returns_not_found_for_other_user() {
+        let server = handle_test_startup().await;
+        let playlist_name = unique_name("Owner Get Playlist");
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": playlist_name,
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let result = super::get_playlist_by_id(Extension(build_other_user()), Path(playlist_id)).await;
+
+        match result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::NotFound(_))),
+            Ok(_) => panic!("expected not found error"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_all_playlists_returns_empty_for_user_without_playlists() {
+        let server = handle_test_startup().await;
+        let _guard = &server.mutex;
+
+        let result = super::get_all_playlists(Extension(build_other_user())).await;
+        match result {
+            Ok(Json(playlists)) => assert!(playlists.is_empty()),
+            Err(err) => panic!("expected empty result, got error: {err}"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_playlist_endpoint_rejects_invalid_payload() {
+        let server = handle_test_startup().await;
+
+        let missing_name_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "items": []
+            }))
+            .await;
+        assert_client_error_status(missing_name_response.status_code().as_u16());
+
+        let wrong_item_type_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Invalid Payload Playlist"),
+                "items": [{"episode": "not-a-number"}]
+            }))
+            .await;
+        assert_client_error_status(wrong_item_type_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_playlist_endpoint_rejects_invalid_payload() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Update Invalid Payload Playlist"),
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let update_response = server
+            .test_server
+            .put(&format!("/api/v1/playlist/{playlist_id}"))
+            .json(&json!({
+                "name": 123,
+                "items": []
+            }))
+            .await;
+        assert_client_error_status(update_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_item_endpoint_rejects_non_numeric_episode_id() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Bad Episode Path Playlist"),
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let delete_response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{}/episode/not-a-number",
+                playlist_id
+            ))
+            .await;
+        assert_client_error_status(delete_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_playlist_persists_item_positions_in_order() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("playlist-order-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Playlist Order Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let first_episode = insert_episode(
+            podcast.id,
+            &format!("playlist-order-episode-1-{unique}"),
+            &format!("playlist-order-guid-1-{unique}"),
+            "Playlist Order Episode 1",
+        );
+        let second_episode = insert_episode(
+            podcast.id,
+            &format!("playlist-order-episode-2-{unique}"),
+            &format!("playlist-order-guid-2-{unique}"),
+            "Playlist Order Episode 2",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Ordered Playlist"),
+                "items": [
+                    {"episode": second_episode.id},
+                    {"episode": first_episode.id}
+                ]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let persisted_items = pli_dsl::playlist_items
+            .filter(pli_dsl::playlist_id.eq(playlist_id))
+            .order(pli_dsl::position.asc())
+            .select((pli_dsl::episode, pli_dsl::position))
+            .load::<(i32, i32)>(&mut get_connection())
+            .unwrap();
+
+        assert_eq!(persisted_items.len(), 2);
+        assert_eq!(persisted_items[0], (second_episode.id, 0));
+        assert_eq!(persisted_items[1], (first_episode.id, 1));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_playlist_endpoints_return_client_error_for_wrong_http_methods() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Method Mismatch Playlist"),
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let post_on_id_response = server
+            .test_server
+            .post(&format!("/api/v1/playlist/{playlist_id}"))
+            .json(&json!({"name": "noop", "items": []}))
+            .await;
+        assert_client_error_status(post_on_id_response.status_code().as_u16());
+
+        let get_delete_item_route_response = server
+            .test_server
+            .get(&format!("/api/v1/playlist/{playlist_id}/episode/1"))
+            .await;
+        assert_client_error_status(get_delete_item_route_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_item_endpoint_rejects_episode_id_overflow() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Overflow Episode Path Playlist"),
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{}/episode/2147483648",
+                playlist_id
+            ))
+            .await;
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_playlist_by_id_returns_not_found_after_playlist_deletion() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Delete Then Get Playlist"),
+                "items": []
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let delete_response = server
+            .test_server
+            .delete(&format!("/api/v1/playlist/{playlist_id}"))
+            .await;
+        assert_eq!(delete_response.status_code(), 200);
+
+        let get_response = server
+            .test_server
+            .get(&format!("/api/v1/playlist/{playlist_id}"))
+            .await;
+        assert_eq!(get_response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_item_returns_not_found_after_playlist_deletion() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("delete-item-after-delete-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Delete Item After Delete Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("delete-item-after-delete-episode-{unique}"),
+            &format!("delete-item-after-delete-guid-{unique}"),
+            "Delete Item After Delete Episode",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Delete Item After Delete Playlist"),
+                "items": [{"episode": episode.id}]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let delete_playlist_response = server
+            .test_server
+            .delete(&format!("/api/v1/playlist/{playlist_id}"))
+            .await;
+        assert_eq!(delete_playlist_response.status_code(), 200);
+
+        let delete_item_response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{}/episode/{}",
+                playlist_id, episode.id
+            ))
+            .await;
+        assert_eq!(delete_item_response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_playlist_item_endpoint_is_idempotent_for_same_episode() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("idempotent-delete-item-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Idempotent Delete Item Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("idempotent-delete-item-episode-{unique}"),
+            &format!("idempotent-delete-item-guid-{unique}"),
+            "Idempotent Delete Item Episode",
+        );
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/playlist")
+            .json(&json!({
+                "name": unique_name("Idempotent Delete Item Playlist"),
+                "items": [{"episode": episode.id}]
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let playlist_id = create_response.json::<serde_json::Value>()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+
+        let first_delete = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{}/episode/{}",
+                playlist_id, episode.id
+            ))
+            .await;
+        assert_eq!(first_delete.status_code(), 200);
+
+        let second_delete = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/playlist/{}/episode/{}",
+                playlist_id, episode.id
+            ))
+            .await;
+        assert_eq!(second_delete.status_code(), 200);
 
         let rows_after = pli_dsl::playlist_items
             .filter(pli_dsl::playlist_id.eq(playlist_id))

@@ -161,8 +161,13 @@ mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::podcasts::Podcast;
+    use crate::utils::error::CustomErrorInner;
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use axum::extract::Path;
+    use axum::{Extension, Json};
     use serde_json::json;
     use serial_test::serial;
+    use uuid::Uuid;
 
     fn admin_username() -> String {
         ENVIRONMENT_SERVICE
@@ -171,37 +176,56 @@ mod tests {
             .unwrap_or_else(|| "postgres".to_string())
     }
 
+    fn unique_name(prefix: &str) -> String {
+        format!("{prefix}-{}", Uuid::new_v4())
+    }
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
+    }
+
+    fn other_user() -> crate::models::user::User {
+        let mut user = UserTestDataBuilder::new().build();
+        user.id = 999_999;
+        user
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_insert_update_and_delete_tag() {
         let server = handle_test_startup().await;
+        let tag_name = unique_name("Backend");
+        let updated_tag_name = unique_name("Backend Updated");
 
         let create_response = server
             .test_server
             .post("/api/v1/tags")
             .json(&json!({
-                "name": "Backend",
+                "name": tag_name,
                 "description": "API related",
                 "color": "Red"
             }))
             .await;
         assert_eq!(create_response.status_code(), 200);
         let created_tag = create_response.json::<Tag>();
-        assert_eq!(created_tag.name, "Backend");
+        assert_eq!(created_tag.name, tag_name);
         assert_eq!(created_tag.description, Some("API related".to_string()));
 
         let update_response = server
             .test_server
             .put(&format!("/api/v1/tags/{}", created_tag.id))
             .json(&json!({
-                "name": "Backend Updated",
+                "name": updated_tag_name,
                 "description": "API and DB",
                 "color": "Blue"
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
         let updated_tag = update_response.json::<Tag>();
-        assert_eq!(updated_tag.name, "Backend Updated");
+        assert_eq!(updated_tag.name, updated_tag_name);
         assert_eq!(updated_tag.description, Some("API and DB".to_string()));
         assert_eq!(updated_tag.color, "Blue");
 
@@ -227,13 +251,16 @@ mod tests {
     async fn test_add_and_remove_podcast_from_tag() {
         let server = handle_test_startup().await;
         let username = admin_username();
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("tagged-podcast-{unique}");
+        let tag_name = unique_name("Favorites");
 
         let podcast = Podcast::add_podcast_to_database(
-            "Tagged Podcast",
-            "tagged-podcast",
-            "https://example.com/tagged-feed.xml",
+            &format!("Tagged Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
             "http://localhost:8080/ui/default.jpg",
-            "tagged-podcast",
+            &podcast_slug,
         )
         .unwrap();
 
@@ -241,7 +268,7 @@ mod tests {
             .test_server
             .post("/api/v1/tags")
             .json(&json!({
-                "name": "Favorites",
+                "name": tag_name,
                 "description": "Pinned",
                 "color": "Green"
             }))
@@ -267,5 +294,155 @@ mod tests {
 
         let tags_after_remove = Tag::get_tags_of_podcast(podcast.id, &username).unwrap();
         assert!(tags_after_remove.is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_and_delete_unknown_tag_return_not_found() {
+        let server = handle_test_startup().await;
+        let unknown_tag_id = "tag-does-not-exist";
+
+        let update_response = server
+            .test_server
+            .put(&format!("/api/v1/tags/{unknown_tag_id}"))
+            .json(&json!({
+                "name": unique_name("Unknown Update"),
+                "description": "no-op",
+                "color": "Blue"
+            }))
+            .await;
+        assert_eq!(update_response.status_code(), 404);
+
+        let delete_response = server
+            .test_server
+            .delete(&format!("/api/v1/tags/{unknown_tag_id}"))
+            .await;
+        assert_eq!(delete_response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_and_remove_podcast_with_unknown_tag_return_not_found() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("unknown-tag-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &format!("Unknown Tag Podcast {unique}"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+
+        let add_response = server
+            .test_server
+            .post(&format!("/api/v1/tags/tag-does-not-exist/{}", podcast.id))
+            .await;
+        assert_eq!(add_response.status_code(), 404);
+
+        let remove_response = server
+            .test_server
+            .delete(&format!("/api/v1/tags/tag-does-not-exist/{}", podcast.id))
+            .await;
+        assert_eq!(remove_response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_insert_tag_rejects_invalid_payload() {
+        let server = handle_test_startup().await;
+
+        let invalid_color_response = server
+            .test_server
+            .post("/api/v1/tags")
+            .json(&json!({
+                "name": unique_name("Invalid Color"),
+                "description": "invalid color payload",
+                "color": "Invisible"
+            }))
+            .await;
+        assert_client_error_status(invalid_color_response.status_code().as_u16());
+
+        let missing_name_response = server
+            .test_server
+            .post("/api/v1/tags")
+            .json(&json!({
+                "description": "missing name",
+                "color": "Red"
+            }))
+            .await;
+        assert_client_error_status(missing_name_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_tag_handlers_return_not_found_for_other_user_tag_access() {
+        let server = handle_test_startup().await;
+
+        let create_response = server
+            .test_server
+            .post("/api/v1/tags")
+            .json(&json!({
+                "name": unique_name("Owner Tag"),
+                "description": "owned by current user",
+                "color": "Red"
+            }))
+            .await;
+        assert_eq!(create_response.status_code(), 200);
+        let created_tag = create_response.json::<Tag>();
+
+        let update_result = super::update_tag(
+            Path(created_tag.id.clone()),
+            Extension(other_user()),
+            Json(super::TagCreate {
+                name: unique_name("Hacker Rename"),
+                description: Some("forbidden".to_string()),
+                color: crate::models::color::Color::Blue,
+            }),
+        )
+        .await;
+        match update_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::NotFound(_))),
+            Ok(_) => panic!("expected not found for update_tag with other user"),
+        }
+
+        let delete_result =
+            super::delete_tag(Path(created_tag.id), Extension(other_user())).await;
+        match delete_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::NotFound(_))),
+            Ok(_) => panic!("expected not found for delete_tag with other user"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_add_podcast_to_tag_rejects_non_numeric_podcast_id() {
+        let server = handle_test_startup().await;
+
+        let tag_response = server
+            .test_server
+            .post("/api/v1/tags")
+            .json(&json!({
+                "name": unique_name("Path Rejection Tag"),
+                "description": "path rejection",
+                "color": "Green"
+            }))
+            .await;
+        assert_eq!(tag_response.status_code(), 200);
+        let tag = tag_response.json::<Tag>();
+
+        let add_response = server
+            .test_server
+            .post(&format!("/api/v1/tags/{}/not-a-number", tag.id))
+            .await;
+        assert_client_error_status(add_response.status_code().as_u16());
+
+        let remove_response = server
+            .test_server
+            .delete(&format!("/api/v1/tags/{}/not-a-number", tag.id))
+            .await;
+        assert_client_error_status(remove_response.status_code().as_u16());
     }
 }

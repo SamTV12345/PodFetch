@@ -323,15 +323,37 @@ mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::invite::Invite;
+    use crate::models::user::User;
     use crate::models::user::UserWithAPiKey;
+    use crate::utils::error::ErrorType;
+    use crate::utils::error::CustomErrorInner;
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use axum::extract::Path;
+    use axum::{Extension, Json};
     use serde_json::json;
     use serial_test::serial;
+    use uuid::Uuid;
 
     fn admin_username() -> String {
         ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "postgres".to_string())
+    }
+
+    fn unique_username(prefix: &str) -> String {
+        format!("{prefix}-{}", Uuid::new_v4())
+    }
+
+    fn non_admin_user() -> User {
+        UserTestDataBuilder::new().build()
+    }
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
     }
 
     #[tokio::test]
@@ -388,5 +410,230 @@ mod tests {
         let list_after_delete = server.test_server.get("/api/v1/invites").await;
         assert_eq!(list_after_delete.status_code(), 200);
         assert!(list_after_delete.json::<Vec<Invite>>().is_empty());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_onboard_user_lifecycle_and_reuse_invite_conflict() {
+        let server = handle_test_startup().await;
+        let username = unique_username("onboard-user");
+        let password = "ValidPass123";
+
+        let create_invite_response = server
+            .test_server
+            .post("/api/v1/invites")
+            .json(&json!({
+                "role": "user",
+                "explicitConsent": true
+            }))
+            .await;
+        assert_eq!(create_invite_response.status_code(), 200);
+        let invite = create_invite_response.json::<Invite>();
+
+        let onboard_response = server
+            .test_server
+            .post("/api/v1/users/")
+            .json(&json!({
+                "inviteId": invite.id,
+                "username": username,
+                "password": password
+            }))
+            .await;
+        assert_eq!(onboard_response.status_code(), 200);
+
+        let second_onboard_response = server
+            .test_server
+            .post("/api/v1/users/")
+            .json(&json!({
+                "inviteId": invite.id,
+                "username": unique_username("onboard-user-second"),
+                "password": password
+            }))
+            .await;
+        assert_eq!(second_onboard_response.status_code(), 409);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_onboard_user_with_unknown_invite_returns_not_found() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .post("/api/v1/users/")
+            .json(&json!({
+                "inviteId": "invite-does-not-exist",
+                "username": unique_username("unknown-invite-user"),
+                "password": "ValidPass123"
+            }))
+            .await;
+
+        assert_eq!(response.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_create_invite_rejects_invalid_role_payload() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .post("/api/v1/invites")
+            .json(&json!({
+                "role": "super-admin",
+                "explicitConsent": true
+            }))
+            .await;
+
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_invite_link_and_delete_return_bad_request_for_unknown_invite() {
+        let server = handle_test_startup().await;
+        let unknown_invite_id = "invite-does-not-exist";
+
+        let link_response = server
+            .test_server
+            .get(&format!("/api/v1/invites/{unknown_invite_id}/link"))
+            .await;
+        assert_eq!(link_response.status_code(), 400);
+
+        let delete_response = server
+            .test_server
+            .delete(&format!("/api/v1/invites/{unknown_invite_id}"))
+            .await;
+        assert_eq!(delete_response.status_code(), 400);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_user_handlers_return_forbidden_for_non_admin_or_foreign_user() {
+        let non_admin = non_admin_user();
+
+        let get_users_result = super::get_users(Extension(non_admin.clone())).await;
+        match get_users_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for get_users"),
+        }
+
+        let get_invites_result = super::get_invites(Extension(non_admin.clone())).await;
+        match get_invites_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for get_invites"),
+        }
+
+        let invite_link_result =
+            super::get_invite_link(Path("some-id".to_string()), Extension(non_admin)).await;
+        match invite_link_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for get_invite_link"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_onboard_user_rejects_weak_password() {
+        let server = handle_test_startup().await;
+
+        let create_invite_response = server
+            .test_server
+            .post("/api/v1/invites")
+            .json(&json!({
+                "role": "user",
+                "explicitConsent": true
+            }))
+            .await;
+        assert_eq!(create_invite_response.status_code(), 200);
+        let invite = create_invite_response.json::<Invite>();
+
+        let onboard_response = server
+            .test_server
+            .post("/api/v1/users/")
+            .json(&json!({
+                "inviteId": invite.id,
+                "username": unique_username("weak-password-user"),
+                "password": "weak"
+            }))
+            .await;
+
+        assert_eq!(onboard_response.status_code(), 409);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_user_endpoints_return_client_error_for_wrong_http_methods() {
+        let server = handle_test_startup().await;
+
+        let post_me_response = server.test_server.post("/api/v1/users/me").await;
+        assert_client_error_status(post_me_response.status_code().as_u16());
+
+        let put_invites_response = server.test_server.put("/api/v1/invites").await;
+        assert_client_error_status(put_invites_response.status_code().as_u16());
+
+        let post_invite_link_response = server
+            .test_server
+            .post("/api/v1/invites/some-id/link")
+            .await;
+        assert_client_error_status(post_invite_link_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_user_endpoints_return_not_found_for_invalid_paths() {
+        let server = handle_test_startup().await;
+
+        let wrong_user_path = server.test_server.get("/api/v1/user/me").await;
+        assert_eq!(wrong_user_path.status_code(), 404);
+
+        let wrong_invite_path = server.test_server.get("/api/v1/invite").await;
+        assert_eq!(wrong_invite_path.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_additional_user_handlers_return_forbidden_for_non_admin() {
+        let non_admin = non_admin_user();
+
+        let get_user_result = super::get_user(
+            Path("other-user".to_string()),
+            Extension(non_admin.clone()),
+        )
+        .await;
+        match get_user_result {
+            Err(ErrorType::CustomErrorType(err)) => {
+                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)))
+            }
+            _ => panic!("expected forbidden error for get_user"),
+        }
+
+        let update_role_result = super::update_role(
+            Path("someone".to_string()),
+            Extension(non_admin.clone()),
+            Json(super::UserRoleUpdateModel {
+                role: crate::constants::inner_constants::Role::User,
+                explicit_consent: true,
+            }),
+        )
+        .await;
+        match update_role_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for update_role"),
+        }
+
+        let delete_user_result =
+            super::delete_user(Path("someone".to_string()), Extension(non_admin.clone())).await;
+        match delete_user_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for delete_user"),
+        }
+
+        let delete_invite_result =
+            super::delete_invite(Path("some-invite".to_string()), Extension(non_admin)).await;
+        match delete_invite_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error for delete_invite"),
+        }
     }
 }
