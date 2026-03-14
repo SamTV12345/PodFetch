@@ -313,7 +313,6 @@ pub fn get_websocket_router() -> OpenApiRouter {
 #[cfg(test)]
 mod tests {
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::podcasts::Podcast;
     use crate::models::user::User;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
