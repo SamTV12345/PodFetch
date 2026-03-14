@@ -948,11 +948,39 @@ pub fn get_podcast_router() -> OpenApiRouter {
 
 #[cfg(test)]
 pub mod tests {
+    use crate::controllers::podcast_controller::find_podcast;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::podcast_controller::PodcastUpdateNameRequest;
     use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
+    use crate::models::misc_models::PodcastAddModel;
+    use crate::models::opml_model::OpmlModel;
+    use crate::models::podcast_settings::PodcastSetting;
+    use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
     use crate::models::podcasts::Podcast;
+    use crate::models::search_type::SearchType;
+    use crate::models::user::User;
+    use crate::utils::error::CustomErrorInner;
+    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use axum::extract::Path;
+    use axum::{Extension, Json};
+    use serde_json::json;
     use serial_test::serial;
+    use uuid::Uuid;
+
+    fn unique_name(prefix: &str) -> String {
+        format!("{prefix}-{}", Uuid::new_v4())
+    }
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
+    }
+
+    fn non_privileged_user() -> User {
+        UserTestDataBuilder::new().build()
+    }
 
     #[tokio::test]
     #[serial]
@@ -1054,5 +1082,390 @@ pub mod tests {
             .get("/proxy/podcast?episodeId=does-not-exist")
             .await;
         assert_eq!(resp.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_name_of_podcast_with_unknown_id_returns_not_found() {
+        let ts_server = handle_test_startup().await;
+
+        let resp = ts_server
+            .test_server
+            .put("/api/v1/podcasts/999999/name")
+            .json(&PodcastUpdateNameRequest {
+                name: unique_name("Unknown Podcast Rename"),
+            })
+            .await;
+
+        assert_eq!(resp.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_name_of_podcast_rejects_invalid_payload() {
+        let ts_server = handle_test_startup().await;
+        let saved_podcast = Podcast::add_podcast_to_database(
+            &unique_name("invalid-payload-collection"),
+            &unique_name("Invalid Payload Podcast"),
+            "https://example.com/invalid-payload-feed.xml",
+            "https://example.com/invalid-payload-image.jpg",
+            &unique_name("invalid-payload-id"),
+        )
+        .unwrap();
+
+        let resp = ts_server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/name", saved_podcast.id))
+            .json(&json!({
+                "otherField": "missing-name"
+            }))
+            .await;
+
+        assert_client_error_status(resp.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_name_of_podcast_noop_with_same_name() {
+        let ts_server = handle_test_startup().await;
+        let original_name = unique_name("Noop Rename Podcast");
+        let saved_podcast = Podcast::add_podcast_to_database(
+            &unique_name("noop-collection"),
+            &original_name,
+            "https://example.com/noop-rename-feed.xml",
+            "https://example.com/noop-rename-image.jpg",
+            &unique_name("noop-rename-id"),
+        )
+        .unwrap();
+
+        let resp = ts_server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/name", saved_podcast.id))
+            .json(&PodcastUpdateNameRequest {
+                name: original_name.clone(),
+            })
+            .await;
+        assert_eq!(resp.status_code(), 200);
+
+        let persisted = Podcast::get_podcast(saved_podcast.id).unwrap();
+        assert_eq!(persisted.name, original_name);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_name_of_podcast_returns_forbidden_for_non_admin() {
+        let non_admin = UserTestDataBuilder::new().build();
+        let saved_podcast = Podcast::add_podcast_to_database(
+            &unique_name("forbidden-collection"),
+            &unique_name("Forbidden Rename Podcast"),
+            "https://example.com/forbidden-rename-feed.xml",
+            "https://example.com/forbidden-rename-image.jpg",
+            &unique_name("forbidden-rename-id"),
+        )
+        .unwrap();
+
+        let result = super::update_name_of_podcast(
+            Path(saved_podcast.id),
+            Extension(non_admin),
+            Json(PodcastUpdateNameRequest {
+                name: unique_name("Should Not Update"),
+            }),
+        )
+        .await;
+
+        match result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_podcast_settings_returns_not_found_when_missing() {
+        let ts_server = handle_test_startup().await;
+        let saved_podcast = Podcast::add_podcast_to_database(
+            &unique_name("settings-missing-collection"),
+            &unique_name("Settings Missing Podcast"),
+            "https://example.com/settings-missing-feed.xml",
+            "https://example.com/settings-missing-image.jpg",
+            &unique_name("settings-missing-id"),
+        )
+        .unwrap();
+
+        let resp = ts_server
+            .test_server
+            .get(&format!("/api/v1/podcasts/{}/settings", saved_podcast.id))
+            .await;
+
+        assert_eq!(resp.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_update_and_get_podcast_settings_happy_path() {
+        let ts_server = handle_test_startup().await;
+        let saved_podcast = Podcast::add_podcast_to_database(
+            &unique_name("settings-happy-collection"),
+            &unique_name("Settings Happy Podcast"),
+            "https://example.com/settings-happy-feed.xml",
+            "https://example.com/settings-happy-image.jpg",
+            &unique_name("settings-happy-id"),
+        )
+        .unwrap();
+
+        let update_payload = PodcastSetting {
+            podcast_id: 0,
+            episode_numbering: true,
+            auto_download: true,
+            auto_update: false,
+            auto_cleanup: false,
+            auto_cleanup_days: 30,
+            replace_invalid_characters: true,
+            use_existing_filename: true,
+            replacement_strategy: "replace-with-dash".to_string(),
+            episode_format: "{episodeTitle}".to_string(),
+            podcast_format: "{podcastTitle}".to_string(),
+            direct_paths: false,
+            activated: true,
+            podcast_prefill: 10,
+        };
+
+        let update_resp = ts_server
+            .test_server
+            .put(&format!("/api/v1/podcasts/{}/settings", saved_podcast.id))
+            .json(&update_payload)
+            .await;
+        assert_eq!(update_resp.status_code(), 200);
+
+        let get_resp = ts_server
+            .test_server
+            .get(&format!("/api/v1/podcasts/{}/settings", saved_podcast.id))
+            .await;
+        assert_eq!(get_resp.status_code(), 200);
+        let persisted = get_resp.json::<PodcastSetting>();
+        assert_eq!(persisted.podcast_id, saved_podcast.id);
+        assert!(persisted.episode_numbering);
+        assert!(persisted.auto_download);
+        assert_eq!(persisted.replacement_strategy, "replace-with-dash");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_podcast_endpoints_return_client_error_for_wrong_http_methods() {
+        let ts_server = handle_test_startup().await;
+        let saved_podcast = Podcast::add_podcast_to_database(
+            &unique_name("method-mismatch-collection"),
+            &unique_name("Method Mismatch Podcast"),
+            "https://example.com/method-mismatch-feed.xml",
+            "https://example.com/method-mismatch-image.jpg",
+            &unique_name("method-mismatch-id"),
+        )
+        .unwrap();
+
+        let post_on_name = ts_server
+            .test_server
+            .post(&format!("/api/v1/podcasts/{}/name", saved_podcast.id))
+            .json(&json!({ "name": "noop" }))
+            .await;
+        assert_client_error_status(post_on_name.status_code().as_u16());
+
+        let post_on_settings = ts_server
+            .test_server
+            .post(&format!("/api/v1/podcasts/{}/settings", saved_podcast.id))
+            .json(&PodcastSetting::default())
+            .await;
+        assert_client_error_status(post_on_settings.status_code().as_u16());
+
+        let get_on_formatting = ts_server.test_server.get("/api/v1/podcasts/formatting").await;
+        assert_client_error_status(get_on_formatting.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_podcast_endpoints_reject_non_numeric_path_ids() {
+        let ts_server = handle_test_startup().await;
+
+        let update_name_response = ts_server
+            .test_server
+            .put("/api/v1/podcasts/not-a-number/name")
+            .json(&json!({ "name": "invalid" }))
+            .await;
+        assert_client_error_status(update_name_response.status_code().as_u16());
+
+        let get_settings_response = ts_server
+            .test_server
+            .get("/api/v1/podcasts/not-a-number/settings")
+            .await;
+        assert_client_error_status(get_settings_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_find_podcast_invalid_search_type_returns_bad_request() {
+        let ts_server = handle_test_startup().await;
+
+        let response = ts_server
+            .test_server
+            .get("/api/v1/podcasts/99/rust/search")
+            .await;
+        assert_eq!(response.status_code(), 400);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_non_privileged_user_is_forbidden_for_admin_podcast_handlers() {
+        let non_privileged = non_privileged_user();
+
+        let add_itunes_result = super::add_podcast(
+            Extension(non_privileged.clone()),
+            Json(PodcastAddModel {
+                track_id: 12345,
+                user_id: 0,
+            }),
+        )
+        .await;
+        match add_itunes_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for add_podcast"),
+        }
+
+        let add_feed_result = super::add_podcast_by_feed(
+            Extension(non_privileged.clone()),
+            Json(PodcastRSSAddModel {
+                rss_feed_url: "https://example.com/feed.xml".to_string(),
+            }),
+        )
+        .await;
+        match add_feed_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for add_podcast_by_feed"),
+        }
+
+        let import_result = super::import_podcasts_from_opml(
+            Extension(non_privileged.clone()),
+            Json(OpmlModel {
+                content: "<opml version=\"2.0\"><body></body></opml>".to_string(),
+            }),
+        )
+        .await;
+        match import_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for import_podcasts_from_opml"),
+        }
+
+        let find_result = find_podcast(
+            Path((SearchType::ITunes as i32, "rust".to_string())),
+            Extension(non_privileged.clone()),
+        )
+        .await;
+        match find_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for find_podcast"),
+        }
+
+        let add_podindex_result = super::add_podcast_from_podindex(
+            Extension(non_privileged.clone()),
+            Json(PodcastAddModel {
+                track_id: 321,
+                user_id: 0,
+            }),
+        )
+        .await;
+        match add_podindex_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for add_podcast_from_podindex"),
+        }
+
+        let refresh_all_result = super::refresh_all_podcasts(Extension(non_privileged.clone())).await;
+        match refresh_all_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for refresh_all_podcasts"),
+        }
+
+        let download_result =
+            super::download_podcast(Extension(non_privileged.clone()), Path("1".to_string())).await;
+        match download_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for download_podcast"),
+        }
+
+        let update_active_result =
+            super::update_active_podcast(Path("1".to_string()), Extension(non_privileged.clone())).await;
+        match update_active_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for update_active_podcast"),
+        }
+
+        let delete_podcast_result = super::delete_podcast(
+            Path(1),
+            Extension(non_privileged.clone()),
+            Json(super::DeletePodcast { delete_files: false }),
+        )
+        .await;
+        match delete_podcast_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for delete_podcast"),
+        }
+
+        let update_settings_result = super::update_podcast_settings(
+            Path(1),
+            Extension(non_privileged.clone()),
+            Json(PodcastSetting::default()),
+        )
+        .await;
+        match update_settings_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for update_podcast_settings"),
+        }
+
+        let get_settings_result =
+            super::get_podcast_settings(Path(1), Extension(non_privileged)).await;
+        match get_settings_result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden for get_podcast_settings"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_podcast_endpoints_return_not_found_for_invalid_paths() {
+        let ts_server = handle_test_startup().await;
+
+        let wrong_route_response = ts_server
+            .test_server
+            .get("/api/v1/podcasts/does-not-exist/unknown")
+            .await;
+        assert_eq!(wrong_route_response.status_code(), 404);
+
+        let trailing_slash_response = ts_server
+            .test_server
+            .get("/api/v1/podcasts/formatting/")
+            .await;
+        assert_client_error_status(trailing_slash_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_podcast_endpoints_reject_invalid_payloads() {
+        let ts_server = handle_test_startup().await;
+
+        let favorite_invalid_response = ts_server
+            .test_server
+            .put("/api/v1/podcasts/favored")
+            .json(&json!({
+                "id": "not-a-number",
+                "favored": "yes"
+            }))
+            .await;
+        assert_client_error_status(favorite_invalid_response.status_code().as_u16());
+
+        let delete_invalid_response = ts_server
+            .test_server
+            .delete("/api/v1/podcasts/1")
+            .json(&json!({
+                "otherField": true
+            }))
+            .await;
+        assert_client_error_status(delete_invalid_response.status_code().as_u16());
     }
 }

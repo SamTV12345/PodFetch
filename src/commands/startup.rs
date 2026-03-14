@@ -438,56 +438,112 @@ pub fn handle_config_for_server_startup() -> Router {
 #[cfg(test)]
 pub mod tests {
     #[cfg(feature = "postgresql")]
+    use crate::adapters::persistence::dbconfig::db::get_connection;
+    use crate::commands::startup::handle_config_for_server_startup;
+    #[cfg(feature = "postgresql")]
     use crate::test_utils::test::setup_container;
     use axum_test::TestServer;
     use std::sync::MutexGuard;
 
     #[cfg(feature = "postgresql")]
-    use crate::commands::startup::handle_config_for_server_startup;
-    #[cfg(feature = "postgresql")]
-    use testcontainers::ContainerAsync;
-    #[cfg(feature = "postgresql")]
     use testcontainers::runners::AsyncRunner;
-    #[cfg(feature = "postgresql")]
-    use testcontainers_modules::postgres::Postgres;
 
     pub struct TestServerWrapper<'a> {
         pub test_server: TestServer,
         pub mutex: MutexGuard<'a, ()>,
-        #[cfg(feature = "postgresql")]
-        pub container: Option<ContainerAsync<Postgres>>,
     }
 
     pub static GLOBAL_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-    pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
-        #[cfg(feature = "postgresql")]
-        let test_server = {
-            let container = AsyncRunner::start(setup_container()).await.unwrap();
-            let mut test_server = TestServer::new(handle_config_for_server_startup());
-            test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
-            TestServerWrapper {
-                test_server,
-                mutex: GLOBAL_MUTEX.lock().unwrap(),
-                container: { Some(container) },
+    fn lock_global_mutex_recovering_poison<'a>() -> MutexGuard<'a, ()> {
+        match GLOBAL_MUTEX.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                eprintln!("GLOBAL_MUTEX is poisoned, recovering lock for continued test execution");
+                poisoned.into_inner()
             }
-        };
-        #[cfg(not(feature = "postgresql"))]
-        let test_server = {
-            let mut test_server =
-                TestServer::new(crate::commands::startup::handle_config_for_server_startup());
-            test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
-            TestServerWrapper {
-                test_server,
-                mutex: crate::commands::startup::tests::GLOBAL_MUTEX
-                    .lock()
-                    .unwrap(),
-            }
-        };
-        test_server
+        }
     }
 
-    #[cfg(feature = "sqlite")]
+    #[cfg(feature = "postgresql")]
+    static POSTGRES_CONTAINER_INIT: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
+
+    #[cfg(feature = "postgresql")]
+    async fn ensure_shared_postgres_container() {
+        // A previous test process may already have created a reusable postgres container.
+        if tokio::net::TcpStream::connect("127.0.0.1:55002")
+            .await
+            .is_ok()
+        {
+            return;
+        }
+
+        POSTGRES_CONTAINER_INIT
+            .get_or_init(|| async {
+                match AsyncRunner::start(setup_container()).await {
+                    Ok(container) => {
+                        // Keep one container alive for the full test process.
+                        std::mem::forget(container);
+                    }
+                    Err(error) => {
+                        // The fixed host port may already be claimed by another test process.
+                        if tokio::net::TcpStream::connect("127.0.0.1:55002")
+                            .await
+                            .is_ok()
+                        {
+                            return;
+                        }
+                        panic!("Could not start shared postgres test container: {error}");
+                    }
+                }
+            })
+            .await;
+    }
+
+    #[cfg(feature = "postgresql")]
+    fn truncate_postgres_tables() {
+        use diesel::{RunQueryDsl, sql_query};
+
+        sql_query(
+            r#"
+DO $$
+DECLARE
+    truncate_stmt text;
+BEGIN
+    SELECT
+        'TRUNCATE TABLE '
+        || string_agg(format('%I.%I', schemaname, tablename), ', ')
+        || ' RESTART IDENTITY CASCADE'
+    INTO truncate_stmt
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename <> '__diesel_schema_migrations';
+
+    IF truncate_stmt IS NOT NULL THEN
+        EXECUTE truncate_stmt;
+    END IF;
+END $$;
+"#,
+        )
+        .execute(&mut get_connection())
+        .expect("Could not truncate postgres tables for test setup");
+    }
+
+    pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
+        let mutex = lock_global_mutex_recovering_poison();
+
+        #[cfg(feature = "postgresql")]
+        {
+            ensure_shared_postgres_container().await;
+            truncate_postgres_tables();
+        }
+
+        let mut test_server = TestServer::new(handle_config_for_server_startup());
+        test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
+        TestServerWrapper { test_server, mutex }
+    }
+
+    #[cfg(all(feature = "sqlite", not(feature = "postgresql")))]
     impl Drop for TestServerWrapper<'_> {
         fn drop(&mut self) {
             use crate::adapters::persistence::dbconfig::db::get_connection;
@@ -519,6 +575,18 @@ pub mod tests {
             {
                 use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
                 diesel::delete(podcast_episodes)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
+                diesel::delete(tags_podcasts)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::tags::dsl::tags;
+                diesel::delete(tags)
                     .execute(&mut get_connection())
                     .unwrap();
             }

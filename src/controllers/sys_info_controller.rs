@@ -256,3 +256,235 @@ pub fn get_sys_info_router() -> OpenApiRouter {
         .routes(routes!(get_sys_info))
         .routes(routes!(get_info))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::commands::startup::tests::handle_test_startup;
+    use crate::constants::inner_constants::Role;
+    use crate::models::settings::ConfigModel;
+    use crate::models::user::User;
+    use crate::utils::error::CustomErrorInner;
+    use axum::Extension;
+    use chrono::Utc;
+    use serde_json::Value;
+    use serial_test::serial;
+    use sha256::digest;
+    use uuid::Uuid;
+
+    fn unique_username(prefix: &str) -> String {
+        format!("{prefix}-{}", Uuid::new_v4())
+    }
+
+    fn insert_user_with_password(username: String, plain_password: &str) {
+        let mut user = User::new(
+            0,
+            username,
+            Role::User,
+            Some(digest(plain_password)),
+            Utc::now().naive_utc(),
+            true,
+        );
+        user.insert_user().unwrap();
+    }
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_login_endpoint_returns_200_for_valid_db_user() {
+        let server = handle_test_startup().await;
+        let username = unique_username("login-ok-user");
+        let password = "login-secret-123";
+        insert_user_with_password(username.clone(), password);
+
+        let response = server
+            .test_server
+            .post("/api/v1/login")
+            .json(&serde_json::json!({
+                "username": username,
+                "password": password
+            }))
+            .await;
+
+        assert_eq!(response.status_code(), 200);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_login_endpoint_returns_401_for_unknown_user() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .post("/api/v1/login")
+            .json(&serde_json::json!({
+                "username": unique_username("unknown-login-user"),
+                "password": "irrelevant"
+            }))
+            .await;
+
+        assert_eq!(response.status_code(), 401);
+        let payload = response.json::<Value>();
+        assert_eq!(payload["errorCode"], "WRONG_USER_OR_PASSWORD");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_login_endpoint_returns_403_for_wrong_password() {
+        let server = handle_test_startup().await;
+        let username = unique_username("login-wrong-password-user");
+        insert_user_with_password(username.clone(), "correct-password");
+
+        let response = server
+            .test_server
+            .post("/api/v1/login")
+            .json(&serde_json::json!({
+                "username": username,
+                "password": "wrong-password"
+            }))
+            .await;
+
+        assert_eq!(response.status_code(), 403);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_public_config_uses_forwarded_headers() {
+        let mut server = handle_test_startup().await;
+        server
+            .test_server
+            .add_header("x-forwarded-host", "podfetch.example.com");
+        server.test_server.add_header("x-forwarded-proto", "https");
+        server.test_server.add_header("x-forwarded-prefix", "/ui");
+
+        let response = server.test_server.get("/api/v1/sys/config").await;
+        assert_eq!(response.status_code(), 200);
+
+        let config = response.json::<ConfigModel>();
+        assert_eq!(config.server_url, "https://podfetch.example.com/ui/");
+        assert_eq!(config.rss_feed, "https://podfetch.example.com/ui/rss");
+        assert_eq!(config.ws_url, "wss://podfetch.example.com/ui/socket.io");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_info_endpoint_returns_version_payload() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/api/v1/info").await;
+        assert_eq!(response.status_code(), 200);
+
+        let payload = response.json::<Value>();
+        assert!(payload["version"].as_str().is_some());
+        assert!(payload["commit"].as_str().is_some());
+        assert!(payload["os"].as_str().is_some());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_sys_info_endpoint_returns_system_payload_for_admin() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/api/v1/sys/info").await;
+        assert_eq!(response.status_code(), 200);
+
+        let payload = response.json::<Value>();
+        assert!(payload["podcast_directory"].is_number());
+        assert!(payload["system"].is_object());
+        assert!(payload["disks"].is_array());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_login_endpoint_rejects_invalid_payload() {
+        let server = handle_test_startup().await;
+
+        let missing_password = server
+            .test_server
+            .post("/api/v1/login")
+            .json(&serde_json::json!({
+                "username": unique_username("invalid-login-user")
+            }))
+            .await;
+        assert_client_error_status(missing_password.status_code().as_u16());
+
+        let non_object_payload = server
+            .test_server
+            .post("/api/v1/login")
+            .json(&serde_json::json!(["user", "pass"]))
+            .await;
+        assert_client_error_status(non_object_payload.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_sys_info_handler_returns_forbidden_for_non_admin() {
+        let non_admin = User::new(
+            0,
+            unique_username("non-admin"),
+            Role::User,
+            Some(digest("non-admin-password")),
+            Utc::now().naive_utc(),
+            true,
+        );
+
+        let result = super::get_sys_info(Extension(non_admin)).await;
+        match result {
+            Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+            Ok(_) => panic!("expected forbidden error"),
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_sys_endpoints_return_client_error_for_wrong_http_methods() {
+        let server = handle_test_startup().await;
+
+        let info_with_put = server.test_server.put("/api/v1/info").await;
+        assert_client_error_status(info_with_put.status_code().as_u16());
+
+        let sys_config_with_post = server.test_server.post("/api/v1/sys/config").await;
+        assert_client_error_status(sys_config_with_post.status_code().as_u16());
+
+        let sys_info_with_post = server.test_server.post("/api/v1/sys/info").await;
+        assert_client_error_status(sys_info_with_post.status_code().as_u16());
+
+        let login_with_get = server.test_server.get("/api/v1/login").await;
+        assert_client_error_status(login_with_get.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_sys_endpoints_return_not_found_for_invalid_paths() {
+        let server = handle_test_startup().await;
+
+        let wrong_info_path = server.test_server.get("/api/v1/inf").await;
+        assert_eq!(wrong_info_path.status_code(), 404);
+
+        let wrong_sys_path = server.test_server.get("/api/v1/sys/infos").await;
+        assert_eq!(wrong_sys_path.status_code(), 404);
+
+        let trailing_slash_path = server.test_server.get("/api/v1/sys/info/").await;
+        assert_client_error_status(trailing_slash_path.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_public_config_without_forwarded_headers_returns_defaults() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/api/v1/sys/config").await;
+        assert_eq!(response.status_code(), 200);
+
+        let config = response.json::<ConfigModel>();
+        assert!(!config.server_url.is_empty());
+        assert!(config.rss_feed.ends_with("/rss") || config.rss_feed.ends_with("rss"));
+        assert!(config.ws_url.starts_with("ws://") || config.ws_url.starts_with("wss://"));
+    }
+}
+

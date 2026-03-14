@@ -96,7 +96,9 @@ mod tests {
     use chrono::{NaiveDate, NaiveDateTime};
     use diesel::ExpressionMethods;
     use diesel::RunQueryDsl;
+    use serde_json::Value;
     use serial_test::serial;
+    use uuid::Uuid;
 
     #[derive(Debug, Deserialize)]
     #[serde(rename_all = "camelCase")]
@@ -129,6 +131,17 @@ mod tests {
             .unwrap()
             .and_hms_opt(hour, minute, second)
             .unwrap()
+    }
+
+    fn unique_name(prefix: &str) -> String {
+        format!("{prefix}-{}", Uuid::new_v4())
+    }
+
+    fn assert_client_error_status(status: u16) {
+        assert!(
+            (400..500).contains(&status),
+            "expected 4xx status, got {status}"
+        );
     }
 
     fn insert_episode(
@@ -297,5 +310,329 @@ mod tests {
         assert_eq!(payload.total_listened_seconds, 60);
         assert_eq!(payload.listened_podcasts, 1);
         assert_eq!(payload.listened_episodes, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_rejects_invalid_datetime_query() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .get("/api/v1/stats/overview?from=not-a-date")
+            .await;
+
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_rejects_from_after_to() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .get("/api/v1/stats/overview?from=2026-02-26&to=2026-02-25")
+            .await;
+
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_clamps_top_limit_to_maximum() {
+        let server = handle_test_startup().await;
+        let username = ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "user123".to_string());
+
+        for i in 0..3 {
+            let unique = Uuid::new_v4().to_string();
+            let podcast_slug = format!("stats-top-limit-{i}-{unique}");
+            let podcast = Podcast::add_podcast_to_database(
+                &unique_name("Stats Top Limit Podcast"),
+                &podcast_slug,
+                &format!("https://example.com/{podcast_slug}.xml"),
+                "http://localhost:8080/ui/default.jpg",
+                &podcast_slug,
+            )
+            .unwrap();
+            let episode = insert_episode(
+                podcast.id,
+                &format!("stats-top-limit-ep-{i}-{unique}"),
+                &format!("stats-top-limit-guid-{i}-{unique}"),
+                "Top Limit Episode",
+            );
+
+            ListeningEvent::insert_event(NewListeningEvent {
+                username: username.clone(),
+                device: "webview".to_string(),
+                podcast_episode_id: episode.episode_id,
+                podcast_id: podcast.id,
+                podcast_episode_db_id: episode.id,
+                delta_seconds: 30,
+                start_position: 0,
+                end_position: 30,
+                listened_at: dt(24, 8 + i, 0, 0),
+            })
+            .unwrap();
+        }
+
+        let response = server
+            .test_server
+            .get("/api/v1/stats/overview?topLimit=999")
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        let payload = response.json::<StatsOverviewResponse>();
+        assert!(payload.top_podcasts.len() <= 20);
+        assert_eq!(payload.top_podcasts.len(), 3);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_rejects_invalid_to_datetime_query() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .get("/api/v1/stats/overview?to=not-a-date")
+            .await;
+
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_accepts_rfc3339_range() {
+        let server = handle_test_startup().await;
+        let username = ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "user123".to_string());
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("stats-rfc3339-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &unique_name("Stats RFC3339 Podcast"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("stats-rfc3339-episode-{unique}"),
+            &format!("stats-rfc3339-guid-{unique}"),
+            "Stats RFC3339 Episode",
+        );
+
+        ListeningEvent::insert_event(NewListeningEvent {
+            username,
+            device: "webview".to_string(),
+            podcast_episode_id: episode.episode_id,
+            podcast_id: podcast.id,
+            podcast_episode_db_id: episode.id,
+            delta_seconds: 90,
+            start_position: 0,
+            end_position: 90,
+            listened_at: dt(24, 10, 0, 0),
+        })
+        .unwrap();
+
+        let response = server
+            .test_server
+            .get(
+                "/api/v1/stats/overview?from=2026-02-24T00:00:00Z&to=2026-02-24T23:59:59Z",
+            )
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        let payload = response.json::<StatsOverviewResponse>();
+        assert_eq!(payload.total_listened_seconds, 90);
+        assert_eq!(payload.listened_podcasts, 1);
+        assert_eq!(payload.listened_episodes, 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_clamps_top_limit_to_minimum_one() {
+        let server = handle_test_startup().await;
+        let username = ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "user123".to_string());
+
+        for i in 0..2 {
+            let unique = Uuid::new_v4().to_string();
+            let podcast_slug = format!("stats-min-top-limit-{i}-{unique}");
+            let podcast = Podcast::add_podcast_to_database(
+                &unique_name("Stats Min Top Limit Podcast"),
+                &podcast_slug,
+                &format!("https://example.com/{podcast_slug}.xml"),
+                "http://localhost:8080/ui/default.jpg",
+                &podcast_slug,
+            )
+            .unwrap();
+            let episode = insert_episode(
+                podcast.id,
+                &format!("stats-min-top-limit-episode-{i}-{unique}"),
+                &format!("stats-min-top-limit-guid-{i}-{unique}"),
+                "Stats Min Top Limit Episode",
+            );
+
+            ListeningEvent::insert_event(NewListeningEvent {
+                username: username.clone(),
+                device: "webview".to_string(),
+                podcast_episode_id: episode.episode_id,
+                podcast_id: podcast.id,
+                podcast_episode_db_id: episode.id,
+                delta_seconds: 30 + (i * 10),
+                start_position: 0,
+                end_position: 40,
+                listened_at: dt(24 + i as u32, 9, 0, 0),
+            })
+            .unwrap();
+        }
+
+        let response = server
+            .test_server
+            .get("/api/v1/stats/overview?topLimit=0")
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        let payload = response.json::<StatsOverviewResponse>();
+        assert_eq!(payload.top_podcasts.len(), 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_rewrites_image_urls_with_forwarded_headers() {
+        let mut server = handle_test_startup().await;
+        let username = ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "user123".to_string());
+        let unique = Uuid::new_v4().to_string();
+        let podcast_slug = format!("stats-rewrite-podcast-{unique}");
+
+        let podcast = Podcast::add_podcast_to_database(
+            &unique_name("Stats Rewrite Podcast"),
+            &podcast_slug,
+            &format!("https://example.com/{podcast_slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &podcast_slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("stats-rewrite-episode-{unique}"),
+            &format!("stats-rewrite-guid-{unique}"),
+            "Stats Rewrite Episode",
+        );
+
+        ListeningEvent::insert_event(NewListeningEvent {
+            username,
+            device: "webview".to_string(),
+            podcast_episode_id: episode.episode_id,
+            podcast_id: podcast.id,
+            podcast_episode_db_id: episode.id,
+            delta_seconds: 42,
+            start_position: 0,
+            end_position: 42,
+            listened_at: dt(24, 8, 0, 0),
+        })
+        .unwrap();
+
+        server
+            .test_server
+            .add_header("x-forwarded-host", "podfetch.example.com");
+        server.test_server.add_header("x-forwarded-proto", "https");
+        server.test_server.add_header("x-forwarded-prefix", "/ui");
+
+        let response = server.test_server.get("/api/v1/stats/overview").await;
+        assert_eq!(response.status_code(), 200);
+
+        let payload = response.json::<Value>();
+        let top_podcasts = payload["topPodcasts"].as_array().unwrap();
+        assert!(!top_podcasts.is_empty());
+        assert!(top_podcasts[0]["imageUrl"]
+            .as_str()
+            .unwrap()
+            .starts_with("https://podfetch.example.com/ui/"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_returns_client_error_for_wrong_http_methods() {
+        let server = handle_test_startup().await;
+
+        let post_response = server.test_server.post("/api/v1/stats/overview").await;
+        assert_client_error_status(post_response.status_code().as_u16());
+
+        let put_response = server.test_server.put("/api/v1/stats/overview").await;
+        assert_client_error_status(put_response.status_code().as_u16());
+
+        let delete_response = server.test_server.delete("/api/v1/stats/overview").await;
+        assert_client_error_status(delete_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_stats_endpoints_return_not_found_for_invalid_paths() {
+        let server = handle_test_startup().await;
+
+        let wrong_base = server.test_server.get("/api/v1/stat/overview").await;
+        assert_eq!(wrong_base.status_code(), 404);
+
+        let typo_path = server.test_server.get("/api/v1/stats/overviews").await;
+        assert_eq!(typo_path.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_rejects_trailing_slash_path_variant() {
+        let server = handle_test_startup().await;
+
+        let response = server.test_server.get("/api/v1/stats/overview/").await;
+        assert_client_error_status(response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_rejects_invalid_top_limit_query_values() {
+        let server = handle_test_startup().await;
+
+        let non_numeric_response = server
+            .test_server
+            .get("/api/v1/stats/overview?topLimit=abc")
+            .await;
+        assert_client_error_status(non_numeric_response.status_code().as_u16());
+
+        let negative_response = server
+            .test_server
+            .get("/api/v1/stats/overview?topLimit=-1")
+            .await;
+        assert_client_error_status(negative_response.status_code().as_u16());
+
+        let overflow_response = server
+            .test_server
+            .get("/api/v1/stats/overview?topLimit=999999999999999999999999")
+            .await;
+        assert_client_error_status(overflow_response.status_code().as_u16());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_stats_overview_rejects_empty_date_query_values() {
+        let server = handle_test_startup().await;
+
+        let empty_from_response = server.test_server.get("/api/v1/stats/overview?from=").await;
+        assert_client_error_status(empty_from_response.status_code().as_u16());
+
+        let empty_to_response = server.test_server.get("/api/v1/stats/overview?to=").await;
+        assert_client_error_status(empty_to_response.status_code().as_u16());
     }
 }
