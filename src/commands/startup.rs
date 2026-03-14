@@ -455,6 +455,16 @@ pub mod tests {
 
     pub static GLOBAL_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+    fn lock_global_mutex_recovering_poison<'a>() -> MutexGuard<'a, ()> {
+        match GLOBAL_MUTEX.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                eprintln!("GLOBAL_MUTEX is poisoned, recovering lock for continued test execution");
+                poisoned.into_inner()
+            }
+        }
+    }
+
     #[cfg(feature = "postgresql")]
     static POSTGRES_CONTAINER_INIT: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 
@@ -520,7 +530,7 @@ END $$;
     }
 
     pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
-        let mutex = GLOBAL_MUTEX.lock().unwrap();
+        let mutex = lock_global_mutex_recovering_poison();
 
         #[cfg(feature = "postgresql")]
         {

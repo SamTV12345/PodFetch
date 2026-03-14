@@ -55,6 +55,7 @@ pub fn get_manifest_router() -> OpenApiRouter {
 mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+    use axum::http::HeaderMap;
     use serde_json::Value;
     use serial_test::serial;
 
@@ -131,7 +132,18 @@ mod tests {
         assert_eq!(response.status_code(), 200);
 
         let manifest = response.json::<Value>();
-        assert_eq!(manifest["start_url"], ENVIRONMENT_SERVICE.server_url);
+        // HTTP requests from the test server include a Host header; resolver prefers request host.
+        assert!(manifest["start_url"]
+            .as_str()
+            .unwrap()
+            .starts_with("http://localhost"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_manifest_direct_handler_without_headers_uses_env_fallback() {
+        let response = super::get_manifest(HeaderMap::new()).await.unwrap();
+        assert_eq!(response.0.start_url, ENVIRONMENT_SERVICE.server_url);
     }
 
     #[tokio::test]
