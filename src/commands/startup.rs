@@ -579,6 +579,18 @@ END $$;
                     .unwrap();
             }
             {
+                use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
+                diesel::delete(tags_podcasts)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::tags::dsl::tags;
+                diesel::delete(tags)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
                 use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
                 diesel::delete(podcasts)
                     .execute(&mut get_connection())
