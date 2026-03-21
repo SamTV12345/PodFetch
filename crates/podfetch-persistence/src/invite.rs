@@ -54,7 +54,11 @@ impl DieselInviteRepository {
 impl InviteRepository for DieselInviteRepository {
     type Error = PersistenceError;
 
-    fn create(&self, role_to_insert: &str, explicit_consent_to_insert: bool) -> Result<Invite, Self::Error> {
+    fn create(
+        &self,
+        role_to_insert: &str,
+        explicit_consent_to_insert: bool,
+    ) -> Result<Invite, Self::Error> {
         use self::invites::dsl::*;
 
         let now = Utc::now().naive_utc();

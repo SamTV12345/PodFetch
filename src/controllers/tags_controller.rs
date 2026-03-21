@@ -1,23 +1,14 @@
-use crate::adapters::persistence::repositories::tag_repository::TagUpdate;
 use crate::app_state::AppState;
-use crate::models::color::Color;
-use crate::models::tag::Tag;
-use crate::models::tags_podcast::TagsPodcast;
-use crate::models::user::User;
 use crate::utils::error::CustomError;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use utoipa::ToSchema;
+use podfetch_domain::tag::{Tag, TagsPodcast};
+use podfetch_domain::user::User;
+use podfetch_web::tags;
+pub use podfetch_web::tags::TagCreate;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct TagCreate {
-    pub name: String,
-    pub description: Option<String>,
-    pub color: Color,
-}
 
 #[utoipa::path(
 post,
@@ -32,15 +23,12 @@ pub async fn insert_tag(
     Extension(requester): Extension<User>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    state
-        .tag_service
-        .create_tag(
-            requester.username.clone(),
-            tag_create.name,
-            tag_create.description,
-            tag_create.color.to_string(),
-        )
-        .map(Json)
+    tags::create_tag(
+        state.tag_service.as_ref(),
+        requester.username.clone(),
+        tag_create,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -54,8 +42,7 @@ pub async fn get_tags(
     State(state): State<AppState>,
     requester: Extension<User>,
 ) -> Result<Json<Vec<Tag>>, CustomError> {
-    let tags = state.tag_service.get_tags(&requester.username)?;
-    Ok(Json(tags))
+    tags::get_tags(state.tag_service.as_ref(), &requester.username).map(Json)
 }
 
 #[utoipa::path(
@@ -70,9 +57,7 @@ pub async fn delete_tag(
     Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    state
-        .tag_service
-        .delete_tag(&requester.username, &tag_id)
+    tags::delete_tag(state.tag_service.as_ref(), &requester.username, &tag_id)
         .map(|_| StatusCode::OK)
 }
 
@@ -89,18 +74,13 @@ pub async fn update_tag(
     Extension(requester): Extension<User>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    state
-        .tag_service
-        .update_tag(
-            &requester.username,
-            &tag_id,
-            TagUpdate {
-                name: tag_create.name,
-                description: tag_create.description,
-                color: tag_create.color.to_string(),
-            },
-        )
-        .map(Json)
+    tags::update_tag(
+        state.tag_service.as_ref(),
+        &requester.username,
+        &tag_id,
+        tag_create,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -116,10 +96,13 @@ pub async fn add_podcast_to_tag(
     requester: Extension<User>,
 ) -> Result<Json<TagsPodcast>, CustomError> {
     let (tag_id, podcast_id) = tag_id_to_convert;
-    state
-        .tag_service
-        .add_podcast_to_tag(&requester.username, &tag_id, podcast_id)
-        .map(Json)
+    tags::add_podcast_to_tag(
+        state.tag_service.as_ref(),
+        &requester.username,
+        &tag_id,
+        podcast_id,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -136,10 +119,13 @@ pub async fn delete_podcast_from_tag(
 ) -> Result<StatusCode, CustomError> {
     let (tag_id, podcast_id) = tag_id;
 
-    state
-        .tag_service
-        .delete_podcast_from_tag(&requester.username, &tag_id, podcast_id)
-        .map(|_| StatusCode::OK)
+    tags::delete_podcast_from_tag(
+        state.tag_service.as_ref(),
+        &requester.username,
+        &tag_id,
+        podcast_id,
+    )
+    .map(|_| StatusCode::OK)
 }
 
 pub fn get_tags_router() -> OpenApiRouter<AppState> {
@@ -154,15 +140,16 @@ pub fn get_tags_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use super::Tag;
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::app_state::AppState;
     use crate::models::podcasts::Podcast;
+    use crate::models::tag::Tag as LegacyTag;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
+    use podfetch_domain::tag::{Color, Tag};
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -185,7 +172,7 @@ mod tests {
         );
     }
 
-    fn other_user() -> crate::models::user::User {
+    fn other_user() -> podfetch_domain::user::User {
         let mut user = UserTestDataBuilder::new().build();
         user.id = 999_999;
         user
@@ -284,7 +271,7 @@ mod tests {
             .await;
         assert_eq!(add_response.status_code(), 200);
 
-        let tags_for_podcast = Tag::get_tags_of_podcast(podcast.id, &username).unwrap();
+        let tags_for_podcast = LegacyTag::get_tags_of_podcast(podcast.id, &username).unwrap();
         assert_eq!(tags_for_podcast.len(), 1);
         assert_eq!(tags_for_podcast[0].id, tag.id);
 
@@ -294,7 +281,7 @@ mod tests {
             .await;
         assert_eq!(remove_response.status_code(), 200);
 
-        let tags_after_remove = Tag::get_tags_of_podcast(podcast.id, &username).unwrap();
+        let tags_after_remove = LegacyTag::get_tags_of_podcast(podcast.id, &username).unwrap();
         assert!(tags_after_remove.is_empty());
     }
 
@@ -402,7 +389,7 @@ mod tests {
             Json(super::TagCreate {
                 name: unique_name("Hacker Rename"),
                 description: Some("forbidden".to_string()),
-                color: crate::models::color::Color::Blue,
+                color: Color::Blue,
             }),
         )
         .await;

@@ -1,10 +1,10 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::user::User;
+use crate::app_state::AppState;
 use crate::service::environment_service::ReverseProxyConfig;
+use crate::service::user_auth_service::UserAuthService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::http_client::get_async_sync_client;
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
@@ -13,6 +13,7 @@ use base64::engine::general_purpose;
 use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use log::info;
+use podfetch_domain::user::User;
 use serde_json::Value;
 use sha256::digest;
 use std::collections::HashSet;
@@ -27,18 +28,22 @@ enum AuthType {
 
 pub struct AuthFilter;
 
-pub async fn handle_basic_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::Basic).await?;
+pub async fn handle_basic_auth(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Basic, &state).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
 static JWKS: OnceLock<JwkSet> = OnceLock::new();
 
-pub async fn get_jwks() -> JwkSet {
+pub async fn get_jwks(jwks_uri: &str) -> JwkSet {
     let client = get_async_sync_client().build().unwrap();
     client
-        .get(&ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri)
+        .get(jwks_uri)
         .send()
         .await
         .unwrap()
@@ -47,33 +52,59 @@ pub async fn get_jwks() -> JwkSet {
         .unwrap()
 }
 
-pub async fn handle_oidc_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::Oidc).await?;
+pub async fn handle_oidc_auth(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Oidc, &state).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
-pub async fn handle_proxy_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::Proxy).await?;
+pub async fn handle_proxy_auth(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::Proxy, &state).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
-pub async fn handle_no_auth(mut request: Request, next: Next) -> Result<Response, CustomError> {
-    let user = handle_auth_internal(&mut request, AuthType::None).await?;
+pub async fn handle_no_auth(
+    State(state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, CustomError> {
+    let user = handle_auth_internal(&mut request, AuthType::None, &state).await?;
     request.extensions_mut().insert(user);
     Ok(next.run(request).await)
 }
 
-async fn handle_auth_internal(req: &mut Request, auth_type: AuthType) -> Result<User, CustomError> {
+async fn handle_auth_internal(
+    req: &mut Request,
+    auth_type: AuthType,
+    state: &AppState,
+) -> Result<User, CustomError> {
     match auth_type {
-        AuthType::Basic => AuthFilter::handle_basic_auth_internal(req),
-        AuthType::Oidc => AuthFilter::handle_oidc_auth_internal(req).await,
+        AuthType::Basic => {
+            AuthFilter::handle_basic_auth_internal(req, state.user_auth_service.as_ref())
+        }
+        AuthType::Oidc => {
+            AuthFilter::handle_oidc_auth_internal(
+                req,
+                state.user_auth_service.as_ref(),
+                state.environment.as_ref(),
+            )
+            .await
+        }
         AuthType::Proxy => AuthFilter::handle_proxy_auth_internal(
             req,
-            &ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap(),
+            &state.environment.reverse_proxy_config.clone().unwrap(),
+            state.user_auth_service.as_ref(),
         ),
-        AuthType::None => Ok(User::create_standard_admin_user()),
+        AuthType::None => Ok(state.user_auth_service.read_only_admin_user()),
     }
 }
 
@@ -122,14 +153,18 @@ impl AuthFilter {
         Ok((u.to_string(), p.to_string()))
     }
 
-    fn handle_basic_auth_internal(req: &Request) -> Result<User, CustomError> {
+    fn handle_basic_auth_internal(
+        req: &Request,
+        user_auth_service: &UserAuthService,
+    ) -> Result<User, CustomError> {
         let opt_auth_header = req.headers().get("Authorization");
         match opt_auth_header {
             Some(header) => match header.to_str() {
                 Ok(auth) => {
                     let (user, password) = AuthFilter::extract_basic_auth(auth)?;
 
-                    let found_user = User::find_by_username(&user)
+                    let found_user = user_auth_service
+                        .find_by_username(&user)
                         .map_err(|_| CustomErrorInner::Forbidden(Warning))?;
 
                     if let Some(password_from_user) = &found_user.password {
@@ -148,7 +183,11 @@ impl AuthFilter {
         }
     }
 
-    async fn handle_oidc_auth_internal(req: &mut Request) -> Result<User, CustomError> {
+    async fn handle_oidc_auth_internal(
+        req: &mut Request,
+        user_auth_service: &UserAuthService,
+        environment: &crate::service::environment_service::EnvironmentService,
+    ) -> Result<User, CustomError> {
         let token_res = match req.headers().get("Authorization") {
             Some(token) => match token.to_str() {
                 Ok(token) => Ok(token),
@@ -162,7 +201,7 @@ impl AuthFilter {
         let jwk = match JWKS.get() {
             Some(jwks) => Ok::<&JwkSet, String>(jwks),
             None => {
-                let jwks = get_jwks().await;
+                let jwks = get_jwks(&environment.oidc_config.clone().unwrap().jwks_uri).await;
                 JWKS.get_or_init(|| jwks);
                 Ok::<&JwkSet, String>(JWKS.get().unwrap())
             }
@@ -174,7 +213,7 @@ impl AuthFilter {
             None => {
                 log::error!(
                     "No JWK found for {}",
-                    ENVIRONMENT_SERVICE.oidc_config.clone().unwrap().jwks_uri
+                    environment.oidc_config.clone().unwrap().jwks_uri
                 );
                 Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
             }
@@ -185,7 +224,7 @@ impl AuthFilter {
         let mut validation = Validation::new(from_key_alg_into_alg(alg));
         let mut aud_hashset = HashSet::new();
         aud_hashset.insert(
-            ENVIRONMENT_SERVICE
+            environment
                 .oidc_config
                 .clone()
                 .unwrap()
@@ -207,7 +246,7 @@ impl AuthFilter {
             .unwrap()
             .as_str()
             .unwrap();
-        let found_user = User::find_by_username(username);
+        let found_user = user_auth_service.find_by_username(username);
 
         match found_user {
             Ok(user) => Ok(user),
@@ -222,16 +261,12 @@ impl AuthFilter {
                 }?;
 
                 // User is authenticated so we can onboard him if he is new
-                let user = User {
-                    id: 0,
-                    username: preferred_username_claim.to_string(),
-                    role: "user".to_string(),
-                    password: None,
-                    explicit_consent: false,
-                    created_at: chrono::Utc::now().naive_utc(),
-                    api_key: None,
-                }
-                .insert_user()?;
+                let user = user_auth_service.create_user(
+                    preferred_username_claim.to_string(),
+                    "user".to_string(),
+                    None,
+                    false,
+                )?;
                 Ok(user)
             }
         }
@@ -240,6 +275,7 @@ impl AuthFilter {
     fn handle_proxy_auth_internal(
         req: &Request,
         reverse_proxy_config: &ReverseProxyConfig,
+        user_auth_service: &UserAuthService,
     ) -> Result<User, CustomError> {
         let header_val = match req
             .headers()
@@ -255,23 +291,15 @@ impl AuthFilter {
             Ok(token) => Ok(token),
             Err(_) => Err(CustomError::from(CustomErrorInner::Forbidden(Warning))),
         }?;
-        let found_user = User::find_by_username(token_res);
+        let found_user = user_auth_service.find_by_username(token_res);
 
         match found_user {
             Ok(user) => Ok(user),
             Err(_) => {
                 if reverse_proxy_config.auto_sign_up {
-                    let user = User {
-                        id: 0,
-                        username: token_res.to_string(),
-                        role: "user".to_string(),
-                        password: None,
-                        explicit_consent: false,
-                        created_at: chrono::Utc::now().naive_utc(),
-                        api_key: None,
-                    }
-                    .insert_user()
-                    .expect("Error inserting user");
+                    let user = user_auth_service
+                        .create_user(token_res.to_string(), "user".to_string(), None, false)
+                        .expect("Error inserting user");
                     Ok(user)
                 } else {
                     Err(CustomErrorInner::Forbidden(Warning).into())
@@ -283,6 +311,7 @@ impl AuthFilter {
 
 #[cfg(test)]
 mod test {
+    use crate::app_state::AppState;
     use axum::extract::Request;
 
     use crate::auth_middleware::AuthFilter;
@@ -291,6 +320,10 @@ mod test {
     use crate::service::environment_service::ReverseProxyConfig;
     use crate::test_utils::test::create_random_user;
     use serial_test::serial;
+
+    fn app_state() -> AppState {
+        AppState::new()
+    }
 
     #[test]
     #[serial]
@@ -325,7 +358,12 @@ mod test {
             .header("Content-Type", "text/plain")
             .body("".into())
             .unwrap();
-        let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
+        let state = app_state();
+        let result = AuthFilter::handle_proxy_auth_internal(
+            &req,
+            &rv_config,
+            state.user_auth_service.as_ref(),
+        );
 
         assert!(result.is_err());
     }
@@ -343,7 +381,12 @@ mod test {
             .header("X-Auth", "test1")
             .body("".into())
             .unwrap();
-        let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
+        let state = app_state();
+        let result = AuthFilter::handle_proxy_auth_internal(
+            &req,
+            &rv_config,
+            state.user_auth_service.as_ref(),
+        );
 
         assert!(result.is_err());
     }
@@ -362,7 +405,12 @@ mod test {
             .header("X-Auth", "test")
             .body("".into())
             .unwrap();
-        let result = AuthFilter::handle_proxy_auth_internal(&req, &rv_config);
+        let state = app_state();
+        let result = AuthFilter::handle_proxy_auth_internal(
+            &req,
+            &rv_config,
+            state.user_auth_service.as_ref(),
+        );
 
         assert!(result.is_ok());
     }
@@ -376,7 +424,8 @@ mod test {
             .header("Content-Type", "text/plain")
             .body("".into())
             .unwrap();
-        let result = AuthFilter::handle_basic_auth_internal(&req);
+        let state = app_state();
+        let result = AuthFilter::handle_basic_auth_internal(&req, state.user_auth_service.as_ref());
 
         assert!(result.is_err());
     }
@@ -391,7 +440,8 @@ mod test {
             .header("Authorization", "Bearer dGVzdDp0ZXN0")
             .body("".into())
             .unwrap();
-        let result = AuthFilter::handle_basic_auth_internal(&req);
+        let state = app_state();
+        let result = AuthFilter::handle_basic_auth_internal(&req, state.user_auth_service.as_ref());
 
         assert!(result.is_err());
     }
@@ -401,7 +451,11 @@ mod test {
     async fn test_basic_auth_header_other_user() {
         // given
         let _router = handle_test_startup().await;
-        create_random_user().insert_user().unwrap();
+        let state = app_state();
+        state
+            .user_admin_service
+            .create_user(create_random_user())
+            .unwrap();
 
         let req = Request::builder()
             .header("Content-Type", "text/plain")
@@ -410,7 +464,7 @@ mod test {
             .unwrap();
 
         // when
-        let result = AuthFilter::handle_basic_auth_internal(&req);
+        let result = AuthFilter::handle_basic_auth_internal(&req, state.user_auth_service.as_ref());
 
         // then
         assert!(result.is_err());
@@ -421,7 +475,11 @@ mod test {
     async fn test_basic_auth_header_correct_user_wrong_password() {
         // given
         let _router = handle_test_startup().await;
-        create_random_user().insert_user().unwrap();
+        let state = app_state();
+        state
+            .user_admin_service
+            .create_user(create_random_user())
+            .unwrap();
 
         let req = Request::builder()
             .header("Content-Type", "text/plain")
@@ -429,7 +487,7 @@ mod test {
             .body("".into())
             .unwrap();
         // when
-        let result = AuthFilter::handle_basic_auth_internal(&req);
+        let result = AuthFilter::handle_basic_auth_internal(&req, state.user_auth_service.as_ref());
 
         // then
         assert!(result.is_err());

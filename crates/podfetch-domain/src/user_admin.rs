@@ -37,8 +37,31 @@ pub struct UserWithApiKey {
 }
 
 impl ManagedUser {
+    pub fn new(
+        id: i32,
+        username: impl Into<String>,
+        role: impl ToString,
+        password: Option<impl Into<String>>,
+        created_at: NaiveDateTime,
+        explicit_consent: bool,
+    ) -> Self {
+        Self {
+            id,
+            username: username.into(),
+            role: role.to_string(),
+            password: password.map(|password| password.into()),
+            explicit_consent,
+            created_at,
+            api_key: None,
+        }
+    }
+
     pub fn is_admin(&self) -> bool {
         self.role == "admin"
+    }
+
+    pub fn is_privileged_user(&self) -> bool {
+        self.role == "admin" || self.role == "uploader"
     }
 
     pub fn to_summary(&self) -> UserSummary {
@@ -68,6 +91,7 @@ pub trait UserAdminRepository: Send + Sync {
     type Error;
 
     fn create(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;
+    fn find_by_api_key(&self, api_key: &str) -> Result<Option<ManagedUser>, Self::Error>;
     fn find_by_username(&self, username: &str) -> Result<Option<ManagedUser>, Self::Error>;
     fn find_all(&self) -> Result<Vec<ManagedUser>, Self::Error>;
     fn update(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;

@@ -1,7 +1,7 @@
 use crate::constants::inner_constants::STANDARD_USER_ID;
-use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
 use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::CustomError;
+use podfetch_domain::user::{User, UserWithoutPassword};
 use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use podfetch_web::user_admin::UserAdminApplicationService;
 use std::sync::Arc;
@@ -30,44 +30,34 @@ impl UserAdminService {
     pub fn oidc_configured(&self) -> bool {
         self.environment.oidc_configured
     }
+
+    pub fn create_user(&self, user: User) -> Result<User, CustomError> {
+        self.repository.create(user.into()).map(Into::into)
+    }
+
+    pub fn find_user_by_username(&self, username: &str) -> Result<Option<User>, CustomError> {
+        self.repository
+            .find_by_username(username)
+            .map(|user| user.map(Into::into))
+    }
+
+    pub fn list_users(&self) -> Result<Vec<UserWithoutPassword>, CustomError> {
+        self.repository
+            .find_all()
+            .map(|users| users.into_iter().map(|user| user.to_summary()).collect())
+    }
+
+    pub fn update_user(&self, user: User) -> Result<User, CustomError> {
+        self.repository.update(user.into()).map(Into::into)
+    }
+
+    pub fn delete_user_by_username(&self, username: &str) -> Result<(), CustomError> {
+        self.repository.delete_by_username(username)
+    }
 }
 
 pub fn map_requester(user: &User) -> ManagedUser {
-    ManagedUser {
-        id: user.id,
-        username: user.username.clone(),
-        role: user.role.clone(),
-        password: user.password.clone(),
-        explicit_consent: user.explicit_consent,
-        created_at: user.created_at,
-        api_key: user.api_key.clone(),
-    }
-}
-
-impl From<podfetch_domain::user_admin::UserSummary> for UserWithoutPassword {
-    fn from(value: podfetch_domain::user_admin::UserSummary) -> Self {
-        Self {
-            id: value.id,
-            username: value.username,
-            role: value.role,
-            created_at: value.created_at,
-            explicit_consent: value.explicit_consent,
-        }
-    }
-}
-
-impl From<podfetch_domain::user_admin::UserWithApiKey> for UserWithAPiKey {
-    fn from(value: podfetch_domain::user_admin::UserWithApiKey) -> Self {
-        Self {
-            id: value.id,
-            username: value.username,
-            role: value.role,
-            created_at: value.created_at,
-            explicit_consent: value.explicit_consent,
-            api_key: value.api_key,
-            read_only: value.read_only,
-        }
-    }
+    user.clone()
 }
 
 impl UserAdminApplicationService for UserAdminService {

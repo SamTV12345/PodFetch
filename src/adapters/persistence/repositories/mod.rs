@@ -1,5 +1,9 @@
 pub mod device;
 pub mod invite_repository;
+pub mod notification_repository;
+pub mod podcast_settings_repository;
+pub mod session_repository;
 pub mod settings_repository;
+pub mod subscription_repository;
 pub mod tag_repository;
 pub mod user_admin_repository;

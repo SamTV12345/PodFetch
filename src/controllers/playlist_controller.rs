@@ -1,31 +1,17 @@
+use crate::app_state::AppState;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
-use crate::models::playlist::Playlist;
-use crate::models::user::User;
 use crate::utils::error::CustomError;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use podfetch_domain::user::User;
+use podfetch_web::playlist;
+use podfetch_web::playlist::PlaylistDto as WebPlaylistDto;
+pub use podfetch_web::playlist::PlaylistDtoPost;
 use reqwest::StatusCode;
-use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-#[derive(Serialize, Deserialize, Clone, ToSchema)]
-pub struct PlaylistDtoPost {
-    pub name: String,
-    pub items: Vec<PlaylistItem>,
-}
-
-#[derive(Serialize, Deserialize, Clone, ToSchema)]
-pub struct PlaylistItem {
-    pub episode: i32,
-}
-
-#[derive(Serialize, Deserialize, Clone, ToSchema)]
-pub struct PlaylistDto {
-    pub id: String,
-    pub name: String,
-    pub items: Vec<PodcastEpisodeWithHistory>,
-}
+pub type PlaylistDto = WebPlaylistDto<PodcastEpisodeWithHistory>;
 
 #[utoipa::path(
 post,
@@ -35,12 +21,17 @@ responses(
 tag="playlist"
 )]
 pub async fn add_playlist(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    let res = Playlist::create_new_playlist(playlist, requester)?;
-
-    Ok(Json(res))
+    playlist::add_playlist(
+        state.playlist_service.as_ref(),
+        requester.id,
+        requester.username.clone(),
+        playlist,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -51,13 +42,19 @@ responses(
 tag="playlist"
 )]
 pub async fn update_playlist(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     Path(playlist_id): Path<String>,
     Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    let res = Playlist::update_playlist(playlist, playlist_id.clone(), requester)?;
-
-    Ok(Json(res))
+    playlist::update_playlist(
+        state.playlist_service.as_ref(),
+        requester.id,
+        requester.username.clone(),
+        playlist_id,
+        playlist,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -68,16 +65,15 @@ responses(
 tag="playlist"
 )]
 pub async fn get_all_playlists(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PlaylistDto>>, CustomError> {
-    Playlist::get_playlists(requester.id)
-        .map(|p| {
-            p.iter()
-                .map(|p| Playlist::get_playlist_dto(p.id.clone(), p.clone(), requester.clone()))
-                .collect::<Result<Vec<PlaylistDto>, CustomError>>()
-                .unwrap()
-        })
-        .map(Json)
+    playlist::get_all_playlists(
+        state.playlist_service.as_ref(),
+        requester.id,
+        requester.username.clone(),
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -88,12 +84,17 @@ responses(
 tag="playlist"
 )]
 pub async fn get_playlist_by_id(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     Path(playlist_id): Path<String>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    let playlist = Playlist::get_playlist_by_user_and_id(playlist_id.clone(), requester.clone())?;
-    let playlist = Playlist::get_playlist_dto(playlist_id.clone(), playlist, requester.clone())?;
-    Ok(Json(playlist))
+    playlist::get_playlist_by_id(
+        state.playlist_service.as_ref(),
+        requester.id,
+        requester.username.clone(),
+        playlist_id,
+    )
+    .map(Json)
 }
 
 #[utoipa::path(
@@ -104,11 +105,11 @@ responses(
 tag="playlist"
 )]
 pub async fn delete_playlist_by_id(
+    State(state): State<AppState>,
     requester: Extension<User>,
     Path(playlist_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    let user_id = requester.id;
-    Playlist::delete_playlist_by_id(playlist_id, user_id)?;
+    playlist::delete_playlist_by_id(state.playlist_service.as_ref(), requester.id, playlist_id)?;
     Ok(StatusCode::OK)
 }
 
@@ -120,15 +121,20 @@ responses(
 tag="playlist"
 )]
 pub async fn delete_playlist_item(
+    State(state): State<AppState>,
     requester: Extension<User>,
     Path(path): Path<(String, i32)>,
 ) -> Result<StatusCode, CustomError> {
-    let user_id = requester.id;
-    Playlist::delete_playlist_item(path.0, path.1, user_id).await?;
+    playlist::delete_playlist_item(
+        state.playlist_service.as_ref(),
+        requester.id,
+        path.0,
+        path.1,
+    )?;
     Ok(StatusCode::OK)
 }
 
-pub fn get_playlist_router() -> OpenApiRouter {
+pub fn get_playlist_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_all_playlists))
         .routes(routes!(add_playlist))
@@ -143,19 +149,20 @@ mod tests {
     use crate::adapters::persistence::dbconfig::db::get_connection;
     use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl as pli_dsl;
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::playlist_controller::PlaylistDtoPost;
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
-    use crate::models::user::User;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use axum::extract::Path;
+    use axum::extract::{Path, State};
     use axum::{Extension, Json};
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use diesel::dsl::count_star;
+    use podfetch_domain::user::User;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -194,6 +201,10 @@ mod tests {
         format!("{prefix}-{}", Uuid::new_v4())
     }
 
+    fn app_state() -> AppState {
+        AppState::new()
+    }
+
     fn assert_client_error_status(status: u16) {
         assert!(
             (400..500).contains(&status),
@@ -224,11 +235,13 @@ mod tests {
         let list_response = server.test_server.get("/api/v1/playlist").await;
         assert_eq!(list_response.status_code(), 200);
         let playlists = list_response.json::<serde_json::Value>();
-        assert!(playlists
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|p| p["id"] == json!(playlist_id.clone())));
+        assert!(
+            playlists
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|p| p["id"] == json!(playlist_id.clone()))
+        );
 
         let get_response = server
             .test_server
@@ -298,9 +311,7 @@ mod tests {
 
         let delete_item_response = server
             .test_server
-            .delete(&format!(
-                "/api/v1/playlist/{unknown_playlist_id}/episode/1"
-            ))
+            .delete(&format!("/api/v1/playlist/{unknown_playlist_id}/episode/1"))
             .await;
         assert_eq!(delete_item_response.status_code(), 404);
     }
@@ -326,6 +337,7 @@ mod tests {
             .to_string();
 
         let result = super::update_playlist(
+            State(app_state()),
             Extension(build_other_user()),
             Path(playlist_id),
             Json(PlaylistDtoPost {
@@ -361,7 +373,12 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let result = super::delete_playlist_by_id(Extension(build_other_user()), Path(playlist_id)).await;
+        let result = super::delete_playlist_by_id(
+            State(app_state()),
+            Extension(build_other_user()),
+            Path(playlist_id),
+        )
+        .await;
 
         match result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
@@ -407,6 +424,7 @@ mod tests {
             .to_string();
 
         let result = super::delete_playlist_item(
+            State(app_state()),
             Extension(build_other_user()),
             Path((playlist_id, episode.id)),
         )
@@ -714,7 +732,12 @@ mod tests {
             .unwrap()
             .to_string();
 
-        let result = super::get_playlist_by_id(Extension(build_other_user()), Path(playlist_id)).await;
+        let result = super::get_playlist_by_id(
+            State(app_state()),
+            Extension(build_other_user()),
+            Path(playlist_id),
+        )
+        .await;
 
         match result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::NotFound(_))),
@@ -728,7 +751,8 @@ mod tests {
         let server = handle_test_startup().await;
         let _guard = &server.mutex;
 
-        let result = super::get_all_playlists(Extension(build_other_user())).await;
+        let result =
+            super::get_all_playlists(State(app_state()), Extension(build_other_user())).await;
         match result {
             Ok(Json(playlists)) => assert!(playlists.is_empty()),
             Err(err) => panic!("expected empty result, got error: {err}"),

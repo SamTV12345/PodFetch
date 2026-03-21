@@ -98,6 +98,18 @@ impl UserAdminRepository for DieselUserAdminRepository {
             .map_err(Into::into)
     }
 
+    fn find_by_api_key(&self, api_key_to_find: &str) -> Result<Option<ManagedUser>, Self::Error> {
+        use self::users::dsl::*;
+
+        let mut conn = self.database.connection()?;
+        users
+            .filter(api_key.eq(api_key_to_find))
+            .first::<UserEntity>(&mut conn)
+            .optional()
+            .map(|user| user.map(Into::into))
+            .map_err(Into::into)
+    }
+
     fn find_all(&self) -> Result<Vec<ManagedUser>, Self::Error> {
         use self::users::dsl::*;
 

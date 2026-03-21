@@ -1,8 +1,5 @@
 use crate::app_state::AppState;
 use crate::models::podcasts::Podcast;
-use crate::models::settings::Setting;
-pub use crate::models::settings::{ReplacementStrategy, UpdateNameSettings};
-use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::url_builder::resolve_server_url_from_headers;
 use axum::extract::{Path, State};
@@ -10,6 +7,8 @@ use axum::http::HeaderMap;
 use axum::http::Response;
 use axum::{Extension, Json};
 use file_format::FileFormat;
+pub use podfetch_domain::settings::{ReplacementStrategy, Setting, UpdateNameSettings};
+use podfetch_domain::user::User;
 use podfetch_web::settings::{self, Mode, OpmlError, OpmlPodcast, SettingsControllerError};
 use reqwest::StatusCode;
 
@@ -126,9 +125,13 @@ pub async fn update_settings(
     Extension(requester): Extension<User>,
     Json(settings): Json<Setting>,
 ) -> Result<Json<Setting>, CustomError> {
-    settings::update_settings(state.settings_service.as_ref(), requester.is_admin(), settings)
-        .map(Json)
-        .map_err(map_settings_controller_error)
+    settings::update_settings(
+        state.settings_service.as_ref(),
+        requester.is_admin(),
+        settings,
+    )
+    .map(Json)
+    .map_err(map_settings_controller_error)
 }
 
 #[utoipa::path(
@@ -142,8 +145,9 @@ pub async fn run_cleanup(
     State(state): State<AppState>,
     requester: Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    let settings = settings::cleanup_settings(state.settings_service.as_ref(), requester.is_admin())
-        .map_err(map_settings_controller_error)?;
+    let settings =
+        settings::cleanup_settings(state.settings_service.as_ref(), requester.is_admin())
+            .map_err(map_settings_controller_error)?;
     PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days);
     Ok(StatusCode::OK)
 }
@@ -226,11 +230,10 @@ fn map_settings_controller_error(error: SettingsControllerError<CustomError>) ->
 
 fn map_opml_error(error: OpmlError) -> CustomError {
     match error {
-        OpmlError::ApiKeyRequired => CustomErrorInner::UnAuthorized(
-            "Please generate an api key".to_string(),
-            Critical,
-        )
-        .into(),
+        OpmlError::ApiKeyRequired => {
+            CustomErrorInner::UnAuthorized("Please generate an api key".to_string(), Critical)
+                .into()
+        }
         OpmlError::Xml(_) => CustomErrorInner::Unknown(Error).into(),
     }
 }
@@ -247,17 +250,17 @@ pub fn get_settings_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::app_state::AppState;
     use crate::adapters::persistence::dbconfig::db::get_connection;
     use crate::adapters::persistence::dbconfig::schema::settings::dsl as s_dsl;
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::models::settings::Setting;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use axum::extract::State;
     use axum::Extension;
     use axum::Json;
+    use axum::extract::State;
     use diesel::RunQueryDsl;
+    use podfetch_domain::settings::Setting;
     use serde_json::json;
     use serial_test::serial;
 
@@ -268,7 +271,7 @@ mod tests {
         );
     }
 
-    fn non_admin_user() -> crate::models::user::User {
+    fn non_admin_user() -> podfetch_domain::user::User {
         UserTestDataBuilder::new().build()
     }
 

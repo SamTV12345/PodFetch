@@ -2,18 +2,18 @@ use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcasts::Podcast;
-use crate::models::tag::Tag;
-use crate::models::tags_podcast::TagsPodcast;
-use crate::models::user::User;
+use crate::service::tag_service::TagService;
 use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::insert_into;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use indexmap::IndexMap;
+use podfetch_domain::ordering::{OrderCriteria, OrderOption};
+use podfetch_domain::tag::{Tag, TagsPodcast};
+use podfetch_domain::user::User;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use utoipa::ToSchema;
@@ -126,7 +126,9 @@ impl Favorite {
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &requester.username).unwrap();
+                let tags = TagService::default_service()
+                    .get_tags_of_podcast(podcast.0.id, &requester.username)
+                    .unwrap();
                 (podcast.0.clone(), Some(podcast.1.clone()), tags, requester).into()
             })
             .collect::<Vec<PodcastDto>>();

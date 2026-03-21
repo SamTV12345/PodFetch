@@ -1,17 +1,15 @@
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::models::session::Session;
+use crate::app_state::AppState;
 use axum_extra::extract::cookie::CookieJar;
 use std::convert::Infallible;
 
-use crate::utils::error::ErrorSeverity::{Critical, Warning};
-use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
-use axum::extract::Request;
+use crate::utils::error::ErrorSeverity::Warning;
+use crate::utils::error::{CustomError, CustomErrorInner};
+use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
-use diesel::ExpressionMethods;
-use diesel::{OptionalExtension, QueryDsl, RunQueryDsl};
 
 pub async fn handle_cookie_session(
+    State(state): State<AppState>,
     mut req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, CustomError> {
@@ -25,12 +23,9 @@ pub async fn handle_cookie_session(
     let binding = cookie.unwrap();
     let extracted_cookie = binding.value();
 
-    use crate::adapters::persistence::dbconfig::schema::sessions::dsl::*;
-    let session = sessions
-        .filter(session_id.eq(extracted_cookie))
-        .first::<Session>(&mut get_connection())
-        .optional()
-        .map_err(|e| map_db_error(e, Critical))
+    let session = state
+        .session_service
+        .find_by_session_id(extracted_cookie)
         .map_err(<CustomError as Into<Infallible>>::into)?;
     if session.is_none() {
         let inner_error = CustomErrorInner::Forbidden(Warning);

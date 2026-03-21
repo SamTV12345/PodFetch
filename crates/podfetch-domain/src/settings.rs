@@ -53,9 +53,7 @@ pub enum ReplacementStrategy {
 impl Display for ReplacementStrategy {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let value = match self {
-            ReplacementStrategy::ReplaceWithDashAndUnderscore => {
-                "replace-with-dash-and-underscore"
-            }
+            ReplacementStrategy::ReplaceWithDashAndUnderscore => "replace-with-dash-and-underscore",
             ReplacementStrategy::Remove => "remove",
             ReplacementStrategy::ReplaceWithDash => "replace-with-dash",
         };

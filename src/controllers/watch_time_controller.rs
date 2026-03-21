@@ -1,11 +1,16 @@
-use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::misc_models::{
-    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
-};
-use crate::models::user::User;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::app_state::AppState;
+use crate::models::episode::EpisodeDto;
+use crate::models::podcast_dto::PodcastDto;
 use axum::extract::Path;
+use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
+use podfetch_domain::user::User;
+use podfetch_web::watchtime::{
+    self, PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
+    WatchtimeControllerError,
+};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -13,6 +18,9 @@ use utoipa_axum::routes;
 use crate::utils::error::ErrorSeverity::Debug;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+
+pub type LastWatchedItem =
+    PodcastWatchedEpisodeModelWithPodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto>;
 
 #[utoipa::path(
 post,
@@ -22,11 +30,17 @@ responses(
 tag="watchtime"
 )]
 pub async fn log_watchtime(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     Json(podcast_watch): Json<PodcastWatchedPostModel>,
 ) -> Result<StatusCode, CustomError> {
     let podcast_episode_id = podcast_watch.podcast_episode_id.clone();
-    Episode::log_watchtime(podcast_watch, requester.username.clone())?;
+    watchtime::log_watchtime(
+        state.watchtime_service.as_ref(),
+        requester.username.clone(),
+        podcast_watch,
+    )
+    .map_err(map_watchtime_error)?;
     log::debug!("Logged watchtime for episode: {podcast_episode_id}");
     Ok(StatusCode::OK)
 }
@@ -35,28 +49,33 @@ pub async fn log_watchtime(
 get,
 path="/podcasts/episode/lastwatched",
 responses(
-(status = 200, description = "Gets the last watched podcast episodes.", body= Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>)),
+(status = 200, description = "Gets the last watched podcast episodes.", body= Vec<LastWatchedItem>)),
 tag="watchtime"
 )]
 pub async fn get_last_watched(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     headers: HeaderMap,
-) -> Result<Json<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>>, CustomError> {
+) -> Result<Json<Vec<LastWatchedItem>>, CustomError> {
     let server_url = resolve_server_url_from_headers(&headers);
-    let episodes = Episode::get_last_watched_episodes(&requester)?
-        .into_iter()
-        .map(|mut item| {
-            item.podcast_episode.local_url =
-                rewrite_env_server_url_prefix(&item.podcast_episode.local_url, &server_url);
-            item.podcast_episode.local_image_url =
-                rewrite_env_server_url_prefix(&item.podcast_episode.local_image_url, &server_url);
-            item.podcast.image_url =
-                rewrite_env_server_url_prefix(&item.podcast.image_url, &server_url);
-            item.podcast.podfetch_feed =
-                rewrite_env_server_url_prefix(&item.podcast.podfetch_feed, &server_url);
-            item
-        })
-        .collect();
+    let episodes =
+        watchtime::get_last_watched(state.watchtime_service.as_ref(), &requester.username)
+            .map_err(map_watchtime_error)?
+            .into_iter()
+            .map(|mut item| {
+                item.podcast_episode.local_url =
+                    rewrite_env_server_url_prefix(&item.podcast_episode.local_url, &server_url);
+                item.podcast_episode.local_image_url = rewrite_env_server_url_prefix(
+                    &item.podcast_episode.local_image_url,
+                    &server_url,
+                );
+                item.podcast.image_url =
+                    rewrite_env_server_url_prefix(&item.podcast.image_url, &server_url);
+                item.podcast.podfetch_feed =
+                    rewrite_env_server_url_prefix(&item.podcast.podfetch_feed, &server_url);
+                item
+            })
+            .collect();
     Ok(Json(episodes))
 }
 
@@ -68,17 +87,23 @@ responses(
 tag="watchtime"
 )]
 pub async fn get_watchtime(
+    State(state): State<AppState>,
     Path(id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<EpisodeDto>, CustomError> {
-    let watchtime = Episode::get_watchtime(&id, &requester.username)?;
-    match watchtime {
-        None => Err(CustomErrorInner::NotFound(Debug).into()),
-        Some(w) => Ok(Json(w.convert_to_episode_dto())),
+    watchtime::get_watchtime(state.watchtime_service.as_ref(), &id, &requester.username)
+        .map(Json)
+        .map_err(map_watchtime_error)
+}
+
+fn map_watchtime_error(error: WatchtimeControllerError<CustomError>) -> CustomError {
+    match error {
+        WatchtimeControllerError::NotFound => CustomErrorInner::NotFound(Debug).into(),
+        WatchtimeControllerError::Service(error) => error,
     }
 }
 
-pub fn get_watchtime_router() -> OpenApiRouter {
+pub fn get_watchtime_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(log_watchtime))
         .routes(routes!(get_last_watched))
@@ -275,7 +300,9 @@ mod tests {
             .test_server
             .add_header("x-forwarded-host", "podfetch.example.com");
         server.test_server.add_header("x-forwarded-proto", "https");
-        server.test_server.add_header("x-forwarded-prefix", "/mobile");
+        server
+            .test_server
+            .add_header("x-forwarded-prefix", "/mobile");
 
         let response = server
             .test_server
@@ -285,14 +312,18 @@ mod tests {
 
         let payload = response.json::<serde_json::Value>();
         let first_item = &payload.as_array().unwrap()[0];
-        assert!(first_item["podcastEpisode"]["local_url"]
-            .as_str()
-            .unwrap()
-            .starts_with("https://podfetch.example.com/mobile/"));
-        assert!(first_item["podcast"]["image_url"]
-            .as_str()
-            .unwrap()
-            .starts_with("https://podfetch.example.com/mobile/"));
+        assert!(
+            first_item["podcastEpisode"]["local_url"]
+                .as_str()
+                .unwrap()
+                .starts_with("https://podfetch.example.com/mobile/")
+        );
+        assert!(
+            first_item["podcast"]["image_url"]
+                .as_str()
+                .unwrap()
+                .starts_with("https://podfetch.example.com/mobile/")
+        );
     }
 
     #[tokio::test]
@@ -460,10 +491,12 @@ mod tests {
 
         let payload = response.json::<serde_json::Value>();
         let first_item = &payload.as_array().unwrap()[0];
-        assert!(first_item["podcastEpisode"]["local_url"]
-            .as_str()
-            .unwrap()
-            .contains("://podfetch-host-only.example.com/"));
+        assert!(
+            first_item["podcastEpisode"]["local_url"]
+                .as_str()
+                .unwrap()
+                .contains("://podfetch-host-only.example.com/")
+        );
     }
 
     #[tokio::test]
@@ -533,10 +566,7 @@ mod tests {
     async fn test_get_watchtime_with_invalid_path_fragment_returns_client_error() {
         let server = handle_test_startup().await;
 
-        let response = server
-            .test_server
-            .get("/api/v1/podcasts/episode/%")
-            .await;
+        let response = server.test_server.get("/api/v1/podcasts/episode/%").await;
         assert_client_error_status(response.status_code().as_u16());
     }
 }

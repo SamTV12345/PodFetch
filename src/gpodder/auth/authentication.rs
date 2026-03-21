@@ -1,14 +1,12 @@
+use crate::app_state::AppState;
 use crate::auth_middleware::AuthFilter;
-use crate::models::session::Session;
-use crate::models::user::User;
-
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{Cookie, SameSite};
+use podfetch_domain::session::Session;
 use sha256::digest;
 
 #[utoipa::path(
@@ -19,6 +17,7 @@ responses(
 tag="gpodder"
 )]
 pub async fn login(
+    State(state): State<AppState>,
     Path(username): Path<String>,
     jar: CookieJar,
     req: axum::extract::Request,
@@ -26,24 +25,38 @@ pub async fn login(
     // If cookie is already set, return it
     if let Some(cookie) = jar.get("sessionid") {
         let session = cookie.value();
-        let opt_session = Session::find_by_session_id(session);
-        if let Ok(unwrapped_session) = opt_session {
+        if let Ok(Some(unwrapped_session)) = state.session_service.find_by_session_id(session) {
             let user_cookie = create_session_cookie(unwrapped_session);
             return Ok((user_cookie, StatusCode::OK));
         }
     }
 
-    match ENVIRONMENT_SERVICE.reverse_proxy {
-        true => handle_proxy_auth(req, &username),
-        false => handle_gpodder_basic_auth(req, &username),
+    match state.environment.reverse_proxy {
+        true => handle_proxy_auth(
+            req,
+            &username,
+            state.user_auth_service.as_ref(),
+            state.environment.as_ref(),
+            state.session_service.as_ref(),
+        ),
+        false => handle_gpodder_basic_auth(
+            req,
+            &username,
+            state.user_auth_service.as_ref(),
+            state.environment.as_ref(),
+            state.session_service.as_ref(),
+        ),
     }
 }
 
 fn handle_proxy_auth(
     rq: axum::extract::Request,
     username: &str,
+    user_auth_service: &crate::service::user_auth_service::UserAuthService,
+    environment: &crate::service::environment_service::EnvironmentService,
+    session_service: &crate::service::session_service::SessionService,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
-    let config = ENVIRONMENT_SERVICE.reverse_proxy_config.clone().unwrap();
+    let config = environment.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
     match opt_authorization {
         Some(auth) => {
@@ -55,26 +68,24 @@ fn handle_proxy_auth(
                 return Err(CustomErrorInner::Forbidden(Warning).into());
             }
 
-            match User::find_by_username(auth_val) {
+            match user_auth_service.find_by_username(auth_val) {
                 Ok(user) => {
-                    let session = Session::new(user.username);
-                    Session::insert_session(&session)?;
+                    let session = session_service.create_session(user.username)?;
                     let user_cookie = create_session_cookie(session);
                     Ok((user_cookie, StatusCode::OK))
                 }
                 Err(e) => {
                     if config.auto_sign_up {
-                        User::insert_user(&mut User {
-                            id: 0,
-                            username: username.to_string(),
-                            role: "user".to_string(),
-                            password: None,
-                            explicit_consent: false,
-                            created_at: chrono::Utc::now().naive_utc(),
-                            api_key: None,
-                        })
-                        .expect("Error inserting user on auto registering");
-                        handle_proxy_auth(rq, username)
+                        user_auth_service
+                            .create_user(username.to_string(), "user".to_string(), None, false)
+                            .expect("Error inserting user on auto registering");
+                        handle_proxy_auth(
+                            rq,
+                            username,
+                            user_auth_service,
+                            environment,
+                            session_service,
+                        )
                     } else {
                         log::error!("Error finding user by username: {e}");
                         Err(CustomErrorInner::Forbidden(Warning).into())
@@ -89,6 +100,9 @@ fn handle_proxy_auth(
 fn handle_gpodder_basic_auth(
     rq: axum::extract::Request,
     username: &str,
+    user_auth_service: &crate::service::user_auth_service::UserAuthService,
+    environment: &crate::service::environment_service::EnvironmentService,
+    session_service: &crate::service::session_service::SessionService,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     let opt_authorization = rq.headers().get("Authorization");
 
@@ -103,7 +117,7 @@ fn handle_gpodder_basic_auth(
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
 
-    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
+    if let Some(admin_username) = &environment.username
         && admin_username == username
     {
         return Err(CustomErrorInner::Conflict(
@@ -115,12 +129,11 @@ fn handle_gpodder_basic_auth(
         .into());
     }
 
-    let user = User::find_by_username(username)?;
+    let user = user_auth_service.find_by_username(username)?;
     match user.password {
         Some(p) => {
             if p == digest(password) {
-                let session = Session::new(user.username);
-                Session::insert_session(&session).expect("Error inserting session");
+                let session = session_service.create_session(user.username)?;
                 let user_cookie = create_session_cookie(session);
                 Ok((user_cookie, StatusCode::OK))
             } else {
@@ -143,8 +156,9 @@ fn create_session_cookie(session: Session) -> CookieJar {
 
 #[cfg(test)]
 mod tests {
+    use crate::app_state::AppState;
     use crate::gpodder::auth::authentication::create_session_cookie;
-    use crate::models::session::Session;
+    use podfetch_domain::session::Session;
     use serial_test::serial;
 
     #[test]
@@ -165,12 +179,19 @@ mod tests {
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use podfetch_web::device::DeviceResponse;
 
+    fn app_state() -> AppState {
+        AppState::new()
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_login() {
         let mut server = handle_test_startup().await;
-        let mut user = UserTestDataBuilder::new().build();
-        user.insert_user().expect("TODO: panic message");
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .expect("TODO: panic message");
 
         create_auth_gpodder(&mut server, &user).await;
 

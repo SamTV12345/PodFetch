@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::models::user::User;
     use fake::Fake;
     use fake::faker::internet::raw::Username;
     use fake::locales::EN;
+    use podfetch_domain::user::User;
 
     pub struct UserTestDataBuilder {
         id: i32,

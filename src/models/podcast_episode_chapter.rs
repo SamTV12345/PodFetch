@@ -1,6 +1,5 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::*;
-use crate::controllers::podcast_episode_controller::PodcastChapterDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::podcast_chapter::Chapter;
 use crate::utils::error::ErrorSeverity::Critical;
@@ -12,6 +11,7 @@ use diesel::{
     ExpressionMethods, Identifiable, OptionalExtension, QueryDsl, Queryable, QueryableByName,
     RunQueryDsl, Selectable,
 };
+use podfetch_web::podcast_episode::PodcastChapterDto;
 use utoipa::ToSchema;
 
 #[derive(

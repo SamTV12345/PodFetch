@@ -7,6 +7,7 @@ edition = "2024"
 path = "src/lib.rs"
 
 [dependencies]
-chrono = { version = "0.4.44", default-features = false, features = ["serde"] }
+chrono = { version = "0.4.44", default-features = false, features = ["serde", "clock"] }
 serde = { version = "1.0.228", features = ["derive"] }
 utoipa = { version = "5.4.0", features = ["chrono", "axum_extras"] }
+uuid = { version = "1.22.0", features = ["v4", "serde"] }

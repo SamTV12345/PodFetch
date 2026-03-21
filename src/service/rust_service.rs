@@ -6,16 +6,16 @@ use crate::models::misc_models::PodcastInsertModel;
 
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorites::Favorite;
-use crate::models::itunes_models::{ItunesWrapper, PodindexResponse};
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
-use crate::models::podcast_settings::PodcastSetting;
-use crate::models::user::User;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::service::podcast_settings_service::PodcastSettingsService;
 use crate::unwrap_string;
 use crate::utils::error::ErrorSeverity::{Critical, Error};
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::http_client::get_http_client;
+use podfetch_domain::ordering::{OrderCriteria, OrderOption};
+use podfetch_domain::user::User;
+use podfetch_web::podcast::{ItunesWrapper, PodindexResponse};
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde_json::Value;
@@ -175,8 +175,9 @@ impl PodcastService {
 
     pub fn schedule_episode_download(podcast: &Podcast) -> Result<(), CustomError> {
         const MAX_PARALLEL_DOWNLOADS: usize = 3;
-        let settings = crate::service::settings_service::SettingsService::shared().get_settings()?;
-        let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
+        let settings =
+            crate::service::settings_service::SettingsService::shared().get_settings()?;
+        let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
         match settings {
             Some(settings) => {
                 if (podcast_settings.is_some() && podcast_settings.unwrap().auto_download)

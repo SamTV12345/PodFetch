@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use utoipa::ToSchema;
 
@@ -27,6 +28,7 @@ impl OrderCriteria {
         }
     }
 }
+
 #[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum OrderOption {
@@ -42,6 +44,7 @@ impl Display for OrderOption {
         }
     }
 }
+
 impl OrderOption {
     pub fn from_string(s: String) -> Self {
         match s.as_str() {
@@ -49,9 +52,7 @@ impl OrderOption {
             "TITLE" => OrderOption::Title,
             "PublishedDate" => OrderOption::PublishedDate,
             "Title" => OrderOption::Title,
-            _ => {
-                panic!("Invalid OrderOption")
-            }
+            _ => panic!("Invalid OrderOption"),
         }
     }
 }

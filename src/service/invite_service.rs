@@ -1,9 +1,8 @@
 use crate::constants::inner_constants::Role;
-use crate::models::invite::Invite;
 use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::ErrorSeverity::{Debug, Error, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner};
-use podfetch_domain::invite::InviteRepository;
+use podfetch_domain::invite::{Invite, InviteRepository};
 use podfetch_web::invite::InviteApplicationService;
 use std::sync::Arc;
 
@@ -30,8 +29,7 @@ impl InviteService {
         explicit_consent: bool,
     ) -> Result<Invite, CustomError> {
         let role = Role::try_from(role)?;
-        self.repository
-            .create(&role.to_string(), explicit_consent)
+        self.repository.create(&role.to_string(), explicit_consent)
     }
 
     pub fn find_optional_invite(&self, invite_id: &str) -> Result<Option<Invite>, CustomError> {

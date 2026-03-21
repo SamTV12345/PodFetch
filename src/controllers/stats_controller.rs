@@ -1,42 +1,14 @@
-use crate::models::stats::StatsOverview;
-use crate::models::user::User;
+use crate::app_state::AppState;
 use crate::utils::error::ErrorSeverity::Info;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
-use axum::extract::Query;
+use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
-use chrono::{DateTime, NaiveDate, NaiveDateTime};
-use utoipa::IntoParams;
+use podfetch_domain::user::User;
+use podfetch_web::stats::{self, StatsControllerError, StatsOverview, StatsOverviewQueryParams};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-
-#[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
-#[serde(rename_all = "camelCase")]
-pub struct StatsOverviewQueryParams {
-    pub from: Option<String>,
-    pub to: Option<String>,
-    pub top_limit: Option<usize>,
-}
-
-fn parse_datetime(input: &str, end_of_day: bool) -> Result<NaiveDateTime, CustomError> {
-    if let Ok(parsed) = DateTime::parse_from_rfc3339(input) {
-        return Ok(parsed.naive_utc());
-    }
-    if let Ok(parsed_date) = NaiveDate::parse_from_str(input, "%Y-%m-%d") {
-        return if end_of_day {
-            Ok(parsed_date.and_hms_opt(23, 59, 59).unwrap())
-        } else {
-            Ok(parsed_date.and_hms_opt(0, 0, 0).unwrap())
-        };
-    }
-
-    Err(CustomErrorInner::BadRequest(
-        format!("Invalid datetime format: {input}. Use RFC3339 or YYYY-MM-DD."),
-        Info,
-    )
-    .into())
-}
 
 #[utoipa::path(
 get,
@@ -47,40 +19,31 @@ responses(
 tag="stats"
 )]
 pub async fn get_stats_overview(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     Query(params): Query<StatsOverviewQueryParams>,
     headers: HeaderMap,
 ) -> Result<Json<StatsOverview>, CustomError> {
-    let from = params
-        .from
-        .as_deref()
-        .map(|from| parse_datetime(from, false))
-        .transpose()?;
-    let to = params
-        .to
-        .as_deref()
-        .map(|to| parse_datetime(to, true))
-        .transpose()?;
-    if let (Some(from), Some(to)) = (from, to)
-        && from > to
-    {
-        return Err(CustomErrorInner::BadRequest(
-            "'from' must be less than or equal to 'to'".to_string(),
-            Info,
-        )
-        .into());
-    }
-
-    let top_limit = params.top_limit.unwrap_or(5).clamp(1, 20);
     let server_url = resolve_server_url_from_headers(&headers);
-    let mut stats = StatsOverview::calculate_for_user(&requester.username, from, to, top_limit)?;
+    let mut stats =
+        stats::get_stats_overview(state.stats_service.as_ref(), &requester.username, params)
+            .map_err(map_stats_error)?;
     stats.top_podcasts.iter_mut().for_each(|podcast| {
         podcast.image_url = rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
     });
     Ok(Json(stats))
 }
 
-pub fn get_stats_router() -> OpenApiRouter {
+fn map_stats_error(error: StatsControllerError<CustomError>) -> CustomError {
+    match error {
+        StatsControllerError::BadRequest(message) => {
+            CustomErrorInner::BadRequest(message, Info).into()
+        }
+        StatsControllerError::Service(error) => error,
+    }
+}
+
+pub fn get_stats_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().routes(routes!(get_stats_overview))
 }
 
@@ -444,9 +407,7 @@ mod tests {
 
         let response = server
             .test_server
-            .get(
-                "/api/v1/stats/overview?from=2026-02-24T00:00:00Z&to=2026-02-24T23:59:59Z",
-            )
+            .get("/api/v1/stats/overview?from=2026-02-24T00:00:00Z&to=2026-02-24T23:59:59Z")
             .await;
         assert_eq!(response.status_code(), 200);
 
@@ -558,10 +519,12 @@ mod tests {
         let payload = response.json::<Value>();
         let top_podcasts = payload["topPodcasts"].as_array().unwrap();
         assert!(!top_podcasts.is_empty());
-        assert!(top_podcasts[0]["imageUrl"]
-            .as_str()
-            .unwrap()
-            .starts_with("https://podfetch.example.com/ui/"));
+        assert!(
+            top_podcasts[0]["imageUrl"]
+                .as_str()
+                .unwrap()
+                .starts_with("https://podfetch.example.com/ui/")
+        );
     }
 
     #[tokio::test]

@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod tests {
     use crate::commands::startup::tests::TestServerWrapper;
-    use crate::models::user::User;
     use base64::Engine;
     use base64::engine::general_purpose;
+    use podfetch_domain::user::User;
 
     pub fn create_basic_header(username: &str, password: &str) -> String {
         general_purpose::STANDARD.encode(format!("{username}:{password}"))

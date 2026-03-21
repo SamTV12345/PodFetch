@@ -19,7 +19,9 @@ impl InviteRepository for InviteRepositoryImpl {
     type Error = CustomError;
 
     fn create(&self, role: &str, explicit_consent: bool) -> Result<Invite, Self::Error> {
-        self.inner.create(role, explicit_consent).map_err(Into::into)
+        self.inner
+            .create(role, explicit_consent)
+            .map_err(Into::into)
     }
 
     fn find_by_id(&self, invite_id: &str) -> Result<Option<Invite>, Self::Error> {

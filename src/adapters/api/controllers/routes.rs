@@ -7,7 +7,7 @@ use crate::gpodder::episodes::gpodder_episodes::get_gpodder_episodes_router;
 use crate::gpodder::parametrization::get_client_parametrization_router;
 use crate::gpodder::session_middleware::handle_cookie_session;
 use crate::gpodder::subscription::subscriptions::get_subscription_router;
-use axum::middleware::from_fn;
+use axum::middleware::from_fn_with_state;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -32,14 +32,20 @@ pub fn global_routes(state: AppState) -> OpenApiRouter {
 
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
         use crate::gpodder::auth::authentication::__path_login;
-        router = router.routes(routes!(login)).nest(
-            "/api/2",
-            OpenApiRouter::new()
-                .merge(get_subscription_router())
-                .merge(get_device_router().with_state(state.clone()))
-                .merge(get_gpodder_episodes_router())
-                .layer(from_fn(handle_cookie_session)),
-        );
+        router = router
+            .merge(
+                OpenApiRouter::new()
+                    .routes(routes!(login))
+                    .with_state(state.clone()),
+            )
+            .nest(
+                "/api/2",
+                OpenApiRouter::new()
+                    .merge(get_subscription_router().with_state(state.clone()))
+                    .merge(get_device_router().with_state(state.clone()))
+                    .merge(get_gpodder_episodes_router())
+                    .layer(from_fn_with_state(state.clone(), handle_cookie_session)),
+            );
     }
     router
 }

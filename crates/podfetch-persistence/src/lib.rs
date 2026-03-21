@@ -1,5 +1,10 @@
 pub mod db;
 pub mod device;
 pub mod invite;
+pub mod notification;
+pub mod podcast_settings;
+pub mod session;
 pub mod settings;
+pub mod subscription;
+pub mod tag;
 pub mod user_admin;

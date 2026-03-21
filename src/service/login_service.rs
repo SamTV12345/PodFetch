@@ -1,4 +1,4 @@
-use crate::models::user::User;
+use crate::service::user_auth_service::UserAuthService;
 use crate::utils::error::CustomError;
 use podfetch_web::sys::{LoginApplicationService, LoginDecision};
 use sha256::digest;
@@ -9,22 +9,25 @@ use crate::service::environment_service::EnvironmentService;
 #[derive(Clone)]
 pub struct LoginService {
     environment: Arc<EnvironmentService>,
+    user_auth_service: Arc<UserAuthService>,
 }
 
 impl LoginService {
-    pub fn new(environment: Arc<EnvironmentService>) -> Self {
-        Self { environment }
+    pub fn new(
+        environment: Arc<EnvironmentService>,
+        user_auth_service: Arc<UserAuthService>,
+    ) -> Self {
+        Self {
+            environment,
+            user_auth_service,
+        }
     }
 }
 
 impl LoginApplicationService for LoginService {
     type Error = CustomError;
 
-    fn verify_login(
-        &self,
-        username: &str,
-        password: &str,
-    ) -> Result<LoginDecision, Self::Error> {
+    fn verify_login(&self, username: &str, password: &str) -> Result<LoginDecision, Self::Error> {
         let digested_password = digest(password);
 
         if let Some(admin_username) = &self.environment.username
@@ -35,7 +38,7 @@ impl LoginApplicationService for LoginService {
             return Ok(LoginDecision::Authenticated);
         }
 
-        match User::find_by_username(username) {
+        match self.user_auth_service.find_by_username(username) {
             Ok(user) => {
                 if let Some(stored_password) = user.password {
                     if stored_password == digested_password {
@@ -48,7 +51,10 @@ impl LoginApplicationService for LoginService {
                 }
             }
             Err(err) => {
-                if matches!(err.inner, crate::utils::error::CustomErrorInner::NotFound(_)) {
+                if matches!(
+                    err.inner,
+                    crate::utils::error::CustomErrorInner::NotFound(_)
+                ) {
                     Ok(LoginDecision::WrongUserOrPassword)
                 } else {
                     Err(err)

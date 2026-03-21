@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::models::notification::Notification;
     use derive_builder::Builder;
     use fake::faker::chrono::en::Time;
     use fake::{Fake, Faker};
+    use podfetch_domain::notification::Notification;
 
     #[derive(Default, Builder, Debug)]
     #[builder(setter(into))]

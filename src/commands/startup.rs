@@ -22,7 +22,6 @@ use crate::controllers::watch_time_controller::get_watchtime_router;
 use crate::controllers::websocket_controller::get_websocket_router;
 use crate::import_database_config;
 use crate::models::podcasts::Podcast;
-use crate::models::session::Session;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
@@ -31,7 +30,7 @@ use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
-use axum::middleware::from_fn;
+use axum::middleware::from_fn_with_state;
 use axum::response::{Redirect, Response};
 use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
@@ -267,10 +266,14 @@ pub fn get_api_config(state: AppState) -> OpenApiRouter {
     use crate::controllers::podcast_controller::__path_proxy_podcast;
     OpenApiRouter::new()
         .merge(get_ui_config())
-        .merge(podcast_serving())
+        .merge(podcast_serving(state.clone()))
         .merge(get_manifest_router())
-        .merge(get_websocket_router())
-        .routes(routes!(proxy_podcast))
+        .merge(get_websocket_router().with_state(state.clone()))
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(proxy_podcast))
+                .with_state(state.clone()),
+        )
         .nest("/api/v1", OpenApiRouter::new().merge(config(state)))
 }
 
@@ -290,25 +293,25 @@ fn config(state: AppState) -> OpenApiRouter {
 
 fn get_private_api(state: AppState) -> OpenApiRouter {
     let router = OpenApiRouter::new()
-        .merge(get_playlist_router())
-        .merge(get_podcast_router())
-        .merge(get_sys_info_router())
-        .merge(get_watchtime_router())
-        .merge(get_stats_router())
-        .merge(get_notification_router())
-        .merge(get_podcast_episode_router())
+        .merge(get_playlist_router().with_state(state.clone()))
+        .merge(get_podcast_router().with_state(state.clone()))
+        .merge(get_sys_info_router().with_state(state.clone()))
+        .merge(get_watchtime_router().with_state(state.clone()))
+        .merge(get_stats_router().with_state(state.clone()))
+        .merge(get_notification_router().with_state(state.clone()))
+        .merge(get_podcast_episode_router().with_state(state.clone()))
         .merge(get_settings_router().with_state(state.clone()))
         .merge(get_tags_router().with_state(state.clone()))
         .merge(get_user_router().with_state(state.clone()));
 
     if ENVIRONMENT_SERVICE.http_basic {
-        router.layer(from_fn(handle_basic_auth))
+        router.layer(from_fn_with_state(state.clone(), handle_basic_auth))
     } else if ENVIRONMENT_SERVICE.oidc_configured {
-        router.layer(from_fn(handle_oidc_auth))
+        router.layer(from_fn_with_state(state.clone(), handle_oidc_auth))
     } else if ENVIRONMENT_SERVICE.reverse_proxy {
-        router.layer(from_fn(handle_proxy_auth))
+        router.layer(from_fn_with_state(state.clone(), handle_proxy_auth))
     } else {
-        router.layer(from_fn(handle_no_auth))
+        router.layer(from_fn_with_state(state, handle_no_auth))
     }
 }
 
@@ -357,6 +360,7 @@ pub fn handle_config_for_server_startup() -> Router {
 
     let settings_service_for_polling = state.settings_service.clone();
     let settings_service_for_cleanup = state.settings_service.clone();
+    let session_service_for_cleanup = state.session_service.clone();
     thread::spawn(move || {
         let mut scheduler = Scheduler::new();
 
@@ -385,11 +389,9 @@ pub fn handle_config_for_server_startup() -> Router {
 
         scheduler.every(1.day()).run(move || {
             // Clears the session ids once per day
-            let conn = &mut get_connection();
-            Session::cleanup_sessions(conn).expect(
-                "Error clearing old \
-            sessions",
-            );
+            session_service_for_cleanup
+                .cleanup_expired()
+                .expect("Error clearing old sessions");
             let settings = settings_service_for_cleanup.get_settings().unwrap();
             match settings {
                 Some(settings) => {
@@ -572,6 +574,12 @@ END $$;
                     .unwrap();
             }
             {
+                use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::subscriptions;
+                diesel::delete(subscriptions)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
                 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
                 diesel::delete(episodes)
                     .execute(&mut get_connection())
@@ -591,9 +599,7 @@ END $$;
             }
             {
                 use crate::adapters::persistence::dbconfig::schema::tags::dsl::tags;
-                diesel::delete(tags)
-                    .execute(&mut get_connection())
-                    .unwrap();
+                diesel::delete(tags).execute(&mut get_connection()).unwrap();
             }
             {
                 use crate::adapters::persistence::dbconfig::schema::invites::dsl::invites;
@@ -604,6 +610,12 @@ END $$;
             {
                 use crate::adapters::persistence::dbconfig::schema::settings::dsl::settings;
                 diesel::delete(settings)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::podcast_settings::dsl::podcast_settings;
+                diesel::delete(podcast_settings)
                     .execute(&mut get_connection())
                     .unwrap();
             }

@@ -1,21 +1,20 @@
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::db::database;
+use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
+use crate::app_state::AppState;
 use crate::application::services::device::service::DeviceService;
 use crate::constants::inner_constants::Role;
 use crate::controllers::sys_info_controller::built_info;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
-use crate::models::session::Session;
-use crate::models::subscription::Subscription;
-use crate::models::user::{User, UserWithoutPassword};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::utils::error::ErrorSeverity::Error as ErrorSeverityError;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp_str;
 use log::error;
+use podfetch_domain::user::{User, UserWithoutPassword};
 use sha256::digest;
 use std::env::Args;
 use std::io::{Error, ErrorKind, stdin};
@@ -24,9 +23,9 @@ use std::sync::Arc;
 
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
+    let state = AppState::new();
     let conn = &mut get_connection();
-    let device_service =
-        DeviceService::new(Arc::new(DeviceRepositoryImpl::new(database())));
+    let device_service = DeviceService::new(Arc::new(DeviceRepositoryImpl::new(database())));
     // Skip first argument
     args.next();
     let arg = match args.next() {
@@ -136,14 +135,14 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
             };
             match user_args.as_str() {
                 "add" => {
-                    let mut user = read_user_account()?;
+                    let mut user = read_user_account(&state)?;
 
                     println!("Should a user with the following settings be applied {user:?}");
 
                     if ask_for_confirmation().is_ok() {
                         user.password =
                             Some(digest(user.password.expect("Error digesting password")));
-                        if User::insert_user(&mut user).is_ok() {
+                        if state.user_admin_service.create_user(user).is_ok() {
                             println!("User succesfully created")
                         }
                     }
@@ -164,13 +163,19 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
 
                     match arg.as_str() {
                         "apiKey" => {
-                            User::find_all_users(conn).iter().for_each(|u| {
+                            state.user_admin_service.list_users()?.iter().for_each(|u| {
                                 log::info!("Updating api key of user {}", &u.username);
-                                User::update_api_key_of_user(
-                                    &u.username,
-                                    uuid::Uuid::new_v4().to_string(),
-                                )
-                                .expect("Error updating api key")
+                                let user = state
+                                    .user_admin_service
+                                    .find_user_by_username(&u.username)
+                                    .expect("Error loading user")
+                                    .expect("User not found while updating api key");
+                                let mut user = user;
+                                user.api_key = Some(uuid::Uuid::new_v4().to_string());
+                                state
+                                    .user_admin_service
+                                    .update_user(user)
+                                    .expect("Error updating api key");
                             });
                             Ok(())
                         }
@@ -187,7 +192,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 "remove" => {
                     let mut username = String::new();
                     // remove user
-                    let available_users = list_users();
+                    let available_users = list_users(&state)?;
                     retry_read(
                         "Please enter the username of the user you want to delete",
                         &mut username,
@@ -204,14 +209,17 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                                 .expect("Error deleting episodes");
                             Favorite::delete_by_username(trim_string(&username), conn)
                                 .expect("Error deleting favorites");
-                            Session::delete_by_username(&trim_string(&username))
+                            state
+                                .session_service
+                                .delete_by_username(&trim_string(&username))
                                 .expect("Error deleting sessions");
-                            Subscription::delete_by_username(
-                                &trim_string(&username),
-                                &mut get_connection(),
-                            )
-                            .expect("TODO: panic message");
-                            User::delete_by_username(trim_string(&username), &mut get_connection())
+                            state
+                                .subscription_service
+                                .delete_by_username(&trim_string(&username))
+                                .expect("Error deleting subscriptions");
+                            state
+                                .user_admin_service
+                                .delete_user_by_username(&trim_string(&username))
                                 .expect("Error deleting user");
                             println!("User deleted");
                             Ok(())
@@ -224,7 +232,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 }
                 "update" => {
                     //update a user
-                    list_users();
+                    list_users(&state)?;
                     let mut username = String::new();
 
                     retry_read(
@@ -232,15 +240,17 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         &mut username,
                     );
                     username = trim_string(&username);
-                    let user = User::find_by_username(username.as_str())?;
+                    let user = state
+                        .user_auth_service
+                        .find_by_username(username.as_str())?;
 
-                    do_user_update(user);
+                    do_user_update(&state, user);
                     Ok(())
                 }
                 "list" => {
                     // list users
 
-                    list_users();
+                    list_users(&state)?;
                     Ok(())
                 }
                 "help" | "--help" => {
@@ -275,8 +285,8 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     }
 }
 
-fn list_users() -> Vec<UserWithoutPassword> {
-    let users = User::find_all_users(&mut get_connection());
+fn list_users(state: &AppState) -> Result<Vec<UserWithoutPassword>, CustomError> {
+    let users = state.user_admin_service.list_users()?;
 
     users.iter().for_each(|u| {
         println!("|Username|Role|Explicit Consent|Created at|",);
@@ -285,16 +295,16 @@ fn list_users() -> Vec<UserWithoutPassword> {
             u.username, u.role, u.explicit_consent, u.created_at
         );
     });
-    users
+    Ok(users)
 }
 
-pub fn read_user_account() -> Result<User, CustomError> {
+pub fn read_user_account(state: &AppState) -> Result<User, CustomError> {
     let mut username = String::new();
 
     let role = Role::VALUES.map(|v| v.to_string()).join(", ");
     retry_read("Enter your username: ", &mut username);
 
-    let user = User::find_by_username(&username);
+    let user = state.user_auth_service.find_by_username(&username);
 
     if user.is_err() {
         println!("User does not exist");
@@ -400,7 +410,7 @@ fn trim_string(string_to_trim: &str) -> String {
         .expect("Error parsing string")
 }
 
-fn do_user_update(mut user: User) {
+fn do_user_update(state: &AppState, mut user: User) {
     let mut input = String::new();
     println!("The following settings of a user should be updated: {user:?}");
     println!(
@@ -417,19 +427,28 @@ fn do_user_update(mut user: User) {
                 "Enter the new role [user,\
             uploader or admin]",
             ));
-            User::update_user(user).expect("Error updating role");
+            state
+                .user_admin_service
+                .update_user(user)
+                .expect("Error updating role");
             println!("Role updated");
         }
         "password" => {
             let mut password = retry_read_secret("Enter the new password");
             password = digest(password);
             user.password = Some(password);
-            User::update_user(user).expect("Error updating password");
+            state
+                .user_admin_service
+                .update_user(user)
+                .expect("Error updating password");
             println!("Password updated");
         }
         "consent" => {
             user.explicit_consent = !user.explicit_consent;
-            User::update_user(user).expect("Error switching consent");
+            state
+                .user_admin_service
+                .update_user(user)
+                .expect("Error switching consent");
             println!("Consent preference switched");
         }
         _ => {

@@ -1,52 +1,39 @@
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
+use crate::app_state::AppState;
+use crate::controllers::server::ChatServerHandle;
 use crate::db::TimelineItem;
 use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::favorites::Favorite;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-use crate::models::user::User;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use serde_json::from_str;
-use utoipa::{IntoParams, ToSchema};
-
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
+use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
+use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
-use crate::models::settings::Setting;
+use crate::models::podcasts::Podcast;
 use crate::service::file_service::perform_episode_variable_replacement;
+use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::ErrorSeverity::Warning;
+use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
-use axum::extract::{Path, Query};
+use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::{Extension, Json};
+use podfetch_domain::settings::Setting;
+use podfetch_domain::subscription::GPodderAvailablePodcast;
+use podfetch_domain::user::User;
+pub use podfetch_web::podcast_episode::{
+    EpisodeFormatDto, FavoritePut, OptionalId, PodcastChapterDto, TimelineQueryParams,
+};
+use podfetch_web::podcast_episode::{
+    PodcastEpisodeWithHistory as WebPodcastEpisodeWithHistory,
+    TimeLinePodcastEpisode as WebTimeLinePodcastEpisode,
+    TimeLinePodcastItem as WebTimeLinePodcastItem,
+};
+use serde_json::from_str;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-#[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
-pub struct OptionalId {
-    last_podcast_episode: Option<String>,
-    only_unlistened: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct PodcastEpisodeWithHistory {
-    pub podcast_episode: PodcastEpisodeDto,
-    pub podcast_history_item: Option<EpisodeDto>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct PodcastChapterDto {
-    pub id: String,
-    pub start_time: i32,
-    pub title: String,
-    pub end_time: i32,
-}
+pub type PodcastEpisodeWithHistory = WebPodcastEpisodeWithHistory<PodcastEpisodeDto, EpisodeDto>;
 
 #[utoipa::path(
     get,
@@ -148,48 +135,32 @@ pub async fn find_all_podcast_episodes_of_podcast(
     Ok(Json(mapped_podcasts))
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct TimeLinePodcastEpisode {
-    podcast_episode: PodcastEpisodeDto,
-    podcast: PodcastDto,
-    history: Option<EpisodeDto>,
-    favorite: Option<Favorite>,
-}
+pub type TimeLinePodcastEpisode =
+    WebTimeLinePodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto, Favorite>;
 
 #[utoipa::path(
     get,
     path="/podcasts/available/gpodder",
     responses(
 (status = 200, description = "Finds all podcast not in webview", body =
-[GPodderAvailablePodcasts])),
+[GPodderAvailablePodcast])),
     tag = "gpodder"
 )]
 pub async fn get_available_podcasts_not_in_webview(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
-) -> Result<Json<Vec<GPodderAvailablePodcasts>>, CustomError> {
+) -> Result<Json<Vec<GPodderAvailablePodcast>>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
-    let found_episodes = Episode::find_episodes_not_in_webview()?;
+    let found_episodes = state
+        .subscription_service
+        .get_available_gpodder_podcasts()?;
 
     Ok(Json(found_episodes))
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct TimeLinePodcastItem {
-    data: Vec<TimeLinePodcastEpisode>,
-    total_elements: i64,
-}
-
-#[derive(Serialize, Deserialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
-pub struct TimelineQueryParams {
-    pub favored_only: bool,
-    pub last_timestamp: Option<String>,
-    pub not_listened: bool,
-    pub favored_episodes: bool,
-}
+pub type TimeLinePodcastItem = WebTimeLinePodcastItem<TimeLinePodcastEpisode>;
 
 #[utoipa::path(
 get,
@@ -236,11 +207,6 @@ pub async fn get_timeline(
         data: mapped_timeline,
         total_elements: res.total_elements,
     }))
-}
-
-#[derive(Deserialize, ToSchema)]
-pub struct FavoritePut {
-    pub favored: bool,
 }
 
 /**
@@ -361,11 +327,6 @@ pub async fn delete_podcast_episode_locally(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct EpisodeFormatDto {
-    pub content: String,
-}
-
 #[utoipa::path(
     post,
     path="/episodes/formatting",
@@ -414,7 +375,7 @@ pub async fn retrieve_episode_sample_format(
     Ok(result)
 }
 
-pub fn get_podcast_episode_router() -> OpenApiRouter {
+pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(find_all_podcast_episodes_of_podcast))
         .routes(routes!(get_available_podcasts_not_in_webview))
@@ -432,20 +393,21 @@ mod tests {
     use crate::adapters::persistence::dbconfig::db::get_connection;
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
     use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl as subs_dsl;
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
-    use crate::models::user::User;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
-    use axum::extract::Path;
+    use axum::extract::{Path, State};
     use chrono::Utc;
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
+    use podfetch_domain::user::User;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -463,6 +425,10 @@ mod tests {
 
     fn non_admin_user() -> User {
         UserTestDataBuilder::new().build()
+    }
+
+    fn app_state() -> AppState {
+        AppState::new()
     }
 
     fn assert_client_error_status(status: u16) {
@@ -782,7 +748,11 @@ mod tests {
     async fn test_admin_episode_handlers_return_forbidden_for_non_admin_user() {
         let non_admin = non_admin_user();
 
-        let available_result = super::get_available_podcasts_not_in_webview(Extension(non_admin.clone())).await;
+        let available_result = super::get_available_podcasts_not_in_webview(
+            State(app_state()),
+            Extension(non_admin.clone()),
+        )
+        .await;
         match available_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for get_available_podcasts_not_in_webview"),
@@ -798,8 +768,11 @@ mod tests {
             Ok(_) => panic!("expected forbidden error for download_podcast_episodes_of_podcast"),
         }
 
-        let delete_result =
-            super::delete_podcast_episode_locally(Path("episode-id".to_string()), Extension(non_admin)).await;
+        let delete_result = super::delete_podcast_episode_locally(
+            Path("episode-id".to_string()),
+            Extension(non_admin),
+        )
+        .await;
         match delete_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for delete_podcast_episode_locally"),

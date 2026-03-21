@@ -16,10 +16,7 @@ pub trait UserOnboardingApplicationService {
     fn onboard_user(&self, request: UserOnboardingModel) -> Result<UserSummary, Self::Error>;
 }
 
-pub fn onboard_user<S>(
-    service: &S,
-    request: UserOnboardingModel,
-) -> Result<UserSummary, S::Error>
+pub fn onboard_user<S>(service: &S, request: UserOnboardingModel) -> Result<UserSummary, S::Error>
 where
     S: UserOnboardingApplicationService,
 {

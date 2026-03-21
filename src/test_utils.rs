@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod test {
     use crate::constants::inner_constants::Role;
-    use crate::models::user::User;
     use chrono::Utc;
+    use podfetch_domain::user::User;
 
     use sha256::digest;
 

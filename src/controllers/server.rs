@@ -1,109 +1,21 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::constants::inner_constants::{MAIN_ROOM, PodcastType};
+use crate::constants::inner_constants::MAIN_ROOM;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use futures::executor::block_on;
+use podfetch_domain::user::User;
+use podfetch_web::events::{
+    OpmlAddedMessage, OpmlErrorMessage, PodcastAddedMessage, PodcastEpisodeDeleteMessage,
+    PodcastEpisodeOfflineAvailableMessage, PodcastEpisodesAdded, PodcastRefreshedMessage,
+    PodcastType,
+};
 use serde::Serialize;
 use socketioxide::SocketIo;
 use std::sync::OnceLock;
 
 type RoomId = String;
-
-#[derive(Serialize)]
-pub struct PodcastEpisodeOfflineAvailableMessage {
-    podcast: PodcastDto,
-    type_of: PodcastType,
-    podcast_episode: PodcastEpisodeDto,
-}
-
-#[derive(Serialize)]
-pub struct PodcastRefreshedMessage {
-    type_of: PodcastType,
-    message: String,
-    podcast: PodcastDto,
-}
-
-#[derive(Serialize)]
-pub struct OpmlErrorMessage {
-    type_of: PodcastType,
-    message: String,
-}
-
-#[derive(Serialize)]
-pub struct PodcastEpisodeDeleteMesage {
-    podcast_episode: PodcastEpisodeDto,
-    type_of: PodcastType,
-    message: String,
-}
-
-#[derive(Serialize)]
-pub struct PodcastEpisodesAdded {
-    type_of: PodcastType,
-    message: String,
-    podcast: PodcastDto,
-    podcast_episodes: Vec<PodcastEpisodeDto>,
-}
-
-#[derive(Serialize)]
-pub struct OpmlAddedMessage {
-    type_of: PodcastType,
-    message: String,
-    podcast: PodcastDto,
-}
-
-#[derive(Serialize)]
-pub struct PodcastAddedMessage {
-    type_of: PodcastType,
-    message: String,
-    podcast: PodcastDto,
-}
-
-impl From<Podcast> for OpmlAddedMessage {
-    fn from(podcast: Podcast) -> Self {
-        OpmlAddedMessage {
-            type_of: PodcastType::OpmlAdded,
-            message: format!("Podcast {} has been added", podcast.name),
-            podcast: podcast.into(),
-        }
-    }
-}
-
-impl From<(Podcast, Vec<PodcastEpisode>)> for PodcastEpisodesAdded {
-    fn from(value: (Podcast, Vec<PodcastEpisode>)) -> Self {
-        Self {
-            podcast_episodes: value
-                .1
-                .into_iter()
-                .map(|episode| (episode, None::<User>, None::<FavoritePodcastEpisode>).into())
-                .collect(),
-            podcast: value.0.clone().into(),
-            type_of: PodcastType::AddPodcastEpisodes,
-            message: format!("Added podcast episodes: {}", &value.0.name),
-        }
-    }
-}
-
-impl From<String> for OpmlErrorMessage {
-    fn from(message: String) -> Self {
-        OpmlErrorMessage {
-            type_of: PodcastType::OpmlErrored,
-            message,
-        }
-    }
-}
-
-impl From<Podcast> for PodcastAddedMessage {
-    fn from(value: Podcast) -> Self {
-        PodcastAddedMessage {
-            type_of: PodcastType::AddPodcast,
-            message: format!("Podcast {} has been added", value.name),
-            podcast: value.into(),
-        }
-    }
-}
 
 pub static SOCKET_IO_LAYER: OnceLock<SocketIo> = OnceLock::new();
 
@@ -159,10 +71,10 @@ impl ChatServerHandle {
         )
             .clone()
             .into();
-        let podcast = podcast.clone().into();
+        let podcast: PodcastDto = podcast.clone().into();
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &PodcastEpisodeOfflineAvailableMessage {
+            &PodcastEpisodeOfflineAvailableMessage::<PodcastDto, PodcastEpisodeDto> {
                 podcast,
                 type_of: PodcastType::AddPodcastEpisode,
                 podcast_episode,
@@ -172,12 +84,13 @@ impl ChatServerHandle {
     }
 
     pub fn broadcast_podcast_refreshed(podcast: &Podcast) {
+        let podcast: PodcastDto = podcast.clone().into();
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &PodcastRefreshedMessage {
+            &PodcastRefreshedMessage::<PodcastDto> {
                 type_of: PodcastType::RefreshPodcast,
                 message: format!("Podcast {} has been refreshed", podcast.name),
-                podcast: podcast.clone().into(),
+                podcast,
             },
             "refreshedPodcast",
         );
@@ -186,15 +99,23 @@ impl ChatServerHandle {
     pub fn broadcast_opml_error(message: String) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &OpmlErrorMessage::from(message),
+            &OpmlErrorMessage {
+                type_of: PodcastType::OpmlErrored,
+                message,
+            },
             "opmlError",
         )
     }
 
     pub fn broadcast_opml_added(podcast: &Podcast) {
+        let podcast: PodcastDto = podcast.clone().into();
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &OpmlAddedMessage::from(podcast.clone()),
+            &OpmlAddedMessage::<PodcastDto> {
+                type_of: PodcastType::OpmlAdded,
+                message: format!("Podcast {} has been added", podcast.name),
+                podcast,
+            },
             "opmlAdded",
         );
     }
@@ -202,7 +123,7 @@ impl ChatServerHandle {
     pub fn broadcast_podcast_episode_deleted_locally(podcast_episode: &PodcastEpisode) {
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &PodcastEpisodeDeleteMesage {
+            &PodcastEpisodeDeleteMessage {
                 podcast_episode: PodcastEpisodeDto::from((
                     podcast_episode.clone(),
                     None::<User>,
@@ -216,17 +137,34 @@ impl ChatServerHandle {
     }
 
     pub fn broadcast_podcast_downloaded(podcast: Podcast) {
+        let podcast_name = podcast.name.clone();
+        let podcast: PodcastDto = podcast.into();
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &PodcastAddedMessage::from(podcast),
+            &PodcastAddedMessage::<PodcastDto> {
+                type_of: PodcastType::AddPodcast,
+                message: format!("Podcast {} has been added", podcast_name),
+                podcast,
+            },
             "addedPodcast",
         );
     }
 
     pub fn broadcast_added_podcast_episodes(podcast: &Podcast, episodes: Vec<PodcastEpisode>) {
+        let podcast: PodcastDto = podcast.clone().into();
+        let podcast_name = podcast.name.clone();
+        let podcast_episodes: Vec<PodcastEpisodeDto> = episodes
+            .into_iter()
+            .map(|episode| (episode, None::<User>, None::<FavoritePodcastEpisode>).into())
+            .collect();
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
-            &PodcastEpisodesAdded::from((podcast.clone(), episodes)),
+            &PodcastEpisodesAdded::<PodcastDto, PodcastEpisodeDto> {
+                podcast_episodes,
+                podcast,
+                type_of: PodcastType::AddPodcastEpisodes,
+                message: format!("Added podcast episodes: {}", podcast_name),
+            },
             "addedEpisodes",
         );
     }

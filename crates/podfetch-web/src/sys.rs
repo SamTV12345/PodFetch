@@ -72,11 +72,7 @@ pub enum LoginDecision {
 pub trait LoginApplicationService {
     type Error;
 
-    fn verify_login(
-        &self,
-        username: &str,
-        password: &str,
-    ) -> Result<LoginDecision, Self::Error>;
+    fn verify_login(&self, username: &str, password: &str) -> Result<LoginDecision, Self::Error>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -89,10 +85,7 @@ pub enum LoginControllerError<E: Display> {
     Service(E),
 }
 
-pub fn login<S>(
-    service: &S,
-    request: &LoginRequest,
-) -> Result<(), LoginControllerError<S::Error>>
+pub fn login<S>(service: &S, request: &LoginRequest) -> Result<(), LoginControllerError<S::Error>>
 where
     S: LoginApplicationService,
     S::Error: Display,

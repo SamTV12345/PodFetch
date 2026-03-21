@@ -1,63 +1,44 @@
 use crate::models::listening_event::ListeningEvent;
 use crate::models::podcasts::Podcast;
 use crate::utils::error::CustomError;
-use chrono::Datelike;
-use chrono::NaiveDateTime;
+use chrono::{Datelike, NaiveDateTime};
+use podfetch_web::stats::{StatsApplicationService, StatsOverview, TopPodcastStats, WeekdayStats};
 use std::cmp::Reverse;
-use std::collections::HashMap;
-use utoipa::ToSchema;
+use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct WeekdayStats {
-    pub day_index: i32,
-    pub weekday: String,
-    pub listened_seconds: i64,
+#[derive(Clone, Default)]
+pub struct StatsService;
+
+impl StatsService {
+    pub fn new() -> Self {
+        Self
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct TopPodcastStats {
-    pub podcast_id: i32,
-    pub podcast_name: String,
-    pub image_url: String,
-    pub listened_seconds: i64,
-    pub listened_episodes: i64,
-}
+impl StatsApplicationService for StatsService {
+    type Error = CustomError;
+    type StatsOverview = StatsOverview;
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct StatsOverview {
-    pub from: Option<NaiveDateTime>,
-    pub to: Option<NaiveDateTime>,
-    pub listened_podcasts: i64,
-    pub listened_episodes: i64,
-    pub total_listened_seconds: i64,
-    pub top_podcasts: Vec<TopPodcastStats>,
-    pub active_weekdays: Vec<WeekdayStats>,
-}
-
-impl StatsOverview {
-    pub fn calculate_for_user(
+    fn get_stats_overview(
+        &self,
         username: &str,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
         top_limit: usize,
-    ) -> Result<Self, CustomError> {
+    ) -> Result<Self::StatsOverview, Self::Error> {
         let events = ListeningEvent::get_by_user_and_range(username, from, to)?;
         let total_listened_seconds = events
             .iter()
             .map(|event| i64::from(event.delta_seconds))
             .sum::<i64>();
 
-        let mut podcast_aggregation: HashMap<i32, (i64, std::collections::HashSet<i32>)> =
-            HashMap::new();
+        let mut podcast_aggregation: HashMap<i32, (i64, HashSet<i32>)> = HashMap::new();
         let mut weekday_seconds = [0i64; 7];
 
         for event in events {
             let entry = podcast_aggregation
                 .entry(event.podcast_id)
-                .or_insert((0, std::collections::HashSet::new()));
+                .or_insert((0, HashSet::new()));
             entry.0 += i64::from(event.delta_seconds);
             entry.1.insert(event.podcast_episode_db_id);
 
@@ -116,7 +97,7 @@ impl StatsOverview {
         })
         .collect::<Vec<_>>();
 
-        Ok(Self {
+        Ok(StatsOverview {
             from,
             to,
             listened_podcasts,

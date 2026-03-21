@@ -1,31 +1,31 @@
 use crate::DBType as DbConnection;
+use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::constants::inner_constants::DEFAULT_DEVICE;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::models::gpodder_available_podcasts::GPodderAvailablePodcasts;
 use crate::models::listening_event::{ListeningEvent, NewListeningEvent};
-use crate::models::misc_models::{
-    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
-};
+use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use chrono::{NaiveDateTime, Utc};
-use diesel::query_dsl::methods::DistinctDsl;
+use diesel::ExpressionMethods;
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::{
     BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
 };
-use diesel::{ExpressionMethods, JoinOnDsl};
+use podfetch_domain::user::User;
+pub use podfetch_web::history::{EpisodeAction, EpisodeDto};
+use podfetch_web::watchtime::{
+    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
+};
 use rand::RngExt;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::io::Error;
 use utoipa::ToSchema;
 
@@ -201,7 +201,12 @@ impl Episode {
 
     pub fn get_last_watched_episodes(
         user: &User,
-    ) -> Result<Vec<PodcastWatchedEpisodeModelWithPodcastEpisode>, CustomError> {
+    ) -> Result<
+        Vec<
+            PodcastWatchedEpisodeModelWithPodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto>,
+        >,
+        CustomError,
+    > {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::guid as eguid;
         use crate::adapters::persistence::dbconfig::schema::episodes::username as e_username;
@@ -276,26 +281,6 @@ impl Episode {
             .execute(conn)
             .expect("");
         Ok(())
-    }
-
-    pub fn find_episodes_not_in_webview() -> Result<Vec<GPodderAvailablePodcasts>, CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
-        use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::rssfeed;
-        use crate::adapters::persistence::dbconfig::schema::subscriptions::device;
-        use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::subscriptions;
-        use crate::adapters::persistence::dbconfig::schema::subscriptions::podcast;
-
-        let result = DistinctDsl::distinct(
-            subscriptions
-                .left_join(podcasts.on(podcast.eq(rssfeed)))
-                .select((device, podcast))
-                .filter(rssfeed.is_null()),
-        )
-        .filter(device.ne("webview"))
-        .load::<GPodderAvailablePodcasts>(&mut get_connection())
-        .map_err(|e| map_db_error(e, Critical))?;
-
-        Ok(result)
     }
 
     pub fn delete_watchtime(podcast_id: i32) -> Result<(), CustomError> {
@@ -503,52 +488,6 @@ impl Episode {
             .execute(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
-pub struct EpisodeDto {
-    pub podcast: String,
-    pub episode: String,
-    pub timestamp: NaiveDateTime,
-    pub guid: Option<String>,
-    pub action: EpisodeAction,
-    pub started: Option<i32>,
-    pub position: Option<i32>,
-    pub total: Option<i32>,
-    pub device: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
-#[serde(rename_all = "lowercase")]
-#[derive(PartialEq, Clone)]
-pub enum EpisodeAction {
-    New,
-    Download,
-    Play,
-    Delete,
-}
-
-impl EpisodeAction {
-    pub fn from_string(s: &str) -> Self {
-        match s {
-            "new" => EpisodeAction::New,
-            "download" => EpisodeAction::Download,
-            "play" => EpisodeAction::Play,
-            "delete" => EpisodeAction::Delete,
-            _ => panic!("Unknown episode action: {s}"),
-        }
-    }
-}
-
-impl fmt::Display for EpisodeAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            EpisodeAction::New => write!(f, "new"),
-            EpisodeAction::Download => write!(f, "download"),
-            EpisodeAction::Play => write!(f, "play"),
-            EpisodeAction::Delete => write!(f, "delete"),
-        }
     }
 }
 

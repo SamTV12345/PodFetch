@@ -6,8 +6,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::tag::Tag;
-use crate::models::user::User;
+use crate::service::tag_service::TagService;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
@@ -19,6 +18,7 @@ use diesel::sql_types::{Bool, Integer, Nullable, Text};
 use diesel::{
     BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl, delete, insert_into,
 };
+use podfetch_domain::user::User;
 
 #[derive(
     Queryable, Identifiable, QueryableByName, Selectable, Debug, PartialEq, Clone, Default,
@@ -103,7 +103,9 @@ impl Podcast {
         let mapped_result = result
             .iter()
             .map(|podcast| {
-                let tags = Tag::get_tags_of_podcast(podcast.0.id, &u.username).unwrap();
+                let tags = TagService::default_service()
+                    .get_tags_of_podcast(podcast.0.id, &u.username)
+                    .unwrap();
                 (podcast.0.clone(), podcast.1.clone(), tags, u).into()
             })
             .collect::<Vec<PodcastDto>>();

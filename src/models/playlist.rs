@@ -1,13 +1,6 @@
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::playlists;
-use crate::controllers::playlist_controller::{PlaylistDto, PlaylistDtoPost};
-use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
-use crate::models::episode::Episode;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::playlist_item::PlaylistItem;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::{Critical, Debug, Info, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use crate::{DBType as DbConnection, execute_with_conn};
@@ -16,6 +9,8 @@ use diesel::RunQueryDsl;
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text};
 use diesel::{Queryable, QueryableByName};
+use podfetch_domain::user::User;
+use podfetch_web::playlist::PlaylistDtoPost;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -110,7 +105,7 @@ impl Playlist {
     pub fn create_new_playlist(
         playlist_dto: PlaylistDtoPost,
         user: User,
-    ) -> Result<PlaylistDto, CustomError> {
+    ) -> Result<Playlist, CustomError> {
         let playlist_to_insert = Playlist {
             id: Uuid::new_v4().to_string(),
             name: playlist_dto.name.clone(),
@@ -128,34 +123,7 @@ impl Playlist {
                 .insert_playlist_item(&mut get_connection())
                 .expect("Error inserting playlist item");
         });
-
-        let items =
-            PlaylistItem::get_playlist_items_by_playlist_id(inserted_playlist.id.clone(), &user)?;
-        let playlist_dto_returned = inserted_playlist.to_playlist_dto(items, user);
-        Ok(playlist_dto_returned)
-    }
-
-    fn to_playlist_dto(
-        &self,
-        item: Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>,
-        user: User,
-    ) -> PlaylistDto {
-        let item = item
-            .iter()
-            .map(|(_, y, z)| PodcastEpisodeWithHistory {
-                podcast_episode:
-                    <(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>) as Into<
-                        PodcastEpisodeDto,
-                    >>::into((y.clone(), Some(user.clone()), None)),
-                podcast_history_item: z.clone().map(|e| e.convert_to_episode_dto()),
-            })
-            .collect::<Vec<PodcastEpisodeWithHistory>>();
-
-        PlaylistDto {
-            id: self.id.clone(),
-            name: self.name.clone(),
-            items: item,
-        }
+        Ok(inserted_playlist)
     }
 
     pub fn update_playlist_fields(
@@ -178,7 +146,7 @@ impl Playlist {
         playlist_dto: PlaylistDtoPost,
         playlist_id: String,
         user: User,
-    ) -> Result<PlaylistDto, CustomError> {
+    ) -> Result<Playlist, CustomError> {
         let playlist_to_be_updated = Self::get_playlist_by_id(playlist_id.clone())?;
 
         if playlist_to_be_updated.user_id != user.id {
@@ -202,22 +170,7 @@ impl Playlist {
                 .expect("Error inserting playlist item");
         });
 
-        let updated_playlist = Self::get_playlist_by_id(playlist_id.clone())?;
-        Self::get_playlist_dto(playlist_id, updated_playlist, user)
-    }
-
-    pub(crate) fn get_playlist_dto(
-        playlist_id: String,
-        playlist: Playlist,
-        user: User,
-    ) -> Result<PlaylistDto, CustomError> {
-        if playlist.user_id != user.id {
-            return Err(CustomErrorInner::Forbidden(Info).into());
-        }
-        let items_in_playlist =
-            PlaylistItem::get_playlist_items_by_playlist_id(playlist_id, &user)?;
-
-        Ok(playlist.to_playlist_dto(items_in_playlist, user))
+        Self::get_playlist_by_id(playlist_id)
     }
 
     pub fn delete_playlist_by_id(playlist_id: String, user_id1: i32) -> Result<(), CustomError> {
@@ -240,7 +193,7 @@ impl Playlist {
         Ok(())
     }
 
-    pub async fn delete_playlist_item(
+    pub fn delete_playlist_item(
         playlist_id_1: String,
         episode_id: i32,
         user_id: i32,

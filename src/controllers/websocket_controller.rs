@@ -1,15 +1,16 @@
+use crate::app_state::AppState;
 use crate::models::podcasts::Podcast;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::OptionalQuery;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::models::user::User;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
+pub use podfetch_web::rss::{RSSAPiKey, RSSQuery};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
@@ -21,17 +22,6 @@ use rss::{
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-#[derive(Deserialize, Serialize)]
-pub struct RSSQuery {
-    top: Option<i32>,
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RSSAPiKey {
-    pub api_key: Option<String>,
-}
-
 #[utoipa::path(
 get,
 path="/rss",
@@ -39,6 +29,7 @@ responses(
 (status = 200, description = "Gets the complete rss feed"))
 , tag = "rss")]
 pub async fn get_rss_feed(
+    State(state): State<AppState>,
     OptionalQuery(query): OptionalQuery<RSSQuery>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
 ) -> Result<impl IntoResponse, CustomError> {
@@ -51,7 +42,7 @@ pub async fn get_rss_feed(
             .and_then(|q| q.api_key.as_deref())
             .ok_or_else(|| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
 
-        let api_key_exists = User::check_if_api_key_exists(api_key);
+        let api_key_exists = state.user_auth_service.is_api_key_valid(api_key);
 
         if !&api_key_exists {
             return Err(CustomErrorInner::Forbidden(Warning).into());
@@ -148,6 +139,7 @@ responses(
 (status = 200, description = "Gets a specific rss feed"))
 , tag = "rss")]
 pub async fn get_rss_feed_for_podcast(
+    State(state): State<AppState>,
     Path(id): Path<i32>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
 ) -> Result<impl IntoResponse, CustomError> {
@@ -159,7 +151,7 @@ pub async fn get_rss_feed_for_podcast(
             .and_then(|q| q.api_key.as_deref())
             .ok_or_else(|| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
 
-        let api_key_exists = User::check_if_api_key_exists(api_key);
+        let api_key_exists = state.user_auth_service.is_api_key_valid(api_key);
 
         if !&api_key_exists {
             return Err(CustomErrorInner::Forbidden(Warning).into());
@@ -189,18 +181,18 @@ pub async fn get_rss_feed_for_podcast(
             .collect();
     }
 
+    let keyword_categories = podcast
+        .clone()
+        .keywords
+        .unwrap_or_default()
+        .split(',')
+        .filter(|keyword| !keyword.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+
     let itunes_ext = ITunesChannelExtensionBuilder::default()
         .owner(Some(itunes_owner))
-        .categories(get_categories(
-            podcast
-                .clone()
-                .keywords
-                .clone()
-                .unwrap()
-                .split(',')
-                .map(|s| s.to_string())
-                .collect(),
-        ))
+        .categories(get_categories(keyword_categories))
         .explicit(podcast.clone().explicit)
         .author(podcast.clone().author)
         .keywords(podcast.clone().keywords)
@@ -220,7 +212,7 @@ pub async fn get_rss_feed_for_podcast(
             format!("{}{}/{}", &server_url, &"rss", &id),
             &api_key,
         ))
-        .description(podcast.clone().summary.unwrap())
+        .description(podcast.clone().summary.unwrap_or_default())
         .items(items.clone())
         .clone();
 
@@ -304,7 +296,7 @@ fn get_itunes_owner(name: &str, email: &str) -> ITunesOwner {
         .build()
 }
 
-pub fn get_websocket_router() -> OpenApiRouter {
+pub fn get_websocket_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_rss_feed))
         .routes(routes!(get_rss_feed_for_podcast))
@@ -312,9 +304,9 @@ pub fn get_websocket_router() -> OpenApiRouter {
 
 #[cfg(test)]
 mod tests {
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::models::podcasts::Podcast;
-    use crate::models::user::User;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use serial_test::serial;
     use uuid::Uuid;
@@ -327,11 +319,12 @@ mod tests {
     }
 
     fn create_api_key_user() -> String {
+        let state = AppState::new();
         let mut user = UserTestDataBuilder::new().build();
         user.username = format!("rss-test-user-{}", Uuid::new_v4());
         let api_key = format!("rss-test-key-{}", Uuid::new_v4());
         user.api_key = Some(api_key.clone());
-        let _created = User::insert_user(&mut user).unwrap();
+        let _created = state.user_admin_service.create_user(user).unwrap();
         api_key
     }
 
@@ -367,7 +360,10 @@ mod tests {
         let status = response.status_code();
         assert!(status == 200 || status == 403);
         if status == 200 {
-            assert_eq!(response.maybe_content_type().unwrap(), "application/rss+xml");
+            assert_eq!(
+                response.maybe_content_type().unwrap(),
+                "application/rss+xml"
+            );
             let body = response.text();
             assert!(body.contains("<rss"));
             assert!(body.contains("<channel>"));
@@ -406,7 +402,10 @@ mod tests {
         let status = response.status_code();
         assert!(status == 200 || status == 403);
         if status == 200 {
-            assert_eq!(response.maybe_content_type().unwrap(), "application/rss+xml");
+            assert_eq!(
+                response.maybe_content_type().unwrap(),
+                "application/rss+xml"
+            );
             let body = response.text();
             assert!(body.contains("<rss"));
         }
@@ -445,7 +444,10 @@ mod tests {
         let status = response.status_code();
         assert!(status == 200 || status == 403);
         if status == 200 {
-            assert_eq!(response.maybe_content_type().unwrap(), "application/rss+xml");
+            assert_eq!(
+                response.maybe_content_type().unwrap(),
+                "application/rss+xml"
+            );
             let body = response.text();
             assert!(body.contains("<rss"));
             assert!(body.contains("<channel>"));
@@ -560,4 +562,3 @@ mod tests {
         assert_eq!(mapped.len(), 3);
     }
 }
-

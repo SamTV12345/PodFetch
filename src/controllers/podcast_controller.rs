@@ -1,16 +1,14 @@
+use crate::app_state::AppState;
 use crate::constants::inner_constants::{
     BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
 };
-use crate::models::dto_models::PodcastFavorUpdateModel;
-use crate::models::misc_models::{PodcastAddModel, PodcastInsertModel};
-use crate::models::opml_model::OpmlModel;
-use crate::models::search_type::SearchType::{ITunes, Podindex};
+use crate::models::misc_models::PodcastInsertModel;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string};
 use async_recursion::async_recursion;
 use axum::body::Body;
-use axum::extract::{Path, Query};
+use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -25,26 +23,20 @@ use std::thread;
 use tokio::task::spawn_blocking;
 
 use crate::models::filter::Filter;
-use crate::models::order_criteria::{OrderCriteria, OrderOption};
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
 use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+use podfetch_domain::ordering::{OrderCriteria, OrderOption};
+use podfetch_domain::user::User;
+pub use podfetch_web::podcast::{
+    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastRSSAddModel,
+    PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest, ProxyPodcastParams,
+    SearchType::{ITunes, Podindex},
+};
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
-
-#[derive(Serialize, Deserialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
-pub struct PodcastSearchModelUtoipa {
-    order: Option<String>,
-    title: Option<String>,
-    order_option: Option<String>,
-    favored_only: bool,
-    tag: Option<String>,
-}
 
 #[utoipa::path(
 get,
@@ -232,7 +224,6 @@ pub async fn find_all_podcasts(
 
     Ok(Json(podcasts))
 }
-use crate::models::itunes_models::PodcastSearchReturn;
 
 #[utoipa::path(
 get,
@@ -559,11 +550,6 @@ pub async fn favorite_podcast(
     Ok(StatusCode::OK)
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct PodcastUpdateNameRequest {
-    name: String,
-}
-
 #[utoipa::path(
 put,
 path="/podcasts/{id}/name",
@@ -695,30 +681,24 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
     }
 }
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_dto::PodcastDto;
-use crate::models::podcast_settings::PodcastSetting;
-use crate::models::settings::Setting;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use utoipa::{IntoParams, ToSchema};
+use podfetch_domain::settings::Setting;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
-
-#[derive(Deserialize, ToSchema)]
-pub struct DeletePodcast {
-    pub delete_files: bool,
-}
+use podfetch_domain::podcast_settings::PodcastSetting;
+use podfetch_web::podcast_episode::EpisodeFormatDto;
 
 #[utoipa::path(
 delete,
@@ -753,12 +733,6 @@ pub async fn delete_podcast(
     Podcast::delete_podcast(id)?;
     Ok(StatusCode::OK)
 }
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Params {
-    episode_id: String,
-}
-
 use crate::utils::error::ErrorSeverity::{Debug, Warning};
 use axum::response::Response;
 
@@ -771,7 +745,8 @@ server")),
 tag="podcasts"
 )]
 pub(crate) async fn proxy_podcast(
-    Query(params): Query<Params>,
+    State(state): State<AppState>,
+    Query(params): Query<ProxyPodcastParams>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
     req: axum::extract::Request,
 ) -> Result<axum::http::response::Response<Body>, CustomError> {
@@ -787,7 +762,7 @@ pub(crate) async fn proxy_podcast(
             .and_then(|q| q.api_key)
             .ok_or_else(|| CustomError::from(CustomErrorInner::Forbidden(Debug)))?;
 
-        let api_key_exists = User::check_if_api_key_exists(&api_key);
+        let api_key_exists = state.user_auth_service.is_api_key_valid(&api_key);
 
         if !api_key_exists {
             return Err(CustomErrorInner::Forbidden(Debug).into());
@@ -846,6 +821,7 @@ pub(crate) async fn proxy_podcast(
     tag="podcasts"
 )]
 pub async fn update_podcast_settings(
+    State(state): State<AppState>,
     Path(id_num): Path<i32>,
     Extension(requester): Extension<User>,
     Json(mut settings): Json<PodcastSetting>,
@@ -854,7 +830,7 @@ pub async fn update_podcast_settings(
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
     settings.podcast_id = id_num;
-    let updated_podcast = PodcastSetting::update_settings(&settings)?;
+    let updated_podcast = state.podcast_settings_service.update_settings(settings)?;
 
     Ok(Json(updated_podcast))
 }
@@ -867,13 +843,14 @@ pub async fn update_podcast_settings(
     tag="podcasts"
 )]
 pub async fn get_podcast_settings(
+    State(state): State<AppState>,
     Path(id): Path<i32>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
     if !requester.is_privileged_user() {
         return Err(CustomErrorInner::Forbidden(Warning).into());
     }
-    let settings = PodcastSetting::get_settings(id)?;
+    let settings = state.podcast_settings_service.get_settings(id)?;
 
     match settings {
         None => Err(CustomErrorInner::NotFound(Debug).into()),
@@ -921,7 +898,7 @@ pub async fn retrieve_podcast_sample_format(
     }
 }
 
-pub fn get_podcast_router() -> OpenApiRouter {
+pub fn get_podcast_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_filter))
         .routes(routes!(search_podcasts))
@@ -948,21 +925,19 @@ pub fn get_podcast_router() -> OpenApiRouter {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::controllers::podcast_controller::find_podcast;
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::podcast_controller::PodcastUpdateNameRequest;
-    use crate::controllers::podcast_episode_controller::EpisodeFormatDto;
-    use crate::models::misc_models::PodcastAddModel;
-    use crate::models::opml_model::OpmlModel;
-    use crate::models::podcast_settings::PodcastSetting;
-    use crate::models::podcast_rssadd_model::PodcastRSSAddModel;
+    use crate::controllers::podcast_controller::find_podcast;
     use crate::models::podcasts::Podcast;
-    use crate::models::search_type::SearchType;
-    use crate::models::user::User;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use axum::extract::Path;
+    use axum::extract::{Path, State};
     use axum::{Extension, Json};
+    use podfetch_domain::podcast_settings::PodcastSetting;
+    use podfetch_domain::user::User;
+    use podfetch_web::podcast::{OpmlModel, PodcastAddModel, PodcastRSSAddModel, SearchType};
+    use podfetch_web::podcast_episode::EpisodeFormatDto;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -980,6 +955,10 @@ pub mod tests {
 
     fn non_privileged_user() -> User {
         UserTestDataBuilder::new().build()
+    }
+
+    fn app_state() -> AppState {
+        AppState::new()
     }
 
     #[tokio::test]
@@ -1016,13 +995,16 @@ pub mod tests {
     #[serial]
     async fn test_change_name_of_podcast() {
         let ts_server = handle_test_startup().await;
+        let collection_name = unique_name("collection");
+        let podcast_name = unique_name("The homelab podcast");
+        let directory_name = unique_name("test123");
         let saved_podcast = Podcast::add_podcast_to_database(
-            "collection",
-            "The homelab podcast",
+            &collection_name,
+            &podcast_name,
             "https://example.com/feed",
             "https://example.com/image\
                                          .jpg",
-            "test123",
+            &directory_name,
         )
         .unwrap();
         let resp = ts_server
@@ -1032,12 +1014,11 @@ pub mod tests {
                 name: "New Podcast Name".to_string(),
             })
             .await;
+        assert_eq!(resp.status_code(), 200);
         assert_eq!(
             Podcast::get_podcast(saved_podcast.id).unwrap().name,
             "New Podcast Name"
         );
-
-        assert_eq!(resp.status_code(), 200);
     }
 
     #[tokio::test]
@@ -1276,7 +1257,10 @@ pub mod tests {
             .await;
         assert_client_error_status(post_on_settings.status_code().as_u16());
 
-        let get_on_formatting = ts_server.test_server.get("/api/v1/podcasts/formatting").await;
+        let get_on_formatting = ts_server
+            .test_server
+            .get("/api/v1/podcasts/formatting")
+            .await;
         assert_client_error_status(get_on_formatting.status_code().as_u16());
     }
 
@@ -1376,7 +1360,8 @@ pub mod tests {
             Ok(_) => panic!("expected forbidden for add_podcast_from_podindex"),
         }
 
-        let refresh_all_result = super::refresh_all_podcasts(Extension(non_privileged.clone())).await;
+        let refresh_all_result =
+            super::refresh_all_podcasts(Extension(non_privileged.clone())).await;
         match refresh_all_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden for refresh_all_podcasts"),
@@ -1390,7 +1375,8 @@ pub mod tests {
         }
 
         let update_active_result =
-            super::update_active_podcast(Path("1".to_string()), Extension(non_privileged.clone())).await;
+            super::update_active_podcast(Path("1".to_string()), Extension(non_privileged.clone()))
+                .await;
         match update_active_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden for update_active_podcast"),
@@ -1399,7 +1385,9 @@ pub mod tests {
         let delete_podcast_result = super::delete_podcast(
             Path(1),
             Extension(non_privileged.clone()),
-            Json(super::DeletePodcast { delete_files: false }),
+            Json(super::DeletePodcast {
+                delete_files: false,
+            }),
         )
         .await;
         match delete_podcast_result {
@@ -1408,6 +1396,7 @@ pub mod tests {
         }
 
         let update_settings_result = super::update_podcast_settings(
+            State(app_state()),
             Path(1),
             Extension(non_privileged.clone()),
             Json(PodcastSetting::default()),
@@ -1419,7 +1408,8 @@ pub mod tests {
         }
 
         let get_settings_result =
-            super::get_podcast_settings(Path(1), Extension(non_privileged)).await;
+            super::get_podcast_settings(State(app_state()), Path(1), Extension(non_privileged))
+                .await;
         match get_settings_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden for get_podcast_settings"),

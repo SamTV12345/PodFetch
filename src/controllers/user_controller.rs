@@ -1,11 +1,13 @@
 use crate::app_state::AppState;
 use crate::constants::inner_constants::STANDARD_USER;
-use crate::models::invite::Invite;
-use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use podfetch_domain::invite::Invite;
+use podfetch_domain::user::{User, UserWithAPiKey, UserWithoutPassword};
 use podfetch_web::invite::{self, InviteControllerError, InvitePostModel};
-use podfetch_web::user_admin::{self, UserAdminControllerError, UserCoreUpdateModel, UserRoleUpdateModel};
+use podfetch_web::user_admin::{
+    self, UserAdminControllerError, UserCoreUpdateModel, UserRoleUpdateModel,
+};
 use podfetch_web::user_onboarding::{self, UserOnboardingModel};
 use reqwest::StatusCode;
 
@@ -192,9 +194,13 @@ pub async fn delete_user(
     Path(username): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    user_admin::delete_user(state.user_admin_service.as_ref(), requester.is_admin(), &username)
-        .map(|_| StatusCode::OK)
-        .map_err(map_user_admin_error)
+    user_admin::delete_user(
+        state.user_admin_service.as_ref(),
+        requester.is_admin(),
+        &username,
+    )
+    .map(|_| StatusCode::OK)
+    .map_err(map_user_admin_error)
 }
 
 #[utoipa::path(
@@ -208,8 +214,12 @@ pub async fn get_invite_link(
     Path(invite_id): Path<String>,
     requester: Extension<User>,
 ) -> Result<String, CustomError> {
-    invite::get_invite_link(state.invite_service.as_ref(), requester.is_admin(), &invite_id)
-        .map_err(map_invite_link_error)
+    invite::get_invite_link(
+        state.invite_service.as_ref(),
+        requester.is_admin(),
+        &invite_id,
+    )
+    .map_err(map_invite_link_error)
 }
 
 #[utoipa::path(
@@ -223,9 +233,13 @@ pub async fn delete_invite(
     invite_id: Path<String>,
     requester: Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    invite::delete_invite(state.invite_service.as_ref(), requester.is_admin(), &invite_id.0)
-        .map(|_| StatusCode::OK)
-        .map_err(map_invite_link_error)
+    invite::delete_invite(
+        state.invite_service.as_ref(),
+        requester.is_admin(),
+        &invite_id.0,
+    )
+    .map(|_| StatusCode::OK)
+    .map_err(map_invite_link_error)
 }
 
 fn map_invite_controller_error(error: InviteControllerError<CustomError>) -> CustomError {
@@ -296,13 +310,13 @@ mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::models::invite::Invite;
-    use crate::models::user::User;
-    use crate::models::user::UserWithAPiKey;
     use crate::utils::error::{CustomErrorInner, ErrorType};
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
+    use podfetch_domain::invite::Invite;
+    use podfetch_domain::user::User;
+    use podfetch_domain::user::UserWithAPiKey;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;

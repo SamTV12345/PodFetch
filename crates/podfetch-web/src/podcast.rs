@@ -1,4 +1,61 @@
-use utoipa::ToSchema;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
+
+#[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct PodcastSearchModelUtoipa {
+    pub order: Option<String>,
+    pub title: Option<String>,
+    pub order_option: Option<String>,
+    pub favored_only: bool,
+    pub tag: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct PodcastUpdateNameRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct DeletePodcast {
+    pub delete_files: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PodcastAddModel {
+    pub track_id: i32,
+    pub user_id: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct PodcastRSSAddModel {
+    #[serde(rename = "rssFeedUrl")]
+    pub rss_feed_url: String,
+}
+
+#[derive(Debug, Deserialize, Clone, ToSchema)]
+pub struct OpmlModel {
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct PodcastFavorUpdateModel {
+    pub id: i32,
+    pub favored: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ProxyPodcastParams {
+    pub episode_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum SearchType {
+    ITunes,
+    Podindex,
+}
 
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema, Default)]
 #[serde(rename_all = "camelCase")]
@@ -79,4 +136,16 @@ pub struct ItunesModel {
     pub track_time_millis: Option<i64>,
     pub genre_ids: Vec<String>,
     pub genres: Vec<String>,
+}
+
+impl TryFrom<i32> for SearchType {
+    type Error = ();
+
+    fn try_from(v: i32) -> Result<Self, Self::Error> {
+        match v {
+            x if x == SearchType::Podindex as i32 => Ok(SearchType::Podindex),
+            x if x == SearchType::ITunes as i32 => Ok(SearchType::ITunes),
+            _ => Err(()),
+        }
+    }
 }

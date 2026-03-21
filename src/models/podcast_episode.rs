@@ -9,7 +9,6 @@ use crate::models::episode::Episode;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{CustomError, map_db_error};
@@ -26,6 +25,7 @@ use diesel::{
     BoolExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, RunQueryDsl,
     TextExpressionMethods, delete, insert_into,
 };
+use podfetch_domain::user::User;
 use rss::{Guid, Item};
 use utoipa::ToSchema;
 

@@ -1,11 +1,11 @@
+use crate::app_state::AppState;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::{Info, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner};
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::http::Uri;
 use axum::middleware::Next;
 use axum::response::Response;
@@ -18,12 +18,13 @@ pub enum PodcastOrPodcastEpisodeResource {
 }
 
 pub async fn check_permissions_for_files(
+    State(state): State<AppState>,
     OptionalQuery(query): OptionalQuery<RSSAPiKey>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, CustomError> {
     let request = query.and_then(|rss_api_key| rss_api_key.api_key);
-    let extracted_podcast = check_auth(req.uri().clone(), request)?;
+    let extracted_podcast = check_auth(req.uri().clone(), request, &state)?;
 
     req.extensions_mut().insert(extracted_podcast);
     Ok(next.run(req).await)
@@ -67,6 +68,7 @@ fn retrieve_podcast_or_podcast_episode(
 fn check_auth(
     uri: Uri,
     api_key: Option<String>,
+    state: &AppState,
 ) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
     match ENVIRONMENT_SERVICE.any_auth_enabled {
         true => {
@@ -81,7 +83,7 @@ fn check_auth(
                 }
             };
 
-            let api_key_exists = User::check_if_api_key_exists(api_key);
+            let api_key_exists = state.user_auth_service.is_api_key_valid(api_key);
 
             if !api_key_exists {
                 return Err(CustomErrorInner::Forbidden(Warning).into());

@@ -1,5 +1,4 @@
 use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::session::Session;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
@@ -7,6 +6,7 @@ use crate::utils::time::get_current_timestamp;
 use axum::extract::{Path, Query};
 use axum::{Extension, Json};
 use chrono::DateTime;
+use podfetch_domain::session::Session;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -110,18 +110,26 @@ pub fn get_gpodder_episodes_router() -> OpenApiRouter {
 
 #[cfg(test)]
 pub mod tests {
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::gpodder::episodes::gpodder_episodes::EpisodeActionResponse;
     use crate::utils::auth::tests::create_auth_gpodder;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use serial_test::serial;
 
+    fn app_state() -> AppState {
+        AppState::new()
+    }
+
     #[serial]
     #[tokio::test]
     async fn test_get_episodes_action() {
         let mut test_server = handle_test_startup().await;
-        let mut user = UserTestDataBuilder::new().build();
-        user.insert_user().unwrap();
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
         create_auth_gpodder(&mut test_server, &user).await;
         let resp = test_server
             .test_server

@@ -3,19 +3,20 @@ use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
-use crate::models::tag::Tag;
-use crate::models::user::User;
+use podfetch_domain::tag::Tag;
+use podfetch_domain::user::User;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, ToSchema, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PodcastDto {
-    pub(crate) id: i32,
-    pub(crate) name: String,
+    pub id: i32,
+    pub name: String,
     pub directory_id: String,
     pub directory_name: String,
     pub podfetch_feed: String,
-    pub(crate) rssfeed: String,
+    pub rssfeed: String,
     pub image_url: String,
     pub summary: Option<String>,
     pub language: Option<String>,

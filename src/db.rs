@@ -1,7 +1,6 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
-use crate::controllers::podcast_episode_controller::TimelineQueryParams;
 use crate::models::episode::{Episode, EpisodeDto};
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
@@ -9,12 +8,13 @@ use crate::models::filter::Filter;
 use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
+use podfetch_domain::user::User;
+use podfetch_web::podcast_episode::TimelineQueryParams;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

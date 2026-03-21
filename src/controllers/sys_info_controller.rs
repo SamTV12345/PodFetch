@@ -1,19 +1,17 @@
 use crate::app_state::AppState;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::settings::ConfigModel;
-use crate::models::user::User;
 use crate::utils::error::ErrorSeverity::Info;
 use crate::utils::error::ErrorType::CustomErrorType;
 use crate::utils::error::{
     ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
 };
-use crate::utils::url_builder::{
-    resolve_server_url_from_headers, rewrite_env_server_url_prefix,
-};
+use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
+use common_infrastructure::config::ConfigModel;
 use fs_extra::dir::get_size;
+use podfetch_domain::user::User;
 use podfetch_web::sys::{
     self, Cpu, CpuUsageDto, CpusWrapperDto, LoginControllerError, LoginRequest, SimplifiedDisk,
     SysExtraInfo, SystemDto, VersionInfo,
@@ -168,7 +166,7 @@ pub async fn get_info() -> Json<VersionInfo> {
     ))
 }
 
-pub fn get_sys_info_router() -> OpenApiRouter {
+pub fn get_sys_info_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_sys_info))
         .routes(routes!(get_info))
@@ -179,12 +177,12 @@ mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::Role;
-    use crate::models::settings::ConfigModel;
-    use crate::models::user::User;
     use crate::utils::error::{CustomErrorInner, ErrorType};
-    use axum::extract::State;
     use axum::Extension;
+    use axum::extract::State;
     use chrono::Utc;
+    use common_infrastructure::config::ConfigModel;
+    use podfetch_domain::user::User;
     use serde_json::Value;
     use serial_test::serial;
     use sha256::digest;
@@ -195,7 +193,7 @@ mod tests {
     }
 
     fn insert_user_with_password(username: String, plain_password: &str) {
-        let mut user = User::new(
+        let user = User::new(
             0,
             username,
             Role::User,
@@ -203,7 +201,7 @@ mod tests {
             Utc::now().naive_utc(),
             true,
         );
-        user.insert_user().unwrap();
+        app_state().user_admin_service.create_user(user).unwrap();
     }
 
     fn app_state() -> AppState {

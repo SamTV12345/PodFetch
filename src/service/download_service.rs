@@ -11,9 +11,9 @@ use crate::constants::inner_constants::{
 };
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
-use crate::models::podcast_settings::PodcastSetting;
 use crate::service::podcast_chapter::{Chapter, Link};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::service::podcast_settings_service::PodcastSettingsService;
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::file_extension_determination::{
     DetermineFileExtensionReturn, FileType, determine_file_extension,
@@ -386,7 +386,7 @@ impl DownloadService {
             &mut conn,
         )?;
 
-        let settings_for_podcast = PodcastSetting::get_settings(podcast.id)?;
+        let settings_for_podcast = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
 
         if let Some(settings_for_podcast) = settings_for_podcast {
             if settings_for_podcast.episode_numbering {

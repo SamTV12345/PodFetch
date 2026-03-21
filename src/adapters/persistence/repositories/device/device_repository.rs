@@ -23,7 +23,9 @@ impl DeviceRepository for DeviceRepositoryImpl {
     }
 
     fn get_devices_of_user(&self, username_to_find: &str) -> Result<Vec<Device>, CustomError> {
-        self.inner.get_devices_of_user(username_to_find).map_err(Into::into)
+        self.inner
+            .get_devices_of_user(username_to_find)
+            .map_err(Into::into)
     }
 
     fn delete_by_username(&self, username1: &str) -> Result<(), CustomError> {

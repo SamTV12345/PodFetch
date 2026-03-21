@@ -22,6 +22,10 @@ impl UserAdminRepository for UserAdminRepositoryImpl {
         self.inner.create(user).map_err(Into::into)
     }
 
+    fn find_by_api_key(&self, api_key: &str) -> Result<Option<ManagedUser>, Self::Error> {
+        self.inner.find_by_api_key(api_key).map_err(Into::into)
+    }
+
     fn find_by_username(&self, username: &str) -> Result<Option<ManagedUser>, Self::Error> {
         self.inner.find_by_username(username).map_err(Into::into)
     }

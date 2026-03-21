@@ -5,14 +5,13 @@ use crate::constants::inner_constants::{
 };
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::models::notification::Notification;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_settings::PodcastSetting;
 use crate::models::podcasts::Podcast;
-use crate::models::user::User;
 use crate::mutex::LockResultExt;
 use crate::service::download_service::DownloadService;
 use crate::service::file_service::FileService;
+use crate::service::notification_service::NotificationService;
+use crate::service::podcast_settings_service::PodcastSettingsService;
 use crate::service::settings_service::SettingsService;
 use crate::service::telegram_api::send_new_episode_notification;
 use crate::utils::environment_variables::is_env_var_present_and_true;
@@ -23,6 +22,8 @@ use crate::utils::error::{
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use podfetch_domain::notification::Notification;
+use podfetch_domain::user::User;
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};
@@ -97,7 +98,7 @@ impl PodcastEpisodeService {
         if let Err(err) =
             DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)
         {
-            if let Err(notification_err) = Notification::insert_notification(Notification {
+            if let Err(notification_err) = NotificationService::create_notification(Notification {
                 id: 0,
                 message: format!("{} ({})", podcast_episode.name, err.inner),
                 created_at: chrono::Utc::now().naive_utc().to_string(),
@@ -123,14 +124,14 @@ impl PodcastEpisodeService {
             type_of_message: "Download".to_string(),
             status: "unread".to_string(),
         };
-        Notification::insert_notification(notification)?;
+        NotificationService::create_notification(notification)?;
         Ok(podcast)
     }
 
     pub fn get_last_n_podcast_episodes(
         podcast: Podcast,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
-        let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
+        let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
         let settings = SettingsService::shared().get_settings()?.unwrap();
         let n_episodes;
 
@@ -432,7 +433,7 @@ impl PodcastEpisodeService {
         }
 
         for p in podcasts.unwrap() {
-            let podcast_settings = PodcastSetting::get_settings(p.id);
+            let podcast_settings = PodcastSettingsService::get_settings_for_podcast(p.id);
             if podcast_settings.is_err() {
                 continue;
             }

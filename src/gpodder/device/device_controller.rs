@@ -1,10 +1,10 @@
 use crate::app_state::AppState;
-use crate::models::session::Session;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use podfetch_domain::session::Session;
 use podfetch_web::device::{self, DeviceControllerError, DevicePost, DeviceResponse};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;

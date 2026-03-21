@@ -26,8 +26,8 @@ use crate::service::environment_service::EnvironmentService;
 mod config;
 
 mod adapters;
-mod application;
 mod app_state;
+mod application;
 mod auth_middleware;
 mod command_line_runner;
 mod commands;

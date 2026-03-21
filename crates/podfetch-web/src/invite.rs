@@ -58,10 +58,15 @@ where
         return Err(InviteControllerError::Forbidden);
     }
 
-    service.get_invites().map_err(InviteControllerError::Service)
+    service
+        .get_invites()
+        .map_err(InviteControllerError::Service)
 }
 
-pub fn get_invite<S>(service: &S, invite_id: &str) -> Result<Invite, InviteControllerError<S::Error>>
+pub fn get_invite<S>(
+    service: &S,
+    invite_id: &str,
+) -> Result<Invite, InviteControllerError<S::Error>>
 where
     S: InviteApplicationService,
     S::Error: Display,

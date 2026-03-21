@@ -10,18 +10,18 @@ use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::controllers::settings_controller::ReplacementStrategy;
 use crate::models::misc_models::PodcastInsertModel;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_settings::PodcastSetting;
-use crate::models::settings::Setting;
 use crate::service::download_service::DownloadService;
 use crate::service::path_service::PathService;
+use crate::service::podcast_settings_service::PodcastSettingsService;
 use crate::service::settings_service::SettingsService;
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use crate::utils::file_extension_determination::{FileType, determine_file_extension};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
 use crate::utils::rss_feed_parser::RSSFeedParser;
+use podfetch_domain::podcast_settings::PodcastSetting;
+use podfetch_domain::settings::{ReplacementStrategy, Setting};
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
@@ -175,7 +175,7 @@ pub async fn prepare_podcast_title_to_directory(
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
     let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
-    let opt_podcast_settings = PodcastSetting::get_settings(podcast.id)?;
+    let opt_podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
 
     let podcast = match channel {
         Some(channel) => RSSFeedParser::parse_rss_feed(channel),
@@ -279,7 +279,8 @@ pub fn prepare_podcast_episode_title_to_directory(
             return Ok(res_unwrapped);
         }
     }
-    let podcast_settings = PodcastSetting::get_settings(podcast_episode.podcast_id)?;
+    let podcast_settings =
+        PodcastSettingsService::get_settings_for_podcast(podcast_episode.podcast_id)?;
     perform_episode_variable_replacement(retrieved_settings, podcast_episode, podcast_settings)
 }
 
@@ -407,12 +408,12 @@ fn remove_extension(filename: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use crate::models::podcast_episode::PodcastEpisode;
-    use crate::models::settings::Setting;
     use crate::service::file_service::{
         perform_episode_variable_replacement, perform_podcast_variable_replacement,
         perform_replacement,
     };
     use crate::utils::rss_feed_parser::PodcastParsed;
+    use podfetch_domain::settings::Setting;
     use serial_test::serial;
 
     #[test]
