@@ -1,13 +1,17 @@
 pub mod download_service;
 pub mod environment_service;
+pub mod favorite_podcast_episode_service;
 pub(crate) mod file_service;
+pub mod filter_service;
 pub mod invite_service;
+pub mod listening_event_service;
 pub mod logging_service;
 pub mod login_service;
 pub mod notification_service;
 pub mod path_service;
 pub mod playlist_service;
 pub mod podcast_chapter;
+pub mod podcast_episode_chapter_service;
 pub mod podcast_episode_service;
 pub mod podcast_settings_service;
 pub mod rust_service;

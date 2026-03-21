@@ -1,12 +1,12 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::app_state::AppState;
 use crate::models::episode::EpisodeDto;
-use crate::models::podcast_dto::PodcastDto;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
 use podfetch_domain::user::User;
+use podfetch_web::podcast::PodcastDto;
 use podfetch_web::watchtime::{
     self, PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
     WatchtimeControllerError,

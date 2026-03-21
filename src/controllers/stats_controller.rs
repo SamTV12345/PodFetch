@@ -53,12 +53,13 @@ mod tests {
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::models::listening_event::{ListeningEvent, NewListeningEvent};
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
+    use crate::service::listening_event_service::ListeningEventService;
     use chrono::{NaiveDate, NaiveDateTime};
     use diesel::ExpressionMethods;
     use diesel::RunQueryDsl;
+    use podfetch_domain::listening_event::NewListeningEvent;
     use serde_json::Value;
     use serial_test::serial;
     use uuid::Uuid;
@@ -161,7 +162,7 @@ mod tests {
         let episode_a2 = insert_episode(podcast_a.id, "stats-ep-a2", "stats-guid-a2", "A2");
         let episode_b1 = insert_episode(podcast_b.id, "stats-ep-b1", "stats-guid-b1", "B1");
 
-        ListeningEvent::insert_event(NewListeningEvent {
+        ListeningEventService::create_event(NewListeningEvent {
             username: username.clone(),
             device: "webview".to_string(),
             podcast_episode_id: episode_a1.episode_id.clone(),
@@ -173,7 +174,7 @@ mod tests {
             listened_at: dt(23, 10, 0, 0),
         })
         .unwrap();
-        ListeningEvent::insert_event(NewListeningEvent {
+        ListeningEventService::create_event(NewListeningEvent {
             username: username.clone(),
             device: "webview".to_string(),
             podcast_episode_id: episode_a2.episode_id.clone(),
@@ -185,7 +186,7 @@ mod tests {
             listened_at: dt(24, 11, 0, 0),
         })
         .unwrap();
-        ListeningEvent::insert_event(NewListeningEvent {
+        ListeningEventService::create_event(NewListeningEvent {
             username,
             device: "webview".to_string(),
             podcast_episode_id: episode_b1.episode_id.clone(),
@@ -238,7 +239,7 @@ mod tests {
         .unwrap();
         let episode = insert_episode(podcast.id, "stats-ep-range", "stats-guid-range", "Range");
 
-        ListeningEvent::insert_event(NewListeningEvent {
+        ListeningEventService::create_event(NewListeningEvent {
             username: username.clone(),
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id.clone(),
@@ -250,7 +251,7 @@ mod tests {
             listened_at: dt(24, 10, 0, 0),
         })
         .unwrap();
-        ListeningEvent::insert_event(NewListeningEvent {
+        ListeningEventService::create_event(NewListeningEvent {
             username,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
@@ -328,7 +329,7 @@ mod tests {
                 "Top Limit Episode",
             );
 
-            ListeningEvent::insert_event(NewListeningEvent {
+            ListeningEventService::create_event(NewListeningEvent {
                 username: username.clone(),
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
@@ -392,7 +393,7 @@ mod tests {
             "Stats RFC3339 Episode",
         );
 
-        ListeningEvent::insert_event(NewListeningEvent {
+        ListeningEventService::create_event(NewListeningEvent {
             username,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
@@ -444,7 +445,7 @@ mod tests {
                 "Stats Min Top Limit Episode",
             );
 
-            ListeningEvent::insert_event(NewListeningEvent {
+            ListeningEventService::create_event(NewListeningEvent {
                 username: username.clone(),
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
@@ -494,7 +495,7 @@ mod tests {
             "Stats Rewrite Episode",
         );
 
-        ListeningEvent::insert_event(NewListeningEvent {
+        ListeningEventService::create_event(NewListeningEvent {
             username,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,

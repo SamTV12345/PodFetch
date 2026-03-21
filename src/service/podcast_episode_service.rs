@@ -4,11 +4,11 @@ use crate::constants::inner_constants::{
     COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED,
 };
 use crate::controllers::server::ChatServerHandle;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::mutex::LockResultExt;
 use crate::service::download_service::DownloadService;
+use crate::service::favorite_podcast_episode_service::FavoritePodcastEpisodeService;
 use crate::service::file_service::FileService;
 use crate::service::notification_service::NotificationService;
 use crate::service::podcast_settings_service::PodcastSettingsService;
@@ -457,9 +457,9 @@ impl PodcastEpisodeService {
 
             log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
-                match FavoritePodcastEpisode::is_podcast_episode_liked_by_someone(
-                    old_podcast_episode.id,
-                ) {
+                match FavoritePodcastEpisodeService::default_service()
+                    .is_liked_by_someone(old_podcast_episode.id)
+                {
                     Ok(true) => {
                         continue;
                     }

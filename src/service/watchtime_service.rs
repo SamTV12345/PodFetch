@@ -1,8 +1,8 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::podcast_dto::PodcastDto;
 use crate::utils::error::CustomError;
 use podfetch_domain::user::User;
+use podfetch_web::podcast::PodcastDto;
 use podfetch_web::watchtime::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
     WatchtimeApplicationService,

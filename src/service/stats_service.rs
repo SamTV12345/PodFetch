@@ -1,17 +1,22 @@
-use crate::models::listening_event::ListeningEvent;
 use crate::models::podcasts::Podcast;
+use crate::service::listening_event_service::ListeningEventService;
 use crate::utils::error::CustomError;
 use chrono::{Datelike, NaiveDateTime};
 use podfetch_web::stats::{StatsApplicationService, StatsOverview, TopPodcastStats, WeekdayStats};
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
-#[derive(Clone, Default)]
-pub struct StatsService;
+#[derive(Clone)]
+pub struct StatsService {
+    listening_event_service: Arc<ListeningEventService>,
+}
 
 impl StatsService {
-    pub fn new() -> Self {
-        Self
+    pub fn new(listening_event_service: Arc<ListeningEventService>) -> Self {
+        Self {
+            listening_event_service,
+        }
     }
 }
 
@@ -26,7 +31,9 @@ impl StatsApplicationService for StatsService {
         to: Option<NaiveDateTime>,
         top_limit: usize,
     ) -> Result<Self::StatsOverview, Self::Error> {
-        let events = ListeningEvent::get_by_user_and_range(username, from, to)?;
+        let events = self
+            .listening_event_service
+            .get_by_user_and_range(username, from, to)?;
         let total_listened_seconds = events
             .iter()
             .map(|event| i64::from(event.delta_seconds))

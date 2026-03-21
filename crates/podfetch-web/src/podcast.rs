@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
+use podfetch_domain::tag::Tag;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -43,6 +44,35 @@ pub struct OpmlModel {
 pub struct PodcastFavorUpdateModel {
     pub id: i32,
     pub favored: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct PodcastInsertModel {
+    pub title: String,
+    pub id: i32,
+    pub feed_url: String,
+    pub image_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct PodcastDto {
+    pub id: i32,
+    pub name: String,
+    pub directory_id: String,
+    pub directory_name: String,
+    pub podfetch_feed: String,
+    pub rssfeed: String,
+    pub image_url: String,
+    pub summary: Option<String>,
+    pub language: Option<String>,
+    pub explicit: Option<String>,
+    pub keywords: Option<String>,
+    pub last_build_date: Option<String>,
+    pub author: Option<String>,
+    pub active: bool,
+    pub original_image_url: String,
+    pub favorites: bool,
+    pub tags: Vec<Tag>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

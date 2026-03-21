@@ -1,7 +1,12 @@
 pub mod db;
 pub mod device;
+pub mod favorite_podcast_episode;
+pub mod filter;
 pub mod invite;
+pub mod listening_event;
 pub mod notification;
+pub mod playlist;
+pub mod podcast_episode_chapter;
 pub mod podcast_settings;
 pub mod session;
 pub mod settings;

@@ -67,7 +67,8 @@ pub async fn rescan_episodes(Extension(requester): Extension<User>) -> Result<()
                         let chapters = chapters.expect("Chapters should be available here");
                         log::info!("Inserting chapters for episode {}", episode.name);
                         for chapter in chapters {
-                            let res = PodcastEpisodeChapter::save_chapter(&chapter, episode);
+                            let res = PodcastEpisodeChapterService::default_service()
+                                .save_chapter(&chapter, episode);
                             if let Err(err) = res {
                                 log::error!(
                                     "Error while saving chapter for episode {}: {}",
@@ -80,7 +81,8 @@ pub async fn rescan_episodes(Extension(requester): Extension<User>) -> Result<()
                     FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio => {
                         let chapters = DownloadService::read_chapters_from_mp4(filepath_to_episode);
                         for chapter in chapters {
-                            let res = PodcastEpisodeChapter::save_chapter(&chapter, episode);
+                            let res = PodcastEpisodeChapterService::default_service()
+                                .save_chapter(&chapter, episode);
                             if let Err(err) = res {
                                 log::error!(
                                     "Error while saving chapter for episode {}: {}",
@@ -213,8 +215,8 @@ pub async fn update_name(
 }
 
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::service::download_service::DownloadService;
+use crate::service::podcast_episode_chapter_service::PodcastEpisodeChapterService;
 use crate::utils::error::ErrorSeverity::{Critical, Debug, Error, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use utoipa_axum::router::OpenApiRouter;

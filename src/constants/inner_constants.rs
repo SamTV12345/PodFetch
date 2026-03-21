@@ -22,11 +22,11 @@ pub use common_infrastructure::config::{
 };
 
 use crate::models::episode::Episode;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::logging_service::init_logging;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use utoipa::ToSchema;
 
 // User management roles

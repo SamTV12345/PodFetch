@@ -144,7 +144,6 @@ mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::podcasts::Podcast;
-    use crate::models::tag::Tag as LegacyTag;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
@@ -271,7 +270,10 @@ mod tests {
             .await;
         assert_eq!(add_response.status_code(), 200);
 
-        let tags_for_podcast = LegacyTag::get_tags_of_podcast(podcast.id, &username).unwrap();
+        let tags_for_podcast = app_state()
+            .tag_service
+            .get_tags_of_podcast(podcast.id, &username)
+            .unwrap();
         assert_eq!(tags_for_podcast.len(), 1);
         assert_eq!(tags_for_podcast[0].id, tag.id);
 
@@ -281,7 +283,10 @@ mod tests {
             .await;
         assert_eq!(remove_response.status_code(), 200);
 
-        let tags_after_remove = LegacyTag::get_tags_of_podcast(podcast.id, &username).unwrap();
+        let tags_after_remove = app_state()
+            .tag_service
+            .get_tags_of_podcast(podcast.id, &username)
+            .unwrap();
         assert!(tags_after_remove.is_empty());
     }
 

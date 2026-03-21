@@ -34,7 +34,11 @@ impl TagService {
         self.repository.get_tags(username)
     }
 
-    pub fn get_tags_of_podcast(&self, podcast_id: i32, username: &str) -> Result<Vec<Tag>, CustomError> {
+    pub fn get_tags_of_podcast(
+        &self,
+        podcast_id: i32,
+        username: &str,
+    ) -> Result<Vec<Tag>, CustomError> {
         self.repository.get_tags_of_podcast(podcast_id, username)
     }
 
@@ -77,7 +81,8 @@ impl TagService {
     }
 
     pub fn delete_podcast_tags(&self, podcast_id: i32) -> Result<(), CustomError> {
-        self.repository.delete_tag_podcasts_by_podcast_id(podcast_id)
+        self.repository
+            .delete_tag_podcasts_by_podcast_id(podcast_id)
     }
 
     fn get_tag_for_user(&self, tag_id: &str, username: &str) -> Result<Tag, CustomError> {

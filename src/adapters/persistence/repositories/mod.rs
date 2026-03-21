@@ -1,6 +1,11 @@
 pub mod device;
+pub mod favorite_podcast_episode_repository;
+pub mod filter_repository;
 pub mod invite_repository;
+pub mod listening_event_repository;
 pub mod notification_repository;
+pub mod playlist_repository;
+pub mod podcast_episode_chapter_repository;
 pub mod podcast_settings_repository;
 pub mod session_repository;
 pub mod settings_repository;

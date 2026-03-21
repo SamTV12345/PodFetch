@@ -10,7 +10,6 @@ use std::env::args;
 use std::process::exit;
 mod controllers;
 use crate::adapters::persistence::dbconfig::DBType;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::command_line_runner::start_command_line;
 use crate::commands::startup::handle_config_for_server_startup;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
@@ -18,6 +17,7 @@ pub use controllers::controller_utils::*;
 
 mod constants;
 mod db;
+mod mappers;
 mod models;
 mod service;
 

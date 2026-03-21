@@ -2,7 +2,7 @@ use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
-use crate::models::podcast_dto::PodcastDto;
+use crate::mappers::podcast_dto_mapper::map_podcast_with_context_to_dto;
 use crate::models::podcasts::Podcast;
 use crate::service::tag_service::TagService;
 use crate::utils::error::ErrorSeverity::Critical;
@@ -14,9 +14,48 @@ use indexmap::IndexMap;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::tag::{Tag, TagsPodcast};
 use podfetch_domain::user::User;
+use podfetch_web::podcast::PodcastDto;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use utoipa::ToSchema;
+
+#[derive(Queryable, Clone)]
+struct JoinedTagsPodcast {
+    tag_id: String,
+    podcast_id: i32,
+}
+
+#[derive(Queryable, Clone)]
+struct JoinedTag {
+    id: String,
+    name: String,
+    username: String,
+    description: Option<String>,
+    created_at: chrono::NaiveDateTime,
+    color: String,
+}
+
+impl From<JoinedTag> for Tag {
+    fn from(value: JoinedTag) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            username: value.username,
+            description: value.description,
+            created_at: value.created_at,
+            color: value.color,
+        }
+    }
+}
+
+impl From<JoinedTagsPodcast> for TagsPodcast {
+    fn from(value: JoinedTagsPodcast) -> Self {
+        Self {
+            tag_id: value.tag_id,
+            podcast_id: value.podcast_id,
+        }
+    }
+}
 
 #[derive(
     Queryable,
@@ -129,7 +168,12 @@ impl Favorite {
                 let tags = TagService::default_service()
                     .get_tags_of_podcast(podcast.0.id, &requester.username)
                     .unwrap();
-                (podcast.0.clone(), Some(podcast.1.clone()), tags, requester).into()
+                map_podcast_with_context_to_dto(
+                    podcast.0.clone(),
+                    Some(podcast.1.clone()),
+                    tags,
+                    requester,
+                )
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)
@@ -194,19 +238,24 @@ impl Favorite {
         let mut matching_podcast_ids: BTreeMap<i32, (Podcast, Favorite, Vec<Tag>)> =
             BTreeMap::new();
         let pr = query
-            .load::<(Podcast, Favorite, Option<TagsPodcast>, Option<Tag>)>(&mut get_connection())
+            .load::<(
+                Podcast,
+                Favorite,
+                Option<JoinedTagsPodcast>,
+                Option<JoinedTag>,
+            )>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
         pr.iter().for_each(|c| {
             if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
                 if let Some(tag) = &c.3
                     && !existing.2.iter().any(|t| t.id == tag.id)
                 {
-                    existing.2.push(tag.clone());
+                    existing.2.push(tag.clone().into());
                 }
             } else {
                 let mut tags = vec![];
                 if let Some(tag) = &c.3 {
-                    tags.push(tag.clone());
+                    tags.push(tag.clone().into());
                 }
                 matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.1.clone(), tags));
             }
@@ -277,21 +326,24 @@ impl Favorite {
         let mut matching_podcast_ids: IndexMap<i32, (Podcast, Option<Favorite>, Vec<Tag>)> =
             IndexMap::new();
         let pr = query
-            .load::<(Podcast, Option<Favorite>, Option<TagsPodcast>, Option<Tag>)>(
-                &mut get_connection(),
-            )
+            .load::<(
+                Podcast,
+                Option<Favorite>,
+                Option<JoinedTagsPodcast>,
+                Option<JoinedTag>,
+            )>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
         pr.iter().for_each(|c| {
             if let Some(existing) = matching_podcast_ids.get_mut(&c.0.id) {
                 if let Some(tag) = &c.3
                     && !existing.2.iter().any(|t| t.id == tag.id)
                 {
-                    existing.2.push(tag.clone());
+                    existing.2.push(tag.clone().into());
                 }
             } else {
                 let mut tags = vec![];
                 if let Some(tag) = &c.3 {
-                    tags.push(tag.clone());
+                    tags.push(tag.clone().into());
                 }
                 matching_podcast_ids.insert(c.0.id, (c.0.clone(), c.1.clone(), tags));
             }

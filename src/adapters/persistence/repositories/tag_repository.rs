@@ -26,7 +26,11 @@ impl TagRepository for TagRepositoryImpl {
         self.inner.get_tags(username).map_err(Into::into)
     }
 
-    fn get_tags_of_podcast(&self, podcast_id: i32, username: &str) -> Result<Vec<Tag>, Self::Error> {
+    fn get_tags_of_podcast(
+        &self,
+        podcast_id: i32,
+        username: &str,
+    ) -> Result<Vec<Tag>, Self::Error> {
         self.inner
             .get_tags_of_podcast(podcast_id, username)
             .map_err(Into::into)

@@ -61,7 +61,8 @@ pub trait TagRepository: Send + Sync {
 
     fn create(&self, tag: Tag) -> Result<Tag, Self::Error>;
     fn get_tags(&self, username: &str) -> Result<Vec<Tag>, Self::Error>;
-    fn get_tags_of_podcast(&self, podcast_id: i32, username: &str) -> Result<Vec<Tag>, Self::Error>;
+    fn get_tags_of_podcast(&self, podcast_id: i32, username: &str)
+    -> Result<Vec<Tag>, Self::Error>;
     fn get_tag_by_id_and_username(
         &self,
         tag_id: &str,

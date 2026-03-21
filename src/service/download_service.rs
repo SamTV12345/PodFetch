@@ -10,8 +10,8 @@ use crate::constants::inner_constants::{
     COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
 };
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
-use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::service::podcast_chapter::{Chapter, Link};
+use crate::service::podcast_episode_chapter_service::PodcastEpisodeChapterService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::podcast_settings_service::PodcastSettingsService;
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
@@ -289,7 +289,8 @@ impl DownloadService {
         if let Ok(chapters) = &result {
             log::info!("Inserting chapters for episode {}", podcast_episode.id);
             for chapter in chapters {
-                let res = PodcastEpisodeChapter::save_chapter(chapter, &podcast_episode);
+                let res = PodcastEpisodeChapterService::default_service()
+                    .save_chapter(chapter, &podcast_episode);
                 if let Err(err) = res {
                     log::error!(
                         "Error while saving chapter for episode {}: {}",

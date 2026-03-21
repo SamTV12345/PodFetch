@@ -1,6 +1,11 @@
 use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
+use crate::adapters::persistence::repositories::favorite_podcast_episode_repository::FavoritePodcastEpisodeRepositoryImpl;
+use crate::adapters::persistence::repositories::filter_repository::FilterRepositoryImpl;
 use crate::adapters::persistence::repositories::invite_repository::InviteRepositoryImpl;
+use crate::adapters::persistence::repositories::listening_event_repository::ListeningEventRepositoryImpl;
 use crate::adapters::persistence::repositories::notification_repository::NotificationRepositoryImpl;
+use crate::adapters::persistence::repositories::playlist_repository::PlaylistRepositoryImpl;
+use crate::adapters::persistence::repositories::podcast_episode_chapter_repository::PodcastEpisodeChapterRepositoryImpl;
 use crate::adapters::persistence::repositories::podcast_settings_repository::PodcastSettingsRepositoryImpl;
 use crate::adapters::persistence::repositories::session_repository::SessionRepositoryImpl;
 use crate::adapters::persistence::repositories::settings_repository::SettingsRepositoryImpl;
@@ -10,10 +15,14 @@ use crate::adapters::persistence::repositories::user_admin_repository::UserAdmin
 use crate::application::services::device::service::DeviceService;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::service::environment_service::EnvironmentService;
+use crate::service::favorite_podcast_episode_service::FavoritePodcastEpisodeService;
+use crate::service::filter_service::FilterService;
 use crate::service::invite_service::InviteService;
+use crate::service::listening_event_service::ListeningEventService;
 use crate::service::login_service::LoginService;
 use crate::service::notification_service::NotificationService;
 use crate::service::playlist_service::PlaylistService;
+use crate::service::podcast_episode_chapter_service::PodcastEpisodeChapterService;
 use crate::service::podcast_settings_service::PodcastSettingsService;
 use crate::service::session_service::SessionService;
 use crate::service::settings_service::SettingsService;
@@ -30,10 +39,14 @@ use std::sync::Arc;
 pub struct AppState {
     pub device_service: Arc<DeviceService>,
     pub environment: Arc<EnvironmentService>,
+    pub favorite_podcast_episode_service: Arc<FavoritePodcastEpisodeService>,
+    pub filter_service: Arc<FilterService>,
     pub invite_service: Arc<InviteService>,
+    pub listening_event_service: Arc<ListeningEventService>,
     pub login_service: Arc<LoginService>,
     pub notification_service: Arc<NotificationService>,
     pub playlist_service: Arc<PlaylistService>,
+    pub podcast_episode_chapter_service: Arc<PodcastEpisodeChapterService>,
     pub podcast_settings_service: Arc<PodcastSettingsService>,
     pub session_service: Arc<SessionService>,
     pub settings_service: Arc<SettingsService>,
@@ -53,10 +66,19 @@ impl AppState {
         let device_service = Arc::new(DeviceService::new(Arc::new(DeviceRepositoryImpl::new(
             database.clone(),
         ))));
+        let favorite_podcast_episode_service = Arc::new(FavoritePodcastEpisodeService::new(
+            Arc::new(FavoritePodcastEpisodeRepositoryImpl::new(database.clone())),
+        ));
+        let filter_service = Arc::new(FilterService::new(Arc::new(FilterRepositoryImpl::new(
+            database.clone(),
+        ))));
         let invite_service = Arc::new(InviteService::new(
             Arc::new(InviteRepositoryImpl::new(database.clone())),
             environment.clone(),
         ));
+        let listening_event_service = Arc::new(ListeningEventService::new(Arc::new(
+            ListeningEventRepositoryImpl::new(database.clone()),
+        )));
         let user_auth_service = Arc::new(UserAuthService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
             environment.clone(),
@@ -68,7 +90,12 @@ impl AppState {
         let notification_service = Arc::new(NotificationService::new(Arc::new(
             NotificationRepositoryImpl::new(database.clone()),
         )));
-        let playlist_service = Arc::new(PlaylistService::new());
+        let playlist_service = Arc::new(PlaylistService::new(Arc::new(
+            PlaylistRepositoryImpl::new(database.clone()),
+        )));
+        let podcast_episode_chapter_service = Arc::new(PodcastEpisodeChapterService::new(
+            Arc::new(PodcastEpisodeChapterRepositoryImpl::new(database.clone())),
+        ));
         let podcast_settings_service = Arc::new(PodcastSettingsService::new(Arc::new(
             PodcastSettingsRepositoryImpl::new(database.clone()),
         )));
@@ -78,7 +105,7 @@ impl AppState {
         let settings_service = Arc::new(SettingsService::new(Arc::new(
             SettingsRepositoryImpl::new(database.clone()),
         )));
-        let stats_service = Arc::new(StatsService::new());
+        let stats_service = Arc::new(StatsService::new(listening_event_service.clone()));
         let subscription_service = Arc::new(SubscriptionService::new(Arc::new(
             SubscriptionRepositoryImpl::new(database.clone()),
         )));
@@ -98,10 +125,14 @@ impl AppState {
         Self {
             device_service,
             environment,
+            favorite_podcast_episode_service,
+            filter_service,
             invite_service,
+            listening_event_service,
             login_service,
             notification_service,
             playlist_service,
+            podcast_episode_chapter_service,
             podcast_settings_service,
             session_service,
             settings_service,

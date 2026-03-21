@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::constants::inner_constants::{
     BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
 };
-use crate::models::misc_models::PodcastInsertModel;
+use crate::mappers::podcast_dto_mapper::map_podcast_with_context_to_dto;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string};
@@ -22,17 +22,19 @@ use serde_json::{Value, from_str};
 use std::thread;
 use tokio::task::spawn_blocking;
 
-use crate::models::filter::Filter;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_domain::filter::Filter;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::user::User;
 pub use podfetch_web::podcast::{
-    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastRSSAddModel,
-    PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest, ProxyPodcastParams,
+    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastInsertModel,
+    PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest,
+    ProxyPodcastParams,
     SearchType::{ITunes, Podindex},
 };
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
@@ -46,6 +48,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn get_filter(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Filter>, CustomError> {
     let default_filter: Filter = Filter {
@@ -56,8 +59,9 @@ pub async fn get_filter(
         username: "".into(),
     };
 
-    let filter = Filter::get_filter_by_username(&requester.username)
-        .await?
+    let filter = state
+        .filter_service
+        .get_filter_by_username(&requester.username)?
         .unwrap_or(default_filter);
     Ok(Json(filter))
 }
@@ -92,6 +96,7 @@ Vec<PodcastDto>)),
 tag="podcasts"
 )]
 pub async fn search_podcasts(
+    State(state): State<AppState>,
     Query(query): Query<PodcastSearchModelUtoipa>,
     Extension(requester): Extension<User>,
     headers: HeaderMap,
@@ -104,7 +109,9 @@ pub async fn search_podcasts(
         .unwrap_or(OrderOption::Title);
     let tag = query.tag;
 
-    let opt_filter = Filter::get_filter_by_username(&requester.username).await?;
+    let opt_filter = state
+        .filter_service
+        .get_filter_by_username(&requester.username)?;
 
     let only_favored = match opt_filter {
         Some(filter) => filter.only_favored,
@@ -119,7 +126,7 @@ pub async fn search_podcasts(
         Some(_latest_pub.clone().to_string()),
         only_favored,
     );
-    Filter::save_filter(filter)?;
+    state.filter_service.save_filter(filter)?;
 
     match query.favored_only {
         true => {
@@ -181,6 +188,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn find_podcast_by_id(
+    State(state): State<AppState>,
     Path(id): Path<String>,
     Extension(user): Extension<User>,
     headers: HeaderMap,
@@ -189,10 +197,10 @@ pub async fn find_podcast_by_id(
     let username = &user.username;
 
     let podcast = PodcastService::get_podcast(id_num)?;
-    let tags = Tag::get_tags_of_podcast(id_num, username)?;
+    let tags = state.tag_service.get_tags_of_podcast(id_num, username)?;
     let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?;
     let server_url = resolve_server_url_from_headers(&headers);
-    let mut podcast_dto: PodcastDto = (podcast, favorite, tags, &user).into();
+    let mut podcast_dto: PodcastDto = map_podcast_with_context_to_dto(podcast, favorite, tags, &user);
     podcast_dto.image_url = rewrite_env_server_url_prefix(&podcast_dto.image_url, &server_url);
     podcast_dto.podfetch_feed =
         rewrite_env_server_url_prefix(&podcast_dto.podfetch_feed, &server_url);
@@ -684,13 +692,10 @@ use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::episode::Episode;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
-use crate::models::podcast_dto::PodcastDto;
-use crate::models::tag::Tag;
-use crate::models::tags_podcast::TagsPodcast;
 use crate::utils::environment_variables::is_env_var_present_and_true;
 use podfetch_domain::settings::Setting;
+use podfetch_web::podcast::PodcastDto;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -709,6 +714,7 @@ responses(
 tag="podcasts"
 )]
 pub async fn delete_podcast(
+    State(state): State<AppState>,
     Path(id): Path<i32>,
     Extension(requester): Extension<User>,
     Json(data): Json<DeletePodcast>,
@@ -728,7 +734,7 @@ pub async fn delete_podcast(
     }
     Episode::delete_watchtime(id)?;
     PodcastEpisode::delete_episodes_of_podcast(id)?;
-    TagsPodcast::delete_tags_by_podcast_id(id)?;
+    state.tag_service.delete_podcast_tags(id)?;
 
     Podcast::delete_podcast(id)?;
     Ok(StatusCode::OK)
@@ -1383,6 +1389,7 @@ pub mod tests {
         }
 
         let delete_podcast_result = super::delete_podcast(
+            State(app_state()),
             Path(1),
             Extension(non_privileged.clone()),
             Json(super::DeletePodcast {

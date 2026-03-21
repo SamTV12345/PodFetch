@@ -1,9 +1,9 @@
 use crate::adapters::file::file_handler::FileHandlerType;
 use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::podcast_episode::PodcastEpisode;
 use chrono::NaiveDateTime;
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use std::borrow::Cow;
 use std::path::PathBuf;

@@ -1,19 +1,20 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
+use crate::mappers::podcast_dto_mapper::map_podcast_to_dto;
 use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
-use crate::models::filter::Filter;
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::service::filter_service::FilterService;
 use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
+use podfetch_web::podcast::PodcastDto;
 use podfetch_web::podcast_episode::TimelineQueryParams;
 
 #[derive(Deserialize, Serialize)]
@@ -26,6 +27,24 @@ pub struct TimelineItem {
         Option<Favorite>,
     )>,
     pub total_elements: i64,
+}
+
+#[derive(Queryable, Clone)]
+#[diesel(table_name = crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes)]
+struct JoinedFavoritePodcastEpisode {
+    username: String,
+    episode_id: i32,
+    favorite: bool,
+}
+
+impl From<JoinedFavoritePodcastEpisode> for FavoritePodcastEpisode {
+    fn from(value: JoinedFavoritePodcastEpisode) -> Self {
+        Self {
+            username: value.username,
+            episode_id: value.episode_id,
+            favorite: value.favorite,
+        }
+    }
 }
 
 impl TimelineItem {
@@ -54,7 +73,8 @@ impl TimelineItem {
 
         let username_to_search = &user.username;
 
-        Filter::save_decision_for_timeline(username_to_search, favored_only.favored_only);
+        let _ = FilterService::default_service()
+            .save_timeline_decision(username_to_search, favored_only.favored_only);
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
@@ -119,7 +139,7 @@ impl TimelineItem {
             .load::<(
                 PodcastEpisode,
                 Podcast,
-                Option<FavoritePodcastEpisode>,
+                Option<JoinedFavoritePodcastEpisode>,
                 Option<Episode>,
                 Option<Favorite>,
             )>(&mut get_connection())
@@ -129,8 +149,12 @@ impl TimelineItem {
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
                     let history_dto = history.map(|h| h.convert_to_episode_dto());
                     (
-                        PodcastEpisodeDto::from((podcast_episode, Some(user.clone()), fav_episode)),
-                        PodcastDto::from(podcast),
+                        PodcastEpisodeDto::from((
+                            podcast_episode,
+                            Some(user.clone()),
+                            fav_episode.map(Into::into),
+                        )),
+                        map_podcast_to_dto(podcast),
                         history_dto,
                         favorite,
                     )

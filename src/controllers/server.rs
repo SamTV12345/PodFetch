@@ -1,16 +1,17 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::MAIN_ROOM;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::models::podcast_dto::PodcastDto;
+use crate::mappers::podcast_dto_mapper::map_podcast_to_dto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use futures::executor::block_on;
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use podfetch_web::events::{
     OpmlAddedMessage, OpmlErrorMessage, PodcastAddedMessage, PodcastEpisodeDeleteMessage,
     PodcastEpisodeOfflineAvailableMessage, PodcastEpisodesAdded, PodcastRefreshedMessage,
     PodcastType,
 };
+use podfetch_web::podcast::PodcastDto;
 use serde::Serialize;
 use socketioxide::SocketIo;
 use std::sync::OnceLock;
@@ -71,7 +72,7 @@ impl ChatServerHandle {
         )
             .clone()
             .into();
-        let podcast: PodcastDto = podcast.clone().into();
+        let podcast: PodcastDto = map_podcast_to_dto(podcast.clone());
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             &PodcastEpisodeOfflineAvailableMessage::<PodcastDto, PodcastEpisodeDto> {
@@ -84,7 +85,7 @@ impl ChatServerHandle {
     }
 
     pub fn broadcast_podcast_refreshed(podcast: &Podcast) {
-        let podcast: PodcastDto = podcast.clone().into();
+        let podcast: PodcastDto = map_podcast_to_dto(podcast.clone());
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             &PodcastRefreshedMessage::<PodcastDto> {
@@ -108,7 +109,7 @@ impl ChatServerHandle {
     }
 
     pub fn broadcast_opml_added(podcast: &Podcast) {
-        let podcast: PodcastDto = podcast.clone().into();
+        let podcast: PodcastDto = map_podcast_to_dto(podcast.clone());
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             &OpmlAddedMessage::<PodcastDto> {
@@ -138,7 +139,7 @@ impl ChatServerHandle {
 
     pub fn broadcast_podcast_downloaded(podcast: Podcast) {
         let podcast_name = podcast.name.clone();
-        let podcast: PodcastDto = podcast.into();
+        let podcast: PodcastDto = map_podcast_to_dto(podcast);
         Self::send_broadcast_sync(
             MAIN_ROOM.parse().unwrap(),
             &PodcastAddedMessage::<PodcastDto> {
@@ -151,7 +152,7 @@ impl ChatServerHandle {
     }
 
     pub fn broadcast_added_podcast_episodes(podcast: &Podcast, episodes: Vec<PodcastEpisode>) {
-        let podcast: PodcastDto = podcast.clone().into();
+        let podcast: PodcastDto = map_podcast_to_dto(podcast.clone());
         let podcast_name = podcast.name.clone();
         let podcast_episodes: Vec<PodcastEpisodeDto> = episodes
             .into_iter()

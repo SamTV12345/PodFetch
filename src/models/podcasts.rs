@@ -3,8 +3,8 @@ use axum::Json;
 
 use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::mappers::podcast_dto_mapper::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::models::favorites::Favorite;
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::tag_service::TagService;
 use crate::utils::do_retry::do_retry;
@@ -19,6 +19,7 @@ use diesel::{
     BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl, delete, insert_into,
 };
 use podfetch_domain::user::User;
+use podfetch_web::podcast::PodcastDto;
 
 #[derive(
     Queryable, Identifiable, QueryableByName, Selectable, Debug, PartialEq, Clone, Default,
@@ -66,7 +67,7 @@ impl Podcast {
             .select(podcasts::all_columns)
             .first::<Podcast>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))
-            .map(|podcast| Json(PodcastDto::from(podcast)))
+            .map(|podcast| Json(map_podcast_to_dto(podcast)))
     }
 }
 
@@ -106,7 +107,12 @@ impl Podcast {
                 let tags = TagService::default_service()
                     .get_tags_of_podcast(podcast.0.id, &u.username)
                     .unwrap();
-                (podcast.0.clone(), podcast.1.clone(), tags, u).into()
+                map_podcast_with_context_to_dto(
+                    podcast.0.clone(),
+                    podcast.1.clone(),
+                    tags,
+                    u,
+                )
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)

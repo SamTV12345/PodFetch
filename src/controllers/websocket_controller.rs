@@ -6,10 +6,10 @@ use axum_extra::extract::OptionalQuery;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 pub use podfetch_web::rss::{RSSAPiKey, RSSQuery};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,

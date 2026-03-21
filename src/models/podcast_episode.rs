@@ -6,9 +6,8 @@ use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::d
 use crate::adapters::persistence::dbconfig::schema::*;
 use crate::constants::inner_constants::{ENVIRONMENT_SERVICE, PodcastEpisodeWithFavorited};
 use crate::models::episode::Episode;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::models::playlist_item::PlaylistItem;
 use crate::models::podcasts::Podcast;
+use crate::service::playlist_service::PlaylistService;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{CustomError, map_db_error};
@@ -25,6 +24,7 @@ use diesel::{
     BoolExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, RunQueryDsl,
     TextExpressionMethods, delete, insert_into,
 };
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use rss::{Guid, Item};
 use utoipa::ToSchema;
@@ -76,6 +76,24 @@ pub struct PodcastEpisode {
     pub(crate) episode_numbering_processed: bool,
     #[diesel(sql_type = Nullable<Text>)]
     pub(crate) download_location: Option<String>,
+}
+
+#[derive(Queryable, Clone)]
+#[diesel(table_name = crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes)]
+struct JoinedFavoritePodcastEpisode {
+    username: String,
+    episode_id: i32,
+    favorite: bool,
+}
+
+impl From<JoinedFavoritePodcastEpisode> for FavoritePodcastEpisode {
+    fn from(value: JoinedFavoritePodcastEpisode) -> Self {
+        Self {
+            username: value.username,
+            episode_id: value.episode_id,
+            favorite: value.favorite,
+        }
+    }
 }
 
 impl PodcastEpisode {
@@ -315,8 +333,15 @@ impl PodcastEpisode {
             .load::<(
                 PodcastEpisode,
                 Option<Episode>,
-                Option<FavoritePodcastEpisode>,
+                Option<JoinedFavoritePodcastEpisode>,
             )>(&mut get_connection())
+            .map(|rows| {
+                rows.into_iter()
+                    .map(|(podcast_episode, history, favorite)| {
+                        (podcast_episode, history, favorite.map(Into::into))
+                    })
+                    .collect()
+            })
             .map_err(|e| map_db_error(e, Critical))
     }
 
@@ -370,7 +395,8 @@ impl PodcastEpisode {
         Self::get_episodes_by_podcast_id(podcast_id)?
             .iter()
             .for_each(|episode| {
-                PlaylistItem::delete_playlist_item_by_episode_id(episode.id, &mut get_connection())
+                PlaylistService::default_service()
+                    .delete_playlist_items_by_episode_id(episode.id)
                     .expect("Error deleting episode");
             });
 

@@ -1,8 +1,6 @@
 use crate::constants::inner_constants::{COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL};
-use crate::models::podcast_dto::PodcastDto;
+use crate::mappers::podcast_dto_mapper::map_podcast_with_context_to_dto;
 use crate::models::podcasts::Podcast;
-
-use crate::models::misc_models::PodcastInsertModel;
 
 use crate::controllers::server::ChatServerHandle;
 use crate::models::favorites::Favorite;
@@ -15,7 +13,7 @@ use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqw
 use crate::utils::http_client::get_http_client;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::user::User;
-use podfetch_web::podcast::{ItunesWrapper, PodindexResponse};
+use podfetch_web::podcast::{ItunesWrapper, PodcastDto, PodcastInsertModel, PodindexResponse};
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde_json::Value;
@@ -308,13 +306,12 @@ impl PodcastService {
                     true
                 })
                 .map(|p| {
-                    (
+                    map_podcast_with_context_to_dto(
                         p.0.clone(),
                         Option::from(p.1.clone()),
                         p.2.clone(),
                         requester,
                     )
-                        .into()
                 })
                 .collect::<Vec<PodcastDto>>();
 
@@ -336,7 +333,14 @@ impl PodcastService {
                 }
                 true
             })
-            .map(|p| (p.0.clone(), p.1.clone(), p.2.clone(), requester).into())
+            .map(|p| {
+                map_podcast_with_context_to_dto(
+                    p.0.clone(),
+                    p.1.clone(),
+                    p.2.clone(),
+                    requester,
+                )
+            })
             .collect::<Vec<PodcastDto>>();
         Ok(podcasts)
     }

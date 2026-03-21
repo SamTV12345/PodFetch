@@ -3,11 +3,8 @@ use crate::app_state::AppState;
 use crate::controllers::server::ChatServerHandle;
 use crate::db::TimelineItem;
 use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
 use crate::models::favorites::Favorite;
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::perform_episode_variable_replacement;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
@@ -21,6 +18,7 @@ use axum::{Extension, Json};
 use podfetch_domain::settings::Setting;
 use podfetch_domain::subscription::GPodderAvailablePodcast;
 use podfetch_domain::user::User;
+use podfetch_web::podcast::PodcastDto;
 pub use podfetch_web::podcast_episode::{
     EpisodeFormatDto, FavoritePut, OptionalId, PodcastChapterDto, TimelineQueryParams,
 };
@@ -44,15 +42,22 @@ pub type PodcastEpisodeWithHistory = WebPodcastEpisodeWithHistory<PodcastEpisode
     tag = "podcast_episodes"
 )]
 pub async fn find_all_chapters_of_podcast_episode(
+    State(state): State<AppState>,
     Path(id): Path<i32>,
 ) -> Result<Json<Vec<PodcastChapterDto>>, CustomError> {
     // no auth needed for this endpoint
 
-    let chapters_of_podcast: Vec<PodcastChapterDto> =
-        PodcastEpisodeChapter::get_chapters_by_episode_id(id)?
-            .into_iter()
-            .map(|v| v.into())
-            .collect();
+    let chapters_of_podcast: Vec<PodcastChapterDto> = state
+        .podcast_episode_chapter_service
+        .get_chapters_by_episode_id(id)?
+        .into_iter()
+        .map(|v| PodcastChapterDto {
+            id: v.id,
+            title: v.title,
+            start_time: v.start_time,
+            end_time: v.end_time,
+        })
+        .collect();
 
     Ok(Json(chapters_of_podcast))
 }
@@ -220,12 +225,15 @@ path="/podcasts/{id}/episodes/favor",
     tag = "podcast_episodes"
 )]
 pub async fn like_podcast_episode(
+    State(state): State<AppState>,
     Path(id): Path<i32>,
     Extension(requester): Extension<User>,
     Json(fav): Json<FavoritePut>,
 ) -> Result<StatusCode, CustomError> {
     println!("User id is {}, Episode id is {}", requester.id, id.clone());
-    FavoritePodcastEpisode::like_podcast_episode(id, &requester, fav.favored)?;
+    state
+        .favorite_podcast_episode_service
+        .set_favorite(&requester.username, id, fav.favored)?;
 
     Ok(StatusCode::OK)
 }
@@ -396,9 +404,9 @@ mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
+    use crate::service::favorite_podcast_episode_service::FavoritePodcastEpisodeService;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
@@ -564,11 +572,9 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 200);
 
-        let favorite = FavoritePodcastEpisode::get_by_user_id_and_episode_id(
-            &admin_username(),
-            inserted_episode.id,
-        )
-        .unwrap();
+        let favorite = FavoritePodcastEpisodeService::default_service()
+            .get_by_username_and_episode_id(&admin_username(), inserted_episode.id)
+            .unwrap();
         assert!(favorite.is_some());
         assert!(favorite.unwrap().favorite);
     }

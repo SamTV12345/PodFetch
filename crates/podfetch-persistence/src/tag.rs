@@ -1,5 +1,6 @@
 use crate::db::{Database, PersistenceError};
 use diesel::BoolExpressionMethods;
+use diesel::JoinOnDsl;
 use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -110,17 +111,21 @@ impl TagRepository for DieselTagRepository {
             .map_err(Into::into)
     }
 
-    fn get_tags_of_podcast(&self, podcast_id: i32, username: &str) -> Result<Vec<Tag>, Self::Error> {
+    fn get_tags_of_podcast(
+        &self,
+        podcast_id: i32,
+        username: &str,
+    ) -> Result<Vec<Tag>, Self::Error> {
         use self::tags::dsl as tags_dsl;
         use self::tags_podcasts::dsl as tags_podcasts_dsl;
 
         tags_dsl::tags
             .inner_join(tags_podcasts::table.on(tags_dsl::id.eq(tags_podcasts_dsl::tag_id)))
-            .select(tags::all_columns())
+            .select(tags::all_columns)
             .filter(tags_podcasts_dsl::podcast_id.eq(podcast_id))
             .filter(tags_dsl::username.eq(username))
             .load::<TagEntity>(&mut self.database.connection()?)
-            .map(|tags| tags.into_iter().map(Into::into).collect())
+            .map(|tags: Vec<TagEntity>| tags.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
 
@@ -209,11 +214,9 @@ impl TagRepository for DieselTagRepository {
     fn delete_tag_podcasts_by_podcast_id(&self, podcast_id: i32) -> Result<(), Self::Error> {
         use self::tags_podcasts::dsl as tags_podcasts_dsl;
 
-        diesel::delete(
-            tags_podcasts::table.filter(tags_podcasts_dsl::podcast_id.eq(podcast_id)),
-        )
-        .execute(&mut self.database.connection()?)
-        .map(|_| ())
-        .map_err(Into::into)
+        diesel::delete(tags_podcasts::table.filter(tags_podcasts_dsl::podcast_id.eq(podcast_id)))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 }

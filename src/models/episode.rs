@@ -4,11 +4,9 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::constants::inner_constants::DEFAULT_DEVICE;
-use crate::models::favorite_podcast_episode::FavoritePodcastEpisode;
-use crate::models::listening_event::{ListeningEvent, NewListeningEvent};
-use crate::models::podcast_dto::PodcastDto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::service::listening_event_service::ListeningEventService;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
 use chrono::{NaiveDateTime, Utc};
@@ -18,15 +16,17 @@ use diesel::{
     BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
 };
+use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_domain::listening_event::NewListeningEvent;
 use podfetch_domain::user::User;
 pub use podfetch_web::history::{EpisodeAction, EpisodeDto};
+use podfetch_web::podcast::PodcastDto;
 use podfetch_web::watchtime::{
     PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
 };
 use rand::RngExt;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::io::Error;
 use utoipa::ToSchema;
 
 #[derive(
@@ -268,26 +268,20 @@ impl Episode {
     pub fn delete_by_username_and_episode(
         username1: &str,
         conn: &mut DbConnection,
-    ) -> Result<(), Error> {
+    ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
         use crate::adapters::persistence::dbconfig::schema::episodes::username;
-        use crate::adapters::persistence::dbconfig::schema::listening_events::dsl as le_dsl;
-        use crate::adapters::persistence::dbconfig::schema::listening_events::table as le_table;
 
-        diesel::delete(le_table.filter(le_dsl::username.eq(username1)))
-            .execute(conn)
-            .expect("");
+        ListeningEventService::default_service().delete_by_username(username1)?;
         diesel::delete(episodes.filter(username.eq(username1)))
             .execute(conn)
-            .expect("");
+            .map_err(|e| map_db_error(e, Critical))?;
         Ok(())
     }
 
     pub fn delete_watchtime(podcast_id: i32) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
-        use crate::adapters::persistence::dbconfig::schema::listening_events::dsl as le_dsl;
-        use crate::adapters::persistence::dbconfig::schema::listening_events::table as le_table;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl as podcast_dsl;
         use crate::adapters::persistence::dbconfig::schema::podcasts::table as podcast_table;
 
@@ -297,9 +291,7 @@ impl Episode {
             .optional()
             .map_err(|e| map_db_error(e, Critical))?;
 
-        diesel::delete(le_table.filter(le_dsl::podcast_id.eq(podcast_id)))
-            .execute(&mut get_connection())
-            .map_err(|e| map_db_error(e, Critical))?;
+        ListeningEventService::default_service().delete_by_podcast_id(podcast_id)?;
         diesel::delete(ep_table.filter(ep_dsl::podcast.eq(found_podcast.unwrap().rssfeed)))
             .execute(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
@@ -378,7 +370,7 @@ impl Episode {
                     now,
                 );
                 if listened_delta_seconds > 0 {
-                    ListeningEvent::insert_event(NewListeningEvent {
+                    ListeningEventService::create_event(NewListeningEvent {
                         username: username.clone(),
                         device: DEFAULT_DEVICE.to_string(),
                         podcast_episode_id: found_episode.episode_id.clone(),
@@ -478,12 +470,8 @@ impl Episode {
     pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::table as ep_table;
-        use crate::adapters::persistence::dbconfig::schema::listening_events::dsl as le_dsl;
-        use crate::adapters::persistence::dbconfig::schema::listening_events::table as le_table;
 
-        diesel::delete(le_table.filter(le_dsl::username.eq(username)))
-            .execute(&mut get_connection())
-            .map_err(|e| map_db_error(e, Critical))?;
+        ListeningEventService::default_service().delete_by_username(username)?;
         diesel::delete(ep_table.filter(ep_dsl::username.eq(username)))
             .execute(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;

@@ -2,9 +2,9 @@ use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::podcast_settings_repository::PodcastSettingsRepositoryImpl;
 use crate::models::file_path::FilenameBuilderReturn;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::podcasts::Podcast;
 use crate::service::download_service::DownloadService;
+use crate::service::podcast_episode_chapter_service::PodcastEpisodeChapterService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use podfetch_domain::podcast_settings::{PodcastSetting, PodcastSettingsRepository};
@@ -66,7 +66,8 @@ impl PodcastSettingsService {
             {
                 Ok(chapters) => {
                     for chapter in chapters {
-                        if let Err(error) = PodcastEpisodeChapter::save_chapter(&chapter, &episode)
+                        if let Err(error) = PodcastEpisodeChapterService::default_service()
+                            .save_chapter(&chapter, &episode)
                         {
                             log::error!(
                                 "Error while saving chapter for episode {}: {}",
