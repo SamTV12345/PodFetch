@@ -15,6 +15,7 @@ postgresql = ["common-infrastructure/postgresql"]
 common-infrastructure = { path = "../common-infrastructure", default-features = false }
 podfetch-domain = { path = "../podfetch-domain" }
 serde = { version = "1.0.228", features = ["derive"] }
+base64 = "0.22.1"
 sha256 = "1.6.0"
 thiserror = { version = "2.0.18", features = ["std"] }
 utoipa = { version = "5.4.0", features = ["chrono", "axum_extras"] }

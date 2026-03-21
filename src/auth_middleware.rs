@@ -8,12 +8,11 @@ use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
-use base64::Engine;
-use base64::engine::general_purpose;
 use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use log::info;
 use podfetch_domain::user::User;
+use podfetch_web::auth::{AuthControllerError, parse_basic_auth};
 use serde_json::Value;
 use sha256::digest;
 use std::collections::HashSet;
@@ -130,21 +129,18 @@ fn from_key_alg_into_alg(value: KeyAlgorithm) -> Algorithm {
 }
 
 impl AuthFilter {
-    pub fn extract_basic_auth(auth: &str) -> Result<(String, String), CustomError> {
-        let auth = auth.to_string();
-        let auth = auth.split(' ').collect::<Vec<&str>>();
-        if auth.len() != 2 || auth[0] != "Basic" {
-            return Err(CustomError::from(CustomErrorInner::Forbidden(Warning)));
+    fn map_auth_error(error: AuthControllerError<CustomError>) -> CustomError {
+        match error {
+            AuthControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+            AuthControllerError::Unauthorized(message) => {
+                CustomErrorInner::UnAuthorized(message, Warning).into()
+            }
+            AuthControllerError::Service(error) => error,
         }
-        let auth = auth[1];
-        let auth = general_purpose::STANDARD
-            .decode(auth)
-            .map_err(|_| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
-        let auth = String::from_utf8(auth).unwrap();
-        let auth = auth.split(':').collect::<Vec<&str>>();
-        let username = auth[0];
-        let password = auth[1];
-        Ok((username.to_string(), password.to_string()))
+    }
+
+    pub fn extract_basic_auth(auth: &str) -> Result<(String, String), CustomError> {
+        parse_basic_auth::<CustomError>(auth).map_err(Self::map_auth_error)
     }
 
     pub fn basic_auth_login(rq: &str) -> Result<(String, String), CustomError> {

@@ -8,12 +8,23 @@ use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use podfetch_domain::session::Session;
 use podfetch_domain::subscription::SubscriptionChangesToClient;
+use podfetch_web::gpodder::{GpodderControllerError, ensure_session_user};
 use podfetch_web::subscription::{
     SubscriptionPostResponse, SubscriptionRetrieveRequest, SubscriptionUpdateRequest, build_opml,
     to_client_changes,
 };
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+fn map_gpodder_error(error: GpodderControllerError<CustomError>) -> CustomError {
+    match error {
+        GpodderControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        GpodderControllerError::BadRequest(message) => {
+            CustomErrorInner::BadRequest(message, Warning).into()
+        }
+        GpodderControllerError::Service(error) => error,
+    }
+}
 
 #[utoipa::path(
     get,
@@ -33,9 +44,7 @@ pub async fn get_subscriptions(
 ) -> Result<Json<SubscriptionChangesToClient>, CustomError> {
     let username = paths.clone().0;
     let deviceid = trim_from_path(&paths.1);
-    if flag.username != username.clone() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
 
     state
         .subscription_service
@@ -60,9 +69,7 @@ pub async fn get_subscriptions_all(
     Query(query): Query<SubscriptionRetrieveRequest>,
 ) -> Result<impl IntoResponse, CustomError> {
     let username = trim_from_path(&username);
-    if flag.username != username.0 {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
 
     let changes = state
         .subscription_service
@@ -96,9 +103,7 @@ pub async fn upload_subscription_changes(
 ) -> Result<Json<SubscriptionPostResponse>, CustomError> {
     let username = paths.clone().0;
     let deviceid = trim_from_path(&paths.1);
-    if flag.username != username.clone() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
 
     let update_urls =
         state

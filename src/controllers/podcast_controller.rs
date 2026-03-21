@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::constants::inner_constants::{
     BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
 };
-use crate::mappers::podcast_dto_mapper::map_podcast_with_context_to_dto;
+use crate::mappers::podcast_dto_mapper::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
 use crate::{get_default_image, unwrap_string};
@@ -18,7 +18,7 @@ use opml::{OPML, Outline};
 use rand::RngExt;
 use rand::rngs::ThreadRng;
 use rss::Channel;
-use serde_json::{Value, from_str};
+use serde_json::Value;
 use std::thread;
 use tokio::task::spawn_blocking;
 
@@ -32,13 +32,30 @@ use podfetch_domain::filter::Filter;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::user::User;
 pub use podfetch_web::podcast::{
-    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastInsertModel,
-    PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest,
-    ProxyPodcastParams,
+    DeletePodcast, OpmlModel, PodcastAddModel, PodcastControllerError, PodcastFavorUpdateModel,
+    PodcastInsertModel, PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn,
+    PodcastUpdateNameRequest, ProxyPodcastParams,
     SearchType::{ITunes, Podindex},
+};
+use podfetch_web::podcast::{
+    ensure_podindex_configured, parse_podcast_id, parse_search_type, require_admin,
+    require_privileged,
 };
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
+
+fn map_podcast_error(error: PodcastControllerError<CustomError>) -> CustomError {
+    match error {
+        PodcastControllerError::Forbidden => {
+            CustomErrorInner::Forbidden(ErrorSeverity::Warning).into()
+        }
+        PodcastControllerError::NotFound => CustomErrorInner::NotFound(ErrorSeverity::Debug).into(),
+        PodcastControllerError::BadRequest(message) => {
+            CustomErrorInner::BadRequest(message, ErrorSeverity::Info).into()
+        }
+        PodcastControllerError::Service(error) => error,
+    }
+}
 
 #[utoipa::path(
 get,
@@ -174,7 +191,7 @@ pub async fn find_podcast_by_id(
     Extension(user): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    let id_num = from_str::<i32>(&id).unwrap();
+    let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
     let username = &user.username;
     let rewriter = create_url_rewriter(&headers);
 
@@ -219,13 +236,11 @@ pub async fn find_podcast(
     Path(podcast_col): Path<(i32, String)>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<PodcastSearchReturn>, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
     let (type_of, podcast) = podcast_col;
-    match type_of.try_into() {
-        Ok(ITunes) => {
+    match parse_search_type::<CustomError>(type_of).map_err(map_podcast_error)? {
+        ITunes => {
             let res;
             {
                 log::debug!("Searching for podcast: {podcast}");
@@ -233,24 +248,16 @@ pub async fn find_podcast(
             }
             Ok(Json(PodcastSearchReturn::Itunes(res)))
         }
-        Ok(Podindex) => {
-            if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-                return Err(CustomErrorInner::BadRequest(
-                    "Podindex is not configured".to_string(),
-                    ErrorSeverity::Warning,
-                )
-                .into());
-            }
+        Podindex => {
+            ensure_podindex_configured::<CustomError>(
+                ENVIRONMENT_SERVICE.get_config().podindex_configured,
+            )
+            .map_err(map_podcast_error)?;
 
             Ok(Json(PodcastSearchReturn::Podindex(
                 PodcastService::find_podcast_on_podindex(&podcast).await?,
             )))
         }
-        Err(_) => Err(CustomErrorInner::BadRequest(
-            "Invalid search type".to_string(),
-            ErrorSeverity::Info,
-        )
-        .into()),
     }
 }
 
@@ -267,9 +274,7 @@ pub async fn add_podcast(
     Extension(requester): Extension<User>,
     Json(track_id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
     let query: Vec<(&str, String)> = vec![
         ("id", track_id.track_id.to_string()),
@@ -312,9 +317,7 @@ pub async fn add_podcast_by_feed(
     Extension(requester): Extension<User>,
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
     let mut header_map = ReqwestHeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
@@ -330,24 +333,21 @@ pub async fn add_podcast_by_feed(
     let channel = Channel::read_from(bytes.as_bytes()).unwrap();
     let num = rand::rng().random_range(100..10000000);
 
-    let res: PodcastDto;
-    {
-        res = PodcastService::handle_insert_of_podcast(
-            PodcastInsertModel {
-                feed_url: rss_feed.clone().rss_feed_url.clone(),
-                title: channel.title.clone(),
-                id: num,
-                image_url: channel
-                    .image
-                    .clone()
-                    .map(|i| i.url)
-                    .unwrap_or(get_default_image()),
-            },
-            Some(channel),
-        )
-        .await?
-        .into();
-    }
+    let inserted = PodcastService::handle_insert_of_podcast(
+        PodcastInsertModel {
+            feed_url: rss_feed.clone().rss_feed_url.clone(),
+            title: channel.title.clone(),
+            id: num,
+            image_url: channel
+                .image
+                .clone()
+                .map(|i| i.url)
+                .unwrap_or(get_default_image()),
+        },
+        Some(channel),
+    )
+    .await?;
+    let res: PodcastDto = map_podcast_to_dto(inserted);
 
     Ok(Json(res))
 }
@@ -364,9 +364,7 @@ pub async fn import_podcasts_from_opml(
     requester: Extension<User>,
     Json(opml): Json<OpmlModel>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
     let document = OPML::from_str(&opml.content).unwrap();
 
     spawn_blocking(move || {
@@ -394,17 +392,9 @@ pub async fn add_podcast_from_podindex(
     Extension(requester): Extension<User>,
     Json(id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
-
-    if !ENVIRONMENT_SERVICE.get_config().podindex_configured {
-        return Err(CustomErrorInner::BadRequest(
-            "Podindex is not configured".to_string(),
-            ErrorSeverity::Warning,
-        )
-        .into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
+    ensure_podindex_configured::<CustomError>(ENVIRONMENT_SERVICE.get_config().podindex_configured)
+        .map_err(map_podcast_error)?;
 
     spawn_blocking(move || match start_download_podindex(id.track_id) {
         Ok(_) => {}
@@ -457,9 +447,7 @@ tag="podcasts"
 pub async fn refresh_all_podcasts(
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
     let podcasts = Podcast::get_all_podcasts()?;
     thread::spawn(move || {
@@ -485,11 +473,9 @@ pub async fn download_podcast(
     Extension(requester): Extension<User>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
-    let id_num = from_str::<i32>(&id).unwrap();
+    let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
     let podcast = PodcastService::get_podcast_by_id(id_num);
     thread::spawn(move || {
         match PodcastService::refresh_podcast(&podcast) {
@@ -544,9 +530,7 @@ pub async fn update_name_of_podcast(
     Extension(requester): Extension<User>,
     req: Json<PodcastUpdateNameRequest>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_admin::<CustomError>(requester.is_admin()).map_err(map_podcast_error)?;
     let found_podcast = match PodcastService::get_podcast(id) {
         Ok(p) => Ok(p),
         Err(..) => Err(CustomErrorInner::NotFound(ErrorSeverity::Debug)),
@@ -588,11 +572,9 @@ pub async fn update_active_podcast(
     Path(id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
-    let id_num = from_str::<i32>(&id).unwrap();
+    let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
     PodcastService::update_active_podcast(id_num)?;
     Ok(StatusCode::OK)
 }
@@ -687,9 +669,7 @@ pub async fn delete_podcast(
     Extension(requester): Extension<User>,
     Json(data): Json<DeletePodcast>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
     let podcast = Podcast::get_podcast(id)?;
     if data.delete_files {
@@ -707,7 +687,7 @@ pub async fn delete_podcast(
     Podcast::delete_podcast(id)?;
     Ok(StatusCode::OK)
 }
-use crate::utils::error::ErrorSeverity::{Debug, Warning};
+use crate::utils::error::ErrorSeverity::Debug;
 use axum::response::Response;
 
 #[utoipa::path(
@@ -800,9 +780,7 @@ pub async fn update_podcast_settings(
     Extension(requester): Extension<User>,
     Json(mut settings): Json<PodcastSetting>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
     settings.podcast_id = id_num;
     let updated_podcast = state.podcast_settings_service.update_settings(settings)?;
 
@@ -821,9 +799,7 @@ pub async fn get_podcast_settings(
     Path(id): Path<i32>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<PodcastSetting>, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
     let settings = state.podcast_settings_service.get_settings(id)?;
 
     match settings {

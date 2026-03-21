@@ -7,7 +7,19 @@ use axum::http::StatusCode;
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use podfetch_domain::session::Session;
+use podfetch_web::auth::require_equal_user;
+use podfetch_web::gpodder::{GpodderControllerError, ensure_session_user};
 use sha256::digest;
+
+fn map_gpodder_error(error: GpodderControllerError<CustomError>) -> CustomError {
+    match error {
+        GpodderControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        GpodderControllerError::BadRequest(message) => {
+            CustomErrorInner::BadRequest(message, Warning).into()
+        }
+        GpodderControllerError::Service(error) => error,
+    }
+}
 
 #[utoipa::path(
 post,
@@ -62,11 +74,7 @@ fn handle_proxy_auth(
         Some(auth) => {
             let auth_val = auth.to_str().unwrap();
 
-            // Block if auth and user are different
-            if auth_val != username {
-                log::error!("Error: Username and auth header are different");
-                return Err(CustomErrorInner::Forbidden(Warning).into());
-            }
+            ensure_session_user::<CustomError>(auth_val, username).map_err(map_gpodder_error)?;
 
             match user_auth_service.find_by_username(auth_val) {
                 Ok(user) => {
@@ -113,9 +121,8 @@ fn handle_gpodder_basic_auth(
     let authorization = opt_authorization.unwrap().to_str().unwrap();
 
     let (username_basic, password) = AuthFilter::basic_auth_login(authorization)?;
-    if username_basic != username {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    require_equal_user::<CustomError>(&username_basic, username)
+        .map_err(|_| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
 
     if let Some(admin_username) = &environment.username
         && admin_username == username

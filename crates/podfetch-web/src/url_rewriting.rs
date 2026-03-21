@@ -78,10 +78,7 @@ fn is_local_path(path: &str) -> bool {
 
 /// Normalizes a relative path to a local path, if valid.
 fn normalize_relative_local_path(path: &str) -> Option<String> {
-    let normalized = path
-        .trim()
-        .trim_start_matches("./")
-        .trim_start_matches('/');
+    let normalized = path.trim().trim_start_matches("./").trim_start_matches('/');
     if normalized.is_empty() {
         return None;
     }

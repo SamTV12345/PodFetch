@@ -5,8 +5,11 @@ use crate::utils::gpodder_trimmer::trim_from_path;
 use crate::utils::time::get_current_timestamp;
 use axum::extract::{Path, Query};
 use axum::{Extension, Json};
-use chrono::DateTime;
 use podfetch_domain::session::Session;
+use podfetch_web::gpodder::{
+    EpisodeActionPostResponse, EpisodeSinceRequest, GpodderControllerError, ensure_session_user,
+    parse_since_epoch,
+};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -16,18 +19,14 @@ pub struct EpisodeActionResponse {
     timestamp: i64,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct EpisodeActionPostResponse {
-    update_urls: Vec<String>,
-    timestamp: i64,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EpisodeSinceRequest {
-    since: i64,
-    podcast: Option<String>,
-    device: Option<String>,
-    aggregate: Option<String>,
+fn map_gpodder_error(error: GpodderControllerError<CustomError>) -> CustomError {
+    match error {
+        GpodderControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        GpodderControllerError::BadRequest(message) => {
+            CustomErrorInner::BadRequest(message, Warning).into()
+        }
+        GpodderControllerError::Service(error) => error,
+    }
 }
 
 #[utoipa::path(
@@ -45,11 +44,8 @@ pub async fn get_episode_actions(
     Path(username): Path<String>,
 ) -> Result<Json<EpisodeActionResponse>, CustomError> {
     let username = trim_from_path(&username);
-    if flag.username != username.0 {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
-
-    let since_date = DateTime::from_timestamp(since.since, 0).map(|v| v.naive_utc());
+    ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
+    let since_date = parse_since_epoch::<CustomError>(since.since).map_err(map_gpodder_error)?;
     let mut actions = Episode::get_actions_by_username(
         username.0,
         since_date,
@@ -88,9 +84,7 @@ pub async fn upload_episode_actions(
     Json(podcast_episode): Json<Vec<EpisodeDto>>,
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     let username = trim_from_path(&username);
-    if flag.username != username.0 {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
     let mut inserted_episodes: Vec<Episode> = vec![];
     podcast_episode.iter().for_each(|episode| {
         let episode = Episode::convert_to_episode(episode, username.0.to_string());

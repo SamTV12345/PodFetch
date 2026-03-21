@@ -1,5 +1,7 @@
+pub mod auth;
 pub mod device;
 pub mod events;
+pub mod gpodder;
 pub mod history;
 pub mod invite;
 pub mod manifest;

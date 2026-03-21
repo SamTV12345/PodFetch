@@ -23,15 +23,32 @@ pub use podfetch_web::podcast_episode::{
     EpisodeFormatDto, FavoritePut, OptionalId, PodcastChapterDto, TimelineQueryParams,
 };
 use podfetch_web::podcast_episode::{
-    PodcastEpisodeWithHistory as WebPodcastEpisodeWithHistory,
+    PodcastEpisodeControllerError, PodcastEpisodeWithHistory as WebPodcastEpisodeWithHistory,
     TimeLinePodcastEpisode as WebTimeLinePodcastEpisode,
     TimeLinePodcastItem as WebTimeLinePodcastItem,
 };
-use serde_json::from_str;
+use podfetch_web::podcast_episode::{
+    get_episode_with_history as web_get_episode_with_history,
+    get_podcast_episodes_with_history as web_get_podcast_episodes_with_history,
+    require_privileged as web_require_privileged,
+};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 pub type PodcastEpisodeWithHistory = WebPodcastEpisodeWithHistory<PodcastEpisodeDto, EpisodeDto>;
+
+fn map_podcast_episode_controller_error(
+    error: PodcastEpisodeControllerError<CustomError>,
+) -> CustomError {
+    match error {
+        PodcastEpisodeControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        PodcastEpisodeControllerError::NotFound => CustomErrorInner::NotFound(Warning).into(),
+        PodcastEpisodeControllerError::BadRequest(message) => {
+            CustomErrorInner::BadRequest(message, Warning).into()
+        }
+        PodcastEpisodeControllerError::Service(error) => error,
+    }
+}
 
 #[utoipa::path(
     get,
@@ -76,24 +93,30 @@ pub async fn get_podcast_episode_by_id(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastEpisodeWithHistory>, CustomError> {
-    let res = PodcastEpisodeService::get_podcast_episode_by_id(&id)?;
-    if res.is_none() {
-        return Err(CustomErrorInner::NotFound(Warning).into());
-    }
-
-    let podcast_inner = res.clone().unwrap();
-
-    let episode = Episode::get_watchtime(&id, &requester.username)?;
     let rewriter = create_url_rewriter(&headers);
-    let mut mapped_podcast_episode: PodcastEpisodeDto =
-        (podcast_inner, Some(requester), None).into();
-    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
-    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
+    let requester_username = requester.username.clone();
+    let episode_with_history = web_get_episode_with_history(
+        &id,
+        &requester_username,
+        |episode_id| {
+            PodcastEpisodeService::get_podcast_episode_by_id(episode_id).map(|opt| {
+                opt.map(|podcast_inner| {
+                    let mut mapped_podcast_episode: PodcastEpisodeDto =
+                        (podcast_inner, Some(requester), None).into();
+                    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
+                    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
+                    mapped_podcast_episode
+                })
+            })
+        },
+        |episode_id, username| {
+            Episode::get_watchtime(episode_id, username)
+                .map(|episode| episode.map(|e| e.convert_to_episode_dto()))
+        },
+    )
+    .map_err(map_podcast_episode_controller_error)?;
 
-    Ok(Json(PodcastEpisodeWithHistory {
-        podcast_history_item: episode.map(|e| e.convert_to_episode_dto()),
-        podcast_episode: mapped_podcast_episode,
-    }))
+    Ok(Json(episode_with_history))
 }
 
 #[utoipa::path(
@@ -111,28 +134,37 @@ pub async fn find_all_podcast_episodes_of_podcast(
     last_podcast_episode: Query<OptionalId>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeWithHistory>>, CustomError> {
-    let id_num = from_str(&id).unwrap();
-
-    let res = PodcastEpisodeService::get_podcast_episodes_of_podcast(
-        id_num,
+    let rewriter = create_url_rewriter(&headers);
+    let mapped_podcasts = web_get_podcast_episodes_with_history(
+        &id,
+        &user.username,
         last_podcast_episode.last_podcast_episode.clone(),
         last_podcast_episode.only_unlistened,
-        &user,
-    )?;
-    let rewriter = create_url_rewriter(&headers);
-    let mapped_podcasts = res
-        .into_iter()
-        .map(|podcast_inner| {
-            let mut mapped_podcast_episode: PodcastEpisodeDto =
-                (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
-            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
-            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
-            PodcastEpisodeWithHistory {
-                podcast_episode: mapped_podcast_episode,
-                podcast_history_item: podcast_inner.1.map(|e| e.convert_to_episode_dto()),
-            }
-        })
-        .collect::<Vec<PodcastEpisodeWithHistory>>();
+        |podcast_id, last_episode, only_unlistened, _username| {
+            PodcastEpisodeService::get_podcast_episodes_of_podcast(
+                podcast_id,
+                last_episode,
+                only_unlistened,
+                &user,
+            )
+            .map(|episodes| {
+                episodes
+                    .into_iter()
+                    .map(|podcast_inner| {
+                        let mut mapped_podcast_episode: PodcastEpisodeDto =
+                            (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
+                        rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
+                        rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
+                        (
+                            mapped_podcast_episode,
+                            podcast_inner.1.map(|e| e.convert_to_episode_dto()),
+                        )
+                    })
+                    .collect()
+            })
+        },
+    )
+    .map_err(map_podcast_episode_controller_error)?;
     Ok(Json(mapped_podcasts))
 }
 
@@ -151,9 +183,8 @@ pub async fn get_available_podcasts_not_in_webview(
     State(state): State<AppState>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<GPodderAvailablePodcast>>, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    web_require_privileged::<CustomError>(requester.is_privileged_user())
+        .map_err(map_podcast_episode_controller_error)?;
     let found_episodes = state
         .subscription_service
         .get_available_gpodder_podcasts()?;
@@ -242,9 +273,8 @@ pub async fn download_podcast_episodes_of_podcast(
     Extension(requester): Extension<User>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    web_require_privileged::<CustomError>(requester.is_privileged_user())
+        .map_err(map_podcast_episode_controller_error)?;
 
     tokio::task::spawn_blocking(
         move || match PodcastEpisode::get_podcast_episode_by_id(&id) {
@@ -310,9 +340,8 @@ pub async fn delete_podcast_episode_locally(
     id: Path<String>,
     requester: Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_privileged_user() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    web_require_privileged::<CustomError>(requester.is_privileged_user())
+        .map_err(map_podcast_episode_controller_error)?;
 
     let delted_podcast_episode = tokio::task::spawn_blocking(move || {
         PodcastEpisodeService::delete_podcast_episode_locally(&id)

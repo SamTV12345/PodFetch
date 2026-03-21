@@ -4,6 +4,7 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::constants::inner_constants::DEFAULT_DEVICE;
+use crate::mappers::podcast_dto_mapper::map_podcast_to_dto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::listening_event_service::ListeningEventService;
@@ -259,7 +260,7 @@ impl Episode {
                     None::<FavoritePodcastEpisode>,
                 )
                     .into(),
-                podcast: e.2.clone().into(),
+                podcast: map_podcast_to_dto(e.2.clone()),
             })
             .collect();
         Ok(mapped_watched_episodes)

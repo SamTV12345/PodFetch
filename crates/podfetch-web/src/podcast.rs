@@ -1,5 +1,6 @@
 use podfetch_domain::tag::Tag;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::url_rewriting::UrlRewriter;
@@ -196,5 +197,60 @@ impl TryFrom<i32> for SearchType {
             x if x == SearchType::ITunes as i32 => Ok(SearchType::ITunes),
             _ => Err(()),
         }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum PodcastControllerError<E: Display> {
+    #[error("forbidden")]
+    Forbidden,
+    #[error("not found")]
+    NotFound,
+    #[error("bad request: {0}")]
+    BadRequest(String),
+    #[error("{0}")]
+    Service(E),
+}
+
+pub fn require_privileged<Err: Display>(
+    is_privileged: bool,
+) -> Result<(), PodcastControllerError<Err>> {
+    if is_privileged {
+        Ok(())
+    } else {
+        Err(PodcastControllerError::Forbidden)
+    }
+}
+
+pub fn require_admin<Err: Display>(is_admin: bool) -> Result<(), PodcastControllerError<Err>> {
+    if is_admin {
+        Ok(())
+    } else {
+        Err(PodcastControllerError::Forbidden)
+    }
+}
+
+pub fn parse_podcast_id<Err: Display>(id: &str) -> Result<i32, PodcastControllerError<Err>> {
+    id.parse::<i32>().map_err(|_| {
+        PodcastControllerError::BadRequest("podcast id must be an integer".to_string())
+    })
+}
+
+pub fn parse_search_type<Err: Display>(
+    type_of: i32,
+) -> Result<SearchType, PodcastControllerError<Err>> {
+    SearchType::try_from(type_of)
+        .map_err(|_| PodcastControllerError::BadRequest("Invalid search type".to_string()))
+}
+
+pub fn ensure_podindex_configured<Err: Display>(
+    configured: bool,
+) -> Result<(), PodcastControllerError<Err>> {
+    if configured {
+        Ok(())
+    } else {
+        Err(PodcastControllerError::BadRequest(
+            "Podindex is not configured".to_string(),
+        ))
     }
 }

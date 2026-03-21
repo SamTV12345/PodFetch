@@ -31,7 +31,6 @@ mod application;
 mod auth_middleware;
 mod command_line_runner;
 mod commands;
-mod domain;
 mod exception;
 mod gpodder;
 pub mod mutex;
