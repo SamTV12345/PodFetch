@@ -334,12 +334,7 @@ impl PodcastService {
                 true
             })
             .map(|p| {
-                map_podcast_with_context_to_dto(
-                    p.0.clone(),
-                    p.1.clone(),
-                    p.2.clone(),
-                    requester,
-                )
+                map_podcast_with_context_to_dto(p.0.clone(), p.1.clone(), p.2.clone(), requester)
             })
             .collect::<Vec<PodcastDto>>();
         Ok(podcasts)

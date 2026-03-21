@@ -1,15 +1,17 @@
 use crate::app_state::AppState;
 use crate::models::podcasts::Podcast;
+use crate::service::episode_scan_service::EpisodeScanServiceImpl;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::url_builder::resolve_server_url_from_headers;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::http::Response;
 use axum::{Extension, Json};
-use file_format::FileFormat;
 pub use podfetch_domain::settings::{ReplacementStrategy, Setting, UpdateNameSettings};
 use podfetch_domain::user::User;
-use podfetch_web::settings::{self, Mode, OpmlError, OpmlPodcast, SettingsControllerError};
+use podfetch_web::settings::{
+    self, Mode, OpmlError, OpmlPodcast, RescanError, SettingsControllerError,
+};
 use reqwest::StatusCode;
 
 #[utoipa::path(
@@ -36,82 +38,18 @@ pub async fn get_settings(
     tag="podcast_episodes"
 )]
 pub async fn rescan_episodes(Extension(requester): Extension<User>) -> Result<(), CustomError> {
-    if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
-    let mut current_episode_id = 0;
-    let first_page = PodcastEpisode::get_nth_page_of_podcast_episodes(0)?;
-    while !first_page.is_empty() {
-        let episodes = PodcastEpisode::get_nth_page_of_podcast_episodes(current_episode_id)?;
-        if episodes.is_empty() {
-            break;
-        }
-        for episode in &episodes {
-            if let Some(filepath_to_episode) = &episode.file_episode_path {
-                let detected_file = FileFormat::from_file(filepath_to_episode).unwrap();
-                match detected_file {
-                    FileFormat::Mpeg12AudioLayer3
-                    | FileFormat::Mpeg12AudioLayer2
-                    | FileFormat::AppleItunesAudio
-                    | FileFormat::Id3v2
-                    | FileFormat::WaveformAudio => {
-                        let chapters = DownloadService::read_chapters_from_mp3(filepath_to_episode);
-                        if let Err(err) = chapters {
-                            log::error!(
-                                "Error while reading chapters for episode {}: {}",
-                                episode.id,
-                                err
-                            );
-                            continue;
-                        }
-                        let chapters = chapters.expect("Chapters should be available here");
-                        log::info!("Inserting chapters for episode {}", episode.name);
-                        for chapter in chapters {
-                            let res = PodcastEpisodeChapterService::default_service()
-                                .save_chapter(&chapter, episode);
-                            if let Err(err) = res {
-                                log::error!(
-                                    "Error while saving chapter for episode {}: {}",
-                                    episode.id,
-                                    err
-                                );
-                            }
-                        }
-                    }
-                    FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio => {
-                        let chapters = DownloadService::read_chapters_from_mp4(filepath_to_episode);
-                        for chapter in chapters {
-                            let res = PodcastEpisodeChapterService::default_service()
-                                .save_chapter(&chapter, episode);
-                            if let Err(err) = res {
-                                log::error!(
-                                    "Error while saving chapter for episode {}: {}",
-                                    episode.id,
-                                    err
-                                );
-                            }
-                        }
-                    }
-                    _ => {
-                        log::error!("File format not supported: {detected_file:?}");
-                        return Err(CustomErrorInner::Conflict(
-                            "File format not supported".to_string(),
-                            ErrorSeverity::Error,
-                        )
-                        .into());
-                    }
-                }
-            }
-        }
-
-        if episodes.is_empty() {
-            break;
-        }
-
-        current_episode_id = episodes[episodes.len() - 1].id;
-    }
-
-    Ok(())
+    let scan_service = EpisodeScanServiceImpl::default();
+    settings::rescan_episodes(&scan_service, requester.is_admin())
+        .map(|stats| {
+            log::info!(
+                "Rescan complete: {} episodes scanned, {} chapters saved, {} skipped, {} errors",
+                stats.episodes_scanned,
+                stats.chapters_saved,
+                stats.skipped,
+                stats.errors
+            );
+        })
+        .map_err(map_rescan_error)
 }
 
 #[utoipa::path(
@@ -215,8 +153,6 @@ pub async fn update_name(
 }
 
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::service::download_service::DownloadService;
-use crate::service::podcast_episode_chapter_service::PodcastEpisodeChapterService;
 use crate::utils::error::ErrorSeverity::{Critical, Debug, Error, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use utoipa_axum::router::OpenApiRouter;
@@ -227,6 +163,17 @@ fn map_settings_controller_error(error: SettingsControllerError<CustomError>) ->
         SettingsControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
         SettingsControllerError::NotFound => CustomErrorInner::NotFound(Debug).into(),
         SettingsControllerError::Service(error) => error,
+    }
+}
+
+fn map_rescan_error(error: RescanError<CustomError>) -> CustomError {
+    match error {
+        RescanError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        RescanError::UnsupportedFormat => {
+            CustomErrorInner::Conflict("Unsupported file format".to_string(), ErrorSeverity::Error)
+                .into()
+        }
+        RescanError::Service(error) => error,
     }
 }
 

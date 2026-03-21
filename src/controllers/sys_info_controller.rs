@@ -5,7 +5,7 @@ use crate::utils::error::ErrorType::CustomErrorType;
 use crate::utils::error::{
     ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
 };
-use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+use crate::utils::url_builder::{create_url_rewriter, resolve_server_url_from_headers};
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
@@ -109,11 +109,12 @@ pub async fn get_public_config(
     headers: HeaderMap,
 ) -> Json<ConfigModel> {
     let resolved_server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let config = state.environment.get_config();
     let rewritten_oidc_redirect_uri = config
         .oidc_config
         .as_ref()
-        .map(|oidc| rewrite_env_server_url_prefix(&oidc.redirect_uri, &resolved_server_url));
+        .map(|oidc| rewriter.rewrite(&oidc.redirect_uri));
 
     Json(sys::get_public_config(
         config,

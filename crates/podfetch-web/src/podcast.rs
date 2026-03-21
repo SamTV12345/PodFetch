@@ -1,6 +1,8 @@
+use podfetch_domain::tag::Tag;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
-use podfetch_domain::tag::Tag;
+
+use crate::url_rewriting::UrlRewriter;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -73,6 +75,23 @@ pub struct PodcastDto {
     pub original_image_url: String,
     pub favorites: bool,
     pub tags: Vec<Tag>,
+}
+
+impl PodcastDto {
+    /// Rewrites internal URLs (image_url, podfetch_feed) to use the resolved server URL.
+    ///
+    /// This is useful when the server is behind a reverse proxy and clients need URLs
+    /// that point to the external-facing URL rather than the internal one.
+    pub fn rewrite_urls(&mut self, rewriter: &UrlRewriter) {
+        rewriter.rewrite_in_place(&mut self.image_url);
+        rewriter.rewrite_in_place(&mut self.podfetch_feed);
+    }
+
+    /// Returns a new PodcastDto with URLs rewritten using the given rewriter.
+    pub fn with_rewritten_urls(mut self, rewriter: &UrlRewriter) -> Self {
+        self.rewrite_urls(rewriter);
+        self
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

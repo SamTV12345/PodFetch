@@ -9,8 +9,8 @@ use crate::utils::error::CustomError;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_domain::user::User;
-use podfetch_web::podcast::PodcastDto;
 use podfetch_web::playlist::{PlaylistApplicationService, PlaylistDtoPost};
+use podfetch_web::podcast::PodcastDto;
 use std::sync::Arc;
 
 #[derive(Clone)]

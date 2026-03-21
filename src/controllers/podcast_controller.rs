@@ -26,7 +26,7 @@ use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+use crate::utils::url_builder::create_url_rewriter;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::filter::Filter;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
@@ -79,10 +79,9 @@ pub async fn search_podcast_of_episode(
     Path(id): Path<i32>,
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let mut dto = Podcast::get_podcast_by_episode_id(id)?.0;
-    dto.image_url = rewrite_env_server_url_prefix(&dto.image_url, &server_url);
-    dto.podfetch_feed = rewrite_env_server_url_prefix(&dto.podfetch_feed, &server_url);
+    dto.rewrite_urls(&rewriter);
     Ok(Json(dto))
 }
 
@@ -101,7 +100,7 @@ pub async fn search_podcasts(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let _order = query.order.map(|o| o.into()).unwrap_or(OrderCriteria::Asc);
     let _latest_pub = query
         .order_option
@@ -130,49 +129,31 @@ pub async fn search_podcasts(
 
     match query.favored_only {
         true => {
-            let podcasts;
-            {
-                podcasts = PodcastService::search_podcasts_favored(
-                    _order.clone(),
-                    query.title,
-                    _latest_pub.clone(),
-                    username,
-                    tag,
-                    &requester,
-                )?;
-            }
+            let podcasts = PodcastService::search_podcasts_favored(
+                _order.clone(),
+                query.title,
+                _latest_pub.clone(),
+                username,
+                tag,
+                &requester,
+            )?;
             let podcasts = podcasts
                 .into_iter()
-                .map(|mut podcast| {
-                    podcast.image_url =
-                        rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
-                    podcast.podfetch_feed =
-                        rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
-                    podcast
-                })
+                .map(|p| p.with_rewritten_urls(&rewriter))
                 .collect();
             Ok(Json(podcasts))
         }
         false => {
-            let podcasts;
-            {
-                podcasts = PodcastService::search_podcasts(
-                    _order.clone(),
-                    query.title,
-                    _latest_pub.clone(),
-                    tag,
-                    &requester,
-                )?;
-            }
+            let podcasts = PodcastService::search_podcasts(
+                _order.clone(),
+                query.title,
+                _latest_pub.clone(),
+                tag,
+                &requester,
+            )?;
             let podcasts = podcasts
                 .into_iter()
-                .map(|mut podcast| {
-                    podcast.image_url =
-                        rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
-                    podcast.podfetch_feed =
-                        rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
-                    podcast
-                })
+                .map(|p| p.with_rewritten_urls(&rewriter))
                 .collect();
             Ok(Json(podcasts))
         }
@@ -195,15 +176,13 @@ pub async fn find_podcast_by_id(
 ) -> Result<Json<PodcastDto>, CustomError> {
     let id_num = from_str::<i32>(&id).unwrap();
     let username = &user.username;
+    let rewriter = create_url_rewriter(&headers);
 
     let podcast = PodcastService::get_podcast(id_num)?;
     let tags = state.tag_service.get_tags_of_podcast(id_num, username)?;
     let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?;
-    let server_url = resolve_server_url_from_headers(&headers);
-    let mut podcast_dto: PodcastDto = map_podcast_with_context_to_dto(podcast, favorite, tags, &user);
-    podcast_dto.image_url = rewrite_env_server_url_prefix(&podcast_dto.image_url, &server_url);
-    podcast_dto.podfetch_feed =
-        rewrite_env_server_url_prefix(&podcast_dto.podfetch_feed, &server_url);
+    let podcast_dto = map_podcast_with_context_to_dto(podcast, favorite, tags, &user)
+        .with_rewritten_urls(&rewriter);
     Ok(Json(podcast_dto))
 }
 
@@ -219,15 +198,10 @@ pub async fn find_all_podcasts(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let podcasts = PodcastService::get_podcasts(&requester)?
         .into_iter()
-        .map(|mut podcast| {
-            podcast.image_url = rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
-            podcast.podfetch_feed =
-                rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
-            podcast
-        })
+        .map(|p| p.with_rewritten_urls(&rewriter))
         .collect();
 
     Ok(Json(podcasts))
@@ -458,15 +432,14 @@ pub async fn query_for_podcast(
     podcast: Path<String>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastEpisodeDto>>, CustomError> {
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let res = PodcastEpisodeService::query_for_podcast(&podcast)?
         .into_iter()
         .map(|p| {
             let mut episode: PodcastEpisodeDto =
                 (p, None::<User>, None::<FavoritePodcastEpisode>).into();
-            episode.local_url = rewrite_env_server_url_prefix(&episode.local_url, &server_url);
-            episode.local_image_url =
-                rewrite_env_server_url_prefix(&episode.local_image_url, &server_url);
+            rewriter.rewrite_in_place(&mut episode.local_url);
+            rewriter.rewrite_in_place(&mut episode.local_image_url);
             episode
         })
         .collect::<Vec<PodcastEpisodeDto>>();
@@ -595,15 +568,10 @@ pub async fn get_favored_podcasts(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let podcasts = PodcastService::get_favored_podcasts(requester)?
         .into_iter()
-        .map(|mut podcast| {
-            podcast.image_url = rewrite_env_server_url_prefix(&podcast.image_url, &server_url);
-            podcast.podfetch_feed =
-                rewrite_env_server_url_prefix(&podcast.podfetch_feed, &server_url);
-            podcast
-        })
+        .map(|p| p.with_rewritten_urls(&rewriter))
         .collect();
     Ok(Json(podcasts))
 }

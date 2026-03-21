@@ -14,6 +14,7 @@ pub mod stats;
 pub mod subscription;
 pub mod sys;
 pub mod tags;
+pub mod url_rewriting;
 pub mod user_admin;
 pub mod user_onboarding;
 pub mod watchtime;

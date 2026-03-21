@@ -6,6 +6,11 @@ edition = "2024"
 [lib]
 path = "src/lib.rs"
 
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite"]
+postgresql = ["common-infrastructure/postgresql"]
+
 [dependencies]
 common-infrastructure = { path = "../common-infrastructure", default-features = false }
 podfetch-domain = { path = "../podfetch-domain" }
@@ -17,3 +22,4 @@ chrono = { version = "0.4.44", default-features = false, features = ["clock"] }
 opml = "1.1.6"
 xml-builder = "0.6.0"
 url = "2.5.8"
+log = "0.4.29"

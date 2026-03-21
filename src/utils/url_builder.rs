@@ -122,6 +122,14 @@ fn is_local_host(host: Option<&str>) -> bool {
     false
 }
 
+/// Creates a UrlRewriter configured for the current request, using the environment's
+/// server URL as the old base and the resolved server URL (from headers) as the new base.
+pub fn create_url_rewriter(headers: &HeaderMap) -> podfetch_web::url_rewriting::UrlRewriter {
+    let old_base = &ENVIRONMENT_SERVICE.server_url;
+    let new_base = resolve_server_url_from_headers(headers);
+    podfetch_web::url_rewriting::UrlRewriter::new(old_base, new_base)
+}
+
 pub fn build_ws_url_from_server_url(server_url: &str) -> String {
     let normalized = normalize_server_url(server_url);
     if let Ok(mut parsed) = Url::parse(&normalized) {

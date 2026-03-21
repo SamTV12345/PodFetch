@@ -1,5 +1,6 @@
 pub mod download_service;
 pub mod environment_service;
+pub mod episode_scan_service;
 pub mod favorite_podcast_episode_service;
 pub(crate) mod file_service;
 pub mod filter_service;

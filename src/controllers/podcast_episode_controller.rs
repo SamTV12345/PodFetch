@@ -10,7 +10,7 @@ use crate::service::file_service::perform_episode_variable_replacement;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+use crate::utils::url_builder::create_url_rewriter;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::StatusCode;
@@ -84,13 +84,11 @@ pub async fn get_podcast_episode_by_id(
     let podcast_inner = res.clone().unwrap();
 
     let episode = Episode::get_watchtime(&id, &requester.username)?;
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let mut mapped_podcast_episode: PodcastEpisodeDto =
         (podcast_inner, Some(requester), None).into();
-    mapped_podcast_episode.local_url =
-        rewrite_env_server_url_prefix(&mapped_podcast_episode.local_url, &server_url);
-    mapped_podcast_episode.local_image_url =
-        rewrite_env_server_url_prefix(&mapped_podcast_episode.local_image_url, &server_url);
+    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
+    rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
 
     Ok(Json(PodcastEpisodeWithHistory {
         podcast_history_item: episode.map(|e| e.convert_to_episode_dto()),
@@ -121,16 +119,14 @@ pub async fn find_all_podcast_episodes_of_podcast(
         last_podcast_episode.only_unlistened,
         &user,
     )?;
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let mapped_podcasts = res
         .into_iter()
         .map(|podcast_inner| {
             let mut mapped_podcast_episode: PodcastEpisodeDto =
                 (podcast_inner.0, Some(user.clone()), podcast_inner.2).into();
-            mapped_podcast_episode.local_url =
-                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_url, &server_url);
-            mapped_podcast_episode.local_image_url =
-                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_image_url, &server_url);
+            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
+            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
             PodcastEpisodeWithHistory {
                 podcast_episode: mapped_podcast_episode,
                 podcast_history_item: podcast_inner.1.map(|e| e.convert_to_episode_dto()),
@@ -181,7 +177,7 @@ pub async fn get_timeline(
     headers: HeaderMap,
 ) -> Result<Json<TimeLinePodcastItem>, CustomError> {
     let res = TimelineItem::get_timeline(requester, favored_only)?;
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
 
     let mapped_timeline = res
         .data
@@ -190,15 +186,9 @@ pub async fn get_timeline(
             let (podcast_episode, podcast_extracted, history, favorite) = podcast_episode.clone();
 
             let mut mapped_podcast_episode = podcast_episode;
-            mapped_podcast_episode.local_url =
-                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_url, &server_url);
-            mapped_podcast_episode.local_image_url =
-                rewrite_env_server_url_prefix(&mapped_podcast_episode.local_image_url, &server_url);
-            let mut mapped_podcast = podcast_extracted;
-            mapped_podcast.image_url =
-                rewrite_env_server_url_prefix(&mapped_podcast.image_url, &server_url);
-            mapped_podcast.podfetch_feed =
-                rewrite_env_server_url_prefix(&mapped_podcast.podfetch_feed, &server_url);
+            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_url);
+            rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
+            let mapped_podcast = podcast_extracted.with_rewritten_urls(&rewriter);
 
             TimeLinePodcastEpisode {
                 podcast_episode: mapped_podcast_episode,

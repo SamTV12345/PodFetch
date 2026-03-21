@@ -17,7 +17,7 @@ use utoipa_axum::routes;
 
 use crate::utils::error::ErrorSeverity::Debug;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::url_builder::{resolve_server_url_from_headers, rewrite_env_server_url_prefix};
+use crate::utils::url_builder::create_url_rewriter;
 
 pub type LastWatchedItem =
     PodcastWatchedEpisodeModelWithPodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto>;
@@ -57,22 +57,15 @@ pub async fn get_last_watched(
     Extension(requester): Extension<User>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<LastWatchedItem>>, CustomError> {
-    let server_url = resolve_server_url_from_headers(&headers);
+    let rewriter = create_url_rewriter(&headers);
     let episodes =
         watchtime::get_last_watched(state.watchtime_service.as_ref(), &requester.username)
             .map_err(map_watchtime_error)?
             .into_iter()
             .map(|mut item| {
-                item.podcast_episode.local_url =
-                    rewrite_env_server_url_prefix(&item.podcast_episode.local_url, &server_url);
-                item.podcast_episode.local_image_url = rewrite_env_server_url_prefix(
-                    &item.podcast_episode.local_image_url,
-                    &server_url,
-                );
-                item.podcast.image_url =
-                    rewrite_env_server_url_prefix(&item.podcast.image_url, &server_url);
-                item.podcast.podfetch_feed =
-                    rewrite_env_server_url_prefix(&item.podcast.podfetch_feed, &server_url);
+                rewriter.rewrite_in_place(&mut item.podcast_episode.local_url);
+                rewriter.rewrite_in_place(&mut item.podcast_episode.local_image_url);
+                item.podcast.rewrite_urls(&rewriter);
                 item
             })
             .collect();

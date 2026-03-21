@@ -1,4 +1,5 @@
 use chrono::Local;
+use podfetch_domain::podcast_episode_chapter::UpsertPodcastEpisodeChapter;
 use podfetch_domain::settings::{Setting, UpdateNameSettings};
 use serde::Deserialize;
 use std::fmt::Display;
@@ -10,6 +11,165 @@ pub trait SettingsApplicationService {
     fn get_settings(&self) -> Result<Option<Setting>, Self::Error>;
     fn update_settings(&self, settings: Setting) -> Result<Setting, Self::Error>;
     fn update_name(&self, update: UpdateNameSettings) -> Result<Setting, Self::Error>;
+}
+
+/// Represents a podcast episode with file path for chapter scanning
+pub struct EpisodeWithPath {
+    pub id: i32,
+    pub name: String,
+    pub file_path: String,
+}
+
+/// Parsed chapter from media file
+#[derive(Debug, Clone)]
+pub struct ParsedChapter {
+    pub title: String,
+    pub start_time_seconds: i32,
+    pub end_time_seconds: i32,
+    pub href: Option<String>,
+    pub image: Option<String>,
+}
+
+impl ParsedChapter {
+    pub fn to_upsert(&self, episode_id: i32) -> UpsertPodcastEpisodeChapter {
+        UpsertPodcastEpisodeChapter {
+            episode_id,
+            title: self.title.clone(),
+            start_time: self.start_time_seconds,
+            end_time: self.end_time_seconds,
+            href: self.href.clone(),
+            image: self.image.clone(),
+        }
+    }
+}
+
+/// File format for media files
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MediaFileFormat {
+    Mp3,
+    Mp4,
+    Unsupported,
+}
+
+/// Service trait for episode scanning operations
+pub trait EpisodeScanService {
+    type Error: Display;
+
+    /// Get paginated episodes with file paths, starting after the given ID
+    fn get_episodes_with_paths_after(
+        &self,
+        last_id: i32,
+        limit: usize,
+    ) -> Result<Vec<EpisodeWithPath>, Self::Error>;
+
+    /// Detect the file format of a media file
+    fn detect_file_format(&self, path: &str) -> Result<MediaFileFormat, Self::Error>;
+
+    /// Read chapters from an MP3 file
+    fn read_chapters_mp3(&self, path: &str) -> Result<Vec<ParsedChapter>, Self::Error>;
+
+    /// Read chapters from an MP4 file
+    fn read_chapters_mp4(&self, path: &str) -> Vec<ParsedChapter>;
+
+    /// Save a chapter for an episode
+    fn save_chapter(&self, chapter: UpsertPodcastEpisodeChapter) -> Result<(), Self::Error>;
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RescanError<E: Display> {
+    #[error("forbidden")]
+    Forbidden,
+    #[error("unsupported file format")]
+    UnsupportedFormat,
+    #[error("{0}")]
+    Service(E),
+}
+
+/// Rescan all episodes for chapters and metadata
+pub fn rescan_episodes<S>(service: &S, is_admin: bool) -> Result<RescanStats, RescanError<S::Error>>
+where
+    S: EpisodeScanService,
+{
+    if !is_admin {
+        return Err(RescanError::Forbidden);
+    }
+
+    let mut stats = RescanStats::default();
+    let mut last_id = 0;
+    const PAGE_SIZE: usize = 100;
+
+    loop {
+        let episodes = service
+            .get_episodes_with_paths_after(last_id, PAGE_SIZE)
+            .map_err(RescanError::Service)?;
+
+        if episodes.is_empty() {
+            break;
+        }
+
+        for episode in &episodes {
+            stats.episodes_scanned += 1;
+
+            let format = match service.detect_file_format(&episode.file_path) {
+                Ok(f) => f,
+                Err(e) => {
+                    log::error!(
+                        "Error detecting file format for episode {}: {}",
+                        episode.id,
+                        e
+                    );
+                    stats.errors += 1;
+                    continue;
+                }
+            };
+
+            let chapters = match format {
+                MediaFileFormat::Mp3 => match service.read_chapters_mp3(&episode.file_path) {
+                    Ok(chapters) => chapters,
+                    Err(e) => {
+                        log::error!("Error reading chapters for episode {}: {}", episode.id, e);
+                        stats.errors += 1;
+                        continue;
+                    }
+                },
+                MediaFileFormat::Mp4 => service.read_chapters_mp4(&episode.file_path),
+                MediaFileFormat::Unsupported => {
+                    log::debug!("Unsupported format for episode {}", episode.id);
+                    stats.skipped += 1;
+                    continue;
+                }
+            };
+
+            log::info!(
+                "Found {} chapters for episode {}",
+                chapters.len(),
+                episode.name
+            );
+
+            for chapter in chapters {
+                let upsert = chapter.to_upsert(episode.id);
+                if let Err(e) = service.save_chapter(upsert) {
+                    log::error!("Error saving chapter for episode {}: {}", episode.id, e);
+                    stats.errors += 1;
+                } else {
+                    stats.chapters_saved += 1;
+                }
+            }
+        }
+
+        last_id = episodes.last().map(|e| e.id).unwrap_or(last_id);
+    }
+
+    Ok(stats)
+}
+
+/// Statistics from episode rescan operation
+#[derive(Debug, Default, Clone)]
+pub struct RescanStats {
+    pub episodes_scanned: usize,
+    pub chapters_saved: usize,
+    pub skipped: usize,
+    pub errors: usize,
 }
 
 #[derive(Debug, thiserror::Error)]
