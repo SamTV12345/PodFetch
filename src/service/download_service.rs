@@ -212,7 +212,7 @@ impl DownloadService {
             true => FilenameBuilder::default()
                 .with_podcast(podcast.clone())
                 .with_suffix(&podcast_data.0)
-                .with_settings(settings_in_db)
+                .with_settings(settings_in_db.into())
                 .with_episode(podcast_episode.clone())?
                 .with_filename(PODCAST_FILENAME)
                 .with_image_filename(PODCAST_IMAGENAME)
@@ -226,7 +226,7 @@ impl DownloadService {
                 .build(conn)?,
             false => FilenameBuilder::default()
                 .with_suffix(&podcast_data.0)
-                .with_settings(settings_in_db)
+                .with_settings(settings_in_db.into())
                 .with_image_suffix(
                     &image_data
                         .as_ref()

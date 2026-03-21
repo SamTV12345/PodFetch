@@ -28,9 +28,9 @@ use crate::service::file_service::{FileService, perform_podcast_variable_replace
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::url_builder::create_url_rewriter;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-use podfetch_domain::filter::Filter;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::user::User;
+use podfetch_web::filter::Filter;
 pub use podfetch_web::podcast::{
     DeletePodcast, OpmlModel, PodcastAddModel, PodcastControllerError, PodcastFavorUpdateModel,
     PodcastInsertModel, PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn,
@@ -644,15 +644,15 @@ use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::utils::environment_variables::is_env_var_present_and_true;
-use podfetch_domain::settings::Setting;
 use podfetch_web::podcast::PodcastDto;
+use podfetch_web::settings::Setting;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use crate::utils::http_client::get_http_client;
 use crate::utils::rss_feed_parser::PodcastParsed;
-use podfetch_domain::podcast_settings::PodcastSetting;
+use podfetch_web::podcast_settings::PodcastSetting;
 use podfetch_web::podcast_episode::EpisodeFormatDto;
 
 #[utoipa::path(
@@ -840,7 +840,7 @@ pub async fn retrieve_podcast_sample_format(
         podcast_format: sample_string.0.content,
         direct_paths: true,
     };
-    let result = perform_podcast_variable_replacement(settings, podcast, None);
+    let result = perform_podcast_variable_replacement(settings.into(), podcast, None);
 
     match result {
         Ok(v) => Ok(Json(v)),
@@ -884,7 +884,7 @@ pub mod tests {
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
-    use podfetch_domain::podcast_settings::PodcastSetting;
+    use podfetch_web::podcast_settings::PodcastSetting;
     use podfetch_domain::user::User;
     use podfetch_web::podcast::{OpmlModel, PodcastAddModel, PodcastRSSAddModel, SearchType};
     use podfetch_web::podcast_episode::EpisodeFormatDto;

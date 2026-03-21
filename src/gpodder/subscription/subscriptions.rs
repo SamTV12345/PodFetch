@@ -7,11 +7,10 @@ use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use podfetch_domain::session::Session;
-use podfetch_domain::subscription::SubscriptionChangesToClient;
 use podfetch_web::gpodder::{GpodderControllerError, ensure_session_user};
 use podfetch_web::subscription::{
-    SubscriptionPostResponse, SubscriptionRetrieveRequest, SubscriptionUpdateRequest, build_opml,
-    to_client_changes,
+    SubscriptionChangesToClient, SubscriptionPostResponse, SubscriptionRetrieveRequest,
+    SubscriptionUpdateRequest, build_opml, to_client_changes,
 };
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;

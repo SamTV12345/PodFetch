@@ -1,13 +1,9 @@
-use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+#[derive(Debug, Clone)]
 pub enum OrderCriteria {
-    #[serde(rename = "ASC")]
-    Asc,
-    #[serde(rename = "DESC")]
-    Desc,
+        Asc,
+        Desc,
 }
 
 impl From<String> for OrderCriteria {
@@ -29,8 +25,7 @@ impl OrderCriteria {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
-#[serde(rename_all = "UPPERCASE")]
+#[derive(Debug, Clone)]
 pub enum OrderOption {
     PublishedDate,
     Title,
@@ -56,3 +51,4 @@ impl OrderOption {
         }
     }
 }
+

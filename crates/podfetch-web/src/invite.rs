@@ -1,7 +1,30 @@
-use podfetch_domain::invite::Invite;
 use serde::Deserialize;
 use std::fmt::Display;
 use utoipa::ToSchema;
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Invite {
+    pub id: String,
+    pub role: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub accepted_at: Option<chrono::NaiveDateTime>,
+    pub explicit_consent: bool,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+impl From<podfetch_domain::invite::Invite> for Invite {
+    fn from(value: podfetch_domain::invite::Invite) -> Self {
+        Self {
+            id: value.id,
+            role: value.role,
+            created_at: value.created_at,
+            accepted_at: value.accepted_at,
+            explicit_consent: value.explicit_consent,
+            expires_at: value.expires_at,
+        }
+    }
+}
 
 #[derive(Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]

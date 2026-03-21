@@ -12,9 +12,9 @@ use diesel::prelude::*;
 use diesel::sql_types::{Bool, Integer, Text};
 use indexmap::IndexMap;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
-use podfetch_domain::tag::{Tag, TagsPodcast};
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
+use podfetch_web::tags::Tag;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use utoipa::ToSchema;
@@ -44,15 +44,6 @@ impl From<JoinedTag> for Tag {
             description: value.description,
             created_at: value.created_at,
             color: value.color,
-        }
-    }
-}
-
-impl From<JoinedTagsPodcast> for TagsPodcast {
-    fn from(value: JoinedTagsPodcast) -> Self {
-        Self {
-            tag_id: value.tag_id,
-            podcast_id: value.podcast_id,
         }
     }
 }

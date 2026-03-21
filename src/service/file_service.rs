@@ -19,9 +19,9 @@ use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use crate::utils::file_extension_determination::{FileType, determine_file_extension};
 use crate::utils::file_name_replacement::{Options, Sanitizer};
 use crate::utils::rss_feed_parser::RSSFeedParser;
-use podfetch_domain::podcast_settings::PodcastSetting;
 use podfetch_domain::settings::{ReplacementStrategy, Setting};
 use podfetch_web::podcast::PodcastInsertModel;
+use podfetch_web::podcast_settings::PodcastSetting;
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
@@ -190,7 +190,11 @@ pub async fn prepare_podcast_title_to_directory(
         }
     };
 
-    perform_podcast_variable_replacement(retrieved_settings, podcast.clone(), opt_podcast_settings)
+    perform_podcast_variable_replacement(
+        retrieved_settings.into(),
+        podcast.clone(),
+        opt_podcast_settings,
+    )
 }
 
 fn replace_date_of_str(date: &str) -> String {
@@ -281,7 +285,11 @@ pub fn prepare_podcast_episode_title_to_directory(
     }
     let podcast_settings =
         PodcastSettingsService::get_settings_for_podcast(podcast_episode.podcast_id)?;
-    perform_episode_variable_replacement(retrieved_settings, podcast_episode, podcast_settings)
+    perform_episode_variable_replacement(
+        retrieved_settings.into(),
+        podcast_episode,
+        podcast_settings,
+    )
 }
 
 pub fn perform_episode_variable_replacement(

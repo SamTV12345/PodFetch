@@ -1,8 +1,6 @@
 use chrono::{NaiveDateTime, Utc};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Subscription {
     pub id: i32,
     pub username: String,
@@ -25,14 +23,14 @@ impl Subscription {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubscriptionChangesToClient {
     pub add: Vec<String>,
     pub remove: Vec<String>,
     pub timestamp: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubscriptionModelChanges {
     pub add: Vec<Subscription>,
     pub remove: Vec<Subscription>,
@@ -57,8 +55,7 @@ impl From<SubscriptionModelChanges> for SubscriptionChangesToClient {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GPodderAvailablePodcast {
     pub device: String,
     pub podcast: String,
@@ -90,3 +87,4 @@ pub trait SubscriptionRepository: Send + Sync {
     ) -> Result<Vec<Vec<String>>, Self::Error>;
     fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
 }
+

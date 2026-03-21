@@ -1,9 +1,142 @@
 use chrono::Local;
-use podfetch_domain::podcast_episode_chapter::UpsertPodcastEpisodeChapter;
-use podfetch_domain::settings::{Setting, UpdateNameSettings};
 use serde::Deserialize;
 use std::fmt::Display;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Setting {
+    pub id: i32,
+    pub auto_download: bool,
+    pub auto_update: bool,
+    pub auto_cleanup: bool,
+    pub auto_cleanup_days: i32,
+    pub podcast_prefill: i32,
+    pub replace_invalid_characters: bool,
+    pub use_existing_filename: bool,
+    pub replacement_strategy: String,
+    pub episode_format: String,
+    pub podcast_format: String,
+    pub direct_paths: bool,
+}
+
+impl From<podfetch_domain::settings::Setting> for Setting {
+    fn from(value: podfetch_domain::settings::Setting) -> Self {
+        Self {
+            id: value.id,
+            auto_download: value.auto_download,
+            auto_update: value.auto_update,
+            auto_cleanup: value.auto_cleanup,
+            auto_cleanup_days: value.auto_cleanup_days,
+            podcast_prefill: value.podcast_prefill,
+            replace_invalid_characters: value.replace_invalid_characters,
+            use_existing_filename: value.use_existing_filename,
+            replacement_strategy: value.replacement_strategy,
+            episode_format: value.episode_format,
+            podcast_format: value.podcast_format,
+            direct_paths: value.direct_paths,
+        }
+    }
+}
+
+impl From<Setting> for podfetch_domain::settings::Setting {
+    fn from(value: Setting) -> Self {
+        Self {
+            id: value.id,
+            auto_download: value.auto_download,
+            auto_update: value.auto_update,
+            auto_cleanup: value.auto_cleanup,
+            auto_cleanup_days: value.auto_cleanup_days,
+            podcast_prefill: value.podcast_prefill,
+            replace_invalid_characters: value.replace_invalid_characters,
+            use_existing_filename: value.use_existing_filename,
+            replacement_strategy: value.replacement_strategy,
+            episode_format: value.episode_format,
+            podcast_format: value.podcast_format,
+            direct_paths: value.direct_paths,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, utoipa::ToSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ReplacementStrategy {
+    ReplaceWithDashAndUnderscore,
+    Remove,
+    ReplaceWithDash,
+}
+
+impl std::fmt::Display for ReplacementStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            ReplacementStrategy::ReplaceWithDashAndUnderscore => "replace-with-dash-and-underscore",
+            ReplacementStrategy::Remove => "remove",
+            ReplacementStrategy::ReplaceWithDash => "replace-with-dash",
+        };
+        write!(f, "{value}")
+    }
+}
+
+impl From<ReplacementStrategy> for podfetch_domain::settings::ReplacementStrategy {
+    fn from(value: ReplacementStrategy) -> Self {
+        match value {
+            ReplacementStrategy::ReplaceWithDashAndUnderscore => {
+                podfetch_domain::settings::ReplacementStrategy::ReplaceWithDashAndUnderscore
+            }
+            ReplacementStrategy::Remove => podfetch_domain::settings::ReplacementStrategy::Remove,
+            ReplacementStrategy::ReplaceWithDash => {
+                podfetch_domain::settings::ReplacementStrategy::ReplaceWithDash
+            }
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateNameSettings {
+    pub use_existing_filename: bool,
+    pub replace_invalid_characters: bool,
+    pub replacement_strategy: ReplacementStrategy,
+    pub episode_format: String,
+    pub podcast_format: String,
+    pub direct_paths: bool,
+}
+
+impl UpdateNameSettings {
+    pub fn to_domain(self) -> podfetch_domain::settings::UpdateNameSettings {
+        podfetch_domain::settings::UpdateNameSettings {
+            use_existing_filename: self.use_existing_filename,
+            replace_invalid_characters: self.replace_invalid_characters,
+            replacement_strategy: self.replacement_strategy.into(),
+            episode_format: self.episode_format,
+            podcast_format: self.podcast_format,
+            direct_paths: self.direct_paths,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpsertPodcastEpisodeChapter {
+    pub episode_id: i32,
+    pub title: String,
+    pub start_time: i32,
+    pub end_time: i32,
+    pub href: Option<String>,
+    pub image: Option<String>,
+}
+
+impl From<UpsertPodcastEpisodeChapter> for podfetch_domain::podcast_episode_chapter::UpsertPodcastEpisodeChapter {
+    fn from(value: UpsertPodcastEpisodeChapter) -> Self {
+        Self {
+            episode_id: value.episode_id,
+            title: value.title,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            href: value.href,
+            image: value.image,
+        }
+    }
+}
 
 pub trait SettingsApplicationService {
     type Error;

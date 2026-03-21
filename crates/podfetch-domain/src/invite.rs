@@ -1,9 +1,6 @@
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Invite {
     pub id: String,
     pub role: String,
@@ -22,3 +19,4 @@ pub trait InviteRepository: Send + Sync {
     fn invalidate(&self, invite_id: &str) -> Result<(), Self::Error>;
     fn delete(&self, invite_id: &str) -> Result<(), Self::Error>;
 }
+

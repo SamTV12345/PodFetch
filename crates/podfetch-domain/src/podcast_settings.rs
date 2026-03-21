@@ -1,8 +1,5 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PodcastSetting {
     pub podcast_id: i32,
     pub episode_numbering: bool,
@@ -26,3 +23,4 @@ pub trait PodcastSettingsRepository: Send + Sync {
     fn get_settings(&self, podcast_id: i32) -> Result<Option<PodcastSetting>, Self::Error>;
     fn upsert_settings(&self, setting: PodcastSetting) -> Result<PodcastSetting, Self::Error>;
 }
+

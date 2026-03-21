@@ -1,8 +1,78 @@
-use podfetch_domain::subscription::{
-    Subscription, SubscriptionChangesToClient, SubscriptionModelChanges,
-};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+pub struct Subscription {
+    pub id: i32,
+    pub username: String,
+    pub device: String,
+    pub podcast: String,
+    pub created: chrono::NaiveDateTime,
+    pub deleted: Option<chrono::NaiveDateTime>,
+}
+
+impl From<podfetch_domain::subscription::Subscription> for Subscription {
+    fn from(value: podfetch_domain::subscription::Subscription) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+            device: value.device,
+            podcast: value.podcast,
+            created: value.created,
+            deleted: value.deleted,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+pub struct SubscriptionChangesToClient {
+    pub add: Vec<String>,
+    pub remove: Vec<String>,
+    pub timestamp: i64,
+}
+
+impl From<podfetch_domain::subscription::SubscriptionChangesToClient> for SubscriptionChangesToClient {
+    fn from(value: podfetch_domain::subscription::SubscriptionChangesToClient) -> Self {
+        Self {
+            add: value.add,
+            remove: value.remove,
+            timestamp: value.timestamp,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SubscriptionModelChanges {
+    pub add: Vec<Subscription>,
+    pub remove: Vec<Subscription>,
+    pub timestamp: i64,
+}
+
+impl From<podfetch_domain::subscription::SubscriptionModelChanges> for SubscriptionModelChanges {
+    fn from(value: podfetch_domain::subscription::SubscriptionModelChanges) -> Self {
+        Self {
+            add: value.add.into_iter().map(Into::into).collect(),
+            remove: value.remove.into_iter().map(Into::into).collect(),
+            timestamp: value.timestamp,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GPodderAvailablePodcast {
+    pub device: String,
+    pub podcast: String,
+}
+
+impl From<podfetch_domain::subscription::GPodderAvailablePodcast> for GPodderAvailablePodcast {
+    fn from(value: podfetch_domain::subscription::GPodderAvailablePodcast) -> Self {
+        Self {
+            device: value.device,
+            podcast: value.podcast,
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 pub struct SubscriptionRetrieveRequest {
@@ -41,10 +111,23 @@ pub trait SubscriptionApplicationService {
         username: &str,
         request: SubscriptionUpdateRequest,
     ) -> Result<Vec<Vec<String>>, Self::Error>;
+    fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
 }
 
 pub fn to_client_changes(changes: SubscriptionModelChanges) -> SubscriptionChangesToClient {
-    changes.into()
+    SubscriptionChangesToClient {
+        add: changes
+            .add
+            .iter()
+            .map(|subscription| subscription.podcast.clone())
+            .collect(),
+        remove: changes
+            .remove
+            .iter()
+            .map(|subscription| subscription.podcast.clone())
+            .collect(),
+        timestamp: changes.timestamp,
+    }
 }
 
 pub fn build_opml(subscriptions: &[Subscription]) -> opml::OPML {

@@ -3,9 +3,8 @@ use crate::adapters::persistence::repositories::podcast_episode_chapter_reposito
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::service::podcast_chapter::Chapter;
 use crate::utils::error::CustomError;
-use podfetch_domain::podcast_episode_chapter::{
-    PodcastEpisodeChapter, PodcastEpisodeChapterRepository, UpsertPodcastEpisodeChapter,
-};
+use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
+use podfetch_web::settings::UpsertPodcastEpisodeChapter;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -39,13 +38,14 @@ impl PodcastEpisodeChapterService {
                 .clone()
                 .map(|link| link.url.to_string()),
             image: chapter_to_save.image.clone().map(|img| img.to_string()),
-        })
+        }
+        .into())
     }
 
     pub fn get_chapters_by_episode_id(
         &self,
         episode_id: i32,
-    ) -> Result<Vec<PodcastEpisodeChapter>, CustomError> {
+    ) -> Result<Vec<podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapter>, CustomError> {
         self.repository.get_by_episode_id(episode_id)
     }
 }

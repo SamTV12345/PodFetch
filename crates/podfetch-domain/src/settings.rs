@@ -1,10 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, ToSchema, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Setting {
     pub id: i32,
     pub auto_download: bool,
@@ -20,8 +17,7 @@ pub struct Setting {
     pub direct_paths: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone)]
 pub struct UpdateNameSettings {
     pub use_existing_filename: bool,
     pub replace_invalid_characters: bool,
@@ -42,8 +38,7 @@ impl UpdateNameSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Clone)]
 pub enum ReplacementStrategy {
     ReplaceWithDashAndUnderscore,
     Remove,
@@ -83,3 +78,4 @@ pub trait SettingRepository: Send + Sync {
     fn update_settings(&self, setting: Setting) -> Result<Setting, Self::Error>;
     fn insert_default_settings(&self) -> Result<(), Self::Error>;
 }
+

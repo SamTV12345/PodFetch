@@ -1,9 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Session {
     pub username: String,
     pub session_id: String,
@@ -30,3 +28,4 @@ pub trait SessionRepository: Send + Sync {
     fn delete_by_username(&self, username: &str) -> Result<usize, Self::Error>;
     fn cleanup_expired(&self, now: NaiveDateTime) -> Result<usize, Self::Error>;
 }
+

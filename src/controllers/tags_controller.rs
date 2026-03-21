@@ -3,10 +3,9 @@ use crate::utils::error::CustomError;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use podfetch_domain::tag::{Tag, TagsPodcast};
 use podfetch_domain::user::User;
 use podfetch_web::tags;
-pub use podfetch_web::tags::TagCreate;
+pub use podfetch_web::tags::{Tag, TagCreate, TagsPodcast};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -148,7 +147,7 @@ mod tests {
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
-    use podfetch_domain::tag::{Color, Tag};
+    use podfetch_web::tags::{Color, Tag};
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;

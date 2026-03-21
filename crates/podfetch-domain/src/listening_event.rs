@@ -1,8 +1,6 @@
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ListeningEvent {
     pub id: i32,
     pub username: String,
@@ -16,7 +14,7 @@ pub struct ListeningEvent {
     pub listened_at: NaiveDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewListeningEvent {
     pub username: String,
     pub device: String,
@@ -42,3 +40,4 @@ pub trait ListeningEventRepository: Send + Sync {
     fn delete_by_username(&self, username: &str) -> Result<usize, Self::Error>;
     fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<usize, Self::Error>;
 }
+

@@ -5,10 +5,10 @@ use crate::service::download_service::DownloadService;
 use crate::service::podcast_chapter::Chapter;
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use file_format::FileFormat;
-use podfetch_domain::podcast_episode_chapter::{
-    PodcastEpisodeChapterRepository, UpsertPodcastEpisodeChapter,
+use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
+use podfetch_web::settings::{
+    EpisodeScanService, EpisodeWithPath, MediaFileFormat, ParsedChapter, UpsertPodcastEpisodeChapter,
 };
-use podfetch_web::settings::{EpisodeScanService, EpisodeWithPath, MediaFileFormat, ParsedChapter};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -81,7 +81,7 @@ impl EpisodeScanService for EpisodeScanServiceImpl {
     }
 
     fn save_chapter(&self, chapter: UpsertPodcastEpisodeChapter) -> Result<(), Self::Error> {
-        self.chapter_repository.upsert(chapter)
+        self.chapter_repository.upsert(chapter.into())
     }
 }
 

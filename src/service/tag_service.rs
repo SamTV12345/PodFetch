@@ -2,8 +2,8 @@ use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::tag_repository::TagRepositoryImpl;
 use crate::utils::error::ErrorSeverity::Debug;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use podfetch_domain::tag::{Tag, TagRepository, TagUpdate, TagsPodcast};
-use podfetch_web::tags::{TagCreate, TagsApplicationService};
+use podfetch_domain::tag::{TagRepository, TagUpdate};
+use podfetch_web::tags::{Tag, TagCreate, TagsApplicationService, TagsPodcast};
 use std::sync::Arc;
 
 pub struct TagService {
@@ -26,12 +26,14 @@ impl TagService {
         description: Option<String>,
         color: String,
     ) -> Result<Tag, CustomError> {
-        let tag = Tag::new(name, description, color, username);
-        self.repository.create(tag)
+        let tag = podfetch_domain::tag::Tag::new(name, description, color, username);
+        self.repository.create(tag).map(Into::into)
     }
 
     pub fn get_tags(&self, username: &str) -> Result<Vec<Tag>, CustomError> {
-        self.repository.get_tags(username)
+        self.repository
+            .get_tags(username)
+            .map(|tags| tags.into_iter().map(Into::into).collect())
     }
 
     pub fn get_tags_of_podcast(
@@ -39,7 +41,9 @@ impl TagService {
         podcast_id: i32,
         username: &str,
     ) -> Result<Vec<Tag>, CustomError> {
-        self.repository.get_tags_of_podcast(podcast_id, username)
+        self.repository
+            .get_tags_of_podcast(podcast_id, username)
+            .map(|tags| tags.into_iter().map(Into::into).collect())
     }
 
     pub fn update_tag(
@@ -49,7 +53,7 @@ impl TagService {
         update: TagUpdate,
     ) -> Result<Tag, CustomError> {
         self.get_tag_for_user(tag_id, username)?;
-        self.repository.update(tag_id, update)
+        self.repository.update(tag_id, update).map(Into::into)
     }
 
     pub fn delete_tag(&self, username: &str, tag_id: &str) -> Result<(), CustomError> {
@@ -67,6 +71,7 @@ impl TagService {
         self.get_tag_for_user(tag_id, username)?;
         self.repository
             .add_podcast_to_tag(tag_id.to_string(), podcast_id)
+            .map(Into::into)
     }
 
     pub fn delete_podcast_from_tag(
@@ -85,7 +90,11 @@ impl TagService {
             .delete_tag_podcasts_by_podcast_id(podcast_id)
     }
 
-    fn get_tag_for_user(&self, tag_id: &str, username: &str) -> Result<Tag, CustomError> {
+    fn get_tag_for_user(
+        &self,
+        tag_id: &str,
+        username: &str,
+    ) -> Result<podfetch_domain::tag::Tag, CustomError> {
         self.repository
             .get_tag_by_id_and_username(tag_id, username)?
             .ok_or_else(|| CustomErrorInner::NotFound(Debug).into())

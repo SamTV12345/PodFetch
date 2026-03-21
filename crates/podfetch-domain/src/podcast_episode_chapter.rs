@@ -1,8 +1,6 @@
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PodcastEpisodeChapter {
     pub id: String,
     pub episode_id: i32,
@@ -15,7 +13,7 @@ pub struct PodcastEpisodeChapter {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpsertPodcastEpisodeChapter {
     pub episode_id: i32,
     pub title: String,
@@ -33,3 +31,4 @@ pub trait PodcastEpisodeChapterRepository: Send + Sync {
     fn get_by_episode_id(&self, episode_id: i32)
     -> Result<Vec<PodcastEpisodeChapter>, Self::Error>;
 }
+

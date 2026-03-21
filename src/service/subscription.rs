@@ -1,10 +1,12 @@
 use crate::utils::error::CustomError;
 use chrono::DateTime;
 use podfetch_domain::subscription::{
-    GPodderAvailablePodcast, SubscriptionChangesToClient, SubscriptionModelChanges,
     SubscriptionRepository,
 };
-use podfetch_web::subscription::{SubscriptionApplicationService, SubscriptionUpdateRequest};
+use podfetch_web::subscription::{
+    GPodderAvailablePodcast, SubscriptionApplicationService, SubscriptionChangesToClient,
+    SubscriptionModelChanges, SubscriptionUpdateRequest,
+};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -32,6 +34,7 @@ impl SubscriptionService {
         self.repository
             .get_device_subscriptions(device_id, username, since, timestamp)
             .map(Into::into)
+            .map(podfetch_web::subscription::to_client_changes)
     }
 
     pub fn get_user_subscriptions(
@@ -43,6 +46,7 @@ impl SubscriptionService {
         let since = Self::parse_since(since);
         self.repository
             .get_user_subscriptions(username, since, timestamp)
+            .map(Into::into)
     }
 
     pub fn update_subscriptions(
@@ -58,7 +62,9 @@ impl SubscriptionService {
     pub fn get_available_gpodder_podcasts(
         &self,
     ) -> Result<Vec<GPodderAvailablePodcast>, CustomError> {
-        self.repository.get_available_gpodder_podcasts()
+        self.repository
+            .get_available_gpodder_podcasts()
+            .map(|podcasts| podcasts.into_iter().map(Into::into).collect())
     }
 
     fn parse_since(since: i32) -> chrono::NaiveDateTime {
@@ -95,5 +101,9 @@ impl SubscriptionApplicationService for SubscriptionService {
         request: SubscriptionUpdateRequest,
     ) -> Result<Vec<Vec<String>>, Self::Error> {
         self.update_subscriptions(device_id, username, request)
+    }
+
+    fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {
+        self.get_available_gpodder_podcasts()
     }
 }

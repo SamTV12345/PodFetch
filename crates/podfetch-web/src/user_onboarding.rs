@@ -1,6 +1,7 @@
-use podfetch_domain::user_admin::UserSummary;
 use serde::Deserialize;
 use utoipa::ToSchema;
+
+use crate::user_admin::UserSummary;
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

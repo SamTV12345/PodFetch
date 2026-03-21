@@ -1,7 +1,8 @@
 use crate::service::invite_service::InviteService;
 use crate::utils::error::ErrorSeverity::{Debug, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner};
-use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository, UserSummary};
+use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
+use podfetch_web::user_admin::UserSummary;
 use podfetch_web::user_onboarding::{UserOnboardingApplicationService, UserOnboardingModel};
 use sha256::digest;
 use std::sync::Arc;
@@ -79,7 +80,7 @@ impl UserOnboardingService {
         })?;
 
         self.invite_service.invalidate_invite(&invite_id)?;
-        Ok(user.to_summary())
+        Ok(user.to_summary().into())
     }
 }
 

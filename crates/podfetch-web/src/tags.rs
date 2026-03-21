@@ -1,6 +1,60 @@
-use podfetch_domain::tag::{Color, Tag, TagsPodcast};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+pub enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+impl std::fmt::Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Color::Red => write!(f, "Red"),
+            Color::Green => write!(f, "Green"),
+            Color::Blue => write!(f, "Blue"),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+pub struct Tag {
+    pub id: String,
+    pub name: String,
+    pub username: String,
+    pub description: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub color: String,
+}
+
+impl From<podfetch_domain::tag::Tag> for Tag {
+    fn from(value: podfetch_domain::tag::Tag) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            username: value.username,
+            description: value.description,
+            created_at: value.created_at,
+            color: value.color,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+pub struct TagsPodcast {
+    pub tag_id: String,
+    pub podcast_id: i32,
+}
+
+impl From<podfetch_domain::tag::TagsPodcast> for TagsPodcast {
+    fn from(value: podfetch_domain::tag::TagsPodcast) -> Self {
+        Self {
+            tag_id: value.tag_id,
+            podcast_id: value.podcast_id,
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct TagCreate {

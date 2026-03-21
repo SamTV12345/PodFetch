@@ -7,7 +7,8 @@ use crate::service::download_service::DownloadService;
 use crate::service::podcast_episode_chapter_service::PodcastEpisodeChapterService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
-use podfetch_domain::podcast_settings::{PodcastSetting, PodcastSettingsRepository};
+use podfetch_domain::podcast_settings::PodcastSettingsRepository;
+use podfetch_web::podcast_settings::PodcastSetting;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -37,14 +38,18 @@ impl PodcastSettingsService {
     }
 
     pub fn get_settings(&self, podcast_id: i32) -> Result<Option<PodcastSetting>, CustomError> {
-        self.repository.get_settings(podcast_id)
+        self.repository
+            .get_settings(podcast_id)
+            .map(|setting| setting.map(Into::into))
     }
 
     pub fn update_settings(
         &self,
         setting_to_insert: PodcastSetting,
     ) -> Result<PodcastSetting, CustomError> {
-        let updated_setting = self.repository.upsert_settings(setting_to_insert.clone())?;
+        let updated_setting = self
+            .repository
+            .upsert_settings(setting_to_insert.clone().into())?;
         let available_episodes =
             PodcastEpisode::get_episodes_by_podcast_id(updated_setting.podcast_id)?;
         let podcast = Podcast::get_podcast(updated_setting.podcast_id).map_err(|_| {
@@ -87,6 +92,6 @@ impl PodcastSettingsService {
             }
         }
 
-        Ok(updated_setting)
+        Ok(updated_setting.into())
     }
 }

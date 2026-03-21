@@ -1,9 +1,7 @@
 use chrono::{NaiveDateTime, Utc};
-use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Color {
     Red,
     Green,
@@ -20,7 +18,7 @@ impl Display for Color {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tag {
     pub id: String,
     pub name: String,
@@ -43,13 +41,13 @@ impl Tag {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TagsPodcast {
     pub tag_id: String,
     pub podcast_id: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct TagUpdate {
     pub name: String,
     pub description: Option<String>,
@@ -83,3 +81,4 @@ pub trait TagRepository: Send + Sync {
     ) -> Result<(), Self::Error>;
     fn delete_tag_podcasts_by_podcast_id(&self, podcast_id: i32) -> Result<(), Self::Error>;
 }
+

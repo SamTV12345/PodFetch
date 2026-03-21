@@ -1,14 +1,12 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Playlist {
     pub id: String,
     pub name: String,
     pub user_id: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlaylistItem {
     pub playlist_id: String,
     pub episode: i32,
@@ -47,3 +45,4 @@ pub trait PlaylistRepository: Send + Sync {
     ) -> Result<usize, Self::Error>;
     fn delete_items_by_episode_id(&self, episode_id: i32) -> Result<usize, Self::Error>;
 }
+

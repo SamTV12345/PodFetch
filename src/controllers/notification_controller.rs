@@ -2,8 +2,7 @@ use crate::app_state::AppState;
 use crate::utils::error::CustomError;
 use axum::Json;
 use axum::extract::State;
-use podfetch_domain::notification::Notification;
-use podfetch_web::notification::{self, NotificationId};
+use podfetch_web::notification::{self, Notification, NotificationId};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -47,7 +46,7 @@ mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::service::notification_service::NotificationService;
     use crate::utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
-    use podfetch_domain::notification::Notification;
+    use podfetch_web::notification::Notification;
     use serde_json::json;
     use serial_test::serial;
 

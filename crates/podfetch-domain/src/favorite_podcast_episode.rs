@@ -1,7 +1,5 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FavoritePodcastEpisode {
     pub username: String,
     pub episode_id: i32,
@@ -31,3 +29,4 @@ pub trait FavoritePodcastEpisodeRepository: Send + Sync {
 
     fn is_liked_by_someone(&self, episode_id: i32) -> Result<bool, Self::Error>;
 }
+

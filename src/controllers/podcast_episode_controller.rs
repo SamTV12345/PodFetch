@@ -15,8 +15,6 @@ use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use podfetch_domain::settings::Setting;
-use podfetch_domain::subscription::GPodderAvailablePodcast;
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
 pub use podfetch_web::podcast_episode::{
@@ -32,6 +30,8 @@ use podfetch_web::podcast_episode::{
     get_podcast_episodes_with_history as web_get_podcast_episodes_with_history,
     require_privileged as web_require_privileged,
 };
+use podfetch_web::settings::Setting;
+use podfetch_web::subscription::GPodderAvailablePodcast;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -397,7 +397,7 @@ pub async fn retrieve_episode_sample_format(
         podcast_format: "test".to_string(),
         direct_paths: true,
     };
-    let result = perform_episode_variable_replacement(settings, episode, None)?;
+    let result = perform_episode_variable_replacement(settings.into(), episode, None)?;
 
     Ok(result)
 }

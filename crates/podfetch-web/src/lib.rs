@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod device;
 pub mod events;
+pub mod filter;
 pub mod gpodder;
 pub mod history;
 pub mod invite;
@@ -9,6 +10,7 @@ pub mod notification;
 pub mod playlist;
 pub mod podcast;
 pub mod podcast_episode;
+pub mod podcast_settings;
 pub mod podcast_view;
 pub mod rss;
 pub mod settings;

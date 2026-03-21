@@ -1,7 +1,133 @@
-use podfetch_domain::user_admin::{ManagedUser, UserSummary, UserWithApiKey};
 use serde::Deserialize;
 use std::fmt::Display;
 use utoipa::ToSchema;
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserSummary {
+    pub id: i32,
+    pub username: String,
+    pub role: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub explicit_consent: bool,
+}
+
+impl From<podfetch_domain::user_admin::UserSummary> for UserSummary {
+    fn from(value: podfetch_domain::user_admin::UserSummary) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+            role: value.role,
+            created_at: value.created_at,
+            explicit_consent: value.explicit_consent,
+        }
+    }
+}
+
+impl From<UserSummary> for podfetch_domain::user_admin::UserSummary {
+    fn from(value: UserSummary) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+            role: value.role,
+            created_at: value.created_at,
+            explicit_consent: value.explicit_consent,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserWithApiKey {
+    pub id: i32,
+    pub username: String,
+    pub role: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub explicit_consent: bool,
+    pub api_key: Option<String>,
+    pub read_only: bool,
+}
+
+impl From<podfetch_domain::user_admin::UserWithApiKey> for UserWithApiKey {
+    fn from(value: podfetch_domain::user_admin::UserWithApiKey) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+            role: value.role,
+            created_at: value.created_at,
+            explicit_consent: value.explicit_consent,
+            api_key: value.api_key,
+            read_only: value.read_only,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ManagedUser {
+    pub id: i32,
+    pub username: String,
+    pub role: String,
+    pub password: Option<String>,
+    pub explicit_consent: bool,
+    pub created_at: chrono::NaiveDateTime,
+    pub api_key: Option<String>,
+}
+
+impl From<podfetch_domain::user_admin::ManagedUser> for ManagedUser {
+    fn from(value: podfetch_domain::user_admin::ManagedUser) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+            role: value.role,
+            password: value.password,
+            explicit_consent: value.explicit_consent,
+            created_at: value.created_at,
+            api_key: value.api_key,
+        }
+    }
+}
+
+impl From<ManagedUser> for podfetch_domain::user_admin::ManagedUser {
+    fn from(value: ManagedUser) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+            role: value.role,
+            password: value.password,
+            explicit_consent: value.explicit_consent,
+            created_at: value.created_at,
+            api_key: value.api_key,
+        }
+    }
+}
+
+impl ManagedUser {
+    pub fn is_admin(&self) -> bool {
+        self.role == "admin"
+    }
+
+    pub fn to_summary(&self) -> UserSummary {
+        UserSummary {
+            id: self.id,
+            username: self.username.clone(),
+            role: self.role.clone(),
+            created_at: self.created_at,
+            explicit_consent: self.explicit_consent,
+        }
+    }
+
+    pub fn to_api_dto(&self, read_only: bool) -> UserWithApiKey {
+        UserWithApiKey {
+            id: self.id,
+            username: self.username.clone(),
+            role: self.role.clone(),
+            created_at: self.created_at,
+            explicit_consent: self.explicit_consent,
+            api_key: self.api_key.clone(),
+            read_only,
+        }
+    }
+}
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

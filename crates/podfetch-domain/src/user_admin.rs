@@ -1,9 +1,6 @@
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManagedUser {
     pub id: i32,
     pub username: String,
@@ -14,8 +11,7 @@ pub struct ManagedUser {
     pub api_key: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserSummary {
     pub id: i32,
     pub username: String,
@@ -24,8 +20,7 @@ pub struct UserSummary {
     pub explicit_consent: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserWithApiKey {
     pub id: i32,
     pub username: String,
@@ -97,3 +92,4 @@ pub trait UserAdminRepository: Send + Sync {
     fn update(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;
     fn delete_by_username(&self, username: &str) -> Result<(), Self::Error>;
 }
+

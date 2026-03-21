@@ -7,10 +7,11 @@ use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::http::Response;
 use axum::{Extension, Json};
-pub use podfetch_domain::settings::{ReplacementStrategy, Setting, UpdateNameSettings};
 use podfetch_domain::user::User;
 use podfetch_web::settings::{
-    self, Mode, OpmlError, OpmlPodcast, RescanError, SettingsControllerError,
+    self, Mode, OpmlError, OpmlPodcast, RescanError, Setting, SettingsControllerError,
+    ReplacementStrategy,
+    UpdateNameSettings,
 };
 use reqwest::StatusCode;
 
@@ -209,7 +210,7 @@ mod tests {
     use axum::Json;
     use axum::extract::State;
     use diesel::RunQueryDsl;
-    use podfetch_domain::settings::Setting;
+    use podfetch_web::settings::Setting;
     use serde_json::json;
     use serial_test::serial;
 

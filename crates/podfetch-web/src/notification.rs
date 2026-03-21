@@ -1,7 +1,39 @@
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-use podfetch_domain::notification::Notification;
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Notification {
+    pub id: i32,
+    pub type_of_message: String,
+    pub message: String,
+    pub created_at: String,
+    pub status: String,
+}
+
+impl From<podfetch_domain::notification::Notification> for Notification {
+    fn from(value: podfetch_domain::notification::Notification) -> Self {
+        Self {
+            id: value.id,
+            type_of_message: value.type_of_message,
+            message: value.message,
+            created_at: value.created_at,
+            status: value.status,
+        }
+    }
+}
+
+impl From<Notification> for podfetch_domain::notification::Notification {
+    fn from(value: Notification) -> Self {
+        Self {
+            id: value.id,
+            type_of_message: value.type_of_message,
+            message: value.message,
+            created_at: value.created_at,
+            status: value.status,
+        }
+    }
+}
 
 #[derive(Deserialize, Debug, ToSchema)]
 pub struct NotificationId {

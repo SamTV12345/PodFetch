@@ -22,8 +22,8 @@ use crate::utils::error::{
 use crate::utils::podcast_builder::PodcastBuilder;
 use crate::utils::reqwest_client::get_sync_client;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use podfetch_domain::notification::Notification;
 use podfetch_domain::user::User;
+use podfetch_web::notification::Notification;
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Item};

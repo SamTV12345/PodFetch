@@ -1,8 +1,5 @@
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Filter {
     pub username: String,
     pub title: Option<String>,
@@ -37,3 +34,4 @@ pub trait FilterRepository: Send + Sync {
     fn save_timeline_decision(&self, username: &str, only_favored: bool)
     -> Result<(), Self::Error>;
 }
+

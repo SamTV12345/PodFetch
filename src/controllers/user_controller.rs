@@ -2,13 +2,14 @@ use crate::app_state::AppState;
 use crate::constants::inner_constants::STANDARD_USER;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
-use podfetch_domain::invite::Invite;
-use podfetch_domain::user::{User, UserWithAPiKey, UserWithoutPassword};
+use podfetch_domain::user::User;
 use podfetch_web::invite::{self, InviteControllerError, InvitePostModel};
 use podfetch_web::user_admin::{
-    self, UserAdminControllerError, UserCoreUpdateModel, UserRoleUpdateModel,
+    self, UserAdminControllerError, UserCoreUpdateModel, UserRoleUpdateModel, UserWithApiKey,
+    UserSummary,
 };
 use podfetch_web::user_onboarding::{self, UserOnboardingModel};
+use podfetch_web::invite::Invite;
 use reqwest::StatusCode;
 
 use crate::service::user_admin_service::map_requester;
@@ -22,31 +23,28 @@ post,
 path="/users/",
 request_body = UserOnboardingModel,
 responses(
-(status = 200, description = "Creates a user (admin)", body = UserWithoutPassword)),
+(status = 200, description = "Creates a user (admin)", body = UserSummary)),
 tag="user"
 )]
 pub async fn onboard_user(
     State(state): State<AppState>,
     Json(user_to_onboard): Json<UserOnboardingModel>,
-) -> Result<Json<UserWithoutPassword>, CustomError> {
-    user_onboarding::onboard_user(state.user_onboarding_service.as_ref(), user_to_onboard)
-        .map(Into::into)
-        .map(Json)
+) -> Result<Json<UserSummary>, CustomError> {
+    user_onboarding::onboard_user(state.user_onboarding_service.as_ref(), user_to_onboard).map(Json)
 }
 
 #[utoipa::path(
 get,
 path="",
 responses(
-(status = 200, description = "Gets all users", body= Vec<UserWithoutPassword>)),
+(status = 200, description = "Gets all users", body= Vec<UserSummary>)),
 tag="info"
 )]
 pub async fn get_users(
     State(state): State<AppState>,
     Extension(requester): Extension<User>,
-) -> Result<Json<Vec<UserWithoutPassword>>, CustomError> {
+) -> Result<Json<Vec<UserSummary>>, CustomError> {
     user_admin::get_users(state.user_admin_service.as_ref(), requester.is_admin())
-        .map(|users| users.into_iter().map(Into::into).collect())
         .map(Json)
         .map_err(map_user_admin_error)
 }
@@ -55,21 +53,20 @@ pub async fn get_users(
 get,
 path = "/{username}",
 responses(
-(status = 200, description = "Gets a user by username", body = Option<UserWithAPiKey>)),
+(status = 200, description = "Gets a user by username", body = Option<UserWithApiKey>)),
 tag="user"
 )]
 pub async fn get_user(
     State(state): State<AppState>,
     Path(username): Path<String>,
     Extension(requester): Extension<User>,
-) -> Result<Json<UserWithAPiKey>, ErrorType> {
+) -> Result<Json<UserWithApiKey>, ErrorType> {
     user_admin::get_user(
         state.user_admin_service.as_ref(),
         &username,
         &map_requester(&requester),
         state.user_admin_service.read_only_admin_id(),
     )
-    .map(Into::into)
     .map(Json)
     .map_err(map_user_admin_error_type)
 }
@@ -79,7 +76,7 @@ put,
 path="/{username}/role",
 request_body = UserRoleUpdateModel,
 responses(
-(status = 200, description = "Updates the role of a user", body = Option<UserWithoutPassword>)),
+(status = 200, description = "Updates the role of a user", body = Option<UserSummary>)),
 tag="user"
 )]
 
@@ -88,7 +85,7 @@ pub async fn update_role(
     Path(username): Path<String>,
     Extension(requester): Extension<User>,
     Json(role): Json<UserRoleUpdateModel>,
-) -> Result<Json<UserWithoutPassword>, CustomError> {
+) -> Result<Json<UserSummary>, CustomError> {
     user_admin::update_role(
         state.user_admin_service.as_ref(),
         &username,
@@ -98,7 +95,6 @@ pub async fn update_role(
             explicit_consent: role.explicit_consent,
         },
     )
-    .map(Into::into)
     .map(Json)
     .map_err(map_user_admin_error)
 }
@@ -108,7 +104,7 @@ put,
 path="/{username}",
 request_body=UserCoreUpdateModel,
 responses(
-(status = 200, description = "Creates an invite", body = UserWithAPiKey,)),
+(status = 200, description = "Creates an invite", body = UserWithApiKey,)),
 tag="user"
 )]
 pub async fn update_user(
@@ -116,7 +112,7 @@ pub async fn update_user(
     Extension(user): Extension<User>,
     Path(username): Path<String>,
     user_update: Json<UserCoreUpdateModel>,
-) -> Result<Json<UserWithAPiKey>, ErrorType> {
+) -> Result<Json<UserWithApiKey>, ErrorType> {
     user_admin::update_user(
         state.user_admin_service.as_ref(),
         &username,
@@ -125,7 +121,6 @@ pub async fn update_user(
         state.user_admin_service.read_only_admin_id(),
         state.user_admin_service.oidc_configured(),
     )
-    .map(Into::into)
     .map(Json)
     .map_err(map_user_admin_error_type)
 }
@@ -314,9 +309,9 @@ mod tests {
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
-    use podfetch_domain::invite::Invite;
+    use podfetch_web::invite::Invite;
     use podfetch_domain::user::User;
-    use podfetch_domain::user::UserWithAPiKey;
+    use podfetch_web::user_admin::UserWithApiKey;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -355,7 +350,7 @@ mod tests {
         let response = server.test_server.get("/api/v1/users/me").await;
         assert_eq!(response.status_code(), 200);
 
-        let user = response.json::<UserWithAPiKey>();
+        let user = response.json::<UserWithApiKey>();
         assert_eq!(user.username, admin_username());
         assert_eq!(user.role, "admin");
         assert!(user.read_only);

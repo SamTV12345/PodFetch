@@ -2,8 +2,8 @@ use crate::constants::inner_constants::Role;
 use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::ErrorSeverity::{Debug, Error, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner};
-use podfetch_domain::invite::{Invite, InviteRepository};
-use podfetch_web::invite::InviteApplicationService;
+use podfetch_domain::invite::InviteRepository;
+use podfetch_web::invite::{Invite, InviteApplicationService};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -29,11 +29,15 @@ impl InviteService {
         explicit_consent: bool,
     ) -> Result<Invite, CustomError> {
         let role = Role::try_from(role)?;
-        self.repository.create(&role.to_string(), explicit_consent)
+        self.repository
+            .create(&role.to_string(), explicit_consent)
+            .map(Into::into)
     }
 
     pub fn find_optional_invite(&self, invite_id: &str) -> Result<Option<Invite>, CustomError> {
-        self.repository.find_by_id(invite_id)
+        self.repository
+            .find_by_id(invite_id)
+            .map(|invite| invite.map(Into::into))
     }
 
     pub fn get_invite(&self, invite_id: &str) -> Result<Invite, CustomError> {
@@ -48,11 +52,13 @@ impl InviteService {
             );
         }
 
-        Ok(invite)
+        Ok(invite.into())
     }
 
     pub fn get_invites(&self) -> Result<Vec<Invite>, CustomError> {
-        self.repository.find_all()
+        self.repository
+            .find_all()
+            .map(|invites| invites.into_iter().map(Into::into).collect())
     }
 
     pub fn invalidate_invite(&self, invite_id: &str) -> Result<(), CustomError> {

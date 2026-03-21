@@ -1,9 +1,9 @@
-use podfetch_domain::tag::Tag;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::url_rewriting::UrlRewriter;
+use crate::tags::Tag;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]

@@ -1,8 +1,8 @@
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::notification_repository::NotificationRepositoryImpl;
 use crate::utils::error::CustomError;
-use podfetch_domain::notification::{Notification, NotificationRepository};
-use podfetch_web::notification::NotificationApplicationService;
+use podfetch_domain::notification::NotificationRepository;
+use podfetch_web::notification::{Notification, NotificationApplicationService};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -24,11 +24,13 @@ impl NotificationService {
     }
 
     pub fn create(&self, notification: Notification) -> Result<Notification, CustomError> {
-        self.repository.create(notification)
+        self.repository.create(notification.into()).map(Into::into)
     }
 
     pub fn get_unread_notifications(&self) -> Result<Vec<Notification>, CustomError> {
-        self.repository.get_unread_notifications()
+        self.repository
+            .get_unread_notifications()
+            .map(|notifications| notifications.into_iter().map(Into::into).collect())
     }
 
     pub fn update_status_of_notification(&self, id: i32, status: &str) -> Result<(), CustomError> {

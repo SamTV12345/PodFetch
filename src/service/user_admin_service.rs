@@ -2,8 +2,8 @@ use crate::constants::inner_constants::STANDARD_USER_ID;
 use crate::service::environment_service::EnvironmentService;
 use crate::utils::error::CustomError;
 use podfetch_domain::user::{User, UserWithoutPassword};
-use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
-use podfetch_web::user_admin::UserAdminApplicationService;
+use podfetch_domain::user_admin::UserAdminRepository;
+use podfetch_web::user_admin::{ManagedUser, UserAdminApplicationService};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -57,22 +57,26 @@ impl UserAdminService {
 }
 
 pub fn map_requester(user: &User) -> ManagedUser {
-    user.clone()
+    user.clone().into()
 }
 
 impl UserAdminApplicationService for UserAdminService {
     type Error = CustomError;
 
     fn find_by_username(&self, username: &str) -> Result<Option<ManagedUser>, Self::Error> {
-        self.repository.find_by_username(username)
+        self.repository
+            .find_by_username(username)
+            .map(|user| user.map(Into::into))
     }
 
     fn find_all(&self) -> Result<Vec<ManagedUser>, Self::Error> {
-        self.repository.find_all()
+        self.repository
+            .find_all()
+            .map(|users| users.into_iter().map(Into::into).collect())
     }
 
     fn update(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error> {
-        self.repository.update(user)
+        self.repository.update(user.into()).map(Into::into)
     }
 
     fn delete_by_username(&self, username: &str) -> Result<(), Self::Error> {

@@ -6,8 +6,8 @@ use crate::service::file_service::{
 };
 use crate::utils::error::CustomError;
 use crate::utils::rss_feed_parser::PodcastParsed;
-use podfetch_domain::settings::{Setting, SettingRepository, UpdateNameSettings};
-use podfetch_web::settings::SettingsApplicationService;
+use podfetch_domain::settings::SettingRepository;
+use podfetch_web::settings::{Setting, SettingsApplicationService, UpdateNameSettings};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -25,11 +25,15 @@ impl SettingsService {
     }
 
     pub fn get_settings(&self) -> Result<Option<Setting>, CustomError> {
-        self.repository.get_settings()
+        self.repository
+            .get_settings()
+            .map(|settings| settings.map(Into::into))
     }
 
     pub fn update_settings(&self, settings: Setting) -> Result<Setting, CustomError> {
-        self.repository.update_settings(settings)
+        self.repository
+            .update_settings(settings.into())
+            .map(Into::into)
     }
 
     pub fn insert_default_settings_if_not_present(&self) -> Result<(), CustomError> {
@@ -40,10 +44,11 @@ impl SettingsService {
     }
 
     pub fn update_name(&self, update_model: UpdateNameSettings) -> Result<Setting, CustomError> {
-        let mut settings = self.get_settings()?.unwrap();
+        let settings = self.get_settings()?.unwrap();
         Self::validate_settings(update_model.clone())?;
-        update_model.apply_to(&mut settings);
-        self.update_settings(settings)
+        let mut domain_settings: podfetch_domain::settings::Setting = settings.clone().into();
+        update_model.to_domain().apply_to(&mut domain_settings);
+        self.update_settings(domain_settings.into())
     }
 
     fn validate_settings(
@@ -84,8 +89,8 @@ impl SettingsService {
     }
 }
 
-fn build_name_only_setting(update: &UpdateNameSettings) -> Setting {
-    Setting {
+fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::settings::Setting {
+    podfetch_domain::settings::Setting {
         id: 0,
         auto_download: false,
         auto_update: false,
