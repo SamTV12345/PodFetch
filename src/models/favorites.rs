@@ -2,9 +2,7 @@ use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorites;
 use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
-use crate::mappers::podcast_dto_mapper::map_podcast_with_context_to_dto;
 use crate::models::podcasts::Podcast;
-use crate::service::tag_service::TagService;
 use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::insert_into;
@@ -13,7 +11,6 @@ use diesel::sql_types::{Bool, Integer, Text};
 use indexmap::IndexMap;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::user::User;
-use podfetch_web::podcast::PodcastDto;
 use podfetch_web::podcast_episode::TimelineFavorite;
 use podfetch_web::tags::Tag;
 use std::collections::BTreeMap;
@@ -141,13 +138,13 @@ impl Favorite {
         Ok(res)
     }
 
-    pub fn get_favored_podcasts(requester: &User) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_favored_podcasts(requester: &User) -> Result<Vec<(Podcast, Favorite)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favored as favor_column;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username as user_favor;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts as dsl_podcast;
 
-        let result: Vec<(Podcast, Favorite)> = dsl_podcast
+        dsl_podcast
             .inner_join(f_db)
             .filter(
                 favor_column
@@ -155,23 +152,7 @@ impl Favorite {
                     .and(user_favor.eq(&requester.username)),
             )
             .load::<(Podcast, Favorite)>(&mut get_connection())
-            .map_err(|e| map_db_error(e, Critical))?;
-
-        let mapped_result = result
-            .iter()
-            .map(|podcast| {
-                let tags = TagService::default_service()
-                    .get_tags_of_podcast(podcast.0.id, &requester.username)
-                    .unwrap();
-                map_podcast_with_context_to_dto(
-                    podcast.0.clone(),
-                    Some(podcast.1.clone().into()),
-                    tags,
-                    requester,
-                )
-            })
-            .collect::<Vec<PodcastDto>>();
-        Ok(mapped_result)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn search_podcasts_favored(

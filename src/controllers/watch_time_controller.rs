@@ -1,11 +1,11 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::app_state::AppState;
-use crate::models::episode::EpisodeDto;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
 use podfetch_domain::user::User;
+use podfetch_web::history::EpisodeDto;
 use podfetch_web::podcast::PodcastDto;
 use podfetch_web::watchtime::{
     self, PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
@@ -108,7 +108,6 @@ mod tests {
     use crate::adapters::persistence::dbconfig::db::get_connection;
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::models::episode::{EpisodeAction, EpisodeDto};
     use crate::models::podcast_episode::PodcastEpisode;
     use crate::models::podcasts::Podcast;
     use serde_json::json;

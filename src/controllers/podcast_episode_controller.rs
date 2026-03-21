@@ -2,7 +2,8 @@ use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::app_state::AppState;
 use crate::controllers::server::ChatServerHandle;
 use crate::db::TimelineItem;
-use crate::models::episode::{Episode, EpisodeDto};
+use crate::mappers::episode_mapper::map_episode_to_dto;
+use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::perform_episode_variable_replacement;
@@ -16,6 +17,7 @@ use axum::http::StatusCode;
 use axum::{Extension, Json};
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
+use podfetch_web::history::EpisodeDto;
 pub use podfetch_web::podcast_episode::{
     EpisodeFormatDto, FavoritePut, OptionalId, PodcastChapterDto, TimelineQueryParams,
 };
@@ -111,7 +113,7 @@ pub async fn get_podcast_episode_by_id(
         },
         |episode_id, username| {
             Episode::get_watchtime(episode_id, username)
-                .map(|episode| episode.map(|e| e.convert_to_episode_dto()))
+                .map(|episode| episode.as_ref().map(map_episode_to_dto))
         },
     )
     .map_err(map_podcast_episode_controller_error)?;
@@ -157,7 +159,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
                         rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
                         (
                             mapped_podcast_episode,
-                            podcast_inner.1.map(|e| e.convert_to_episode_dto()),
+                            podcast_inner.1.as_ref().map(map_episode_to_dto),
                         )
                     })
                     .collect()

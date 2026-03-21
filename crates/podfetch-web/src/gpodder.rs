@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use utoipa::ToSchema;
+use crate::history::EpisodeDto;
 
 #[derive(Serialize, Deserialize)]
 pub struct ClientParametrization {
@@ -31,6 +32,12 @@ pub fn build_client_parametrization(server_url: &str) -> ClientParametrization {
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct EpisodeActionPostResponse {
     pub update_urls: Vec<String>,
+    pub timestamp: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct EpisodeActionResponse {
+    pub actions: Vec<EpisodeDto>,
     pub timestamp: i64,
 }
 

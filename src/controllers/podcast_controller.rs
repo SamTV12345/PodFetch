@@ -97,7 +97,8 @@ pub async fn search_podcast_of_episode(
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let rewriter = create_url_rewriter(&headers);
-    let mut dto = Podcast::get_podcast_by_episode_id(id)?.0;
+    let podcast = Podcast::get_podcast_by_episode_id(id)?;
+    let mut dto = map_podcast_to_dto(podcast);
     dto.rewrite_urls(&rewriter);
     Ok(Json(dto))
 }
@@ -198,7 +199,7 @@ pub async fn find_podcast_by_id(
     let podcast = PodcastService::get_podcast(id_num)?;
     let tags = state.tag_service.get_tags_of_podcast(id_num, username)?;
     let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?
-        .map(Into::into);
+        .map(|f| f.favored);
     let podcast_dto = map_podcast_with_context_to_dto(podcast, favorite, tags, &user)
         .with_rewritten_urls(&rewriter);
     Ok(Json(podcast_dto))

@@ -1,12 +1,9 @@
 use crate::adapters::persistence::dbconfig::schema::*;
-use axum::Json;
 
 use crate::DBType as DbConnection;
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::mappers::podcast_dto_mapper::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::service::tag_service::TagService;
 use crate::utils::do_retry::do_retry;
 use crate::utils::error::ErrorSeverity::{Critical, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, map_db_error};
@@ -19,7 +16,6 @@ use diesel::{
     BoolExpressionMethods, JoinOnDsl, OptionalExtension, RunQueryDsl, delete, insert_into,
 };
 use podfetch_domain::user::User;
-use podfetch_web::podcast::PodcastDto;
 
 #[derive(
     Queryable, Identifiable, QueryableByName, Selectable, Debug, PartialEq, Clone, Default,
@@ -60,14 +56,13 @@ pub struct Podcast {
 }
 
 impl Podcast {
-    pub(crate) fn get_podcast_by_episode_id(p0: i32) -> Result<Json<PodcastDto>, CustomError> {
+    pub(crate) fn get_podcast_by_episode_id(p0: i32) -> Result<Podcast, CustomError> {
         podcasts::table
             .inner_join(podcast_episodes::table.on(podcast_episodes::podcast_id.eq(podcasts::id)))
             .filter(podcast_episodes::id.eq(p0))
             .select(podcasts::all_columns)
             .first::<Podcast>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))
-            .map(|podcast| Json(map_podcast_to_dto(podcast)))
     }
 }
 
@@ -90,32 +85,16 @@ impl Podcast {
             .map_err(|e| map_db_error(e, Critical))
     }
 
-    pub fn get_podcasts(u: &User) -> Result<Vec<PodcastDto>, CustomError> {
+    pub fn get_podcasts(u: &User) -> Result<Vec<(Podcast, Option<Favorite>)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::favorites as f_db;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::podcast_id as f_id;
         use crate::adapters::persistence::dbconfig::schema::favorites::dsl::username;
         use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
         use crate::adapters::persistence::dbconfig::schema::podcasts::id as p_id;
-        let result = podcasts
+        podcasts
             .left_join(f_db.on(username.eq(&u.username).and(f_id.eq(p_id))))
             .load::<(Podcast, Option<Favorite>)>(&mut get_connection())
-            .map_err(|e| map_db_error(e, Critical))?;
-
-        let mapped_result = result
-            .iter()
-            .map(|podcast| {
-                let tags = TagService::default_service()
-                    .get_tags_of_podcast(podcast.0.id, &u.username)
-                    .unwrap();
-                map_podcast_with_context_to_dto(
-                    podcast.0.clone(),
-                    podcast.1.clone().map(Into::into),
-                    tags,
-                    u,
-                )
-            })
-            .collect::<Vec<PodcastDto>>();
-        Ok(mapped_result)
+            .map_err(|e| map_db_error(e, Critical))
     }
 
     pub fn get_all_podcasts() -> Result<Vec<Podcast>, CustomError> {

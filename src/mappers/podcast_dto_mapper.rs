@@ -4,7 +4,6 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::podcasts::Podcast;
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
-use podfetch_web::podcast_episode::TimelineFavorite;
 use podfetch_web::tags::Tag;
 use std::collections::HashSet;
 
@@ -40,7 +39,7 @@ pub fn map_podcast_to_dto(value: Podcast) -> PodcastDto {
 
 pub fn map_podcast_with_context_to_dto(
     value: Podcast,
-    favorite: Option<TimelineFavorite>,
+    favorite: Option<bool>,
     tags: Vec<Tag>,
     user: &User,
 ) -> PodcastDto {
@@ -74,7 +73,7 @@ pub fn map_podcast_with_context_to_dto(
         original_image_url: value.original_image_url.clone(),
         directory_name: value.directory_name.clone(),
         tags,
-        favorites: favorite.as_ref().map(|f| f.favored).unwrap_or(false),
+        favorites: favorite.unwrap_or(false),
     }
 }
 

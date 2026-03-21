@@ -1,10 +1,8 @@
 use crate::DBType as DbConnection;
-use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::episodes;
 use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes as episodes_dsl;
 use crate::constants::inner_constants::DEFAULT_DEVICE;
-use crate::mappers::podcast_dto_mapper::map_podcast_to_dto;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::listening_event_service::ListeningEventService;
@@ -17,21 +15,12 @@ use diesel::{
     BoolExpressionMethods, Insertable, NullableExpressionMethods, OptionalExtension, QueryDsl,
     QueryId, Queryable, QueryableByName, RunQueryDsl, Selectable,
 };
-use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::listening_event::NewListeningEvent;
 use podfetch_domain::user::User;
-pub use podfetch_web::history::{EpisodeAction, EpisodeDto};
-use podfetch_web::podcast::PodcastDto;
-use podfetch_web::watchtime::{
-    PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
-};
 use rand::RngExt;
 use reqwest::Url;
-use serde::{Deserialize, Serialize};
 
 #[derive(
-    Serialize,
-    Deserialize,
     Debug,
     Queryable,
     QueryableByName,
@@ -106,39 +95,6 @@ impl Episode {
             .get_result(&mut get_connection())
     }
 
-    pub fn convert_to_episode_dto(&self) -> EpisodeDto {
-        EpisodeDto {
-            podcast: self.podcast.clone(),
-            episode: self.episode.clone(),
-            timestamp: self.timestamp,
-            guid: self.guid.clone(),
-            action: EpisodeAction::from_string(&self.action),
-            started: self.started,
-            position: self.position,
-            total: self.total,
-            device: self.clone().device.clone(),
-        }
-    }
-
-    pub fn convert_to_episode(episode_dto: &EpisodeDto, username: String) -> Episode {
-        // Remove query parameters
-        let mut episode = Url::parse(&episode_dto.episode).unwrap();
-        episode.set_query(None);
-
-        Episode {
-            id: 0,
-            username,
-            device: episode_dto.device.clone(),
-            podcast: episode_dto.podcast.clone(),
-            episode: episode_dto.episode.clone(),
-            timestamp: episode_dto.timestamp,
-            guid: episode_dto.guid.clone(),
-            action: episode_dto.action.clone().to_string(),
-            started: episode_dto.started,
-            position: episode_dto.position,
-            total: episode_dto.total,
-        }
-    }
     pub async fn get_actions_by_username(
         username1: &str,
         since_date: Option<NaiveDateTime>,
@@ -200,12 +156,7 @@ impl Episode {
 
     pub fn get_last_watched_episodes(
         user: &User,
-    ) -> Result<
-        Vec<
-            PodcastWatchedEpisodeModelWithPodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto>,
-        >,
-        CustomError,
-    > {
+    ) -> Result<Vec<(PodcastEpisode, Episode, Podcast)>, CustomError> {
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl as ep_dsl;
         use crate::adapters::persistence::dbconfig::schema::episodes::dsl::guid as eguid;
         use crate::adapters::persistence::dbconfig::schema::episodes::username as e_username;
@@ -248,20 +199,7 @@ impl Episode {
             .load::<(PodcastEpisode, Episode, Podcast)>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?;
 
-        let mapped_watched_episodes = query
-            .iter()
-            .map(|e| PodcastWatchedEpisodeModelWithPodcastEpisode {
-                episode: e.1.clone().convert_to_episode_dto(),
-                podcast_episode: (
-                    e.0.clone(),
-                    Some(user).cloned(),
-                    None::<FavoritePodcastEpisode>,
-                )
-                    .into(),
-                podcast: map_podcast_to_dto(e.2.clone()),
-            })
-            .collect();
-        Ok(mapped_watched_episodes)
+        Ok(query)
     }
 
     pub fn delete_by_username_and_episode(
@@ -325,7 +263,8 @@ impl Episode {
     }
 
     pub fn log_watchtime(
-        pod_watch_model: PodcastWatchedPostModel,
+        podcast_episode_id: &str,
+        watch_time: i32,
         username: String,
     ) -> Result<(), CustomError> {
         use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
@@ -334,7 +273,7 @@ impl Episode {
         use crate::adapters::persistence::dbconfig::schema::podcasts::table as p_table;
 
         let found_episode = pe_table
-            .filter(pe_dsl::episode_id.eq(pod_watch_model.podcast_episode_id.clone()))
+            .filter(pe_dsl::episode_id.eq(podcast_episode_id))
             .first::<PodcastEpisode>(&mut get_connection())
             .optional()
             .map_err(|e| map_db_error(e, Critical))?;
@@ -365,7 +304,7 @@ impl Episode {
                 let listened_delta_seconds = Self::calculate_listened_delta(
                     episode.position,
                     Some(episode.timestamp),
-                    pod_watch_model.time,
+                    watch_time,
                     now,
                 );
                 if listened_delta_seconds > 0 {
@@ -376,17 +315,17 @@ impl Episode {
                         podcast_id: found_episode.podcast_id,
                         podcast_episode_db_id: found_episode.id,
                         delta_seconds: listened_delta_seconds,
-                        start_position: pod_watch_model.time.saturating_sub(listened_delta_seconds),
-                        end_position: pod_watch_model.time,
+                        start_position: watch_time.saturating_sub(listened_delta_seconds),
+                        end_position: watch_time,
                         listened_at: now,
                     })?;
                 }
 
-                episode.position = Some(pod_watch_model.time);
+                episode.position = Some(watch_time);
                 diesel::update(episodes_dsl.filter(episodes::id.eq(episode.id)))
                     .set((
-                        episodes::started.eq(pod_watch_model.time),
-                        episodes::position.eq(pod_watch_model.time),
+                        episodes::started.eq(watch_time),
+                        episodes::position.eq(watch_time),
                         episodes::timestamp.eq(now),
                     ))
                     .execute(&mut get_connection())
@@ -405,8 +344,8 @@ impl Episode {
                     timestamp: now,
                     guid: Some(found_episode.guid.clone()),
                     action: "play".to_string(),
-                    started: Some(pod_watch_model.time),
-                    position: Some(pod_watch_model.time),
+                    started: Some(watch_time),
+                    position: Some(watch_time),
                     total: Some(found_episode.total_time),
                 };
                 episode

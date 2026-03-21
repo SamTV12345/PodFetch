@@ -1,4 +1,5 @@
-use crate::models::episode::{Episode, EpisodeDto};
+use crate::mappers::episode_mapper::{map_episode_dto_to_episode, map_episode_to_dto};
+use crate::models::episode::Episode;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
@@ -7,18 +8,12 @@ use axum::extract::{Path, Query};
 use axum::{Extension, Json};
 use podfetch_domain::session::Session;
 use podfetch_web::gpodder::{
-    EpisodeActionPostResponse, EpisodeSinceRequest, GpodderControllerError, ensure_session_user,
-    parse_since_epoch,
+    EpisodeActionPostResponse, EpisodeActionResponse, EpisodeSinceRequest, GpodderControllerError,
+    ensure_session_user, parse_since_epoch,
 };
-use serde::{Deserialize, Serialize};
+use podfetch_web::history::EpisodeDto;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-
-#[derive(Serialize, Deserialize)]
-pub struct EpisodeActionResponse {
-    actions: Vec<Episode>,
-    timestamp: i64,
-}
 
 fn map_gpodder_error(error: GpodderControllerError<CustomError>) -> CustomError {
     match error {
@@ -63,7 +58,7 @@ pub async fn get_episode_actions(
     }
 
     Ok(Json(EpisodeActionResponse {
-        actions,
+        actions: actions.iter().map(map_episode_to_dto).collect(),
         timestamp: get_current_timestamp(),
     }))
 }
@@ -88,7 +83,7 @@ pub async fn upload_episode_actions(
     ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
     let mut inserted_episodes: Vec<Episode> = vec![];
     podcast_episode.iter().for_each(|episode| {
-        let episode = Episode::convert_to_episode(episode, username.0.to_string());
+        let episode = map_episode_dto_to_episode(episode, username.0.to_string());
         inserted_episodes.push(Episode::insert_episode(&episode.clone()).unwrap());
     });
     Ok(Json(EpisodeActionPostResponse {

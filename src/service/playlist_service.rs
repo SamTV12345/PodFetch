@@ -3,6 +3,7 @@ use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::playlist_repository::PlaylistRepositoryImpl;
 use crate::controllers::playlist_controller::PlaylistDto;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
+use crate::mappers::episode_mapper::map_episode_to_dto;
 use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::utils::error::CustomError;
@@ -59,8 +60,7 @@ impl PlaylistService {
                             None,
                         )
                         ),
-                        podcast_history_item: history
-                            .map(|episode: Episode| episode.convert_to_episode_dto()),
+                        podcast_history_item: history.as_ref().map(map_episode_to_dto),
                     }
                 },
             )

@@ -1,8 +1,9 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
+use crate::mappers::episode_mapper::map_episode_to_dto;
 use crate::mappers::podcast_dto_mapper::map_podcast_to_dto;
-use crate::models::episode::{Episode, EpisodeDto};
+use crate::models::episode::Episode;
 use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
@@ -17,6 +18,7 @@ use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
 use podfetch_web::podcast_episode::{TimelineFavorite, TimelineQueryParams};
+use podfetch_web::history::EpisodeDto;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -148,7 +150,7 @@ impl TimelineItem {
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
-                    let history_dto = history.map(|h| h.convert_to_episode_dto());
+                    let history_dto = history.as_ref().map(map_episode_to_dto);
                     (
                         PodcastEpisodeDto::from((
                             podcast_episode,

@@ -7,6 +7,7 @@ use crate::models::favorites::Favorite;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::podcast_settings_service::PodcastSettingsService;
+use crate::service::tag_service::TagService;
 use crate::unwrap_string;
 use crate::utils::error::ErrorSeverity::{Critical, Error};
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
@@ -235,7 +236,22 @@ impl PodcastService {
     }
 
     pub fn get_favored_podcasts(requester: User) -> Result<Vec<PodcastDto>, CustomError> {
-        Favorite::get_favored_podcasts(&requester)
+        let result = Favorite::get_favored_podcasts(&requester)?;
+        let mapped_result = result
+            .iter()
+            .map(|podcast| {
+                let tags = TagService::default_service()
+                    .get_tags_of_podcast(podcast.0.id, &requester.username)
+                    .unwrap();
+                map_podcast_with_context_to_dto(
+                    podcast.0.clone(),
+                    Some(podcast.1.favored),
+                    tags,
+                    &requester,
+                )
+            })
+            .collect::<Vec<PodcastDto>>();
+        Ok(mapped_result)
     }
 
     pub fn update_active_podcast(id: i32) -> Result<(), CustomError> {
@@ -285,7 +301,22 @@ impl PodcastService {
     }
 
     pub fn get_podcasts(u: &User) -> Result<Vec<PodcastDto>, CustomError> {
-        Podcast::get_podcasts(u)
+        let result = Podcast::get_podcasts(u)?;
+        let mapped_result = result
+            .iter()
+            .map(|podcast| {
+                let tags = TagService::default_service()
+                    .get_tags_of_podcast(podcast.0.id, &u.username)
+                    .unwrap();
+                map_podcast_with_context_to_dto(
+                    podcast.0.clone(),
+                    podcast.1.clone().map(|f| f.favored),
+                    tags,
+                    u,
+                )
+            })
+            .collect::<Vec<PodcastDto>>();
+        Ok(mapped_result)
     }
 
     pub fn search_podcasts_favored(
@@ -308,7 +339,7 @@ impl PodcastService {
                 .map(|p| {
                     map_podcast_with_context_to_dto(
                         p.0.clone(),
-                        Option::from(p.1.clone()).map(Into::into),
+                        Some(p.1.favored),
                         p.2.iter().cloned().map(Into::into).collect(),
                         requester,
                     )
@@ -336,7 +367,7 @@ impl PodcastService {
             .map(|p| {
                 map_podcast_with_context_to_dto(
                     p.0.clone(),
-                    p.1.clone().map(Into::into),
+                    p.1.as_ref().map(|f| f.favored),
                     p.2.iter().cloned().map(Into::into).collect(),
                     requester,
                 )
