@@ -12,10 +12,11 @@ use crate::utils::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
-use podfetch_web::podcast_episode::TimelineQueryParams;
+use podfetch_web::podcast_episode::{TimelineFavorite, TimelineQueryParams};
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,7 +25,7 @@ pub struct TimelineItem {
         PodcastEpisodeDto,
         PodcastDto,
         Option<EpisodeDto>,
-        Option<Favorite>,
+        Option<TimelineFavorite>,
     )>,
     pub total_elements: i64,
 }
@@ -156,7 +157,7 @@ impl TimelineItem {
                         )),
                         map_podcast_to_dto(podcast),
                         history_dto,
-                        favorite,
+                        favorite.map(Into::into),
                     )
                 },
             )

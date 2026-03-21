@@ -197,7 +197,8 @@ pub async fn find_podcast_by_id(
 
     let podcast = PodcastService::get_podcast(id_num)?;
     let tags = state.tag_service.get_tags_of_podcast(id_num, username)?;
-    let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?;
+    let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?
+        .map(Into::into);
     let podcast_dto = map_podcast_with_context_to_dto(podcast, favorite, tags, &user)
         .with_rewritten_urls(&rewriter);
     Ok(Json(podcast_dto))

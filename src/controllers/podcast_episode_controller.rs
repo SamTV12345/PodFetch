@@ -3,7 +3,6 @@ use crate::app_state::AppState;
 use crate::controllers::server::ChatServerHandle;
 use crate::db::TimelineItem;
 use crate::models::episode::{Episode, EpisodeDto};
-use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::perform_episode_variable_replacement;
@@ -22,6 +21,7 @@ pub use podfetch_web::podcast_episode::{
 };
 use podfetch_web::podcast_episode::{
     PodcastEpisodeControllerError, PodcastEpisodeWithHistory as WebPodcastEpisodeWithHistory,
+    TimelineFavorite,
     TimeLinePodcastEpisode as WebTimeLinePodcastEpisode,
     TimeLinePodcastItem as WebTimeLinePodcastItem,
 };
@@ -169,7 +169,7 @@ pub async fn find_all_podcast_episodes_of_podcast(
 }
 
 pub type TimeLinePodcastEpisode =
-    WebTimeLinePodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto, Favorite>;
+    WebTimeLinePodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto, TimelineFavorite>;
 
 #[utoipa::path(
     get,
@@ -225,7 +225,7 @@ pub async fn get_timeline(
                 podcast_episode: mapped_podcast_episode,
                 podcast: mapped_podcast,
                 history,
-                favorite,
+                favorite: favorite.map(Into::into),
             }
         })
         .collect::<Vec<TimeLinePodcastEpisode>>();

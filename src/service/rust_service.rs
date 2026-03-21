@@ -308,7 +308,7 @@ impl PodcastService {
                 .map(|p| {
                     map_podcast_with_context_to_dto(
                         p.0.clone(),
-                        Option::from(p.1.clone()),
+                        Option::from(p.1.clone()).map(Into::into),
                         p.2.iter().cloned().map(Into::into).collect(),
                         requester,
                     )
@@ -336,7 +336,7 @@ impl PodcastService {
             .map(|p| {
                 map_podcast_with_context_to_dto(
                     p.0.clone(),
-                    p.1.clone(),
+                    p.1.clone().map(Into::into),
                     p.2.iter().cloned().map(Into::into).collect(),
                     requester,
                 )

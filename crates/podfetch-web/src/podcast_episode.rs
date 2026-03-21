@@ -54,6 +54,11 @@ pub struct FavoritePut {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct TimelineFavorite {
+    pub favored: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct EpisodeFormatDto {
     pub content: String,
 }

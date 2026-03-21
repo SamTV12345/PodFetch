@@ -27,7 +27,6 @@ use diesel::{
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use rss::{Guid, Item};
-use utoipa::ToSchema;
 
 #[derive(
     Queryable,
@@ -37,9 +36,6 @@ use utoipa::ToSchema;
     Debug,
     PartialEq,
     Clone,
-    ToSchema,
-    Serialize,
-    Deserialize,
     Default,
     AsChangeset,
 )]

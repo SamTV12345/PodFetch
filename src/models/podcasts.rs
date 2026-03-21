@@ -107,7 +107,12 @@ impl Podcast {
                 let tags = TagService::default_service()
                     .get_tags_of_podcast(podcast.0.id, &u.username)
                     .unwrap();
-                map_podcast_with_context_to_dto(podcast.0.clone(), podcast.1.clone(), tags, u)
+                map_podcast_with_context_to_dto(
+                    podcast.0.clone(),
+                    podcast.1.clone().map(Into::into),
+                    tags,
+                    u,
+                )
             })
             .collect::<Vec<PodcastDto>>();
         Ok(mapped_result)

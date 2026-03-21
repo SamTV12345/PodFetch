@@ -1,10 +1,10 @@
 use crate::adapters::file::file_handler::{FileHandlerType, resolve_file_handler_type};
 use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
+use podfetch_web::podcast_episode::TimelineFavorite;
 use podfetch_web::tags::Tag;
 use std::collections::HashSet;
 
@@ -40,7 +40,7 @@ pub fn map_podcast_to_dto(value: Podcast) -> PodcastDto {
 
 pub fn map_podcast_with_context_to_dto(
     value: Podcast,
-    favorite: Option<Favorite>,
+    favorite: Option<TimelineFavorite>,
     tags: Vec<Tag>,
     user: &User,
 ) -> PodcastDto {

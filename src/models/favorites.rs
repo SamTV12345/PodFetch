@@ -14,10 +14,9 @@ use indexmap::IndexMap;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
+use podfetch_web::podcast_episode::TimelineFavorite;
 use podfetch_web::tags::Tag;
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use utoipa::ToSchema;
 
 #[derive(Queryable, Clone)]
 struct JoinedTagsPodcast {
@@ -54,12 +53,9 @@ impl From<JoinedTag> for Tag {
     Debug,
     PartialEq,
     QueryableByName,
-    Serialize,
-    Deserialize,
     Insertable,
     Clone,
     AsChangeset,
-    ToSchema,
 )]
 #[diesel(belongs_to(Podcast, foreign_key = podcast_id))]
 #[diesel(belongs_to(User, foreign_key = username))]
@@ -73,6 +69,14 @@ pub struct Favorite {
 }
 
 type SearchPodcastType = Vec<(Podcast, Option<Favorite>, Vec<Tag>)>;
+
+impl From<Favorite> for TimelineFavorite {
+    fn from(value: Favorite) -> Self {
+        Self {
+            favored: value.favored,
+        }
+    }
+}
 
 impl Favorite {
     pub fn delete_by_username(
@@ -161,7 +165,7 @@ impl Favorite {
                     .unwrap();
                 map_podcast_with_context_to_dto(
                     podcast.0.clone(),
-                    Some(podcast.1.clone()),
+                    Some(podcast.1.clone().into()),
                     tags,
                     requester,
                 )

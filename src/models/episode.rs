@@ -28,7 +28,6 @@ use podfetch_web::watchtime::{
 use rand::RngExt;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 #[derive(
     Serialize,
@@ -39,7 +38,6 @@ use utoipa::ToSchema;
     Insertable,
     Clone,
     Selectable,
-    ToSchema,
     QueryId,
 )]
 pub struct Episode {
