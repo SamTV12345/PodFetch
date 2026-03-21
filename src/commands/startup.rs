@@ -1,6 +1,7 @@
 use crate::adapters::api::controllers::routes::global_routes;
 use crate::adapters::persistence::dbconfig::DBType;
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::app_state::AppState;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
@@ -22,10 +23,10 @@ use crate::controllers::websocket_controller::get_websocket_router;
 use crate::import_database_config;
 use crate::models::podcasts::Podcast;
 use crate::models::session::Session;
-use crate::models::settings::Setting;
 use crate::service::file_service::FileService;
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::service::rust_service::PodcastService;
+use crate::service::settings_service::SettingsService;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::Router;
 use axum::body::Body;
@@ -34,11 +35,9 @@ use axum::middleware::from_fn;
 use axum::response::{Redirect, Response};
 use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
-use diesel::r2d2::ConnectionManager;
 use diesel_migrations::MigrationHarness;
 use log::info;
 use maud::{Markup, html};
-use r2d2::Pool;
 use socketioxide::SocketIoBuilder;
 use socketioxide::extract::SocketRef;
 use std::ops::DerefMut;
@@ -55,7 +54,6 @@ use utoipa_scalar::Scalar;
 use utoipa_scalar::Servable as UtoipaServable;
 use utoipa_swagger_ui::SwaggerUi;
 
-pub type DbPool = Pool<ConnectionManager<DBType>>;
 use crate::EmbeddedMigrations;
 use crate::embed_migrations;
 use crate::utils::error::ErrorSeverity::Warning;
@@ -216,8 +214,10 @@ pub fn get_ui_config() -> OpenApiRouter {
     )
 }
 
-pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
-    let settings = Setting::get_settings()?;
+pub fn insert_default_settings_if_not_present(
+    settings_service: &SettingsService,
+) -> Result<(), CustomError> {
+    let settings = settings_service.get_settings()?;
     match settings {
         Some(_) => {
             info!("Settings already present");
@@ -225,7 +225,7 @@ pub fn insert_default_settings_if_not_present() -> Result<(), CustomError> {
         }
         None => {
             info!("No settings found, inserting default settings");
-            Setting::insert_default_settings()?;
+            settings_service.insert_default_settings_if_not_present()?;
             Ok(())
         }
     }
@@ -263,7 +263,7 @@ async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
     Ok(res)
 }
 
-pub fn get_api_config() -> OpenApiRouter {
+pub fn get_api_config(state: AppState) -> OpenApiRouter {
     use crate::controllers::podcast_controller::__path_proxy_podcast;
     OpenApiRouter::new()
         .merge(get_ui_config())
@@ -271,10 +271,10 @@ pub fn get_api_config() -> OpenApiRouter {
         .merge(get_manifest_router())
         .merge(get_websocket_router())
         .routes(routes!(proxy_podcast))
-        .nest("/api/v1", OpenApiRouter::new().merge(config()))
+        .nest("/api/v1", OpenApiRouter::new().merge(config(state)))
 }
 
-fn config() -> OpenApiRouter {
+fn config(state: AppState) -> OpenApiRouter {
     use crate::controllers::sys_info_controller::__path_get_public_config;
     use crate::controllers::sys_info_controller::__path_login;
     use crate::controllers::user_controller::__path_get_invite;
@@ -284,10 +284,11 @@ fn config() -> OpenApiRouter {
         .routes(routes!(onboard_user))
         .routes(routes!(get_public_config))
         .routes(routes!(login))
-        .merge(get_private_api())
+        .with_state(state.clone())
+        .merge(get_private_api(state))
 }
 
-fn get_private_api() -> OpenApiRouter {
+fn get_private_api(state: AppState) -> OpenApiRouter {
     let router = OpenApiRouter::new()
         .merge(get_playlist_router())
         .merge(get_podcast_router())
@@ -296,9 +297,9 @@ fn get_private_api() -> OpenApiRouter {
         .merge(get_stats_router())
         .merge(get_notification_router())
         .merge(get_podcast_episode_router())
-        .merge(get_settings_router())
-        .merge(get_tags_router())
-        .merge(get_user_router());
+        .merge(get_settings_router().with_state(state.clone()))
+        .merge(get_tags_router().with_state(state.clone()))
+        .merge(get_user_router().with_state(state.clone()));
 
     if ENVIRONMENT_SERVICE.http_basic {
         router.layer(from_fn(handle_basic_auth))
@@ -336,6 +337,7 @@ pub fn run_migrations() {
 }
 
 pub fn handle_config_for_server_startup() -> Router {
+    let state = AppState::new();
     run_migrations();
 
     check_server_config();
@@ -350,14 +352,17 @@ pub fn handle_config_for_server_startup() -> Router {
         }
     }
 
-    insert_default_settings_if_not_present().expect("Could not insert default settings");
+    insert_default_settings_if_not_present(state.settings_service.as_ref())
+        .expect("Could not insert default settings");
 
-    thread::spawn(|| {
+    let settings_service_for_polling = state.settings_service.clone();
+    let settings_service_for_cleanup = state.settings_service.clone();
+    thread::spawn(move || {
         let mut scheduler = Scheduler::new();
 
         let polling_interval = ENVIRONMENT_SERVICE.get_polling_interval();
-        scheduler.every(polling_interval.minutes()).run(|| {
-            let settings = Setting::get_settings().unwrap();
+        scheduler.every(polling_interval.minutes()).run(move || {
+            let settings = settings_service_for_polling.get_settings().unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_update {
@@ -385,7 +390,7 @@ pub fn handle_config_for_server_startup() -> Router {
                 "Error clearing old \
             sessions",
             );
-            let settings = Setting::get_settings().unwrap();
+            let settings = settings_service_for_cleanup.get_settings().unwrap();
             match settings {
                 Some(settings) => {
                     if settings.auto_cleanup {
@@ -420,7 +425,7 @@ pub fn handle_config_for_server_startup() -> Router {
     SOCKET_IO_LAYER.get_or_init(|| io);
 
     let (router, api) = OpenApiRouter::new()
-        .merge(global_routes())
+        .merge(global_routes(state))
         .route("/", get(Redirect::to(&ui_dir)))
         .split_for_parts();
     router
@@ -587,6 +592,18 @@ END $$;
             {
                 use crate::adapters::persistence::dbconfig::schema::tags::dsl::tags;
                 diesel::delete(tags)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::invites::dsl::invites;
+                diesel::delete(invites)
+                    .execute(&mut get_connection())
+                    .unwrap();
+            }
+            {
+                use crate::adapters::persistence::dbconfig::schema::settings::dsl::settings;
+                diesel::delete(settings)
                     .execute(&mut get_connection())
                     .unwrap();
             }

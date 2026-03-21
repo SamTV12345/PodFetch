@@ -1,27 +1,38 @@
-use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
-use crate::application::repositories::device_repository::DeviceRepository;
-use crate::application::usecases::devices::create_use_case::CreateUseCase;
-use crate::application::usecases::devices::edit_use_case::EditUseCase;
-use crate::application::usecases::devices::query_use_case::QueryUseCase;
-use crate::domain::models::device::model::Device;
 use crate::utils::error::CustomError;
+use podfetch_domain::device::{Device, DeviceRepository};
+use podfetch_web::device::DeviceApplicationService;
+use std::sync::Arc;
 
-pub struct DeviceService;
+pub struct DeviceService {
+    repository: Arc<dyn DeviceRepository<Error = CustomError>>,
+}
 
-impl CreateUseCase for DeviceService {
-    fn create(device_to_safe: Device) -> Result<Device, CustomError> {
-        DeviceRepositoryImpl::create(device_to_safe)
+impl DeviceService {
+    pub fn new(repository: Arc<dyn DeviceRepository<Error = CustomError>>) -> Self {
+        Self { repository }
+    }
+
+    pub fn create(&self, device_to_safe: Device) -> Result<Device, CustomError> {
+        self.repository.create(device_to_safe)
+    }
+
+    pub fn query_by_username(&self, username: &str) -> Result<Vec<Device>, CustomError> {
+        self.repository.get_devices_of_user(username)
+    }
+
+    pub fn delete_by_username(&self, username: &str) -> Result<(), CustomError> {
+        self.repository.delete_by_username(username)
     }
 }
 
-impl QueryUseCase for DeviceService {
-    fn query_by_username(username: &str) -> Result<Vec<Device>, CustomError> {
-        DeviceRepositoryImpl::get_devices_of_user(username)
-    }
-}
+impl DeviceApplicationService for DeviceService {
+    type Error = CustomError;
 
-impl EditUseCase for DeviceService {
-    fn delete_by_username(username: &str) -> Result<(), CustomError> {
-        DeviceRepositoryImpl::delete_by_username(username)
+    fn create(&self, device: Device) -> Result<Device, Self::Error> {
+        self.create(device)
+    }
+
+    fn query_by_username(&self, username: &str) -> Result<Vec<Device>, Self::Error> {
+        self.query_by_username(username)
     }
 }

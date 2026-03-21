@@ -131,7 +131,7 @@ impl PodcastEpisodeService {
         podcast: Podcast,
     ) -> Result<Vec<PodcastEpisode>, CustomError> {
         let podcast_settings = PodcastSetting::get_settings(podcast.id)?;
-        let settings = SettingsService::get_settings()?.unwrap();
+        let settings = SettingsService::shared().get_settings()?.unwrap();
         let n_episodes;
 
         if let Some(podcast_settings) = podcast_settings {

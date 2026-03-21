@@ -1,7 +1,7 @@
 use crate::adapters::persistence::dbconfig::schema::devices;
-use crate::domain::models::device::model::Device;
 use diesel::{Insertable, Queryable, QueryableByName};
 use utoipa::ToSchema;
+use podfetch_domain::device::Device;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, QueryableByName, Clone, ToSchema)]
 #[diesel(table_name=devices)]

@@ -1,6 +1,8 @@
 pub mod download_service;
 pub mod environment_service;
 pub(crate) mod file_service;
+pub mod invite_service;
+pub mod login_service;
 pub mod logging_service;
 pub mod notification_service;
 pub mod path_service;
@@ -9,6 +11,8 @@ pub mod podcast_episode_service;
 pub mod rust_service;
 pub mod settings_service;
 pub mod subscription;
+pub mod tag_service;
 pub mod telegram_api;
-pub mod user_management_service;
+pub mod user_admin_service;
+pub mod user_onboarding_service;
 pub mod websocket_service;

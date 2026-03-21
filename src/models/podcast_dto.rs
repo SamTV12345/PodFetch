@@ -1,4 +1,4 @@
-use crate::adapters::file::file_handler::FileHandlerType;
+use crate::adapters::file::file_handler::{FileHandlerType, resolve_file_handler_type};
 use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::favorites::Favorite;
@@ -33,14 +33,7 @@ impl From<(Podcast, Option<Favorite>, Vec<Tag>, &User)> for PodcastDto {
     fn from(value: (Podcast, Option<Favorite>, Vec<Tag>, &User)) -> Self {
         let favorite = value.1.is_some() && value.1.clone().unwrap().favored;
 
-        let image_url = match FileHandlerType::from(
-            value
-                .0
-                .download_location
-                .clone()
-                .unwrap_or(FileHandlerType::Local.to_string())
-                .as_str(),
-        ) {
+        let image_url = match resolve_file_handler_type(value.0.download_location.clone()) {
             FileHandlerType::Local => {
                 format!(
                     "{}{}",

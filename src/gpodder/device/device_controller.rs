@@ -1,17 +1,20 @@
-use crate::adapters::api::models::device::device_create::DeviceCreate;
-use crate::adapters::api::models::device::device_response::DeviceResponse;
-use crate::application::services::device::service::DeviceService;
-use crate::application::usecases::devices::create_use_case::CreateUseCase;
-use crate::application::usecases::devices::query_use_case::QueryUseCase;
-use crate::gpodder::device::dto::device_post::DevicePost;
+use crate::app_state::AppState;
 use crate::models::session::Session;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use podfetch_web::device::{self, DeviceControllerError, DevicePost, DeviceResponse};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+fn map_controller_error(error: DeviceControllerError<CustomError>) -> CustomError {
+    match error {
+        DeviceControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        DeviceControllerError::Service(error) => error,
+    }
+}
 
 #[utoipa::path(
     post,
@@ -24,27 +27,22 @@ use utoipa_axum::routes;
     tag="gpodder"
 )]
 pub async fn post_device(
+    State(state): State<AppState>,
     query: Path<(String, String)>,
     Extension(flag): Extension<Session>,
     Json(device_post): Json<DevicePost>,
 ) -> Result<Json<DeviceResponse>, CustomError> {
     let username = &query.0.0;
     let deviceid = trim_from_path(&query.0.1);
-    if &flag.username != username {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
-
-    let device_create = DeviceCreate {
-        id: deviceid.0.to_string(),
-        username: username.clone(),
-        type_: device_post.kind.clone(),
-        caption: device_post.caption.clone(),
-    };
-
-    let device = DeviceService::create(device_create.into())?;
-    let result = DeviceResponse::from(&device);
-
-    Ok(Json(result))
+    device::post_device(
+        state.device_service.as_ref(),
+        &flag.username,
+        username,
+        &deviceid.0,
+        device_post,
+    )
+    .map(Json)
+    .map_err(map_controller_error)
 }
 
 #[utoipa::path(
@@ -56,24 +54,18 @@ pub async fn post_device(
     tag="devices"
 )]
 pub async fn get_devices_of_user(
+    State(state): State<AppState>,
     Path(query): Path<String>,
     Extension(flag): Extension<Session>,
 ) -> Result<Json<Vec<DeviceResponse>>, CustomError> {
     let query = trim_from_path(&query);
     let user_query = query.0;
-    if flag.username != user_query {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
-    let devices = DeviceService::query_by_username(user_query)?;
-
-    let dtos = devices
-        .iter()
-        .map(DeviceResponse::from)
-        .collect::<Vec<DeviceResponse>>();
-    Ok(Json(dtos))
+    device::get_devices_of_user(state.device_service.as_ref(), &flag.username, user_query)
+        .map(Json)
+        .map_err(map_controller_error)
 }
 
-pub fn get_device_router() -> OpenApiRouter {
+pub fn get_device_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_devices_of_user))
         .routes(routes!(post_device))

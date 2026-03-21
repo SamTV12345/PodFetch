@@ -2,13 +2,7 @@ pub mod db;
 #[path = "schemas/sqlite/schema.rs"]
 pub mod schema;
 
-#[derive(diesel::MultiConnection)]
-pub enum DBType {
-    #[cfg(feature = "postgresql")]
-    Postgresql(diesel::PgConnection),
-    #[cfg(feature = "sqlite")]
-    Sqlite(diesel::SqliteConnection),
-}
+pub use common_infrastructure::db::DBType;
 
 #[macro_export]
 macro_rules! import_database_config {

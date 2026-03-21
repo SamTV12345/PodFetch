@@ -1,0 +1,12 @@
+[package]
+name = "podfetch-domain"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { version = "0.4.44", default-features = false, features = ["serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+utoipa = { version = "5.4.0", features = ["chrono", "axum_extras"] }

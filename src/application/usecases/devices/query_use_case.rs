@@ -1,6 +1,7 @@
-use crate::domain::models::device::model::Device;
 use crate::utils::error::CustomError;
+use podfetch_domain::device::Device;
 
+#[allow(dead_code)]
 pub trait QueryUseCase {
     fn query_by_username(username: &str) -> Result<Vec<Device>, CustomError>;
 }

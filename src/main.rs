@@ -27,6 +27,7 @@ mod config;
 
 mod adapters;
 mod application;
+mod app_state;
 mod auth_middleware;
 mod command_line_runner;
 mod commands;

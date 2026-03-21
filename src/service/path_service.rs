@@ -1,6 +1,6 @@
 use crate::DBType as DbConnection;
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
-use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
+use crate::adapters::file::file_handler::{FileRequest, resolve_file_handler_type};
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
 use crate::service::file_service::prepare_podcast_episode_title_to_directory;
@@ -48,12 +48,12 @@ impl PathService {
         let dir_exists = FileHandleWrapper::path_exists(
             base_path,
             FileRequest::Directory,
-            &FileHandlerType::from(_podcast.download_location.clone()),
+            &resolve_file_handler_type(_podcast.download_location.clone()),
         );
         if !dir_exists {
             FileHandleWrapper::create_dir(
                 base_path,
-                &FileHandlerType::from(_podcast.download_location.clone()),
+                &resolve_file_handler_type(_podcast.download_location.clone()),
             )?;
             return Ok(base_path.to_string());
         }
@@ -61,7 +61,7 @@ impl PathService {
         while FileHandleWrapper::path_exists(
             &format!("{base_path}-{i}"),
             FileRequest::NoopS3,
-            &FileHandlerType::from(_podcast.download_location.clone()),
+            &resolve_file_handler_type(_podcast.download_location.clone()),
         ) {
             i += 1;
         }
@@ -69,7 +69,7 @@ impl PathService {
         // This is safe to insert because this directory does not exist
         FileHandleWrapper::create_dir(
             &final_path,
-            &FileHandlerType::from(_podcast.download_location.clone()),
+            &resolve_file_handler_type(_podcast.download_location.clone()),
         )?;
         Ok(final_path)
     }

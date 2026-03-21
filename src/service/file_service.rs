@@ -174,7 +174,7 @@ pub async fn prepare_podcast_title_to_directory(
     podcast: &PodcastInsertModel,
     channel: Option<Channel>,
 ) -> Result<String, CustomError> {
-    let retrieved_settings = SettingsService::get_settings()?.unwrap();
+    let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
     let opt_podcast_settings = PodcastSetting::get_settings(podcast.id)?;
 
     let podcast = match channel {
@@ -272,7 +272,7 @@ pub fn perform_podcast_variable_replacement(
 pub fn prepare_podcast_episode_title_to_directory(
     podcast_episode: PodcastEpisode,
 ) -> Result<String, CustomError> {
-    let retrieved_settings = SettingsService::get_settings()?.unwrap();
+    let retrieved_settings = SettingsService::shared().get_settings()?.unwrap();
     if retrieved_settings.use_existing_filename {
         let res_of_filename = get_filename_of_url(&podcast_episode.url);
         if let Ok(res_unwrapped) = res_of_filename {

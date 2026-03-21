@@ -1,6 +1,7 @@
 use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::persistence::dbconfig::db::database;
+use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
 use crate::application::services::device::service::DeviceService;
-use crate::application::usecases::devices::edit_use_case::EditUseCase;
 use crate::constants::inner_constants::Role;
 use crate::controllers::sys_info_controller::built_info;
 use crate::models::episode::Episode;
@@ -19,10 +20,13 @@ use sha256::digest;
 use std::env::Args;
 use std::io::{Error, ErrorKind, stdin};
 use std::process::exit;
+use std::sync::Arc;
 
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
     let conn = &mut get_connection();
+    let device_service =
+        DeviceService::new(Arc::new(DeviceRepositoryImpl::new(database())));
     // Skip first argument
     args.next();
     let arg = match args.next() {
@@ -193,7 +197,8 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                         Some(..) => {
                             Episode::delete_by_username(&username)
                                 .expect("Error deleting entries for podcast history item");
-                            DeviceService::delete_by_username(&username)
+                            device_service
+                                .delete_by_username(&username)
                                 .expect("Error deleting devices");
                             Episode::delete_by_username_and_episode(&username, conn)
                                 .expect("Error deleting episodes");

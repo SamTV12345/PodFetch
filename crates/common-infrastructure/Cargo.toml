@@ -1,0 +1,25 @@
+[package]
+name = "common-infrastructure"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+postgresql = ["diesel/postgres", "diesel/postgres_backend", "dep:r2d2_postgres"]
+sqlite = ["diesel/sqlite", "dep:libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
+
+[dependencies]
+diesel = { version = "2.3.7", features = ["chrono", "r2d2"] }
+r2d2 = "0.8.10"
+thiserror = { version = "2.0.18", features = ["std"] }
+serde = { version = "1.0.228", features = ["derive"] }
+utoipa = { version = "5.4.0", features = ["chrono", "axum_extras"] }
+sha256 = "1.6.0"
+url = "2.5.8"
+log = "0.4.29"
+rust-s3 = { version = "0.36.0", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
+libsqlite3-sys = { version = "0.35.0", features = ["bundled"], optional = true }
+r2d2_postgres = { version = "0.18.2", optional = true }

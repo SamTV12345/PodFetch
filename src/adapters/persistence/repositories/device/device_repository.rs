@@ -1,45 +1,32 @@
-use crate::adapters::persistence::model::device::device_entity::DeviceEntity;
-use crate::application::repositories::device_repository::DeviceRepository;
-use crate::domain::models::device::model::Device;
-use crate::execute_with_conn;
-use crate::utils::error::{CustomError, ErrorSeverity, map_db_error};
-use diesel::RunQueryDsl;
+use crate::utils::error::CustomError;
+use podfetch_domain::device::{Device, DeviceRepository};
+use podfetch_persistence::db::Database;
+use podfetch_persistence::device::DieselDeviceRepository;
 
-pub struct DeviceRepositoryImpl;
+pub struct DeviceRepositoryImpl {
+    inner: DieselDeviceRepository,
+}
 
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
-use diesel::ExpressionMethods;
-use diesel::QueryDsl;
+impl DeviceRepositoryImpl {
+    pub fn new(database: Database) -> Self {
+        Self {
+            inner: DieselDeviceRepository::new(database),
+        }
+    }
+}
 
 impl DeviceRepository for DeviceRepositoryImpl {
-    fn create(device: Device) -> Result<Device, CustomError> {
-        let device_entity: DeviceEntity = device.into();
-        execute_with_conn!(|conn| diesel::insert_into(devices)
-            .values(device_entity)
-            .get_result(conn)
-            .map_err(|e| map_db_error(e, ErrorSeverity::Critical))
-            .map(|device_entity: DeviceEntity| device_entity.into()))
+    type Error = CustomError;
+
+    fn create(&self, device: Device) -> Result<Device, CustomError> {
+        self.inner.create(device).map_err(Into::into)
     }
 
-    fn get_devices_of_user(username_to_find: &str) -> Result<Vec<Device>, CustomError> {
-        devices
-            .filter(username.eq(username_to_find))
-            .load::<DeviceEntity>(&mut get_connection())
-            .map(|device_entity| {
-                device_entity
-                    .into_iter()
-                    .map(|device_entity| device_entity.into())
-                    .collect()
-            })
-            .map_err(|e| map_db_error(e, ErrorSeverity::Critical))
+    fn get_devices_of_user(&self, username_to_find: &str) -> Result<Vec<Device>, CustomError> {
+        self.inner.get_devices_of_user(username_to_find).map_err(Into::into)
     }
 
-    fn delete_by_username(username1: &str) -> Result<(), CustomError> {
-        use crate::adapters::persistence::dbconfig::schema::devices::dsl::*;
-        diesel::delete(devices.filter(username.eq(username1)))
-            .execute(&mut get_connection())
-            .map(|_| ())
-            .map_err(|e| map_db_error(e, ErrorSeverity::Critical))
+    fn delete_by_username(&self, username1: &str) -> Result<(), CustomError> {
+        self.inner.delete_by_username(username1).map_err(Into::into)
     }
 }

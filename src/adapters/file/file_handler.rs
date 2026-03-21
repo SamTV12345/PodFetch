@@ -1,7 +1,7 @@
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::utils::error::CustomError;
 use async_trait::async_trait;
-use std::fmt::{Display, Formatter};
+pub use common_infrastructure::config::FileHandlerType;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -19,37 +19,10 @@ pub trait FileHandler: Sync + Send {
     fn remove_file(path: &str) -> Result<(), CustomError>;
 }
 
-#[derive(PartialEq, Clone)]
-pub enum FileHandlerType {
-    Local,
-    S3,
-}
-
-impl Display for FileHandlerType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            FileHandlerType::Local => write!(f, "Local"),
-            FileHandlerType::S3 => write!(f, "S3"),
-        }
-    }
-}
-
-impl From<&str> for FileHandlerType {
-    fn from(value: &str) -> Self {
-        match value {
-            "Local" => FileHandlerType::Local,
-            "S3" => FileHandlerType::S3,
-            _ => panic!("Invalid FileHandlerType"),
-        }
-    }
-}
-
-impl From<Option<String>> for FileHandlerType {
-    fn from(value: Option<String>) -> Self {
-        match value {
-            Some(val) => FileHandlerType::from(val.as_str()),
-            None => ENVIRONMENT_SERVICE.default_file_handler.clone(),
-        }
+pub fn resolve_file_handler_type(value: Option<String>) -> FileHandlerType {
+    match value {
+        Some(val) => FileHandlerType::from(val.as_str()),
+        None => ENVIRONMENT_SERVICE.default_file_handler.clone(),
     }
 }
 

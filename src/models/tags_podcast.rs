@@ -18,8 +18,8 @@ use utoipa::ToSchema;
 )]
 #[diesel(treat_none_as_null = true)]
 pub struct TagsPodcast {
-    tag_id: String,
-    podcast_id: i32,
+    pub(crate) tag_id: String,
+    pub(crate) podcast_id: i32,
 }
 
 impl TagsPodcast {

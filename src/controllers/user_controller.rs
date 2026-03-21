@@ -1,47 +1,19 @@
-use crate::constants::inner_constants::{
-    ENVIRONMENT_SERVICE, Role, STANDARD_USER, STANDARD_USER_ID,
-};
+use crate::app_state::AppState;
+use crate::constants::inner_constants::STANDARD_USER;
+use crate::models::invite::Invite;
 use crate::models::user::{User, UserWithAPiKey, UserWithoutPassword};
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use podfetch_web::invite::{self, InviteControllerError, InvitePostModel};
+use podfetch_web::user_admin::{self, UserAdminControllerError, UserCoreUpdateModel, UserRoleUpdateModel};
+use podfetch_web::user_onboarding::{self, UserOnboardingModel};
 use reqwest::StatusCode;
 
-use crate::service::user_management_service::UserManagementService;
+use crate::service::user_admin_service::map_requester;
 use crate::utils::error::{ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType};
 
-use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-
-#[derive(Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UserOnboardingModel {
-    invite_id: String,
-    username: String,
-    password: String,
-}
-
-#[derive(Deserialize, Debug, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct InvitePostModel {
-    role: String,
-    explicit_consent: bool,
-}
-
-#[derive(Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UserRoleUpdateModel {
-    role: Role,
-    explicit_consent: bool,
-}
-
-#[derive(Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct UserCoreUpdateModel {
-    pub username: String,
-    pub password: Option<String>,
-    pub api_key: Option<String>,
-}
 
 #[utoipa::path(
 post,
@@ -52,15 +24,12 @@ responses(
 tag="user"
 )]
 pub async fn onboard_user(
+    State(state): State<AppState>,
     Json(user_to_onboard): Json<UserOnboardingModel>,
 ) -> Result<Json<UserWithoutPassword>, CustomError> {
-    let res = UserManagementService::onboard_user(
-        user_to_onboard.username,
-        user_to_onboard.password,
-        user_to_onboard.invite_id,
-    )?;
-
-    Ok(Json(User::map_to_dto(res)))
+    user_onboarding::onboard_user(state.user_onboarding_service.as_ref(), user_to_onboard)
+        .map(Into::into)
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -71,11 +40,13 @@ responses(
 tag="info"
 )]
 pub async fn get_users(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<UserWithoutPassword>>, CustomError> {
-    let res = UserManagementService::get_users(requester)?;
-
-    Ok(Json(res))
+    user_admin::get_users(state.user_admin_service.as_ref(), requester.is_admin())
+        .map(|users| users.into_iter().map(Into::into).collect())
+        .map(Json)
+        .map_err(map_user_admin_error)
 }
 
 #[utoipa::path(
@@ -86,19 +57,19 @@ responses(
 tag="user"
 )]
 pub async fn get_user(
+    State(state): State<AppState>,
     Path(username): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<UserWithAPiKey>, ErrorType> {
-    if username == requester.username || username == "me" {
-        return Ok(Json(User::map_to_api_dto(requester)));
-    }
-
-    if !requester.is_admin() || requester.username != username {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
-
-    let user = User::find_by_username(&username.clone())?;
-    Ok(Json(User::map_to_api_dto(user)))
+    user_admin::get_user(
+        state.user_admin_service.as_ref(),
+        &username,
+        &map_requester(&requester),
+        state.user_admin_service.read_only_admin_id(),
+    )
+    .map(Into::into)
+    .map(Json)
+    .map_err(map_user_admin_error_type)
 }
 
 #[utoipa::path(
@@ -111,22 +82,23 @@ tag="user"
 )]
 
 pub async fn update_role(
+    State(state): State<AppState>,
     Path(username): Path<String>,
     Extension(requester): Extension<User>,
     Json(role): Json<UserRoleUpdateModel>,
 ) -> Result<Json<UserWithoutPassword>, CustomError> {
-    if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden(ErrorSeverity::Warning).into());
-    }
-    let mut user_to_update = User::find_by_username(&username)?;
-
-    // Update to his/her designated role
-    user_to_update.role = role.role.to_string();
-    user_to_update.explicit_consent = role.explicit_consent;
-
-    let res = UserManagementService::update_user(user_to_update)?;
-
-    Ok(Json(res))
+    user_admin::update_role(
+        state.user_admin_service.as_ref(),
+        &username,
+        requester.is_admin(),
+        UserRoleUpdateModel {
+            role: role.role.to_string(),
+            explicit_consent: role.explicit_consent,
+        },
+    )
+    .map(Into::into)
+    .map(Json)
+    .map_err(map_user_admin_error)
 }
 
 #[utoipa::path(
@@ -138,52 +110,24 @@ responses(
 tag="user"
 )]
 pub async fn update_user(
+    State(state): State<AppState>,
     Extension(user): Extension<User>,
     Path(username): Path<String>,
     user_update: Json<UserCoreUpdateModel>,
 ) -> Result<Json<UserWithAPiKey>, ErrorType> {
-    if STANDARD_USER_ID == user.id {
-        return Err(ApiError::updating_admin_not_allowed(STANDARD_USER).into());
-    }
-
-    let old_username = &user.clone().username;
-    if old_username != &username {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
-
-    let mut user = User::find_by_username(&username)?;
-
-    if old_username != &user_update.username && !ENVIRONMENT_SERVICE.oidc_configured {
-        // Check if this username is already taken
-        let new_username_res = User::find_by_username(&user_update.username);
-        if new_username_res.is_ok() {
-            return Err(
-                CustomErrorInner::Conflict("Username already taken".to_string(), Info).into(),
-            );
-        }
-        user.username = user_update.username.to_string();
-    }
-    if let Some(password) = user_update.password.clone() {
-        if password.trim().len() < 8 {
-            return Err(CustomErrorInner::BadRequest(
-                "Password must be at least 8 characters long".to_string(),
-                Info,
-            )
-            .into());
-        }
-        user.password = Some(sha256::digest(password.trim()));
-    }
-
-    if let Some(api_key) = &user_update.api_key {
-        user.api_key = Some(api_key.clone());
-    }
-
-    let user = User::update_user(user)?;
-
-    Ok(Json(User::map_to_api_dto(user)))
+    user_admin::update_user(
+        state.user_admin_service.as_ref(),
+        &username,
+        &map_requester(&user),
+        user_update.0,
+        state.user_admin_service.read_only_admin_id(),
+        state.user_admin_service.oidc_configured(),
+    )
+    .map(Into::into)
+    .map(Json)
+    .map_err(map_user_admin_error_type)
 }
 
-use crate::models::invite::Invite;
 use crate::utils::error::ErrorSeverity::{Info, Warning};
 
 #[utoipa::path(
@@ -195,15 +139,13 @@ responses(
 tag="invite"
 )]
 pub async fn create_invite(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     Json(invite): Json<InvitePostModel>,
 ) -> Result<Json<Invite>, CustomError> {
-    let created_invite = UserManagementService::create_invite(
-        Role::try_from(invite.role)?,
-        invite.explicit_consent,
-        requester,
-    )?;
-    Ok(Json(created_invite))
+    invite::create_invite(state.invite_service.as_ref(), requester.is_admin(), invite)
+        .map(Json)
+        .map_err(map_invite_controller_error)
 }
 
 #[utoipa::path(
@@ -214,15 +156,12 @@ responses(
 tag="invite"
 )]
 pub async fn get_invites(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<Invite>>, CustomError> {
-    if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden(Info).into());
-    }
-
-    let invites = UserManagementService::get_invites()?;
-
-    Ok(Json(invites))
+    invite::get_invites(state.invite_service.as_ref(), requester.is_admin())
+        .map(Json)
+        .map_err(map_invite_controller_error)
 }
 
 #[utoipa::path(
@@ -232,11 +171,13 @@ responses(
 (status = 200, description = "Gets a specific invite", body = Option<Invite>)),
 tag="user"
 )]
-pub async fn get_invite(Path(invite_id): Path<String>) -> Result<Json<Invite>, CustomError> {
-    match UserManagementService::get_invite(invite_id) {
-        Ok(invite) => Ok(Json(invite)),
-        Err(e) => Err(e),
-    }
+pub async fn get_invite(
+    State(state): State<AppState>,
+    Path(invite_id): Path<String>,
+) -> Result<Json<Invite>, CustomError> {
+    invite::get_invite(state.invite_service.as_ref(), &invite_id)
+        .map(Json)
+        .map_err(map_invite_controller_error)
 }
 
 #[utoipa::path(
@@ -247,18 +188,13 @@ responses(
 tag="user"
 )]
 pub async fn delete_user(
+    State(state): State<AppState>,
     Path(username): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden(Info).into());
-    }
-
-    let user_to_delete = User::find_by_username(&username)?;
-    match UserManagementService::delete_user(user_to_delete) {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => Err(e),
-    }
+    user_admin::delete_user(state.user_admin_service.as_ref(), requester.is_admin(), &username)
+        .map(|_| StatusCode::OK)
+        .map_err(map_user_admin_error)
 }
 
 #[utoipa::path(
@@ -268,17 +204,12 @@ tag="invite",
 responses(
 (status = 200, description = "Gets an invite by id", body = Option<String>)))]
 pub async fn get_invite_link(
+    State(state): State<AppState>,
     Path(invite_id): Path<String>,
     requester: Extension<User>,
 ) -> Result<String, CustomError> {
-    if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
-
-    match UserManagementService::get_invite_link(invite_id) {
-        Ok(invite) => Ok(invite),
-        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string(), Warning).into()),
-    }
+    invite::get_invite_link(state.invite_service.as_ref(), requester.is_admin(), &invite_id)
+        .map_err(map_invite_link_error)
 }
 
 #[utoipa::path(
@@ -288,20 +219,62 @@ tag="invite",
 responses(
 (status = 200, description = "Deletes an invite by id")))]
 pub async fn delete_invite(
+    State(state): State<AppState>,
     invite_id: Path<String>,
     requester: Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    if !requester.is_admin() {
-        return Err(CustomErrorInner::Forbidden(Warning).into());
-    }
+    invite::delete_invite(state.invite_service.as_ref(), requester.is_admin(), &invite_id.0)
+        .map(|_| StatusCode::OK)
+        .map_err(map_invite_link_error)
+}
 
-    match UserManagementService::delete_invite(invite_id.0) {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(e) => Err(CustomErrorInner::BadRequest(e.to_string(), Warning).into()),
+fn map_invite_controller_error(error: InviteControllerError<CustomError>) -> CustomError {
+    match error {
+        InviteControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        InviteControllerError::Service(error) => error,
     }
 }
 
-pub fn get_user_router() -> OpenApiRouter {
+fn map_invite_link_error(error: InviteControllerError<CustomError>) -> CustomError {
+    match error {
+        InviteControllerError::Forbidden => CustomErrorInner::Forbidden(Warning).into(),
+        InviteControllerError::Service(error) => {
+            CustomErrorInner::BadRequest(error.to_string(), Warning).into()
+        }
+    }
+}
+
+fn map_user_admin_error(error: UserAdminControllerError<CustomError>) -> CustomError {
+    match error {
+        UserAdminControllerError::Forbidden => {
+            CustomErrorInner::Forbidden(ErrorSeverity::Warning).into()
+        }
+        UserAdminControllerError::NotFound => CustomErrorInner::NotFound(Info).into(),
+        UserAdminControllerError::UpdatingAdminNotAllowed => {
+            CustomErrorInner::BadRequest("UPDATE_OF_ADMIN_NOT_ALLOWED".to_string(), Info).into()
+        }
+        UserAdminControllerError::UsernameTaken => {
+            CustomErrorInner::Conflict("Username already taken".to_string(), Info).into()
+        }
+        UserAdminControllerError::PasswordTooShort => CustomErrorInner::BadRequest(
+            "Password must be at least 8 characters long".to_string(),
+            Info,
+        )
+        .into(),
+        UserAdminControllerError::Service(error) => error,
+    }
+}
+
+fn map_user_admin_error_type(error: UserAdminControllerError<CustomError>) -> ErrorType {
+    match error {
+        UserAdminControllerError::UpdatingAdminNotAllowed => {
+            ApiError::updating_admin_not_allowed(STANDARD_USER).into()
+        }
+        other => map_user_admin_error(other).into(),
+    }
+}
+
+pub fn get_user_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .nest(
             "/users",
@@ -320,15 +293,15 @@ pub fn get_user_router() -> OpenApiRouter {
 
 #[cfg(test)]
 mod tests {
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::invite::Invite;
     use crate::models::user::User;
     use crate::models::user::UserWithAPiKey;
-    use crate::utils::error::ErrorType;
-    use crate::utils::error::CustomErrorInner;
+    use crate::utils::error::{CustomErrorInner, ErrorType};
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use axum::extract::Path;
+    use axum::extract::{Path, State};
     use axum::{Extension, Json};
     use serde_json::json;
     use serial_test::serial;
@@ -347,6 +320,10 @@ mod tests {
 
     fn non_admin_user() -> User {
         UserTestDataBuilder::new().build()
+    }
+
+    fn app_state() -> AppState {
+        AppState::new()
     }
 
     fn assert_client_error_status(status: u16) {
@@ -512,20 +489,26 @@ mod tests {
     async fn test_user_handlers_return_forbidden_for_non_admin_or_foreign_user() {
         let non_admin = non_admin_user();
 
-        let get_users_result = super::get_users(Extension(non_admin.clone())).await;
+        let get_users_result =
+            super::get_users(State(app_state()), Extension(non_admin.clone())).await;
         match get_users_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for get_users"),
         }
 
-        let get_invites_result = super::get_invites(Extension(non_admin.clone())).await;
+        let get_invites_result =
+            super::get_invites(State(app_state()), Extension(non_admin.clone())).await;
         match get_invites_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for get_invites"),
         }
 
-        let invite_link_result =
-            super::get_invite_link(Path("some-id".to_string()), Extension(non_admin)).await;
+        let invite_link_result = super::get_invite_link(
+            State(app_state()),
+            Path("some-id".to_string()),
+            Extension(non_admin),
+        )
+        .await;
         match invite_link_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for get_invite_link"),
@@ -597,6 +580,7 @@ mod tests {
         let non_admin = non_admin_user();
 
         let get_user_result = super::get_user(
+            State(app_state()),
             Path("other-user".to_string()),
             Extension(non_admin.clone()),
         )
@@ -609,10 +593,11 @@ mod tests {
         }
 
         let update_role_result = super::update_role(
+            State(app_state()),
             Path("someone".to_string()),
             Extension(non_admin.clone()),
             Json(super::UserRoleUpdateModel {
-                role: crate::constants::inner_constants::Role::User,
+                role: "user".to_string(),
                 explicit_consent: true,
             }),
         )
@@ -622,15 +607,23 @@ mod tests {
             Ok(_) => panic!("expected forbidden error for update_role"),
         }
 
-        let delete_user_result =
-            super::delete_user(Path("someone".to_string()), Extension(non_admin.clone())).await;
+        let delete_user_result = super::delete_user(
+            State(app_state()),
+            Path("someone".to_string()),
+            Extension(non_admin.clone()),
+        )
+        .await;
         match delete_user_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for delete_user"),
         }
 
-        let delete_invite_result =
-            super::delete_invite(Path("some-invite".to_string()), Extension(non_admin)).await;
+        let delete_invite_result = super::delete_invite(
+            State(app_state()),
+            Path("some-invite".to_string()),
+            Extension(non_admin),
+        )
+        .await;
         match delete_invite_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for delete_invite"),

@@ -1,13 +1,29 @@
+use crate::app_state::AppState;
+use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use crate::models::settings::ConfigModel;
 use crate::models::user::User;
+use crate::utils::error::ErrorSeverity::Info;
+use crate::utils::error::ErrorType::CustomErrorType;
+use crate::utils::error::{
+    ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
+};
+use crate::utils::url_builder::{
+    resolve_server_url_from_headers, rewrite_env_server_url_prefix,
+};
+use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::{Extension, Json};
-
 use fs_extra::dir::get_size;
+use podfetch_web::sys::{
+    self, Cpu, CpuUsageDto, CpusWrapperDto, LoginControllerError, LoginRequest, SimplifiedDisk,
+    SysExtraInfo, SystemDto, VersionInfo,
+};
 use reqwest::StatusCode;
-use sha256::digest;
-
 use sysinfo::{Disk, Disks, System};
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+
 pub mod built_info {
-    // The file has been placed there by the build script.
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
@@ -28,11 +44,7 @@ pub async fn get_sys_info(
 
     let mut sys = System::new();
     let disks = Disks::new_with_refreshed_list();
-
-    let sim_disks = disks
-        .iter()
-        .map(|disk| disk.into())
-        .collect::<Vec<SimplifiedDisk>>();
+    let simplified_disks = disks.iter().map(map_disk).collect::<Vec<SimplifiedDisk>>();
 
     sys.refresh_all();
     sys.refresh_cpu_all();
@@ -41,113 +53,48 @@ pub async fn get_sys_info(
         get_size(&ENVIRONMENT_SERVICE.default_podfetch_folder).map_err(|e| {
             map_io_extra_error(
                 e,
-                Some(
-                    ENVIRONMENT_SERVICE
-                        .default_podfetch_folder
-                        .to_string()
-                        .to_string(),
-                ),
+                Some(ENVIRONMENT_SERVICE.default_podfetch_folder.to_string()),
                 ErrorSeverity::Critical,
             )
         })?;
+
     Ok(Json(SysExtraInfo {
-        system: sys.into(),
-        disks: sim_disks,
+        system: map_system(sys),
+        disks: simplified_disks,
         podcast_directory: podcast_byte_size,
     }))
 }
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::settings::ConfigModel;
-use crate::utils::error::ErrorSeverity::Info;
-use crate::utils::error::ErrorType::CustomErrorType;
-use crate::utils::error::{
-    ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
-};
-use crate::utils::url_builder::{
-    build_ws_url_from_server_url, resolve_server_url_from_headers, rewrite_env_server_url_prefix,
-};
-use axum::http::HeaderMap;
-use utoipa::ToSchema;
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
 
-#[derive(Debug, Serialize, ToSchema)]
-pub struct SysExtraInfo {
-    pub system: SystemDto,
-    pub disks: Vec<SimplifiedDisk>,
-    pub podcast_directory: u64,
-}
-
-impl From<System> for SystemDto {
-    fn from(sys: System) -> Self {
-        SystemDto {
-            mem_total: sys.total_memory(),
-            mem_available: sys.available_memory(),
-            swap_total: sys.total_swap(),
-            swap_used: sys.used_swap(),
-            cpus: CpusWrapperDto {
-                global: sys.global_cpu_usage(),
-                cpus: sys
-                    .cpus()
-                    .iter()
-                    .map(|cpu| Cpu {
-                        name: cpu.name().to_string(),
-                        vendor_id: cpu.vendor_id().to_string(),
-                        usage: CpuUsageDto {
-                            percent: cpu.cpu_usage(),
-                        },
-                        brand: cpu.brand().to_string(),
-                        frequency: cpu.frequency(),
-                    })
-                    .collect(),
-            },
-        }
+fn map_system(sys: System) -> SystemDto {
+    SystemDto {
+        mem_total: sys.total_memory(),
+        mem_available: sys.available_memory(),
+        swap_total: sys.total_swap(),
+        swap_used: sys.used_swap(),
+        cpus: CpusWrapperDto {
+            global: sys.global_cpu_usage(),
+            cpus: sys
+                .cpus()
+                .iter()
+                .map(|cpu| Cpu {
+                    name: cpu.name().to_string(),
+                    vendor_id: cpu.vendor_id().to_string(),
+                    usage: CpuUsageDto {
+                        percent: cpu.cpu_usage(),
+                    },
+                    brand: cpu.brand().to_string(),
+                    frequency: cpu.frequency(),
+                })
+                .collect(),
+        },
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
-pub struct SystemDto {
-    mem_total: u64,
-    mem_available: u64,
-    swap_total: u64,
-    swap_used: u64,
-    cpus: CpusWrapperDto,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct CpusWrapperDto {
-    global: f32,
-    cpus: Vec<Cpu>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct Cpu {
-    name: String,
-    vendor_id: String,
-    usage: CpuUsageDto,
-    brand: String,
-    frequency: u64,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct CpuUsageDto {
-    percent: f32,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct SimplifiedDisk {
-    pub name: String,
-    pub total_space: u64,
-    pub available_space: u64,
-}
-
-impl From<&Disk> for SimplifiedDisk {
-    fn from(disk: &Disk) -> Self {
-        SimplifiedDisk {
-            name: disk.name().to_str().unwrap_or("").to_string(),
-            total_space: disk.total_space(),
-            available_space: disk.available_space(),
-        }
+fn map_disk(disk: &Disk) -> SimplifiedDisk {
+    SimplifiedDisk {
+        name: disk.name().to_str().unwrap_or("").to_string(),
+        total_space: disk.total_space(),
+        available_space: disk.available_space(),
     }
 }
 
@@ -159,18 +106,22 @@ responses(
 body=ConfigModel)),
 tag="sys"
 )]
-
-pub async fn get_public_config(headers: HeaderMap) -> Json<ConfigModel> {
+pub async fn get_public_config(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Json<ConfigModel> {
     let resolved_server_url = resolve_server_url_from_headers(&headers);
-    let mut config = ENVIRONMENT_SERVICE.get_config();
-    config.server_url = resolved_server_url.clone();
-    config.rss_feed = format!("{}rss", resolved_server_url);
-    config.ws_url = build_ws_url_from_server_url(&resolved_server_url);
-    if let Some(oidc_config) = config.oidc_config.as_mut() {
-        oidc_config.redirect_uri =
-            rewrite_env_server_url_prefix(&oidc_config.redirect_uri, &resolved_server_url);
-    }
-    Json(config)
+    let config = state.environment.get_config();
+    let rewritten_oidc_redirect_uri = config
+        .oidc_config
+        .as_ref()
+        .map(|oidc| rewrite_env_server_url_prefix(&oidc.redirect_uri, &resolved_server_url));
+
+    Json(sys::get_public_config(
+        config,
+        &resolved_server_url,
+        rewritten_oidc_redirect_uri,
+    ))
 }
 
 #[utoipa::path(
@@ -182,54 +133,21 @@ responses(
 body=String)),
 tag="sys"
 )]
-pub async fn login(auth: Json<LoginRequest>) -> Result<StatusCode, ErrorType> {
-    use crate::ENVIRONMENT_SERVICE;
-
-    let digested_password = digest(auth.0.password);
-    if let Some(admin_username) = &ENVIRONMENT_SERVICE.username
-        && admin_username == &auth.0.username
-        && let Some(admin_password) = &ENVIRONMENT_SERVICE.password
-        && admin_password == &digested_password
-    {
-        return Ok(StatusCode::OK);
-    }
-    let db_user = match User::find_by_username(&auth.0.username) {
-        Ok(user) => user,
-        Err(err) => {
-            if matches!(err.inner, CustomErrorInner::NotFound(_)) {
-                log::warn!("Login failed for user {}", auth.0.username);
-                return Err(ApiError::wrong_user_or_password().into());
-            }
-            return Err(CustomErrorType(err));
-        }
-    };
-
-    if db_user.password.is_none() {
-        log::warn!("Login failed for user {}", auth.0.username);
-        return Err(CustomErrorInner::Forbidden(Info).into());
-    }
-
-    if db_user.password.unwrap() == digested_password {
-        return Ok(StatusCode::OK);
-    }
-    log::warn!("Login failed for user {}", auth.0.username);
-    Err(CustomErrorInner::Forbidden(Info).into())
+pub async fn login(
+    State(state): State<AppState>,
+    auth: Json<LoginRequest>,
+) -> Result<StatusCode, ErrorType> {
+    sys::login(state.login_service.as_ref(), &auth.0)
+        .map(|_| StatusCode::OK)
+        .map_err(map_login_error)
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct LoginRequest {
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct VersionInfo {
-    pub version: &'static str,
-    pub r#ref: &'static str,
-    pub commit: &'static str,
-    pub ci: &'static str,
-    pub time: &'static str,
-    pub os: &'static str,
+fn map_login_error(error: LoginControllerError<CustomError>) -> ErrorType {
+    match error {
+        LoginControllerError::Unauthorized => ApiError::wrong_user_or_password().into(),
+        LoginControllerError::Forbidden => CustomErrorInner::Forbidden(Info).into(),
+        LoginControllerError::Service(error) => CustomErrorType(error),
+    }
 }
 
 #[utoipa::path(
@@ -240,15 +158,14 @@ responses(
 tag="info"
 )]
 pub async fn get_info() -> Json<VersionInfo> {
-    let version = VersionInfo {
-        commit: env!("GIT_EXACT_TAG"),
-        version: env!("VW_VERSION"),
-        r#ref: env!("GIT_BRANCH"),
-        ci: built_info::CI_PLATFORM.unwrap_or("No CI platform"),
-        time: built_info::BUILT_TIME_UTC,
-        os: built_info::CFG_OS,
-    };
-    Json(version)
+    Json(sys::get_version_info(
+        env!("VW_VERSION"),
+        env!("GIT_BRANCH"),
+        env!("GIT_EXACT_TAG"),
+        built_info::CI_PLATFORM.unwrap_or("No CI platform"),
+        built_info::BUILT_TIME_UTC,
+        built_info::CFG_OS,
+    ))
 }
 
 pub fn get_sys_info_router() -> OpenApiRouter {
@@ -259,11 +176,13 @@ pub fn get_sys_info_router() -> OpenApiRouter {
 
 #[cfg(test)]
 mod tests {
+    use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::Role;
     use crate::models::settings::ConfigModel;
     use crate::models::user::User;
-    use crate::utils::error::CustomErrorInner;
+    use crate::utils::error::{CustomErrorInner, ErrorType};
+    use axum::extract::State;
     use axum::Extension;
     use chrono::Utc;
     use serde_json::Value;
@@ -285,6 +204,10 @@ mod tests {
             true,
         );
         user.insert_user().unwrap();
+    }
+
+    fn app_state() -> AppState {
+        AppState::new()
     }
 
     fn assert_client_error_status(status: u16) {
@@ -486,5 +409,27 @@ mod tests {
         assert!(config.rss_feed.ends_with("/rss") || config.rss_feed.ends_with("rss"));
         assert!(config.ws_url.starts_with("ws://") || config.ws_url.starts_with("wss://"));
     }
-}
 
+    #[tokio::test]
+    #[serial]
+    async fn test_login_handler_returns_forbidden_for_wrong_password() {
+        let username = unique_username("login-handler-user");
+        insert_user_with_password(username.clone(), "correct-password");
+
+        let result = super::login(
+            State(app_state()),
+            axum::Json(super::LoginRequest {
+                username,
+                password: "wrong-password".to_string(),
+            }),
+        )
+        .await;
+
+        match result {
+            Err(ErrorType::CustomErrorType(err)) => {
+                assert!(matches!(err.inner, CustomErrorInner::Forbidden(_)))
+            }
+            _ => panic!("expected forbidden login result"),
+        }
+    }
+}

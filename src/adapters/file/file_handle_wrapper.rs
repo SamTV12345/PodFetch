@@ -1,4 +1,6 @@
-use crate::adapters::file::file_handler::{FileHandler, FileHandlerType, FileRequest};
+use crate::adapters::file::file_handler::{
+    FileHandler, FileHandlerType, FileRequest, resolve_file_handler_type,
+};
 use crate::adapters::file::local_file_handler::LocalFileHandler;
 use crate::adapters::file::s3_file_handler::S3Handler;
 use crate::models::podcast_episode::PodcastEpisode;
@@ -43,7 +45,7 @@ impl FileHandleWrapper {
         }
     }
     pub fn remove_dir(podcast: &Podcast) -> Result<(), CustomError> {
-        match FileHandlerType::from(podcast.download_location.clone()) {
+        match resolve_file_handler_type(podcast.download_location.clone()) {
             FileHandlerType::Local => {
                 // Remove the directory
                 LocalFileHandler::remove_dir(&podcast.directory_name)?;

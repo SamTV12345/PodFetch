@@ -1,3 +1,4 @@
+use crate::app_state::AppState;
 use crate::commands::startup::get_api_config;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::gpodder::auth::authentication::login;
@@ -10,12 +11,12 @@ use axum::middleware::from_fn;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-pub fn global_routes() -> OpenApiRouter {
+pub fn global_routes(state: AppState) -> OpenApiRouter {
     let base_path = ENVIRONMENT_SERVICE
         .sub_directory
         .clone()
         .unwrap_or("/".to_string());
-    let service = get_api_config();
+    let service = get_api_config(state.clone());
 
     let mut router = match base_path.is_empty() {
         true => OpenApiRouter::new()
@@ -35,7 +36,7 @@ pub fn global_routes() -> OpenApiRouter {
             "/api/2",
             OpenApiRouter::new()
                 .merge(get_subscription_router())
-                .merge(get_device_router())
+                .merge(get_device_router().with_state(state.clone()))
                 .merge(get_gpodder_episodes_router())
                 .layer(from_fn(handle_cookie_session)),
         );

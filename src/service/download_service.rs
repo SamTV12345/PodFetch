@@ -12,7 +12,6 @@ use crate::constants::inner_constants::{
 use crate::models::file_path::{FilenameBuilder, FilenameBuilderReturn};
 use crate::models::podcast_episode_chapter::PodcastEpisodeChapter;
 use crate::models::podcast_settings::PodcastSetting;
-use crate::models::settings::Setting;
 use crate::service::podcast_chapter::{Chapter, Link};
 use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
@@ -188,7 +187,9 @@ impl DownloadService {
             determine_file_extension(&podcast_episode.url, &client, FileType::Audio),
             &podcast_episode.url,
         )?;
-        let settings_in_db = Setting::get_settings()?.unwrap();
+        let settings_in_db = crate::service::settings_service::SettingsService::shared()
+            .get_settings()?
+            .unwrap();
         let should_download_main_image = !FileService::check_if_podcast_main_image_downloaded(
             &podcast.clone().directory_id,
             conn,

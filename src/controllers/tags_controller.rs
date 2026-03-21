@@ -1,10 +1,11 @@
+use crate::adapters::persistence::repositories::tag_repository::TagUpdate;
+use crate::app_state::AppState;
 use crate::models::color::Color;
 use crate::models::tag::Tag;
 use crate::models::tags_podcast::TagsPodcast;
 use crate::models::user::User;
-use crate::utils::error::ErrorSeverity::Debug;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use axum::extract::Path;
+use crate::utils::error::CustomError;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use utoipa::ToSchema;
@@ -27,16 +28,19 @@ body = Tag)),
 tag="tags"
 )]
 pub async fn insert_tag(
+    State(state): State<AppState>,
     Extension(requester): Extension<User>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    let new_tag = Tag::new(
-        tag_create.name.clone(),
-        tag_create.description.clone(),
-        tag_create.color.to_string(),
-        requester.username.clone(),
-    );
-    new_tag.insert_tag().map(Json)
+    state
+        .tag_service
+        .create_tag(
+            requester.username.clone(),
+            tag_create.name,
+            tag_create.description,
+            tag_create.color.to_string(),
+        )
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -46,8 +50,11 @@ responses(
 (status = 200, description = "Gets all tags of a user", body=Vec<Tag>)),
 tag="tags"
 )]
-pub async fn get_tags(requester: Extension<User>) -> Result<Json<Vec<Tag>>, CustomError> {
-    let tags = Tag::get_tags(requester.username.clone())?;
+pub async fn get_tags(
+    State(state): State<AppState>,
+    requester: Extension<User>,
+) -> Result<Json<Vec<Tag>>, CustomError> {
+    let tags = state.tag_service.get_tags(&requester.username)?;
     Ok(Json(tags))
 }
 
@@ -59,18 +66,14 @@ responses(
 tag="tags"
 )]
 pub async fn delete_tag(
+    State(state): State<AppState>,
     Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
-    match opt_tag {
-        Some(tag) => {
-            TagsPodcast::delete_tag_podcasts(&tag.id)?;
-            Tag::delete_tag(&tag.id)?;
-            Ok(StatusCode::OK)
-        }
-        None => Err(CustomErrorInner::NotFound(Debug).into()),
-    }
+    state
+        .tag_service
+        .delete_tag(&requester.username, &tag_id)
+        .map(|_| StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -81,23 +84,23 @@ responses(
 tag="tags"
 )]
 pub async fn update_tag(
+    State(state): State<AppState>,
     Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username)?;
-    match opt_tag {
-        Some(tag) => {
-            let updated_tag = Tag::update_tag(
-                &tag.id,
-                tag_create.name.clone(),
-                tag_create.description.clone(),
-                tag_create.color.to_string(),
-            )?;
-            Ok(Json(updated_tag))
-        }
-        None => Err(CustomErrorInner::NotFound(Debug).into()),
-    }
+    state
+        .tag_service
+        .update_tag(
+            &requester.username,
+            &tag_id,
+            TagUpdate {
+                name: tag_create.name,
+                description: tag_create.description,
+                color: tag_create.color.to_string(),
+            },
+        )
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -108,18 +111,15 @@ responses(
 tag="tags"
 )]
 pub async fn add_podcast_to_tag(
+    State(state): State<AppState>,
     Path(tag_id_to_convert): Path<(String, i32)>,
     requester: Extension<User>,
 ) -> Result<Json<TagsPodcast>, CustomError> {
     let (tag_id, podcast_id) = tag_id_to_convert;
-    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
-    match opt_tag {
-        Some(tag) => {
-            let podcast = TagsPodcast::add_podcast_to_tag(tag.id.clone(), podcast_id)?;
-            Ok(Json(podcast))
-        }
-        None => Err(CustomErrorInner::NotFound(Debug).into()),
-    }
+    state
+        .tag_service
+        .add_podcast_to_tag(&requester.username, &tag_id, podcast_id)
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -130,22 +130,19 @@ responses(
 tag="tags"
 )]
 pub async fn delete_podcast_from_tag(
+    State(state): State<AppState>,
     Path(tag_id): Path<(String, i32)>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
     let (tag_id, podcast_id) = tag_id;
 
-    let opt_tag = Tag::get_tag_by_id_and_username(&tag_id, &requester.username.clone())?;
-    match opt_tag {
-        Some(tag) => {
-            TagsPodcast::delete_tag_podcasts_by_podcast_id_tag_id(podcast_id, &tag.id)?;
-            Ok(StatusCode::OK)
-        }
-        None => Err(CustomErrorInner::NotFound(Debug).into()),
-    }
+    state
+        .tag_service
+        .delete_podcast_from_tag(&requester.username, &tag_id, podcast_id)
+        .map(|_| StatusCode::OK)
 }
 
-pub fn get_tags_router() -> OpenApiRouter {
+pub fn get_tags_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(insert_tag))
         .routes(routes!(get_tags))
@@ -160,10 +157,11 @@ mod tests {
     use super::Tag;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+    use crate::app_state::AppState;
     use crate::models::podcasts::Podcast;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use axum::extract::Path;
+    use axum::extract::{Path, State};
     use axum::{Extension, Json};
     use serde_json::json;
     use serial_test::serial;
@@ -191,6 +189,10 @@ mod tests {
         let mut user = UserTestDataBuilder::new().build();
         user.id = 999_999;
         user
+    }
+
+    fn app_state() -> AppState {
+        AppState::new()
     }
 
     #[tokio::test]
@@ -394,6 +396,7 @@ mod tests {
         let created_tag = create_response.json::<Tag>();
 
         let update_result = super::update_tag(
+            State(app_state()),
             Path(created_tag.id.clone()),
             Extension(other_user()),
             Json(super::TagCreate {
@@ -408,8 +411,12 @@ mod tests {
             Ok(_) => panic!("expected not found for update_tag with other user"),
         }
 
-        let delete_result =
-            super::delete_tag(Path(created_tag.id), Extension(other_user())).await;
+        let delete_result = super::delete_tag(
+            State(app_state()),
+            Path(created_tag.id),
+            Extension(other_user()),
+        )
+        .await;
         match delete_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::NotFound(_))),
             Ok(_) => panic!("expected not found for delete_tag with other user"),

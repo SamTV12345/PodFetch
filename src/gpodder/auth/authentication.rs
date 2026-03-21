@@ -159,11 +159,11 @@ mod tests {
         assert_eq!(cookie.value(), session.session_id);
     }
 
-    use crate::adapters::api::models::device::device_response::DeviceResponse;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::utils::auth::tests::create_auth_gpodder;
     use crate::utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use podfetch_web::device::DeviceResponse;
 
     #[tokio::test]
     #[serial]

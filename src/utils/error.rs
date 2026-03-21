@@ -1,5 +1,6 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use common_infrastructure::db::PersistenceError;
 use log::{debug, error, info, warn};
 use s3::error::S3Error;
 use std::backtrace::Backtrace;
@@ -73,6 +74,17 @@ impl IntoResponse for ErrorType {
 impl From<CustomError> for ErrorType {
     fn from(value: CustomError) -> Self {
         ErrorType::CustomErrorType(value)
+    }
+}
+
+impl From<PersistenceError> for CustomError {
+    fn from(value: PersistenceError) -> Self {
+        match value {
+            PersistenceError::Database(db_error) => map_db_error(db_error, ErrorSeverity::Critical),
+            PersistenceError::Pool(_) | PersistenceError::Connection(_) => {
+                CustomErrorInner::Unknown(ErrorSeverity::Critical).into()
+            }
+        }
     }
 }
 

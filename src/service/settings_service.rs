@@ -1,38 +1,54 @@
-use crate::controllers::settings_controller::UpdateNameSettings;
+use crate::adapters::persistence::dbconfig::db::database;
+use crate::adapters::persistence::repositories::settings_repository::SettingsRepositoryImpl;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::settings::Setting;
+use crate::models::settings::{Setting, UpdateNameSettings};
 use crate::service::file_service::{
     perform_episode_variable_replacement, perform_podcast_variable_replacement,
 };
 use crate::utils::error::CustomError;
 use crate::utils::rss_feed_parser::PodcastParsed;
+use podfetch_domain::settings::SettingRepository;
+use podfetch_web::settings::SettingsApplicationService;
+use std::sync::Arc;
 
-pub struct SettingsService {}
+#[derive(Clone)]
+pub struct SettingsService {
+    repository: Arc<dyn SettingRepository<Error = CustomError>>,
+}
 
 impl SettingsService {
-    pub fn get_settings() -> Result<Option<Setting>, CustomError> {
-        Setting::get_settings()
+    pub fn new(repository: Arc<dyn SettingRepository<Error = CustomError>>) -> Self {
+        Self { repository }
     }
 
-    pub fn update_settings(settings: Setting) -> Result<Setting, CustomError> {
-        Setting::update_settings(settings)
+    pub fn shared() -> Self {
+        Self::new(Arc::new(SettingsRepositoryImpl::new(database())))
     }
 
-    pub fn update_name(update_model: UpdateNameSettings) -> Result<Setting, CustomError> {
-        let mut settings_ = Self::get_settings()?.unwrap();
+    pub fn get_settings(&self) -> Result<Option<Setting>, CustomError> {
+        self.repository.get_settings()
+    }
+
+    pub fn update_settings(&self, settings: Setting) -> Result<Setting, CustomError> {
+        self.repository.update_settings(settings)
+    }
+
+    pub fn insert_default_settings_if_not_present(&self) -> Result<(), CustomError> {
+        if self.get_settings()?.is_none() {
+            self.repository.insert_default_settings()?;
+        }
+        Ok(())
+    }
+
+    pub fn update_name(&self, update_model: UpdateNameSettings) -> Result<Setting, CustomError> {
+        let mut settings = self.get_settings()?.unwrap();
         Self::validate_settings(update_model.clone())?;
-
-        settings_.replace_invalid_characters = update_model.replace_invalid_characters;
-        settings_.use_existing_filename = update_model.use_existing_filename;
-        settings_.direct_paths = update_model.direct_paths;
-        settings_.replacement_strategy = update_model.replacement_strategy.to_string();
-        settings_.episode_format = update_model.episode_format;
-        settings_.podcast_format = update_model.podcast_format;
-        Self::update_settings(settings_)
+        update_model.apply_to(&mut settings);
+        self.update_settings(settings)
     }
 
     fn validate_settings(
-        update_setttings: UpdateNameSettings,
+        update_settings: UpdateNameSettings,
     ) -> Result<UpdateNameSettings, CustomError> {
         let sample_podcast = PodcastParsed {
             date: "2022-01-01".to_string(),
@@ -62,16 +78,42 @@ impl SettingsService {
             download_location: None,
         };
 
-        perform_podcast_variable_replacement(
-            update_setttings.clone().into(),
-            sample_podcast.clone(),
-            None,
-        )?;
-        perform_episode_variable_replacement(
-            update_setttings.clone().into(),
-            sample_episode.clone(),
-            None,
-        )?;
-        Ok(update_setttings)
+        let transient_setting = build_name_only_setting(&update_settings);
+        perform_podcast_variable_replacement(transient_setting.clone(), sample_podcast, None)?;
+        perform_episode_variable_replacement(transient_setting, sample_episode, None)?;
+        Ok(update_settings)
+    }
+}
+
+fn build_name_only_setting(update: &UpdateNameSettings) -> Setting {
+    Setting {
+        id: 0,
+        auto_download: false,
+        auto_update: false,
+        auto_cleanup: false,
+        auto_cleanup_days: 0,
+        podcast_prefill: 0,
+        replace_invalid_characters: update.replace_invalid_characters,
+        use_existing_filename: update.use_existing_filename,
+        replacement_strategy: update.replacement_strategy.to_string(),
+        episode_format: update.episode_format.clone(),
+        podcast_format: update.podcast_format.clone(),
+        direct_paths: update.direct_paths,
+    }
+}
+
+impl SettingsApplicationService for SettingsService {
+    type Error = CustomError;
+
+    fn get_settings(&self) -> Result<Option<Setting>, Self::Error> {
+        self.get_settings()
+    }
+
+    fn update_settings(&self, settings: Setting) -> Result<Setting, Self::Error> {
+        self.update_settings(settings)
+    }
+
+    fn update_name(&self, update: UpdateNameSettings) -> Result<Setting, Self::Error> {
+        self.update_name(update)
     }
 }
