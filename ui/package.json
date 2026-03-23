@@ -75,7 +75,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "happy-dom": "^20.8.4",
-    "jsdom": "^29.0.0",
+    "jsdom": "^29.0.1",
     "openapi-typescript": "^7.13.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
