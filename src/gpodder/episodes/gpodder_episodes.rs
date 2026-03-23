@@ -1,5 +1,5 @@
-use crate::mappers::episode_mapper::{map_episode_dto_to_episode, map_episode_to_dto};
-use crate::models::episode::Episode;
+use crate::adapters::api::mappers::episode::{map_episode_dto_to_episode, map_episode_to_dto};
+use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::gpodder_trimmer::trim_from_path;
@@ -42,14 +42,13 @@ pub async fn get_episode_actions(
     let username = trim_from_path(&username);
     ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
     let since_date = parse_since_epoch::<CustomError>(since.since).map_err(map_gpodder_error)?;
-    let mut actions = Episode::get_actions_by_username(
+    let mut actions = WatchtimeService::get_actions_by_username(
         username.0,
         since_date,
         since.device.clone(),
         since.aggregate.clone(),
         since.podcast.clone(),
-    )
-    .await;
+    )?;
 
     if let Some(device) = since.device.clone() {
         actions.iter_mut().for_each(|a| {
@@ -58,7 +57,10 @@ pub async fn get_episode_actions(
     }
 
     Ok(Json(EpisodeActionResponse {
-        actions: actions.iter().map(map_episode_to_dto).collect(),
+        actions: actions
+            .iter()
+            .map(|episode| map_episode_to_dto(&episode.clone().into()))
+            .collect(),
         timestamp: get_current_timestamp(),
     }))
 }
@@ -81,10 +83,10 @@ pub async fn upload_episode_actions(
 ) -> Result<Json<EpisodeActionPostResponse>, CustomError> {
     let username = trim_from_path(&username);
     ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
-    let mut inserted_episodes: Vec<Episode> = vec![];
+    let mut inserted_episodes = vec![];
     podcast_episode.iter().for_each(|episode| {
         let episode = map_episode_dto_to_episode(episode, username.0.to_string());
-        inserted_episodes.push(Episode::insert_episode(&episode.clone()).unwrap());
+        inserted_episodes.push(WatchtimeService::insert_episode(episode).unwrap());
     });
     Ok(Json(EpisodeActionPostResponse {
         update_urls: vec![],

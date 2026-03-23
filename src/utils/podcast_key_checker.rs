@@ -3,6 +3,8 @@ use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::controllers::websocket_controller::RSSAPiKey;
 use crate::models::podcast_episode::PodcastEpisode;
 use crate::models::podcasts::Podcast;
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::application::services::podcast::service::PodcastService;
 use crate::utils::error::ErrorSeverity::{Info, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::extract::{Request, State};
@@ -34,7 +36,7 @@ fn retrieve_podcast_or_podcast_episode(
     path: &str,
     encoded_path: &str,
 ) -> Result<PodcastOrPodcastEpisodeResource, CustomError> {
-    let podcast_episode = PodcastEpisode::get_podcast_episodes_by_url(path)?;
+    let podcast_episode = PodcastEpisodeService::get_podcast_episodes_by_url(path)?;
     match podcast_episode {
         Some(podcast_episode) => {
             if podcast_episode.file_image_path.is_none() {
@@ -44,7 +46,7 @@ fn retrieve_podcast_or_podcast_episode(
             }
 
             if let Some(image) = &podcast_episode.file_image_path
-                && image.eq(path)
+                && image == path
             {
                 return Ok(PodcastOrPodcastEpisodeResource::PodcastEpisode(
                     podcast_episode,
@@ -56,7 +58,7 @@ fn retrieve_podcast_or_podcast_episode(
             ))
         }
         None => {
-            let podcast = Podcast::find_by_path(encoded_path)?;
+            let podcast = PodcastService::find_podcast_by_image_path(encoded_path)?;
             match podcast {
                 Some(podcast) => Ok(PodcastOrPodcastEpisodeResource::Podcast(podcast)),
                 None => Err(CustomErrorInner::NotFound(Info).into()),
@@ -113,3 +115,4 @@ fn check_auth(
         }
     }
 }
+

@@ -58,6 +58,14 @@ pub struct TimelineFavorite {
     pub favored: bool,
 }
 
+impl From<podfetch_domain::favorite::Favorite> for TimelineFavorite {
+    fn from(value: podfetch_domain::favorite::Favorite) -> Self {
+        Self {
+            favored: value.favored,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct EpisodeFormatDto {
     pub content: String,

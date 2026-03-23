@@ -17,11 +17,9 @@ pub use controllers::controller_utils::*;
 
 mod constants;
 mod db;
-mod mappers;
 mod models;
-mod service;
 
-use crate::service::environment_service::EnvironmentService;
+use common_infrastructure::config::EnvironmentService;
 
 mod config;
 

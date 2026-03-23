@@ -1,4 +1,4 @@
-use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use file_format::FileFormat;
 use reqwest::header::CONTENT_TYPE;
 use std::fmt::Display;
@@ -100,7 +100,7 @@ fn get_suffix_by_url(url: &str) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::service::podcast_episode_service::PodcastEpisodeService;
+    use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
     use serial_test::serial;
 
     // From https://github.com/parshap/node-sanitize-filename/blob/master/test.js

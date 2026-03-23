@@ -21,11 +21,10 @@ use crate::controllers::user_controller::{get_invite, get_user_router, onboard_u
 use crate::controllers::watch_time_controller::get_watchtime_router;
 use crate::controllers::websocket_controller::get_websocket_router;
 use crate::import_database_config;
-use crate::models::podcasts::Podcast;
-use crate::service::file_service::FileService;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::service::rust_service::PodcastService;
-use crate::service::settings_service::SettingsService;
+use crate::application::services::file::service::FileService;
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::application::services::podcast::service::PodcastService;
+use crate::application::services::settings::service::SettingsService;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use axum::Router;
 use axum::body::Body;
@@ -61,7 +60,7 @@ import_database_config!();
 
 pub fn run_poll() -> Result<(), CustomError> {
     //check for new episodes
-    let podcast_result = Podcast::get_all_podcasts()?;
+    let podcast_result = PodcastService::get_all_podcasts_raw()?;
     for podcast in podcast_result {
         if podcast.active {
             let podcast_clone = podcast.clone();
@@ -646,3 +645,4 @@ END $$;
         }
     }
 }
+

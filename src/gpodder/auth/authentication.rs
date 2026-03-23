@@ -6,6 +6,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{Cookie, SameSite};
+use common_infrastructure::config::EnvironmentService;
 use podfetch_domain::session::Session;
 use podfetch_web::auth::require_equal_user;
 use podfetch_web::gpodder::{GpodderControllerError, ensure_session_user};
@@ -64,9 +65,9 @@ pub async fn login(
 fn handle_proxy_auth(
     rq: axum::extract::Request,
     username: &str,
-    user_auth_service: &crate::service::user_auth_service::UserAuthService,
-    environment: &crate::service::environment_service::EnvironmentService,
-    session_service: &crate::service::session_service::SessionService,
+    user_auth_service: &crate::application::services::user_auth::service::UserAuthService,
+    environment: &EnvironmentService,
+    session_service: &crate::application::services::session::service::SessionService,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     let config = environment.reverse_proxy_config.clone().unwrap();
     let opt_authorization = rq.headers().get(config.header_name);
@@ -108,9 +109,9 @@ fn handle_proxy_auth(
 fn handle_gpodder_basic_auth(
     rq: axum::extract::Request,
     username: &str,
-    user_auth_service: &crate::service::user_auth_service::UserAuthService,
-    environment: &crate::service::environment_service::EnvironmentService,
-    session_service: &crate::service::session_service::SessionService,
+    user_auth_service: &crate::application::services::user_auth::service::UserAuthService,
+    environment: &EnvironmentService,
+    session_service: &crate::application::services::session::service::SessionService,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
     let opt_authorization = rq.headers().get("Authorization");
 

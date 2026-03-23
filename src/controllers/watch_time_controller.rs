@@ -109,10 +109,10 @@ mod tests {
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::models::podcast_episode::PodcastEpisode;
-    use crate::models::podcasts::Podcast;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
+    use podfetch_web::history::{EpisodeAction, EpisodeDto};
 
     fn insert_episode(
         podcast_id: i32,
@@ -153,7 +153,7 @@ mod tests {
     async fn test_log_watchtime_and_fetch_by_episode_id() {
         let server = handle_test_startup().await;
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Watchtime Podcast",
             "watchtime-podcast",
             "https://example.com/watchtime.xml",
@@ -263,7 +263,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("watchtime-rewrite-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Watchtime Rewrite Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -341,7 +341,7 @@ mod tests {
         let podcast_slug = format!("watchtime-update-podcast-{unique}");
         let episode_id = format!("watchtime-update-episode-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Watchtime Update Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -394,7 +394,7 @@ mod tests {
         let podcast_slug = format!("watchtime-seekback-podcast-{unique}");
         let episode_id = format!("watchtime-seekback-episode-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Watchtime Seekback Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -446,7 +446,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("watchtime-host-fallback-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Watchtime Host Fallback Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -562,3 +562,4 @@ mod tests {
         assert_client_error_status(response.status_code().as_u16());
     }
 }
+

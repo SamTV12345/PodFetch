@@ -142,7 +142,6 @@ mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::models::podcasts::Podcast;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
@@ -242,7 +241,7 @@ mod tests {
         let podcast_slug = format!("tagged-podcast-{unique}");
         let tag_name = unique_name("Favorites");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Tagged Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -320,7 +319,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("unknown-tag-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Unknown Tag Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -444,3 +443,4 @@ mod tests {
         assert_client_error_status(remove_response.status_code().as_u16());
     }
 }
+

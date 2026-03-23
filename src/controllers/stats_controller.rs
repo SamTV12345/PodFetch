@@ -54,8 +54,7 @@ mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::podcast_episode::PodcastEpisode;
-    use crate::models::podcasts::Podcast;
-    use crate::service::listening_event_service::ListeningEventService;
+    use crate::application::services::listening_event::service::ListeningEventService;
     use chrono::{NaiveDate, NaiveDateTime};
     use diesel::ExpressionMethods;
     use diesel::RunQueryDsl;
@@ -141,7 +140,7 @@ mod tests {
             .clone()
             .unwrap_or_else(|| "user123".to_string());
 
-        let podcast_a = Podcast::add_podcast_to_database(
+        let podcast_a = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Stats Podcast A",
             "stats-a",
             "https://example.com/stats-a.xml",
@@ -149,7 +148,7 @@ mod tests {
             "stats-a",
         )
         .unwrap();
-        let podcast_b = Podcast::add_podcast_to_database(
+        let podcast_b = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Stats Podcast B",
             "stats-b",
             "https://example.com/stats-b.xml",
@@ -229,7 +228,7 @@ mod tests {
             .clone()
             .unwrap_or_else(|| "user123".to_string());
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Stats Date Range",
             "stats-date-range",
             "https://example.com/stats-date.xml",
@@ -314,7 +313,7 @@ mod tests {
         for i in 0..3 {
             let unique = Uuid::new_v4().to_string();
             let podcast_slug = format!("stats-top-limit-{i}-{unique}");
-            let podcast = Podcast::add_podcast_to_database(
+            let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
                 &unique_name("Stats Top Limit Podcast"),
                 &podcast_slug,
                 &format!("https://example.com/{podcast_slug}.xml"),
@@ -378,7 +377,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("stats-rfc3339-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("Stats RFC3339 Podcast"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -430,7 +429,7 @@ mod tests {
         for i in 0..2 {
             let unique = Uuid::new_v4().to_string();
             let podcast_slug = format!("stats-min-top-limit-{i}-{unique}");
-            let podcast = Podcast::add_podcast_to_database(
+            let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
                 &unique_name("Stats Min Top Limit Podcast"),
                 &podcast_slug,
                 &format!("https://example.com/{podcast_slug}.xml"),
@@ -480,7 +479,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("stats-rewrite-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("Stats Rewrite Podcast"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -600,3 +599,4 @@ mod tests {
         assert_client_error_status(empty_to_response.status_code().as_u16());
     }
 }
+

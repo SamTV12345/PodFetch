@@ -1,5 +1,4 @@
 use crate::adapters::file::file_handler::FileHandlerType;
-use crate::adapters::file::s3_file_handler::S3_BUCKET_CONFIG;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::models::podcast_episode::PodcastEpisode;
 use chrono::NaiveDateTime;
@@ -236,7 +235,7 @@ pub fn map_s3_url(url: &Option<String>, remote_url: &str) -> String {
                 .map(|c| urlencoding::encode(c.as_os_str().to_str().unwrap()))
                 .collect::<Vec<Cow<str>>>()
                 .join("/");
-            url_encoded = format!("{}/{}", S3_BUCKET_CONFIG.endpoint, url_encoded);
+            url_encoded = format!("{}/{}", ENVIRONMENT_SERVICE.s3_config.endpoint, url_encoded);
             url_encoded
         }
         None => remote_url.to_string(),

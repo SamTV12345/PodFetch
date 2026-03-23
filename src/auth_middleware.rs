@@ -1,6 +1,5 @@
 use crate::app_state::AppState;
-use crate::service::environment_service::ReverseProxyConfig;
-use crate::service::user_auth_service::UserAuthService;
+use crate::application::services::user_auth::service::UserAuthService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::http_client::get_async_sync_client;
@@ -11,6 +10,7 @@ use axum::response::Response;
 use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use log::info;
+use common_infrastructure::config::{EnvironmentService, ReverseProxyConfig};
 use podfetch_domain::user::User;
 use podfetch_web::auth::{AuthControllerError, parse_basic_auth};
 use serde_json::Value;
@@ -182,7 +182,7 @@ impl AuthFilter {
     async fn handle_oidc_auth_internal(
         req: &mut Request,
         user_auth_service: &UserAuthService,
-        environment: &crate::service::environment_service::EnvironmentService,
+        environment: &EnvironmentService,
     ) -> Result<User, CustomError> {
         let token_res = match req.headers().get("Authorization") {
             Some(token) => match token.to_str() {
@@ -313,8 +313,8 @@ mod test {
     use crate::auth_middleware::AuthFilter;
 
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::service::environment_service::ReverseProxyConfig;
     use crate::test_utils::test::create_random_user;
+    use common_infrastructure::config::ReverseProxyConfig;
     use serial_test::serial;
 
     fn app_state() -> AppState {

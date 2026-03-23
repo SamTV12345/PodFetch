@@ -1,13 +1,13 @@
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::app_state::AppState;
 use crate::controllers::server::ChatServerHandle;
 use crate::db::TimelineItem;
-use crate::mappers::episode_mapper::map_episode_to_dto;
-use crate::models::episode::Episode;
+use crate::adapters::api::mappers::episode::map_episode_to_dto;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-use crate::service::file_service::perform_episode_variable_replacement;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::application::services::file::service::perform_episode_variable_replacement;
+use crate::application::services::podcast::service::PodcastService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::url_builder::create_url_rewriter;
@@ -112,8 +112,13 @@ pub async fn get_podcast_episode_by_id(
             })
         },
         |episode_id, username| {
-            Episode::get_watchtime(episode_id, username)
-                .map(|episode| episode.as_ref().map(map_episode_to_dto))
+            WatchtimeService::get_watchtime(episode_id, username)
+                .map(|episode| {
+                    episode
+                        .map(Into::into)
+                        .as_ref()
+                        .map(map_episode_to_dto)
+                })
         },
     )
     .map_err(map_podcast_episode_controller_error)?;
@@ -159,7 +164,11 @@ pub async fn find_all_podcast_episodes_of_podcast(
                         rewriter.rewrite_in_place(&mut mapped_podcast_episode.local_image_url);
                         (
                             mapped_podcast_episode,
-                            podcast_inner.1.as_ref().map(map_episode_to_dto),
+                            podcast_inner
+                                .1
+                                .map(Into::into)
+                                .as_ref()
+                                .map(map_episode_to_dto),
                         )
                     })
                     .collect()
@@ -279,8 +288,8 @@ pub async fn download_podcast_episodes_of_podcast(
         .map_err(map_podcast_episode_controller_error)?;
 
     tokio::task::spawn_blocking(
-        move || match PodcastEpisode::get_podcast_episode_by_id(&id) {
-            Ok(Some(podcast_episode)) => match Podcast::get_podcast(podcast_episode.podcast_id) {
+        move || match PodcastEpisodeService::get_podcast_episode_by_id(&id) {
+            Ok(Some(podcast_episode)) => match PodcastService::get_podcast(podcast_episode.podcast_id) {
                 Ok(podcast_found) => {
                     if let Err(err) =
                         PodcastEpisodeService::perform_download(&podcast_episode, &podcast_found)
@@ -293,7 +302,7 @@ pub async fn download_podcast_episodes_of_podcast(
                         return;
                     }
                     if let Err(err) =
-                        PodcastEpisode::update_deleted(&podcast_episode.episode_id, false)
+                        PodcastEpisodeService::update_deleted(&podcast_episode.episode_id, false)
                     {
                         log::error!(
                             "Error updating deleted status for episode {}: {}",
@@ -426,8 +435,7 @@ mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
     use crate::models::podcast_episode::PodcastEpisode;
-    use crate::models::podcasts::Podcast;
-    use crate::service::favorite_podcast_episode_service::FavoritePodcastEpisodeService;
+    use crate::application::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
@@ -512,7 +520,7 @@ mod tests {
     async fn test_find_all_podcast_episodes_and_get_single_by_id() {
         let server = handle_test_startup().await;
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Episode Query Podcast",
             "episode-query",
             "https://example.com/episode-query.xml",
@@ -568,7 +576,7 @@ mod tests {
     async fn test_like_podcast_episode_persists_favorite() {
         let server = handle_test_startup().await;
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Like Podcast",
             "like-podcast",
             "https://example.com/like.xml",
@@ -636,7 +644,7 @@ mod tests {
     async fn test_get_timeline_returns_items_without_external_calls() {
         let server = handle_test_startup().await;
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Timeline Podcast",
             "timeline-podcast",
             "https://example.com/timeline.xml",
@@ -666,7 +674,7 @@ mod tests {
     async fn test_find_all_chapters_of_episode_returns_empty_when_none_exist() {
         let server = handle_test_startup().await;
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             "Chapter Podcast",
             "chapter-podcast",
             "https://example.com/chapter.xml",
@@ -700,7 +708,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let slug = format!("delete-local-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("Delete Local Podcast"),
             &slug,
             &format!("https://example.com/{slug}.xml"),
@@ -747,7 +755,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let slug = format!("invalid-like-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("Invalid Like Podcast"),
             &slug,
             &format!("https://example.com/{slug}.xml"),
@@ -818,3 +826,4 @@ mod tests {
         assert_eq!(response.status_code(), 200);
     }
 }
+

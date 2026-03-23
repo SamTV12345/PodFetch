@@ -1,0 +1,12 @@
+[package]
+name = "podfetch-storage"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+common-infrastructure = { path = "../common-infrastructure", default-features = false }
+rust-s3 = { version = "0.36.0", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
+thiserror = { version = "2.0.18", features = ["std"] }

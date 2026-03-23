@@ -1,9 +1,10 @@
-use crate::service::environment_service::EnvironmentService;
 use std::convert::Into;
 use std::fmt;
 use std::fmt::Formatter;
 use std::string::ToString;
 use std::sync::LazyLock;
+use common_infrastructure::config::EnvironmentService;
+use common_infrastructure::logging::init_logging;
 
 pub static ITUNES_URL: &str = "https://itunes.apple.com/search";
 
@@ -23,7 +24,6 @@ pub use common_infrastructure::config::{
 
 use crate::models::episode::Episode;
 use crate::models::podcast_episode::PodcastEpisode;
-use crate::service::logging_service::init_logging;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;

@@ -13,26 +13,26 @@ use crate::adapters::persistence::repositories::subscription_repository::Subscri
 use crate::adapters::persistence::repositories::tag_repository::TagRepositoryImpl;
 use crate::adapters::persistence::repositories::user_admin_repository::UserAdminRepositoryImpl;
 use crate::application::services::device::service::DeviceService;
+use crate::application::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
+use crate::application::services::filter::service::FilterService;
+use crate::application::services::invite::service::InviteService;
+use crate::application::services::login::service::LoginService;
+use crate::application::services::notification::service::NotificationService;
+use crate::application::services::playlist::service::PlaylistService;
+use crate::application::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
+use crate::application::services::podcast_settings::service::PodcastSettingsService;
+use crate::application::services::settings::service::SettingsService;
+use crate::application::services::listening_event::service::ListeningEventService;
+use crate::application::services::session::service::SessionService;
+use crate::application::services::stats::service::StatsService;
+use crate::application::services::subscription::service::SubscriptionService;
+use crate::application::services::tag::service::TagService;
+use crate::application::services::user_auth::service::UserAuthService;
+use crate::application::services::user_admin::service::UserAdminService;
+use crate::application::services::user_onboarding::service::UserOnboardingService;
+use crate::application::usecases::watchtime::WatchtimeUseCase;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::service::environment_service::EnvironmentService;
-use crate::service::favorite_podcast_episode_service::FavoritePodcastEpisodeService;
-use crate::service::filter_service::FilterService;
-use crate::service::invite_service::InviteService;
-use crate::service::listening_event_service::ListeningEventService;
-use crate::service::login_service::LoginService;
-use crate::service::notification_service::NotificationService;
-use crate::service::playlist_service::PlaylistService;
-use crate::service::podcast_episode_chapter_service::PodcastEpisodeChapterService;
-use crate::service::podcast_settings_service::PodcastSettingsService;
-use crate::service::session_service::SessionService;
-use crate::service::settings_service::SettingsService;
-use crate::service::stats_service::StatsService;
-use crate::service::subscription::SubscriptionService;
-use crate::service::tag_service::TagService;
-use crate::service::user_admin_service::UserAdminService;
-use crate::service::user_auth_service::UserAuthService;
-use crate::service::user_onboarding_service::UserOnboardingService;
-use crate::service::watchtime_service::WatchtimeService;
+use common_infrastructure::config::EnvironmentService;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -56,7 +56,7 @@ pub struct AppState {
     pub user_admin_service: Arc<UserAdminService>,
     pub user_auth_service: Arc<UserAuthService>,
     pub user_onboarding_service: Arc<UserOnboardingService>,
-    pub watchtime_service: Arc<WatchtimeService>,
+    pub watchtime_service: Arc<WatchtimeUseCase>,
 }
 
 impl AppState {
@@ -112,7 +112,7 @@ impl AppState {
         let tag_service = Arc::new(TagService::new(Arc::new(TagRepositoryImpl::new(
             database.clone(),
         ))));
-        let watchtime_service = Arc::new(WatchtimeService::new());
+        let watchtime_service = Arc::new(WatchtimeUseCase::new());
         let user_admin_service = Arc::new(UserAdminService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
             environment.clone(),

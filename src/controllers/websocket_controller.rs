@@ -1,12 +1,13 @@
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::app_state::AppState;
 use crate::models::podcasts::Podcast;
+use crate::application::services::podcast::service::PodcastService;
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::OptionalQuery;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
 use crate::utils::error::ErrorSeverity::Warning;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -158,7 +159,7 @@ pub async fn get_rss_feed_for_podcast(
         }
     }
     let api_key = api_key.and_then(|c| c.api_key);
-    let podcast = Podcast::get_podcast(id)?;
+    let podcast = PodcastService::get_podcast(id)?;
 
     let downloaded_episodes: Vec<PodcastEpisodeDto> =
         PodcastEpisodeService::find_all_downloaded_podcast_episodes_by_podcast_id(id)?
@@ -339,7 +340,7 @@ mod tests {
     fn create_podcast_for_rss() -> Podcast {
         let unique = Uuid::new_v4().to_string();
         let slug = format!("rss-podcast-{unique}");
-        Podcast::add_podcast_to_database(
+        crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("RSS Podcast {unique}"),
             &slug,
             &format!("https://example.com/{slug}.xml"),
@@ -562,3 +563,4 @@ mod tests {
         assert_eq!(mapped.len(), 3);
     }
 }
+

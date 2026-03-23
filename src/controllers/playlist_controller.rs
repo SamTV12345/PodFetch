@@ -153,7 +153,6 @@ mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::playlist_controller::PlaylistDtoPost;
     use crate::models::podcast_episode::PodcastEpisode;
-    use crate::models::podcasts::Podcast;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
@@ -394,7 +393,7 @@ mod tests {
         let podcast_slug = format!("forbidden-item-podcast-{unique}");
         let playlist_name = unique_name("Owner Item Playlist");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Forbidden Item Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -444,7 +443,7 @@ mod tests {
         let podcast_slug = format!("playlist-podcast-{unique}");
         let playlist_name = unique_name("Single Item Playlist");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Playlist Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -549,7 +548,7 @@ mod tests {
         let podcast_slug = format!("update-items-podcast-{unique}");
         let playlist_name = unique_name("Replace Items Playlist");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Update Items Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -620,7 +619,7 @@ mod tests {
         let podcast_slug = format!("noop-delete-item-podcast-{unique}");
         let playlist_name = unique_name("Noop Delete Item Playlist");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Noop Delete Item Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -676,7 +675,7 @@ mod tests {
         let podcast_slug = format!("add-item-playlist-podcast-{unique}");
         let playlist_name = unique_name("Add Item Response Playlist");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Add Item Response Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -850,7 +849,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("playlist-order-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Playlist Order Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -1001,7 +1000,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("delete-item-after-delete-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Delete Item After Delete Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -1053,7 +1052,7 @@ mod tests {
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("idempotent-delete-item-podcast-{unique}");
 
-        let podcast = Podcast::add_podcast_to_database(
+        let podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &format!("Idempotent Delete Item Podcast {unique}"),
             &podcast_slug,
             &format!("https://example.com/{podcast_slug}.xml"),
@@ -1109,3 +1108,4 @@ mod tests {
         assert_eq!(rows_after, 0);
     }
 }
+

@@ -1,15 +1,12 @@
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use crate::adapters::persistence::dbconfig::db::database;
-use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
 use crate::app_state::AppState;
 use crate::application::services::device::service::DeviceService;
 use crate::constants::inner_constants::Role;
 use crate::controllers::sys_info_controller::built_info;
-use crate::models::episode::Episode;
-use crate::models::favorites::Favorite;
-use crate::models::podcasts::Podcast;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::service::rust_service::PodcastService;
+use crate::application::services::podcast::service::PodcastService;
 use crate::utils::error::ErrorSeverity::Error as ErrorSeverityError;
 use crate::utils::error::{CustomError, CustomErrorInner};
 use crate::utils::time::get_current_timestamp_str;
@@ -24,7 +21,6 @@ use std::sync::Arc;
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
     let state = AppState::new();
-    let conn = &mut get_connection();
     let device_service = DeviceService::new(Arc::new(DeviceRepositoryImpl::new(database())));
     // Skip first argument
     args.next();
@@ -61,12 +57,10 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
 
                     match podcast_rss_feed {
                         Some(feed) => {
-                            let conn = &mut get_connection();
-
                             let replaced_feed = feed.replace(['\'', ' '], "");
                             println!("Refreshing podcast {replaced_feed}");
 
-                            let podcast = Podcast::get_podcast_by_rss_feed(replaced_feed, conn)
+                            let podcast = PodcastService::get_podcast_by_rss_feed(&replaced_feed)
                                 .expect("Error getting podcast");
 
                             PodcastEpisodeService::insert_podcast_episodes(&podcast)?;
@@ -79,7 +73,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     }
                 }
                 "refresh-all" => {
-                    let podcasts = Podcast::get_all_podcasts()?;
+                    let podcasts = PodcastService::get_all_podcasts_raw()?;
                     for podcast in podcasts {
                         println!("Refreshing podcast {}", podcast.name);
 
@@ -89,7 +83,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     Ok(())
                 }
                 "list" => {
-                    let podcasts = Podcast::get_all_podcasts();
+                    let podcasts = PodcastService::get_all_podcasts_raw();
                     match podcasts {
                         Ok(podcasts) => {
                             println!("Id - Name - RSS Feed");
@@ -200,14 +194,14 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     username = trim_string(&username);
                     match available_users.iter().find(|u| u.username == username) {
                         Some(..) => {
-                            Episode::delete_by_username(&username)
+                            WatchtimeService::delete_by_username(&username)
                                 .expect("Error deleting entries for podcast history item");
                             device_service
                                 .delete_by_username(&username)
                                 .expect("Error deleting devices");
-                            Episode::delete_by_username_and_episode(&username, conn)
+                            WatchtimeService::delete_by_username_and_episode(&username)
                                 .expect("Error deleting episodes");
-                            Favorite::delete_by_username(trim_string(&username), conn)
+                            PodcastService::delete_favorites_by_username(&trim_string(&username))
                                 .expect("Error deleting favorites");
                             state
                                 .session_service
@@ -475,7 +469,7 @@ pub fn create_debug_message() {
     println!("Rustc Version: {}", built_info::RUSTC_VERSION);
     println!("Rustc: {}", built_info::RUSTC_VERSION);
 
-    let podcasts = Podcast::get_all_podcasts();
+    let podcasts = PodcastService::get_all_podcasts_raw();
 
     match podcasts {
         Ok(podcasts) => {
@@ -488,3 +482,4 @@ pub fn create_debug_message() {
         }
     }
 }
+

@@ -1,7 +1,7 @@
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::app_state::AppState;
-use crate::models::podcasts::Podcast;
-use crate::service::episode_scan_service::EpisodeScanServiceImpl;
-use crate::service::podcast_episode_service::PodcastEpisodeService;
+use crate::application::services::episode_scan::service::EpisodeScanServiceImpl;
+use crate::application::services::podcast::service::PodcastService;
 use crate::utils::url_builder::resolve_server_url_from_headers;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
@@ -10,7 +10,6 @@ use axum::{Extension, Json};
 use podfetch_domain::user::User;
 use podfetch_web::settings::{
     self, Mode, OpmlError, OpmlPodcast, RescanError, Setting, SettingsControllerError,
-    ReplacementStrategy,
     UpdateNameSettings,
 };
 use reqwest::StatusCode;
@@ -106,7 +105,7 @@ pub async fn get_opml(
     Path(type_of): Path<String>,
     headers: HeaderMap,
 ) -> Result<Response<String>, CustomError> {
-    let podcasts_found = Podcast::get_all_podcasts()?
+    let podcasts_found = PodcastService::get_all_podcasts_raw()?
         .into_iter()
         .map(|podcast| OpmlPodcast {
             id: podcast.id,
@@ -153,7 +152,6 @@ pub async fn update_name(
     .map_err(map_settings_controller_error)
 }
 
-use crate::models::podcast_episode::PodcastEpisode;
 use crate::utils::error::ErrorSeverity::{Critical, Debug, Error, Warning};
 use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use utoipa_axum::router::OpenApiRouter;
@@ -210,7 +208,7 @@ mod tests {
     use axum::Json;
     use axum::extract::State;
     use diesel::RunQueryDsl;
-    use podfetch_web::settings::Setting;
+    use podfetch_web::settings::{ReplacementStrategy, Setting};
     use serde_json::json;
     use serial_test::serial;
 
@@ -454,7 +452,7 @@ mod tests {
             Json(super::UpdateNameSettings {
                 use_existing_filename: true,
                 replace_invalid_characters: true,
-                replacement_strategy: super::ReplacementStrategy::ReplaceWithDash,
+                replacement_strategy: ReplacementStrategy::ReplaceWithDash,
                 episode_format: "{episodeTitle}".to_string(),
                 podcast_format: "{podcastTitle}".to_string(),
                 direct_paths: false,
@@ -512,3 +510,4 @@ mod tests {
         assert_eq!(extra_segment.status_code(), 404);
     }
 }
+

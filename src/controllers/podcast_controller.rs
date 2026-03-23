@@ -2,9 +2,9 @@ use crate::app_state::AppState;
 use crate::constants::inner_constants::{
     BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
 };
-use crate::mappers::podcast_dto_mapper::{map_podcast_to_dto, map_podcast_with_context_to_dto};
-use crate::service::podcast_episode_service::PodcastEpisodeService;
-use crate::service::rust_service::PodcastService;
+use crate::adapters::api::mappers::podcast::{map_podcast_to_dto, map_podcast_with_context_to_dto};
+use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::application::services::podcast::service::PodcastService;
 use crate::{get_default_image, unwrap_string};
 use async_recursion::async_recursion;
 use axum::body::Body;
@@ -22,9 +22,9 @@ use serde_json::Value;
 use std::thread;
 use tokio::task::spawn_blocking;
 
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
-use crate::service::file_service::{FileService, perform_podcast_variable_replacement};
+use crate::application::services::file::service::{
+    FileService, perform_podcast_variable_replacement,
+};
 use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
 use crate::utils::url_builder::create_url_rewriter;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -97,8 +97,8 @@ pub async fn search_podcast_of_episode(
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let rewriter = create_url_rewriter(&headers);
-    let podcast = Podcast::get_podcast_by_episode_id(id)?;
-    let mut dto = map_podcast_to_dto(podcast);
+    let podcast = PodcastService::get_podcast_by_episode_id(id)?;
+    let mut dto = map_podcast_to_dto(podcast.into());
     dto.rewrite_urls(&rewriter);
     Ok(Json(dto))
 }
@@ -198,9 +198,8 @@ pub async fn find_podcast_by_id(
 
     let podcast = PodcastService::get_podcast(id_num)?;
     let tags = state.tag_service.get_tags_of_podcast(id_num, username)?;
-    let favorite = Favorite::get_favored_podcast_by_username_and_podcast_id(username, id_num)?
-        .map(|f| f.favored);
-    let podcast_dto = map_podcast_with_context_to_dto(podcast, favorite, tags, &user)
+    let favorite = PodcastService::get_favorite_state(username, id_num)?;
+    let podcast_dto = map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user)
         .with_rewritten_urls(&rewriter);
     Ok(Json(podcast_dto))
 }
@@ -349,7 +348,7 @@ pub async fn add_podcast_by_feed(
         Some(channel),
     )
     .await?;
-    let res: PodcastDto = map_podcast_to_dto(inserted);
+    let res: PodcastDto = map_podcast_to_dto(inserted.into());
 
     Ok(Json(res))
 }
@@ -407,7 +406,7 @@ pub async fn add_podcast_from_podindex(
     Ok(StatusCode::OK)
 }
 
-fn start_download_podindex(id: i32) -> Result<Podcast, CustomError> {
+fn start_download_podindex(id: i32) -> Result<crate::models::podcasts::Podcast, CustomError> {
     let rt = Runtime::new().unwrap();
 
     rt.block_on(async { PodcastService::insert_podcast_from_podindex(id).await })
@@ -451,7 +450,7 @@ pub async fn refresh_all_podcasts(
 ) -> Result<StatusCode, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
-    let podcasts = Podcast::get_all_podcasts()?;
+    let podcasts = PodcastService::get_all_podcasts_raw()?;
     thread::spawn(move || {
         for podcast in podcasts {
             let refresh_result = PodcastService::refresh_podcast(&podcast);
@@ -538,7 +537,7 @@ pub async fn update_name_of_podcast(
         Err(..) => Err(CustomErrorInner::NotFound(ErrorSeverity::Debug)),
     }?;
 
-    Podcast::update_podcast_name(found_podcast.id, &req.name)?;
+    PodcastService::update_podcast_name(found_podcast.id, &req.name)?;
 
     Ok(StatusCode::OK)
 }
@@ -643,9 +642,8 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
-use crate::models::episode::Episode;
-use crate::models::favorites::Favorite;
 use crate::utils::environment_variables::is_env_var_present_and_true;
+use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use podfetch_web::podcast::PodcastDto;
 use podfetch_web::settings::Setting;
 use utoipa_axum::router::OpenApiRouter;
@@ -673,7 +671,7 @@ pub async fn delete_podcast(
 ) -> Result<StatusCode, CustomError> {
     require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
 
-    let podcast = Podcast::get_podcast(id)?;
+    let podcast = PodcastService::get_podcast(id)?;
     if data.delete_files {
         spawn_blocking(move || FileService::delete_podcast_files(&podcast))
             .await
@@ -682,11 +680,11 @@ pub async fn delete_podcast(
         files",
             );
     }
-    Episode::delete_watchtime(id)?;
-    PodcastEpisode::delete_episodes_of_podcast(id)?;
+    WatchtimeService::delete_watchtime(id)?;
+    PodcastEpisodeService::delete_episodes_of_podcast(id)?;
     state.tag_service.delete_podcast_tags(id)?;
 
-    Podcast::delete_podcast(id)?;
+    PodcastService::delete_podcast(id)?;
     Ok(StatusCode::OK)
 }
 use crate::utils::error::ErrorSeverity::Debug;
@@ -881,7 +879,6 @@ pub mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::podcast_controller::PodcastUpdateNameRequest;
     use crate::controllers::podcast_controller::find_podcast;
-    use crate::models::podcasts::Podcast;
     use crate::utils::error::CustomErrorInner;
     use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
@@ -950,7 +947,7 @@ pub mod tests {
         let collection_name = unique_name("collection");
         let podcast_name = unique_name("The homelab podcast");
         let directory_name = unique_name("test123");
-        let saved_podcast = Podcast::add_podcast_to_database(
+        let saved_podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &collection_name,
             &podcast_name,
             "https://example.com/feed",
@@ -968,7 +965,9 @@ pub mod tests {
             .await;
         assert_eq!(resp.status_code(), 200);
         assert_eq!(
-            Podcast::get_podcast(saved_podcast.id).unwrap().name,
+            crate::application::services::podcast::service::PodcastService::get_podcast(saved_podcast.id)
+                .unwrap()
+                .name,
             "New Podcast Name"
         );
     }
@@ -1037,7 +1036,7 @@ pub mod tests {
     #[serial]
     async fn test_update_name_of_podcast_rejects_invalid_payload() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = Podcast::add_podcast_to_database(
+        let saved_podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("invalid-payload-collection"),
             &unique_name("Invalid Payload Podcast"),
             "https://example.com/invalid-payload-feed.xml",
@@ -1062,7 +1061,7 @@ pub mod tests {
     async fn test_update_name_of_podcast_noop_with_same_name() {
         let ts_server = handle_test_startup().await;
         let original_name = unique_name("Noop Rename Podcast");
-        let saved_podcast = Podcast::add_podcast_to_database(
+        let saved_podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("noop-collection"),
             &original_name,
             "https://example.com/noop-rename-feed.xml",
@@ -1080,7 +1079,8 @@ pub mod tests {
             .await;
         assert_eq!(resp.status_code(), 200);
 
-        let persisted = Podcast::get_podcast(saved_podcast.id).unwrap();
+        let persisted = crate::application::services::podcast::service::PodcastService::get_podcast(saved_podcast.id)
+            .unwrap();
         assert_eq!(persisted.name, original_name);
     }
 
@@ -1088,7 +1088,7 @@ pub mod tests {
     #[serial]
     async fn test_update_name_of_podcast_returns_forbidden_for_non_admin() {
         let non_admin = UserTestDataBuilder::new().build();
-        let saved_podcast = Podcast::add_podcast_to_database(
+        let saved_podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("forbidden-collection"),
             &unique_name("Forbidden Rename Podcast"),
             "https://example.com/forbidden-rename-feed.xml",
@@ -1116,7 +1116,7 @@ pub mod tests {
     #[serial]
     async fn test_get_podcast_settings_returns_not_found_when_missing() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = Podcast::add_podcast_to_database(
+        let saved_podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("settings-missing-collection"),
             &unique_name("Settings Missing Podcast"),
             "https://example.com/settings-missing-feed.xml",
@@ -1137,7 +1137,7 @@ pub mod tests {
     #[serial]
     async fn test_update_and_get_podcast_settings_happy_path() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = Podcast::add_podcast_to_database(
+        let saved_podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("settings-happy-collection"),
             &unique_name("Settings Happy Podcast"),
             "https://example.com/settings-happy-feed.xml",
@@ -1186,7 +1186,7 @@ pub mod tests {
     #[serial]
     async fn test_podcast_endpoints_return_client_error_for_wrong_http_methods() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = Podcast::add_podcast_to_database(
+        let saved_podcast = crate::application::services::podcast::service::PodcastService::add_podcast_to_database(
             &unique_name("method-mismatch-collection"),
             &unique_name("Method Mismatch Podcast"),
             "https://example.com/method-mismatch-feed.xml",
@@ -1412,3 +1412,4 @@ pub mod tests {
         assert_client_error_status(delete_invalid_response.status_code().as_u16());
     }
 }
+

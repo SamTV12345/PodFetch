@@ -19,6 +19,8 @@ serde = { version = "1.0.228", features = ["derive"] }
 utoipa = { version = "5.4.0", features = ["chrono", "axum_extras"] }
 sha256 = "1.6.0"
 url = "2.5.8"
+chrono = { version = "0.4.44", default-features = false, features = ["clock"] }
+env_logger = "0.11.9"
 log = "0.4.29"
 rust-s3 = { version = "0.36.0", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
 libsqlite3-sys = { version = "0.35.0", features = ["bundled"], optional = true }

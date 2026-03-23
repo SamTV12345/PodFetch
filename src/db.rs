@@ -1,13 +1,13 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
-use crate::mappers::episode_mapper::map_episode_to_dto;
-use crate::mappers::podcast_dto_mapper::map_podcast_to_dto;
+use crate::adapters::api::mappers::episode::map_episode_to_dto;
+use crate::adapters::api::mappers::podcast::map_podcast_to_dto;
 use crate::models::episode::Episode;
-use crate::models::favorites::Favorite;
 use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::favorites::Favorite;
 use crate::models::podcasts::Podcast;
-use crate::service::filter_service::FilterService;
+use crate::application::services::filter::service::FilterService;
 use crate::utils::error::ErrorSeverity::Critical;
 use crate::utils::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
@@ -150,16 +150,16 @@ impl TimelineItem {
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
-                    let history_dto = history.as_ref().map(map_episode_to_dto);
+                    let history_dto = history.as_ref().map(|episode| map_episode_to_dto(&episode.clone().into()));
                     (
                         PodcastEpisodeDto::from((
                             podcast_episode,
                             Some(user.clone()),
                             fav_episode.map(Into::into),
                         )),
-                        map_podcast_to_dto(podcast),
+                        map_podcast_to_dto(podcast.into()),
                         history_dto,
-                        favorite.map(Into::into),
+                        favorite.map(|f| TimelineFavorite { favored: f.favored }),
                     )
                 },
             )

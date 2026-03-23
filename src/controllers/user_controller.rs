@@ -12,7 +12,7 @@ use podfetch_web::user_onboarding::{self, UserOnboardingModel};
 use podfetch_web::invite::Invite;
 use reqwest::StatusCode;
 
-use crate::service::user_admin_service::map_requester;
+use crate::application::services::user_admin::service::map_requester;
 use crate::utils::error::{ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType};
 
 use utoipa_axum::router::OpenApiRouter;

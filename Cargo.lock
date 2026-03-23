@@ -542,7 +542,9 @@ checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 name = "common-infrastructure"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "diesel",
+ "env_logger",
  "libsqlite3-sys",
  "log",
  "r2d2",
@@ -2729,6 +2731,7 @@ dependencies = [
  "opml",
  "podfetch-domain",
  "podfetch-persistence",
+ "podfetch-storage",
  "podfetch-web",
  "r2d2",
  "r2d2_postgres",
@@ -2782,10 +2785,20 @@ dependencies = [
  "chrono",
  "common-infrastructure",
  "diesel",
+ "indexmap 2.13.0",
  "libsqlite3-sys",
  "podfetch-domain",
  "r2d2_postgres",
  "uuid",
+]
+
+[[package]]
+name = "podfetch-storage"
+version = "0.1.0"
+dependencies = [
+ "common-infrastructure",
+ "rust-s3",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

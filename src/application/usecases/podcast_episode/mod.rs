@@ -1,0 +1,862 @@
+use crate::adapters::external::telegram::send_new_episode_notification;
+use crate::adapters::persistence::dbconfig::db::database;
+use crate::adapters::persistence::dbconfig::db::get_connection;
+use crate::adapters::file::file_handler::FileHandlerType;
+use crate::application::services::download::service::DownloadService;
+use crate::application::services::file::service::FileService;
+use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
+use crate::constants::inner_constants::{
+    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED,
+};
+use crate::controllers::server::ChatServerHandle;
+use crate::models::podcast_episode::PodcastEpisode;
+use crate::models::podcasts::Podcast;
+use crate::mutex::LockResultExt;
+use crate::application::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
+use crate::application::services::notification::service::NotificationService;
+use crate::application::services::playlist::service::PlaylistService;
+use crate::application::services::podcast_settings::service::PodcastSettingsService;
+use crate::application::services::settings::service::SettingsService;
+use crate::utils::do_retry::do_retry;
+use crate::utils::time::opt_or_empty_string;
+use crate::utils::environment_variables::is_env_var_present_and_true;
+use crate::utils::error::ErrorSeverity::{Critical, Warning};
+use crate::utils::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_reqwest_error,
+};
+use crate::utils::podcast_builder::PodcastBuilder;
+use crate::utils::reqwest_client::get_sync_client;
+use chrono::{DateTime, FixedOffset, Utc};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
+use podfetch_domain::user::User;
+use podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository;
+use podfetch_web::notification::Notification;
+use reqwest::header::{ACCEPT, HeaderMap};
+use reqwest::redirect::Policy;
+use rss::{Channel, Guid, Item};
+use std::collections::HashSet;
+use std::ffi::OsStr;
+use std::io::Error;
+use std::path::Path;
+use std::sync::LazyLock;
+use std::sync::{Arc, Mutex};
+use url::Url;
+
+pub struct PodcastEpisodeUseCase;
+static IN_PROGRESS_DOWNLOADS: LazyLock<Mutex<HashSet<String>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+
+struct InProgressDownloadGuard {
+    episode_id: String,
+}
+
+impl Drop for InProgressDownloadGuard {
+    fn drop(&mut self) {
+        let mut guard = IN_PROGRESS_DOWNLOADS.lock().ignore_poison();
+        guard.remove(&self.episode_id);
+    }
+}
+
+impl PodcastEpisodeUseCase {
+    fn repo() -> DieselPodcastEpisodeRepository {
+        DieselPodcastEpisodeRepository::new(database())
+    }
+
+    fn try_acquire_download_guard(episode_id: &str) -> Option<InProgressDownloadGuard> {
+        let mut downloads = IN_PROGRESS_DOWNLOADS.lock().ignore_poison();
+        if downloads.contains(episode_id) {
+            return None;
+        }
+        downloads.insert(episode_id.to_string());
+        Some(InProgressDownloadGuard {
+            episode_id: episode_id.to_string(),
+        })
+    }
+
+    pub fn get_podcast_episodes_by_url(path: &str) -> Result<Option<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_file_path(path)
+            .map(|episode| episode.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    pub fn get_podcast_episode_by_internal_id(
+        podcast_episode_id: i32,
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_id(podcast_episode_id)
+            .map(|episode| episode.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    pub fn get_position_of_episode(
+        timestamp: &str,
+        podcast_id: i32,
+    ) -> Result<usize, CustomError> {
+        Self::repo()
+            .get_position_of_episode(timestamp, podcast_id)
+            .map_err(Into::into)
+    }
+
+    pub fn get_nth_page_of_podcast_episodes(
+        last_podcast_episode_id: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .get_nth_page(last_podcast_episode_id, 100)
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn get_podcast_episode_by_id(id: &str) -> Result<Option<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_episode_id(id)
+            .map(|episode| episode.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    pub fn get_podcast_episode_by_url(
+        url: &str,
+        podcast_id: Option<i32>,
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_url(url, podcast_id)
+            .map(|episode| episode.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    pub fn query_podcast_episode_by_url(url: &str) -> Result<Option<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .query_by_url_like(url)
+            .map(|episode| episode.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    fn parse_recording_date(item: &Item) -> String {
+        let mut inserted_date = String::new();
+
+        if let Some(date) = &item.pub_date {
+            fn parse_naive(timestring: &str) -> chrono::ParseResult<DateTime<FixedOffset>> {
+                let date_without_weekday = &timestring[5..];
+                DateTime::parse_from_str(date_without_weekday, "%d %b %Y %H:%M:%S %z")
+            }
+
+            let parsed_date = DateTime::parse_from_rfc2822(date).unwrap_or(
+                DateTime::parse_from_rfc3339(date).unwrap_or(
+                    parse_naive(date)
+                        .unwrap_or(DateTime::parse_from_rfc3339("2021-01-01T00:00:00Z").unwrap()),
+                ),
+            );
+            inserted_date = parsed_date.with_timezone(&Utc).to_rfc3339();
+        }
+
+        inserted_date
+    }
+
+    fn insert_podcast_episode(
+        podcast: &Podcast,
+        item: &Item,
+        episode_image_url: &str,
+        duration: i32,
+    ) -> Result<PodcastEpisode, CustomError> {
+        let guid_to_insert = Guid {
+            value: uuid::Uuid::new_v4().to_string(),
+            ..Default::default()
+        };
+
+        Self::repo()
+            .create(NewPodcastEpisode {
+                podcast_id: podcast.id,
+                episode_id: uuid::Uuid::new_v4().to_string(),
+                name: item
+                    .title
+                    .clone()
+                    .unwrap_or_else(|| "No title given".to_string()),
+                url: item.enclosure.clone().unwrap().url,
+                date_of_recording: Self::parse_recording_date(item),
+                image_url: episode_image_url.to_string(),
+                total_time: duration,
+                description: opt_or_empty_string(item.clone().description),
+                guid: item.guid.clone().unwrap_or(guid_to_insert).value,
+            })
+            .map(Into::into)
+            .map_err(Into::into)
+    }
+
+    pub fn get_podcast_episodes_of_podcast(
+        podcast_id: i32,
+        last_id: Option<String>,
+        only_unlistened: Option<bool>,
+        user: &User,
+    ) -> PodcastEpisodeWithFavorited {
+        Self::repo()
+            .get_episodes_with_history(
+                podcast_id,
+                &user.username,
+                last_id.as_deref(),
+                only_unlistened.unwrap_or(false),
+                75,
+            )
+            .map(|rows| {
+                rows.into_iter()
+                    .map(|(episode, history, favorite)| {
+                        (episode.into(), history.map(Into::into), favorite)
+                    })
+                    .collect()
+            })
+            .map_err(Into::into)
+    }
+
+    pub fn get_last_n_podcast_episodes_by_count(
+        podcast_id: i32,
+        n_episodes: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .get_last_n_episodes(podcast_id, i64::from(n_episodes))
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn update_local_paths(
+        episode_id: &str,
+        file_image_path: &str,
+        file_episode_path: &str,
+    ) -> Result<(), CustomError> {
+        Self::repo()
+            .update_local_paths(episode_id, file_image_path, file_episode_path)
+            .map_err(Into::into)
+    }
+
+    pub fn delete_episodes_of_podcast(podcast_id: i32) -> Result<(), CustomError> {
+        Self::get_episodes_by_podcast_id(podcast_id)?
+            .iter()
+            .try_for_each(|episode| {
+                PlaylistService::default_service().delete_playlist_items_by_episode_id(episode.id)
+            })?;
+
+        Self::repo()
+            .delete_by_podcast_id(podcast_id)
+            .map_err(Into::into)
+    }
+
+    pub fn update_podcast_image(id: &str, image_url: &str) -> Result<(), CustomError> {
+        crate::application::services::podcast::service::PodcastService::update_podcast_image(
+            id,
+            image_url,
+            &ENVIRONMENT_SERVICE.default_file_handler.to_string(),
+        )
+    }
+
+    pub fn check_if_downloaded(download_episode_url: &str) -> Result<bool, CustomError> {
+        Self::repo()
+            .check_if_downloaded(download_episode_url)
+            .map_err(Into::into)
+    }
+
+    pub fn update_podcast_episode_status(
+        download_url_of_episode: &str,
+        download_location_to_set: Option<FileHandlerType>,
+    ) -> Result<PodcastEpisode, CustomError> {
+        Self::repo()
+            .update_download_status(
+                download_url_of_episode,
+                download_location_to_set.map(|d| d.to_string()),
+                Utc::now().naive_utc(),
+            )
+            .map(Into::into)
+            .map_err(Into::into)
+    }
+
+    pub fn get_episodes() -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .get_all()
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn get_podcast_episodes_older_than_days(
+        days: i32,
+        podcast_id: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .get_episodes_older_than_days(i64::from(days), podcast_id)
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn remove_download_status_of_episode(id: i32) -> Result<(), CustomError> {
+        do_retry(|| Self::repo().remove_download_status(id).map_err(Into::into))
+    }
+
+    pub fn get_episodes_by_podcast_id(id: i32) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_podcast_id(id)
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn update_guid(guid: Guid, episode_id: &str) -> Result<(), CustomError> {
+        Self::repo()
+            .update_guid(episode_id, &guid.value)
+            .map_err(Into::into)
+    }
+
+    pub fn update_podcast_episode(
+        episode_to_update: PodcastEpisode,
+    ) -> Result<PodcastEpisode, CustomError> {
+        Self::repo()
+            .update(&episode_to_update.clone().into())
+            .map(|_| episode_to_update)
+            .map_err(Into::into)
+    }
+
+    pub fn update_deleted(episode_id: &str, deleted: bool) -> Result<usize, CustomError> {
+        Self::repo()
+            .update_deleted(episode_id, deleted)
+            .map_err(Into::into)
+    }
+
+    pub fn get_podcast_episodes_by_podcast_to_k(
+        top_k: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .get_episodes_by_podcast_to_k(i64::from(top_k))
+            .map(|episodes| episodes.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn update_episode_numbering_processed(
+        processed: bool,
+        episode_id: &str,
+    ) -> Result<(), CustomError> {
+        Self::repo()
+            .update_episode_numbering_processed(episode_id, processed)
+            .map_err(Into::into)
+    }
+
+    pub fn download_podcast_episode_if_not_locally_available(
+        podcast_episode: PodcastEpisode,
+        podcast: Podcast,
+    ) -> Result<(), CustomError> {
+        let podcast_episode_cloned = podcast_episode.clone();
+
+        if podcast_episode.is_downloaded() {
+            return Ok(());
+        }
+        let podcast_inserted = Self::perform_download(&podcast_episode_cloned, &podcast)?;
+        ChatServerHandle::broadcast_podcast_episode_offline_available(&podcast_inserted, &podcast);
+
+        if is_env_var_present_and_true(TELEGRAM_API_ENABLED) {
+            send_new_episode_notification(podcast_episode, podcast)
+        }
+        Ok(())
+    }
+
+    pub fn perform_download(
+        podcast_episode: &PodcastEpisode,
+        podcast_cloned: &Podcast,
+    ) -> Result<PodcastEpisode, CustomError> {
+        let _guard = match Self::try_acquire_download_guard(&podcast_episode.episode_id) {
+            Some(guard) => guard,
+            None => {
+                log::info!(
+                    "Skipping download for episode {} because a download is already running",
+                    podcast_episode.episode_id
+                );
+                return Ok(podcast_episode.clone());
+            }
+        };
+        log::info!("Downloading podcast episode: {}", podcast_episode.name);
+        if let Err(err) =
+            DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)
+        {
+            if let Err(notification_err) = NotificationService::create_notification(Notification {
+                id: 0,
+                message: format!("{} ({})", podcast_episode.name, err.inner),
+                created_at: chrono::Utc::now().naive_utc().to_string(),
+                type_of_message: "DownloadFailed".to_string(),
+                status: "unread".to_string(),
+            }) {
+                log::error!(
+                    "Failed to insert failed-download notification for episode {}: {}",
+                    podcast_episode.episode_id,
+                    notification_err
+                );
+            }
+            return Err(err);
+        }
+        let podcast = Self::update_podcast_episode_status(
+            &podcast_episode.url,
+            Some(ENVIRONMENT_SERVICE.default_file_handler.clone()),
+        )?;
+        let notification = Notification {
+            id: 0,
+            message: podcast_episode.name.to_string(),
+            created_at: chrono::Utc::now().naive_utc().to_string(),
+            type_of_message: "Download".to_string(),
+            status: "unread".to_string(),
+        };
+        NotificationService::create_notification(notification)?;
+        Ok(podcast)
+    }
+
+    pub fn get_last_n_podcast_episodes(
+        podcast: Podcast,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        let podcast_settings = PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
+        let settings = SettingsService::shared().get_settings()?.unwrap();
+        let n_episodes;
+
+        if let Some(podcast_settings) = podcast_settings {
+            if podcast_settings.activated {
+                n_episodes = podcast_settings.podcast_prefill;
+            } else {
+                n_episodes = settings.podcast_prefill;
+            }
+        } else {
+            n_episodes = settings.podcast_prefill;
+        }
+
+        Self::get_last_n_podcast_episodes_by_count(podcast.id, n_episodes)
+    }
+
+    // Used for creating/updating podcasts
+    pub fn insert_podcast_episodes(podcast: &Podcast) -> Result<Vec<PodcastEpisode>, CustomError> {
+        let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
+
+        let returned_data_from_podcast_insert =
+            Self::do_request_to_podcast_server(podcast.clone())?;
+
+        let channel = Channel::read_from(returned_data_from_podcast_insert.content.as_bytes());
+
+        match channel {
+            Ok(channel) => {
+                if *is_redirected.clone().lock().ignore_poison() {
+                    log::info!(
+                        "The podcast {} has moved to {}",
+                        podcast.name,
+                        returned_data_from_podcast_insert.url
+                    );
+                    crate::application::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
+                        podcast.id,
+                        &returned_data_from_podcast_insert.url,
+                    );
+                    Self::update_episodes_on_redirect(channel.items())?;
+                }
+
+                Self::handle_itunes_extension(podcast, &channel)?;
+
+                Self::update_podcast_fields(channel.clone(), podcast.id)?;
+
+                let mut podcast_inserted = Vec::new();
+
+                Self::handle_podcast_image_insert(podcast, &channel)?;
+
+                for item in channel.items.iter() {
+                    if item.enclosure.is_none() {
+                        log::info!(
+                            "Skipping podcast episode {:?} as it has no enclosure",
+                            item.title
+                        );
+                        continue;
+                    }
+
+                    let itunes_ext = &item.itunes_ext;
+                    let opt_found_podcast_episode: Option<PodcastEpisode> = match &item.guid {
+                        Some(guid) => Self::get_podcast_episode_by_guid(&guid.value)?,
+                        None => {
+                            if let Some(enclosure) = &item.enclosure {
+                                Self::get_podcast_episode_by_url(
+                                    &enclosure.url.to_string(),
+                                    Some(podcast.id),
+                                )?
+                            } else {
+                                None
+                            }
+                        }
+                    };
+
+                    if let Some(podcast_episode) = &opt_found_podcast_episode {
+                        let mut updated_podcast_episode = podcast_episode.clone();
+                        if let Some(title) = &item.title {
+                            updated_podcast_episode.name = title.to_string();
+                        }
+
+                        if let Some(enclosure) = &item.enclosure {
+                            updated_podcast_episode.url = enclosure.url.to_string();
+                        }
+
+                        if let Some(description) = &item.description {
+                            updated_podcast_episode.description = description.to_string();
+                        }
+
+                        if updated_podcast_episode.name != podcast_episode.name
+                            || updated_podcast_episode.url != podcast_episode.url
+                            || updated_podcast_episode.description != podcast_episode.description
+                        {
+                            Self::update_podcast_episode(updated_podcast_episode.clone())?;
+                        }
+
+                        // Skip already existing episodes with insert
+                        continue;
+                    };
+
+                    let mut duration_of_podcast_episode = 0;
+                    let mut image_url =
+                        format!("{}{}", ENVIRONMENT_SERVICE.server_url, DEFAULT_IMAGE_URL);
+
+                    // itunes extension checking
+                    if let Some(itunes_ext) = &itunes_ext {
+                        // duration
+                        if let Some(duration_from_itunes) = &itunes_ext.duration {
+                            duration_of_podcast_episode =
+                                Self::parse_duration(duration_from_itunes);
+                        }
+                        if let Some(itunes_image) = &itunes_ext.image {
+                            image_url = itunes_image.to_string();
+                        }
+                    }
+
+                    let inserted_episode = Self::insert_podcast_episode(
+                        podcast,
+                        item,
+                        &image_url,
+                        duration_of_podcast_episode as i32,
+                    )?;
+                    podcast_inserted.push(inserted_episode);
+                }
+                Ok(podcast_inserted)
+            }
+            Err(e) => {
+                log::info!(
+                    "Error parsing podcast {} {:?} with cause {:?}",
+                    podcast.name,
+                    returned_data_from_podcast_insert.content,
+                    e
+                );
+                Err(CustomErrorInner::BadRequest(
+                    format!("Error parsing podcast {} with cause {:?}", podcast.name, e,),
+                    ErrorSeverity::Error,
+                )
+                .into())
+            }
+        }
+    }
+
+    fn handle_podcast_image_insert(
+        podcast: &Podcast,
+        channel: &Channel,
+    ) -> Result<(), CustomError> {
+        match channel.image() {
+            Some(image) => {
+                crate::application::services::podcast::service::PodcastService::update_original_image_url(
+                    &image.url.to_string(),
+                    podcast.id,
+                )?;
+            }
+            None => {
+                let url = ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL;
+                crate::application::services::podcast::service::PodcastService::update_original_image_url(
+                    &url,
+                    podcast.id,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_itunes_extension(podcast: &Podcast, channel: &Channel) -> Result<(), CustomError> {
+        if let Some(extension) = &channel.itunes_ext
+            && let Some(new_feed) = &extension.new_feed_url
+        {
+            let new_url = new_feed;
+            crate::application::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
+                podcast.id,
+                new_url,
+            );
+
+            let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone())?;
+
+            let channel = Channel::read_from(returned_data_from_server.content.as_bytes()).unwrap();
+            let items = channel.items();
+            Self::update_episodes_on_redirect(items)?;
+        }
+        Ok(())
+    }
+
+    fn update_episodes_on_redirect(items: &[Item]) -> Result<(), CustomError> {
+        for item in items.iter() {
+            match &item.guid {
+                Some(guid) => {
+                    let opt_found_podcast_episode = Self::get_podcast_episode_by_guid(&guid.value)?;
+                    if let Some(found_podcast_episode) = opt_found_podcast_episode {
+                        let mut podcast_episode = found_podcast_episode.clone();
+                        podcast_episode.url = item.enclosure.as_ref().unwrap().url.to_string();
+                        Self::update_podcast_episode(podcast_episode)?;
+                    }
+                }
+                None => {
+                    println!("No guid found for episode {:?}", item.title.as_ref());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn get_podcast_episode_by_guid(
+        guid_to_search: &str,
+    ) -> Result<Option<PodcastEpisode>, CustomError> {
+        Self::repo()
+            .find_by_guid(guid_to_search)
+            .map(|episode| episode.map(Into::into))
+            .map_err(Into::into)
+    }
+
+    fn parse_duration(duration_str: &str) -> u32 {
+        let parts: Vec<&str> = duration_str.split(':').collect();
+        match parts.len() {
+            1 => parts[0].parse::<u32>().unwrap_or(0),
+            2 => {
+                let minutes = parts[0].parse::<u32>().unwrap_or(0);
+                let seconds = parts[1].parse::<u32>().unwrap_or(0);
+                minutes * 60 + seconds
+            }
+            3 => {
+                let hours = parts[0].parse::<u32>().unwrap_or(0);
+                let minutes = parts[1].parse::<u32>().unwrap_or(0);
+                let seconds = parts[2].parse::<u32>().unwrap_or(0);
+                hours * 3600 + minutes * 60 + seconds
+            }
+            4 => {
+                let days = parts[0].parse::<u32>().unwrap_or(0);
+                let hours = parts[1].parse::<u32>().unwrap_or(0);
+                let minutes = parts[2].parse::<u32>().unwrap_or(0);
+                let seconds = parts[3].parse::<u32>().unwrap_or(0);
+                days * 86400 + hours * 3600 + minutes * 60 + seconds
+            }
+            _ => 0,
+        }
+    }
+
+    #[inline]
+    pub fn get_url_file_suffix(url: &str) -> Result<String, Error> {
+        let mut url = Url::parse(url).unwrap();
+        url.set_query(None);
+        Ok(Path::new(&String::from(url))
+            .extension()
+            .unwrap_or(OsStr::new(""))
+            .to_string_lossy()
+            .into_owned())
+    }
+
+    pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
+        crate::application::services::podcast::service::PodcastService::query_for_podcast(query)
+    }
+
+    pub fn find_all_downloaded_podcast_episodes() -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::get_episodes()
+    }
+
+    pub fn find_all_downloaded_podcast_episodes_with_top_k(
+        top_k: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::get_podcast_episodes_by_podcast_to_k(top_k)
+    }
+
+    pub fn map_to_local_url(url: &str) -> String {
+        let mut splitted_url = url.split('/').collect::<Vec<&str>>();
+        let new_last_part = urlencoding::encode(splitted_url.last().unwrap())
+            .clone()
+            .to_string();
+        splitted_url.pop();
+        splitted_url.push(&new_last_part);
+        splitted_url.join("/")
+    }
+
+    pub fn find_all_downloaded_podcast_episodes_by_podcast_id(
+        podcast_id: i32,
+    ) -> Result<Vec<PodcastEpisode>, CustomError> {
+        Self::get_episodes_by_podcast_id(podcast_id)
+    }
+
+    fn update_podcast_fields(feed: Channel, podcast_id: i32) -> Result<(), CustomError> {
+        let itunes = feed.clone().itunes_ext;
+
+        let ext = feed
+            .extensions()
+            .get("podcast")
+            .and_then(|m| m.get("guid"))
+            .and_then(|v| v.first())
+            .and_then(|v| v.value.clone());
+
+        if let Some(itunes) = itunes {
+            let constructed_extra_fields = PodcastBuilder::new(podcast_id)
+                .author(itunes.author)
+                .last_build_date(feed.last_build_date.clone())
+                .description(feed.description.clone())
+                .guid(ext)
+                .language(feed.language.clone())
+                .keywords(itunes.categories)
+                .build();
+            crate::application::services::podcast::service::PodcastService::update_podcast_fields(
+                constructed_extra_fields,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    pub fn cleanup_old_episodes(days_from_settings: i32) {
+        let podcasts = crate::application::services::podcast::service::PodcastService::get_all_podcasts_raw();
+
+        if podcasts.is_err() {
+            return;
+        }
+
+        for p in podcasts.unwrap() {
+            let podcast_settings = PodcastSettingsService::get_settings_for_podcast(p.id);
+            if podcast_settings.is_err() {
+                continue;
+            }
+            let days;
+
+            match podcast_settings.unwrap() {
+                Some(podcast_settings) => {
+                    if podcast_settings.auto_cleanup {
+                        days = podcast_settings.auto_cleanup_days;
+                    } else {
+                        days = days_from_settings;
+                    }
+                }
+                _ => {
+                    days = days_from_settings;
+                }
+            }
+
+            let old_podcast_episodes =
+                match Self::get_podcast_episodes_older_than_days(days, p.id) {
+                    Ok(episodes) => episodes,
+                    Err(err) => {
+                        log::error!(
+                            "Error loading old podcast episodes for podcast {}: {}",
+                            p.id,
+                            err
+                        );
+                        continue;
+                    }
+                };
+
+            log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
+            for old_podcast_episode in old_podcast_episodes {
+                match FavoritePodcastEpisodeService::default_service()
+                    .is_liked_by_someone(old_podcast_episode.id)
+                {
+                    Ok(true) => {
+                        continue;
+                    }
+                    Ok(false) => {}
+                    Err(e) => {
+                        log::error!("Error checking if podcast episode is liked.{e}");
+                    }
+                }
+
+                let res = FileService::cleanup_old_episode(&old_podcast_episode);
+
+                match res {
+                    Ok(_) => {
+                        if let Err(err) =
+                            Self::remove_download_status_of_episode(old_podcast_episode.clone().id)
+                        {
+                            log::error!(
+                                "Error clearing download status for episode {}: {}",
+                                old_podcast_episode.id,
+                                err
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        println!("Error deleting podcast episode.{e}");
+                    }
+                }
+            }
+        }
+    }
+
+    fn do_request_to_podcast_server(podcast: Podcast) -> Result<RequestReturnType, CustomError> {
+        let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
+        let client = get_sync_client()
+            .redirect(Policy::custom({
+                let is_redirected = Arc::clone(&is_redirected);
+
+                move |attempt| {
+                    if !attempt.previous().is_empty() {
+                        *is_redirected.lock().unwrap() = true;
+                    }
+                    attempt.follow()
+                }
+            }))
+            .build()
+            .map_err(map_reqwest_error)?;
+        let mut header_map = HeaderMap::new();
+        header_map.append(
+            ACCEPT,
+            // Safe as it is a standard header
+            "application/rss+xml,application/xml".parse().unwrap(),
+        );
+        header_map.append("User-Agent", COMMON_USER_AGENT.parse().unwrap());
+        let result = client
+            .get(podcast.clone().rssfeed)
+            .headers(header_map)
+            .send()
+            .map_err(map_reqwest_error)?;
+        let url = result.url().clone().to_string();
+        let content = result.text().map_err(map_reqwest_error)?;
+
+        Ok(RequestReturnType { url, content })
+    }
+
+    pub(crate) fn delete_podcast_episode_locally(
+        episode_id: &str,
+    ) -> Result<PodcastEpisode, CustomError> {
+        let episode = Self::get_podcast_episode_by_id(episode_id)?;
+        if episode.is_none() {
+            return Err(CustomErrorInner::NotFound(Warning).into());
+        }
+
+        match episode {
+            Some(episode) => {
+                FileService::cleanup_old_episode(&episode)?;
+                Self::remove_download_status_of_episode(episode.id)?;
+                Self::update_deleted(episode_id, true)?;
+                Ok(episode)
+            }
+            None => Err(CustomErrorInner::NotFound(Warning).into()),
+        }
+    }
+
+    pub fn get_track_number_for_episode(
+        podcast_id: i32,
+        date_of_recording_to_search: &str,
+    ) -> Result<i64, CustomError> {
+        use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+
+        podcast_episodes
+            .filter(
+                crate::adapters::persistence::dbconfig::schema::podcast_episodes::podcast_id
+                    .eq(podcast_id),
+            )
+            .filter(
+                crate::adapters::persistence::dbconfig::schema::podcast_episodes::date_of_recording
+                    .le(date_of_recording_to_search),
+            )
+            .count()
+            .get_result::<i64>(&mut get_connection())
+            .map_err(|e| map_db_error(e, Critical))
+    }
+}
+
+struct RequestReturnType {
+    pub url: String,
+    pub content: String,
+}
+
