@@ -9,19 +9,12 @@ use std::env;
 use std::env::args;
 use std::process::exit;
 mod controllers;
-use crate::adapters::persistence::dbconfig::DBType;
 use crate::command_line_runner::start_command_line;
 use crate::commands::startup::handle_config_for_server_startup;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 pub use controllers::controller_utils::*;
 
-mod constants;
-mod db;
-mod models;
-
 use common_infrastructure::config::EnvironmentService;
-
-mod config;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 
 mod adapters;
 mod app_state;
@@ -29,11 +22,9 @@ mod application;
 mod auth_middleware;
 mod command_line_runner;
 mod commands;
-mod exception;
 mod gpodder;
 pub mod mutex;
 mod test_utils;
-pub mod utils;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -59,3 +50,4 @@ async fn main() -> std::io::Result<()> {
     axum::serve(listener, router).await?;
     Ok(())
 }
+

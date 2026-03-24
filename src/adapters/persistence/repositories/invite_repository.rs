@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::invite::{Invite, InviteRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::invite::DieselInviteRepository;
@@ -40,3 +40,4 @@ impl InviteRepository for InviteRepositoryImpl {
         self.inner.delete(invite_id).map_err(Into::into)
     }
 }
+

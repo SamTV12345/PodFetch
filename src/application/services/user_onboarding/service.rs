@@ -1,6 +1,6 @@
 use crate::application::services::invite::service::InviteService;
-use crate::utils::error::ErrorSeverity::{Debug, Warning};
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::ErrorSeverity::{Debug, Warning};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use podfetch_web::user_admin::UserSummary;
 use podfetch_web::user_onboarding::{UserOnboardingApplicationService, UserOnboardingModel};
@@ -91,3 +91,4 @@ impl UserOnboardingApplicationService for UserOnboardingService {
         self.register_user(request.username, request.password, request.invite_id)
     }
 }
+

@@ -1,6 +1,6 @@
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::listening_event_repository::ListeningEventRepositoryImpl;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use chrono::NaiveDateTime;
 use podfetch_domain::listening_event::{
     ListeningEvent, ListeningEventRepository, NewListeningEvent,
@@ -46,3 +46,4 @@ impl ListeningEventService {
         self.repository.delete_by_podcast_id(podcast_id)
     }
 }
+

@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use chrono::NaiveDateTime;
 use podfetch_domain::listening_event::{
     ListeningEvent, ListeningEventRepository, NewListeningEvent,
@@ -46,3 +46,4 @@ impl ListeningEventRepository for ListeningEventRepositoryImpl {
             .map_err(Into::into)
     }
 }
+

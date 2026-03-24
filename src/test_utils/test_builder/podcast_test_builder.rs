@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::models::podcasts::Podcast;
+    use podfetch_persistence::podcast::PodcastEntity as Podcast;
     use derive_builder::Builder;
     use fake::Fake;
     use fake::Faker;
@@ -100,3 +100,4 @@ pub mod tests {
         }
     }
 }
+

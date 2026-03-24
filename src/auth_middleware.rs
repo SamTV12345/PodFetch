@@ -1,12 +1,13 @@
 use crate::app_state::AppState;
 use crate::application::services::user_auth::service::UserAuthService;
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::http_client::get_async_sync_client;
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
+use common_infrastructure::http::get_async_sync_client;
 use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use log::info;
@@ -40,7 +41,7 @@ pub async fn handle_basic_auth(
 static JWKS: OnceLock<JwkSet> = OnceLock::new();
 
 pub async fn get_jwks(jwks_uri: &str) -> JwkSet {
-    let client = get_async_sync_client().build().unwrap();
+    let client = get_async_sync_client(&ENVIRONMENT_SERVICE).build().unwrap();
     client
         .get(jwks_uri)
         .send()
@@ -489,3 +490,4 @@ mod test {
         assert!(result.is_err());
     }
 }
+

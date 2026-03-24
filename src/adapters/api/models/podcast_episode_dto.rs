@@ -1,7 +1,7 @@
 use crate::adapters::file::file_handler::FileHandlerType;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::podcast_episode::PodcastEpisode;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use chrono::NaiveDateTime;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use std::borrow::Cow;
@@ -241,3 +241,4 @@ pub fn map_s3_url(url: &Option<String>, remote_url: &str) -> String {
         None => remote_url.to_string(),
     }
 }
+

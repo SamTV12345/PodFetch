@@ -1,15 +1,15 @@
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::app_state::AppState;
-use crate::models::podcasts::Podcast;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use crate::application::services::podcast::service::PodcastService;
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::OptionalQuery;
 
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 pub use podfetch_web::rss::{RSSAPiKey, RSSQuery};
 use rss::extension::itunes::{
@@ -34,8 +34,6 @@ pub async fn get_rss_feed(
     OptionalQuery(query): OptionalQuery<RSSQuery>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
 ) -> Result<impl IntoResponse, CustomError> {
-    use crate::ENVIRONMENT_SERVICE;
-
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = api_key
@@ -307,8 +305,8 @@ pub fn get_websocket_router() -> OpenApiRouter<AppState> {
 mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::models::podcasts::Podcast;
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use podfetch_persistence::podcast::PodcastEntity as Podcast;
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use serial_test::serial;
     use uuid::Uuid;
 
@@ -563,4 +561,7 @@ mod tests {
         assert_eq!(mapped.len(), 3);
     }
 }
+
+
+
 

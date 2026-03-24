@@ -1,16 +1,16 @@
+use crate::adapters::api::url::create_url_rewriter;
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::application::usecases::timeline::TimelineItem;
 use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::app_state::AppState;
 use crate::controllers::server::ChatServerHandle;
-use crate::db::TimelineItem;
 use crate::adapters::api::mappers::episode::map_episode_to_dto;
-use crate::models::podcast_episode::PodcastEpisode;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use crate::application::services::file::service::perform_episode_variable_replacement;
 use crate::application::services::podcast::service::PodcastService;
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::url_builder::create_url_rewriter;
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::StatusCode;
@@ -433,11 +433,11 @@ mod tests {
     use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl as subs_dsl;
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::models::podcast_episode::PodcastEpisode;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use crate::application::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
-    use crate::utils::error::CustomErrorInner;
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use common_infrastructure::error::CustomErrorInner;
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
     use axum::extract::{Path, State};
     use chrono::Utc;
@@ -826,4 +826,7 @@ mod tests {
         assert_eq!(response.status_code(), 200);
     }
 }
+
+
+
 

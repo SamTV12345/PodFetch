@@ -27,12 +27,12 @@ impl PodcastBuilder {
     pub fn new(podcast_id: i32) -> PodcastBuilder {
         PodcastBuilder {
             id: podcast_id,
-            description: "".to_string(),
-            language: "".to_string(),
-            keywords: "".to_string(),
-            last_build_date: "".to_string(),
+            description: String::new(),
+            language: String::new(),
+            keywords: String::new(),
+            last_build_date: String::new(),
             explicit: false,
-            author: "".to_string(),
+            author: String::new(),
             guid: None,
         }
     }
@@ -72,6 +72,7 @@ impl PodcastBuilder {
         self
     }
 
+    #[cfg(test)]
     pub fn explicit(&mut self, explicit: Option<String>) -> &mut PodcastBuilder {
         if let Some(explicit) = explicit {
             self.explicit = explicit == "yes";
@@ -103,7 +104,7 @@ impl PodcastBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::podcast_builder::PodcastBuilder;
+    use crate::application::services::podcast::metadata::PodcastBuilder;
     use serial_test::serial;
 
     #[test]

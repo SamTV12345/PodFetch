@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use chrono::DateTime;
 use podfetch_domain::subscription::{
     SubscriptionRepository,
@@ -29,7 +29,7 @@ impl SubscriptionService {
         username: &str,
         since: i32,
     ) -> Result<SubscriptionChangesToClient, CustomError> {
-        let timestamp = crate::utils::time::get_current_timestamp();
+        let timestamp = common_infrastructure::time::get_current_timestamp();
         let since = Self::parse_since(since);
         self.repository
             .get_device_subscriptions(device_id, username, since, timestamp)
@@ -42,7 +42,7 @@ impl SubscriptionService {
         username: &str,
         since: i32,
     ) -> Result<SubscriptionModelChanges, CustomError> {
-        let timestamp = crate::utils::time::get_current_timestamp();
+        let timestamp = common_infrastructure::time::get_current_timestamp();
         let since = Self::parse_since(since);
         self.repository
             .get_user_subscriptions(username, since, timestamp)
@@ -107,3 +107,4 @@ impl SubscriptionApplicationService for SubscriptionService {
         self.get_available_gpodder_podcasts()
     }
 }
+

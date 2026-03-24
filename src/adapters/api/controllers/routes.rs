@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
 use crate::commands::startup::get_api_config;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
 use crate::gpodder::auth::authentication::login;
 use crate::gpodder::device::device_controller::get_device_router;
 use crate::gpodder::episodes::gpodder_episodes::get_gpodder_episodes_router;
 use crate::gpodder::parametrization::get_client_parametrization_router;
 use crate::gpodder::session_middleware::handle_cookie_session;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use crate::gpodder::subscription::subscriptions::get_subscription_router;
 use axum::middleware::from_fn_with_state;
 use utoipa_axum::router::OpenApiRouter;

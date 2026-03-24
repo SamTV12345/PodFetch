@@ -1,6 +1,6 @@
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::session_repository::SessionRepositoryImpl;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use chrono::{NaiveDateTime, Utc};
 use podfetch_domain::session::{Session, SessionRepository};
 use std::sync::Arc;
@@ -43,3 +43,4 @@ impl SessionService {
         self.repository.cleanup_expired(now)
     }
 }
+

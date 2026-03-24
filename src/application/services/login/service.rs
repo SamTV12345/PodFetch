@@ -1,5 +1,5 @@
 use crate::application::services::user_auth::service::UserAuthService;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use common_infrastructure::config::EnvironmentService;
 use podfetch_web::sys::{LoginApplicationService, LoginDecision};
 use sha256::digest;
@@ -52,7 +52,7 @@ impl LoginApplicationService for LoginService {
             Err(err) => {
                 if matches!(
                     err.inner,
-                    crate::utils::error::CustomErrorInner::NotFound(_)
+                    common_infrastructure::error::CustomErrorInner::NotFound(_)
                 ) {
                     Ok(LoginDecision::WrongUserOrPassword)
                 } else {
@@ -62,3 +62,4 @@ impl LoginApplicationService for LoginService {
         }
     }
 }
+

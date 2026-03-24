@@ -1,35 +1,15 @@
-use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::file_type::FileType;
 use file_format::FileFormat;
 use reqwest::header::CONTENT_TYPE;
-use std::fmt::Display;
 use std::io::Error;
-
-pub enum FileType {
-    Audio,
-    Image,
-}
-
-impl Display for FileType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            FileType::Audio => write!(f, "mp3"),
-            FileType::Image => write!(f, "jpg"),
-        }
-    }
-}
+use std::path::Path;
+use url::Url;
 
 pub enum DetermineFileExtensionReturn {
     FileExtension(String, Vec<u8>),
     String(String),
 }
 
-//
-// File extension determination
-// It determines the current file extension
-// 1. By the file name
-// 2. By the mime type
-// 2. By the file name
-// 3. By a set of extensions
 pub fn determine_file_extension(
     url: &str,
     client: &reqwest::blocking::Client,
@@ -95,15 +75,17 @@ fn is_valid_extension(ext: &str) -> bool {
 }
 
 fn get_suffix_by_url(url: &str) -> Result<String, Error> {
-    PodcastEpisodeService::get_url_file_suffix(url)
+    let mut parsed = Url::parse(url).map_err(Error::other)?;
+    parsed.set_query(None);
+    Ok(Path::new(parsed.path())
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-    use serial_test::serial;
-
-    // From https://github.com/parshap/node-sanitize-filename/blob/master/test.js
     static URLS: &[&str] = &[
         "http://www.contoso.com/test",
         "http://www.contoso.com/test.jpg",
@@ -116,14 +98,9 @@ mod tests {
     static URL_EXTENSIONS: &[&str] = &["", "jpg", "mp3", "mp3", "jpg", ""];
 
     #[test]
-    #[serial]
     fn stripping_filename_works() {
-        // Check extensions are correctly determined
         for (idx, url) in URLS.iter().enumerate() {
-            assert_eq!(
-                PodcastEpisodeService::get_url_file_suffix(url).unwrap(),
-                URL_EXTENSIONS[idx]
-            );
+            assert_eq!(super::get_suffix_by_url(url).unwrap(), URL_EXTENSIONS[idx]);
         }
     }
 }

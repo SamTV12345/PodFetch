@@ -1,8 +1,8 @@
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
-use crate::constants::inner_constants::MAIN_ROOM;
 use crate::adapters::api::mappers::podcast::map_podcast_to_dto;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
+use common_infrastructure::runtime::MAIN_ROOM;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use futures::executor::block_on;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
@@ -170,3 +170,4 @@ impl ChatServerHandle {
         );
     }
 }
+

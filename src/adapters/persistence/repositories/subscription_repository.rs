@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::subscription::{
     GPodderAvailablePodcast, SubscriptionModelChanges, SubscriptionRepository,
 };
@@ -65,3 +65,4 @@ impl SubscriptionRepository for SubscriptionRepositoryImpl {
             .map_err(Into::into)
     }
 }
+

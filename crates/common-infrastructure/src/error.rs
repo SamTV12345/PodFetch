@@ -1,8 +1,8 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use common_infrastructure::db::PersistenceError;
 use log::{debug, error, info, warn};
 use s3::error::S3Error;
+use serde::{Deserialize, Serialize};
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
 use std::convert::{Infallible, Into};
@@ -10,6 +10,8 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
 use thiserror::Error;
+
+use crate::db::PersistenceError;
 
 pub struct CustomError {
     pub inner: CustomErrorInner,
@@ -448,11 +450,8 @@ struct ErrorResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::error::{
-        CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_io_error,
-    };
+    use crate::error::{CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_io_error};
     use axum::response::IntoResponse;
-
     use diesel::result::Error;
     use serial_test::serial;
     use std::io::ErrorKind;

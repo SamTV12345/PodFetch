@@ -1,8 +1,8 @@
 use crate::app_state::AppState;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::podcast_key_checker::check_permissions_for_files;
+use crate::adapters::api::file_access::check_permissions_for_files;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use tower_http::services::ServeDir;
 use utoipa_axum::router::OpenApiRouter;
 

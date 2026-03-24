@@ -1,6 +1,6 @@
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::favorite_podcast_episode_repository::FavoritePodcastEpisodeRepositoryImpl;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::favorite_podcast_episode::{
     FavoritePodcastEpisode, FavoritePodcastEpisodeRepository,
 };
@@ -45,3 +45,4 @@ impl FavoritePodcastEpisodeService {
         self.repository.is_liked_by_someone(episode_id)
     }
 }
+

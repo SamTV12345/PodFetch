@@ -1,8 +1,8 @@
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::podcast_episode_chapter_repository::PodcastEpisodeChapterRepositoryImpl;
 use crate::application::services::download::chapter::Chapter;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::utils::error::CustomError;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
 use podfetch_web::settings::UpsertPodcastEpisodeChapter;
 use std::sync::Arc;
@@ -49,3 +49,5 @@ impl PodcastEpisodeChapterService {
         self.repository.get_by_episode_id(episode_id)
     }
 }
+
+

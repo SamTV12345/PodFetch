@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::favorite_podcast_episode::{
     FavoritePodcastEpisode, FavoritePodcastEpisodeRepository,
 };
@@ -40,3 +40,4 @@ impl FavoritePodcastEpisodeRepository for FavoritePodcastEpisodeRepositoryImpl {
             .map_err(Into::into)
     }
 }
+

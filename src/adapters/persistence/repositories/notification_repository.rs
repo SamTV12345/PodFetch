@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::notification::{Notification, NotificationRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::notification::DieselNotificationRepository;
@@ -32,3 +32,4 @@ impl NotificationRepository for NotificationRepositoryImpl {
             .map_err(Into::into)
     }
 }
+

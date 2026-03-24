@@ -8,5 +8,9 @@ path = "src/lib.rs"
 
 [dependencies]
 common-infrastructure = { path = "../common-infrastructure", default-features = false }
+file-format = "0.28.0"
+regex = "1.12.3"
+reqwest = { version = "0.12.28", features = ["blocking", "rustls-tls", "trust-dns"] }
 rust-s3 = { version = "0.36.0", features = ["blocking", "fail-on-err", "futures", "tokio", "tokio-rustls-tls"], default-features = false }
 thiserror = { version = "2.0.18", features = ["std"] }
+url = "2.5.8"

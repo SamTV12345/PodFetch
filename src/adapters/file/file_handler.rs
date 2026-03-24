@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 pub use common_infrastructure::config::FileHandlerType;
 pub use podfetch_storage::FileRequest;
 

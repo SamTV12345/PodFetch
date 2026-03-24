@@ -3,13 +3,13 @@ use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
 use crate::adapters::api::mappers::episode::map_episode_to_dto;
 use crate::adapters::api::mappers::podcast::map_podcast_to_dto;
-use crate::models::episode::Episode;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::favorites::Favorite;
-use crate::models::podcasts::Podcast;
+use podfetch_persistence::episode::EpisodeEntity as Episode;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::favorite::FavoriteEntity as Favorite;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use crate::application::services::filter::service::FilterService;
-use crate::utils::error::ErrorSeverity::Critical;
-use crate::utils::error::{CustomError, map_db_error};
+use common_infrastructure::error::ErrorSeverity::Critical;
+use common_infrastructure::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
@@ -171,3 +171,5 @@ impl TimelineItem {
         })
     }
 }
+
+

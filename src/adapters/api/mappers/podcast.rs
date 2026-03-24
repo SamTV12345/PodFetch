@@ -1,5 +1,5 @@
 use crate::adapters::file::file_handler::{FileHandlerType, resolve_file_handler_type};
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::podcast::Podcast;
 use podfetch_domain::user::User;
 use podfetch_web::podcast::PodcastDto;
@@ -109,7 +109,7 @@ fn build_podfetch_feed(podcast_id: i32, api_key: Option<&str>) -> String {
 #[cfg(test)]
 mod tests {
     use super::map_podcast_to_dto;
-    use crate::utils::test_builder::podcast_test_builder::tests::PodcastTestDataBuilder;
+    use crate::test_utils::test_builder::podcast_test_builder::tests::PodcastTestDataBuilder;
 
     #[test]
     fn test_podcast_2_keywords() {
@@ -133,3 +133,4 @@ mod tests {
         assert_eq!(podcast_dto.keywords.unwrap().split(',').count(), 3);
     }
 }
+

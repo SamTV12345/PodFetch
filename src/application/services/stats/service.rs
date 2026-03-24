@@ -1,5 +1,5 @@
 use crate::application::services::listening_event::service::ListeningEventService;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use chrono::{Datelike, NaiveDateTime};
 use podfetch_web::stats::{StatsApplicationService, StatsOverview, TopPodcastStats, WeekdayStats};
 use std::cmp::Reverse;
@@ -114,4 +114,5 @@ impl StatsApplicationService for StatsService {
         })
     }
 }
+
 

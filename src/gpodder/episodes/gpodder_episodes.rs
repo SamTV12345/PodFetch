@@ -1,9 +1,9 @@
 use crate::adapters::api::mappers::episode::{map_episode_dto_to_episode, map_episode_to_dto};
 use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::gpodder_trimmer::trim_from_path;
-use crate::utils::time::get_current_timestamp;
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::path::trim_from_path;
+use common_infrastructure::time::get_current_timestamp;
 use axum::extract::{Path, Query};
 use axum::{Extension, Json};
 use podfetch_domain::session::Session;
@@ -105,8 +105,8 @@ pub mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::gpodder::episodes::gpodder_episodes::EpisodeActionResponse;
-    use crate::utils::auth::tests::create_auth_gpodder;
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use crate::gpodder::auth::test_support::tests::create_auth_gpodder;
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use serial_test::serial;
 
     fn app_state() -> AppState {
@@ -132,3 +132,5 @@ pub mod tests {
         assert_eq!(json.actions.len(), 0);
     }
 }
+
+

@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::filter::{Filter, FilterRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::filter::DieselFilterRepository;
@@ -36,3 +36,4 @@ impl FilterRepository for FilterRepositoryImpl {
             .map_err(Into::into)
     }
 }
+

@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::podcast_settings::{PodcastSetting, PodcastSettingsRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::podcast_settings::DieselPodcastSettingsRepository;
@@ -26,3 +26,4 @@ impl PodcastSettingsRepository for PodcastSettingsRepositoryImpl {
         self.inner.upsert_settings(setting).map_err(Into::into)
     }
 }
+

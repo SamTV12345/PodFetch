@@ -1,19 +1,20 @@
-use crate::constants::inner_constants::{COMMON_USER_AGENT, ENVIRONMENT_SERVICE, ITUNES_URL};
 use crate::adapters::api::mappers::podcast::map_podcast_with_context_to_dto;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
 use crate::controllers::server::ChatServerHandle;
 use crate::application::services::file::service::FileService;
+use crate::application::services::podcast::metadata::PodcastExtra;
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::application::services::podcast_settings::service::PodcastSettingsService;
 use crate::application::services::tag::service::TagService;
 use crate::unwrap_string;
-use crate::utils::error::ErrorSeverity::{Critical, Error};
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
-use crate::utils::http_client::get_http_client;
-use crate::utils::podcast_builder::PodcastExtra;
+use common_infrastructure::error::ErrorSeverity::{Critical, Error};
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
+use common_infrastructure::http::COMMON_USER_AGENT;
+use common_infrastructure::http::get_http_client;
+use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
 use podfetch_domain::favorite::FavoriteRepository;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::{NewPodcast, PodcastMetadataUpdate, PodcastRepository};
@@ -43,7 +44,7 @@ fn favorite_repo() -> DieselFavoriteRepository {
 impl PodcastService {
     pub async fn find_podcast(podcast: &str) -> ItunesWrapper {
         let query = vec![("term", podcast), ("entity", "podcast")];
-        let result = get_http_client()
+        let result = get_http_client(&ENVIRONMENT_SERVICE)
             .get(ITUNES_URL)
             .query(&query)
             .send()
@@ -69,7 +70,7 @@ impl PodcastService {
 
         let query = vec![("q", podcast)];
 
-        let result = get_http_client()
+        let result = get_http_client(&ENVIRONMENT_SERVICE)
             .get("https://api.podcastindex.org/api/1.0/search/byterm")
             .query(&query)
             .headers(headers)
@@ -101,7 +102,7 @@ impl PodcastService {
     }
 
     pub async fn insert_podcast_from_podindex(id: i32) -> Result<Podcast, CustomError> {
-        let resp = get_http_client()
+        let resp = get_http_client(&ENVIRONMENT_SERVICE)
             .get(format!(
                 "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id={}",
                 &id.to_string()
@@ -404,7 +405,7 @@ impl PodcastService {
                     .or(description.like(format!("%{query}%"))),
             )
             .load::<PodcastEpisode>(&mut get_connection())
-            .map_err(|e| crate::utils::error::map_db_error(e, ErrorSeverity::Critical))
+            .map_err(|e| common_infrastructure::error::map_db_error(e, ErrorSeverity::Critical))
     }
 
     pub fn update_favor_podcast(id: i32, x: bool, username: &str) -> Result<(), CustomError> {
@@ -580,3 +581,5 @@ impl PodcastService {
         Ok(podcasts)
     }
 }
+
+

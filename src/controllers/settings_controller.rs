@@ -2,7 +2,7 @@ use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as Podc
 use crate::app_state::AppState;
 use crate::application::services::episode_scan::service::EpisodeScanServiceImpl;
 use crate::application::services::podcast::service::PodcastService;
-use crate::utils::url_builder::resolve_server_url_from_headers;
+use crate::adapters::api::url::resolve_server_url_from_headers;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::http::Response;
@@ -152,8 +152,8 @@ pub async fn update_name(
     .map_err(map_settings_controller_error)
 }
 
-use crate::utils::error::ErrorSeverity::{Critical, Debug, Error, Warning};
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::error::ErrorSeverity::{Critical, Debug, Error, Warning};
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -202,8 +202,8 @@ mod tests {
     use crate::adapters::persistence::dbconfig::schema::settings::dsl as s_dsl;
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::utils::error::CustomErrorInner;
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use common_infrastructure::error::CustomErrorInner;
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
     use axum::Json;
     use axum::extract::State;
@@ -510,4 +510,6 @@ mod tests {
         assert_eq!(extra_segment.status_code(), 404);
     }
 }
+
+
 

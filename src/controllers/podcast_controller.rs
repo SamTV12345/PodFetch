@@ -1,7 +1,4 @@
 use crate::app_state::AppState;
-use crate::constants::inner_constants::{
-    BASIC_AUTH, COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, OIDC_AUTH,
-};
 use crate::adapters::api::mappers::podcast::{map_podcast_to_dto, map_podcast_with_context_to_dto};
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::application::services::podcast::service::PodcastService;
@@ -17,16 +14,21 @@ use axum_extra::extract::OptionalQuery;
 use opml::{OPML, Outline};
 use rand::RngExt;
 use rand::rngs::ThreadRng;
+use common_infrastructure::config::{BASIC_AUTH, OIDC_AUTH};
+use common_infrastructure::http::COMMON_USER_AGENT;
+use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use rss::Channel;
 use serde_json::Value;
 use std::thread;
 use tokio::task::spawn_blocking;
 
+use crate::adapters::api::url::create_url_rewriter;
 use crate::application::services::file::service::{
     FileService, perform_podcast_variable_replacement,
 };
-use crate::utils::append_to_header::add_basic_auth_headers_conditionally;
-use crate::utils::url_builder::create_url_rewriter;
+use common_infrastructure::config::is_env_var_present_and_true;
+use common_infrastructure::http::get_http_client;
+use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::user::User;
@@ -282,7 +284,7 @@ pub async fn add_podcast(
         ("entity", "podcast".to_string()),
     ];
 
-    let res = get_http_client()
+    let res = get_http_client(&ENVIRONMENT_SERVICE)
         .get("https://itunes.apple.com/lookup")
         .query(&query)
         .send()
@@ -322,7 +324,7 @@ pub async fn add_podcast_by_feed(
     let mut header_map = ReqwestHeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
-    let result = get_http_client()
+    let result = get_http_client(&ENVIRONMENT_SERVICE)
         .get(rss_feed.clone().rss_feed_url)
         .headers(header_map)
         .send()
@@ -406,7 +408,7 @@ pub async fn add_podcast_from_podindex(
     Ok(StatusCode::OK)
 }
 
-fn start_download_podindex(id: i32) -> Result<crate::models::podcasts::Podcast, CustomError> {
+fn start_download_podindex(id: i32) -> Result<podfetch_persistence::podcast::PodcastEntity, CustomError> {
     let rt = Runtime::new().unwrap();
 
     rt.block_on(async { PodcastService::insert_podcast_from_podindex(id).await })
@@ -593,7 +595,10 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
         return;
     }
 
-    let feed_response = get_http_client().get(feed_url.unwrap()).send().await;
+    let feed_response = get_http_client(&ENVIRONMENT_SERVICE)
+        .get(feed_url.unwrap())
+        .send()
+        .await;
     if feed_response.is_err() {
         ChatServerHandle::broadcast_opml_error(feed_response.err().unwrap().to_string());
         return;
@@ -642,16 +647,14 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
 use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::controllers::server::ChatServerHandle;
 use crate::controllers::websocket_controller::RSSAPiKey;
-use crate::utils::environment_variables::is_env_var_present_and_true;
 use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use podfetch_web::podcast::PodcastDto;
 use podfetch_web::settings::Setting;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
-use crate::utils::http_client::get_http_client;
-use crate::utils::rss_feed_parser::PodcastParsed;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
+use crate::adapters::external::rss::PodcastParsed;
 use podfetch_web::podcast_settings::PodcastSetting;
 use podfetch_web::podcast_episode::EpisodeFormatDto;
 
@@ -687,7 +690,7 @@ pub async fn delete_podcast(
     PodcastService::delete_podcast(id)?;
     Ok(StatusCode::OK)
 }
-use crate::utils::error::ErrorSeverity::Debug;
+use common_infrastructure::error::ErrorSeverity::Debug;
 use axum::response::Response;
 
 #[utoipa::path(
@@ -879,8 +882,8 @@ pub mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::podcast_controller::PodcastUpdateNameRequest;
     use crate::controllers::podcast_controller::find_podcast;
-    use crate::utils::error::CustomErrorInner;
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use common_infrastructure::error::CustomErrorInner;
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
     use podfetch_web::podcast_settings::PodcastSetting;
@@ -1412,4 +1415,7 @@ pub mod tests {
         assert_client_error_status(delete_invalid_response.status_code().as_u16());
     }
 }
+
+
+
 

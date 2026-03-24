@@ -1,9 +1,9 @@
-use crate::constants::inner_constants::Role;
-use crate::utils::error::ErrorSeverity::{Debug, Error, Warning};
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::ErrorSeverity::{Debug, Error, Warning};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::config::EnvironmentService;
 use podfetch_domain::invite::InviteRepository;
 use podfetch_web::invite::{Invite, InviteApplicationService};
+use podfetch_web::role::Role;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -107,3 +107,4 @@ impl InviteApplicationService for InviteService {
         self.delete_invite(invite_id)
     }
 }
+

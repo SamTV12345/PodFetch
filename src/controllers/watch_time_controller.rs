@@ -15,9 +15,9 @@ use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::utils::error::ErrorSeverity::Debug;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::url_builder::create_url_rewriter;
+use common_infrastructure::error::ErrorSeverity::Debug;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use crate::adapters::api::url::create_url_rewriter;
 
 pub type LastWatchedItem =
     PodcastWatchedEpisodeModelWithPodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto>;
@@ -108,7 +108,7 @@ mod tests {
     use crate::adapters::persistence::dbconfig::db::get_connection;
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::models::podcast_episode::PodcastEpisode;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -562,4 +562,6 @@ mod tests {
         assert_client_error_status(response.status_code().as_u16());
     }
 }
+
+
 

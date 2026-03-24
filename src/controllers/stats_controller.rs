@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
-use crate::utils::error::ErrorSeverity::Info;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::url_builder::create_url_rewriter;
+use common_infrastructure::error::ErrorSeverity::Info;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use crate::adapters::api::url::create_url_rewriter;
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
@@ -52,8 +52,8 @@ mod tests {
     use crate::adapters::persistence::dbconfig::db::get_connection;
     use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl as pe_dsl;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::models::podcast_episode::PodcastEpisode;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use crate::application::services::listening_event::service::ListeningEventService;
     use chrono::{NaiveDate, NaiveDateTime};
     use diesel::ExpressionMethods;
@@ -599,4 +599,6 @@ mod tests {
         assert_client_error_status(empty_to_response.status_code().as_u16());
     }
 }
+
+
 

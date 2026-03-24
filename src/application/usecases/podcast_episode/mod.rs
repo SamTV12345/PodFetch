@@ -1,32 +1,31 @@
 use crate::adapters::external::telegram::send_new_episode_notification;
+use crate::application::services::podcast::metadata::PodcastBuilder;
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::dbconfig::db::get_connection;
 use crate::adapters::file::file_handler::FileHandlerType;
 use crate::application::services::download::service::DownloadService;
 use crate::application::services::file::service::FileService;
-use crate::constants::inner_constants::PodcastEpisodeWithFavorited;
-use crate::constants::inner_constants::{
-    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, TELEGRAM_API_ENABLED,
-};
 use crate::controllers::server::ChatServerHandle;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use crate::mutex::LockResultExt;
 use crate::application::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::application::services::notification::service::NotificationService;
 use crate::application::services::playlist::service::PlaylistService;
 use crate::application::services::podcast_settings::service::PodcastSettingsService;
 use crate::application::services::settings::service::SettingsService;
-use crate::utils::do_retry::do_retry;
-use crate::utils::time::opt_or_empty_string;
-use crate::utils::environment_variables::is_env_var_present_and_true;
-use crate::utils::error::ErrorSeverity::{Critical, Warning};
-use crate::utils::error::{
+use common_infrastructure::error::ErrorSeverity::{Critical, Warning};
+use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_reqwest_error,
 };
-use crate::utils::podcast_builder::PodcastBuilder;
-use crate::utils::reqwest_client::get_sync_client;
 use chrono::{DateTime, FixedOffset, Utc};
+use common_infrastructure::config::is_env_var_present_and_true;
+use common_infrastructure::config::TELEGRAM_API_ENABLED;
+use common_infrastructure::http::get_sync_client;
+use common_infrastructure::http::COMMON_USER_AGENT;
+use common_infrastructure::retry::do_retry;
+use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
+use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
 use podfetch_domain::user::User;
@@ -46,6 +45,15 @@ use url::Url;
 pub struct PodcastEpisodeUseCase;
 static IN_PROGRESS_DOWNLOADS: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
+
+type PodcastEpisodeWithFavorited = Result<
+    Vec<(
+        PodcastEpisode,
+        Option<podfetch_persistence::episode::EpisodeEntity>,
+        Option<podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode>,
+    )>,
+    CustomError,
+>;
 
 struct InProgressDownloadGuard {
     episode_id: String,
@@ -784,7 +792,7 @@ impl PodcastEpisodeUseCase {
 
     fn do_request_to_podcast_server(podcast: Podcast) -> Result<RequestReturnType, CustomError> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
-        let client = get_sync_client()
+        let client = get_sync_client(&ENVIRONMENT_SERVICE)
             .redirect(Policy::custom({
                 let is_redirected = Arc::clone(&is_redirected);
 
@@ -859,4 +867,6 @@ struct RequestReturnType {
     pub url: String,
     pub content: String,
 }
+
+
 

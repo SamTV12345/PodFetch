@@ -4,14 +4,14 @@ use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
 use crate::app_state::AppState;
 use crate::application::services::device::service::DeviceService;
-use crate::constants::inner_constants::Role;
 use crate::controllers::sys_info_controller::built_info;
 use crate::application::services::podcast::service::PodcastService;
-use crate::utils::error::ErrorSeverity::Error as ErrorSeverityError;
-use crate::utils::error::{CustomError, CustomErrorInner};
-use crate::utils::time::get_current_timestamp_str;
+use common_infrastructure::error::ErrorSeverity::Error as ErrorSeverityError;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::time::get_current_timestamp_str;
 use log::error;
 use podfetch_domain::user::{User, UserWithoutPassword};
+use podfetch_web::role::Role;
 use sha256::digest;
 use std::env::Args;
 use std::io::{Error, ErrorKind, stdin};
@@ -482,4 +482,5 @@ pub fn create_debug_message() {
         }
     }
 }
+
 

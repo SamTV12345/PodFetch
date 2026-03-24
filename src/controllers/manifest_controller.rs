@@ -1,5 +1,5 @@
-use crate::utils::error::CustomError;
-use crate::utils::url_builder::resolve_server_url_from_headers;
+use common_infrastructure::error::CustomError;
+use crate::adapters::api::url::resolve_server_url_from_headers;
 use axum::Json;
 use axum::http::HeaderMap;
 use axum::routing::get;
@@ -18,7 +18,7 @@ pub fn get_manifest_router() -> OpenApiRouter {
 #[cfg(test)]
 mod tests {
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use axum::http::HeaderMap;
     use serde_json::Value;
     use serial_test::serial;
@@ -123,3 +123,4 @@ mod tests {
         assert_client_error_status(response.status_code().as_u16());
     }
 }
+

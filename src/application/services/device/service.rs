@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::device::{Device, DeviceRepository};
 use podfetch_web::device::DeviceApplicationService;
 use std::sync::Arc;
@@ -36,3 +36,4 @@ impl DeviceApplicationService for DeviceService {
         self.query_by_username(username)
     }
 }
+

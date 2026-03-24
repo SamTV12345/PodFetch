@@ -12,6 +12,7 @@ pub mod podcast;
 pub mod podcast_episode;
 pub mod podcast_settings;
 pub mod podcast_view;
+pub mod role;
 pub mod rss;
 pub mod settings;
 pub mod stats;

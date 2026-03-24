@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use axum::http::HeaderMap;
 use url::Url;
 
@@ -53,6 +53,7 @@ pub fn resolve_server_url_from_headers(headers: &HeaderMap) -> String {
     normalize_server_url(&base)
 }
 
+#[allow(dead_code)]
 pub fn rewrite_env_server_url_prefix(url: &str, resolved_server_url: &str) -> String {
     let old_base = normalize_server_url(&ENVIRONMENT_SERVICE.server_url);
     let new_base = normalize_server_url(resolved_server_url);
@@ -78,6 +79,7 @@ pub fn rewrite_env_server_url_prefix(url: &str, resolved_server_url: &str) -> St
     }
 }
 
+#[allow(dead_code)]
 fn normalize_relative_local_path(path: &str) -> Option<String> {
     let normalized = path.trim().trim_start_matches("./").trim_start_matches('/');
     if normalized.is_empty() {
@@ -92,6 +94,7 @@ fn normalize_relative_local_path(path: &str) -> Option<String> {
     }
 }
 
+#[allow(dead_code)]
 fn is_local_path(path: &str) -> bool {
     path == "/rss"
         || path.starts_with("/rss/")
@@ -103,6 +106,7 @@ fn is_local_path(path: &str) -> bool {
         || path.starts_with("/ui/")
 }
 
+#[allow(dead_code)]
 fn is_local_host(host: Option<&str>) -> bool {
     let host = match host {
         Some(host) => host,
@@ -122,14 +126,13 @@ fn is_local_host(host: Option<&str>) -> bool {
     false
 }
 
-/// Creates a UrlRewriter configured for the current request, using the environment's
-/// server URL as the old base and the resolved server URL (from headers) as the new base.
 pub fn create_url_rewriter(headers: &HeaderMap) -> podfetch_web::url_rewriting::UrlRewriter {
     let old_base = &ENVIRONMENT_SERVICE.server_url;
     let new_base = resolve_server_url_from_headers(headers);
     podfetch_web::url_rewriting::UrlRewriter::new(old_base, new_base)
 }
 
+#[allow(dead_code)]
 pub fn build_ws_url_from_server_url(server_url: &str) -> String {
     let normalized = normalize_server_url(server_url);
     if let Ok(mut parsed) = Url::parse(&normalized) {

@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::settings::{Setting, SettingRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::settings::DieselSettingsRepository;
@@ -30,3 +30,4 @@ impl SettingRepository for SettingsRepositoryImpl {
         self.inner.insert_default_settings().map_err(Into::into)
     }
 }
+

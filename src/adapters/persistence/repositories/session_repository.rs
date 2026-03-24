@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use chrono::NaiveDateTime;
 use podfetch_domain::session::{Session, SessionRepository};
 use podfetch_persistence::db::Database;
@@ -37,3 +37,4 @@ impl SessionRepository for SessionRepositoryImpl {
         self.inner.cleanup_expired(now).map_err(Into::into)
     }
 }
+

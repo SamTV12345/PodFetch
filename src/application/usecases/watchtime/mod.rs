@@ -2,11 +2,11 @@ use crate::adapters::api::models::podcast_episode_dto::PodcastEpisodeDto;
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::application::services::listening_event::service::ListeningEventService;
 use crate::adapters::api::mappers::episode::map_episode_to_dto;
-use crate::models::episode::Episode;
-use crate::utils::error::CustomError;
+use podfetch_persistence::episode::EpisodeEntity as Episode;
+use common_infrastructure::error::CustomError;
 use crate::adapters::api::mappers::podcast::map_podcast_to_dto;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use chrono::{NaiveDateTime, Utc};
 use podfetch_domain::episode::{EpisodeRepository, NewEpisode};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
@@ -20,9 +20,9 @@ use podfetch_web::watchtime::{
 };
 use podfetch_persistence::episode::DieselEpisodeRepository;
 
-use crate::constants::inner_constants::DEFAULT_DEVICE;
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::CustomErrorInner;
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::CustomErrorInner;
+use common_infrastructure::runtime::DEFAULT_DEVICE;
 
 #[derive(Clone, Default)]
 pub struct WatchtimeUseCase;
@@ -319,4 +319,6 @@ mod tests {
         assert_eq!(delta, 8);
     }
 }
+
+
 

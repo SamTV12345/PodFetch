@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::device::{Device, DeviceRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::device::DieselDeviceRepository;
@@ -32,3 +32,4 @@ impl DeviceRepository for DeviceRepositoryImpl {
         self.inner.delete_by_username(username1).map_err(Into::into)
     }
 }
+

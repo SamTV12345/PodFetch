@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::user_admin::DieselUserAdminRepository;
@@ -42,3 +42,4 @@ impl UserAdminRepository for UserAdminRepositoryImpl {
         self.inner.delete_by_username(username).map_err(Into::into)
     }
 }
+

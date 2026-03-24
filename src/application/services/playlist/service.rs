@@ -4,11 +4,11 @@ use crate::adapters::persistence::repositories::playlist_repository::PlaylistRep
 use crate::controllers::playlist_controller::PlaylistDto;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
 use crate::adapters::api::mappers::episode::map_episode_to_dto;
-use crate::models::episode::Episode;
-use crate::models::podcast_episode::PodcastEpisode;
+use podfetch_persistence::episode::EpisodeEntity as Episode;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_domain::user::User;
@@ -101,8 +101,8 @@ impl PlaylistService {
 
     fn find_playlist_by_id(&self, playlist_id: &str) -> Result<Playlist, CustomError> {
         self.repository.find_by_id(playlist_id)?.ok_or_else(|| {
-            crate::utils::error::CustomErrorInner::NotFound(
-                crate::utils::error::ErrorSeverity::Debug,
+            common_infrastructure::error::CustomErrorInner::NotFound(
+                common_infrastructure::error::ErrorSeverity::Debug,
             )
             .into()
         })
@@ -116,8 +116,8 @@ impl PlaylistService {
         self.repository
             .find_by_user_and_id(playlist_id, user_id)?
             .ok_or_else(|| {
-                crate::utils::error::CustomErrorInner::NotFound(
-                    crate::utils::error::ErrorSeverity::Debug,
+                common_infrastructure::error::CustomErrorInner::NotFound(
+                    common_infrastructure::error::ErrorSeverity::Debug,
                 )
                 .into()
             })
@@ -181,8 +181,8 @@ impl PlaylistApplicationService for PlaylistService {
         let user = Self::map_user(user_id, username);
         let playlist_to_update = self.find_playlist_by_id(&playlist_id)?;
         if playlist_to_update.user_id != user.id {
-            return Err(crate::utils::error::CustomErrorInner::Forbidden(
-                crate::utils::error::ErrorSeverity::Info,
+            return Err(common_infrastructure::error::CustomErrorInner::Forbidden(
+                common_infrastructure::error::ErrorSeverity::Info,
             )
             .into());
         }
@@ -234,8 +234,8 @@ impl PlaylistApplicationService for PlaylistService {
     fn delete_playlist_by_id(&self, user_id: i32, playlist_id: String) -> Result<(), Self::Error> {
         let playlist = self.find_playlist_by_id(&playlist_id)?;
         if playlist.user_id != user_id {
-            return Err(crate::utils::error::CustomErrorInner::Forbidden(
-                crate::utils::error::ErrorSeverity::Info,
+            return Err(common_infrastructure::error::CustomErrorInner::Forbidden(
+                common_infrastructure::error::ErrorSeverity::Info,
             )
             .into());
         }
@@ -253,8 +253,8 @@ impl PlaylistApplicationService for PlaylistService {
     ) -> Result<(), Self::Error> {
         let playlist = self.find_playlist_by_id(&playlist_id)?;
         if playlist.user_id != user_id {
-            return Err(crate::utils::error::CustomErrorInner::Forbidden(
-                crate::utils::error::ErrorSeverity::Warning,
+            return Err(common_infrastructure::error::CustomErrorInner::Forbidden(
+                common_infrastructure::error::ErrorSeverity::Warning,
             )
             .into());
         }
@@ -264,3 +264,5 @@ impl PlaylistApplicationService for PlaylistService {
         Ok(())
     }
 }
+
+

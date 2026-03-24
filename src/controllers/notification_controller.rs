@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use axum::Json;
 use axum::extract::State;
 use podfetch_web::notification::{self, Notification, NotificationId};
@@ -45,7 +45,7 @@ pub fn get_notification_router() -> OpenApiRouter<AppState> {
 mod tests {
     use crate::commands::startup::tests::handle_test_startup;
     use crate::application::services::notification::service::NotificationService;
-    use crate::utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
+    use crate::test_utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
     use podfetch_web::notification::Notification;
     use serde_json::json;
     use serial_test::serial;
@@ -389,3 +389,5 @@ mod tests {
         assert_eq!(unread_after.len(), 1);
     }
 }
+
+

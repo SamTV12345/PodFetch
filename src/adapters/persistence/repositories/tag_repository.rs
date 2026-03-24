@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::tag::{Tag, TagRepository, TagUpdate, TagsPodcast};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::tag::DieselTagRepository;
@@ -84,3 +84,4 @@ impl TagRepository for TagRepositoryImpl {
             .map_err(Into::into)
     }
 }
+

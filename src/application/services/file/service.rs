@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use crate::models::podcasts::Podcast;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::DBType as DbConnection;
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{
     FileHandlerType, FileRequest, resolve_file_handler_type,
@@ -14,17 +13,19 @@ use crate::application::services::download::service::DownloadService;
 use crate::application::services::podcast::service::PodcastService;
 use crate::application::services::podcast_settings::service::PodcastSettingsService;
 use crate::application::services::settings::service::SettingsService;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::podcast_episode::PodcastEpisode;
+use crate::adapters::external::rss::{PodcastParsed, RSSFeedParser};
+use crate::adapters::persistence::dbconfig::DBType as DbConnection;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
-use crate::utils::file_extension_determination::{FileType, determine_file_extension};
-use crate::utils::file_name_replacement::{Options, Sanitizer};
-use crate::utils::rss_feed_parser::RSSFeedParser;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::settings::{ReplacementStrategy, Setting};
 use podfetch_web::podcast::PodcastInsertModel;
 use podfetch_web::podcast_settings::PodcastSetting;
-use podfetch_storage::{build_podcast_image_paths, create_available_directory};
+use podfetch_storage::{
+    FileType, Options, Sanitizer, build_podcast_image_paths, create_available_directory,
+    determine_file_extension,
+};
 use regex::Regex;
 use rss::Channel;
 use tokio::task::spawn_blocking;
@@ -228,7 +229,7 @@ fn replace_date_of_str(date: &str) -> String {
 
 pub fn perform_podcast_variable_replacement(
     retrieved_settings: Setting,
-    podcast: crate::utils::rss_feed_parser::PodcastParsed,
+    podcast: PodcastParsed,
     podcast_setting: Option<PodcastSetting>,
 ) -> Result<String, CustomError> {
     let sanitizer = Sanitizer::new(None);
@@ -434,12 +435,12 @@ fn remove_extension(filename: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::podcast_episode::PodcastEpisode;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use crate::application::services::file::service::{
         perform_episode_variable_replacement, perform_podcast_variable_replacement,
         perform_replacement,
     };
-    use crate::utils::rss_feed_parser::PodcastParsed;
+    use crate::adapters::external::rss::PodcastParsed;
     use podfetch_domain::settings::Setting;
     use serial_test::serial;
 
@@ -733,4 +734,6 @@ mod tests {
         assert_eq!(result.unwrap(), "Test");
     }
 }
+
+
 

@@ -1,8 +1,8 @@
-use crate::constants::inner_constants::STANDARD_USER_ID;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use common_infrastructure::config::EnvironmentService;
 use podfetch_domain::user::{User, UserWithoutPassword};
 use podfetch_domain::user_admin::UserAdminRepository;
+use podfetch_web::role::STANDARD_USER_ID;
 use podfetch_web::user_admin::{ManagedUser, UserAdminApplicationService};
 use std::sync::Arc;
 
@@ -83,3 +83,4 @@ impl UserAdminApplicationService for UserAdminService {
         self.repository.delete_by_username(username)
     }
 }
+

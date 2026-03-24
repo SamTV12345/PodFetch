@@ -1,11 +1,11 @@
+use crate::adapters::api::url::{create_url_rewriter, resolve_server_url_from_headers};
 use crate::app_state::AppState;
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::utils::error::ErrorSeverity::Info;
-use crate::utils::error::ErrorType::CustomErrorType;
-use crate::utils::error::{
+use common_infrastructure::error::ErrorSeverity::Info;
+use common_infrastructure::error::ErrorType::CustomErrorType;
+use common_infrastructure::error::{
     ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType, map_io_extra_error,
 };
-use crate::utils::url_builder::{create_url_rewriter, resolve_server_url_from_headers};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
@@ -177,8 +177,8 @@ pub fn get_sys_info_router() -> OpenApiRouter<AppState> {
 mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::constants::inner_constants::Role;
-    use crate::utils::error::{CustomErrorInner, ErrorType};
+    use podfetch_web::role::Role;
+    use common_infrastructure::error::{CustomErrorInner, ErrorType};
     use axum::Extension;
     use axum::extract::State;
     use chrono::Utc;
@@ -432,3 +432,4 @@ mod tests {
         }
     }
 }
+

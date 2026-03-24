@@ -542,17 +542,25 @@ checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 name = "common-infrastructure"
 version = "0.1.0"
 dependencies = [
+ "axum",
+ "base64 0.22.1",
  "chrono",
  "diesel",
  "env_logger",
+ "fs_extra",
  "libsqlite3-sys",
  "log",
  "r2d2",
  "r2d2_postgres",
+ "regex",
+ "reqwest",
  "rust-s3",
  "serde",
+ "serde_json",
  "sha256",
+ "strfmt",
  "thiserror 2.0.18",
+ "tokio",
  "url",
  "utoipa",
 ]
@@ -2797,8 +2805,12 @@ name = "podfetch-storage"
 version = "0.1.0"
 dependencies = [
  "common-infrastructure",
+ "file-format",
+ "regex",
+ "reqwest",
  "rust-s3",
  "thiserror 2.0.18",
+ "url",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use podfetch_domain::user::User;
@@ -152,9 +152,9 @@ mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
     use crate::controllers::playlist_controller::PlaylistDtoPost;
-    use crate::models::podcast_episode::PodcastEpisode;
-    use crate::utils::error::CustomErrorInner;
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+    use common_infrastructure::error::CustomErrorInner;
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
     use diesel::ExpressionMethods;
@@ -1108,4 +1108,7 @@ mod tests {
         assert_eq!(rows_after, 0);
     }
 }
+
+
+
 

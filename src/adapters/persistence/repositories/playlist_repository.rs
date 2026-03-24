@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_persistence::db::Database;
 use podfetch_persistence::playlist::DieselPlaylistRepository;
@@ -96,3 +96,4 @@ impl PlaylistRepository for PlaylistRepositoryImpl {
             .map_err(Into::into)
     }
 }
+

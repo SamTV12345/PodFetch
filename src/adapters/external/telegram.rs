@@ -1,6 +1,6 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use frankenstein::client_ureq::Bot;
 use frankenstein::methods::SendMessageParams;
 use frankenstein::{ParseMode, TelegramApi};
@@ -29,3 +29,4 @@ pub fn send_new_episode_notification(podcast_episode: PodcastEpisode, podcast: P
         }
     }
 }
+

@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use axum::Json;
 use axum::routing::get;
 use podfetch_web::gpodder::{ClientParametrization, build_client_parametrization};

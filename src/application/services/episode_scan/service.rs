@@ -3,7 +3,7 @@ use crate::adapters::persistence::repositories::podcast_episode_chapter_reposito
 use crate::application::services::download::chapter::Chapter;
 use crate::application::services::download::service::DownloadService;
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use file_format::FileFormat;
 use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
 use podfetch_web::settings::{
@@ -97,3 +97,4 @@ fn map_chapters(chapters: Vec<Chapter>) -> Vec<ParsedChapter> {
         })
         .collect()
 }
+

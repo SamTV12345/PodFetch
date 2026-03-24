@@ -3,8 +3,8 @@ use crate::adapters::persistence::repositories::podcast_settings_repository::Pod
 use crate::application::services::download::service::DownloadService;
 use crate::application::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::podcast_settings::PodcastSettingsRepository;
 use podfetch_web::podcast_settings::PodcastSetting;
 use podfetch_storage::FilenameBuilderReturn;
@@ -97,4 +97,5 @@ impl PodcastSettingsService {
         Ok(updated_setting.into())
     }
 }
+
 

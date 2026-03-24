@@ -1,9 +1,9 @@
-use crate::constants::inner_constants::{Role, STANDARD_USER, STANDARD_USER_ID};
-use crate::utils::error::ErrorSeverity::{Debug, Warning};
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::ErrorSeverity::{Debug, Warning};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::config::EnvironmentService;
 use podfetch_domain::user::User;
 use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
+use podfetch_web::role::{Role, STANDARD_USER, STANDARD_USER_ID};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -111,3 +111,4 @@ impl UserAuthService {
         }
     }
 }
+

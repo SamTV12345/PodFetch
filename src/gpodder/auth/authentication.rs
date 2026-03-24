@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
 use crate::auth_middleware::AuthFilter;
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum_extra::extract::CookieJar;
@@ -182,9 +182,9 @@ mod tests {
     }
 
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::utils::auth::tests::create_auth_gpodder;
-    use crate::utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use crate::gpodder::auth::test_support::tests::create_auth_gpodder;
+    use crate::test_utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use podfetch_web::device::DeviceResponse;
 
     fn app_state() -> AppState {
@@ -231,3 +231,5 @@ mod tests {
         assert_eq!(response.json::<Vec<DeviceResponse>>().len(), 1);
     }
 }
+
+

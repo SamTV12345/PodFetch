@@ -1,6 +1,6 @@
 use crate::adapters::persistence::dbconfig::db::database;
 use crate::adapters::persistence::repositories::filter_repository::FilterRepositoryImpl;
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::filter::FilterRepository;
 use podfetch_web::filter::Filter;
 use std::sync::Arc;
@@ -38,3 +38,4 @@ impl FilterService {
             .save_timeline_decision(username, only_favored)
     }
 }
+

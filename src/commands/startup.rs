@@ -5,7 +5,6 @@ use crate::app_state::AppState;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
-use crate::constants::inner_constants::{CSS, ENVIRONMENT_SERVICE, JS, MAIN_ROOM};
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::notification_controller::get_notification_router;
@@ -25,7 +24,8 @@ use crate::application::services::file::service::FileService;
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::application::services::podcast::service::PodcastService;
 use crate::application::services::settings::service::SettingsService;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
 use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
@@ -38,6 +38,9 @@ use log::info;
 use maud::{Markup, html};
 use socketioxide::SocketIoBuilder;
 use socketioxide::extract::SocketRef;
+
+const CSS: &str = "css";
+const JS: &str = "javascript";
 use std::ops::DerefMut;
 use std::process::exit;
 use std::sync::OnceLock;
@@ -54,7 +57,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::EmbeddedMigrations;
 use crate::embed_migrations;
-use crate::utils::error::ErrorSeverity::Warning;
+use common_infrastructure::error::ErrorSeverity::Warning;
 
 import_database_config!();
 
@@ -645,4 +648,5 @@ END $$;
         }
     }
 }
+
 

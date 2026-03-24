@@ -1,4 +1,4 @@
-use crate::utils::error::CustomError;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::podcast_episode_chapter::{
     PodcastEpisodeChapter, PodcastEpisodeChapterRepository, UpsertPodcastEpisodeChapter,
 };
@@ -31,3 +31,4 @@ impl PodcastEpisodeChapterRepository for PodcastEpisodeChapterRepositoryImpl {
         self.inner.get_by_episode_id(episode_id).map_err(Into::into)
     }
 }
+

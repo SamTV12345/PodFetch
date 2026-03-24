@@ -5,10 +5,6 @@ pub mod tests {
     use base64::engine::general_purpose;
     use podfetch_domain::user::User;
 
-    pub fn create_basic_header(username: &str, password: &str) -> String {
-        general_purpose::STANDARD.encode(format!("{username}:{password}"))
-    }
-
     pub async fn create_auth_gpodder(server: &mut TestServerWrapper<'_>, user: &User) {
         let encoded_auth =
             general_purpose::STANDARD.encode(format!("{}:{}", user.username, "password"));
@@ -24,7 +20,6 @@ pub mod tests {
                 .await
         };
         assert_eq!(response.status_code().as_u16(), 200);
-        // get devices
         let cookie_binding = response.cookies();
         server
             .test_server

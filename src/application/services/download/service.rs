@@ -4,27 +4,27 @@ use crate::application::services::file::service::{
 };
 use crate::application::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::application::services::podcast_settings::service::PodcastSettingsService;
-use crate::models::podcast_episode::PodcastEpisode;
-use crate::models::podcasts::Podcast;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use std::fs::File;
 
 use crate::adapters::file::file_handle_wrapper::FileHandleWrapper;
 use crate::adapters::file::file_handler::{FileHandlerType, FileRequest};
 use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::constants::inner_constants::{
-    COMMON_USER_AGENT, DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
-};
 use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::utils::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
-use crate::utils::file_extension_determination::{
-    DetermineFileExtensionReturn, FileType, determine_file_extension,
-};
-use crate::utils::http_client::get_async_sync_client;
-use crate::utils::reqwest_client::get_sync_client;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use chrono::Duration;
+use common_infrastructure::http::{get_async_sync_client, get_sync_client};
+use common_infrastructure::http::COMMON_USER_AGENT;
+use common_infrastructure::runtime::{
+    DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
+};
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike};
-use podfetch_storage::{FilenameBuilder, FilenameBuilderReturn};
+use podfetch_storage::{
+    DetermineFileExtensionReturn, FileType, FilenameBuilder, FilenameBuilderReturn,
+    determine_file_extension,
+};
 use reqwest::header::{ACCEPT_ENCODING, HeaderMap, HeaderValue, USER_AGENT};
 use std::io::Read;
 use std::path::PathBuf;
@@ -51,7 +51,7 @@ impl DownloadService {
     }
 
     fn build_binary_sync_client() -> Result<reqwest::blocking::Client, CustomError> {
-        get_sync_client()
+        get_sync_client(&ENVIRONMENT_SERVICE)
             .no_gzip()
             .no_brotli()
             .no_deflate()
@@ -61,7 +61,7 @@ impl DownloadService {
     }
 
     async fn build_binary_async_client() -> Result<reqwest::Client, CustomError> {
-        get_async_sync_client()
+        get_async_sync_client(&ENVIRONMENT_SERVICE)
             .no_gzip()
             .no_brotli()
             .no_deflate()
@@ -176,7 +176,7 @@ impl DownloadService {
         let mut header_map = HeaderMap::new();
         header_map.insert(USER_AGENT, HeaderValue::from_static(COMMON_USER_AGENT));
         header_map.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
-        let client = get_sync_client()
+        let client = get_sync_client(&ENVIRONMENT_SERVICE)
             .default_headers(header_map)
             .no_gzip()
             .no_brotli()
@@ -595,3 +595,5 @@ impl DownloadService {
         chapters
     }
 }
+
+

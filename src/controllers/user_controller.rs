@@ -1,9 +1,9 @@
 use crate::app_state::AppState;
-use crate::constants::inner_constants::STANDARD_USER;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use podfetch_domain::user::User;
 use podfetch_web::invite::{self, InviteControllerError, InvitePostModel};
+use podfetch_web::role::STANDARD_USER;
 use podfetch_web::user_admin::{
     self, UserAdminControllerError, UserCoreUpdateModel, UserRoleUpdateModel, UserWithApiKey,
     UserSummary,
@@ -13,7 +13,7 @@ use podfetch_web::invite::Invite;
 use reqwest::StatusCode;
 
 use crate::application::services::user_admin::service::map_requester;
-use crate::utils::error::{ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType};
+use common_infrastructure::error::{ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType};
 
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -125,7 +125,7 @@ pub async fn update_user(
     .map_err(map_user_admin_error_type)
 }
 
-use crate::utils::error::ErrorSeverity::{Info, Warning};
+use common_infrastructure::error::ErrorSeverity::{Info, Warning};
 
 #[utoipa::path(
 post,
@@ -304,9 +304,9 @@ pub fn get_user_router() -> OpenApiRouter<AppState> {
 mod tests {
     use crate::app_state::AppState;
     use crate::commands::startup::tests::handle_test_startup;
-    use crate::constants::inner_constants::ENVIRONMENT_SERVICE;
-    use crate::utils::error::{CustomErrorInner, ErrorType};
-    use crate::utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+    use common_infrastructure::error::{CustomErrorInner, ErrorType};
+    use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
     use podfetch_web::invite::Invite;
@@ -639,3 +639,5 @@ mod tests {
         }
     }
 }
+
+

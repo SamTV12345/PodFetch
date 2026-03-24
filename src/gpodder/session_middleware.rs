@@ -2,8 +2,8 @@ use crate::app_state::AppState;
 use axum_extra::extract::cookie::CookieJar;
 use std::convert::Infallible;
 
-use crate::utils::error::ErrorSeverity::Warning;
-use crate::utils::error::{CustomError, CustomErrorInner};
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::IntoResponse;
@@ -37,3 +37,4 @@ pub async fn handle_cookie_session(
 
     Ok(next.run(req).await)
 }
+

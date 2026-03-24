@@ -1,4 +1,4 @@
-use crate::constants::inner_constants::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
+use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use serde_json::Value;
 
 pub fn unwrap_string(value: &Value) -> String {
