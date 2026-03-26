@@ -236,7 +236,7 @@ pub async fn get_timeline(
                 podcast_episode: mapped_podcast_episode,
                 podcast: mapped_podcast,
                 history,
-                favorite: favorite.map(Into::into),
+                favorite,
             }
         })
         .collect::<Vec<TimeLinePodcastEpisode>>();

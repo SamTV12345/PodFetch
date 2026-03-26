@@ -3,6 +3,7 @@ use diesel::Connection;
 use diesel::r2d2::ConnectionManager;
 use r2d2::Pool;
 use std::sync::OnceLock;
+#[cfg(feature = "sqlite")]
 use std::time::Duration;
 
 pub type DbPool = Pool<ConnectionManager<DBType>>;

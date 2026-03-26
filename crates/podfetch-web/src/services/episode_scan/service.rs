@@ -23,7 +23,7 @@ impl EpisodeScanServiceImpl {
         Self { chapter_repository }
     }
 
-    pub fn default() -> Self {
+    pub fn default_service() -> Self {
         Self::new(Arc::new(PodcastEpisodeChapterRepositoryImpl::new(
             database(),
         )))

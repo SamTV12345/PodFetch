@@ -89,6 +89,7 @@ struct PodcastEntity {
 }
 
 #[derive(Queryable, Clone)]
+#[allow(dead_code)]
 struct JoinedTagsPodcast {
     tag_id: String,
     podcast_id: i32,
@@ -358,10 +359,10 @@ impl FavoriteRepository for DieselFavoriteRepository {
         let mut matching_podcast_ids: BTreeMap<i32, FavoredPodcastSearchResult> = BTreeMap::new();
         for (podcast, favorite, _tags_podcast, tag) in results {
             if let Some(existing) = matching_podcast_ids.get_mut(&podcast.id) {
-                if let Some(tag) = tag {
-                    if !existing.tags.iter().any(|t| t.id == tag.id) {
-                        existing.tags.push(tag.into());
-                    }
+                if let Some(tag) = tag
+                    && !existing.tags.iter().any(|t| t.id == tag.id)
+                {
+                    existing.tags.push(tag.into());
                 }
             } else {
                 let mut tags = vec![];
@@ -441,10 +442,10 @@ impl FavoriteRepository for DieselFavoriteRepository {
         let mut matching_podcast_ids: IndexMap<i32, PodcastSearchResult> = IndexMap::new();
         for (podcast, favorite, _tags_podcast, tag) in results {
             if let Some(existing) = matching_podcast_ids.get_mut(&podcast.id) {
-                if let Some(tag) = tag {
-                    if !existing.tags.iter().any(|t| t.id == tag.id) {
-                        existing.tags.push(tag.into());
-                    }
+                if let Some(tag) = tag
+                    && !existing.tags.iter().any(|t| t.id == tag.id)
+                {
+                    existing.tags.push(tag.into());
                 }
             } else {
                 let mut tags = vec![];

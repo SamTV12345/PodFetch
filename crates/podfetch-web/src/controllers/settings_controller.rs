@@ -38,7 +38,7 @@ pub async fn get_settings(
     tag="podcast_episodes"
 )]
 pub async fn rescan_episodes(Extension(requester): Extension<User>) -> Result<(), CustomError> {
-    let scan_service = EpisodeScanServiceImpl::default();
+    let scan_service = EpisodeScanServiceImpl::default_service();
     settings::rescan_episodes(&scan_service, requester.is_admin())
         .map(|stats| {
             log::info!(

@@ -32,8 +32,7 @@ impl UserAuthService {
 
         self.repository
             .find_by_username(username)?
-            .map(|user| user)
-            .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))
+                        .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))
     }
 
     pub fn create_user(
@@ -59,8 +58,7 @@ impl UserAuthService {
                 created_at: chrono::Utc::now().naive_utc(),
                 api_key: None,
             })
-            .map(|user| user)
-    }
+                }
 
     pub fn find_by_api_key(&self, api_key: &str) -> Result<Option<User>, CustomError> {
         if api_key.is_empty() {
@@ -74,8 +72,7 @@ impl UserAuthService {
             return Ok(Some(self.read_only_admin_user()));
         }
 
-        self.repository.find_by_api_key(api_key).map(|user| user)
-    }
+        self.repository.find_by_api_key(api_key)    }
 
     pub fn is_api_key_valid(&self, api_key: &str) -> bool {
         self.find_by_api_key(api_key)

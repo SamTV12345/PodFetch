@@ -38,7 +38,7 @@ pub async fn post_device(
         state.device_service.as_ref(),
         &flag.username,
         username,
-        &deviceid.0,
+        deviceid.0,
         device_post,
     )
     .map(Json)

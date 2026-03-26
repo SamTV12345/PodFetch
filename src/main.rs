@@ -1,21 +1,14 @@
-#[macro_use]
-extern crate serde_derive;
-extern crate core;
-extern crate serde_json;
-
 use std::env;
 use std::env::args;
 use std::process::exit;
 
 use crate::command_line_runner::start_command_line;
-use crate::commands::startup::handle_config_for_server_startup;
 
 use common_infrastructure::config::EnvironmentService;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_web::startup::handle_config_for_server_startup;
 
 mod command_line_runner;
-mod commands;
-mod test_utils;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {

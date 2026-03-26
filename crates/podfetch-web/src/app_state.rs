@@ -57,6 +57,12 @@ pub struct AppState {
     pub watchtime_service: Arc<WatchtimeUseCase>,
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppState {
     pub fn new() -> Self {
         let database = podfetch_persistence::db::database();
