@@ -1,6 +1,7 @@
 use common_infrastructure::config::ConfigModel;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use sysinfo::{Disk, System};
 use url::Url;
 use utoipa::ToSchema;
 
@@ -131,6 +132,39 @@ pub fn get_version_info(
         ci,
         time,
         os,
+    }
+}
+
+pub fn map_system(sys: &System) -> SystemDto {
+    SystemDto {
+        mem_total: sys.total_memory(),
+        mem_available: sys.available_memory(),
+        swap_total: sys.total_swap(),
+        swap_used: sys.used_swap(),
+        cpus: CpusWrapperDto {
+            global: sys.global_cpu_usage(),
+            cpus: sys
+                .cpus()
+                .iter()
+                .map(|cpu| Cpu {
+                    name: cpu.name().to_string(),
+                    vendor_id: cpu.vendor_id().to_string(),
+                    usage: CpuUsageDto {
+                        percent: cpu.cpu_usage(),
+                    },
+                    brand: cpu.brand().to_string(),
+                    frequency: cpu.frequency(),
+                })
+                .collect(),
+        },
+    }
+}
+
+pub fn map_disk(disk: &Disk) -> SimplifiedDisk {
+    SimplifiedDisk {
+        name: disk.name().to_str().unwrap_or("").to_string(),
+        total_space: disk.total_space(),
+        available_space: disk.available_space(),
     }
 }
 

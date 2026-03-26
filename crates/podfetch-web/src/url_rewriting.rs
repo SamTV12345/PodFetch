@@ -3,6 +3,8 @@
 //! This module provides functions to rewrite URLs in DTOs from internal server URLs
 //! to the actual server URL as seen by the client (handling reverse proxies, etc.).
 
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use http::HeaderMap;
 use url::Url;
 
 /// Rewrites a URL from the old server base to a new server base.
@@ -113,6 +115,49 @@ fn is_local_host(host: Option<&str>, old_base: &str) -> bool {
     false
 }
 
+fn get_header_value(headers: &HeaderMap, key: &str) -> Option<String> {
+    headers
+        .get(key)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(str::trim)
+        .map(ToString::to_string)
+        .filter(|v| !v.is_empty())
+}
+
+pub fn resolve_server_url_from_headers(headers: &HeaderMap) -> String {
+    let host = get_header_value(headers, "x-forwarded-host")
+        .or_else(|| get_header_value(headers, "host"))
+        .or_else(|| get_header_value(headers, ":authority"));
+
+    if host.is_none() {
+        return ENVIRONMENT_SERVICE.server_url.clone();
+    }
+
+    let proto = get_header_value(headers, "x-forwarded-proto")
+        .or_else(|| get_header_value(headers, "x-forwarded-scheme"))
+        .unwrap_or_else(|| {
+            if ENVIRONMENT_SERVICE.server_url.starts_with("https://") {
+                "https".to_string()
+            } else {
+                "http".to_string()
+            }
+        });
+
+    let prefix = get_header_value(headers, "x-forwarded-prefix")
+        .or_else(|| ENVIRONMENT_SERVICE.sub_directory.clone())
+        .unwrap_or_default();
+    let cleaned_prefix = prefix.trim_matches('/');
+
+    let mut base = format!("{}://{}", proto, host.unwrap());
+    if !cleaned_prefix.is_empty() {
+        base.push('/');
+        base.push_str(cleaned_prefix);
+    }
+
+    normalize_server_url(&base)
+}
+
 /// URL rewriter for batch rewriting URLs on DTOs.
 ///
 /// Create once with the old and new base URLs, then use to rewrite multiple URLs.
@@ -146,9 +191,17 @@ impl UrlRewriter {
     }
 }
 
+pub fn create_url_rewriter(headers: &HeaderMap) -> UrlRewriter {
+    let old_base = &ENVIRONMENT_SERVICE.server_url;
+    let new_base = resolve_server_url_from_headers(headers);
+    UrlRewriter::new(old_base, new_base)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use http::HeaderMap;
+    use http::HeaderValue;
 
     #[test]
     fn test_rewrite_url_with_old_base_prefix() {
@@ -206,6 +259,21 @@ mod tests {
         assert_eq!(
             rewriter.rewrite("/ui/image.jpg"),
             "https://example.com/ui/image.jpg"
+        );
+    }
+
+    #[test]
+    fn test_create_url_rewriter_from_headers() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-forwarded-host",
+            HeaderValue::from_static("podfetch.example.com"),
+        );
+        headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+        let rewriter = create_url_rewriter(&headers);
+        assert_eq!(
+            rewriter.rewrite("/ui/default.jpg"),
+            "https://podfetch.example.com/ui/default.jpg"
         );
     }
 

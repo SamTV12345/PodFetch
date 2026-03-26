@@ -1,11 +1,11 @@
-use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::application::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
-use crate::adapters::persistence::dbconfig::db::database;
-use crate::adapters::persistence::repositories::device::device_repository::DeviceRepositoryImpl;
-use crate::app_state::AppState;
-use crate::application::services::device::service::DeviceService;
-use crate::controllers::sys_info_controller::built_info;
-use crate::application::services::podcast::service::PodcastService;
+use podfetch_web::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use podfetch_web::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
+use podfetch_persistence::db::database;
+use podfetch_persistence::adapters::DeviceRepositoryImpl;
+use podfetch_web::app_state::AppState;
+use podfetch_web::services::device::service::DeviceService;
+use podfetch_web::controllers::sys_info_controller::built_info;
+use podfetch_web::services::podcast::service::PodcastService;
 use common_infrastructure::error::ErrorSeverity::Error as ErrorSeverityError;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::time::get_current_timestamp_str;
@@ -185,7 +185,6 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                 }
                 "remove" => {
                     let mut username = String::new();
-                    // remove user
                     let available_users = list_users(&state)?;
                     retry_read(
                         "Please enter the username of the user you want to delete",
@@ -225,7 +224,6 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     }
                 }
                 "update" => {
-                    //update a user
                     list_users(&state)?;
                     let mut username = String::new();
 
@@ -242,8 +240,6 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     Ok(())
                 }
                 "list" => {
-                    // list users
-
                     list_users(&state)?;
                     Ok(())
                 }
@@ -482,5 +478,3 @@ pub fn create_debug_message() {
         }
     }
 }
-
-

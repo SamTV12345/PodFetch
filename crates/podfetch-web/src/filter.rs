@@ -28,6 +28,16 @@ impl Filter {
     }
 }
 
+pub fn default_podcast_filter() -> Filter {
+    Filter {
+        username: String::new(),
+        title: None,
+        ascending: true,
+        filter: Some("PUBLISHEDDATE".to_string()),
+        only_favored: false,
+    }
+}
+
 impl From<podfetch_domain::filter::Filter> for Filter {
     fn from(value: podfetch_domain::filter::Filter) -> Self {
         Self {

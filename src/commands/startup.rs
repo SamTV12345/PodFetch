@@ -1,29 +1,27 @@
-use crate::adapters::api::controllers::routes::global_routes;
-use crate::adapters::persistence::dbconfig::DBType;
-use crate::adapters::persistence::dbconfig::db::get_connection;
-use crate::app_state::AppState;
-use crate::auth_middleware::{
+use podfetch_web::routes::global_routes;
+use podfetch_persistence::db::{DBType, get_connection};
+use podfetch_web::app_state::AppState;
+use podfetch_web::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
-use crate::controllers::file_hosting::podcast_serving;
-use crate::controllers::manifest_controller::get_manifest_router;
-use crate::controllers::notification_controller::get_notification_router;
-use crate::controllers::playlist_controller::get_playlist_router;
-use crate::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
-use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
-use crate::controllers::server::SOCKET_IO_LAYER;
-use crate::controllers::settings_controller::get_settings_router;
-use crate::controllers::stats_controller::get_stats_router;
-use crate::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
-use crate::controllers::tags_controller::get_tags_router;
-use crate::controllers::user_controller::{get_invite, get_user_router, onboard_user};
-use crate::controllers::watch_time_controller::get_watchtime_router;
-use crate::controllers::websocket_controller::get_websocket_router;
-use crate::import_database_config;
-use crate::application::services::file::service::FileService;
-use crate::application::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::application::services::podcast::service::PodcastService;
-use crate::application::services::settings::service::SettingsService;
+use podfetch_web::controllers::file_hosting::podcast_serving;
+use podfetch_web::controllers::manifest_controller::get_manifest_router;
+use podfetch_web::controllers::notification_controller::get_notification_router;
+use podfetch_web::controllers::playlist_controller::get_playlist_router;
+use podfetch_web::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
+use podfetch_web::controllers::podcast_episode_controller::get_podcast_episode_router;
+use podfetch_web::server::SOCKET_IO_LAYER;
+use podfetch_web::controllers::settings_controller::get_settings_router;
+use podfetch_web::controllers::stats_controller::get_stats_router;
+use podfetch_web::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
+use podfetch_web::controllers::tags_controller::get_tags_router;
+use podfetch_web::controllers::user_controller::{get_invite, get_user_router, onboard_user};
+use podfetch_web::controllers::watch_time_controller::get_watchtime_router;
+use podfetch_web::controllers::websocket_controller::get_websocket_router;
+use podfetch_web::services::file::service::FileService;
+use podfetch_web::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use podfetch_web::services::podcast::service::PodcastService;
+use podfetch_web::services::settings::service::SettingsService;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
 use axum::Router;
@@ -62,7 +60,6 @@ use common_infrastructure::error::ErrorSeverity::Warning;
 import_database_config!();
 
 pub fn run_poll() -> Result<(), CustomError> {
-    //check for new episodes
     let podcast_result = PodcastService::get_all_podcasts_raw()?;
     for podcast in podcast_result {
         if podcast.active {
@@ -114,13 +111,6 @@ pub fn transform_index_files() -> String {
             .iter()
             .filter(|x| x.starts_with("index") && x.ends_with(".css"))
             .collect::<Vec<&String>>()[0];
-
-        /*let icon_file = found_files
-           .iter()
-           .filter(|x| x.starts_with("outlined-") && x.ends_with(".css"))
-           .collect::<Vec<&String>>()[0];
-         link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",icon_file));
-        */
 
         let config = ENVIRONMENT_SERVICE.get_config();
         let config_string = serde_json::to_string(&config).unwrap();
@@ -255,8 +245,6 @@ async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
         content = fix_links(&str_content).as_bytes().to_vec();
     }
 
-    //let res = Response::builder().header("Content-Type", content_type.to_string()).body(content)
-    //    .unwrap();
     let res = Response::builder()
         .header("Content-Type", content_type.to_string())
         .body(Body::from(content))
@@ -265,7 +253,7 @@ async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
 }
 
 pub fn get_api_config(state: AppState) -> OpenApiRouter {
-    use crate::controllers::podcast_controller::__path_proxy_podcast;
+    use podfetch_web::controllers::podcast_controller::__path_proxy_podcast;
     OpenApiRouter::new()
         .merge(get_ui_config())
         .merge(podcast_serving(state.clone()))
@@ -280,10 +268,10 @@ pub fn get_api_config(state: AppState) -> OpenApiRouter {
 }
 
 fn config(state: AppState) -> OpenApiRouter {
-    use crate::controllers::sys_info_controller::__path_get_public_config;
-    use crate::controllers::sys_info_controller::__path_login;
-    use crate::controllers::user_controller::__path_get_invite;
-    use crate::controllers::user_controller::__path_onboard_user;
+    use podfetch_web::controllers::sys_info_controller::__path_get_public_config;
+    use podfetch_web::controllers::sys_info_controller::__path_login;
+    use podfetch_web::controllers::user_controller::__path_get_invite;
+    use podfetch_web::controllers::user_controller::__path_onboard_user;
     OpenApiRouter::new()
         .routes(routes!(get_invite))
         .routes(routes!(onboard_user))
@@ -347,8 +335,6 @@ pub fn handle_config_for_server_startup() -> Router {
 
     check_server_config();
 
-    //services
-
     match FileService::create_podcast_root_directory_exists() {
         Ok(_) => {}
         Err(e) => {
@@ -390,7 +376,6 @@ pub fn handle_config_for_server_startup() -> Router {
         });
 
         scheduler.every(1.day()).run(move || {
-            // Clears the session ids once per day
             session_service_for_cleanup
                 .cleanup_expired()
                 .expect("Error clearing old sessions");
@@ -428,18 +413,15 @@ pub fn handle_config_for_server_startup() -> Router {
     });
     SOCKET_IO_LAYER.get_or_init(|| io);
 
+    let api_config = get_api_config(state.clone());
     let (router, api) = OpenApiRouter::new()
-        .merge(global_routes(state))
+        .merge(global_routes(state, api_config))
         .route("/", get(Redirect::to(&ui_dir)))
         .split_for_parts();
     router
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
         .merge(Redoc::with_url("/redoc", api.clone()))
-        // There is no need to create `RapiDoc::with_openapi` because the OpenApi is served
-        // via SwaggerUi instead we only make rapidoc to point to the existing doc.
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
-        // Alternative to above
-        // .merge(RapiDoc::with_openapi("/api-docs/openapi2.json", api).path("/rapidoc"))
         .merge(Scalar::with_url("/scalar", api))
         .layer(layer)
 }
@@ -447,7 +429,7 @@ pub fn handle_config_for_server_startup() -> Router {
 #[cfg(test)]
 pub mod tests {
     #[cfg(feature = "postgresql")]
-    use crate::adapters::persistence::dbconfig::db::get_connection;
+    use podfetch_persistence::db::get_connection;
     use crate::commands::startup::handle_config_for_server_startup;
     #[cfg(feature = "postgresql")]
     use crate::test_utils::test::setup_container;
@@ -479,7 +461,6 @@ pub mod tests {
 
     #[cfg(feature = "postgresql")]
     async fn ensure_shared_postgres_container() {
-        // A previous test process may already have created a reusable postgres container.
         if tokio::net::TcpStream::connect("127.0.0.1:55002")
             .await
             .is_ok()
@@ -491,11 +472,9 @@ pub mod tests {
             .get_or_init(|| async {
                 match AsyncRunner::start(setup_container()).await {
                     Ok(container) => {
-                        // Keep one container alive for the full test process.
                         std::mem::forget(container);
                     }
                     Err(error) => {
-                        // The fixed host port may already be claimed by another test process.
                         if tokio::net::TcpStream::connect("127.0.0.1:55002")
                             .await
                             .is_ok()
@@ -555,92 +534,92 @@ END $$;
     #[cfg(all(feature = "sqlite", not(feature = "postgresql")))]
     impl Drop for TestServerWrapper<'_> {
         fn drop(&mut self) {
-            use crate::adapters::persistence::dbconfig::db::get_connection;
+            use podfetch_persistence::db::get_connection;
             use diesel::RunQueryDsl;
             {
-                use crate::adapters::persistence::dbconfig::schema::listening_events::dsl::listening_events;
+                use podfetch_persistence::schema::listening_events::dsl::listening_events;
                 diesel::delete(listening_events)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::playlist_items::dsl::playlist_items;
+                use podfetch_persistence::schema::playlist_items::dsl::playlist_items;
                 diesel::delete(playlist_items)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
+                use podfetch_persistence::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
                 diesel::delete(favorite_podcast_episodes)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::subscriptions::dsl::subscriptions;
+                use podfetch_persistence::schema::subscriptions::dsl::subscriptions;
                 diesel::delete(subscriptions)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::episodes::dsl::episodes;
+                use podfetch_persistence::schema::episodes::dsl::episodes;
                 diesel::delete(episodes)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::podcast_episodes::dsl::podcast_episodes;
+                use podfetch_persistence::schema::podcast_episodes::dsl::podcast_episodes;
                 diesel::delete(podcast_episodes)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::tags_podcasts::dsl::tags_podcasts;
+                use podfetch_persistence::schema::tags_podcasts::dsl::tags_podcasts;
                 diesel::delete(tags_podcasts)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::tags::dsl::tags;
+                use podfetch_persistence::schema::tags::dsl::tags;
                 diesel::delete(tags).execute(&mut get_connection()).unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::invites::dsl::invites;
+                use podfetch_persistence::schema::invites::dsl::invites;
                 diesel::delete(invites)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::settings::dsl::settings;
+                use podfetch_persistence::schema::settings::dsl::settings;
                 diesel::delete(settings)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::podcast_settings::dsl::podcast_settings;
+                use podfetch_persistence::schema::podcast_settings::dsl::podcast_settings;
                 diesel::delete(podcast_settings)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::podcasts::dsl::podcasts;
+                use podfetch_persistence::schema::podcasts::dsl::podcasts;
                 diesel::delete(podcasts)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::notifications::dsl::notifications;
+                use podfetch_persistence::schema::notifications::dsl::notifications;
                 diesel::delete(notifications)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::devices::dsl::devices;
+                use podfetch_persistence::schema::devices::dsl::devices;
                 diesel::delete(devices)
                     .execute(&mut get_connection())
                     .unwrap();
             }
             {
-                use crate::adapters::persistence::dbconfig::schema::users::dsl::users;
+                use podfetch_persistence::schema::users::dsl::users;
                 diesel::delete(users)
                     .execute(&mut get_connection())
                     .unwrap();
@@ -648,5 +627,3 @@ END $$;
         }
     }
 }
-
-

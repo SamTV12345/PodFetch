@@ -19,4 +19,5 @@ diesel = { version = "2.3.7", features = ["chrono", "r2d2"] }
 indexmap = "2"
 libsqlite3-sys = { version = "0.35.0", features = ["bundled"], optional = true }
 r2d2_postgres = { version = "0.18.2", optional = true }
+r2d2 = "0.8"
 uuid = { version = "1.22.0", features = ["v4"] }

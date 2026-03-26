@@ -1,4 +1,9 @@
 pub mod db;
+pub mod schema;
+
+pub use db::{database, get_connection};
+
+pub mod adapters;
 pub mod device;
 pub mod episode;
 pub mod favorite;
