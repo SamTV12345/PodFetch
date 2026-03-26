@@ -9,15 +9,13 @@ edition = "2024"
 build = "build.rs"
 
 [build-dependencies]
-built = {version="0.8.0", features=["chrono", "semver","cargo-lock"]}
+built = { version = "0.8.0", features = ["chrono", "semver", "cargo-lock"] }
 
 [features]
 default = ["sqlite", "postgresql"]
-postgresql = ["diesel/postgres", "diesel_migrations/postgres", "dep:r2d2_postgres",
-    "diesel/postgres_backend", "common-infrastructure/postgresql", "podfetch-persistence/postgresql", "podfetch-web/postgresql",
-    "hyper-tls", "native-tls"]
-sqlite = ["diesel/sqlite", "diesel_migrations/sqlite", "diesel/returning_clauses_for_sqlite_3_35",
-    "common-infrastructure/sqlite", "podfetch-persistence/sqlite", "podfetch-web/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-persistence/postgresql", "podfetch-web/postgresql",
+    "dep:r2d2_postgres", "hyper-tls", "native-tls"]
+sqlite = ["common-infrastructure/sqlite", "podfetch-persistence/sqlite", "podfetch-web/sqlite"]
 
 [dependencies]
 # Workspace crates
@@ -27,27 +25,9 @@ podfetch-persistence = { path = "crates/podfetch-persistence", default-features 
 podfetch-storage = { path = "crates/podfetch-storage" }
 podfetch-web = { path = "crates/podfetch-web", default-features = false }
 
-# Web framework (startup, routing, UI serving)
-axum = { version = "0.8.8", features = ["macros", "http2"] }
-utoipa-axum = "0.2.0"
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
-utoipa-redoc = { version = "6.0.0", features = ["axum"] }
-utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-socketioxide = "0.18.2"
-maud = { version = "*", features = ["axum", "axum-core"] }
-mime_guess = "2.0.5"
-
-# Database (migrations)
-diesel = { version = "2.3.7", features = ["chrono", "r2d2"] }
-diesel_migrations = "2.3.1"
-r2d2_postgres = { version = "0.18.2", optional = true }
-
 # Async runtime
 tokio = { version = "1.50.0", features = ["full"] }
-
-# Scheduler
-clokwerk = "0.4.0"
+axum = { version = "0.8.8", features = ["macros", "http2"] }
 
 # CLI
 rpassword = "7.4.0"
@@ -61,6 +41,9 @@ serde_json = "1.0.149"
 
 # Logging
 log = "0.4.29"
+
+# PostgreSQL (optional)
+r2d2_postgres = { version = "0.18.2", optional = true }
 
 [target.'cfg(not(windows))'.dependencies]
 hyper-tls = { version = "0.6.0", optional = true }

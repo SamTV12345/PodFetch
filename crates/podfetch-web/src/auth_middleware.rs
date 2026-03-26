@@ -313,7 +313,7 @@ mod test {
 
     use crate::auth_middleware::AuthFilter;
 
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test::create_random_user;
     use common_infrastructure::config::ReverseProxyConfig;
     use serial_test::serial;

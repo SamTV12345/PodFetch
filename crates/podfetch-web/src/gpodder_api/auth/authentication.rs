@@ -159,7 +159,7 @@ mod tests {
         assert_eq!(cookie.value(), session.session_id);
     }
 
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use crate::gpodder_api::auth::test_support::tests::create_auth_gpodder;
     use crate::test_utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;

@@ -91,7 +91,7 @@ pub fn get_gpodder_episodes_router() -> OpenApiRouter {
 #[cfg(test)]
 pub mod tests {
     use crate::app_state::AppState;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use crate::gpodder_api::episodes::gpodder_episodes::EpisodeActionResponse;
     use crate::gpodder_api::auth::test_support::tests::create_auth_gpodder;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;

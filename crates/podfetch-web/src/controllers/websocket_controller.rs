@@ -304,7 +304,7 @@ pub fn get_websocket_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use podfetch_persistence::podcast::PodcastEntity as Podcast;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use serial_test::serial;

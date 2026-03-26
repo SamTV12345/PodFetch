@@ -828,7 +828,7 @@ pub fn get_podcast_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 pub mod tests {
     use crate::app_state::AppState;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use crate::controllers::podcast_controller::PodcastUpdateNameRequest;
     use crate::controllers::podcast_controller::find_podcast;
     use common_infrastructure::error::CustomErrorInner;

@@ -150,7 +150,7 @@ mod tests {
     use podfetch_persistence::schema::playlist_items::dsl as pli_dsl;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use crate::app_state::AppState;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use crate::controllers::playlist_controller::PlaylistDtoPost;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use common_infrastructure::error::CustomErrorInner;

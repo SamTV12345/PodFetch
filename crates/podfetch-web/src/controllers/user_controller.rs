@@ -303,7 +303,7 @@ pub fn get_user_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use common_infrastructure::error::{CustomErrorInner, ErrorType};
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;

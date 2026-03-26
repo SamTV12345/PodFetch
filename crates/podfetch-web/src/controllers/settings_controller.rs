@@ -201,7 +201,7 @@ mod tests {
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::schema::settings::dsl as s_dsl;
     use crate::app_state::AppState;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use common_infrastructure::error::CustomErrorInner;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;

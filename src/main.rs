@@ -1,5 +1,3 @@
-use diesel_migrations::{EmbeddedMigrations, embed_migrations};
-
 #[macro_use]
 extern crate serde_derive;
 extern crate core;
@@ -18,17 +16,6 @@ use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 mod command_line_runner;
 mod commands;
 mod test_utils;
-
-macro_rules! import_database_config {
-    () => {
-        #[cfg(feature = "sqlite")]
-        pub const SQLITE_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations/sqlite");
-
-        #[cfg(feature = "postgresql")]
-        pub const POSTGRES_MIGRATIONS: EmbeddedMigrations =
-            embed_migrations!("./migrations/postgres");
-    };
-}
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {

@@ -51,8 +51,17 @@ pub mod gpodder_api;
 // Route configuration
 pub mod routes;
 
+// Server startup, scheduling, UI serving
+pub mod startup;
+
 // Application state
 pub mod app_state;
 
 // File access API adapter
 pub mod api_file_access;
+
+// Test utilities
+#[cfg(test)]
+pub mod test_utils;
+#[cfg(test)]
+pub mod test_support;

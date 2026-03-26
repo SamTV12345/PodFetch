@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::commands::startup::tests::TestServerWrapper;
+    use crate::test_support::tests::TestServerWrapper;
     use base64::Engine;
     use base64::engine::general_purpose;
     use podfetch_domain::user::User;

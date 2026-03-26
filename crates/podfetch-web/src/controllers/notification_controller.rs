@@ -43,7 +43,7 @@ pub fn get_notification_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use crate::services::notification::service::NotificationService;
     use crate::test_utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
     use crate::notification::Notification;

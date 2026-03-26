@@ -17,7 +17,7 @@ pub fn get_manifest_router() -> OpenApiRouter {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use axum::http::HeaderMap;
     use serde_json::Value;

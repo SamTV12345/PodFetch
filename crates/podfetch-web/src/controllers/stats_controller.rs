@@ -51,7 +51,7 @@ pub fn get_stats_router() -> OpenApiRouter<AppState> {
 mod tests {
     use podfetch_persistence::db::get_connection;
     use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use crate::services::listening_event::service::ListeningEventService;

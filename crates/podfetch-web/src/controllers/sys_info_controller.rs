@@ -40,7 +40,10 @@ pub mod built_info {
     pub const BUILT_TIME_UTC: &str = "unknown";
     pub const CFG_OS: &str = std::env::consts::OS;
     pub const CFG_ENDIAN: &str = if cfg!(target_endian = "big") { "big" } else { "little" };
-    pub const TARGET: &str = option_env!("TARGET").unwrap_or("unknown");
+    pub const TARGET: &str = match option_env!("TARGET") {
+        Some(v) => v,
+        None => "unknown",
+    };
     pub const DEBUG: &str = if cfg!(debug_assertions) { "true" } else { "false" };
     pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
     pub const PKG_AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
@@ -169,7 +172,7 @@ pub fn get_sys_info_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::commands::startup::tests::handle_test_startup;
+    use crate::test_support::tests::handle_test_startup;
     use crate::role::Role;
     use common_infrastructure::error::{CustomErrorInner, ErrorType};
     use axum::Extension;
