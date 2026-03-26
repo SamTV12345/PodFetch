@@ -190,6 +190,12 @@ pub struct TelegramConfig {
     pub telegram_chat_id: String,
 }
 
+impl Default for EnvironmentService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnvironmentService {
     pub fn for_tests() -> Self {
         let mut environment = Self::new();
