@@ -1,0 +1,18 @@
+[package]
+name = "podfetch-storage"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+common-infrastructure = { workspace = true }
+file-format = { workspace = true }
+log = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true }
+rust-s3 = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+urlencoding = { workspace = true }

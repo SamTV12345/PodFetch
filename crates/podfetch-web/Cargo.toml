@@ -1,0 +1,92 @@
+[package]
+name = "podfetch-web"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+sqlite = ["common-infrastructure/sqlite", "podfetch-persistence/sqlite"]
+postgresql = ["common-infrastructure/postgresql", "podfetch-persistence/postgresql"]
+
+[dependencies]
+common-infrastructure = { workspace = true }
+podfetch-domain = { workspace = true }
+podfetch-persistence = { workspace = true }
+podfetch-storage = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+axum-extra = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+utoipa = { workspace = true }
+utoipa-axum = { workspace = true }
+socketioxide = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+utoipa-rapidoc = { workspace = true }
+utoipa-redoc = { workspace = true }
+utoipa-scalar = { workspace = true }
+clokwerk = { workspace = true }
+http = { workspace = true }
+mime_guess = { workspace = true }
+serial_test = { workspace = true }
+# Auth
+jsonwebtoken = { workspace = true }
+base64 = { workspace = true }
+sha256 = { workspace = true }
+sha1 = { workspace = true }
+
+# Async
+tokio = { workspace = true }
+futures = { workspace = true }
+async-recursion = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true }
+
+# RSS / OPML / XML
+rss = { workspace = true }
+opml = { workspace = true }
+xml-builder = { workspace = true }
+
+# Media metadata
+id3 = { workspace = true }
+mp4ameta = { workspace = true }
+file-format = { workspace = true }
+
+# Database (for direct queries in usecases/controllers)
+diesel = { workspace = true }
+r2d2 = { workspace = true }
+
+# Utilities
+chrono = { workspace = true, features = ["serde"] }
+uuid = { workspace = true }
+url = { workspace = true }
+urlencoding = { workspace = true }
+regex = { workspace = true }
+strfmt = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+rand = { workspace = true }
+
+# System info
+sysinfo = { workspace = true }
+
+# Templating (for manifest)
+maud = { workspace = true }
+
+[dev-dependencies]
+axum-test = { workspace = true }
+ctor = "0.8.0"
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+derive_builder = { workspace = true }
+fake = { workspace = true }
+bollard = { workspace = true }

@@ -33,7 +33,7 @@ jobs:
       - name: Run lint
         run: cargo clippy -- -D warnings
       - name: Run cargo test
-        run: cargo test
+        run: cargo test --workspace
   build_sqlite:
     name: Build sqlite
     runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
       - name: Run lint
         run: cargo clippy --no-default-features --features sqlite -- -D warnings
       - name: Run cargo test
-        run: cargo test --no-default-features --features sqlite
+        run: cargo test --no-default-features --workspace --features sqlite
   build_postgres:
     name: Build postgres
     runs-on: ubuntu-latest
@@ -85,4 +85,4 @@ jobs:
       - name: Run lint
         run: cargo clippy --no-default-features --features postgresql -- -D warnings
       - name: Run cargo test
-        run: cargo test --no-default-features --features postgresql
+        run: cargo test --no-default-features --workspace --features postgresql

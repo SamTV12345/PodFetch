@@ -1,0 +1,406 @@
+use crate::routes::global_routes;
+use crate::app_state::AppState;
+use crate::auth_middleware::{
+    handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
+};
+use crate::controllers::file_hosting::podcast_serving;
+use crate::controllers::manifest_controller::get_manifest_router;
+use crate::controllers::notification_controller::get_notification_router;
+use crate::controllers::playlist_controller::get_playlist_router;
+use crate::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
+use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
+use crate::server::SOCKET_IO_LAYER;
+use crate::controllers::settings_controller::get_settings_router;
+use crate::controllers::stats_controller::get_stats_router;
+use crate::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
+use crate::controllers::tags_controller::get_tags_router;
+use crate::controllers::user_controller::{get_invite, get_user_router, onboard_user};
+use crate::controllers::watch_time_controller::get_watchtime_router;
+use crate::controllers::websocket_controller::get_websocket_router;
+use crate::services::file::service::FileService;
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::services::podcast::service::PodcastService;
+use crate::services::settings::service::SettingsService;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
+use axum::Router;
+use axum::body::Body;
+use axum::extract::Request;
+use axum::middleware::from_fn_with_state;
+use axum::response::{Redirect, Response};
+use axum::routing::get;
+use clokwerk::{Scheduler, TimeUnits};
+use log::info;
+use maud::{Markup, html};
+use socketioxide::SocketIoBuilder;
+use socketioxide::extract::SocketRef;
+
+const CSS: &str = "css";
+const JS: &str = "javascript";
+use std::process::exit;
+use std::sync::OnceLock;
+use std::thread;
+use std::time::Duration;
+use tokio::fs;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
+use utoipa_scalar::Scalar;
+use utoipa_scalar::Servable as UtoipaServable;
+use utoipa_swagger_ui::SwaggerUi;
+
+use common_infrastructure::error::ErrorSeverity::Warning;
+
+pub fn run_poll() -> Result<(), CustomError> {
+    let podcast_result = PodcastService::get_all_podcasts_raw()?;
+    for podcast in podcast_result {
+        if podcast.active {
+            let podcast_clone = podcast.clone();
+            let insert_result = PodcastEpisodeService::insert_podcast_episodes(&podcast);
+            if let Err(e) = insert_result {
+                log::error!(
+                    "Could not insert new podcast episodes for podcast: {} with cause {}",
+                    &podcast.name,
+                    e
+                );
+                continue;
+            }
+            let schedule = PodcastService::schedule_episode_download(&podcast_clone);
+            if let Err(e) = schedule {
+                log::error!(
+                    "Could not schedule episode download for podcast: {} with cause {}",
+                    &podcast.name,
+                    e
+                );
+                continue;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn fix_links(content: &str) -> String {
+    let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
+    content.replace("/ui/", &dir)
+}
+
+pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
+
+pub fn transform_index_files() -> String {
+    let html = INDEX_HTML.get_or_init(|| {
+        let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
+        let manifest_json_location =
+            ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/manifest.json";
+        let found_files = std::fs::read_dir("./static/assets/")
+            .expect("Could not read directory")
+            .map(|x| x.unwrap().file_name().into_string().unwrap())
+            .collect::<Vec<String>>();
+        let js_file = found_files
+            .iter()
+            .filter(|x| x.starts_with("index") && x.ends_with(".js"))
+            .collect::<Vec<&String>>()[0];
+        let css_file = found_files
+            .iter()
+            .filter(|x| x.starts_with("index") && x.ends_with(".css"))
+            .collect::<Vec<&String>>()[0];
+
+        let config = ENVIRONMENT_SERVICE.get_config();
+        let config_string = serde_json::to_string(&config).unwrap();
+        let html = html! {
+            html {
+                head {
+                    meta charset="utf-8";
+                    meta name="viewport" content="width=device-width, initial-scale=1";
+                    title {"Podfetch"};
+                    link rel="icon" type="image/png" href="/ui/favicon.ico";
+                    link rel="manifest" href=(manifest_json_location);
+                    script type="module" crossorigin src=(format!("{}{}{}",dir.clone(),
+                        "assets/",js_file))
+                    {};
+                    link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",css_file));
+                }
+            body {
+            div id="config" data-config=(config_string)    {};
+            div id="root" {};
+            div id="modal" {};
+            div id="modal1"{};
+            div id="modal2"{};
+            div id="confirm-modal"{};
+                }
+
+        }};
+        html
+    });
+
+    html.0.to_string()
+}
+
+#[utoipa::path(get, path = "/index.html")]
+async fn index() -> Result<Response<String>, CustomError> {
+    let response = Response::builder()
+        .header("Content-Type", "text/html")
+        .status(200)
+        .body(transform_index_files())
+        .unwrap();
+    Ok(response)
+}
+
+fn check_if_multiple_auth_is_configured() -> bool {
+    let mut num_of_auth_count = 0;
+    if ENVIRONMENT_SERVICE.http_basic {
+        num_of_auth_count += 1;
+    }
+    if ENVIRONMENT_SERVICE.oidc_configured {
+        num_of_auth_count += 1;
+    }
+    if ENVIRONMENT_SERVICE.reverse_proxy {
+        num_of_auth_count += 1;
+    }
+    num_of_auth_count > 1
+}
+
+pub fn check_server_config() {
+    if ENVIRONMENT_SERVICE.http_basic
+        && (ENVIRONMENT_SERVICE.password.is_none() || ENVIRONMENT_SERVICE.username.is_none())
+    {
+        eprintln!(
+            "BASIC_AUTH activated but no username or password set. Please set username and password in the .env file."
+        );
+        exit(1);
+    }
+
+    if ENVIRONMENT_SERVICE.gpodder_integration_enabled
+        && !(ENVIRONMENT_SERVICE.http_basic
+            || ENVIRONMENT_SERVICE.oidc_configured
+            || ENVIRONMENT_SERVICE.reverse_proxy)
+    {
+        eprintln!(
+            "GPODDER_INTEGRATION_ENABLED activated but no BASIC_AUTH or OIDC_AUTH set. Please set BASIC_AUTH or OIDC_AUTH in the .env file."
+        );
+        exit(1);
+    }
+
+    if check_if_multiple_auth_is_configured() {
+        eprintln!(
+            "You cannot have oidc and basic auth enabled at the same time. Please disable one of them."
+        );
+        exit(1);
+    }
+}
+
+pub fn get_ui_config() -> OpenApiRouter {
+    OpenApiRouter::new().nest(
+        "/ui/",
+        OpenApiRouter::new()
+            .routes(routes!(index))
+            .fallback(handle_ui_access),
+    )
+}
+
+pub fn insert_default_settings_if_not_present(
+    settings_service: &SettingsService,
+) -> Result<(), CustomError> {
+    let settings = settings_service.get_settings()?;
+    match settings {
+        Some(_) => {
+            info!("Settings already present");
+            Ok(())
+        }
+        None => {
+            info!("No settings found, inserting default settings");
+            settings_service.insert_default_settings_if_not_present()?;
+            Ok(())
+        }
+    }
+}
+
+async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
+    let (req_parts, _) = req.into_parts();
+    let path = req_parts.uri.path();
+
+    if path.contains("..") {
+        return Err(CustomErrorInner::NotFound(Warning).into());
+    }
+    let mut file_path = format!("{}{}", "./static", path);
+
+    let mut content = match fs::read(&file_path).await {
+        Ok(e) => Ok::<Vec<u8>, CustomError>(e),
+        Err(_) => {
+            file_path = format!("{}{}", "./static", "/ui/index.html");
+            Ok(transform_index_files().as_bytes().to_vec())
+        }
+    }?;
+    let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
+
+    if content_type.to_string().contains(CSS) || content_type.to_string().contains(JS) {
+        let str_content = String::from_utf8(content).unwrap();
+        content = fix_links(&str_content).as_bytes().to_vec();
+    }
+
+    let res = Response::builder()
+        .header("Content-Type", content_type.to_string())
+        .body(Body::from(content))
+        .unwrap();
+    Ok(res)
+}
+
+pub fn get_api_config(state: AppState) -> OpenApiRouter {
+    use crate::controllers::podcast_controller::__path_proxy_podcast;
+    OpenApiRouter::new()
+        .merge(get_ui_config())
+        .merge(podcast_serving(state.clone()))
+        .merge(get_manifest_router())
+        .merge(get_websocket_router().with_state(state.clone()))
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(proxy_podcast))
+                .with_state(state.clone()),
+        )
+        .nest("/api/v1", OpenApiRouter::new().merge(config(state)))
+}
+
+fn config(state: AppState) -> OpenApiRouter {
+    use crate::controllers::sys_info_controller::__path_get_public_config;
+    use crate::controllers::sys_info_controller::__path_login;
+    use crate::controllers::user_controller::__path_get_invite;
+    use crate::controllers::user_controller::__path_onboard_user;
+    OpenApiRouter::new()
+        .routes(routes!(get_invite))
+        .routes(routes!(onboard_user))
+        .routes(routes!(get_public_config))
+        .routes(routes!(login))
+        .with_state(state.clone())
+        .merge(get_private_api(state))
+}
+
+fn get_private_api(state: AppState) -> OpenApiRouter {
+    let router = OpenApiRouter::new()
+        .merge(get_playlist_router().with_state(state.clone()))
+        .merge(get_podcast_router().with_state(state.clone()))
+        .merge(get_sys_info_router().with_state(state.clone()))
+        .merge(get_watchtime_router().with_state(state.clone()))
+        .merge(get_stats_router().with_state(state.clone()))
+        .merge(get_notification_router().with_state(state.clone()))
+        .merge(get_podcast_episode_router().with_state(state.clone()))
+        .merge(get_settings_router().with_state(state.clone()))
+        .merge(get_tags_router().with_state(state.clone()))
+        .merge(get_user_router().with_state(state.clone()));
+
+    if ENVIRONMENT_SERVICE.http_basic {
+        router.layer(from_fn_with_state(state.clone(), handle_basic_auth))
+    } else if ENVIRONMENT_SERVICE.oidc_configured {
+        router.layer(from_fn_with_state(state.clone(), handle_oidc_auth))
+    } else if ENVIRONMENT_SERVICE.reverse_proxy {
+        router.layer(from_fn_with_state(state.clone(), handle_proxy_auth))
+    } else {
+        router.layer(from_fn_with_state(state, handle_no_auth))
+    }
+}
+
+/// Builds the full Router with migrations, settings, and SocketIO —
+/// but **without** the background scheduler. Use this for tests.
+pub fn build_server_router() -> Router {
+    let state = AppState::new();
+    podfetch_persistence::run_migrations();
+
+    check_server_config();
+
+    match FileService::create_podcast_root_directory_exists() {
+        Ok(_) => {}
+        Err(e) => {
+            log::error!("Could not create podcast root directory: {e}");
+            panic!("Could not create podcast root directory: {e}");
+        }
+    }
+
+    insert_default_settings_if_not_present(state.settings_service.as_ref())
+        .expect("Could not insert default settings");
+
+    let sub_dir = ENVIRONMENT_SERVICE
+        .sub_directory
+        .clone()
+        .unwrap_or("/".to_string());
+
+    let ui_dir = format!("{sub_dir}/ui/");
+    let (layer, io) = SocketIoBuilder::new().build_layer();
+    io.ns("/", async |socket: SocketRef| {
+        info!("Socket connected {}", socket.id);
+    });
+    io.ns("/".to_owned() + MAIN_ROOM, async || {
+        info!("Socket connected to main room");
+    });
+    SOCKET_IO_LAYER.get_or_init(|| io);
+
+    let api_config = get_api_config(state.clone());
+    let (router, api) = OpenApiRouter::new()
+        .merge(global_routes(state, api_config))
+        .route("/", get(Redirect::to(&ui_dir)))
+        .split_for_parts();
+    router
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
+        .merge(Redoc::with_url("/redoc", api.clone()))
+        .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
+        .merge(Scalar::with_url("/scalar", api))
+        .layer(layer)
+}
+
+/// Full server startup including background scheduler for polling and cleanup.
+pub fn handle_config_for_server_startup() -> Router {
+    let router = build_server_router();
+
+    // Background scheduler — not started during tests to avoid SQLite lock contention
+    let settings_service_for_polling = AppState::new().settings_service.clone();
+    let settings_service_for_cleanup = AppState::new().settings_service.clone();
+    let session_service_for_cleanup = AppState::new().session_service.clone();
+    thread::spawn(move || {
+        let mut scheduler = Scheduler::new();
+
+        let polling_interval = ENVIRONMENT_SERVICE.get_polling_interval();
+        scheduler.every(polling_interval.minutes()).run(move || {
+            let settings = settings_service_for_polling.get_settings().unwrap();
+            match settings {
+                Some(settings) => {
+                    if settings.auto_update {
+                        info!("Polling for new episodes");
+                        match run_poll() {
+                            Ok(_) => {
+                                info!("Polling for new episodes successful");
+                            }
+                            Err(e) => {
+                                log::error!("Error polling for new episodes: {e}");
+                            }
+                        }
+                    }
+                }
+                None => {
+                    log::error!("Could not get settings from database");
+                }
+            }
+        });
+
+        scheduler.every(1.day()).run(move || {
+            session_service_for_cleanup
+                .cleanup_expired()
+                .expect("Error clearing old sessions");
+            let settings = settings_service_for_cleanup.get_settings().unwrap();
+            match settings {
+                Some(settings) => {
+                    if settings.auto_cleanup {
+                        PodcastEpisodeService::cleanup_old_episodes(settings.auto_cleanup_days)
+                    }
+                }
+                None => {
+                    log::error!("Could not get settings from database");
+                }
+            }
+        });
+
+        loop {
+            scheduler.run_pending();
+            thread::sleep(Duration::from_millis(1000));
+        }
+    });
+
+    router
+}

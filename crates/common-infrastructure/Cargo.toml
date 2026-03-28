@@ -1,0 +1,38 @@
+[package]
+name = "common-infrastructure"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = ["sqlite"]
+postgresql = ["diesel/postgres", "diesel/postgres_backend", "dep:r2d2_postgres"]
+sqlite = ["diesel/sqlite", "dep:libsqlite3-sys", "diesel/returning_clauses_for_sqlite_3_35"]
+
+[dependencies]
+diesel = { workspace = true }
+r2d2 = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+utoipa = { workspace = true }
+axum = { workspace = true }
+sha256 = { workspace = true }
+url = { workspace = true }
+chrono = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+reqwest = { workspace = true }
+base64 = { workspace = true }
+regex = { workspace = true }
+fs_extra = { workspace = true }
+rss = { workspace = true }
+serial_test = { workspace = true }
+frankenstein = { workspace = true }
+rust-s3 = { workspace = true }
+serde_json = { workspace = true }
+strfmt = { workspace = true }
+tokio = { workspace = true }
+libsqlite3-sys = { workspace = true, optional = true }
+r2d2_postgres = { workspace = true, optional = true }
