@@ -9,7 +9,7 @@ edition = "2024"
 build = "build.rs"
 
 [build-dependencies]
-built = { version = "0.8.0", features = ["chrono", "semver", "cargo-lock"] }
+built = { workspace = true }
 
 [features]
 default = ["sqlite", "postgresql"]
@@ -19,42 +19,114 @@ sqlite = ["common-infrastructure/sqlite", "podfetch-persistence/sqlite", "podfet
 
 [dependencies]
 # Workspace crates
-common-infrastructure = { path = "crates/common-infrastructure", default-features = false }
-podfetch-domain = { path = "crates/podfetch-domain" }
-podfetch-persistence = { path = "crates/podfetch-persistence", default-features = false }
-podfetch-storage = { path = "crates/podfetch-storage" }
-podfetch-web = { path = "crates/podfetch-web", default-features = false }
+common-infrastructure = { workspace = true }
+podfetch-domain = { workspace = true }
+podfetch-persistence = { workspace = true }
+podfetch-storage = { workspace = true }
+podfetch-web = { workspace = true }
 
 # Async runtime
-tokio = { version = "1.50.0", features = ["full"] }
-axum = { version = "0.8.8", features = ["macros", "http2"] }
+tokio = { workspace = true }
+axum = { workspace = true }
 
 # CLI
-rpassword = "7.4.0"
-sha256 = "1.6.0"
-uuid = { version = "1.22.0", features = ["v4", "serde"] }
+rpassword = { workspace = true }
+sha256 = { workspace = true }
+uuid = { workspace = true }
 
 # Logging
-log = "0.4.29"
+log = { workspace = true }
 
 # PostgreSQL (optional)
-r2d2_postgres = { version = "0.18.2", optional = true }
+r2d2_postgres = { workspace = true, optional = true }
 
 [target.'cfg(not(windows))'.dependencies]
-hyper-tls = { version = "0.6.0", optional = true }
-native-tls = { version = "0.2.15", optional = true }
+hyper-tls = { workspace = true, optional = true }
+native-tls = { workspace = true, optional = true }
 
 [dev-dependencies]
-serial_test = "3.4.0"
-testcontainers = { version = "0.24.0" }
-testcontainers-modules = { version = "0.12.1", features = ["postgres", "blocking"] }
-derive_builder = "0.20.2"
-fake = { version = "5.0.0", features = ["chrono", "url"] }
-bollard = { version = "*", features = ["rustls", "rustls-native-certs"], default-features = false }
-axum-test = "19.1.1"
+serial_test = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+derive_builder = { workspace = true }
+fake = { workspace = true }
+bollard = { workspace = true }
+axum-test = { workspace = true }
 
 [profile.release]
 debug = true
 
 [profile.release.package."*"]
 debug = false
+
+[workspace.dependencies]
+# Workspace internal crates
+common-infrastructure = { path = "crates/common-infrastructure", default-features = false }
+podfetch-domain = { path = "crates/podfetch-domain" }
+podfetch-persistence = { path = "crates/podfetch-persistence", default-features = false }
+podfetch-storage = { path = "crates/podfetch-storage" }
+podfetch-web = { path = "crates/podfetch-web", default-features = false }
+
+# External dependencies
+async-recursion = "1.1.1"
+axum = { version = "0.8.8", features = ["macros", "http2"] }
+axum-extra = { version = "0.12.5", features = ["cookie", "query"] }
+axum-test = "19.1.1"
+base64 = "0.22.1"
+bollard = { version = "*", features = ["rustls", "rustls-native-certs"], default-features = false }
+built = { version = "0.8.0", features = ["chrono", "semver", "cargo-lock"] }
+chrono = { version = "0.4.44", default-features = false, features = ["clock"] }
+clokwerk = "0.4.0"
+derive_builder = "0.20.2"
+diesel = { version = "2.3.7", features = ["chrono", "r2d2"] }
+diesel_migrations = "2.3.1"
+env_logger = "0.11.9"
+fake = { version = "5.0.0", features = ["chrono", "url"] }
+file-format = "0.29.0"
+frankenstein = { version = "0.48.0", features = ["client-ureq"] }
+fs_extra = "1.3.0"
+futures = "0.3.32"
+http = "1.3.1"
+hyper-tls = { version = "0.6.0" }
+id3 = "1.16.4"
+indexmap = "2"
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+libsqlite3-sys = { version = "0.36.0", features = ["bundled"] }
+log = "0.4.29"
+maud = { version = "*", features = ["axum", "axum-core"] }
+mime_guess = "2.0.5"
+mp4ameta = "0.13.0"
+native-tls = { version = "0.2.15" }
+opml = "1.1.6"
+r2d2 = "0.8.10"
+r2d2_postgres = { version = "0.18.2" }
+rand = "0.10.0"
+regex = "1.12.3"
+reqwest = { version = "0.13.2", features = ["stream", "json", "blocking", "rustls", "hickory-dns", "query"] }
+rpassword = "7.4.0"
+rss = "2.0.12"
+rust-s3 = { version = "0.37.1", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
+serial_test = "3.4.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha1 = "0.10.6"
+sha256 = "1.6.0"
+socketioxide = "0.18.2"
+strfmt = "0.2.5"
+sysinfo = { version = "0.38.4", default-features = false, features = ["disk", "system"] }
+testcontainers = { version = "0.27.2" }
+testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
+thiserror = { version = "2.0.18", features = ["std"] }
+tokio = { version = "1.50.0", features = ["full"] }
+tower = { version = "0.5.3", features = ["util"] }
+tower-http = { version = "0.6.6", features = ["fs"] }
+url = "2.5.8"
+urlencoding = "2.1.3"
+utoipa = { version = "5.4.0", features = ["chrono", "axum_extras"] }
+utoipa-axum = "0.2.0"
+utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
+utoipa-redoc = { version = "6.0.0", features = ["axum"] }
+utoipa-scalar = { version = "0.3.0", features = ["axum"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+uuid = { version = "1.22.0", features = ["v4", "serde"] }
+xml-builder = "0.6.0"

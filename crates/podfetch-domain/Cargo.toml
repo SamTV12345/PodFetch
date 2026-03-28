@@ -7,5 +7,5 @@ edition = "2024"
 path = "src/lib.rs"
 
 [dependencies]
-chrono = { version = "0.4.44", default-features = false, features = ["clock"] }
-uuid = { version = "1.22.0", features = ["v4"] }
+chrono = { workspace = true }
+uuid = { workspace = true }

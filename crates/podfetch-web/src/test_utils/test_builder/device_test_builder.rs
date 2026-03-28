@@ -2,7 +2,6 @@
 pub mod tests {
     use fake::Fake;
     use fake::faker::lorem::en::Word;
-    use podfetch_web::device::DevicePost;
     use crate::device::DevicePost;
 
     pub struct DevicePostTestDataBuilder {

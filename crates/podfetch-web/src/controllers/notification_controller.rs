@@ -80,7 +80,7 @@ mod tests {
         let test_server = handle_test_startup().await;
         // given
         let notification = NotificationTestDataBuilder::new().build();
-        NotificationService::create_notification(notification).unwrap();
+        NotificationService::create_notification(notification.into()).unwrap();
 
         // when
         let response = test_server
@@ -99,7 +99,7 @@ mod tests {
         let test_server = handle_test_startup().await;
 
         let notification = NotificationTestDataBuilder::new().build();
-        NotificationService::create_notification(notification).unwrap();
+        NotificationService::create_notification(notification.into()).unwrap();
 
         let before = test_server
             .test_server
@@ -131,7 +131,7 @@ mod tests {
         let test_server = handle_test_startup().await;
 
         let notification = NotificationTestDataBuilder::new().build();
-        NotificationService::create_notification(notification).unwrap();
+        NotificationService::create_notification(notification.into()).unwrap();
 
         let dismiss_response = test_server
             .test_server
@@ -254,7 +254,7 @@ mod tests {
     async fn test_dismiss_notification_endpoint_is_idempotent() {
         let test_server = handle_test_startup().await;
 
-        NotificationService::create_notification(NotificationTestDataBuilder::new().build())
+        NotificationService::create_notification(NotificationTestDataBuilder::new().build().into())
             .unwrap();
 
         let unread_before = test_server
@@ -364,7 +364,7 @@ mod tests {
     async fn test_dismiss_notification_with_zero_or_negative_id_is_noop() {
         let test_server = handle_test_startup().await;
 
-        NotificationService::create_notification(NotificationTestDataBuilder::new().build())
+        NotificationService::create_notification(NotificationTestDataBuilder::new().build().into())
             .unwrap();
 
         let dismiss_zero = test_server

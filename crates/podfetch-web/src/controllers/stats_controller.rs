@@ -58,6 +58,7 @@ mod tests {
     use chrono::{NaiveDate, NaiveDateTime};
     use diesel::ExpressionMethods;
     use diesel::RunQueryDsl;
+    use serde::Deserialize;
     use podfetch_domain::listening_event::NewListeningEvent;
     use serde_json::Value;
     use serial_test::serial;

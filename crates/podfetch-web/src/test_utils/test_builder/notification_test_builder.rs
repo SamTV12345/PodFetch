@@ -3,7 +3,7 @@ pub mod tests {
     use derive_builder::Builder;
     use fake::faker::chrono::en::Time;
     use fake::{Fake, Faker};
-    use podfetch_web::notification::Notification;
+    use podfetch_domain::notification::Notification;
 
     #[derive(Default, Builder, Debug)]
     #[builder(setter(into))]
