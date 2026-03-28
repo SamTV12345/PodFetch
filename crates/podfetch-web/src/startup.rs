@@ -247,6 +247,8 @@ async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
 
 pub fn get_api_config(state: AppState) -> OpenApiRouter {
     use crate::controllers::podcast_controller::__path_proxy_podcast;
+    use crate::controllers::podcast_controller::__path_proxy_podcast_with_path_api_key;
+    use crate::controllers::podcast_controller::proxy_podcast_with_path_api_key;
     OpenApiRouter::new()
         .merge(get_ui_config())
         .merge(podcast_serving(state.clone()))
@@ -255,6 +257,7 @@ pub fn get_api_config(state: AppState) -> OpenApiRouter {
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(proxy_podcast))
+                .routes(routes!(proxy_podcast_with_path_api_key))
                 .with_state(state.clone()),
         )
         .nest("/api/v1", OpenApiRouter::new().merge(config(state)))

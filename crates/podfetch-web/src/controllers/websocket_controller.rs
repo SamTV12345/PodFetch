@@ -23,6 +23,8 @@ use rss::{
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+
+
 #[utoipa::path(
 get,
 path="/rss",
@@ -295,10 +297,46 @@ fn get_itunes_owner(name: &str, email: &str) -> ITunesOwner {
         .build()
 }
 
+
+#[utoipa::path(
+get,
+path="/rss/apiKey/{apiKey}",
+responses(
+(status = 200, description = "Gets the complete rss feed (API key in path)"))
+, tag = "rss")]
+pub async fn get_rss_feed_with_path_api_key(
+    State(state): State<AppState>,
+    Path(api_key): Path<String>,
+    OptionalQuery(query): OptionalQuery<RSSQuery>,
+) -> Result<impl IntoResponse, CustomError> {
+    let api_key_query = OptionalQuery(Some(RSSAPiKey {
+        api_key: Some(api_key),
+    }));
+    get_rss_feed(State(state), OptionalQuery(query), api_key_query).await
+}
+
+#[utoipa::path(
+get,
+path="/rss/apiKey/{apiKey}/{id}",
+responses(
+(status = 200, description = "Gets a specific rss feed (API key in path)"))
+, tag = "rss")]
+pub async fn get_rss_feed_for_podcast_with_path_api_key(
+    State(state): State<AppState>,
+    Path((api_key, id)): Path<(String, i32)>,
+) -> Result<impl IntoResponse, CustomError> {
+    let api_key_query = OptionalQuery(Some(RSSAPiKey {
+        api_key: Some(api_key),
+    }));
+    get_rss_feed_for_podcast(State(state), Path(id), api_key_query).await
+}
+
 pub fn get_websocket_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_rss_feed))
         .routes(routes!(get_rss_feed_for_podcast))
+        .routes(routes!(get_rss_feed_with_path_api_key))
+        .routes(routes!(get_rss_feed_for_podcast_with_path_api_key))
 }
 
 #[cfg(test)]
@@ -559,6 +597,101 @@ mod tests {
         ];
         let mapped = super::get_categories(categories);
         assert_eq!(mapped.len(), 3);
+    }
+
+    // ── Path-based API key tests ────────────────────────────────────────
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_with_path_api_key_returns_xml() {
+        let server = handle_test_startup().await;
+        let api_key = create_api_key_user();
+
+        let response = server
+            .test_server
+            .get(&format!("/rss/apiKey/{api_key}"))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        assert_eq!(
+            response.maybe_content_type().unwrap(),
+            "application/rss+xml"
+        );
+        let body = response.text();
+        assert!(body.contains("<rss"));
+        assert!(body.contains("<channel>"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_with_path_api_key_rejects_invalid_key() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .get("/rss/apiKey/invalid-key-that-does-not-exist")
+            .await;
+        assert_eq!(response.status_code(), 403);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_with_path_api_key_supports_top_query() {
+        let server = handle_test_startup().await;
+        let api_key = create_api_key_user();
+
+        let response = server
+            .test_server
+            .get(&format!("/rss/apiKey/{api_key}?top=1"))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let body = response.text();
+        assert!(body.contains("<rss"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_for_podcast_with_path_api_key_returns_xml() {
+        let server = handle_test_startup().await;
+        let podcast = create_podcast_for_rss();
+        let api_key = create_api_key_user();
+
+        let response = server
+            .test_server
+            .get(&format!("/rss/apiKey/{api_key}/{}", podcast.id))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        assert_eq!(
+            response.maybe_content_type().unwrap(),
+            "application/rss+xml"
+        );
+        let body = response.text();
+        assert!(body.contains("<rss"));
+        assert!(body.contains(&podcast.name));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_for_podcast_with_path_api_key_rejects_invalid_key() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .get("/rss/apiKey/invalid-key/1")
+            .await;
+        assert_eq!(response.status_code(), 403);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_get_rss_feed_for_podcast_with_path_api_key_returns_not_found_for_unknown_id() {
+        let server = handle_test_startup().await;
+        let api_key = create_api_key_user();
+
+        let response = server
+            .test_server
+            .get(&format!("/rss/apiKey/{api_key}/999999"))
+            .await;
+        assert_eq!(response.status_code(), 404);
     }
 }
 
