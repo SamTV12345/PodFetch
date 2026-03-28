@@ -3,17 +3,20 @@ use diesel::Connection;
 use diesel::r2d2::ConnectionManager;
 use r2d2::Pool;
 use std::sync::OnceLock;
-#[cfg(feature = "sqlite")]
+#[cfg(any(feature = "sqlite", not(feature = "postgresql")))]
 use std::time::Duration;
 
 pub type DbPool = Pool<ConnectionManager<DBType>>;
+
+#[cfg(feature = "sqlite")]
+use diesel::sqlite::SqliteConnection;
 
 #[derive(diesel::MultiConnection)]
 pub enum DBType {
     #[cfg(feature = "postgresql")]
     Postgresql(diesel::PgConnection),
     #[cfg(feature = "sqlite")]
-    Sqlite(diesel::SqliteConnection),
+    Sqlite(SqliteConnection),
 }
 
 #[derive(Clone)]
@@ -65,7 +68,7 @@ pub fn shared_connection(
     shared_database(environment)?.connection()
 }
 
-#[cfg(feature = "sqlite")]
+#[cfg(any(feature = "sqlite", not(feature = "postgresql")))]
 #[derive(Debug)]
 struct ConnectionOptions {
     enable_wal: bool,
@@ -73,7 +76,7 @@ struct ConnectionOptions {
     busy_timeout: Option<Duration>,
 }
 
-#[cfg(feature = "sqlite")]
+#[cfg(any(feature = "sqlite", not(feature = "postgresql")))]
 impl r2d2::CustomizeConnection<DBType, diesel::r2d2::Error> for ConnectionOptions {
     fn on_acquire(&self, conn: &mut DBType) -> Result<(), diesel::r2d2::Error> {
         use diesel::connection::SimpleConnection;
@@ -105,7 +108,7 @@ fn init_postgres_db_pool(
         .map_err(PersistenceError::Pool)
 }
 
-#[cfg(feature = "sqlite")]
+#[cfg(any(feature = "sqlite", not(feature = "postgresql")))]
 fn init_sqlite_db_pool(database_url: &str) -> Result<DbPool, PersistenceError> {
     let manager = ConnectionManager::<DBType>::new(database_url);
     Pool::builder()
