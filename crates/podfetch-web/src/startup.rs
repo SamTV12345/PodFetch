@@ -298,7 +298,9 @@ fn get_private_api(state: AppState) -> OpenApiRouter {
     }
 }
 
-pub fn handle_config_for_server_startup() -> Router {
+/// Builds the full Router with migrations, settings, and SocketIO —
+/// but **without** the background scheduler. Use this for tests.
+pub fn build_server_router() -> Router {
     let state = AppState::new();
     podfetch_persistence::run_migrations();
 
@@ -315,9 +317,42 @@ pub fn handle_config_for_server_startup() -> Router {
     insert_default_settings_if_not_present(state.settings_service.as_ref())
         .expect("Could not insert default settings");
 
-    let settings_service_for_polling = state.settings_service.clone();
-    let settings_service_for_cleanup = state.settings_service.clone();
-    let session_service_for_cleanup = state.session_service.clone();
+    let sub_dir = ENVIRONMENT_SERVICE
+        .sub_directory
+        .clone()
+        .unwrap_or("/".to_string());
+
+    let ui_dir = format!("{sub_dir}/ui/");
+    let (layer, io) = SocketIoBuilder::new().build_layer();
+    io.ns("/", async |socket: SocketRef| {
+        info!("Socket connected {}", socket.id);
+    });
+    io.ns("/".to_owned() + MAIN_ROOM, async || {
+        info!("Socket connected to main room");
+    });
+    SOCKET_IO_LAYER.get_or_init(|| io);
+
+    let api_config = get_api_config(state.clone());
+    let (router, api) = OpenApiRouter::new()
+        .merge(global_routes(state, api_config))
+        .route("/", get(Redirect::to(&ui_dir)))
+        .split_for_parts();
+    router
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
+        .merge(Redoc::with_url("/redoc", api.clone()))
+        .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
+        .merge(Scalar::with_url("/scalar", api))
+        .layer(layer)
+}
+
+/// Full server startup including background scheduler for polling and cleanup.
+pub fn handle_config_for_server_startup() -> Router {
+    let router = build_server_router();
+
+    // Background scheduler — not started during tests to avoid SQLite lock contention
+    let settings_service_for_polling = AppState::new().settings_service.clone();
+    let settings_service_for_cleanup = AppState::new().settings_service.clone();
+    let session_service_for_cleanup = AppState::new().session_service.clone();
     thread::spawn(move || {
         let mut scheduler = Scheduler::new();
 
@@ -367,30 +402,5 @@ pub fn handle_config_for_server_startup() -> Router {
         }
     });
 
-    let sub_dir = ENVIRONMENT_SERVICE
-        .sub_directory
-        .clone()
-        .unwrap_or("/".to_string());
-
-    let ui_dir = format!("{sub_dir}/ui/");
-    let (layer, io) = SocketIoBuilder::new().build_layer();
-    io.ns("/", async |socket: SocketRef| {
-        info!("Socket connected {}", socket.id);
-    });
-    io.ns("/".to_owned() + MAIN_ROOM, async || {
-        info!("Socket connected to main room");
-    });
-    SOCKET_IO_LAYER.get_or_init(|| io);
-
-    let api_config = get_api_config(state.clone());
-    let (router, api) = OpenApiRouter::new()
-        .merge(global_routes(state, api_config))
-        .route("/", get(Redirect::to(&ui_dir)))
-        .split_for_parts();
     router
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
-        .merge(Redoc::with_url("/redoc", api.clone()))
-        .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
-        .merge(Scalar::with_url("/scalar", api))
-        .layer(layer)
 }

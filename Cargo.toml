@@ -34,6 +34,9 @@ rpassword = { workspace = true }
 sha256 = { workspace = true }
 uuid = { workspace = true }
 
+# URL parsing
+url = "2.5.8"
+
 # Logging
 log = { workspace = true }
 

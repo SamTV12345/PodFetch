@@ -21,10 +21,10 @@ pub mod tests {
         }
     }
 
-    #[cfg(feature = "postgresql")]
+    #[cfg(all(feature = "postgresql", not(feature = "sqlite")))]
     static POSTGRES_CONTAINER_INIT: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 
-    #[cfg(feature = "postgresql")]
+    #[cfg(all(feature = "postgresql", not(feature = "sqlite")))]
     async fn ensure_shared_postgres_container() {
         use testcontainers::runners::AsyncRunner;
         use testcontainers::{ContainerRequest, ImageExt};
@@ -61,7 +61,7 @@ pub mod tests {
             .await;
     }
 
-    #[cfg(feature = "postgresql")]
+    #[cfg(all(feature = "postgresql", not(feature = "sqlite")))]
     fn truncate_postgres_tables() {
         use diesel::{RunQueryDsl, sql_query};
         use podfetch_persistence::db::get_connection;
@@ -91,22 +91,97 @@ END $$;
         .expect("Could not truncate postgres tables for test setup");
     }
 
+    #[cfg(feature = "sqlite")]
+    fn cleanup_sqlite() {
+        use diesel::RunQueryDsl;
+        use podfetch_persistence::db::get_connection;
+
+        // Order matters: delete children before parents (foreign keys)
+        let tables: &[&str] = &[
+            "listening_events",
+            "playlist_items",
+            "favorite_podcast_episodes",
+            "subscriptions",
+            "episodes",
+            "podcast_episodes",
+            "podcast_episode_chapters",
+            "tags_podcasts",
+            "tags",
+            "invites",
+            "sessions",
+            "settings",
+            "podcast_settings",
+            "podcasts",
+            "notifications",
+            "devices",
+            "users",
+        ];
+
+        let mut conn = get_connection();
+        for table in tables {
+            let _ = diesel::sql_query(format!("DELETE FROM {table}"))
+                .execute(&mut conn);
+        }
+    }
+
+    /// Set environment variables so that `EnvironmentService::new()` produces
+    /// a test-friendly configuration.  `common-infrastructure` is compiled
+    /// **without** `cfg(test)` when used as a dependency, so its
+    /// `ENVIRONMENT_SERVICE` calls `new()` instead of `for_tests()`.
+    /// We bridge that gap by injecting the right env vars before the
+    /// `LazyLock` is first accessed.
+    ///
+    /// Call this before any access to `ENVIRONMENT_SERVICE` — including in
+    /// tests that do NOT use `handle_test_startup`.
+    pub fn ensure_test_env_vars() {
+        use std::sync::Once;
+        static INIT: Once = Once::new();
+        // SAFETY: This runs exactly once (via `Once`) before any other test
+        // code accesses the environment, and tests are serialised by
+        // GLOBAL_MUTEX, so there are no concurrent readers.
+        INIT.call_once(|| unsafe {
+            // Enable GPodder routes in tests
+            std::env::set_var("GPODDER_INTEGRATION_ENABLED", "true");
+            // Enable basic auth so GPodder tests can authenticate
+            std::env::set_var("BASIC_AUTH", "true");
+            std::env::set_var("USERNAME", "postgres");
+            // EnvironmentService::new() applies sha256::digest to the raw
+            // value, so we pass the plaintext here.
+            std::env::set_var("PASSWORD", "postgres");
+            std::env::set_var("SERVER_URL", "http://localhost:8000/");
+            std::env::set_var("API_KEY", "test-api-key");
+            #[cfg(feature = "sqlite")]
+            std::env::set_var("DATABASE_URL", "sqlite://./podcast.db");
+            #[cfg(all(feature = "postgresql", not(feature = "sqlite")))]
+            std::env::set_var(
+                "DATABASE_URL",
+                "postgres://postgres:postgres@127.0.0.1:55002/postgres",
+            );
+        });
+    }
+
     pub async fn handle_test_startup<'a>() -> TestServerWrapper<'a> {
+        ensure_test_env_vars();
         let mutex = lock_global_mutex_recovering_poison();
 
-        #[cfg(feature = "postgresql")]
+        #[cfg(all(feature = "postgresql", not(feature = "sqlite")))]
         {
             ensure_shared_postgres_container().await;
             truncate_postgres_tables();
         }
 
+        // Clean DB BEFORE building the router so insert_default_settings
+        // starts with a fresh database every time.
+        #[cfg(feature = "sqlite")]
+        cleanup_sqlite();
+
         let mut test_server =
-            TestServer::new(crate::startup::handle_config_for_server_startup());
+            TestServer::new(crate::startup::build_server_router());
         test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
         TestServerWrapper { test_server, mutex }
     }
 
-    #[cfg(all(feature = "sqlite", not(feature = "postgresql")))]
+    #[cfg(feature = "sqlite")]
     impl Drop for TestServerWrapper<'_> {
         fn drop(&mut self) {
             use diesel::RunQueryDsl;

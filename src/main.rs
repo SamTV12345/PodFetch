@@ -28,7 +28,13 @@ async fn main() -> std::io::Result<()> {
     }
 
     let router = handle_config_for_server_startup();
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await?;
+    let port = url::Url::parse(&ENVIRONMENT_SERVICE.server_url)
+        .ok()
+        .and_then(|u| u.port())
+        .unwrap_or(8000);
+    let bind_addr = format!("0.0.0.0:{port}");
+    let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
+    log::info!("Listening on {bind_addr}");
 
     axum::serve(listener, router).await?;
     Ok(())

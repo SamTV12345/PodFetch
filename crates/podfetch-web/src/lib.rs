@@ -65,3 +65,27 @@ pub mod api_file_access;
 pub mod test_utils;
 #[cfg(test)]
 pub mod test_support;
+
+/// Runs before any test, ensuring env vars are set before
+/// `ENVIRONMENT_SERVICE` LazyLock is first accessed.
+#[cfg(test)]
+#[ctor::ctor]
+fn init_test_env() {
+    // SAFETY: This runs before any test thread starts.
+    unsafe {
+        std::env::set_var("BASIC_AUTH", "true");
+        std::env::set_var("USERNAME", "postgres");
+        std::env::set_var("PASSWORD", "postgres");
+        std::env::set_var("GPODDER_INTEGRATION_ENABLED", "true");
+        std::env::set_var("SERVER_URL", "http://localhost:8000/");
+        std::env::set_var("API_KEY", "test-api-key");
+        #[cfg(feature = "sqlite")]
+        std::env::set_var("DATABASE_URL", "sqlite://./podcast.db");
+        #[cfg(all(feature = "postgresql", not(feature = "sqlite")))]
+        std::env::set_var(
+            "DATABASE_URL",
+            "postgres://postgres:postgres@127.0.0.1:55002/postgres",
+        );
+    }
+}
+

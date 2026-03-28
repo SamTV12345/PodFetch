@@ -963,7 +963,7 @@ pub mod tests {
         let ts_server = handle_test_startup().await;
         let resp = ts_server
             .test_server
-            .get("/proxy/podcast?episodeId=does-not-exist")
+            .get("/proxy/podcast?episodeId=does-not-exist&apiKey=test-api-key")
             .await;
         assert_eq!(resp.status_code(), 404);
     }

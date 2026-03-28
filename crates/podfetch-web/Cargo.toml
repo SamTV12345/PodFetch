@@ -84,6 +84,7 @@ maud = { workspace = true }
 
 [dev-dependencies]
 axum-test = { workspace = true }
+ctor = "0.8.0"
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 derive_builder = { workspace = true }
