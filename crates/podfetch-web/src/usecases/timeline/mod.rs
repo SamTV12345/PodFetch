@@ -77,7 +77,7 @@ impl TimelineItem {
         let username_to_search = &user.username;
 
         let _ = FilterService::default_service()
-            .save_timeline_decision(username_to_search, favored_only.favored_only);
+            .save_timeline_decision(username_to_search, favored_only.favored_only.unwrap_or(false));
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
@@ -108,7 +108,7 @@ impl TimelineItem {
 
         let mut total_count = part_query.count().into_boxed();
 
-        match favored_only.favored_only {
+        match favored_only.favored_only.unwrap_or(false) {
             true => {
                 if let Some(last_id) = favored_only.last_timestamp {
                     query = query.filter(date_of_recording.lt(last_id.clone()));

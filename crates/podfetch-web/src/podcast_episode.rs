@@ -20,7 +20,7 @@ pub struct PodcastChapterDto {
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineQueryParams {
-    pub favored_only: bool,
+    pub favored_only: Option<bool>,
     pub last_timestamp: Option<String>,
     pub not_listened: bool,
     pub favored_episodes: bool,
