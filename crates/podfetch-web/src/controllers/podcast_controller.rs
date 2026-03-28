@@ -720,6 +720,25 @@ pub(crate) async fn proxy_podcast(
 }
 
 #[utoipa::path(
+get,
+path="/proxy/podcast/apiKey/{apiKey}",
+responses(
+(status = 200, description = "Proxies a podcast (API key in path)")),
+tag="podcasts"
+)]
+pub(crate) async fn proxy_podcast_with_path_api_key(
+    State(state): State<AppState>,
+    Path(api_key): Path<String>,
+    Query(params): Query<ProxyPodcastParams>,
+    req: axum::extract::Request,
+) -> Result<axum::http::response::Response<Body>, CustomError> {
+    let api_key_query = OptionalQuery(Some(RSSAPiKey {
+        api_key: Some(api_key),
+    }));
+    proxy_podcast(State(state), Query(params), api_key_query, req).await
+}
+
+#[utoipa::path(
     put,
     path="/podcasts/{id}/settings",
     responses(
@@ -1362,6 +1381,45 @@ pub mod tests {
             }))
             .await;
         assert_client_error_status(delete_invalid_response.status_code().as_u16());
+    }
+
+    // ── Path-based API key proxy tests ──────────────────────────────────
+
+    fn create_api_key_user() -> String {
+        let state = crate::app_state::AppState::new();
+        let mut user = crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder::new().build();
+        user.username = format!("proxy-test-user-{}", uuid::Uuid::new_v4());
+        let api_key = format!("proxy-test-key-{}", uuid::Uuid::new_v4());
+        user.api_key = Some(api_key.clone());
+        let _created = state.user_admin_service.create_user(user).unwrap();
+        api_key
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_proxy_podcast_with_path_api_key_returns_not_found_for_unknown_episode() {
+        let ts_server = handle_test_startup().await;
+        let api_key = create_api_key_user();
+
+        let resp = ts_server
+            .test_server
+            .get(&format!(
+                "/proxy/podcast/apiKey/{api_key}?episodeId=does-not-exist"
+            ))
+            .await;
+        assert_eq!(resp.status_code(), 404);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_proxy_podcast_with_path_api_key_rejects_invalid_key() {
+        let ts_server = handle_test_startup().await;
+
+        let resp = ts_server
+            .test_server
+            .get("/proxy/podcast/apiKey/invalid-key?episodeId=does-not-exist")
+            .await;
+        assert_eq!(resp.status_code(), 403);
     }
 }
 
