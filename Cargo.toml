@@ -100,7 +100,7 @@ log = "0.4.29"
 maud = { version = "*", features = ["axum", "axum-core"] }
 mime_guess = "2.0.5"
 mp4ameta = "0.13.0"
-native-tls = { version = "0.2.15" }
+native-tls = { version = "0.2.18" }
 opml = "1.1.6"
 r2d2 = "0.8.10"
 r2d2_postgres = { version = "0.18.2" }
