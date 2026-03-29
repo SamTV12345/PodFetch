@@ -132,5 +132,5 @@ utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-uuid = { version = "1.22.0", features = ["v4", "serde"] }
+uuid = { version = "1.23.0", features = ["v4", "serde"] }
 xml-builder = "0.6.0"
