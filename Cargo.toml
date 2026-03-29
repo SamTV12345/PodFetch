@@ -113,7 +113,7 @@ rust-s3 = { version = "0.37.1", features = ["blocking", "fail-on-err", "futures-
 serial_test = "3.4.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-sha1 = "0.10.6"
+sha1 = "0.11.0"
 sha256 = "1.6.0"
 socketioxide = "0.18.2"
 strfmt = "0.2.5"

@@ -470,7 +470,8 @@ impl PodcastService {
 
         hasher.update(non_hashed_string);
 
-        let hashed_auth_key = format!("{:x}", hasher.finalize());
+        let result = hasher.finalize();
+        let hashed_auth_key = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
 
         headers.insert(
             "User-Agent",
