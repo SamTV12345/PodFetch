@@ -68,7 +68,7 @@
     "@rsbuild/plugin-react": "^1.4.6",
     "@rsbuild/plugin-sass": "^1.5.1",
     "@tailwindcss/postcss": "^4.2.2",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.5.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/sanitize-html": "^2.16.1",
