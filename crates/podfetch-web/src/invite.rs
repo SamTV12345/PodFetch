@@ -39,7 +39,7 @@ pub trait InviteApplicationService {
     fn create_invite(&self, role: String, explicit_consent: bool) -> Result<Invite, Self::Error>;
     fn get_invites(&self) -> Result<Vec<Invite>, Self::Error>;
     fn get_invite(&self, invite_id: &str) -> Result<Invite, Self::Error>;
-    fn get_invite_link(&self, invite_id: &str) -> Result<String, Self::Error>;
+    fn get_invite_link(&self, invite_id: &str, server_url: &str) -> Result<String, Self::Error>;
     fn delete_invite(&self, invite_id: &str) -> Result<(), Self::Error>;
 }
 
@@ -103,6 +103,7 @@ pub fn get_invite_link<S>(
     service: &S,
     is_admin: bool,
     invite_id: &str,
+    server_url: &str,
 ) -> Result<String, InviteControllerError<S::Error>>
 where
     S: InviteApplicationService,
@@ -113,7 +114,7 @@ where
     }
 
     service
-        .get_invite_link(invite_id)
+        .get_invite_link(invite_id, server_url)
         .map_err(InviteControllerError::Service)
 }
 

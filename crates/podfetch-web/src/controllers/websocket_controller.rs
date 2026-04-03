@@ -3,10 +3,12 @@ use crate::app_state::AppState;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use crate::services::podcast::service::PodcastService;
 use axum::extract::{Path, State};
+use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::OptionalQuery;
 
 use crate::podcast_episode_dto::PodcastEpisodeDto;
+use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
@@ -33,9 +35,11 @@ responses(
 , tag = "rss")]
 pub async fn get_rss_feed(
     State(state): State<AppState>,
+    headers: HeaderMap,
     OptionalQuery(query): OptionalQuery<RSSQuery>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
 ) -> Result<impl IntoResponse, CustomError> {
+    let server_url = resolve_server_url_from_headers(&headers);
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = api_key
@@ -66,7 +70,7 @@ pub async fn get_rss_feed(
         .collect();
 
     let feed_url = add_api_key_to_url(
-        format!("{}{}", &ENVIRONMENT_SERVICE.server_url, &"rss"),
+        format!("{}rss", &server_url),
         &api_key,
     );
     let itunes_owner = get_itunes_owner("Podfetch", "dev@podfetch.com");
@@ -92,7 +96,7 @@ pub async fn get_rss_feed(
         .clone();
 
     let channel =
-        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, &api_key);
+        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, &api_key, &server_url);
 
     let response = Response::builder()
         .header("Content-Type", "application/rss+xml")
@@ -116,15 +120,16 @@ fn generate_itunes_extension_conditionally(
     mut channel_builder: ChannelBuilder,
     podcast: Option<Podcast>,
     api_key: &Option<String>,
+    server_url: &str,
 ) -> Channel {
     if let Some(e) = podcast {
         match !e.image_url.is_empty() {
             true => itunes_ext.set_image(add_api_key_to_url(
-                ENVIRONMENT_SERVICE.server_url.to_string() + &*e.image_url,
+                server_url.to_string() + &*e.image_url,
                 api_key,
             )),
             false => itunes_ext.set_image(add_api_key_to_url(
-                ENVIRONMENT_SERVICE.server_url.to_string() + &*e.original_image_url,
+                server_url.to_string() + &*e.original_image_url,
                 api_key,
             )),
         }
@@ -141,10 +146,11 @@ responses(
 , tag = "rss")]
 pub async fn get_rss_feed_for_podcast(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<i32>,
     OptionalQuery(api_key): OptionalQuery<RSSAPiKey>,
 ) -> Result<impl IntoResponse, CustomError> {
-    let server_url = ENVIRONMENT_SERVICE.server_url.clone();
+    let server_url = resolve_server_url_from_headers(&headers);
     // If http basic is enabled, we need to check if the api key is valid
     if ENVIRONMENT_SERVICE.http_basic || ENVIRONMENT_SERVICE.oidc_configured {
         let api_key = api_key
@@ -222,6 +228,7 @@ pub async fn get_rss_feed_for_podcast(
         channel_builder,
         Some(podcast.clone()),
         &api_key,
+        &server_url,
     );
     let response = Response::builder()
         .header("Content-Type", "application/rss+xml")
@@ -306,13 +313,14 @@ responses(
 , tag = "rss")]
 pub async fn get_rss_feed_with_path_api_key(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(api_key): Path<String>,
     OptionalQuery(query): OptionalQuery<RSSQuery>,
 ) -> Result<impl IntoResponse, CustomError> {
     let api_key_query = OptionalQuery(Some(RSSAPiKey {
         api_key: Some(api_key),
     }));
-    get_rss_feed(State(state), OptionalQuery(query), api_key_query).await
+    get_rss_feed(State(state), headers, OptionalQuery(query), api_key_query).await
 }
 
 #[utoipa::path(
@@ -323,12 +331,13 @@ responses(
 , tag = "rss")]
 pub async fn get_rss_feed_for_podcast_with_path_api_key(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path((api_key, id)): Path<(String, i32)>,
 ) -> Result<impl IntoResponse, CustomError> {
     let api_key_query = OptionalQuery(Some(RSSAPiKey {
         api_key: Some(api_key),
     }));
-    get_rss_feed_for_podcast(State(state), Path(id), api_key_query).await
+    get_rss_feed_for_podcast(State(state), headers, Path(id), api_key_query).await
 }
 
 pub fn get_websocket_router() -> OpenApiRouter<AppState> {
@@ -556,6 +565,7 @@ mod tests {
             channel_builder,
             Some(podcast),
             &Some("k1".to_string()),
+            "http://localhost:8000/",
         );
 
         let xml = channel.to_string();
@@ -582,6 +592,7 @@ mod tests {
             channel_builder,
             Some(podcast),
             &Some("k1".to_string()),
+            "http://localhost:8000/",
         );
 
         let xml = channel.to_string();

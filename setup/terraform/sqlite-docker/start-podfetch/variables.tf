@@ -1,5 +1,5 @@
-variable "server_url" {
-    description = "The URL of the podfetch server"
+variable "hostname" {
+    description = "The hostname for the traefik Host rule"
 }
 
 variable "podcast_dir" {

@@ -77,7 +77,6 @@ fn init_test_env() {
         std::env::set_var("USERNAME", "postgres");
         std::env::set_var("PASSWORD", "postgres");
         std::env::set_var("GPODDER_INTEGRATION_ENABLED", "true");
-        std::env::set_var("SERVER_URL", "http://localhost:8000/");
         std::env::set_var("API_KEY", "test-api-key");
         #[cfg(feature = "sqlite")]
         std::env::set_var("DATABASE_URL", "sqlite://./podcast.db");

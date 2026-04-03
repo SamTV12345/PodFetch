@@ -23,7 +23,6 @@
     <Requires/>
     <Config Name="Host Port 1" Target="8000" Default="" Mode="tcp" Description="Public UI and API port." Type="Port" Display="always" Required="false" Mask="false"/>
     <Config Name="Database path for SQLite" Target="/app/db" Default="" Mode="rw" Description="" Type="Path" Display="always" Required="false" Mask="false"/>
-    <Config Name="Server URL" Target="SERVER_URL" Default="" Mode="" Description="Url to your PodFetch server instance" Type="Variable" Display="always" Required="true" Mask="false"/>
     <Config Name="Podcast path" Target="/app/podcasts" Default="" Mode="rw" Description="Path where your podcasts are saved" Type="Path" Display="always" Required="true" Mask="false"/>
     <Config Name="Basic auth" Target="BASIC_AUTH" Default="" Mode="" Description="Indicates if present that basic auth should be added" Type="Variable" Display="advanced" Required="false" Mask="false"/>
     <Config Name="Basic auth username" Target="USERNAME" Default="" Mode="" Description="Your basic auth username" Type="Variable" Display="advanced" Required="false" Mask="false"/>

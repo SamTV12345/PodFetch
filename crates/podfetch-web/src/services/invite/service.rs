@@ -1,6 +1,5 @@
 use common_infrastructure::error::ErrorSeverity::{Debug, Error, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use common_infrastructure::config::EnvironmentService;
 use podfetch_domain::invite::InviteRepository;
 use crate::invite::{Invite, InviteApplicationService};
 use crate::role::Role;
@@ -9,17 +8,14 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct InviteService {
     repository: Arc<dyn InviteRepository<Error = CustomError>>,
-    environment: Arc<EnvironmentService>,
 }
 
 impl InviteService {
     pub fn new(
         repository: Arc<dyn InviteRepository<Error = CustomError>>,
-        environment: Arc<EnvironmentService>,
     ) -> Self {
         Self {
             repository,
-            environment,
         }
     }
 
@@ -65,14 +61,14 @@ impl InviteService {
         self.repository.invalidate(invite_id)
     }
 
-    pub fn get_invite_link(&self, invite_id: &str) -> Result<String, CustomError> {
+    pub fn get_invite_link(&self, invite_id: &str, server_url: &str) -> Result<String, CustomError> {
         let invite = self
             .repository
             .find_by_id(invite_id)?
             .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Error)))?;
         Ok(format!(
-            "{}{}{}",
-            self.environment.server_url, "ui/invite/", invite.id
+            "{}ui/invite/{}",
+            server_url, invite.id
         ))
     }
 
@@ -99,8 +95,8 @@ impl InviteApplicationService for InviteService {
         self.get_invite(invite_id)
     }
 
-    fn get_invite_link(&self, invite_id: &str) -> Result<String, Self::Error> {
-        self.get_invite_link(invite_id)
+    fn get_invite_link(&self, invite_id: &str, server_url: &str) -> Result<String, Self::Error> {
+        self.get_invite_link(invite_id, server_url)
     }
 
     fn delete_invite(&self, invite_id: &str) -> Result<(), Self::Error> {

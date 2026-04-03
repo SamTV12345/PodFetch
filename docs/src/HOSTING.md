@@ -1,12 +1,17 @@
 ## Proxy
 
+PodFetch automatically derives its public URL from the incoming request headers. There is no need to configure a server URL manually.
+
 ## Requirements
-- Set the  `SERVER_URL` environment variable to the url of the proxy.
+- Ensure your reverse proxy forwards the following headers to PodFetch:
+  - `X-Forwarded-Host` — the public hostname (e.g. `podfetch.example.com`)
+  - `X-Forwarded-Proto` — the protocol (`https` or `http`)
+  - `X-Forwarded-Prefix` — the sub-path, if PodFetch is hosted under a sub-directory (e.g. `/podfetch`)
 - Turn on websocket support in your proxy
 
-You won't be able to use your service via the plain local url as the websocket connection will fail.
+If you host PodFetch under a sub-path without a reverse proxy that sets `X-Forwarded-Prefix`, you can set the `SUB_DIRECTORY` environment variable instead (e.g. `SUB_DIRECTORY=/podfetch`).
 
-If the SERVER_URL starts with
+The websocket protocol is determined from the forwarded protocol:
 - https => Secured Websocket (wss)
 - http => Unsecured Websocket (ws)
 

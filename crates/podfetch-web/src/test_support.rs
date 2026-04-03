@@ -148,7 +148,6 @@ END $$;
             // EnvironmentService::new() applies sha256::digest to the raw
             // value, so we pass the plaintext here.
             std::env::set_var("PASSWORD", "postgres");
-            std::env::set_var("SERVER_URL", "http://localhost:8000/");
             std::env::set_var("API_KEY", "test-api-key");
             #[cfg(feature = "sqlite")]
             std::env::set_var("DATABASE_URL", "sqlite://./podcast.db");

@@ -18,4 +18,4 @@ This directory contains two other directories named:
 - Run `terraform plan` to see what terraform will do
 - Run `terraform apply` to apply the changes
 
-Now you should be able to access podfetch using the `SERVER_URL`
+Now you should be able to access PodFetch at the configured hostname.

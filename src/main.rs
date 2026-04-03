@@ -28,10 +28,7 @@ async fn main() -> std::io::Result<()> {
     }
 
     let router = handle_config_for_server_startup();
-    let port = url::Url::parse(&ENVIRONMENT_SERVICE.server_url)
-        .ok()
-        .and_then(|u| u.port())
-        .unwrap_or(8000);
+    let port = ENVIRONMENT_SERVICE.port;
     let bind_addr = format!("0.0.0.0:{port}");
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
     log::info!("Listening on {bind_addr}");

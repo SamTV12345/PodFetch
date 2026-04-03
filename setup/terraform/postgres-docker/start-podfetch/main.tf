@@ -18,7 +18,7 @@ resource "docker_container" "podfetch" {
 
   labels{
     label = "traefik.http.routers.podfetch.rule"
-    value = "Host(`${replace(var.server_url,"/(https?://)|(/)/","")}`)"
+    value = "Host(`${var.hostname}`)"
   }
 
   networks_advanced {
@@ -30,7 +30,6 @@ resource "docker_container" "podfetch" {
   }
 
   env = [
-    "SERVER_URL=${var.server_url}",
     "DATABASE_URL=postgres://${var.db_user}:${var.db_password}@podfetch-db:5432/${var.db_name}",
   ]
 

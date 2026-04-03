@@ -6,8 +6,9 @@ variable "podcast_dir" {
   default = "/var/podfetch/podcasts"
 }
 
-variable "server_url" {
-    default = "http://podfetch.example.com"
+variable "hostname" {
+    default = "podfetch.example.com"
+    description = "The hostname for the traefik Host rule"
 }
 
 variable "traefik-http-port" {
