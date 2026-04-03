@@ -102,8 +102,8 @@ importers:
         specifier: ^0.13.4
         version: 0.13.8
       openapi-react-query:
-        specifier: ^0.3.0
-        version: 0.3.2(@tanstack/react-query@5.90.20(react@19.1.0))(openapi-fetch@0.13.8)
+        specifier: ^0.4.2
+        version: 0.4.2(@tanstack/react-query@5.90.20(react@19.1.0))(openapi-fetch@0.13.8)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -1548,6 +1548,7 @@ packages:
   '@xmldom/xmldom@0.8.11':
     resolution: {integrity: sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abab@2.0.6:
     resolution: {integrity: sha512-j2afSsaIENvHZN2B8GOpF566vZ5WVk5opAiMTvWgaQT8DkbOqsTfvNAvHoRGU2zzP8cPoqys+xHTRDWW8L+/BA==}
@@ -3290,11 +3291,11 @@ packages:
   openapi-fetch@0.13.8:
     resolution: {integrity: sha512-yJ4QKRyNxE44baQ9mY5+r/kAzZ8yXMemtNAOFwOzRXJscdjSxxzWSNlyBAr+o5JjkUw9Lc3W7OIoca0cY3PYnQ==}
 
-  openapi-react-query@0.3.2:
-    resolution: {integrity: sha512-nJq1Fpt0PwO0KeJf+pL5s5m9ecIaWmaFqkfrxwMOKMEEP2yLuOW4pb0UzSxkYIAq9dlQHiHpYCHu0tb7F0kSkA==}
+  openapi-react-query@0.4.2:
+    resolution: {integrity: sha512-8DI+QloeFK7uoOKJNQf9GCx16XbHmeh+fle3q/tNMQY0Pgb8P/bGXhHwicO4Ggzgmv1gmSGir6RsWwcFh3cq/w==}
     peerDependencies:
       '@tanstack/react-query': ^5.25.0
-      openapi-fetch: ^0.13.6
+      openapi-fetch: ^0.13.8
 
   openapi-typescript-helpers@0.0.15:
     resolution: {integrity: sha512-opyTPaunsklCBpTK8JGef6mfPhLSnyy5a0IN9vKtx3+4aExf+KxEqYwIy3hqkedXIB97u357uLMJsOnm3GVjsw==}
@@ -3971,6 +3972,7 @@ packages:
   tar@7.5.7:
     resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   temp-dir@2.0.0:
     resolution: {integrity: sha512-aoBAniQmmwtcKp/7BzsH8Cxzv8OL736p7v1ihGb5e9DJ9kTwGWHrQrVB5+lfVDzfGrdRzXch+ig7LHaY1JTOrg==}
@@ -8153,7 +8155,7 @@ snapshots:
     dependencies:
       openapi-typescript-helpers: 0.0.15
 
-  openapi-react-query@0.3.2(@tanstack/react-query@5.90.20(react@19.1.0))(openapi-fetch@0.13.8):
+  openapi-react-query@0.4.2(@tanstack/react-query@5.90.20(react@19.1.0))(openapi-fetch@0.13.8):
     dependencies:
       '@tanstack/react-query': 5.90.20(react@19.1.0)
       openapi-fetch: 0.13.8

@@ -48,7 +48,7 @@
     "expo-web-browser": "~15.0.10",
     "i18next": "^24.2.2",
     "openapi-fetch": "^0.13.4",
-    "openapi-react-query": "^0.3.0",
+    "openapi-react-query": "^0.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-i18next": "^15.4.0",
