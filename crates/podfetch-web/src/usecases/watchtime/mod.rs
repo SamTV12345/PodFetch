@@ -47,6 +47,37 @@ impl WatchtimeUseCase {
             .map_err(Into::into)
     }
 
+    /// Insert or update an episode action with GUID-based fallback matching.
+    ///
+    /// When a client (e.g. AntennaPod) uses a local RSS feed, the episode/podcast URLs
+    /// won't match the original URLs stored by PodFetch. If a GUID is present, we first
+    /// check for an existing action with the same GUID and update it instead of creating
+    /// a duplicate entry.
+    pub fn upsert_episode_by_guid(
+        episode: podfetch_domain::episode::Episode,
+    ) -> Result<Episode, CustomError> {
+        let repo = Self::repo();
+
+        if let Some(ref guid) = episode.guid
+            && let Some(existing) = repo
+                .find_by_username_and_guid(&episode.username, guid)
+                .map_err(CustomError::from)?
+            {
+                if let Some(position) = episode.position {
+                    repo.update_position(existing.id, position, episode.timestamp)
+                        .map_err(CustomError::from)?;
+                }
+                return repo
+                    .find_by_username_and_guid(&episode.username, guid)
+                    .map(|opt| opt.unwrap().into())
+                    .map_err(Into::into);
+            }
+
+        repo.insert_episode(&episode)
+            .map(Into::into)
+            .map_err(Into::into)
+    }
+
     pub fn get_actions_by_username(
         username: &str,
         since_date: Option<NaiveDateTime>,

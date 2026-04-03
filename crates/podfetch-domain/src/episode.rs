@@ -68,6 +68,14 @@ pub trait EpisodeRepository: Send + Sync {
         guid: &str,
     ) -> Result<Option<Episode>, Self::Error>;
 
+    /// Find the most recent episode action by username and guid (any device).
+    /// Used as fallback matching when episode URLs differ (e.g. local vs original feed).
+    fn find_by_username_and_guid(
+        &self,
+        username: &str,
+        guid: &str,
+    ) -> Result<Option<Episode>, Self::Error>;
+
     /// Find all episode actions for a user with optional filters.
     /// If `default_device` is provided, results will include both the specified device
     /// and the default device.

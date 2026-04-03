@@ -299,6 +299,24 @@ impl EpisodeRepository for DieselEpisodeRepository {
             .map_err(Into::into)
     }
 
+    fn find_by_username_and_guid(
+        &self,
+        username: &str,
+        guid: &str,
+    ) -> Result<Option<Episode>, Self::Error> {
+        episodes::table
+            .filter(
+                episodes::username
+                    .eq(username)
+                    .and(episodes::guid.eq(guid)),
+            )
+            .order_by(episodes::timestamp.desc())
+            .first::<EpisodeEntity>(&mut self.database.connection()?)
+            .optional()
+            .map(|opt| opt.map(Into::into))
+            .map_err(Into::into)
+    }
+
     fn find_actions_by_username(
         &self,
         username: &str,

@@ -74,7 +74,7 @@ pub async fn upload_episode_actions(
     let mut inserted_episodes = vec![];
     podcast_episode.iter().for_each(|episode| {
         let episode = map_episode_dto_to_episode(episode, username.0.to_string());
-        inserted_episodes.push(WatchtimeService::insert_episode(episode).unwrap());
+        inserted_episodes.push(WatchtimeService::upsert_episode_by_guid(episode).unwrap());
     });
     Ok(Json(EpisodeActionPostResponse {
         update_urls: vec![],
@@ -118,6 +118,74 @@ pub mod tests {
         assert_eq!(resp.status_code(), 200);
         let json = resp.json::<EpisodeActionResponse>();
         assert_eq!(json.actions.len(), 0);
+    }
+
+    #[serial]
+    #[tokio::test]
+    async fn test_guid_fallback_updates_existing_episode_action() {
+        let mut test_server = handle_test_startup().await;
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+        create_auth_gpodder(&mut test_server, &user).await;
+
+        let guid = uuid::Uuid::new_v4().to_string();
+        let timestamp = "2026-01-01T12:00:00";
+
+        // Upload episode action with original URL
+        let resp = test_server
+            .test_server
+            .post(&format!("/api/2/episodes/{}", user.username))
+            .json(&serde_json::json!([{
+                "podcast": "https://example.com/feed.xml",
+                "episode": "https://example.com/episode1.mp3",
+                "guid": guid,
+                "action": "play",
+                "device": "device-a",
+                "timestamp": timestamp,
+                "started": 0,
+                "position": 60,
+                "total": 300
+            }]))
+            .await;
+        assert_eq!(resp.status_code(), 200);
+
+        // Upload same episode with a local URL but same GUID — should update, not duplicate
+        let resp = test_server
+            .test_server
+            .post(&format!("/api/2/episodes/{}", user.username))
+            .json(&serde_json::json!([{
+                "podcast": "http://192.168.1.50:8000/rss/1",
+                "episode": "http://192.168.1.50:8000/podcasts/episode1.mp3",
+                "guid": guid,
+                "action": "play",
+                "device": "device-b",
+                "timestamp": "2026-01-01T12:05:00",
+                "started": 60,
+                "position": 180,
+                "total": 300
+            }]))
+            .await;
+        assert_eq!(resp.status_code(), 200);
+
+        // Fetch all actions — should have updated position, not two separate entries
+        let resp = test_server
+            .test_server
+            .get(&format!("/api/2/episodes/{}?since=0", user.username))
+            .await;
+        assert_eq!(resp.status_code(), 200);
+        let json = resp.json::<EpisodeActionResponse>();
+
+        let matching: Vec<_> = json
+            .actions
+            .iter()
+            .filter(|a| a.guid.as_deref() == Some(&guid))
+            .collect();
+
+        assert_eq!(matching.len(), 1, "GUID fallback should update existing entry, not create a duplicate");
+        assert_eq!(matching[0].position, Some(180), "Position should be updated to 180");
     }
 }
 
