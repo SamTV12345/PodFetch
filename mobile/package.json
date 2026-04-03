@@ -28,7 +28,7 @@
     "expo": "^54.0.33",
     "expo-asset": "^12.0.12",
     "expo-audio": "~1.1.1",
-    "expo-blur": "~15.0.8",
+    "expo-blur": "~55.0.12",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-document-picker": "~14.0.8",
