@@ -50,7 +50,23 @@ use utoipa_scalar::Scalar;
 use utoipa_scalar::Servable as UtoipaServable;
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::services::user_auth::service::UserAuthService;
 use common_infrastructure::error::ErrorSeverity::Warning;
+use std::sync::Arc;
+
+fn is_socket_authenticated(socket: &SocketRef, auth_service: &Arc<UserAuthService>) -> bool {
+    let req_parts = socket.req_parts();
+    let query = req_parts.uri.query().unwrap_or("");
+    for param in query.split('&') {
+        if let Some(key) = param.strip_prefix("apiKey=") {
+            let decoded = urlencoding::decode(key).unwrap_or_default();
+            if auth_service.is_api_key_valid(&decoded) {
+                return true;
+            }
+        }
+    }
+    false
+}
 
 pub fn run_poll() -> Result<(), CustomError> {
     let podcast_result = PodcastService::get_all_podcasts_raw()?;
@@ -327,11 +343,29 @@ pub fn build_server_router() -> Router {
 
     let ui_dir = format!("{sub_dir}/ui/");
     let (layer, io) = SocketIoBuilder::new().build_layer();
-    io.ns("/", async |socket: SocketRef| {
-        info!("Socket connected {}", socket.id);
+    let auth_service = state.user_auth_service.clone();
+    let auth_service_main = state.user_auth_service.clone();
+    io.ns("/", move |socket: SocketRef| {
+        let auth_service = auth_service.clone();
+        async move {
+            if ENVIRONMENT_SERVICE.any_auth_enabled && !is_socket_authenticated(&socket, &auth_service) {
+                log::warn!("Rejecting unauthenticated WebSocket connection {}", socket.id);
+                let _ = socket.disconnect();
+                return;
+            }
+            info!("Socket connected {}", socket.id);
+        }
     });
-    io.ns("/".to_owned() + MAIN_ROOM, async || {
-        info!("Socket connected to main room");
+    io.ns("/".to_owned() + MAIN_ROOM, move |socket: SocketRef| {
+        let auth_service = auth_service_main.clone();
+        async move {
+            if ENVIRONMENT_SERVICE.any_auth_enabled && !is_socket_authenticated(&socket, &auth_service) {
+                log::warn!("Rejecting unauthenticated WebSocket connection {} to main room", socket.id);
+                let _ = socket.disconnect();
+                return;
+            }
+            info!("Socket connected to main room");
+        }
     });
     SOCKET_IO_LAYER.get_or_init(|| io);
 
