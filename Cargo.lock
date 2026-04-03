@@ -1735,7 +1735,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "http",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "slab",
  "tokio",
  "tokio-util",
@@ -2262,9 +2262,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.13.0"
+version = "2.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7714e70437a7dc3ac8eb7e6f8df75fd8eb422675fc7678aff7364301092b1017"
+checksum = "45a8a2b9cb3e0b0c1803dbb0758ffac5de2f425b23c28f518faabd9d805342ff"
 dependencies = [
  "equivalent",
  "hashbrown 0.16.1",
@@ -3177,7 +3177,7 @@ dependencies = [
  "common-infrastructure",
  "diesel",
  "diesel_migrations",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "libsqlite3-sys",
  "podfetch-domain",
  "r2d2",
@@ -4173,7 +4173,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cde65b75f2603066b78d6fa239b2c07b43e06ead09435f60554d3912962b4a3c"
 dependencies = [
  "form_urlencoded",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "itoa",
  "ryu",
  "serde",
@@ -4253,7 +4253,7 @@ dependencies = [
  "chrono",
  "hex",
  "indexmap 1.9.3",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4991,7 +4991,7 @@ version = "0.22.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ae48d6208a266e853d946088ed816055e556cc6028c5e8e2b84d9fa5dd7c7f5"
 dependencies = [
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "serde",
  "serde_spanned 0.6.8",
  "toml_datetime 0.6.8",
@@ -5055,7 +5055,7 @@ checksum = "ebe5ef63511595f1344e2d5cfa636d973292adc0eec1f0ad45fae9f0851ab1d4"
 dependencies = [
  "futures-core",
  "futures-util",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "pin-project-lite",
  "slab",
  "sync_wrapper",
@@ -5332,7 +5332,7 @@ version = "5.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fcc29c80c21c31608227e0912b2d7fddba57ad76b606890627ba8ee7964e993"
 dependencies = [
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "serde",
  "serde_json",
  "utoipa-gen",
@@ -5581,7 +5581,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb0e353e6a2fbdc176932bbaab493762eb1255a7900fe0fea1a2f96c296cc909"
 dependencies = [
  "anyhow",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "wasm-encoder",
  "wasmparser",
 ]
@@ -5620,7 +5620,7 @@ checksum = "47b807c72e1bac69382b3a6fb3dbe8ea4c0ed87ff5629b8685ae6b9a611028fe"
 dependencies = [
  "bitflags",
  "hashbrown 0.15.5",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "semver",
 ]
 
@@ -6297,7 +6297,7 @@ checksum = "b7c566e0f4b284dd6561c786d9cb0142da491f46a9fbed79ea69cdad5db17f21"
 dependencies = [
  "anyhow",
  "heck",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "prettyplease",
  "syn 2.0.117",
  "wasm-metadata",
@@ -6328,7 +6328,7 @@ checksum = "9d66ea20e9553b30172b5e831994e35fbde2d165325bec84fc43dbf6f4eb9cb2"
 dependencies = [
  "anyhow",
  "bitflags",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "log",
  "serde",
  "serde_derive",
@@ -6347,7 +6347,7 @@ checksum = "ecc8ac4bc1dc3381b7f59c34f00b67e18f910c2c0f50015669dde7def656a736"
 dependencies = [
  "anyhow",
  "id-arena",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "log",
  "semver",
  "serde",
@@ -6521,7 +6521,7 @@ dependencies = [
  "arbitrary",
  "crc32fast",
  "flate2",
- "indexmap 2.13.0",
+ "indexmap 2.13.1",
  "memchr",
  "zopfli",
 ]
