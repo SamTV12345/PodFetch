@@ -6,7 +6,7 @@ The following environment variable must be set to `true` to enable it:
 
 | Variable                          | Description                                             | Default             |
 |-----------------------------------|---------------------------------------------------------|---------------------|
-| GPODDER_INTEGRATION_ENABLED       | Activates the GPodder integration via your `SERVER_URL` | false               |
+| GPODDER_INTEGRATION_ENABLED       | Activates the GPodder integration                       | false               |
 
 ## ⚙️ Using the GPodder API
 
@@ -63,7 +63,7 @@ After opening the app, press the burger menu and tap settings. Go to synchronisa
 
 ![Adding server url to gpodder](./add_server_url.png)
 
-1. Enter here your SERVER_URL
+1. Enter here your PodFetch server URL (e.g. https://podfetch.example.com)
 
 ⚠️ AntennaPod always chooses https and thus requires a valid SSL certificate from e.g. Let's Encrypt. If you want to host PodFetch in your local network it is okay to not use SSL. Therefore you can use http:// to establish an insecure connection which AntennaPod will complain in the next steps about.
 

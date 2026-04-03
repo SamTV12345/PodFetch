@@ -23,8 +23,11 @@ pub const BASIC_AUTH: &str = "BASIC_AUTH";
 pub const USERNAME: &str = "USERNAME";
 pub const PASSWORD: &str = "PASSWORD";
 pub const API_KEY: &str = "API_KEY";
-pub const SERVER_URL: &str = "SERVER_URL";
 pub const SUB_DIRECTORY: &str = "SUB_DIRECTORY";
+pub const PORT: &str = "PORT";
+pub const DEFAULT_PORT: u16 = 8000;
+/// Internal base URL used for URL construction. Actual external URLs are derived from request headers.
+pub const INTERNAL_SERVER_URL: &str = "http://localhost:8000/";
 pub const POLLING_INTERVAL: &str = "POLLING_INTERVAL";
 pub const PODINDEX_API_KEY: &str = "PODINDEX_API_KEY";
 pub const PODINDEX_API_SECRET: &str = "PODINDEX_API_SECRET";
@@ -108,7 +111,7 @@ pub struct ConfigModel {
 #[derive(Clone)]
 pub struct EnvironmentService {
     pub server_url: String,
-    pub ws_url: String,
+    pub port: u16,
     pub polling_interval: u32,
     pub podindex_api_key: String,
     pub podindex_api_secret: String,
@@ -255,40 +258,14 @@ impl EnvironmentService {
     pub fn new() -> EnvironmentService {
         let oidc_configured = Self::handle_oidc();
 
-        let server_url = match var("DEV") {
-            Ok(val) if val == "true" => "http://localhost:5173/".to_string(),
-            _ => var(SERVER_URL)
-                .map(|s| if s.ends_with('/') { s } else { s + "/" })
-                .unwrap_or("http://localhost:8000/".to_string()),
-        };
+        let server_url = INTERNAL_SERVER_URL.to_string();
 
-        let ws_url = match var("DEV") {
-            Ok(_) => "http://localhost:8000/socket.io/".to_string(),
-            Err(_) => var(SERVER_URL)
-                .map(|mut s| {
-                    s = if s.starts_with("https") {
-                        s.replace("https", "wss")
-                    } else {
-                        s.replace("http", "ws")
-                    };
-                    if s.ends_with('/') {
-                        s + "socket.io"
-                    } else {
-                        s + "/socket.io"
-                    }
-                })
-                .unwrap_or("http://localhost:8000/socket.io/".to_string()),
-        };
+        let port = var(PORT)
+            .ok()
+            .and_then(|v| v.parse::<u16>().ok())
+            .unwrap_or(DEFAULT_PORT);
 
-        let mut opt_sub_dir = var(SUB_DIRECTORY).ok();
-        if opt_sub_dir.is_none() {
-            let url = Url::parse(&server_url).expect("Invalid server url");
-            if url.path().ends_with('/') {
-                opt_sub_dir = Some(url.path()[0..url.path().len() - 1].to_string());
-            } else {
-                opt_sub_dir = Some(url.path().to_string());
-            }
-        }
+        let opt_sub_dir = Some(var(SUB_DIRECTORY).unwrap_or_default());
 
         let password = var(PASSWORD).ok().map(sha256::digest);
         let telegram_api = Self::handle_telegram_config();
@@ -304,7 +281,7 @@ impl EnvironmentService {
 
         EnvironmentService {
             server_url: server_url.clone(),
-            ws_url,
+            port,
             polling_interval: var(POLLING_INTERVAL)
                 .ok()
                 .and_then(|v| v.parse::<u32>().ok())
@@ -399,15 +376,12 @@ impl EnvironmentService {
         for (key, value) in env::vars() {
             log::debug!("{key}: {value}");
         }
-        log::info!("Public server url: {}", self.server_url);
+        log::info!("Listening on port: {}", self.port);
         log::info!(
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
-        log::info!(
-            "Developer specifications available at {}",
-            self.server_url.clone() + "swagger-ui/index.html#/"
-        );
+        log::info!("Developer specifications available at http://localhost:{}/swagger-ui/index.html#/", self.port);
         log::info!(
             "GPodder integration enabled: {}",
             self.gpodder_integration_enabled
@@ -430,7 +404,7 @@ impl EnvironmentService {
             basic_auth: self.http_basic,
             oidc_configured: self.oidc_configured,
             oidc_config: self.oidc_config.clone(),
-            ws_url: self.ws_url.clone(),
+            ws_url: String::new(),
         }
     }
 

@@ -19,16 +19,14 @@ resource "docker_container" "podfetch" {
 
   labels{
     label = "traefik.http.routers.podfetch.rule"
-    value = "Host(`${replace(var.server_url,"/(https?://)|(/)/","")}`)"
+    value = "Host(`${var.hostname}`)"
   }
 
   networks_advanced {
     name = "sqlite-traefik-proxy"
   }
 
-  env = [
-    "SERVER_URL=${var.server_url}"
-  ]
+  env = []
 
   volumes {
     container_path = "/app/podcasts"

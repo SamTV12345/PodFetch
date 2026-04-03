@@ -78,7 +78,6 @@ impl AppState {
         ))));
         let invite_service = Arc::new(InviteService::new(
             Arc::new(InviteRepositoryImpl::new(database.clone())),
-            environment.clone(),
         ));
         let user_auth_service = Arc::new(UserAuthService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),

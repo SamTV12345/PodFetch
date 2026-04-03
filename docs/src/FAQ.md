@@ -7,8 +7,7 @@
 
 ## My PodFetch server does not show any images
 
-- Make sure your `SERVER_URL` is set correctly
-- Make sure your `SERVER_URL` is reachable from the internet
+- Make sure your server is reachable and that your reverse proxy forwards the `X-Forwarded-Host`, `X-Forwarded-Proto`, and `X-Forwarded-Prefix` headers correctly
 
 ## I cannot login to the UI
 

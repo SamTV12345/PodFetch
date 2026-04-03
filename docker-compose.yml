@@ -10,7 +10,6 @@ services:
       - podfetch-db:/app/db
     environment:
       - POLLING_INTERVAL=60
-      - SERVER_URL=http://localhost:80
       - DATABASE_URL=sqlite:///app/db/podcast.db
 
 volumes:

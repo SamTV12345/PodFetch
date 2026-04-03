@@ -40,5 +40,5 @@ module "deploy-podfetch" {
   depends_on = [module.deploy-traefik-images]
   db_dir     = var.db_dir
   podcast_dir = var.podcast_dir
-  server_url = var.server_url
+  hostname = var.hostname
 }

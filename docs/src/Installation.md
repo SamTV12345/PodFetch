@@ -17,7 +17,6 @@ services:
       - podfetch-db:/app/db
     environment:
       - POLLING_INTERVAL=60
-      - SERVER_URL=http://localhost:80
       - DATABASE_URL=sqlite:///app/db/podcast.db
 
 volumes:
@@ -27,11 +26,12 @@ volumes:
 
 
 
-| Variable         | Description                                   | Default                  |
-|------------------|-----------------------------------------------|--------------------------|
-| POLLING_INTERVAL | Interval in minutes to check for new episodes | 300                      |
-| SERVER_URL       | URL of the server/the URL of the proxy        | http://localhost:8000    |
-| DATABASE_URL     | URL of the database                           | sqlite://./db/podcast.db |
+| Variable         | Description                                          | Default                  |
+|------------------|------------------------------------------------------|--------------------------|
+| POLLING_INTERVAL | Interval in minutes to check for new episodes        | 300                      |
+| PORT             | The port PodFetch listens on                         | 8000                     |
+| SUB_DIRECTORY    | Sub-path when hosting behind a reverse proxy (e.g. `/podfetch`) | _(none)_      |
+| DATABASE_URL     | URL of the database                                  | sqlite://./db/podcast.db |
 
 It is important to change `UID` and `GID` to your user id and group id so that the files are owned by you and not by root.
 Docker will create the volumes by default as root and podfetch will not be able to write to them.

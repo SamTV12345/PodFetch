@@ -206,13 +206,16 @@ responses(
 (status = 200, description = "Gets an invite by id", body = Option<String>)))]
 pub async fn get_invite_link(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     Path(invite_id): Path<String>,
     requester: Extension<User>,
 ) -> Result<String, CustomError> {
+    let server_url = crate::url_rewriting::resolve_server_url_from_headers(&headers);
     invite::get_invite_link(
         state.invite_service.as_ref(),
         requester.is_admin(),
         &invite_id,
+        &server_url,
     )
     .map_err(map_invite_link_error)
 }
@@ -514,6 +517,7 @@ mod tests {
 
         let invite_link_result = super::get_invite_link(
             State(app_state()),
+            axum::http::HeaderMap::new(),
             Path("some-id".to_string()),
             Extension(non_admin),
         )

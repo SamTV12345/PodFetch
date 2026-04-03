@@ -136,13 +136,7 @@ pub fn resolve_server_url_from_headers(headers: &HeaderMap) -> String {
 
     let proto = get_header_value(headers, "x-forwarded-proto")
         .or_else(|| get_header_value(headers, "x-forwarded-scheme"))
-        .unwrap_or_else(|| {
-            if ENVIRONMENT_SERVICE.server_url.starts_with("https://") {
-                "https".to_string()
-            } else {
-                "http".to_string()
-            }
-        });
+        .unwrap_or_else(|| "http".to_string());
 
     let prefix = get_header_value(headers, "x-forwarded-prefix")
         .or_else(|| ENVIRONMENT_SERVICE.sub_directory.clone())
