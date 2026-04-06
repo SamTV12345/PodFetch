@@ -171,7 +171,7 @@ importers:
         version: 2.16.1
       '@vitejs/plugin-react':
         specifier: ^5.2.0
-        version: 5.2.0(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))
+        version: 5.2.0(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))
       babel-plugin-react-compiler:
         specifier: ^19.1.0-rc.3
         version: 19.1.0-rc.3
@@ -197,11 +197,11 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vite:
-        specifier: ^8.0.3
-        version: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
+        specifier: ^8.0.5
+        version: 8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
       vitest:
         specifier: ^4.1.2
-        version: 4.1.2(@types/node@25.5.2)(happy-dom@20.8.9)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))
+        version: 4.1.2(@types/node@25.5.2)(happy-dom@20.8.9)(jsdom@29.0.1)(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))
 
 packages:
 
@@ -2722,14 +2722,14 @@ packages:
   varint@6.0.0:
     resolution: {integrity: sha512-cXEIW6cfr15lFv563k4GuVuW/fiwjknytD37jIOLSdSWuOI6WnO/oKwmP2FQTU2l01LP8/M5TSAJpzUaGe3uWg==}
 
-  vite@8.0.3:
-    resolution: {integrity: sha512-B9ifbFudT1TFhfltfaIPgjo9Z3mDynBTJSUYxTjOQruf/zHH+ezCQKcoqO+h7a9Pw9Nm/OtlXAiGT1axBgwqrQ==}
+  vite@8.0.5:
+    resolution: {integrity: sha512-nmu43Qvq9UopTRfMx2jOYW5l16pb3iDC1JH6yMuPkpVbzK0k+L7dfsEDH4jRgYFmsg0sTAqkojoZgzLMlwHsCQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
       '@vitejs/devtools': ^0.1.0
-      esbuild: ^0.27.0
+      esbuild: ^0.27.0 || ^0.28.0
       jiti: '>=1.21.0'
       less: ^4.0.0
       sass: ^1.70.0
@@ -4299,7 +4299,7 @@ snapshots:
     dependencies:
       '@types/node': 25.5.2
 
-  '@vitejs/plugin-react@5.2.0(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))':
+  '@vitejs/plugin-react@5.2.0(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0)
@@ -4307,7 +4307,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-rc.3
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
-      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
+      vite: 8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -4320,13 +4320,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.2(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))':
+  '@vitest/mocker@4.1.2(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))':
     dependencies:
       '@vitest/spy': 4.1.2
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
+      vite: 8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
 
   '@vitest/pretty-format@4.1.2':
     dependencies:
@@ -5303,7 +5303,7 @@ snapshots:
 
   varint@6.0.0: {}
 
-  vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2):
+  vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
@@ -5323,10 +5323,10 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  vitest@4.1.2(@types/node@25.5.2)(happy-dom@20.8.9)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)):
+  vitest@4.1.2(@types/node@25.5.2)(happy-dom@20.8.9)(jsdom@29.0.1)(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)):
     dependencies:
       '@vitest/expect': 4.1.2
-      '@vitest/mocker': 4.1.2(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))
+      '@vitest/mocker': 4.1.2(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2))
       '@vitest/pretty-format': 4.1.2
       '@vitest/runner': 4.1.2
       '@vitest/snapshot': 4.1.2
@@ -5343,7 +5343,7 @@ snapshots:
       tinyexec: 1.0.4
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
+      vite: 8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.2)(jiti@2.6.1)(sass-embedded@1.98.0)(sass@1.98.0)(terser@5.31.0)(yaml@2.4.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.5.2
