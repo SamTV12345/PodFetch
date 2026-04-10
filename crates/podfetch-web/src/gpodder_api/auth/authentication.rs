@@ -54,6 +54,30 @@ pub async fn login(
     }
 }
 
+#[utoipa::path(
+post,
+path="/api/2/auth/{username}/logout.json",
+responses(
+(status = 200, description = "Logs out the user and removes the session.")),
+tag="gpodder"
+)]
+pub async fn logout(
+    State(state): State<AppState>,
+    Path(username): Path<String>,
+    jar: CookieJar,
+) -> Result<StatusCode, CustomError> {
+    // Verify the session belongs to the requested user
+    if let Some(cookie) = jar.get("sessionid")
+        && let Ok(Some(session)) = state.session_service.find_by_session_id(cookie.value())
+    {
+        ensure_session_user::<CustomError>(&session.username, &username)
+            .map_err(map_gpodder_error)?;
+        state.session_service.delete_by_username(&username)?;
+        return Ok(StatusCode::OK);
+    }
+    Err(CustomErrorInner::Forbidden(Warning).into())
+}
+
 fn handle_proxy_auth(
     rq: axum::extract::Request,
     username: &str,
@@ -146,6 +170,13 @@ fn create_session_cookie(session: Session) -> CookieJar {
     )
 }
 
+pub fn get_auth_router() -> utoipa_axum::router::OpenApiRouter<AppState> {
+    use utoipa_axum::routes;
+    utoipa_axum::router::OpenApiRouter::new()
+        .routes(routes!(login))
+        .routes(routes!(logout))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
@@ -213,5 +244,42 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 200);
         assert_eq!(response.json::<Vec<DeviceResponse>>().len(), 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_logout() {
+        let mut server = handle_test_startup().await;
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+
+        create_auth_gpodder(&mut server, &user).await;
+
+        // Verify we're authenticated
+        let response = server
+            .test_server
+            .get(&format!("/api/2/devices/{}", user.username))
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        // Logout
+        let response = server
+            .test_server
+            .post(&format!("/api/2/auth/{}/logout.json", user.username))
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        // Clear all auth so we only rely on the (now-invalidated) cookie
+        server.test_server.clear_headers();
+
+        // After logout, session is gone — request should fail
+        let response = server
+            .test_server
+            .get(&format!("/api/2/devices/{}", user.username))
+            .await;
+        assert_eq!(response.status_code(), 403);
     }
 }

@@ -48,6 +48,16 @@ struct SubscriptionEntity {
     deleted: Option<NaiveDateTime>,
 }
 
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = subscriptions)]
+struct NewSubscriptionEntity {
+    username: String,
+    device: String,
+    podcast: String,
+    created: NaiveDateTime,
+    deleted: Option<NaiveDateTime>,
+}
+
 #[derive(Debug, Clone, Queryable, QueryableByName)]
 struct GPodderAvailablePodcastEntity {
     #[diesel(sql_type = Text)]
@@ -207,8 +217,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                         podcast.to_string(),
                     );
                     diesel::insert_into(subscriptions_dsl::subscriptions)
-                        .values(SubscriptionEntity {
-                            id: subscription.id,
+                        .values(NewSubscriptionEntity {
                             username: subscription.username,
                             device: subscription.device,
                             podcast: subscription.podcast,
@@ -245,6 +254,25 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
         }
 
         Ok(rewritten_urls)
+    }
+
+    fn get_active_device_podcast_urls(
+        &self,
+        device_id: &str,
+        username: &str,
+    ) -> Result<Vec<String>, Self::Error> {
+        use self::subscriptions::dsl as subscriptions_dsl;
+
+        subscriptions_dsl::subscriptions
+            .filter(
+                subscriptions_dsl::username
+                    .eq(username)
+                    .and(subscriptions_dsl::device.eq(device_id))
+                    .and(subscriptions_dsl::deleted.is_null()),
+            )
+            .select(subscriptions_dsl::podcast)
+            .load::<String>(&mut self.database.connection()?)
+            .map_err(Into::into)
     }
 
     fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {

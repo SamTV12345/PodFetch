@@ -1,8 +1,10 @@
 pub mod device;
+pub mod device_sync_group;
 pub mod episode;
 pub mod favorite;
 pub mod favorite_podcast_episode;
 pub mod filter;
+pub mod gpodder_setting;
 pub mod invite;
 pub mod listening_event;
 pub mod notification;

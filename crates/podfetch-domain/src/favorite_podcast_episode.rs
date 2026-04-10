@@ -27,4 +27,9 @@ pub trait FavoritePodcastEpisodeRepository: Send + Sync {
     fn save_or_update(&self, favorite: FavoritePodcastEpisode) -> Result<(), Self::Error>;
 
     fn is_liked_by_someone(&self, episode_id: i32) -> Result<bool, Self::Error>;
+
+    fn get_favorites_by_username(
+        &self,
+        username: &str,
+    ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error>;
 }

@@ -108,6 +108,82 @@ pub async fn upload_subscription_changes(
     }))
 }
 
+/// Parses podcast URLs from a request body based on format.
+fn parse_urls_from_body(body: &str, format: &str) -> Result<Vec<String>, CustomError> {
+    match format {
+        "json" => serde_json::from_str::<Vec<String>>(body).map_err(|e| {
+            CustomErrorInner::BadRequest(format!("Invalid JSON: {e}"), Warning).into()
+        }),
+        "opml" => {
+            let opml = opml::OPML::from_str(body).map_err(|e| {
+                CustomError::from(CustomErrorInner::BadRequest(
+                    format!("Invalid OPML: {e}"),
+                    Warning,
+                ))
+            })?;
+            Ok(opml
+                .body
+                .outlines
+                .iter()
+                .filter_map(|o| o.xml_url.clone())
+                .collect())
+        }
+        "txt" => Ok(body
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .map(String::from)
+            .collect()),
+        _ => Err(CustomErrorInner::BadRequest(
+            "Unsupported format. Use .json, .opml, or .txt".to_string(),
+            Warning,
+        )
+        .into()),
+    }
+}
+
+pub async fn put_device_subscriptions(
+    State(state): State<AppState>,
+    Extension(flag): Extension<Session>,
+    Path(paths): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<SubscriptionPostResponse>, CustomError> {
+    let username = paths.0.clone();
+    let deviceid = trim_from_path(&paths.1);
+    ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
+
+    let body_str = String::from_utf8_lossy(&body);
+    let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
+    let current_urls = state
+        .subscription_service
+        .get_active_device_podcast_urls(deviceid.0, &username)?;
+
+    let to_add: Vec<String> = new_urls
+        .iter()
+        .filter(|u| !current_urls.contains(u))
+        .cloned()
+        .collect();
+    let to_remove: Vec<String> = current_urls
+        .iter()
+        .filter(|u| !new_urls.contains(u))
+        .cloned()
+        .collect();
+
+    let update_urls = state.subscription_service.update_subscriptions(
+        deviceid.0,
+        &username,
+        crate::subscription::SubscriptionUpdateRequest {
+            add: to_add,
+            remove: to_remove,
+        },
+    )?;
+
+    Ok(Json(SubscriptionPostResponse {
+        update_urls,
+        timestamp: get_current_timestamp(),
+    }))
+}
+
 pub fn get_subscription_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(upload_subscription_changes))
@@ -169,6 +245,48 @@ pub async fn get_simple_subscriptions(
         )
         .into()),
     }
+}
+
+pub async fn put_simple_subscriptions(
+    State(state): State<AppState>,
+    Extension(flag): Extension<Session>,
+    Path(paths): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<SubscriptionPostResponse>, CustomError> {
+    let username = &paths.0;
+    let deviceid = trim_from_path(&paths.1);
+    ensure_session_user::<CustomError>(&flag.username, username).map_err(map_gpodder_error)?;
+
+    let body_str = String::from_utf8_lossy(&body);
+    let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
+    let current_urls = state
+        .subscription_service
+        .get_active_device_podcast_urls(deviceid.0, username)?;
+
+    let to_add: Vec<String> = new_urls
+        .iter()
+        .filter(|u| !current_urls.contains(u))
+        .cloned()
+        .collect();
+    let to_remove: Vec<String> = current_urls
+        .iter()
+        .filter(|u| !new_urls.contains(u))
+        .cloned()
+        .collect();
+
+    let update_urls = state.subscription_service.update_subscriptions(
+        deviceid.0,
+        username,
+        crate::subscription::SubscriptionUpdateRequest {
+            add: to_add,
+            remove: to_remove,
+        },
+    )?;
+
+    Ok(Json(SubscriptionPostResponse {
+        update_urls,
+        timestamp: get_current_timestamp(),
+    }))
 }
 
 pub fn get_simple_subscription_router() -> OpenApiRouter<AppState> {
@@ -374,5 +492,130 @@ mod tests {
         assert_eq!(response.status_code(), 200);
         let body = response.text();
         assert_eq!(body.trim(), "https://example.com/feed.xml");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_put_device_subscriptions_json() {
+        let mut server = handle_test_startup().await;
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+        create_auth_gpodder(&mut server, &user).await;
+
+        // Create a device
+        let device_post = DevicePostTestDataBuilder::new().build();
+        server
+            .test_server
+            .post(&format!(
+                "/api/2/devices/{}/{}",
+                user.username, device_post.caption
+            ))
+            .json(&device_post)
+            .await;
+
+        // Add initial subscriptions via POST
+        server
+            .test_server
+            .post(&format!(
+                "/api/2/subscriptions/{}/{}.json",
+                user.username, device_post.caption
+            ))
+            .json(&serde_json::json!({
+                "add": ["https://example.com/feed1.xml", "https://example.com/feed2.xml"],
+                "remove": []
+            }))
+            .await;
+
+        // PUT replaces all subscriptions — feed1 should be removed, feed3 added
+        let response = server
+            .test_server
+            .put(&format!(
+                "/api/2/subscriptions/{}/{}.json",
+                user.username, device_post.caption
+            ))
+            .text(
+                &serde_json::json!([
+                    "https://example.com/feed2.xml",
+                    "https://example.com/feed3.xml"
+                ])
+                .to_string(),
+            )
+            .await;
+        let status = response.status_code();
+        let body = response.text();
+        assert_eq!(status, 200, "PUT failed with body: {body}");
+
+        // Verify via GET
+        let response = server
+            .test_server
+            .get(&format!(
+                "/api/2/subscriptions/{}/{}.json?since=0",
+                user.username, device_post.caption
+            ))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let changes = response.json::<SubscriptionChangesToClient>();
+        assert!(
+            changes
+                .add
+                .contains(&"https://example.com/feed2.xml".to_string()),
+            "feed2 should still be active"
+        );
+        assert!(
+            changes
+                .add
+                .contains(&"https://example.com/feed3.xml".to_string()),
+            "feed3 should be added"
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_put_simple_subscriptions_txt() {
+        let mut server = handle_test_startup().await;
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+        create_auth_gpodder(&mut server, &user).await;
+
+        // Create a device
+        let device_post = DevicePostTestDataBuilder::new().build();
+        server
+            .test_server
+            .post(&format!(
+                "/api/2/devices/{}/{}",
+                user.username, device_post.caption
+            ))
+            .json(&device_post)
+            .await;
+
+        // PUT via Simple API with plaintext
+        setup_basic_auth(&mut server, &user);
+        let response = server
+            .test_server
+            .put(&format!(
+                "/subscriptions/{}/{}.txt",
+                user.username, device_post.caption
+            ))
+            .text("https://example.com/feed-a.xml\nhttps://example.com/feed-b.xml")
+            .await;
+        let status = response.status_code();
+        let body = response.text();
+        assert_eq!(status, 200, "PUT failed with body: {body}");
+
+        // Verify via Simple API JSON
+        let response = server
+            .test_server
+            .get(&format!("/subscriptions/{}.json", user.username))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let urls = response.json::<Vec<String>>();
+        assert!(urls.contains(&"https://example.com/feed-a.xml".to_string()));
+        assert!(urls.contains(&"https://example.com/feed-b.xml".to_string()));
     }
 }

@@ -1,6 +1,15 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    device_sync_groups (id) {
+        id -> Integer,
+        username -> Text,
+        group_id -> Integer,
+        device_id -> Text,
+    }
+}
+
+diesel::table! {
     devices (id) {
         id -> Integer,
         deviceid -> Text,
@@ -49,6 +58,16 @@ diesel::table! {
         ascending -> Bool,
         filter -> Nullable<Text>,
         only_favored -> Bool,
+    }
+}
+
+diesel::table! {
+    gpodder_settings (id) {
+        id -> Integer,
+        username -> Text,
+        scope -> Text,
+        scope_id -> Nullable<Text>,
+        data -> Text,
     }
 }
 
@@ -257,11 +276,13 @@ diesel::joinable!(tags_podcasts -> podcasts (podcast_id));
 diesel::joinable!(tags_podcasts -> tags (tag_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    device_sync_groups,
     devices,
     episodes,
     favorite_podcast_episodes,
     favorites,
     filters,
+    gpodder_settings,
     invites,
     listening_events,
     notifications,
