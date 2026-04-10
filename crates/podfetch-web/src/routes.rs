@@ -6,13 +6,14 @@ use crate::gpodder_api::episodes::gpodder_episodes::get_gpodder_episodes_router;
 use crate::gpodder_api::session_middleware::handle_cookie_session;
 use crate::gpodder_api::settings::settings_controller::get_settings_router;
 use crate::gpodder_api::subscription::subscriptions::{
-    get_simple_subscription_router, get_subscription_router,
+    get_simple_subscription_router, get_subscription_router, put_device_subscriptions,
+    put_simple_subscriptions,
 };
 use crate::url_rewriting::resolve_server_url_from_headers;
 use axum::Json;
 use axum::http::HeaderMap;
 use axum::middleware::from_fn_with_state;
-use axum::routing::get;
+use axum::routing::{get, put};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -44,6 +45,8 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
     };
 
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
+        let gpodder_session = from_fn_with_state(state.clone(), handle_cookie_session);
+
         router = router
             // Auth endpoints (login + logout) — no session middleware needed
             .merge(get_auth_router().with_state(state.clone()))
@@ -52,6 +55,10 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
                 "/subscriptions",
                 OpenApiRouter::new()
                     .merge(get_simple_subscription_router().with_state(state.clone()))
+                    .route(
+                        "/{username}/{deviceid}",
+                        put(put_simple_subscriptions).with_state(state.clone()),
+                    )
                     .layer(from_fn_with_state(state.clone(), handle_cookie_session)),
             )
             // Advanced API (v2)
@@ -62,7 +69,11 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
                     .merge(get_device_router().with_state(state.clone()))
                     .merge(get_gpodder_episodes_router().with_state(state.clone()))
                     .merge(get_settings_router().with_state(state.clone()))
-                    .layer(from_fn_with_state(state.clone(), handle_cookie_session)),
+                    .route(
+                        "/subscriptions/{username}/{deviceid}",
+                        put(put_device_subscriptions).with_state(state.clone()),
+                    )
+                    .layer(gpodder_session),
             );
     }
     router

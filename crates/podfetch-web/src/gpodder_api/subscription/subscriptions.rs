@@ -142,26 +142,18 @@ fn parse_urls_from_body(body: &str, format: &str) -> Result<Vec<String>, CustomE
     }
 }
 
-#[utoipa::path(
-    put,
-    path="/subscriptions/{username}/{deviceid}",
-    responses(
-        (status = 200, description = "Replaces all subscriptions for a device"),
-        (status = 403, description = "Forbidden")
-    ),
-    tag="gpodder"
-)]
 pub async fn put_device_subscriptions(
     State(state): State<AppState>,
     Extension(flag): Extension<Session>,
     Path(paths): Path<(String, String)>,
-    body: String,
+    body: axum::body::Bytes,
 ) -> Result<Json<SubscriptionPostResponse>, CustomError> {
     let username = paths.0.clone();
     let deviceid = trim_from_path(&paths.1);
     ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
 
-    let new_urls = parse_urls_from_body(&body, deviceid.1)?;
+    let body_str = String::from_utf8_lossy(&body);
+    let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
     let current_urls = state
         .subscription_service
         .get_active_device_podcast_urls(deviceid.0, &username)?;
@@ -197,10 +189,6 @@ pub fn get_subscription_router() -> OpenApiRouter<AppState> {
         .routes(routes!(upload_subscription_changes))
         .routes(routes!(get_subscriptions_all))
         .routes(routes!(get_subscriptions))
-        .route(
-            "/subscriptions/{username}/{deviceid}",
-            axum::routing::put(put_device_subscriptions),
-        )
 }
 
 #[utoipa::path(
@@ -259,26 +247,18 @@ pub async fn get_simple_subscriptions(
     }
 }
 
-#[utoipa::path(
-    put,
-    path="/{username}/{deviceid}",
-    responses(
-        (status = 200, description = "Replaces all subscriptions for a device (Simple API)"),
-        (status = 403, description = "Forbidden")
-    ),
-    tag="gpodder"
-)]
 pub async fn put_simple_subscriptions(
     State(state): State<AppState>,
     Extension(flag): Extension<Session>,
     Path(paths): Path<(String, String)>,
-    body: String,
+    body: axum::body::Bytes,
 ) -> Result<Json<SubscriptionPostResponse>, CustomError> {
     let username = &paths.0;
     let deviceid = trim_from_path(&paths.1);
     ensure_session_user::<CustomError>(&flag.username, username).map_err(map_gpodder_error)?;
 
-    let new_urls = parse_urls_from_body(&body, deviceid.1)?;
+    let body_str = String::from_utf8_lossy(&body);
+    let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
     let current_urls = state
         .subscription_service
         .get_active_device_podcast_urls(deviceid.0, username)?;
@@ -310,12 +290,7 @@ pub async fn put_simple_subscriptions(
 }
 
 pub fn get_simple_subscription_router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new()
-        .routes(routes!(get_simple_subscriptions))
-        .route(
-            "/{username}/{deviceid}",
-            axum::routing::put(put_simple_subscriptions),
-        )
+    OpenApiRouter::new().routes(routes!(get_simple_subscriptions))
 }
 
 #[cfg(test)]
@@ -569,7 +544,9 @@ mod tests {
                 .to_string(),
             )
             .await;
-        assert_eq!(response.status_code(), 200);
+        let status = response.status_code();
+        let body = response.text();
+        assert_eq!(status, 200, "PUT failed with body: {body}");
 
         // Verify via GET
         let response = server
@@ -627,7 +604,9 @@ mod tests {
             ))
             .text("https://example.com/feed-a.xml\nhttps://example.com/feed-b.xml")
             .await;
-        assert_eq!(response.status_code(), 200);
+        let status = response.status_code();
+        let body = response.text();
+        assert_eq!(status, 200, "PUT failed with body: {body}");
 
         // Verify via Simple API JSON
         let response = server

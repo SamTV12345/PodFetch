@@ -48,6 +48,16 @@ struct SubscriptionEntity {
     deleted: Option<NaiveDateTime>,
 }
 
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = subscriptions)]
+struct NewSubscriptionEntity {
+    username: String,
+    device: String,
+    podcast: String,
+    created: NaiveDateTime,
+    deleted: Option<NaiveDateTime>,
+}
+
 #[derive(Debug, Clone, Queryable, QueryableByName)]
 struct GPodderAvailablePodcastEntity {
     #[diesel(sql_type = Text)]
@@ -207,8 +217,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                         podcast.to_string(),
                     );
                     diesel::insert_into(subscriptions_dsl::subscriptions)
-                        .values(SubscriptionEntity {
-                            id: subscription.id,
+                        .values(NewSubscriptionEntity {
                             username: subscription.username,
                             device: subscription.device,
                             podcast: subscription.podcast,
