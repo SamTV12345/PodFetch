@@ -264,7 +264,10 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 200);
 
-        // After logout, session cookie is invalidated — subsequent requests should fail
+        // Clear all auth so we only rely on the (now-invalidated) cookie
+        server.test_server.clear_headers();
+
+        // After logout, session is gone — request should fail
         let response = server
             .test_server
             .get(&format!("/api/2/devices/{}", user.username))

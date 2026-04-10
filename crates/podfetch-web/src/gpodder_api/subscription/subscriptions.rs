@@ -194,8 +194,10 @@ pub async fn put_device_subscriptions(
 
 pub fn get_subscription_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
-        .routes(routes!(upload_subscription_changes))
-        .routes(routes!(put_device_subscriptions))
+        .routes(routes!(
+            upload_subscription_changes,
+            put_device_subscriptions
+        ))
         .routes(routes!(get_subscriptions_all))
         .routes(routes!(get_subscriptions))
 }
