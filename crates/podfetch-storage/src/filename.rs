@@ -77,10 +77,8 @@ impl FilenameBuilder {
             ));
         }
 
-        let resulting_directory = resolve_directory(format!(
-            "{}/{}",
-            self.podcast_directory, self.episode_stem
-        ))?;
+        let resulting_directory =
+            resolve_directory(format!("{}/{}", self.podcast_directory, self.episode_stem))?;
 
         Ok(FilenameBuilderReturn::new(
             format!("{}/{}.{}", resulting_directory, self.filename, self.suffix),

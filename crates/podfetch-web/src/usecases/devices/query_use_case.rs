@@ -5,4 +5,3 @@ use podfetch_domain::device::Device;
 pub trait QueryUseCase {
     fn query_by_username(username: &str) -> Result<Vec<Device>, CustomError>;
 }
-

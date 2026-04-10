@@ -32,7 +32,9 @@ impl FileHandleWrapper {
     fn map_storage_error(error: StorageError) -> CustomError {
         match error {
             StorageError::Io { path, source } => map_io_error(source, Some(path), Critical),
-            StorageError::Backend { message } => CustomErrorInner::Conflict(message, Critical).into(),
+            StorageError::Backend { message } => {
+                CustomErrorInner::Conflict(message, Critical).into()
+            }
         }
     }
 
@@ -92,7 +94,10 @@ impl FileHandleWrapper {
         }
     }
 
-    pub fn remove_dir(podcast: &PodcastFileInfo, episodes: &[EpisodeFileInfo]) -> Result<(), CustomError> {
+    pub fn remove_dir(
+        podcast: &PodcastFileInfo,
+        episodes: &[EpisodeFileInfo],
+    ) -> Result<(), CustomError> {
         match resolve_file_handler_type(podcast.download_location.clone()) {
             FileHandlerType::Local => {
                 LocalStorageBackend::remove_dir(&podcast.directory_name)

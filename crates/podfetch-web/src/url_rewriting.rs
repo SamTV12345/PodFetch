@@ -43,7 +43,8 @@ pub fn rewrite_url(url: &str, old_base: &str, new_base: &str) -> String {
 
     // Handle absolute URLs (e.g., http://localhost:8080/podcasts/file.mp3)
     if let Ok(parsed) = Url::parse(url)
-        && is_local_host(parsed.host_str(), &old_base) && is_local_path(parsed.path())
+        && is_local_host(parsed.host_str(), &old_base)
+        && is_local_path(parsed.path())
     {
         let mut rewritten = format!("{}{}", new_base, parsed.path().trim_start_matches('/'));
         if let Some(query) = parsed.query() {

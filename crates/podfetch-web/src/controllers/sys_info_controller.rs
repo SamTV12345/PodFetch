@@ -1,14 +1,14 @@
 use crate::app_state::AppState;
+use axum::extract::State;
+use axum::http::HeaderMap;
+use axum::{Extension, Json};
+use common_infrastructure::config::ConfigModel;
 use common_infrastructure::error::ErrorSeverity::Info;
 use common_infrastructure::error::ErrorType::CustomErrorType;
 use common_infrastructure::error::{
     ApiError, CustomError, CustomErrorInner, ErrorSeverity, ErrorType,
 };
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use axum::extract::State;
-use axum::http::HeaderMap;
-use axum::{Extension, Json};
-use common_infrastructure::config::ConfigModel;
 fn get_size(path: &str) -> Result<u64, std::io::Error> {
     let mut total: u64 = 0;
     let path = std::path::Path::new(path);
@@ -25,11 +25,9 @@ fn get_size(path: &str) -> Result<u64, std::io::Error> {
     }
     Ok(total)
 }
-use podfetch_domain::user::User;
-use crate::sys::{
-    self, LoginControllerError, LoginRequest, SysExtraInfo, VersionInfo,
-};
+use crate::sys::{self, LoginControllerError, LoginRequest, SysExtraInfo, VersionInfo};
 use crate::url_rewriting::{create_url_rewriter, resolve_server_url_from_headers};
+use podfetch_domain::user::User;
 use reqwest::StatusCode;
 use sysinfo::{Disks, System};
 use utoipa_axum::router::OpenApiRouter;
@@ -39,12 +37,20 @@ pub mod built_info {
     pub const CI_PLATFORM: Option<&str> = option_env!("CI");
     pub const BUILT_TIME_UTC: &str = "unknown";
     pub const CFG_OS: &str = std::env::consts::OS;
-    pub const CFG_ENDIAN: &str = if cfg!(target_endian = "big") { "big" } else { "little" };
+    pub const CFG_ENDIAN: &str = if cfg!(target_endian = "big") {
+        "big"
+    } else {
+        "little"
+    };
     pub const TARGET: &str = match option_env!("TARGET") {
         Some(v) => v,
         None => "unknown",
     };
-    pub const DEBUG: &str = if cfg!(debug_assertions) { "true" } else { "false" };
+    pub const DEBUG: &str = if cfg!(debug_assertions) {
+        "true"
+    } else {
+        "false"
+    };
     pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
     pub const PKG_AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
     pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
@@ -172,13 +178,13 @@ pub fn get_sys_info_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
-    use crate::test_support::tests::handle_test_startup;
     use crate::role::Role;
-    use common_infrastructure::error::{CustomErrorInner, ErrorType};
+    use crate::test_support::tests::handle_test_startup;
     use axum::Extension;
     use axum::extract::State;
     use chrono::Utc;
     use common_infrastructure::config::ConfigModel;
+    use common_infrastructure::error::{CustomErrorInner, ErrorType};
     use podfetch_domain::user::User;
     use serde_json::Value;
     use serial_test::serial;
@@ -428,4 +434,3 @@ mod tests {
         }
     }
 }
-

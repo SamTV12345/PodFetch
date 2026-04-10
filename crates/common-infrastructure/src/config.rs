@@ -381,7 +381,10 @@ impl EnvironmentService {
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
-        log::info!("Developer specifications available at http://localhost:{}/swagger-ui/index.html#/", self.port);
+        log::info!(
+            "Developer specifications available at http://localhost:{}/swagger-ui/index.html#/",
+            self.port
+        );
         log::info!(
             "GPodder integration enabled: {}",
             self.gpodder_integration_enabled

@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Notification {
     pub id: i32,
@@ -15,4 +14,3 @@ pub trait NotificationRepository: Send + Sync {
     fn get_unread_notifications(&self) -> Result<Vec<Notification>, Self::Error>;
     fn update_status_of_notification(&self, id: i32, status: &str) -> Result<(), Self::Error>;
 }
-

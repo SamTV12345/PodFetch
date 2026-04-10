@@ -62,9 +62,9 @@ pub mod api_file_access;
 
 // Test utilities
 #[cfg(test)]
-pub mod test_utils;
-#[cfg(test)]
 pub mod test_support;
+#[cfg(test)]
+pub mod test_utils;
 
 /// Runs before any test, ensuring env vars are set before
 /// `ENVIRONMENT_SERVICE` LazyLock is first accessed.
@@ -87,4 +87,3 @@ fn init_test_env() {
         );
     }
 }
-

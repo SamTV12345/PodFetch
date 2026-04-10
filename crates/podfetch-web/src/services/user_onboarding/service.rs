@@ -1,9 +1,9 @@
 use crate::services::invite::service::InviteService;
+use crate::user_admin::UserSummary;
+use crate::user_onboarding::{UserOnboardingApplicationService, UserOnboardingModel};
 use common_infrastructure::error::ErrorSeverity::{Debug, Warning};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::user_admin::{ManagedUser, UserAdminRepository};
-use crate::user_admin::UserSummary;
-use crate::user_onboarding::{UserOnboardingApplicationService, UserOnboardingModel};
 use sha256::digest;
 use std::sync::Arc;
 
@@ -91,4 +91,3 @@ impl UserOnboardingApplicationService for UserOnboardingService {
         self.register_user(request.username, request.password, request.invite_id)
     }
 }
-

@@ -1,14 +1,15 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use crate::services::download::chapter::Chapter;
 use crate::services::download::service::DownloadService;
+use crate::settings::{
+    EpisodeScanService, EpisodeWithPath, MediaFileFormat, ParsedChapter,
+    UpsertPodcastEpisodeChapter,
+};
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use file_format::FileFormat;
 use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
-use crate::settings::{
-    EpisodeScanService, EpisodeWithPath, MediaFileFormat, ParsedChapter, UpsertPodcastEpisodeChapter,
-};
+use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
+use podfetch_persistence::db::database;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -97,4 +98,3 @@ fn map_chapters(chapters: Vec<Chapter>) -> Vec<ParsedChapter> {
         })
         .collect()
 }
-

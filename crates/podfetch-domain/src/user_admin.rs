@@ -92,4 +92,3 @@ pub trait UserAdminRepository: Send + Sync {
     fn update(&self, user: ManagedUser) -> Result<ManagedUser, Self::Error>;
     fn delete_by_username(&self, username: &str) -> Result<(), Self::Error>;
 }
-

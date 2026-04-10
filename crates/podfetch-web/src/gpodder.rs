@@ -1,11 +1,11 @@
-use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use crate::history::EpisodeDto;
+use crate::url_rewriting::normalize_server_url;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use http::{HeaderMap, header::COOKIE};
+use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use utoipa::ToSchema;
-use crate::history::EpisodeDto;
-use crate::url_rewriting::normalize_server_url;
 
 #[derive(Serialize, Deserialize)]
 pub struct ClientParametrization {

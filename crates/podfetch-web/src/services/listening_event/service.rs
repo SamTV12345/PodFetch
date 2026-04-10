@@ -1,10 +1,10 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
-use common_infrastructure::error::CustomError;
 use chrono::NaiveDateTime;
+use common_infrastructure::error::CustomError;
 use podfetch_domain::listening_event::{
     ListeningEvent, ListeningEventRepository, NewListeningEvent,
 };
+use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
+use podfetch_persistence::db::database;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -46,4 +46,3 @@ impl ListeningEventService {
         self.repository.delete_by_podcast_id(podcast_id)
     }
 }
-

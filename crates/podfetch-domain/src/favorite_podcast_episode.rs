@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FavoritePodcastEpisode {
     pub username: String,
@@ -29,4 +28,3 @@ pub trait FavoritePodcastEpisodeRepository: Send + Sync {
 
     fn is_liked_by_someone(&self, episode_id: i32) -> Result<bool, Self::Error>;
 }
-

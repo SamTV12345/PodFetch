@@ -78,4 +78,3 @@ pub trait SettingRepository: Send + Sync {
     fn update_settings(&self, setting: Setting) -> Result<Setting, Self::Error>;
     fn insert_default_settings(&self) -> Result<(), Self::Error>;
 }
-

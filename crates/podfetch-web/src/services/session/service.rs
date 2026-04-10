@@ -1,8 +1,8 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::SessionRepositoryImpl;
-use common_infrastructure::error::CustomError;
 use chrono::{NaiveDateTime, Utc};
+use common_infrastructure::error::CustomError;
 use podfetch_domain::session::{Session, SessionRepository};
+use podfetch_persistence::adapters::SessionRepositoryImpl;
+use podfetch_persistence::db::database;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -43,4 +43,3 @@ impl SessionService {
         self.repository.cleanup_expired(now)
     }
 }
-

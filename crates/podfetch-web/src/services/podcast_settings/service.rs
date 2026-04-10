@@ -1,12 +1,12 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
+use crate::podcast_settings::PodcastSetting;
 use crate::services::download::service::DownloadService;
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::podcast_settings::PodcastSettingsRepository;
-use crate::podcast_settings::PodcastSetting;
+use podfetch_persistence::adapters::PodcastSettingsRepositoryImpl;
+use podfetch_persistence::db::database;
 use podfetch_storage::FilenameBuilderReturn;
 use std::sync::Arc;
 
@@ -97,5 +97,3 @@ impl PodcastSettingsService {
         Ok(updated_setting.into())
     }
 }
-
-

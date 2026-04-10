@@ -1,15 +1,15 @@
 use crate::app_state::AppState;
+use crate::file_access::{FileAccessError, check_permissions_for_files as check_file_access};
+use crate::rss::RSSAPiKey;
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::rss::RSSAPiKey;
-use common_infrastructure::error::ErrorSeverity::{Info, Warning};
-use common_infrastructure::error::{CustomError, CustomErrorInner};
-use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum_extra::extract::OptionalQuery;
-use crate::file_access::{FileAccessError, check_permissions_for_files as check_file_access};
+use common_infrastructure::error::ErrorSeverity::{Info, Warning};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 
 pub async fn check_permissions_for_files(
     State(state): State<AppState>,
@@ -29,7 +29,8 @@ pub async fn check_permissions_for_files(
                 .map(|episode| episode.and_then(|e| e.file_image_path))
         },
         |encoded_path| {
-            PodcastService::find_podcast_by_image_path(encoded_path).map(|podcast| podcast.is_some())
+            PodcastService::find_podcast_by_image_path(encoded_path)
+                .map(|podcast| podcast.is_some())
         },
     )
     .map_err(map_file_access_error)?;
@@ -46,4 +47,3 @@ fn map_file_access_error(error: FileAccessError<CustomError>) -> CustomError {
         FileAccessError::Service(error) => error,
     }
 }
-

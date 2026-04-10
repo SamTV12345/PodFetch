@@ -1,8 +1,8 @@
 use crate::app_state::AppState;
-use common_infrastructure::error::CustomError;
+use crate::notification::{self, Notification, NotificationId};
 use axum::Json;
 use axum::extract::State;
-use crate::notification::{self, Notification, NotificationId};
+use common_infrastructure::error::CustomError;
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -43,10 +43,10 @@ pub fn get_notification_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_support::tests::handle_test_startup;
-    use crate::services::notification::service::NotificationService;
-    use crate::test_utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
     use crate::notification::Notification;
+    use crate::services::notification::service::NotificationService;
+    use crate::test_support::tests::handle_test_startup;
+    use crate::test_utils::test_builder::notification_test_builder::tests::NotificationTestDataBuilder;
     use serde_json::json;
     use serial_test::serial;
 
@@ -389,5 +389,3 @@ mod tests {
         assert_eq!(unread_after.len(), 1);
     }
 }
-
-

@@ -1,23 +1,23 @@
-use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::app_state::AppState;
+use crate::history::EpisodeDto;
+use crate::podcast::PodcastDto;
+use crate::podcast_episode_dto::PodcastEpisodeDto;
+use crate::watchtime::{
+    self, PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
+    WatchtimeControllerError,
+};
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
 use podfetch_domain::user::User;
-use crate::history::EpisodeDto;
-use crate::podcast::PodcastDto;
-use crate::watchtime::{
-    self, PodcastWatchedEpisodeModelWithPodcastEpisode, PodcastWatchedPostModel,
-    WatchtimeControllerError,
-};
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::url_rewriting::create_url_rewriter;
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
-use crate::url_rewriting::create_url_rewriter;
 
 pub type LastWatchedItem =
     PodcastWatchedEpisodeModelWithPodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto>;
@@ -105,14 +105,14 @@ pub fn get_watchtime_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
+    use crate::history::{EpisodeAction, EpisodeDto};
     use crate::test_support::tests::handle_test_startup;
+    use podfetch_persistence::db::get_connection;
     use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
-    use crate::history::{EpisodeAction, EpisodeDto};
 
     fn insert_episode(
         podcast_id: i32,
@@ -562,6 +562,3 @@ mod tests {
         assert_client_error_status(response.status_code().as_u16());
     }
 }
-
-
-

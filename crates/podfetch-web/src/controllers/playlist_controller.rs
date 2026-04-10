@@ -1,12 +1,12 @@
 use crate::app_state::AppState;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
-use common_infrastructure::error::CustomError;
-use axum::extract::{Path, State};
-use axum::{Extension, Json};
-use podfetch_domain::user::User;
 use crate::playlist;
 use crate::playlist::PlaylistDto as WebPlaylistDto;
 pub use crate::playlist::PlaylistDtoPost;
+use axum::extract::{Path, State};
+use axum::{Extension, Json};
+use common_infrastructure::error::CustomError;
+use podfetch_domain::user::User;
 use reqwest::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -146,22 +146,22 @@ pub fn get_playlist_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::schema::playlist_items::dsl as pli_dsl;
-    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use crate::app_state::AppState;
-    use crate::test_support::tests::handle_test_startup;
     use crate::controllers::playlist_controller::PlaylistDtoPost;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-    use common_infrastructure::error::CustomErrorInner;
+    use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
+    use common_infrastructure::error::CustomErrorInner;
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use diesel::dsl::count_star;
     use podfetch_domain::user::User;
+    use podfetch_persistence::db::get_connection;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+    use podfetch_persistence::schema::playlist_items::dsl as pli_dsl;
+    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -1108,7 +1108,3 @@ mod tests {
         assert_eq!(rows_after, 0);
     }
 }
-
-
-
-

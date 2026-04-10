@@ -1,10 +1,10 @@
 #[cfg(test)]
 pub mod tests {
-    use podfetch_persistence::podcast::PodcastEntity as Podcast;
     use derive_builder::Builder;
     use fake::Fake;
     use fake::Faker;
     use fake::faker::lorem::de_de::Word;
+    use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
     #[derive(Default, Builder, Debug)]
     #[builder(setter(into), default)]
@@ -100,4 +100,3 @@ pub mod tests {
         }
     }
 }
-

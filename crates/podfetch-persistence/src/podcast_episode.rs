@@ -3,7 +3,10 @@ use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::query_source::Alias;
-use diesel::{BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, OptionalExtension,
+    QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
 use podfetch_domain::episode::Episode;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::podcast_episode::{
@@ -83,7 +86,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     podcasts,
 );
 
-#[derive(Queryable, Identifiable, Selectable, AsChangeset, Debug, Clone, PartialEq, Eq, Default)]
+#[derive(
+    Queryable, Identifiable, Selectable, AsChangeset, Debug, Clone, PartialEq, Eq, Default,
+)]
 #[diesel(table_name = podcast_episodes)]
 pub struct PodcastEpisodeEntity {
     pub id: i32,
@@ -385,11 +390,7 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .map_err(Into::into)
     }
 
-    fn get_nth_page(
-        &self,
-        last_id: i32,
-        limit: i64,
-    ) -> Result<Vec<PodcastEpisode>, Self::Error> {
+    fn get_nth_page(&self, last_id: i32, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error> {
         podcast_episodes::table
             .filter(podcast_episodes::id.gt(last_id))
             .filter(podcast_episodes::file_episode_path.is_not_null())
@@ -419,13 +420,15 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
 
         let mut query = podcast_episodes::table
             .filter(podcast_episodes::podcast_id.eq(podcast_id))
-            .left_join(ep1.on(ep1.field(episodes::guid).eq(podcast_episodes::guid.nullable())))
             .left_join(
-                favorite_podcast_episodes::table.on(
-                    favorite_podcast_episodes::episode_id
-                        .eq(podcast_episodes::id)
-                        .and(favorite_podcast_episodes::username.eq(username)),
-                ),
+                ep1.on(ep1
+                    .field(episodes::guid)
+                    .eq(podcast_episodes::guid.nullable())),
+            )
+            .left_join(
+                favorite_podcast_episodes::table.on(favorite_podcast_episodes::episode_id
+                    .eq(podcast_episodes::id)
+                    .and(favorite_podcast_episodes::username.eq(username))),
             )
             .filter(
                 ep1.field(episodes::timestamp)
@@ -457,13 +460,7 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             )>(&mut self.database.connection()?)
             .map(|rows| {
                 rows.into_iter()
-                    .map(|(pe, ep, fav)| {
-                        (
-                            pe.into(),
-                            ep.map(Into::into),
-                            fav.map(Into::into),
-                        )
-                    })
+                    .map(|(pe, ep, fav)| (pe.into(), ep.map(Into::into), fav.map(Into::into)))
                     .collect()
             })
             .map_err(Into::into)
@@ -532,7 +529,9 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         let (pe1, pe2) = diesel::alias!(podcast_episodes as pe1, podcast_episodes as pe2);
 
         pe1.select(Alias::fields(&pe1, podcast_episodes::all_columns))
-            .inner_join(podcasts::table.on(podcasts::id.eq(pe1.field(podcast_episodes::podcast_id))))
+            .inner_join(
+                podcasts::table.on(podcasts::id.eq(pe1.field(podcast_episodes::podcast_id))),
+            )
             .filter(
                 pe1.field(podcast_episodes::date_of_recording).eq_any(
                     pe2.select(pe2.field(podcast_episodes::date_of_recording))
@@ -600,22 +599,18 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
     }
 
     fn update_guid(&self, episode_id: &str, guid: &str) -> Result<(), Self::Error> {
-        diesel::update(
-            podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)),
-        )
-        .set(podcast_episodes::guid.eq(guid))
-        .execute(&mut self.database.connection()?)
-        .map(|_| ())
-        .map_err(Into::into)
+        diesel::update(podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)))
+            .set(podcast_episodes::guid.eq(guid))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     fn update_deleted(&self, episode_id: &str, deleted: bool) -> Result<usize, Self::Error> {
-        diesel::update(
-            podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)),
-        )
-        .set(podcast_episodes::deleted.eq(deleted))
-        .execute(&mut self.database.connection()?)
-        .map_err(Into::into)
+        diesel::update(podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)))
+            .set(podcast_episodes::deleted.eq(deleted))
+            .execute(&mut self.database.connection()?)
+            .map_err(Into::into)
     }
 
     fn update_episode_numbering_processed(
@@ -623,12 +618,10 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         episode_id: &str,
         processed: bool,
     ) -> Result<(), Self::Error> {
-        diesel::update(
-            podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)),
-        )
-        .set(podcast_episodes::episode_numbering_processed.eq(processed))
-        .execute(&mut self.database.connection()?)
-        .map(|_| ())
-        .map_err(Into::into)
+        diesel::update(podcast_episodes::table.filter(podcast_episodes::episode_id.eq(episode_id)))
+            .set(podcast_episodes::episode_numbering_processed.eq(processed))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 }

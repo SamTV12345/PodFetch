@@ -1,27 +1,27 @@
 use crate::services::download::chapter::{Chapter, Link};
-use crate::services::file::service::{
-    FileService, prepare_podcast_episode_title_to_directory,
-};
+use crate::services::file::service::{FileService, prepare_podcast_episode_title_to_directory};
 use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::fs::File;
 
-use podfetch_storage::FileHandleWrapper;
-use common_infrastructure::config::FileHandlerType;
-use podfetch_storage::{ FileRequest};
-use podfetch_persistence::db::get_connection;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
 use chrono::Duration;
-use common_infrastructure::http::{get_async_sync_client, get_sync_client};
+use common_infrastructure::config::FileHandlerType;
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
 use common_infrastructure::http::COMMON_USER_AGENT;
+use common_infrastructure::http::{get_async_sync_client, get_sync_client};
 use common_infrastructure::runtime::{
     DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE, PODCAST_FILENAME, PODCAST_IMAGENAME,
 };
 use file_format::FileFormat;
 use id3::{ErrorKind, Tag, TagLike};
+use podfetch_persistence::db::get_connection;
+use podfetch_storage::FileHandleWrapper;
+use podfetch_storage::FileRequest;
 use podfetch_storage::{
     DetermineFileExtensionReturn, FileType, FilenameBuilder, FilenameBuilderReturn,
     determine_file_extension,
@@ -596,5 +596,3 @@ impl DownloadService {
         chapters
     }
 }
-
-

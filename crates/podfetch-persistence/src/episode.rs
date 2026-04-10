@@ -3,7 +3,10 @@ use crate::podcast::podcasts;
 use crate::podcast_episode::podcast_episodes;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel::{BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, OptionalExtension,
+    QueryDsl, RunQueryDsl,
+};
 use podfetch_domain::episode::{Episode, EpisodeRepository, LastWatchedEpisode, NewEpisode};
 use podfetch_domain::podcast::Podcast;
 use podfetch_domain::podcast_episode::PodcastEpisode;
@@ -305,11 +308,7 @@ impl EpisodeRepository for DieselEpisodeRepository {
         guid: &str,
     ) -> Result<Option<Episode>, Self::Error> {
         episodes::table
-            .filter(
-                episodes::username
-                    .eq(username)
-                    .and(episodes::guid.eq(guid)),
-            )
+            .filter(episodes::username.eq(username).and(episodes::guid.eq(guid)))
             .order_by(episodes::timestamp.desc())
             .first::<EpisodeEntity>(&mut self.database.connection()?)
             .optional()

@@ -81,4 +81,3 @@ pub trait TagRepository: Send + Sync {
     ) -> Result<(), Self::Error>;
     fn delete_tag_podcasts_by_podcast_id(&self, podcast_id: i32) -> Result<(), Self::Error>;
 }
-

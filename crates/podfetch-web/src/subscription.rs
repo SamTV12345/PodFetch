@@ -31,7 +31,9 @@ pub struct SubscriptionChangesToClient {
     pub timestamp: i64,
 }
 
-impl From<podfetch_domain::subscription::SubscriptionChangesToClient> for SubscriptionChangesToClient {
+impl From<podfetch_domain::subscription::SubscriptionChangesToClient>
+    for SubscriptionChangesToClient
+{
     fn from(value: podfetch_domain::subscription::SubscriptionChangesToClient) -> Self {
         Self {
             add: value.add,
@@ -76,6 +78,7 @@ impl From<podfetch_domain::subscription::GPodderAvailablePodcast> for GPodderAva
 
 #[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 pub struct SubscriptionRetrieveRequest {
+    #[serde(default)]
     pub since: i32,
 }
 

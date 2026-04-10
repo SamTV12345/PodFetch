@@ -87,4 +87,3 @@ pub trait SubscriptionRepository: Send + Sync {
     ) -> Result<Vec<Vec<String>>, Self::Error>;
     fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
 }
-

@@ -2,8 +2,8 @@ use chrono::NaiveDateTime;
 use podfetch_domain::episode::Episode;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use utoipa::ToSchema;
 use url::Url;
+use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EpisodeDto {

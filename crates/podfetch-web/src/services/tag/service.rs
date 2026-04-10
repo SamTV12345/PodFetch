@@ -1,9 +1,9 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::TagRepositoryImpl;
+use crate::tags::{Tag, TagCreate, TagsApplicationService, TagsPodcast};
 use common_infrastructure::error::ErrorSeverity::Debug;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::tag::{TagRepository, TagUpdate};
-use crate::tags::{Tag, TagCreate, TagsApplicationService, TagsPodcast};
+use podfetch_persistence::adapters::TagRepositoryImpl;
+use podfetch_persistence::db::database;
 use std::sync::Arc;
 
 pub struct TagService {
@@ -157,4 +157,3 @@ impl TagsApplicationService for TagService {
         self.delete_podcast_from_tag(username, tag_id, podcast_id)
     }
 }
-

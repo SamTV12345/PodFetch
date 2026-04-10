@@ -119,8 +119,7 @@ END $$;
 
         let mut conn = get_connection();
         for table in tables {
-            let _ = diesel::sql_query(format!("DELETE FROM {table}"))
-                .execute(&mut conn);
+            let _ = diesel::sql_query(format!("DELETE FROM {table}")).execute(&mut conn);
         }
     }
 
@@ -174,8 +173,7 @@ END $$;
         #[cfg(feature = "sqlite")]
         cleanup_sqlite();
 
-        let mut test_server =
-            TestServer::new(crate::startup::build_server_router());
+        let mut test_server = TestServer::new(crate::startup::build_server_router());
         test_server.add_header("Authorization", "Basic cG9zdGdyZXM6cG9zdGdyZXM=");
         TestServerWrapper { test_server, mutex }
     }

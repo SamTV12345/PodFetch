@@ -15,11 +15,7 @@ impl S3StorageBackend {
         Self { config }
     }
 
-    async fn handle_write_async(
-        &self,
-        path: &str,
-        content: &mut [u8],
-    ) -> Result<(), StorageError> {
+    async fn handle_write_async(&self, path: &str, content: &mut [u8]) -> Result<(), StorageError> {
         self.get_bucket_async()
             .await?
             .put_object(path, content)
