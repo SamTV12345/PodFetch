@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::gpodder::{ClientParametrization, build_client_parametrization};
-use crate::gpodder_api::auth::authentication::{get_auth_router, login};
+use crate::gpodder_api::auth::authentication::get_auth_router;
 use crate::gpodder_api::device::device_controller::get_device_router;
 use crate::gpodder_api::episodes::gpodder_episodes::get_gpodder_episodes_router;
 use crate::gpodder_api::session_middleware::handle_cookie_session;
@@ -15,7 +15,6 @@ use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
 
 pub async fn get_client_parametrization(headers: HeaderMap) -> Json<ClientParametrization> {
     let server_url = resolve_server_url_from_headers(&headers);
@@ -45,13 +44,9 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
     };
 
     if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
-        use crate::gpodder_api::auth::authentication::__path_login;
         router = router
-            .merge(
-                OpenApiRouter::new()
-                    .routes(routes!(login))
-                    .with_state(state.clone()),
-            )
+            // Auth endpoints (login + logout) — no session middleware needed
+            .merge(get_auth_router().with_state(state.clone()))
             // Simple API (for Kodi and other clients expecting gpodder.net-style endpoints)
             .nest(
                 "/subscriptions",
@@ -67,7 +62,6 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
                     .merge(get_device_router().with_state(state.clone()))
                     .merge(get_gpodder_episodes_router().with_state(state.clone()))
                     .merge(get_settings_router().with_state(state.clone()))
-                    .merge(get_auth_router().with_state(state.clone()))
                     .layer(from_fn_with_state(state.clone(), handle_cookie_session)),
             );
     }

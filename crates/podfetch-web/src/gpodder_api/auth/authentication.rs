@@ -4,7 +4,6 @@ use crate::auth_middleware::AuthFilter;
 use crate::gpodder::{
     ensure_session_user, map_gpodder_error, require_password_match, require_present_header_value,
 };
-use axum::Extension;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum_extra::extract::CookieJar;
@@ -57,7 +56,7 @@ pub async fn login(
 
 #[utoipa::path(
 post,
-path="/auth/{username}/logout.json",
+path="/api/2/auth/{username}/logout.json",
 responses(
 (status = 200, description = "Logs out the user and removes the session.")),
 tag="gpodder"
@@ -65,11 +64,18 @@ tag="gpodder"
 pub async fn logout(
     State(state): State<AppState>,
     Path(username): Path<String>,
-    Extension(flag): Extension<Session>,
+    jar: CookieJar,
 ) -> Result<StatusCode, CustomError> {
-    ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
-    state.session_service.delete_by_username(&username)?;
-    Ok(StatusCode::OK)
+    // Verify the session belongs to the requested user
+    if let Some(cookie) = jar.get("sessionid")
+        && let Ok(Some(session)) = state.session_service.find_by_session_id(cookie.value())
+    {
+        ensure_session_user::<CustomError>(&session.username, &username)
+            .map_err(map_gpodder_error)?;
+        state.session_service.delete_by_username(&username)?;
+        return Ok(StatusCode::OK);
+    }
+    Err(CustomErrorInner::Forbidden(Warning).into())
 }
 
 fn handle_proxy_auth(
@@ -166,7 +172,9 @@ fn create_session_cookie(session: Session) -> CookieJar {
 
 pub fn get_auth_router() -> utoipa_axum::router::OpenApiRouter<AppState> {
     use utoipa_axum::routes;
-    utoipa_axum::router::OpenApiRouter::new().routes(routes!(logout))
+    utoipa_axum::router::OpenApiRouter::new()
+        .routes(routes!(login))
+        .routes(routes!(logout))
 }
 
 #[cfg(test)]

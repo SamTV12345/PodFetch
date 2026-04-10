@@ -194,12 +194,13 @@ pub async fn put_device_subscriptions(
 
 pub fn get_subscription_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
-        .routes(routes!(
-            upload_subscription_changes,
-            put_device_subscriptions
-        ))
+        .routes(routes!(upload_subscription_changes))
         .routes(routes!(get_subscriptions_all))
         .routes(routes!(get_subscriptions))
+        .route(
+            "/subscriptions/{username}/{deviceid}",
+            axum::routing::put(put_device_subscriptions),
+        )
 }
 
 #[utoipa::path(
@@ -311,7 +312,10 @@ pub async fn put_simple_subscriptions(
 pub fn get_simple_subscription_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_simple_subscriptions))
-        .routes(routes!(put_simple_subscriptions))
+        .route(
+            "/{username}/{deviceid}",
+            axum::routing::put(put_simple_subscriptions),
+        )
 }
 
 #[cfg(test)]
