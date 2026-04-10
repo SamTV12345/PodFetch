@@ -51,7 +51,7 @@
     "openapi-react-query": "^0.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-i18next": "^15.4.0",
+    "react-i18next": "^17.0.2",
     "react-native": "0.84.1",
     "react-native-gesture-handler": "~2.31.0",
     "react-native-progress": "^5.0.1",
