@@ -16,3 +16,4 @@ local-configs
 .terraform
 terraform.tfstate
 terraform.tfstate.backup
+settings.local.json

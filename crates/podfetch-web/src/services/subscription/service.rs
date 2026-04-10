@@ -57,6 +57,15 @@ impl SubscriptionService {
             .update_subscriptions(device_id, username, &request.add, &request.remove)
     }
 
+    pub fn get_active_device_podcast_urls(
+        &self,
+        device_id: &str,
+        username: &str,
+    ) -> Result<Vec<String>, CustomError> {
+        self.repository
+            .get_active_device_podcast_urls(device_id, username)
+    }
+
     pub fn get_available_gpodder_podcasts(
         &self,
     ) -> Result<Vec<GPodderAvailablePodcast>, CustomError> {

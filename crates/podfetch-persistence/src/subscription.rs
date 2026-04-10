@@ -247,6 +247,25 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
         Ok(rewritten_urls)
     }
 
+    fn get_active_device_podcast_urls(
+        &self,
+        device_id: &str,
+        username: &str,
+    ) -> Result<Vec<String>, Self::Error> {
+        use self::subscriptions::dsl as subscriptions_dsl;
+
+        subscriptions_dsl::subscriptions
+            .filter(
+                subscriptions_dsl::username
+                    .eq(username)
+                    .and(subscriptions_dsl::device.eq(device_id))
+                    .and(subscriptions_dsl::deleted.is_null()),
+            )
+            .select(subscriptions_dsl::podcast)
+            .load::<String>(&mut self.database.connection()?)
+            .map_err(Into::into)
+    }
+
     fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {
         use self::podcasts::dsl as podcasts_dsl;
         use self::subscriptions::dsl as subscriptions_dsl;

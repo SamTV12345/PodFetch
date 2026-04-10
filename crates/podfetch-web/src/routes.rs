@@ -1,9 +1,10 @@
 use crate::app_state::AppState;
 use crate::gpodder::{ClientParametrization, build_client_parametrization};
-use crate::gpodder_api::auth::authentication::login;
+use crate::gpodder_api::auth::authentication::{get_auth_router, login};
 use crate::gpodder_api::device::device_controller::get_device_router;
 use crate::gpodder_api::episodes::gpodder_episodes::get_gpodder_episodes_router;
 use crate::gpodder_api::session_middleware::handle_cookie_session;
+use crate::gpodder_api::settings::settings_controller::get_settings_router;
 use crate::gpodder_api::subscription::subscriptions::{
     get_simple_subscription_router, get_subscription_router,
 };
@@ -64,7 +65,9 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
                 OpenApiRouter::new()
                     .merge(get_subscription_router().with_state(state.clone()))
                     .merge(get_device_router().with_state(state.clone()))
-                    .merge(get_gpodder_episodes_router())
+                    .merge(get_gpodder_episodes_router().with_state(state.clone()))
+                    .merge(get_settings_router().with_state(state.clone()))
+                    .merge(get_auth_router().with_state(state.clone()))
                     .layer(from_fn_with_state(state.clone(), handle_cookie_session)),
             );
     }

@@ -1,6 +1,8 @@
 use crate::services::device::service::DeviceService;
+use crate::services::device_sync_group::service::DeviceSyncGroupService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
 use crate::services::filter::service::FilterService;
+use crate::services::gpodder_setting::service::GpodderSettingService;
 use crate::services::invite::service::InviteService;
 use crate::services::login::service::LoginService;
 use crate::services::notification::service::NotificationService;
@@ -19,8 +21,10 @@ use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
+use podfetch_persistence::adapters::DeviceSyncGroupRepositoryImpl;
 use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
 use podfetch_persistence::adapters::FilterRepositoryImpl;
+use podfetch_persistence::adapters::GpodderSettingRepositoryImpl;
 use podfetch_persistence::adapters::InviteRepositoryImpl;
 use podfetch_persistence::adapters::ListeningEventRepositoryImpl;
 use podfetch_persistence::adapters::NotificationRepositoryImpl;
@@ -37,9 +41,11 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct AppState {
     pub device_service: Arc<DeviceService>,
+    pub device_sync_group_service: Arc<DeviceSyncGroupService>,
     pub environment: Arc<EnvironmentService>,
     pub favorite_podcast_episode_service: Arc<FavoritePodcastEpisodeService>,
     pub filter_service: Arc<FilterService>,
+    pub gpodder_setting_service: Arc<GpodderSettingService>,
     pub invite_service: Arc<InviteService>,
     pub login_service: Arc<LoginService>,
     pub notification_service: Arc<NotificationService>,
@@ -70,12 +76,18 @@ impl AppState {
         let device_service = Arc::new(DeviceService::new(Arc::new(DeviceRepositoryImpl::new(
             database.clone(),
         ))));
+        let device_sync_group_service = Arc::new(DeviceSyncGroupService::new(Arc::new(
+            DeviceSyncGroupRepositoryImpl::new(database.clone()),
+        )));
         let favorite_podcast_episode_service = Arc::new(FavoritePodcastEpisodeService::new(
             Arc::new(FavoritePodcastEpisodeRepositoryImpl::new(database.clone())),
         ));
         let filter_service = Arc::new(FilterService::new(Arc::new(FilterRepositoryImpl::new(
             database.clone(),
         ))));
+        let gpodder_setting_service = Arc::new(GpodderSettingService::new(Arc::new(
+            GpodderSettingRepositoryImpl::new(database.clone()),
+        )));
         let invite_service = Arc::new(InviteService::new(Arc::new(InviteRepositoryImpl::new(
             database.clone(),
         ))));
@@ -128,9 +140,11 @@ impl AppState {
 
         Self {
             device_service,
+            device_sync_group_service,
             environment,
             favorite_podcast_episode_service,
             filter_service,
+            gpodder_setting_service,
             invite_service,
             login_service,
             notification_service,

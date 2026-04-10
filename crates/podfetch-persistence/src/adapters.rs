@@ -1,6 +1,35 @@
 use crate::db::Database;
 use common_infrastructure::error::CustomError;
 
+// ── DeviceSyncGroup ─────────────────────────────────────────────────────────
+
+use crate::device_sync_group::DieselDeviceSyncGroupRepository;
+use podfetch_domain::device_sync_group::{DeviceSyncGroup, DeviceSyncGroupRepository};
+
+pub struct DeviceSyncGroupRepositoryImpl {
+    inner: DieselDeviceSyncGroupRepository,
+}
+
+impl DeviceSyncGroupRepositoryImpl {
+    pub fn new(database: Database) -> Self {
+        Self {
+            inner: DieselDeviceSyncGroupRepository::new(database),
+        }
+    }
+}
+
+impl DeviceSyncGroupRepository for DeviceSyncGroupRepositoryImpl {
+    type Error = CustomError;
+
+    fn get_by_username(&self, username: &str) -> Result<Vec<DeviceSyncGroup>, Self::Error> {
+        self.inner.get_by_username(username).map_err(Into::into)
+    }
+
+    fn replace_all(&self, username: &str, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error> {
+        self.inner.replace_all(username, groups).map_err(Into::into)
+    }
+}
+
 // ── Device ──────────────────────────────────────────────────────────────────
 
 use crate::device::DieselDeviceRepository;
@@ -72,6 +101,42 @@ impl FilterRepository for FilterRepositoryImpl {
         self.inner
             .save_timeline_decision(username, only_favored)
             .map_err(Into::into)
+    }
+}
+
+// ── GpodderSetting ──────────────────────────────────────────────────────────
+
+use crate::gpodder_setting::DieselGpodderSettingRepository;
+use podfetch_domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository};
+
+pub struct GpodderSettingRepositoryImpl {
+    inner: DieselGpodderSettingRepository,
+}
+
+impl GpodderSettingRepositoryImpl {
+    pub fn new(database: Database) -> Self {
+        Self {
+            inner: DieselGpodderSettingRepository::new(database),
+        }
+    }
+}
+
+impl GpodderSettingRepository for GpodderSettingRepositoryImpl {
+    type Error = CustomError;
+
+    fn get_setting(
+        &self,
+        username: &str,
+        scope: &str,
+        scope_id: Option<&str>,
+    ) -> Result<Option<GpodderSetting>, Self::Error> {
+        self.inner
+            .get_setting(username, scope, scope_id)
+            .map_err(Into::into)
+    }
+
+    fn save_setting(&self, setting: GpodderSetting) -> Result<GpodderSetting, Self::Error> {
+        self.inner.save_setting(setting).map_err(Into::into)
     }
 }
 
@@ -157,6 +222,15 @@ impl FavoritePodcastEpisodeRepository for FavoritePodcastEpisodeRepositoryImpl {
     fn is_liked_by_someone(&self, episode_id: i32) -> Result<bool, Self::Error> {
         self.inner
             .is_liked_by_someone(episode_id)
+            .map_err(Into::into)
+    }
+
+    fn get_favorites_by_username(
+        &self,
+        username: &str,
+    ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error> {
+        self.inner
+            .get_favorites_by_username(username)
             .map_err(Into::into)
     }
 }
@@ -543,6 +617,16 @@ impl SubscriptionRepository for SubscriptionRepositoryImpl {
     fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error> {
         self.inner
             .get_available_gpodder_podcasts()
+            .map_err(Into::into)
+    }
+
+    fn get_active_device_podcast_urls(
+        &self,
+        device_id: &str,
+        username: &str,
+    ) -> Result<Vec<String>, Self::Error> {
+        self.inner
+            .get_active_device_podcast_urls(device_id, username)
             .map_err(Into::into)
     }
 }

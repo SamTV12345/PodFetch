@@ -4,6 +4,7 @@ use crate::auth_middleware::AuthFilter;
 use crate::gpodder::{
     ensure_session_user, map_gpodder_error, require_password_match, require_present_header_value,
 };
+use axum::Extension;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum_extra::extract::CookieJar;
@@ -52,6 +53,23 @@ pub async fn login(
             state.session_service.as_ref(),
         ),
     }
+}
+
+#[utoipa::path(
+post,
+path="/auth/{username}/logout.json",
+responses(
+(status = 200, description = "Logs out the user and removes the session.")),
+tag="gpodder"
+)]
+pub async fn logout(
+    State(state): State<AppState>,
+    Path(username): Path<String>,
+    Extension(flag): Extension<Session>,
+) -> Result<StatusCode, CustomError> {
+    ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
+    state.session_service.delete_by_username(&username)?;
+    Ok(StatusCode::OK)
 }
 
 fn handle_proxy_auth(
@@ -146,6 +164,11 @@ fn create_session_cookie(session: Session) -> CookieJar {
     )
 }
 
+pub fn get_auth_router() -> utoipa_axum::router::OpenApiRouter<AppState> {
+    use utoipa_axum::routes;
+    utoipa_axum::router::OpenApiRouter::new().routes(routes!(logout))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
@@ -213,5 +236,39 @@ mod tests {
             .await;
         assert_eq!(response.status_code(), 200);
         assert_eq!(response.json::<Vec<DeviceResponse>>().len(), 1);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_logout() {
+        let mut server = handle_test_startup().await;
+        let state = app_state();
+        let user = state
+            .user_admin_service
+            .create_user(UserTestDataBuilder::new().build())
+            .unwrap();
+
+        create_auth_gpodder(&mut server, &user).await;
+
+        // Verify we're authenticated
+        let response = server
+            .test_server
+            .get(&format!("/api/2/devices/{}", user.username))
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        // Logout
+        let response = server
+            .test_server
+            .post(&format!("/api/2/auth/{}/logout.json", user.username))
+            .await;
+        assert_eq!(response.status_code(), 200);
+
+        // After logout, session cookie is invalidated — subsequent requests should fail
+        let response = server
+            .test_server
+            .get(&format!("/api/2/devices/{}", user.username))
+            .await;
+        assert_eq!(response.status_code(), 403);
     }
 }

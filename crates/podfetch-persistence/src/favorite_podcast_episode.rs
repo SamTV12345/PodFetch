@@ -108,6 +108,21 @@ impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository
         }
     }
 
+    fn get_favorites_by_username(
+        &self,
+        username_to_search: &str,
+    ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error> {
+        use self::favorite_podcast_episodes::dsl as fpe_dsl;
+        use self::favorite_podcast_episodes::table as fpe_table;
+
+        fpe_table
+            .filter(fpe_dsl::username.eq(username_to_search))
+            .filter(fpe_dsl::favorite.eq(true))
+            .load::<FavoritePodcastEpisodeEntity>(&mut self.database.connection()?)
+            .map(|favs| favs.into_iter().map(Into::into).collect())
+            .map_err(Into::into)
+    }
+
     fn is_liked_by_someone(&self, episode_id_to_find: i32) -> Result<bool, Self::Error> {
         use self::favorite_podcast_episodes::dsl as fpe_dsl;
         use self::favorite_podcast_episodes::table as fpe_table;
