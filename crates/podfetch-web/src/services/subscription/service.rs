@@ -1,12 +1,10 @@
-use common_infrastructure::error::CustomError;
-use chrono::DateTime;
-use podfetch_domain::subscription::{
-    SubscriptionRepository,
-};
 use crate::subscription::{
     GPodderAvailablePodcast, SubscriptionApplicationService, SubscriptionChangesToClient,
     SubscriptionModelChanges, SubscriptionUpdateRequest,
 };
+use chrono::DateTime;
+use common_infrastructure::error::CustomError;
+use podfetch_domain::subscription::SubscriptionRepository;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -107,4 +105,3 @@ impl SubscriptionApplicationService for SubscriptionService {
         self.get_available_gpodder_podcasts()
     }
 }
-

@@ -1,12 +1,12 @@
 use crate::app_state::AppState;
-use common_infrastructure::error::ErrorSeverity::Info;
-use common_infrastructure::error::{CustomError, CustomErrorInner};
+use crate::stats::{self, StatsControllerError, StatsOverview, StatsOverviewQueryParams};
+use crate::url_rewriting::create_url_rewriter;
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::{Extension, Json};
+use common_infrastructure::error::ErrorSeverity::Info;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::user::User;
-use crate::stats::{self, StatsControllerError, StatsOverview, StatsOverviewQueryParams};
-use crate::url_rewriting::create_url_rewriter;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -49,17 +49,17 @@ pub fn get_stats_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
-    use crate::test_support::tests::handle_test_startup;
-    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use crate::services::listening_event::service::ListeningEventService;
+    use crate::test_support::tests::handle_test_startup;
     use chrono::{NaiveDate, NaiveDateTime};
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use diesel::ExpressionMethods;
     use diesel::RunQueryDsl;
-    use serde::Deserialize;
     use podfetch_domain::listening_event::NewListeningEvent;
+    use podfetch_persistence::db::get_connection;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
+    use serde::Deserialize;
     use serde_json::Value;
     use serial_test::serial;
     use uuid::Uuid;
@@ -314,14 +314,15 @@ mod tests {
         for i in 0..3 {
             let unique = Uuid::new_v4().to_string();
             let podcast_slug = format!("stats-top-limit-{i}-{unique}");
-            let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-                &unique_name("Stats Top Limit Podcast"),
-                &podcast_slug,
-                &format!("https://example.com/{podcast_slug}.xml"),
-                "http://localhost:8080/ui/default.jpg",
-                &podcast_slug,
-            )
-            .unwrap();
+            let podcast =
+                crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                    &unique_name("Stats Top Limit Podcast"),
+                    &podcast_slug,
+                    &format!("https://example.com/{podcast_slug}.xml"),
+                    "http://localhost:8080/ui/default.jpg",
+                    &podcast_slug,
+                )
+                .unwrap();
             let episode = insert_episode(
                 podcast.id,
                 &format!("stats-top-limit-ep-{i}-{unique}"),
@@ -430,14 +431,15 @@ mod tests {
         for i in 0..2 {
             let unique = Uuid::new_v4().to_string();
             let podcast_slug = format!("stats-min-top-limit-{i}-{unique}");
-            let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-                &unique_name("Stats Min Top Limit Podcast"),
-                &podcast_slug,
-                &format!("https://example.com/{podcast_slug}.xml"),
-                "http://localhost:8080/ui/default.jpg",
-                &podcast_slug,
-            )
-            .unwrap();
+            let podcast =
+                crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                    &unique_name("Stats Min Top Limit Podcast"),
+                    &podcast_slug,
+                    &format!("https://example.com/{podcast_slug}.xml"),
+                    "http://localhost:8080/ui/default.jpg",
+                    &podcast_slug,
+                )
+                .unwrap();
             let episode = insert_episode(
                 podcast.id,
                 &format!("stats-min-top-limit-episode-{i}-{unique}"),
@@ -600,6 +602,3 @@ mod tests {
         assert_client_error_status(empty_to_response.status_code().as_u16());
     }
 }
-
-
-

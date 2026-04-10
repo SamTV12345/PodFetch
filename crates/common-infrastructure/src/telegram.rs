@@ -27,4 +27,3 @@ pub fn send_new_episode_notification(podcast_episode_name: &str, podcast_name: &
         }
     }
 }
-

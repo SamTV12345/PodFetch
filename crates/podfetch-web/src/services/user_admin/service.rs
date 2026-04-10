@@ -1,9 +1,9 @@
-use common_infrastructure::error::CustomError;
-use common_infrastructure::config::EnvironmentService;
-use podfetch_domain::user::{User, UserWithoutPassword};
-use podfetch_domain::user_admin::UserAdminRepository;
 use crate::role::STANDARD_USER_ID;
 use crate::user_admin::{ManagedUser, UserAdminApplicationService};
+use common_infrastructure::config::EnvironmentService;
+use common_infrastructure::error::CustomError;
+use podfetch_domain::user::{User, UserWithoutPassword};
+use podfetch_domain::user_admin::UserAdminRepository;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -83,4 +83,3 @@ impl UserAdminApplicationService for UserAdminService {
         self.repository.delete_by_username(username)
     }
 }
-

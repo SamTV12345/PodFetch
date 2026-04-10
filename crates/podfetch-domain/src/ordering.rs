@@ -2,8 +2,8 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
 pub enum OrderCriteria {
-        Asc,
-        Desc,
+    Asc,
+    Desc,
 }
 
 impl From<String> for OrderCriteria {
@@ -51,4 +51,3 @@ impl OrderOption {
         }
     }
 }
-

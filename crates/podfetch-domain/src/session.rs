@@ -28,4 +28,3 @@ pub trait SessionRepository: Send + Sync {
     fn delete_by_username(&self, username: &str) -> Result<usize, Self::Error>;
     fn cleanup_expired(&self, now: NaiveDateTime) -> Result<usize, Self::Error>;
 }
-

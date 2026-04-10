@@ -1,3 +1,23 @@
+use crate::services::device::service::DeviceService;
+use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
+use crate::services::filter::service::FilterService;
+use crate::services::invite::service::InviteService;
+use crate::services::login::service::LoginService;
+use crate::services::notification::service::NotificationService;
+use crate::services::playlist::service::PlaylistService;
+use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
+use crate::services::podcast_settings::service::PodcastSettingsService;
+use crate::services::session::service::SessionService;
+use crate::services::settings::service::SettingsService;
+use crate::services::stats::service::StatsService;
+use crate::services::subscription::service::SubscriptionService;
+use crate::services::tag::service::TagService;
+use crate::services::user_admin::service::UserAdminService;
+use crate::services::user_auth::service::UserAuthService;
+use crate::services::user_onboarding::service::UserOnboardingService;
+use crate::usecases::watchtime::WatchtimeUseCase;
+use common_infrastructure::config::EnvironmentService;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
 use podfetch_persistence::adapters::FilterRepositoryImpl;
@@ -12,26 +32,6 @@ use podfetch_persistence::adapters::SettingsRepositoryImpl;
 use podfetch_persistence::adapters::SubscriptionRepositoryImpl;
 use podfetch_persistence::adapters::TagRepositoryImpl;
 use podfetch_persistence::adapters::UserAdminRepositoryImpl;
-use crate::services::device::service::DeviceService;
-use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
-use crate::services::filter::service::FilterService;
-use crate::services::invite::service::InviteService;
-use crate::services::login::service::LoginService;
-use crate::services::notification::service::NotificationService;
-use crate::services::playlist::service::PlaylistService;
-use crate::services::podcast_episode_chapter::service::PodcastEpisodeChapterService;
-use crate::services::podcast_settings::service::PodcastSettingsService;
-use crate::services::settings::service::SettingsService;
-use crate::services::session::service::SessionService;
-use crate::services::stats::service::StatsService;
-use crate::services::subscription::service::SubscriptionService;
-use crate::services::tag::service::TagService;
-use crate::services::user_auth::service::UserAuthService;
-use crate::services::user_admin::service::UserAdminService;
-use crate::services::user_onboarding::service::UserOnboardingService;
-use crate::usecases::watchtime::WatchtimeUseCase;
-use common_infrastructure::config::EnvironmentService;
-use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -76,9 +76,9 @@ impl AppState {
         let filter_service = Arc::new(FilterService::new(Arc::new(FilterRepositoryImpl::new(
             database.clone(),
         ))));
-        let invite_service = Arc::new(InviteService::new(
-            Arc::new(InviteRepositoryImpl::new(database.clone())),
-        ));
+        let invite_service = Arc::new(InviteService::new(Arc::new(InviteRepositoryImpl::new(
+            database.clone(),
+        ))));
         let user_auth_service = Arc::new(UserAuthService::new(
             Arc::new(UserAdminRepositoryImpl::new(database.clone())),
             environment.clone(),
@@ -106,9 +106,9 @@ impl AppState {
             SettingsRepositoryImpl::new(database.clone()),
         )));
         let stats_service = Arc::new(StatsService::new(Arc::new(
-            crate::services::listening_event::service::ListeningEventService::new(
-                Arc::new(ListeningEventRepositoryImpl::new(database.clone())),
-            ),
+            crate::services::listening_event::service::ListeningEventService::new(Arc::new(
+                ListeningEventRepositoryImpl::new(database.clone()),
+            )),
         )));
         let subscription_service = Arc::new(SubscriptionService::new(Arc::new(
             SubscriptionRepositoryImpl::new(database.clone()),

@@ -1,19 +1,19 @@
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::app_state::AppState;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use crate::services::podcast::service::PodcastService;
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::OptionalQuery;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 
 use crate::podcast_episode_dto::PodcastEpisodeDto;
+pub use crate::rss::{RSSAPiKey, RSSQuery};
 use crate::url_rewriting::resolve_server_url_from_headers;
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
-pub use crate::rss::{RSSAPiKey, RSSQuery};
 use rss::extension::itunes::{
     ITunesCategory, ITunesCategoryBuilder, ITunesChannelExtension, ITunesChannelExtensionBuilder,
     ITunesItemExtensionBuilder, ITunesOwner, ITunesOwnerBuilder,
@@ -24,8 +24,6 @@ use rss::{
 };
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-
-
 
 #[utoipa::path(
 get,
@@ -69,10 +67,7 @@ pub async fn get_rss_feed(
         .map(|c| (c, api_key.clone(), None::<FavoritePodcastEpisode>).into())
         .collect();
 
-    let feed_url = add_api_key_to_url(
-        format!("{}rss", &server_url),
-        &api_key,
-    );
+    let feed_url = add_api_key_to_url(format!("{}rss", &server_url), &api_key);
     let itunes_owner = get_itunes_owner("Podfetch", "dev@podfetch.com");
     let category = get_category("Technology".to_string());
     let itunes_ext = ITunesChannelExtensionBuilder::default()
@@ -95,8 +90,13 @@ pub async fn get_rss_feed(
         .items(items.clone())
         .clone();
 
-    let channel =
-        generate_itunes_extension_conditionally(itunes_ext, channel_builder, None, &api_key, &server_url);
+    let channel = generate_itunes_extension_conditionally(
+        itunes_ext,
+        channel_builder,
+        None,
+        &api_key,
+        &server_url,
+    );
 
     let response = Response::builder()
         .header("Content-Type", "application/rss+xml")
@@ -304,7 +304,6 @@ fn get_itunes_owner(name: &str, email: &str) -> ITunesOwner {
         .build()
 }
 
-
 #[utoipa::path(
 get,
 path="/rss/apiKey/{apiKey}",
@@ -352,8 +351,8 @@ pub fn get_websocket_router() -> OpenApiRouter<AppState> {
 mod tests {
     use crate::app_state::AppState;
     use crate::test_support::tests::handle_test_startup;
-    use podfetch_persistence::podcast::PodcastEntity as Podcast;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
+    use podfetch_persistence::podcast::PodcastEntity as Podcast;
     use serial_test::serial;
     use uuid::Uuid;
 
@@ -685,10 +684,7 @@ mod tests {
     async fn test_get_rss_feed_for_podcast_with_path_api_key_rejects_invalid_key() {
         let server = handle_test_startup().await;
 
-        let response = server
-            .test_server
-            .get("/rss/apiKey/invalid-key/1")
-            .await;
+        let response = server.test_server.get("/rss/apiKey/invalid-key/1").await;
         assert_eq!(response.status_code(), 403);
     }
 
@@ -705,7 +701,3 @@ mod tests {
         assert_eq!(response.status_code(), 404);
     }
 }
-
-
-
-

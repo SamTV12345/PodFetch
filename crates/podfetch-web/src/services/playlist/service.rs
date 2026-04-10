@@ -1,18 +1,18 @@
-use crate::podcast_episode_dto::PodcastEpisodeDto;
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::PlaylistRepositoryImpl;
 use crate::controllers::playlist_controller::PlaylistDto;
 use crate::controllers::podcast_episode_controller::PodcastEpisodeWithHistory;
-use podfetch_persistence::episode::EpisodeEntity as Episode;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use crate::history::map_episode_to_dto;
+use crate::playlist::{PlaylistApplicationService, PlaylistDtoPost};
+use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::playlist::{Playlist, PlaylistItem, PlaylistRepository};
 use podfetch_domain::user::User;
-use crate::history::map_episode_to_dto;
-use crate::playlist::{PlaylistApplicationService, PlaylistDtoPost};
+use podfetch_persistence::adapters::PlaylistRepositoryImpl;
+use podfetch_persistence::db::database;
+use podfetch_persistence::episode::EpisodeEntity as Episode;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -264,5 +264,3 @@ impl PlaylistApplicationService for PlaylistService {
         Ok(())
     }
 }
-
-

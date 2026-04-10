@@ -31,4 +31,3 @@ pub trait PodcastEpisodeChapterRepository: Send + Sync {
     fn get_by_episode_id(&self, episode_id: i32)
     -> Result<Vec<PodcastEpisodeChapter>, Self::Error>;
 }
-

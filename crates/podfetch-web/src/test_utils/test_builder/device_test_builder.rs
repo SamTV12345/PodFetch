@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod tests {
+    use crate::device::DevicePost;
     use fake::Fake;
     use fake::faker::lorem::en::Word;
-    use crate::device::DevicePost;
 
     pub struct DevicePostTestDataBuilder {
         caption: String,

@@ -1,6 +1,8 @@
 use crate::db::{Database, PersistenceError};
 use diesel::prelude::*;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl,
+};
 use podfetch_domain::favorite::Favorite;
 use podfetch_domain::podcast::{
     NewPodcast, Podcast, PodcastMetadataUpdate, PodcastRepository, PodcastWithFavorite,
@@ -235,9 +237,7 @@ impl PodcastRepository for DieselPodcastRepository {
 
     fn find_by_episode_id(&self, episode_id: i32) -> Result<Option<Podcast>, Self::Error> {
         podcasts::table
-            .inner_join(
-                podcast_episodes::table.on(podcast_episodes::podcast_id.eq(podcasts::id)),
-            )
+            .inner_join(podcast_episodes::table.on(podcast_episodes::podcast_id.eq(podcasts::id)))
             .filter(podcast_episodes::id.eq(episode_id))
             .select(podcasts::all_columns)
             .first::<PodcastEntity>(&mut self.database.connection()?)

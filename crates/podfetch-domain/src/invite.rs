@@ -19,4 +19,3 @@ pub trait InviteRepository: Send + Sync {
     fn invalidate(&self, invite_id: &str) -> Result<(), Self::Error>;
     fn delete(&self, invite_id: &str) -> Result<(), Self::Error>;
 }
-

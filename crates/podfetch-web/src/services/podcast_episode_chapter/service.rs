@@ -1,10 +1,10 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
 use crate::services::download::chapter::Chapter;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use crate::settings::UpsertPodcastEpisodeChapter;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapterRepository;
-use crate::settings::UpsertPodcastEpisodeChapter;
+use podfetch_persistence::adapters::PodcastEpisodeChapterRepositoryImpl;
+use podfetch_persistence::db::database;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -28,26 +28,27 @@ impl PodcastEpisodeChapterService {
         chapter_to_save: &Chapter,
         podcast_episode: &PodcastEpisode,
     ) -> Result<(), CustomError> {
-        self.repository.upsert(UpsertPodcastEpisodeChapter {
-            episode_id: podcast_episode.id,
-            title: chapter_to_save.title.clone().unwrap_or_default(),
-            start_time: chapter_to_save.start.num_seconds() as i32,
-            end_time: chapter_to_save.end.unwrap_or_default().num_seconds() as i32,
-            href: chapter_to_save
-                .link
-                .clone()
-                .map(|link| link.url.to_string()),
-            image: chapter_to_save.image.clone().map(|img| img.to_string()),
-        }
-        .into())
+        self.repository.upsert(
+            UpsertPodcastEpisodeChapter {
+                episode_id: podcast_episode.id,
+                title: chapter_to_save.title.clone().unwrap_or_default(),
+                start_time: chapter_to_save.start.num_seconds() as i32,
+                end_time: chapter_to_save.end.unwrap_or_default().num_seconds() as i32,
+                href: chapter_to_save
+                    .link
+                    .clone()
+                    .map(|link| link.url.to_string()),
+                image: chapter_to_save.image.clone().map(|img| img.to_string()),
+            }
+            .into(),
+        )
     }
 
     pub fn get_chapters_by_episode_id(
         &self,
         episode_id: i32,
-    ) -> Result<Vec<podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapter>, CustomError> {
+    ) -> Result<Vec<podfetch_domain::podcast_episode_chapter::PodcastEpisodeChapter>, CustomError>
+    {
         self.repository.get_by_episode_id(episode_id)
     }
 }
-
-

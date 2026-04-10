@@ -49,12 +49,10 @@ where
         return Ok(());
     }
 
-    let podcast_found =
-        find_podcast_by_image(&requested_path).map_err(FileAccessError::Service)?;
+    let podcast_found = find_podcast_by_image(&requested_path).map_err(FileAccessError::Service)?;
     if podcast_found {
         Ok(())
     } else {
         Err(FileAccessError::NotFound)
     }
 }
-

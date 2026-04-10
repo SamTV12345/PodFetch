@@ -1,24 +1,24 @@
+use crate::history::EpisodeDto;
+use crate::history::map_episode_to_dto;
+use crate::podcast::PodcastDto;
+use crate::podcast::map_podcast_to_dto;
+use crate::podcast_episode::{TimelineFavorite, TimelineQueryParams};
 use crate::podcast_episode_dto::PodcastEpisodeDto;
-use podfetch_persistence::db::get_connection;
-use podfetch_persistence::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
-use podfetch_persistence::episode::EpisodeEntity as Episode;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use podfetch_persistence::favorite::FavoriteEntity as Favorite;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use crate::services::filter::service::FilterService;
 use common_infrastructure::error::ErrorSeverity::Critical;
 use common_infrastructure::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
-use crate::podcast::PodcastDto;
-use crate::podcast::map_podcast_to_dto;
-use crate::podcast_episode::{TimelineFavorite, TimelineQueryParams};
-use crate::history::EpisodeDto;
-use crate::history::map_episode_to_dto;
+use podfetch_persistence::db::get_connection;
+use podfetch_persistence::episode::EpisodeEntity as Episode;
+use podfetch_persistence::favorite::FavoriteEntity as Favorite;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::schema::favorite_podcast_episodes::dsl::favorite_podcast_episodes;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,8 +76,10 @@ impl TimelineItem {
 
         let username_to_search = &user.username;
 
-        let _ = FilterService::default_service()
-            .save_timeline_decision(username_to_search, favored_only.favored_only.unwrap_or(false));
+        let _ = FilterService::default_service().save_timeline_decision(
+            username_to_search,
+            favored_only.favored_only.unwrap_or(false),
+        );
 
         let (ph1, ph2) = diesel::alias!(phi_struct as ph1, phi_struct as ph2);
 
@@ -150,7 +152,9 @@ impl TimelineItem {
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
-                    let history_dto = history.as_ref().map(|episode| map_episode_to_dto(&episode.clone().into()));
+                    let history_dto = history
+                        .as_ref()
+                        .map(|episode| map_episode_to_dto(&episode.clone().into()));
                     (
                         PodcastEpisodeDto::from((
                             podcast_episode,
@@ -171,5 +175,3 @@ impl TimelineItem {
         })
     }
 }
-
-

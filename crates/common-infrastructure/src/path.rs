@@ -10,7 +10,10 @@ mod tests {
 
     #[test]
     fn test_trim_from_path() {
-        assert_eq!(trim_from_path("src/utils/podcast_builder.rs").0, "src/utils/podcast_builder");
+        assert_eq!(
+            trim_from_path("src/utils/podcast_builder.rs").0,
+            "src/utils/podcast_builder"
+        );
     }
 
     #[test]

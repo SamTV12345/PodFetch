@@ -1,19 +1,19 @@
 use crate::app_state::AppState;
+use crate::auth::{AuthControllerError, parse_basic_auth};
 use crate::services::user_auth::service::UserAuthService;
-use common_infrastructure::error::ErrorSeverity::Warning;
-use common_infrastructure::error::{CustomError, CustomErrorInner};
-use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
+use common_infrastructure::config::{EnvironmentService, ReverseProxyConfig};
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::http::get_async_sync_client;
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use log::info;
-use common_infrastructure::config::{EnvironmentService, ReverseProxyConfig};
 use podfetch_domain::user::User;
-use crate::auth::{AuthControllerError, parse_basic_auth};
 use serde_json::Value;
 use sha256::digest;
 use std::collections::HashSet;
@@ -490,4 +490,3 @@ mod test {
         assert!(result.is_err());
     }
 }
-

@@ -1,7 +1,7 @@
 use crate::app_state::AppState;
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::services::podcast::service::PodcastService;
 use crate::controllers::controller_utils::{get_default_image, unwrap_string};
+use crate::services::podcast::service::PodcastService;
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use async_recursion::async_recursion;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -10,39 +10,37 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Extension, Json, debug_handler};
 use axum_extra::extract::OptionalQuery;
-use opml::{OPML, Outline};
-use rand::RngExt;
-use rand::rngs::ThreadRng;
 use common_infrastructure::config::{BASIC_AUTH, OIDC_AUTH};
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
+use opml::{OPML, Outline};
+use rand::RngExt;
+use rand::rngs::ThreadRng;
 use rss::Channel;
 use serde_json::Value;
 use std::thread;
 use tokio::task::spawn_blocking;
 
-use crate::services::file::service::{
-    FileService, perform_podcast_variable_replacement,
+use crate::filter::Filter;
+pub use crate::podcast::{
+    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel, PodcastInsertModel,
+    PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn, PodcastUpdateNameRequest,
+    ProxyPodcastParams,
+    SearchType::{ITunes, Podindex},
 };
+use crate::podcast::{
+    build_podcast_search_plan, ensure_podindex_configured, ensure_proxy_api_access,
+    map_podcast_error, map_proxy_podcast_error, parse_podcast_id, parse_search_type, require_admin,
+    require_privileged, require_proxy_episode, sanitize_proxy_request_headers,
+    spawn_podindex_download,
+};
+use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
+use crate::url_rewriting::create_url_rewriter;
 use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
-use crate::filter::Filter;
-use crate::url_rewriting::create_url_rewriter;
-pub use crate::podcast::{
-    DeletePodcast, OpmlModel, PodcastAddModel, PodcastFavorUpdateModel,
-    PodcastInsertModel, PodcastRSSAddModel, PodcastSearchModelUtoipa, PodcastSearchReturn,
-    PodcastUpdateNameRequest, ProxyPodcastParams,
-    SearchType::{ITunes, Podindex},
-};
-use crate::podcast::{
-    build_podcast_search_plan, ensure_podindex_configured, map_podcast_error, parse_podcast_id,
-    parse_search_type, require_admin, require_privileged, ensure_proxy_api_access,
-    require_proxy_episode, sanitize_proxy_request_headers, map_proxy_podcast_error,
-    spawn_podindex_download,
-};
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
 
@@ -601,20 +599,22 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
         }
     }
 }
-use crate::podcast_episode_dto::PodcastEpisodeDto;
-use crate::server::ChatServerHandle;
-use crate::rss::RSSAPiKey;
-use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use crate::podcast::PodcastDto;
 use crate::podcast::{map_podcast_to_dto, map_podcast_with_context_to_dto};
+use crate::podcast_episode_dto::PodcastEpisodeDto;
+use crate::rss::RSSAPiKey;
+use crate::server::ChatServerHandle;
 use crate::settings::Setting;
+use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
-use common_infrastructure::rss::PodcastParsed;
-use crate::podcast_settings::PodcastSetting;
 use crate::podcast_episode::EpisodeFormatDto;
+use crate::podcast_settings::PodcastSetting;
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
+use common_infrastructure::rss::PodcastParsed;
 
 #[utoipa::path(
 delete,
@@ -648,8 +648,8 @@ pub async fn delete_podcast(
     PodcastService::delete_podcast(id)?;
     Ok(StatusCode::OK)
 }
-use common_infrastructure::error::ErrorSeverity::Debug;
 use axum::response::Response;
+use common_infrastructure::error::ErrorSeverity::Debug;
 
 #[utoipa::path(
 get,
@@ -847,17 +847,17 @@ pub fn get_podcast_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 pub mod tests {
     use crate::app_state::AppState;
-    use crate::test_support::tests::handle_test_startup;
     use crate::controllers::podcast_controller::PodcastUpdateNameRequest;
     use crate::controllers::podcast_controller::find_podcast;
-    use common_infrastructure::error::CustomErrorInner;
+    use crate::podcast::{OpmlModel, PodcastAddModel, PodcastRSSAddModel, SearchType};
+    use crate::podcast_episode::EpisodeFormatDto;
+    use crate::podcast_settings::PodcastSetting;
+    use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
-    use crate::podcast_settings::PodcastSetting;
+    use common_infrastructure::error::CustomErrorInner;
     use podfetch_domain::user::User;
-    use crate::podcast::{OpmlModel, PodcastAddModel, PodcastRSSAddModel, SearchType};
-    use crate::podcast_episode::EpisodeFormatDto;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -918,15 +918,16 @@ pub mod tests {
         let collection_name = unique_name("collection");
         let podcast_name = unique_name("The homelab podcast");
         let directory_name = unique_name("test123");
-        let saved_podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-            &collection_name,
-            &podcast_name,
-            "https://example.com/feed",
-            "https://example.com/image\
+        let saved_podcast =
+            crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                &collection_name,
+                &podcast_name,
+                "https://example.com/feed",
+                "https://example.com/image\
                                          .jpg",
-            &directory_name,
-        )
-        .unwrap();
+                &directory_name,
+            )
+            .unwrap();
         let resp = ts_server
             .test_server
             .put(&format!("/api/v1/podcasts/{}/name", &saved_podcast.id))
@@ -1007,14 +1008,15 @@ pub mod tests {
     #[serial]
     async fn test_update_name_of_podcast_rejects_invalid_payload() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-            &unique_name("invalid-payload-collection"),
-            &unique_name("Invalid Payload Podcast"),
-            "https://example.com/invalid-payload-feed.xml",
-            "https://example.com/invalid-payload-image.jpg",
-            &unique_name("invalid-payload-id"),
-        )
-        .unwrap();
+        let saved_podcast =
+            crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                &unique_name("invalid-payload-collection"),
+                &unique_name("Invalid Payload Podcast"),
+                "https://example.com/invalid-payload-feed.xml",
+                "https://example.com/invalid-payload-image.jpg",
+                &unique_name("invalid-payload-id"),
+            )
+            .unwrap();
 
         let resp = ts_server
             .test_server
@@ -1032,14 +1034,15 @@ pub mod tests {
     async fn test_update_name_of_podcast_noop_with_same_name() {
         let ts_server = handle_test_startup().await;
         let original_name = unique_name("Noop Rename Podcast");
-        let saved_podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-            &unique_name("noop-collection"),
-            &original_name,
-            "https://example.com/noop-rename-feed.xml",
-            "https://example.com/noop-rename-image.jpg",
-            &unique_name("noop-rename-id"),
-        )
-        .unwrap();
+        let saved_podcast =
+            crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                &unique_name("noop-collection"),
+                &original_name,
+                "https://example.com/noop-rename-feed.xml",
+                "https://example.com/noop-rename-image.jpg",
+                &unique_name("noop-rename-id"),
+            )
+            .unwrap();
 
         let resp = ts_server
             .test_server
@@ -1050,8 +1053,9 @@ pub mod tests {
             .await;
         assert_eq!(resp.status_code(), 200);
 
-        let persisted = crate::services::podcast::service::PodcastService::get_podcast(saved_podcast.id)
-            .unwrap();
+        let persisted =
+            crate::services::podcast::service::PodcastService::get_podcast(saved_podcast.id)
+                .unwrap();
         assert_eq!(persisted.name, original_name);
     }
 
@@ -1059,14 +1063,15 @@ pub mod tests {
     #[serial]
     async fn test_update_name_of_podcast_returns_forbidden_for_non_admin() {
         let non_admin = UserTestDataBuilder::new().build();
-        let saved_podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-            &unique_name("forbidden-collection"),
-            &unique_name("Forbidden Rename Podcast"),
-            "https://example.com/forbidden-rename-feed.xml",
-            "https://example.com/forbidden-rename-image.jpg",
-            &unique_name("forbidden-rename-id"),
-        )
-        .unwrap();
+        let saved_podcast =
+            crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                &unique_name("forbidden-collection"),
+                &unique_name("Forbidden Rename Podcast"),
+                "https://example.com/forbidden-rename-feed.xml",
+                "https://example.com/forbidden-rename-image.jpg",
+                &unique_name("forbidden-rename-id"),
+            )
+            .unwrap();
 
         let result = super::update_name_of_podcast(
             Path(saved_podcast.id),
@@ -1087,14 +1092,15 @@ pub mod tests {
     #[serial]
     async fn test_get_podcast_settings_returns_not_found_when_missing() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-            &unique_name("settings-missing-collection"),
-            &unique_name("Settings Missing Podcast"),
-            "https://example.com/settings-missing-feed.xml",
-            "https://example.com/settings-missing-image.jpg",
-            &unique_name("settings-missing-id"),
-        )
-        .unwrap();
+        let saved_podcast =
+            crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                &unique_name("settings-missing-collection"),
+                &unique_name("Settings Missing Podcast"),
+                "https://example.com/settings-missing-feed.xml",
+                "https://example.com/settings-missing-image.jpg",
+                &unique_name("settings-missing-id"),
+            )
+            .unwrap();
 
         let resp = ts_server
             .test_server
@@ -1108,14 +1114,15 @@ pub mod tests {
     #[serial]
     async fn test_update_and_get_podcast_settings_happy_path() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-            &unique_name("settings-happy-collection"),
-            &unique_name("Settings Happy Podcast"),
-            "https://example.com/settings-happy-feed.xml",
-            "https://example.com/settings-happy-image.jpg",
-            &unique_name("settings-happy-id"),
-        )
-        .unwrap();
+        let saved_podcast =
+            crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                &unique_name("settings-happy-collection"),
+                &unique_name("Settings Happy Podcast"),
+                "https://example.com/settings-happy-feed.xml",
+                "https://example.com/settings-happy-image.jpg",
+                &unique_name("settings-happy-id"),
+            )
+            .unwrap();
 
         let update_payload = PodcastSetting {
             podcast_id: 0,
@@ -1157,14 +1164,15 @@ pub mod tests {
     #[serial]
     async fn test_podcast_endpoints_return_client_error_for_wrong_http_methods() {
         let ts_server = handle_test_startup().await;
-        let saved_podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
-            &unique_name("method-mismatch-collection"),
-            &unique_name("Method Mismatch Podcast"),
-            "https://example.com/method-mismatch-feed.xml",
-            "https://example.com/method-mismatch-image.jpg",
-            &unique_name("method-mismatch-id"),
-        )
-        .unwrap();
+        let saved_podcast =
+            crate::services::podcast::service::PodcastService::add_podcast_to_database(
+                &unique_name("method-mismatch-collection"),
+                &unique_name("Method Mismatch Podcast"),
+                "https://example.com/method-mismatch-feed.xml",
+                "https://example.com/method-mismatch-image.jpg",
+                &unique_name("method-mismatch-id"),
+            )
+            .unwrap();
 
         let post_on_name = ts_server
             .test_server
@@ -1387,7 +1395,9 @@ pub mod tests {
 
     fn create_api_key_user() -> String {
         let state = crate::app_state::AppState::new();
-        let mut user = crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder::new().build();
+        let mut user =
+            crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder::new()
+                .build();
         user.username = format!("proxy-test-user-{}", uuid::Uuid::new_v4());
         let api_key = format!("proxy-test-key-{}", uuid::Uuid::new_v4());
         user.api_key = Some(api_key.clone());
@@ -1422,7 +1432,3 @@ pub mod tests {
         assert_eq!(resp.status_code(), 403);
     }
 }
-
-
-
-

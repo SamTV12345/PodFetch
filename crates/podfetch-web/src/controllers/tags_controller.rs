@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
-use common_infrastructure::error::CustomError;
+use crate::tags;
+pub use crate::tags::{Tag, TagCreate, TagsPodcast};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
+use common_infrastructure::error::CustomError;
 use podfetch_domain::user::User;
-use crate::tags;
-pub use crate::tags::{Tag, TagCreate, TagsPodcast};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -140,13 +140,13 @@ pub fn get_tags_router() -> OpenApiRouter<AppState> {
 #[cfg(test)]
 mod tests {
     use crate::app_state::AppState;
+    use crate::tags::{Color, Tag};
     use crate::test_support::tests::handle_test_startup;
-    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-    use common_infrastructure::error::CustomErrorInner;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::extract::{Path, State};
     use axum::{Extension, Json};
-    use crate::tags::{Color, Tag};
+    use common_infrastructure::error::CustomErrorInner;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -443,6 +443,3 @@ mod tests {
         assert_client_error_status(remove_response.status_code().as_u16());
     }
 }
-
-
-

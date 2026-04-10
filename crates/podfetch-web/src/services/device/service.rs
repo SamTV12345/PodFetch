@@ -1,6 +1,6 @@
+use crate::device::DeviceApplicationService;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::device::{Device, DeviceRepository};
-use crate::device::DeviceApplicationService;
 use std::sync::Arc;
 
 pub struct DeviceService {
@@ -36,4 +36,3 @@ impl DeviceApplicationService for DeviceService {
         self.query_by_username(username)
     }
 }
-

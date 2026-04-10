@@ -1,9 +1,9 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
 use common_infrastructure::error::CustomError;
 use podfetch_domain::favorite_podcast_episode::{
     FavoritePodcastEpisode, FavoritePodcastEpisodeRepository,
 };
+use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
+use podfetch_persistence::db::database;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -45,4 +45,3 @@ impl FavoritePodcastEpisodeService {
         self.repository.is_liked_by_someone(episode_id)
     }
 }
-

@@ -1,15 +1,15 @@
-use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
-use common_infrastructure::error::CustomError;
-use common_infrastructure::path::trim_from_path;
-use common_infrastructure::time::get_current_timestamp;
-use axum::extract::{Path, Query};
-use axum::{Extension, Json};
-use podfetch_domain::session::Session;
 use crate::gpodder::{
     EpisodeActionPostResponse, EpisodeActionResponse, EpisodeSinceRequest, ensure_session_user,
     map_gpodder_error, parse_since_epoch,
 };
 use crate::history::{EpisodeDto, map_episode_dto_to_episode, map_episode_to_dto};
+use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
+use axum::extract::{Path, Query};
+use axum::{Extension, Json};
+use common_infrastructure::error::CustomError;
+use common_infrastructure::path::trim_from_path;
+use common_infrastructure::time::get_current_timestamp;
+use podfetch_domain::session::Session;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -91,9 +91,9 @@ pub fn get_gpodder_episodes_router() -> OpenApiRouter {
 #[cfg(test)]
 pub mod tests {
     use crate::app_state::AppState;
-    use crate::test_support::tests::handle_test_startup;
-    use crate::gpodder_api::episodes::gpodder_episodes::EpisodeActionResponse;
     use crate::gpodder_api::auth::test_support::tests::create_auth_gpodder;
+    use crate::gpodder_api::episodes::gpodder_episodes::EpisodeActionResponse;
+    use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use serial_test::serial;
 
@@ -184,9 +184,15 @@ pub mod tests {
             .filter(|a| a.guid.as_deref() == Some(&guid))
             .collect();
 
-        assert_eq!(matching.len(), 1, "GUID fallback should update existing entry, not create a duplicate");
-        assert_eq!(matching[0].position, Some(180), "Position should be updated to 180");
+        assert_eq!(
+            matching.len(),
+            1,
+            "GUID fallback should update existing entry, not create a duplicate"
+        );
+        assert_eq!(
+            matching[0].position,
+            Some(180),
+            "Position should be updated to 180"
+        );
     }
 }
-
-

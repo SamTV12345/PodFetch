@@ -1,8 +1,8 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::NotificationRepositoryImpl;
+use crate::notification::{Notification, NotificationApplicationService};
 use common_infrastructure::error::CustomError;
 use podfetch_domain::notification::NotificationRepository;
-use crate::notification::{Notification, NotificationApplicationService};
+use podfetch_persistence::adapters::NotificationRepositoryImpl;
+use podfetch_persistence::db::database;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -49,4 +49,3 @@ impl NotificationApplicationService for NotificationService {
         self.update_status_of_notification(id, "dismissed")
     }
 }
-

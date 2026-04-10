@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Playlist {
     pub id: String,
@@ -45,4 +44,3 @@ pub trait PlaylistRepository: Send + Sync {
     ) -> Result<usize, Self::Error>;
     fn delete_items_by_episode_id(&self, episode_id: i32) -> Result<usize, Self::Error>;
 }
-

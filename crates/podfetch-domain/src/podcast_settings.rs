@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PodcastSetting {
     pub podcast_id: i32,
@@ -23,4 +22,3 @@ pub trait PodcastSettingsRepository: Send + Sync {
     fn get_settings(&self, podcast_id: i32) -> Result<Option<PodcastSetting>, Self::Error>;
     fn upsert_settings(&self, setting: PodcastSetting) -> Result<PodcastSetting, Self::Error>;
 }
-

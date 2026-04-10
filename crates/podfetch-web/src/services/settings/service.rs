@@ -1,13 +1,13 @@
-use podfetch_persistence::db::database;
-use podfetch_persistence::adapters::SettingsRepositoryImpl;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use crate::services::file::service::{
     perform_episode_variable_replacement, perform_podcast_variable_replacement,
 };
+use crate::settings::{Setting, SettingsApplicationService, UpdateNameSettings};
 use common_infrastructure::error::CustomError;
 use common_infrastructure::rss::PodcastParsed;
 use podfetch_domain::settings::SettingRepository;
-use crate::settings::{Setting, SettingsApplicationService, UpdateNameSettings};
+use podfetch_persistence::adapters::SettingsRepositoryImpl;
+use podfetch_persistence::db::database;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -121,5 +121,3 @@ impl SettingsApplicationService for SettingsService {
         self.update_name(update)
     }
 }
-
-

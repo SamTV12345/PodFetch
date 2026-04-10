@@ -1,11 +1,11 @@
 use crate::app_state::AppState;
+use crate::device::{self, DeviceControllerError, DevicePost, DeviceResponse};
+use axum::extract::{Path, State};
+use axum::{Extension, Json};
 use common_infrastructure::error::ErrorSeverity::Warning;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::path::trim_from_path;
-use axum::extract::{Path, State};
-use axum::{Extension, Json};
 use podfetch_domain::session::Session;
-use crate::device::{self, DeviceControllerError, DevicePost, DeviceResponse};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -70,4 +70,3 @@ pub fn get_device_router() -> OpenApiRouter<AppState> {
         .routes(routes!(get_devices_of_user))
         .routes(routes!(post_device))
 }
-

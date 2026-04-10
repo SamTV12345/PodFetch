@@ -1,9 +1,11 @@
 use crate::db::{Database, PersistenceError};
 use diesel::prelude::*;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl,
+};
 use indexmap::IndexMap;
 use podfetch_domain::favorite::{
-    Favorite, FavoredPodcastSearchResult, FavoriteRepository, PodcastSearchResult,
+    FavoredPodcastSearchResult, Favorite, FavoriteRepository, PodcastSearchResult,
     PodcastWithFavorite,
 };
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
@@ -187,19 +189,17 @@ impl FavoriteRepository for DieselFavoriteRepository {
             .optional()?;
 
         match existing {
-            Some(_) => {
-                diesel::update(
-                    favorites::table.filter(
-                        favorites::username
-                            .eq(&entity.username)
-                            .and(favorites::podcast_id.eq(entity.podcast_id)),
-                    ),
-                )
-                .set(favorites::favored.eq(entity.favored))
-                .execute(&mut self.database.connection()?)
-                .map(|_| ())
-                .map_err(Into::into)
-            }
+            Some(_) => diesel::update(
+                favorites::table.filter(
+                    favorites::username
+                        .eq(&entity.username)
+                        .and(favorites::podcast_id.eq(entity.podcast_id)),
+                ),
+            )
+            .set(favorites::favored.eq(entity.favored))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into),
             None => diesel::insert_into(favorites::table)
                 .values(&entity)
                 .execute(&mut self.database.connection()?)
@@ -227,7 +227,11 @@ impl FavoriteRepository for DieselFavoriteRepository {
 
     fn find_favored_by_username(&self, username: &str) -> Result<Vec<Favorite>, Self::Error> {
         favorites::table
-            .filter(favorites::username.eq(username).and(favorites::favored.eq(true)))
+            .filter(
+                favorites::username
+                    .eq(username)
+                    .and(favorites::favored.eq(true)),
+            )
             .load::<FavoriteEntity>(&mut self.database.connection()?)
             .map(|entities| entities.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -256,19 +260,17 @@ impl FavoriteRepository for DieselFavoriteRepository {
             .optional()?;
 
         match existing {
-            Some(_) => {
-                diesel::update(
-                    favorites::table.filter(
-                        favorites::podcast_id
-                            .eq(podcast_id)
-                            .and(favorites::username.eq(username)),
-                    ),
-                )
-                .set(favorites::favored.eq(favor))
-                .execute(&mut self.database.connection()?)
-                .map(|_| ())
-                .map_err(Into::into)
-            }
+            Some(_) => diesel::update(
+                favorites::table.filter(
+                    favorites::podcast_id
+                        .eq(podcast_id)
+                        .and(favorites::username.eq(username)),
+                ),
+            )
+            .set(favorites::favored.eq(favor))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into),
             None => diesel::insert_into(favorites::table)
                 .values((
                     favorites::podcast_id.eq(podcast_id),
@@ -281,7 +283,10 @@ impl FavoriteRepository for DieselFavoriteRepository {
         }
     }
 
-    fn get_favored_podcasts(&self, username: &str) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
+    fn get_favored_podcasts(
+        &self,
+        username: &str,
+    ) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
         podcasts::table
             .inner_join(favorites::table.on(podcasts::id.eq(favorites::podcast_id)))
             .filter(
@@ -348,13 +353,12 @@ impl FavoriteRepository for DieselFavoriteRepository {
             query = query.filter(podcasts::name.like(format!("%{}%", title)));
         }
 
-        let results = query
-            .load::<(
-                PodcastEntity,
-                FavoriteEntity,
-                Option<JoinedTagsPodcast>,
-                Option<JoinedTag>,
-            )>(&mut conn)?;
+        let results = query.load::<(
+            PodcastEntity,
+            FavoriteEntity,
+            Option<JoinedTagsPodcast>,
+            Option<JoinedTag>,
+        )>(&mut conn)?;
 
         let mut matching_podcast_ids: BTreeMap<i32, FavoredPodcastSearchResult> = BTreeMap::new();
         for (podcast, favorite, _tags_podcast, tag) in results {
@@ -431,13 +435,12 @@ impl FavoriteRepository for DieselFavoriteRepository {
             query = query.filter(lower(podcasts::name).like(format!("%{}%", title.to_lowercase())));
         }
 
-        let results = query
-            .load::<(
-                PodcastEntity,
-                Option<FavoriteEntity>,
-                Option<JoinedTagsPodcast>,
-                Option<JoinedTag>,
-            )>(&mut conn)?;
+        let results = query.load::<(
+            PodcastEntity,
+            Option<FavoriteEntity>,
+            Option<JoinedTagsPodcast>,
+            Option<JoinedTag>,
+        )>(&mut conn)?;
 
         let mut matching_podcast_ids: IndexMap<i32, PodcastSearchResult> = IndexMap::new();
         for (podcast, favorite, _tags_podcast, tag) in results {

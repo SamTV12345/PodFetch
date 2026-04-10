@@ -45,7 +45,11 @@ pub struct NewPodcastEpisode {
 }
 
 /// Result type for paginated episode queries with history and favorites.
-pub type PodcastEpisodeWithHistory = Vec<(PodcastEpisode, Option<Episode>, Option<FavoritePodcastEpisode>)>;
+pub type PodcastEpisodeWithHistory = Vec<(
+    PodcastEpisode,
+    Option<Episode>,
+    Option<FavoritePodcastEpisode>,
+)>;
 
 /// Repository trait for PodcastEpisode persistence operations.
 pub trait PodcastEpisodeRepository: Send + Sync {
@@ -71,11 +75,7 @@ pub trait PodcastEpisodeRepository: Send + Sync {
     fn query_by_url_like(&self, url_pattern: &str) -> Result<Option<PodcastEpisode>, Self::Error>;
 
     // Pagination methods
-    fn get_nth_page(
-        &self,
-        last_id: i32,
-        limit: i64,
-    ) -> Result<Vec<PodcastEpisode>, Self::Error>;
+    fn get_nth_page(&self, last_id: i32, limit: i64) -> Result<Vec<PodcastEpisode>, Self::Error>;
 
     /// Get episodes of a podcast with watch history and favorites for a user.
     /// Returns episodes with optional history and favorites, paginated by date_of_recording.

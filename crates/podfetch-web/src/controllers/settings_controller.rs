@@ -1,17 +1,17 @@
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::app_state::AppState;
 use crate::services::episode_scan::service::EpisodeScanServiceImpl;
 use crate::services::podcast::service::PodcastService;
-use axum::extract::{Path, State};
-use axum::http::HeaderMap;
-use axum::http::Response;
-use axum::{Extension, Json};
-use podfetch_domain::user::User;
 use crate::settings::{
     self, Mode, OpmlError, OpmlPodcast, RescanError, Setting, SettingsControllerError,
     UpdateNameSettings,
 };
 use crate::url_rewriting::resolve_server_url_from_headers;
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use axum::extract::{Path, State};
+use axum::http::HeaderMap;
+use axum::http::Response;
+use axum::{Extension, Json};
+use podfetch_domain::user::User;
 use reqwest::StatusCode;
 
 #[utoipa::path(
@@ -198,17 +198,17 @@ pub fn get_settings_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::schema::settings::dsl as s_dsl;
     use crate::app_state::AppState;
+    use crate::settings::{ReplacementStrategy, Setting};
     use crate::test_support::tests::handle_test_startup;
-    use common_infrastructure::error::CustomErrorInner;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
     use axum::Json;
     use axum::extract::State;
+    use common_infrastructure::error::CustomErrorInner;
     use diesel::RunQueryDsl;
-    use crate::settings::{ReplacementStrategy, Setting};
+    use podfetch_persistence::db::get_connection;
+    use podfetch_persistence::schema::settings::dsl as s_dsl;
     use serde_json::json;
     use serial_test::serial;
 
@@ -510,6 +510,3 @@ mod tests {
         assert_eq!(extra_segment.status_code(), 404);
     }
 }
-
-
-

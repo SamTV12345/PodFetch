@@ -40,4 +40,3 @@ pub trait ListeningEventRepository: Send + Sync {
     fn delete_by_username(&self, username: &str) -> Result<usize, Self::Error>;
     fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<usize, Self::Error>;
 }
-

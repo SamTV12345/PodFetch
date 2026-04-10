@@ -1,4 +1,3 @@
-use crate::routes::global_routes;
 use crate::app_state::AppState;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
@@ -9,7 +8,6 @@ use crate::controllers::notification_controller::get_notification_router;
 use crate::controllers::playlist_controller::get_playlist_router;
 use crate::controllers::podcast_controller::{get_podcast_router, proxy_podcast};
 use crate::controllers::podcast_episode_controller::get_podcast_episode_router;
-use crate::server::SOCKET_IO_LAYER;
 use crate::controllers::settings_controller::get_settings_router;
 use crate::controllers::stats_controller::get_stats_router;
 use crate::controllers::sys_info_controller::{get_public_config, get_sys_info_router, login};
@@ -17,12 +15,12 @@ use crate::controllers::tags_controller::get_tags_router;
 use crate::controllers::user_controller::{get_invite, get_user_router, onboard_user};
 use crate::controllers::watch_time_controller::get_watchtime_router;
 use crate::controllers::websocket_controller::get_websocket_router;
+use crate::routes::global_routes;
+use crate::server::SOCKET_IO_LAYER;
 use crate::services::file::service::FileService;
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::services::podcast::service::PodcastService;
 use crate::services::settings::service::SettingsService;
-use common_infrastructure::error::{CustomError, CustomErrorInner};
-use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
@@ -30,6 +28,8 @@ use axum::middleware::from_fn_with_state;
 use axum::response::{Redirect, Response};
 use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
 use log::info;
 use maud::{Markup, html};
 use socketioxide::SocketIoBuilder;
@@ -348,8 +348,13 @@ pub fn build_server_router() -> Router {
     io.ns("/", move |socket: SocketRef| {
         let auth_service = auth_service.clone();
         async move {
-            if ENVIRONMENT_SERVICE.any_auth_enabled && !is_socket_authenticated(&socket, &auth_service) {
-                log::warn!("Rejecting unauthenticated WebSocket connection {}", socket.id);
+            if ENVIRONMENT_SERVICE.any_auth_enabled
+                && !is_socket_authenticated(&socket, &auth_service)
+            {
+                log::warn!(
+                    "Rejecting unauthenticated WebSocket connection {}",
+                    socket.id
+                );
                 let _ = socket.disconnect();
                 return;
             }
@@ -359,8 +364,13 @@ pub fn build_server_router() -> Router {
     io.ns("/".to_owned() + MAIN_ROOM, move |socket: SocketRef| {
         let auth_service = auth_service_main.clone();
         async move {
-            if ENVIRONMENT_SERVICE.any_auth_enabled && !is_socket_authenticated(&socket, &auth_service) {
-                log::warn!("Rejecting unauthenticated WebSocket connection {} to main room", socket.id);
+            if ENVIRONMENT_SERVICE.any_auth_enabled
+                && !is_socket_authenticated(&socket, &auth_service)
+            {
+                log::warn!(
+                    "Rejecting unauthenticated WebSocket connection {} to main room",
+                    socket.id
+                );
                 let _ = socket.disconnect();
                 return;
             }

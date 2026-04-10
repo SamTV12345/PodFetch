@@ -72,8 +72,20 @@ impl From<(PodcastEpisode, Option<User>, Option<FavoritePodcastEpisode>)> for Po
     }
 }
 
-impl From<(PodcastEpisode, Option<String>, Option<FavoritePodcastEpisode>)> for PodcastEpisodeDto {
-    fn from(value: (PodcastEpisode, Option<String>, Option<FavoritePodcastEpisode>)) -> Self {
+impl
+    From<(
+        PodcastEpisode,
+        Option<String>,
+        Option<FavoritePodcastEpisode>,
+    )> for PodcastEpisodeDto
+{
+    fn from(
+        value: (
+            PodcastEpisode,
+            Option<String>,
+            Option<FavoritePodcastEpisode>,
+        ),
+    ) -> Self {
         PodcastEpisodeDto {
             id: value.0.id,
             podcast_id: value.0.podcast_id,

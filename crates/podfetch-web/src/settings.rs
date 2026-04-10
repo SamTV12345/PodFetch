@@ -3,7 +3,9 @@ use serde::Deserialize;
 use std::fmt::Display;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema, Default)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema, Default,
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Setting {
     pub id: i32,
@@ -125,7 +127,9 @@ pub struct UpsertPodcastEpisodeChapter {
     pub image: Option<String>,
 }
 
-impl From<UpsertPodcastEpisodeChapter> for podfetch_domain::podcast_episode_chapter::UpsertPodcastEpisodeChapter {
+impl From<UpsertPodcastEpisodeChapter>
+    for podfetch_domain::podcast_episode_chapter::UpsertPodcastEpisodeChapter
+{
     fn from(value: UpsertPodcastEpisodeChapter) -> Self {
         Self {
             episode_id: value.episode_id,

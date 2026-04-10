@@ -1,27 +1,24 @@
-use crate::services::podcast::metadata::PodcastBuilder;
-use podfetch_persistence::db::database;
-use podfetch_persistence::db::get_connection;
-use common_infrastructure::config::FileHandlerType;
-use crate::services::download::service::DownloadService;
-use crate::services::file::service::FileService;
+use crate::notification::Notification;
 use crate::server::ChatServerHandle;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use podfetch_persistence::podcast::PodcastEntity as Podcast;
-use common_infrastructure::mutex::LockResultExt;
+use crate::services::download::service::DownloadService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
+use crate::services::file::service::FileService;
 use crate::services::notification::service::NotificationService;
 use crate::services::playlist::service::PlaylistService;
+use crate::services::podcast::metadata::PodcastBuilder;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
+use chrono::{DateTime, FixedOffset, Utc};
+use common_infrastructure::config::FileHandlerType;
+use common_infrastructure::config::TELEGRAM_API_ENABLED;
+use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::error::ErrorSeverity::{Critical, Warning};
 use common_infrastructure::error::{
     CustomError, CustomErrorInner, ErrorSeverity, map_db_error, map_reqwest_error,
 };
-use chrono::{DateTime, FixedOffset, Utc};
-use common_infrastructure::config::is_env_var_present_and_true;
-use common_infrastructure::config::TELEGRAM_API_ENABLED;
-use common_infrastructure::http::get_sync_client;
 use common_infrastructure::http::COMMON_USER_AGENT;
+use common_infrastructure::http::get_sync_client;
+use common_infrastructure::mutex::LockResultExt;
 use common_infrastructure::retry::do_retry;
 use common_infrastructure::runtime::{DEFAULT_IMAGE_URL, ENVIRONMENT_SERVICE};
 use common_infrastructure::telegram::send_new_episode_notification;
@@ -29,8 +26,11 @@ use common_infrastructure::time::opt_or_empty_string;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_episode::{NewPodcastEpisode, PodcastEpisodeRepository};
 use podfetch_domain::user::User;
+use podfetch_persistence::db::database;
+use podfetch_persistence::db::get_connection;
+use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::DieselPodcastEpisodeRepository;
-use crate::notification::Notification;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use reqwest::header::{ACCEPT, HeaderMap};
 use reqwest::redirect::Policy;
 use rss::{Channel, Guid, Item};
@@ -98,10 +98,7 @@ impl PodcastEpisodeUseCase {
             .map_err(Into::into)
     }
 
-    pub fn get_position_of_episode(
-        timestamp: &str,
-        podcast_id: i32,
-    ) -> Result<usize, CustomError> {
+    pub fn get_position_of_episode(timestamp: &str, podcast_id: i32) -> Result<usize, CustomError> {
         Self::repo()
             .get_position_of_episode(timestamp, podcast_id)
             .map_err(Into::into)
@@ -565,8 +562,7 @@ impl PodcastEpisodeUseCase {
             None => {
                 let url = ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL;
                 crate::services::podcast::service::PodcastService::update_original_image_url(
-                    &url,
-                    podcast.id,
+                    &url, podcast.id,
                 )?;
             }
         }
@@ -579,8 +575,7 @@ impl PodcastEpisodeUseCase {
         {
             let new_url = new_feed;
             crate::services::podcast::service::PodcastService::update_podcast_urls_on_redirect(
-                podcast.id,
-                new_url,
+                podcast.id, new_url,
             );
 
             let returned_data_from_server = Self::do_request_to_podcast_server(podcast.clone())?;
@@ -741,18 +736,18 @@ impl PodcastEpisodeUseCase {
                 }
             }
 
-            let old_podcast_episodes =
-                match Self::get_podcast_episodes_older_than_days(days, p.id) {
-                    Ok(episodes) => episodes,
-                    Err(err) => {
-                        log::error!(
-                            "Error loading old podcast episodes for podcast {}: {}",
-                            p.id,
-                            err
-                        );
-                        continue;
-                    }
-                };
+            let old_podcast_episodes = match Self::get_podcast_episodes_older_than_days(days, p.id)
+            {
+                Ok(episodes) => episodes,
+                Err(err) => {
+                    log::error!(
+                        "Error loading old podcast episodes for podcast {}: {}",
+                        p.id,
+                        err
+                    );
+                    continue;
+                }
+            };
 
             log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
@@ -849,10 +844,7 @@ impl PodcastEpisodeUseCase {
         use podfetch_persistence::schema::podcast_episodes::dsl::podcast_episodes;
 
         podcast_episodes
-            .filter(
-                podfetch_persistence::schema::podcast_episodes::podcast_id
-                    .eq(podcast_id),
-            )
+            .filter(podfetch_persistence::schema::podcast_episodes::podcast_id.eq(podcast_id))
             .filter(
                 podfetch_persistence::schema::podcast_episodes::date_of_recording
                     .le(date_of_recording_to_search),
@@ -867,6 +859,3 @@ struct RequestReturnType {
     pub url: String,
     pub content: String,
 }
-
-
-

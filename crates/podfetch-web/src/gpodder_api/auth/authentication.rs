@@ -1,17 +1,17 @@
 use crate::app_state::AppState;
+use crate::auth::require_equal_user;
 use crate::auth_middleware::AuthFilter;
-use common_infrastructure::error::ErrorSeverity::Warning;
-use common_infrastructure::error::{CustomError, CustomErrorInner};
+use crate::gpodder::{
+    ensure_session_user, map_gpodder_error, require_password_match, require_present_header_value,
+};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use common_infrastructure::config::EnvironmentService;
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
 use podfetch_domain::session::Session;
-use crate::auth::require_equal_user;
-use crate::gpodder::{
-    ensure_session_user, map_gpodder_error, require_password_match, require_present_header_value,
-};
 use sha256::digest;
 
 #[utoipa::path(
@@ -82,7 +82,13 @@ fn handle_proxy_auth(
                 user_auth_service
                     .create_user(username.to_string(), "user".to_string(), None, false)
                     .expect("Error inserting user on auto registering");
-                handle_proxy_auth(rq, username, user_auth_service, environment, session_service)
+                handle_proxy_auth(
+                    rq,
+                    username,
+                    user_auth_service,
+                    environment,
+                    session_service,
+                )
             } else {
                 log::error!("Error finding user by username: {e}");
                 Err(CustomErrorInner::Forbidden(Warning).into())
@@ -159,11 +165,11 @@ mod tests {
         assert_eq!(cookie.value(), session.session_id);
     }
 
-    use crate::test_support::tests::handle_test_startup;
+    use crate::device::DeviceResponse;
     use crate::gpodder_api::auth::test_support::tests::create_auth_gpodder;
+    use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::device_test_builder::tests::DevicePostTestDataBuilder;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
-    use crate::device::DeviceResponse;
 
     fn app_state() -> AppState {
         AppState::new()
@@ -209,5 +215,3 @@ mod tests {
         assert_eq!(response.json::<Vec<DeviceResponse>>().len(), 1);
     }
 }
-
-

@@ -1,7 +1,7 @@
 use crate::services::listening_event::service::ListeningEventService;
-use common_infrastructure::error::CustomError;
-use chrono::{Datelike, NaiveDateTime};
 use crate::stats::{StatsApplicationService, StatsOverview, TopPodcastStats, WeekdayStats};
+use chrono::{Datelike, NaiveDateTime};
+use common_infrastructure::error::CustomError;
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -114,5 +114,3 @@ impl StatsApplicationService for StatsService {
         })
     }
 }
-
-

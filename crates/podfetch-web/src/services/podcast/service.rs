@@ -1,16 +1,19 @@
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 
+use crate::controllers::controller_utils::unwrap_string;
+use crate::podcast::map_podcast_with_context_to_dto;
+use crate::podcast::{ItunesWrapper, PodcastDto, PodcastInsertModel, PodindexResponse};
 use crate::server::ChatServerHandle;
 use crate::services::file::service::FileService;
 use crate::services::podcast::metadata::PodcastExtra;
-use podfetch_persistence::db::database;
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::tag::service::TagService;
-use crate::controllers::controller_utils::unwrap_string;
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use common_infrastructure::error::ErrorSeverity::{Critical, Error};
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error};
+use common_infrastructure::error::{
+    CustomError, CustomErrorInner, ErrorSeverity, map_reqwest_error,
+};
 use common_infrastructure::http::COMMON_USER_AGENT;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
@@ -19,10 +22,9 @@ use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::{NewPodcast, PodcastMetadataUpdate, PodcastRepository};
 use podfetch_domain::user::User;
 use podfetch_persistence::db::PersistenceError;
+use podfetch_persistence::db::database;
 use podfetch_persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::podcast::DieselPodcastRepository;
-use crate::podcast::{ItunesWrapper, PodcastDto, PodcastInsertModel, PodindexResponse};
-use crate::podcast::map_podcast_with_context_to_dto;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde_json::Value;
@@ -259,7 +261,10 @@ impl PodcastService {
             .ok_or_else(|| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
     }
 
-    pub fn get_favorite_state(username: &str, podcast_id: i32) -> Result<Option<bool>, CustomError> {
+    pub fn get_favorite_state(
+        username: &str,
+        podcast_id: i32,
+    ) -> Result<Option<bool>, CustomError> {
         favorite_repo()
             .find_by_username_and_podcast_id(username, podcast_id)
             .map(|opt| opt.map(|f| f.favored))
@@ -392,12 +397,12 @@ impl PodcastService {
     }
 
     pub fn query_for_podcast(query: &str) -> Result<Vec<PodcastEpisode>, CustomError> {
-        use podfetch_persistence::db::get_connection;
-        use podfetch_persistence::schema::podcast_episodes::dsl::*;
         use diesel::BoolExpressionMethods;
         use diesel::QueryDsl;
         use diesel::RunQueryDsl;
         use diesel::TextExpressionMethods;
+        use podfetch_persistence::db::get_connection;
+        use podfetch_persistence::schema::podcast_episodes::dsl::*;
 
         podcast_episodes
             .filter(
@@ -471,7 +476,10 @@ impl PodcastService {
         hasher.update(non_hashed_string);
 
         let result = hasher.finalize();
-        let hashed_auth_key = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let hashed_auth_key = result
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
 
         headers.insert(
             "User-Agent",
@@ -582,5 +590,3 @@ impl PodcastService {
         Ok(podcasts)
     }
 }
-
-

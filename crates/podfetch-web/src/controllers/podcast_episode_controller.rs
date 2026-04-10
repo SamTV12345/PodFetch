@@ -1,39 +1,38 @@
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use crate::usecases::timeline::TimelineItem;
-use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
-use crate::podcast_episode_dto::PodcastEpisodeDto;
 use crate::app_state::AppState;
-use crate::server::ChatServerHandle;
-use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use crate::services::file::service::perform_episode_variable_replacement;
-use crate::services::podcast::service::PodcastService;
-use common_infrastructure::error::ErrorSeverity::Warning;
-use common_infrastructure::error::{CustomError, CustomErrorInner};
-use axum::extract::{Path, Query, State};
-use axum::http::HeaderMap;
-use axum::http::StatusCode;
-use axum::{Extension, Json};
-use podfetch_domain::user::User;
-use crate::podcast::PodcastDto;
 use crate::history::EpisodeDto;
 use crate::history::map_episode_to_dto;
-use crate::url_rewriting::create_url_rewriter;
+use crate::podcast::PodcastDto;
 pub use crate::podcast_episode::{
     EpisodeFormatDto, FavoritePut, OptionalId, PodcastChapterDto, TimelineQueryParams,
 };
 use crate::podcast_episode::{
     PodcastEpisodeControllerError, PodcastEpisodeWithHistory as WebPodcastEpisodeWithHistory,
-    TimelineFavorite,
     TimeLinePodcastEpisode as WebTimeLinePodcastEpisode,
-    TimeLinePodcastItem as WebTimeLinePodcastItem,
+    TimeLinePodcastItem as WebTimeLinePodcastItem, TimelineFavorite,
 };
 use crate::podcast_episode::{
     get_episode_with_history as web_get_episode_with_history,
     get_podcast_episodes_with_history as web_get_podcast_episodes_with_history,
     require_privileged as web_require_privileged,
 };
+use crate::podcast_episode_dto::PodcastEpisodeDto;
+use crate::server::ChatServerHandle;
+use crate::services::file::service::perform_episode_variable_replacement;
+use crate::services::podcast::service::PodcastService;
 use crate::settings::Setting;
 use crate::subscription::GPodderAvailablePodcast;
+use crate::url_rewriting::create_url_rewriter;
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use crate::usecases::timeline::TimelineItem;
+use crate::usecases::watchtime::WatchtimeUseCase as WatchtimeService;
+use axum::extract::{Path, Query, State};
+use axum::http::HeaderMap;
+use axum::http::StatusCode;
+use axum::{Extension, Json};
+use common_infrastructure::error::ErrorSeverity::Warning;
+use common_infrastructure::error::{CustomError, CustomErrorInner};
+use podfetch_domain::user::User;
+use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -113,12 +112,7 @@ pub async fn get_podcast_episode_by_id(
         },
         |episode_id, username| {
             WatchtimeService::get_watchtime(episode_id, username)
-                .map(|episode| {
-                    episode
-                        .map(Into::into)
-                        .as_ref()
-                        .map(map_episode_to_dto)
-                })
+                .map(|episode| episode.map(Into::into).as_ref().map(map_episode_to_dto))
         },
     )
     .map_err(map_podcast_episode_controller_error)?;
@@ -287,51 +281,55 @@ pub async fn download_podcast_episodes_of_podcast(
     web_require_privileged::<CustomError>(requester.is_privileged_user())
         .map_err(map_podcast_episode_controller_error)?;
 
-    tokio::task::spawn_blocking(
-        move || match PodcastEpisodeService::get_podcast_episode_by_id(&id) {
-            Ok(Some(podcast_episode)) => match PodcastService::get_podcast(podcast_episode.podcast_id) {
-                Ok(podcast_found) => {
-                    if let Err(err) =
-                        PodcastEpisodeService::perform_download(&podcast_episode, &podcast_found)
-                    {
+    tokio::task::spawn_blocking(move || {
+        match PodcastEpisodeService::get_podcast_episode_by_id(&id) {
+            Ok(Some(podcast_episode)) => {
+                match PodcastService::get_podcast(podcast_episode.podcast_id) {
+                    Ok(podcast_found) => {
+                        if let Err(err) = PodcastEpisodeService::perform_download(
+                            &podcast_episode,
+                            &podcast_found,
+                        ) {
+                            log::error!(
+                                "Error downloading episode {}: {}",
+                                podcast_episode.episode_id,
+                                err
+                            );
+                            return;
+                        }
+                        if let Err(err) = PodcastEpisodeService::update_deleted(
+                            &podcast_episode.episode_id,
+                            false,
+                        ) {
+                            log::error!(
+                                "Error updating deleted status for episode {}: {}",
+                                podcast_episode.episode_id,
+                                err
+                            );
+                        }
+                        ChatServerHandle::broadcast_podcast_episode_offline_available(
+                            &podcast_episode,
+                            &podcast_found,
+                        );
+                    }
+                    Err(err) => {
                         log::error!(
-                            "Error downloading episode {}: {}",
+                            "Could not load podcast {} for episode {}: {}",
+                            podcast_episode.podcast_id,
                             podcast_episode.episode_id,
                             err
                         );
-                        return;
                     }
-                    if let Err(err) =
-                        PodcastEpisodeService::update_deleted(&podcast_episode.episode_id, false)
-                    {
-                        log::error!(
-                            "Error updating deleted status for episode {}: {}",
-                            podcast_episode.episode_id,
-                            err
-                        );
-                    }
-                    ChatServerHandle::broadcast_podcast_episode_offline_available(
-                        &podcast_episode,
-                        &podcast_found,
-                    );
                 }
-                Err(err) => {
-                    log::error!(
-                        "Could not load podcast {} for episode {}: {}",
-                        podcast_episode.podcast_id,
-                        podcast_episode.episode_id,
-                        err
-                    );
-                }
-            },
+            }
             Ok(None) => {
                 log::error!("Episode with id {} not found", id);
             }
             Err(err) => {
                 log::error!("Error retrieving episode {}: {}", id, err);
             }
-        },
-    );
+        }
+    });
 
     Ok(StatusCode::from_u16(200).unwrap())
 }
@@ -428,23 +426,23 @@ pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use podfetch_persistence::db::get_connection;
-    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
-    use podfetch_persistence::schema::subscriptions::dsl as subs_dsl;
     use crate::app_state::AppState;
-    use crate::test_support::tests::handle_test_startup;
-    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
-    use common_infrastructure::error::CustomErrorInner;
+    use crate::test_support::tests::handle_test_startup;
     use crate::test_utils::test_builder::user_test_builder::tests::UserTestDataBuilder;
     use axum::Extension;
     use axum::extract::{Path, State};
     use chrono::Utc;
+    use common_infrastructure::error::CustomErrorInner;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
     use podfetch_domain::user::User;
+    use podfetch_persistence::db::get_connection;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+    use podfetch_persistence::schema::podcast_episodes::dsl as pe_dsl;
+    use podfetch_persistence::schema::subscriptions::dsl as subs_dsl;
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
@@ -826,7 +824,3 @@ mod tests {
         assert_eq!(response.status_code(), 200);
     }
 }
-
-
-
-

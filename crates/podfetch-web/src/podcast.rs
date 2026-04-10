@@ -1,19 +1,19 @@
-use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::collections::HashSet;
-use std::thread;
-use http::HeaderMap;
-use utoipa::{IntoParams, ToSchema};
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use common_infrastructure::config::FileHandlerType;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use http::HeaderMap;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::Podcast;
 use podfetch_domain::user::User;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::fmt::Display;
+use std::thread;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::filter::Filter;
-use crate::url_rewriting::UrlRewriter;
 use crate::tags::Tag;
+use crate::url_rewriting::UrlRewriter;
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]
 #[serde(rename_all = "camelCase")]
@@ -46,7 +46,9 @@ pub fn build_podcast_search_plan(
         .order_option
         .map(OrderOption::from_string)
         .unwrap_or(OrderOption::Title);
-    let only_favored = existing_filter.map(|filter| filter.only_favored).unwrap_or(true);
+    let only_favored = existing_filter
+        .map(|filter| filter.only_favored)
+        .unwrap_or(true);
     let username = username.to_string();
     let filter = Filter::new(
         username.clone(),
@@ -148,7 +150,11 @@ impl PodcastDto {
 }
 
 pub fn map_podcast_to_dto(value: Podcast) -> PodcastDto {
-    let image_url = format!("{}{}", ENVIRONMENT_SERVICE.get_server_url(), value.image_url);
+    let image_url = format!(
+        "{}{}",
+        ENVIRONMENT_SERVICE.get_server_url(),
+        value.image_url
+    );
     let keywords = dedupe_keywords(value.keywords.clone());
     let podfetch_rss_feed = build_podfetch_feed(value.id, None);
 
@@ -181,10 +187,18 @@ pub fn map_podcast_with_context_to_dto(
 ) -> PodcastDto {
     let image_url = match resolve_file_handler_type(value.download_location.clone()) {
         FileHandlerType::Local => {
-            format!("{}{}", ENVIRONMENT_SERVICE.get_server_url(), value.image_url)
+            format!(
+                "{}{}",
+                ENVIRONMENT_SERVICE.get_server_url(),
+                value.image_url
+            )
         }
         FileHandlerType::S3 => {
-            format!("{}/{}", ENVIRONMENT_SERVICE.s3_config.endpoint.clone(), &value.image_url)
+            format!(
+                "{}/{}",
+                ENVIRONMENT_SERVICE.s3_config.endpoint.clone(),
+                &value.image_url
+            )
         }
     };
 

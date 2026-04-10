@@ -5,24 +5,22 @@ use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use std::path::Path;
 use std::str::FromStr;
 
-use common_infrastructure::config::FileHandlerType;
-use podfetch_storage::FileHandleWrapper;
-use podfetch_storage::{
-    FileRequest, resolve_file_handler_type,
-};
+use crate::podcast::PodcastInsertModel;
+use crate::podcast_settings::PodcastSetting;
 use crate::services::download::service::DownloadService;
 use crate::services::podcast::service::PodcastService;
 use crate::services::podcast_settings::service::PodcastSettingsService;
 use crate::services::settings::service::SettingsService;
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+use common_infrastructure::config::FileHandlerType;
+use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
+use common_infrastructure::rss::{PodcastParsed, RSSFeedParser};
+use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_domain::settings::{ReplacementStrategy, Setting};
 use podfetch_persistence::db::DBType as DbConnection;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
-use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
-use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
-use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
-use common_infrastructure::rss::{PodcastParsed, RSSFeedParser};
-use podfetch_domain::settings::{ReplacementStrategy, Setting};
-use crate::podcast::PodcastInsertModel;
-use crate::podcast_settings::PodcastSetting;
+use podfetch_storage::FileHandleWrapper;
+use podfetch_storage::{FileRequest, resolve_file_handler_type};
 use podfetch_storage::{
     FileType, Options, Sanitizer, build_podcast_image_paths, create_available_directory,
     determine_file_extension,
@@ -173,8 +171,8 @@ impl FileService {
     }
 
     pub fn delete_podcast_files(podcast: &Podcast) {
-        let episodes = PodcastEpisodeService::get_episodes_by_podcast_id(podcast.id)
-            .unwrap_or_default();
+        let episodes =
+            PodcastEpisodeService::get_episodes_by_podcast_id(podcast.id).unwrap_or_default();
         let episode_infos: Vec<podfetch_storage::EpisodeFileInfo> = episodes
             .iter()
             .map(|e| podfetch_storage::EpisodeFileInfo {
@@ -452,13 +450,13 @@ fn remove_extension(filename: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use crate::services::file::service::{
         perform_episode_variable_replacement, perform_podcast_variable_replacement,
         perform_replacement,
     };
     use common_infrastructure::rss::PodcastParsed;
     use podfetch_domain::settings::Setting;
+    use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
     use serial_test::serial;
 
     #[test]
@@ -751,6 +749,3 @@ mod tests {
         assert_eq!(result.unwrap(), "Test");
     }
 }
-
-
-

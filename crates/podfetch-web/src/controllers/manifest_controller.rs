@@ -1,9 +1,9 @@
-use common_infrastructure::error::CustomError;
+use crate::manifest::{Manifest, build_manifest};
+use crate::url_rewriting::resolve_server_url_from_headers;
 use axum::Json;
 use axum::http::HeaderMap;
 use axum::routing::get;
-use crate::manifest::{Manifest, build_manifest};
-use crate::url_rewriting::resolve_server_url_from_headers;
+use common_infrastructure::error::CustomError;
 use utoipa_axum::router::OpenApiRouter;
 
 pub async fn get_manifest(headers: HeaderMap) -> Result<Json<Manifest>, CustomError> {
@@ -18,8 +18,8 @@ pub fn get_manifest_router() -> OpenApiRouter {
 #[cfg(test)]
 mod tests {
     use crate::test_support::tests::handle_test_startup;
-    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use axum::http::HeaderMap;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use serde_json::Value;
     use serial_test::serial;
 
@@ -123,4 +123,3 @@ mod tests {
         assert_client_error_status(response.status_code().as_u16());
     }
 }
-
