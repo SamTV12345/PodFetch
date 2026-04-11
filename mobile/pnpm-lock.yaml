@@ -60,8 +60,8 @@ importers:
         specifier: ~14.0.11
         version: 14.0.11(expo@54.0.33)(react-native@0.85.0(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
       expo-haptics:
-        specifier: ~15.0.8
-        version: 15.0.8(expo@54.0.33)
+        specifier: ~55.0.14
+        version: 55.0.14(expo@54.0.33)
       expo-linear-gradient:
         specifier: ~55.0.13
         version: 55.0.13(expo@54.0.33)(react-native@0.85.0(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
@@ -2360,8 +2360,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-haptics@15.0.8:
-    resolution: {integrity: sha512-lftutojy8Qs8zaDzzjwM3gKHFZ8bOOEZDCkmh2Ddpe95Ra6kt2izeOfOfKuP/QEh0MZ1j9TfqippyHdRd1ZM9g==}
+  expo-haptics@55.0.14:
+    resolution: {integrity: sha512-KjDItBsA9mi1f5nRwf8g1wOdfEcLHwvEdt5Jl1sMCDETR/homcGOl+F3QIiPOl/PRlbGVieQsjTtF4DGtHOj6g==}
     peerDependencies:
       expo: '*'
 
@@ -7311,7 +7311,7 @@ snapshots:
       react: 19.2.5
       react-native: 0.85.0(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.5)
 
-  expo-haptics@15.0.8(expo@54.0.33):
+  expo-haptics@55.0.14(expo@54.0.33):
     dependencies:
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native-webview@13.16.1(react-native@0.85.0(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.5))(react@19.2.5))(react-native@0.85.0(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
 
