@@ -121,7 +121,7 @@ sysinfo = { version = "0.38.4", default-features = false, features = ["disk", "s
 testcontainers = { version = "0.27.2" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
-tokio = { version = "1.51.0", features = ["full"] }
+tokio = { version = "1.51.1", features = ["full"] }
 tower = { version = "0.5.3", features = ["util"] }
 tower-http = { version = "0.6.6", features = ["fs"] }
 url = "2.5.8"
