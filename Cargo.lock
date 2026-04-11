@@ -1550,9 +1550,9 @@ checksum = "28dd6caf6059519a65843af8fe2a3ae298b14b80179855aeb4adc2c1934ee619"
 
 [[package]]
 name = "frankenstein"
-version = "0.48.0"
+version = "0.49.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a525a295979ba9df8d05f8cf4b548287ea8bc843a0a3cfd666f879bb3f2d107f"
+checksum = "06e10117ac7e8e878d711eb394213e0b6f2b6bffd3ec80441b300dc3a6edd2e9"
 dependencies = [
  "bon",
  "macro_rules_attribute",
@@ -2041,7 +2041,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "system-configuration",
  "tokio",
  "tower-service",
