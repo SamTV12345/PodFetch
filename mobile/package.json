@@ -26,7 +26,7 @@
     "@react-navigation/native": "^7.2.2",
     "@tanstack/react-query": "^5.97.0",
     "expo": "^54.0.33",
-    "expo-asset": "^12.0.12",
+    "expo-asset": "^55.0.14",
     "expo-audio": "~1.1.1",
     "expo-blur": "~55.0.14",
     "expo-clipboard": "~55.0.13",
