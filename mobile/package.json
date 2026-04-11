@@ -40,7 +40,7 @@
     "expo-localization": "~55.0.13",
     "expo-network": "^55.0.13",
     "expo-router": "~6.0.23",
-    "expo-splash-screen": "~31.0.13",
+    "expo-splash-screen": "~55.0.17",
     "expo-sqlite": "~55.0.15",
     "expo-status-bar": "~3.0.9",
     "expo-symbols": "~55.0.7",
