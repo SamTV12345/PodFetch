@@ -31,7 +31,7 @@
     "expo-blur": "~55.0.14",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
-    "expo-document-picker": "~14.0.8",
+    "expo-document-picker": "~55.0.13",
     "expo-file-system": "~19.0.9",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
