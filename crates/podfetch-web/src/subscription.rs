@@ -135,6 +135,22 @@ pub fn to_client_changes(changes: SubscriptionModelChanges) -> SubscriptionChang
 
 pub fn build_opml(subscriptions: &[Subscription]) -> opml::OPML {
     let mut opml = opml::OPML::default();
+    opml.head = Some(opml::Head {
+        title: Some("PodFetch Subscriptions".to_string()),
+        ..opml::Head::default()
+    });
+
+    // Kodi's OPML importer expects body/head maps, not self-closing XML nodes.
+    // Keep one non-RSS placeholder outline for empty subscription exports.
+    if subscriptions.is_empty() {
+        opml.body.outlines.push(opml::Outline {
+            text: "PodFetch Subscriptions".to_string(),
+            title: Some("PodFetch Subscriptions".to_string()),
+            ..opml::Outline::default()
+        });
+        return opml;
+    }
+
     for subscription in subscriptions {
         opml.body.outlines.push(opml::Outline {
             text: subscription.podcast.to_string(),

@@ -361,6 +361,8 @@ mod tests {
         assert_eq!(response.header("Content-Type"), "text/x-opml+xml",);
         let body = response.text();
         assert!(body.contains("<opml"));
+        assert!(body.contains("<title>PodFetch Subscriptions</title>"));
+        assert!(body.contains("<outline"));
     }
 
     #[tokio::test]
@@ -382,6 +384,8 @@ mod tests {
         assert_eq!(response.header("Content-Type"), "text/x-opml+xml",);
         let body = response.text();
         assert!(body.contains("<opml"));
+        assert!(body.contains("<title>PodFetch Subscriptions</title>"));
+        assert!(body.contains("<outline"));
     }
 
     #[tokio::test]
