@@ -1,14 +1,14 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FavoritePodcastEpisode {
-    pub username: String,
+    pub user_id: i32,
     pub episode_id: i32,
     pub favorite: bool,
 }
 
 impl FavoritePodcastEpisode {
-    pub fn new(username: impl Into<String>, episode_id: i32, favorite: bool) -> Self {
+    pub fn new(user_id: i32, episode_id: i32, favorite: bool) -> Self {
         Self {
-            username: username.into(),
+            user_id,
             episode_id,
             favorite,
         }
@@ -18,9 +18,9 @@ impl FavoritePodcastEpisode {
 pub trait FavoritePodcastEpisodeRepository: Send + Sync {
     type Error;
 
-    fn get_by_username_and_episode_id(
+    fn get_by_user_id_and_episode_id(
         &self,
-        username: &str,
+        user_id: i32,
         episode_id: i32,
     ) -> Result<Option<FavoritePodcastEpisode>, Self::Error>;
 
@@ -28,8 +28,8 @@ pub trait FavoritePodcastEpisodeRepository: Send + Sync {
 
     fn is_liked_by_someone(&self, episode_id: i32) -> Result<bool, Self::Error>;
 
-    fn get_favorites_by_username(
+    fn get_favorites_by_user_id(
         &self,
-        username: &str,
+        user_id: i32,
     ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error>;
 }

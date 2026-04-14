@@ -26,6 +26,7 @@ diesel::table! {
         directory_name -> Text,
         download_location -> Nullable<Text>,
         guid -> Nullable<Text>,
+        added_by -> Nullable<Integer>,
     }
 }
 
@@ -51,8 +52,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    favorites (username, podcast_id) {
-        username -> Text,
+    favorites (user_id, podcast_id) {
+        user_id -> Integer,
         podcast_id -> Integer,
         favored -> Bool,
     }
@@ -79,6 +80,7 @@ pub struct PodcastEntity {
     pub directory_name: String,
     pub download_location: Option<String>,
     pub guid: Option<String>,
+    pub added_by: Option<i32>,
 }
 
 #[derive(Insertable, Debug, Clone)]
@@ -90,6 +92,7 @@ struct NewPodcastEntity {
     image_url: String,
     original_image_url: String,
     directory_name: String,
+    added_by: Option<i32>,
 }
 
 impl From<PodcastEntity> for Podcast {
@@ -111,6 +114,7 @@ impl From<PodcastEntity> for Podcast {
             directory_name: entity.directory_name,
             download_location: entity.download_location,
             guid: entity.guid,
+            added_by: entity.added_by,
         }
     }
 }
@@ -134,6 +138,7 @@ impl From<Podcast> for PodcastEntity {
             directory_name: value.directory_name,
             download_location: value.download_location,
             guid: value.guid,
+            added_by: value.added_by,
         }
     }
 }
@@ -147,13 +152,14 @@ impl From<NewPodcast> for NewPodcastEntity {
             image_url: podcast.image_url.clone(),
             original_image_url: podcast.image_url,
             directory_name: podcast.directory_name,
+            added_by: podcast.added_by,
         }
     }
 }
 
 #[derive(Queryable, Debug, Clone)]
 struct FavoriteEntity {
-    username: String,
+    user_id: i32,
     podcast_id: i32,
     favored: bool,
 }
@@ -161,7 +167,7 @@ struct FavoriteEntity {
 impl From<FavoriteEntity> for Favorite {
     fn from(entity: FavoriteEntity) -> Self {
         Self {
-            username: entity.username,
+            user_id: entity.user_id,
             podcast_id: entity.podcast_id,
             favored: entity.favored,
         }
@@ -255,12 +261,12 @@ impl PodcastRepository for DieselPodcastRepository {
 
     fn find_all_with_favorites(
         &self,
-        username: &str,
+        user_id: i32,
     ) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
         podcasts::table
             .left_join(
-                favorites::table.on(favorites::username
-                    .eq(username)
+                favorites::table.on(favorites::user_id
+                    .eq(user_id)
                     .and(favorites::podcast_id.eq(podcasts::id))),
             )
             .load::<(PodcastEntity, Option<FavoriteEntity>)>(&mut self.database.connection()?)
@@ -344,6 +350,15 @@ impl PodcastRepository for DieselPodcastRepository {
         diesel::delete(podcasts::table.filter(podcasts::id.eq(id)))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    fn count_by_added_by(&self, user_id: i32) -> Result<i64, Self::Error> {
+        use diesel::dsl::count_star;
+        podcasts::table
+            .filter(podcasts::added_by.eq(user_id))
+            .select(count_star())
+            .first::<i64>(&mut self.database.connection()?)
             .map_err(Into::into)
     }
 }

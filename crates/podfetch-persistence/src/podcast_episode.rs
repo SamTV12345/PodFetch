@@ -38,7 +38,7 @@ diesel::table! {
 diesel::table! {
     episodes (id) {
         id -> Integer,
-        username -> Text,
+        user_id -> Integer,
         device -> Text,
         podcast -> Text,
         episode -> Text,
@@ -52,10 +52,17 @@ diesel::table! {
 }
 
 diesel::table! {
-    favorite_podcast_episodes (username, episode_id) {
-        username -> Text,
+    favorite_podcast_episodes (user_id, episode_id) {
+        user_id -> Integer,
         episode_id -> Integer,
         favorite -> Bool,
+    }
+}
+
+diesel::table! {
+    users (id) {
+        id -> Integer,
+        username -> Text,
     }
 }
 
@@ -128,7 +135,7 @@ struct NewPodcastEpisodeEntity {
 #[diesel(table_name = episodes)]
 struct EpisodeEntity {
     id: i32,
-    username: String,
+    user_id: i32,
     device: String,
     podcast: String,
     episode: String,
@@ -144,7 +151,7 @@ struct EpisodeEntity {
 #[derive(Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = favorite_podcast_episodes)]
 struct FavoritePodcastEpisodeEntity {
-    username: String,
+    user_id: i32,
     episode_id: i32,
     favorite: bool,
 }
@@ -211,28 +218,10 @@ impl From<NewPodcastEpisode> for NewPodcastEpisodeEntity {
     }
 }
 
-impl From<EpisodeEntity> for Episode {
-    fn from(entity: EpisodeEntity) -> Self {
-        Self {
-            id: entity.id,
-            username: entity.username,
-            device: entity.device,
-            podcast: entity.podcast,
-            episode: entity.episode,
-            timestamp: entity.timestamp,
-            guid: entity.guid,
-            action: entity.action,
-            started: entity.started,
-            position: entity.position,
-            total: entity.total,
-        }
-    }
-}
-
 impl From<FavoritePodcastEpisodeEntity> for FavoritePodcastEpisode {
     fn from(entity: FavoritePodcastEpisodeEntity) -> Self {
         Self {
-            username: entity.username,
+            user_id: entity.user_id,
             episode_id: entity.episode_id,
             favorite: entity.favorite,
         }
@@ -409,12 +398,19 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
         only_unlistened: bool,
         limit: i64,
     ) -> Result<PodcastEpisodeWithHistory, Self::Error> {
+        let user_id = users::table
+            .filter(users::username.eq(username))
+            .select(users::id)
+            .first::<i32>(&mut self.database.connection()?)
+            .optional()?
+            .unwrap_or(-1);
+
         let (ep1, ep2) = diesel::alias!(episodes as ep1, episodes as ep2);
 
         // Subquery to get the latest timestamp per episode guid for this user
         let subquery = ep2
             .select(max(ep2.field(episodes::timestamp)))
-            .filter(ep2.field(episodes::username).eq(username))
+            .filter(ep2.field(episodes::user_id).eq(user_id))
             .filter(ep2.field(episodes::guid).eq(ep1.field(episodes::guid)))
             .group_by(ep2.field(episodes::guid));
 
@@ -423,12 +419,13 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .left_join(
                 ep1.on(ep1
                     .field(episodes::guid)
-                    .eq(podcast_episodes::guid.nullable())),
+                    .eq(podcast_episodes::guid.nullable())
+                    .and(ep1.field(episodes::user_id).eq(user_id))),
             )
             .left_join(
                 favorite_podcast_episodes::table.on(favorite_podcast_episodes::episode_id
                     .eq(podcast_episodes::id)
-                    .and(favorite_podcast_episodes::username.eq(username))),
+                    .and(favorite_podcast_episodes::user_id.eq(user_id))),
             )
             .filter(
                 ep1.field(episodes::timestamp)
@@ -460,7 +457,28 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             )>(&mut self.database.connection()?)
             .map(|rows| {
                 rows.into_iter()
-                    .map(|(pe, ep, fav)| (pe.into(), ep.map(Into::into), fav.map(Into::into)))
+                    .map(|(pe, ep, fav)| {
+                        (
+                            pe.into(),
+                            ep.map(|entity| {
+                                let _user_id = entity.user_id;
+                                Episode {
+                                    id: entity.id,
+                                username: username.to_string(),
+                                device: entity.device,
+                                podcast: entity.podcast,
+                                episode: entity.episode,
+                                timestamp: entity.timestamp,
+                                guid: entity.guid,
+                                action: entity.action,
+                                started: entity.started,
+                                position: entity.position,
+                                total: entity.total,
+                                }
+                            }),
+                            fav.map(Into::into),
+                        )
+                    })
                     .collect()
             })
             .map_err(Into::into)

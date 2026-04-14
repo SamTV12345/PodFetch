@@ -44,6 +44,7 @@ pub async fn post_device(
     device::post_device(
         state.device_service.as_ref(),
         &flag.username,
+        flag.user_id,
         username,
         deviceid.0,
         device_post,
@@ -67,7 +68,12 @@ pub async fn get_devices_of_user(
 ) -> Result<Json<Vec<DeviceResponse>>, CustomError> {
     let query = trim_from_path(&query);
     let user_query = query.0;
-    device::get_devices_of_user(state.device_service.as_ref(), &flag.username, user_query)
+    device::get_devices_of_user(
+        state.device_service.as_ref(),
+        &flag.username,
+        flag.user_id,
+        user_query,
+    )
         .map(Json)
         .map_err(map_controller_error)
 }
@@ -108,7 +114,7 @@ pub async fn get_device_updates(
 
     let sub_changes = state.subscription_service.get_device_subscriptions(
         deviceid.0,
-        username,
+        flag.user_id,
         query.since as i32,
     )?;
 
@@ -181,10 +187,10 @@ pub async fn get_sync_devices(
     let username = trim_from_path(&username);
     ensure_session_user::<CustomError>(&flag.username, username.0).map_err(map_gpodder_error)?;
 
-    let all_devices = state.device_service.query_by_username(username.0)?;
+    let all_devices = state.device_service.query_by_user_id(flag.user_id)?;
     let sync_groups = state
         .device_sync_group_service
-        .get_by_username(username.0)?;
+        .get_by_user_id(flag.user_id)?;
 
     // Group by group_id
     let mut groups: std::collections::HashMap<i32, Vec<String>> = std::collections::HashMap::new();
@@ -232,7 +238,7 @@ pub async fn post_sync_devices(
 
     let mut sync_groups = state
         .device_sync_group_service
-        .get_by_username(username_parsed.0)?;
+        .get_by_user_id(flag.user_id)?;
 
     let max_group_id = sync_groups.iter().map(|g| g.group_id).max().unwrap_or(0);
 
@@ -245,7 +251,7 @@ pub async fn post_sync_devices(
             for device_id in group {
                 sync_groups.push(DeviceSyncGroup {
                     id: 0,
-                    username: username_parsed.0.to_string(),
+                    user_id: flag.user_id,
                     group_id,
                     device_id: device_id.clone(),
                 });
@@ -262,7 +268,7 @@ pub async fn post_sync_devices(
 
     state
         .device_sync_group_service
-        .replace_all(username_parsed.0, sync_groups)?;
+        .replace_all(flag.user_id, sync_groups)?;
 
     // Return updated state
     get_sync_devices(State(state), Path(username), Extension(flag)).await

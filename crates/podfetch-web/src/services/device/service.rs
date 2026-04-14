@@ -16,12 +16,12 @@ impl DeviceService {
         self.repository.create(device_to_safe)
     }
 
-    pub fn query_by_username(&self, username: &str) -> Result<Vec<Device>, CustomError> {
-        self.repository.get_devices_of_user(username)
+    pub fn query_by_user_id(&self, user_id: i32) -> Result<Vec<Device>, CustomError> {
+        self.repository.get_devices_of_user(user_id)
     }
 
-    pub fn delete_by_username(&self, username: &str) -> Result<(), CustomError> {
-        self.repository.delete_by_username(username)
+    pub fn delete_by_user_id(&self, user_id: i32) -> Result<(), CustomError> {
+        self.repository.delete_by_user_id(user_id)
     }
 }
 
@@ -32,7 +32,7 @@ impl DeviceApplicationService for DeviceService {
         self.create(device)
     }
 
-    fn query_by_username(&self, username: &str) -> Result<Vec<Device>, Self::Error> {
-        self.query_by_username(username)
+    fn query_by_user_id(&self, user_id: i32) -> Result<Vec<Device>, Self::Error> {
+        self.query_by_user_id(user_id)
     }
 }

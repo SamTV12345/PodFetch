@@ -24,7 +24,7 @@ pub async fn insert_tag(
 ) -> Result<Json<Tag>, CustomError> {
     tags::create_tag(
         state.tag_service.as_ref(),
-        requester.username.clone(),
+        requester.id,
         tag_create,
     )
     .map(Json)
@@ -41,7 +41,7 @@ pub async fn get_tags(
     State(state): State<AppState>,
     requester: Extension<User>,
 ) -> Result<Json<Vec<Tag>>, CustomError> {
-    tags::get_tags(state.tag_service.as_ref(), &requester.username).map(Json)
+    tags::get_tags(state.tag_service.as_ref(), requester.id).map(Json)
 }
 
 #[utoipa::path(
@@ -56,7 +56,7 @@ pub async fn delete_tag(
     Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    tags::delete_tag(state.tag_service.as_ref(), &requester.username, &tag_id)
+    tags::delete_tag(state.tag_service.as_ref(), requester.id, &tag_id)
         .map(|_| StatusCode::OK)
 }
 
@@ -75,7 +75,7 @@ pub async fn update_tag(
 ) -> Result<Json<Tag>, CustomError> {
     tags::update_tag(
         state.tag_service.as_ref(),
-        &requester.username,
+        requester.id,
         &tag_id,
         tag_create,
     )
@@ -97,7 +97,7 @@ pub async fn add_podcast_to_tag(
     let (tag_id, podcast_id) = tag_id_to_convert;
     tags::add_podcast_to_tag(
         state.tag_service.as_ref(),
-        &requester.username,
+        requester.id,
         &tag_id,
         podcast_id,
     )
@@ -120,7 +120,7 @@ pub async fn delete_podcast_from_tag(
 
     tags::delete_podcast_from_tag(
         state.tag_service.as_ref(),
-        &requester.username,
+        requester.id,
         &tag_id,
         podcast_id,
     )
@@ -270,7 +270,7 @@ mod tests {
 
         let tags_for_podcast = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, &username)
+            .get_tags_of_podcast(podcast.id, 9999)
             .unwrap();
         assert_eq!(tags_for_podcast.len(), 1);
         assert_eq!(tags_for_podcast[0].id, tag.id);
@@ -283,7 +283,7 @@ mod tests {
 
         let tags_after_remove = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, &username)
+            .get_tags_of_podcast(podcast.id, 9999)
             .unwrap();
         assert!(tags_after_remove.is_empty());
     }

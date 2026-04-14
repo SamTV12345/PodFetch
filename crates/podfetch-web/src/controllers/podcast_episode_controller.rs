@@ -259,7 +259,7 @@ pub async fn like_podcast_episode(
     println!("User id is {}, Episode id is {}", requester.id, id.clone());
     state
         .favorite_podcast_episode_service
-        .set_favorite(&requester.username, id, fav.favored)?;
+        .set_favorite(requester.id, id, fav.favored)?;
 
     Ok(StatusCode::OK)
 }
@@ -600,7 +600,7 @@ mod tests {
         assert_eq!(response.status_code(), 200);
 
         let favorite = FavoritePodcastEpisodeService::default_service()
-            .get_by_username_and_episode_id(&admin_username(), inserted_episode.id)
+            .get_by_user_id_and_episode_id(crate::role::STANDARD_USER_ID, inserted_episode.id)
             .unwrap();
         assert!(favorite.is_some());
         assert!(favorite.unwrap().favorite);
@@ -613,7 +613,7 @@ mod tests {
 
         diesel::insert_into(subs_dsl::subscriptions)
             .values((
-                subs_dsl::username.eq(admin_username()),
+                subs_dsl::user_id.eq(crate::role::STANDARD_USER_ID),
                 subs_dsl::device.eq("phone".to_string()),
                 subs_dsl::podcast.eq("https://example.com/not-present.xml".to_string()),
                 subs_dsl::created.eq(Utc::now().naive_utc()),

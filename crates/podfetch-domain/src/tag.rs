@@ -22,18 +22,18 @@ impl Display for Color {
 pub struct Tag {
     pub id: String,
     pub name: String,
-    pub username: String,
+    pub user_id: i32,
     pub description: Option<String>,
     pub created_at: NaiveDateTime,
     pub color: String,
 }
 
 impl Tag {
-    pub fn new(name: String, description: Option<String>, color: String, username: String) -> Self {
+    pub fn new(name: String, description: Option<String>, color: String, user_id: i32) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             name,
-            username,
+            user_id,
             description,
             created_at: Utc::now().naive_utc(),
             color,
@@ -58,13 +58,13 @@ pub trait TagRepository: Send + Sync {
     type Error;
 
     fn create(&self, tag: Tag) -> Result<Tag, Self::Error>;
-    fn get_tags(&self, username: &str) -> Result<Vec<Tag>, Self::Error>;
-    fn get_tags_of_podcast(&self, podcast_id: i32, username: &str)
+    fn get_tags(&self, user_id: i32) -> Result<Vec<Tag>, Self::Error>;
+    fn get_tags_of_podcast(&self, podcast_id: i32, user_id: i32)
     -> Result<Vec<Tag>, Self::Error>;
-    fn get_tag_by_id_and_username(
+    fn get_tag_by_id_and_user_id(
         &self,
         tag_id: &str,
-        username: &str,
+        user_id: i32,
     ) -> Result<Option<Tag>, Self::Error>;
     fn update(&self, tag_id: &str, update: TagUpdate) -> Result<Tag, Self::Error>;
     fn delete(&self, tag_id: &str) -> Result<(), Self::Error>;

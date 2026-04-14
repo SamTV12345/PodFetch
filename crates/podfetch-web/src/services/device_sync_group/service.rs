@@ -12,15 +12,15 @@ impl DeviceSyncGroupService {
         Self { repository }
     }
 
-    pub fn get_by_username(&self, username: &str) -> Result<Vec<DeviceSyncGroup>, CustomError> {
-        self.repository.get_by_username(username)
+    pub fn get_by_user_id(&self, user_id: i32) -> Result<Vec<DeviceSyncGroup>, CustomError> {
+        self.repository.get_by_user_id(user_id)
     }
 
     pub fn replace_all(
         &self,
-        username: &str,
+        user_id: i32,
         groups: Vec<DeviceSyncGroup>,
     ) -> Result<(), CustomError> {
-        self.repository.replace_all(username, groups)
+        self.repository.replace_all(user_id, groups)
     }
 }

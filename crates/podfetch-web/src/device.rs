@@ -7,7 +7,7 @@ pub struct DeviceCreate {
     pub id: String,
     pub caption: String,
     pub type_: String,
-    pub username: String,
+    pub user_id: i32,
 }
 
 impl From<DeviceCreate> for Device {
@@ -17,7 +17,7 @@ impl From<DeviceCreate> for Device {
             deviceid: val.id,
             kind: val.type_,
             name: val.caption,
-            username: val.username,
+            user_id: val.user_id,
         }
     }
 }
@@ -53,7 +53,7 @@ pub trait DeviceApplicationService {
     type Error;
 
     fn create(&self, device: Device) -> Result<Device, Self::Error>;
-    fn query_by_username(&self, username: &str) -> Result<Vec<Device>, Self::Error>;
+    fn query_by_user_id(&self, user_id: i32) -> Result<Vec<Device>, Self::Error>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -67,6 +67,7 @@ pub enum DeviceControllerError<E: Display> {
 pub fn post_device<S>(
     service: &S,
     session_username: &str,
+    session_user_id: i32,
     username: &str,
     device_id: &str,
     device_post: DevicePost,
@@ -85,7 +86,7 @@ where
                 id: device_id.to_string(),
                 caption: device_post.caption,
                 type_: device_post.kind,
-                username: username.to_string(),
+                user_id: session_user_id,
             }
             .into(),
         )
@@ -97,6 +98,7 @@ where
 pub fn get_devices_of_user<S>(
     service: &S,
     session_username: &str,
+    session_user_id: i32,
     username: &str,
 ) -> Result<Vec<DeviceResponse>, DeviceControllerError<S::Error>>
 where
@@ -108,7 +110,7 @@ where
     }
 
     service
-        .query_by_username(username)
+        .query_by_user_id(session_user_id)
         .map(|devices| devices.iter().map(DeviceResponse::from).collect())
         .map_err(DeviceControllerError::Service)
 }

@@ -163,7 +163,7 @@ mod tests {
         let episode_b1 = insert_episode(podcast_b.id, "stats-ep-b1", "stats-guid-b1", "B1");
 
         ListeningEventService::create_event(NewListeningEvent {
-            username: username.clone(),
+            user_id: crate::role::STANDARD_USER_ID,
             device: "webview".to_string(),
             podcast_episode_id: episode_a1.episode_id.clone(),
             podcast_id: podcast_a.id,
@@ -175,7 +175,7 @@ mod tests {
         })
         .unwrap();
         ListeningEventService::create_event(NewListeningEvent {
-            username: username.clone(),
+            user_id: crate::role::STANDARD_USER_ID,
             device: "webview".to_string(),
             podcast_episode_id: episode_a2.episode_id.clone(),
             podcast_id: podcast_a.id,
@@ -187,7 +187,7 @@ mod tests {
         })
         .unwrap();
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id: crate::role::STANDARD_USER_ID,
             device: "webview".to_string(),
             podcast_episode_id: episode_b1.episode_id.clone(),
             podcast_id: podcast_b.id,
@@ -240,7 +240,7 @@ mod tests {
         let episode = insert_episode(podcast.id, "stats-ep-range", "stats-guid-range", "Range");
 
         ListeningEventService::create_event(NewListeningEvent {
-            username: username.clone(),
+            user_id: crate::role::STANDARD_USER_ID,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id.clone(),
             podcast_id: podcast.id,
@@ -252,7 +252,7 @@ mod tests {
         })
         .unwrap();
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id: crate::role::STANDARD_USER_ID,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
             podcast_id: podcast.id,
@@ -331,7 +331,7 @@ mod tests {
             );
 
             ListeningEventService::create_event(NewListeningEvent {
-                username: username.clone(),
+                user_id: crate::role::STANDARD_USER_ID,
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
                 podcast_id: podcast.id,
@@ -395,7 +395,7 @@ mod tests {
         );
 
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id: crate::role::STANDARD_USER_ID,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
             podcast_id: podcast.id,
@@ -448,7 +448,7 @@ mod tests {
             );
 
             ListeningEventService::create_event(NewListeningEvent {
-                username: username.clone(),
+                user_id: crate::role::STANDARD_USER_ID,
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
                 podcast_id: podcast.id,
@@ -498,7 +498,7 @@ mod tests {
         );
 
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id: crate::role::STANDARD_USER_ID,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
             podcast_id: podcast.id,

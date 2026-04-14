@@ -7,7 +7,7 @@ use podfetch_domain::device_sync_group::{DeviceSyncGroup, DeviceSyncGroupReposit
 diesel::table! {
     device_sync_groups (id) {
         id -> Integer,
-        username -> Text,
+        user_id -> Integer,
         group_id -> Integer,
         device_id -> Text,
     }
@@ -18,8 +18,8 @@ diesel::table! {
 struct DeviceSyncGroupEntity {
     #[diesel(sql_type = Integer)]
     id: i32,
-    #[diesel(sql_type = Text)]
-    username: String,
+    #[diesel(sql_type = Integer)]
+    user_id: i32,
     #[diesel(sql_type = Integer)]
     group_id: i32,
     #[diesel(sql_type = Text)]
@@ -29,7 +29,7 @@ struct DeviceSyncGroupEntity {
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = device_sync_groups)]
 struct NewDeviceSyncGroupEntity {
-    username: String,
+    user_id: i32,
     group_id: i32,
     device_id: String,
 }
@@ -38,7 +38,7 @@ impl From<DeviceSyncGroupEntity> for DeviceSyncGroup {
     fn from(value: DeviceSyncGroupEntity) -> Self {
         Self {
             id: value.id,
-            username: value.username,
+            user_id: value.user_id,
             group_id: value.group_id,
             device_id: value.device_id,
         }
@@ -58,29 +58,29 @@ impl DieselDeviceSyncGroupRepository {
 impl DeviceSyncGroupRepository for DieselDeviceSyncGroupRepository {
     type Error = PersistenceError;
 
-    fn get_by_username(&self, username: &str) -> Result<Vec<DeviceSyncGroup>, Self::Error> {
+    fn get_by_user_id(&self, user_id_to_find: i32) -> Result<Vec<DeviceSyncGroup>, Self::Error> {
         use self::device_sync_groups::dsl as dsg_dsl;
 
         dsg_dsl::device_sync_groups
-            .filter(dsg_dsl::username.eq(username))
+            .filter(dsg_dsl::user_id.eq(user_id_to_find))
             .load::<DeviceSyncGroupEntity>(&mut self.database.connection()?)
             .map(|groups| groups.into_iter().map(DeviceSyncGroup::from).collect())
             .map_err(Into::into)
     }
 
-    fn replace_all(&self, username: &str, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error> {
+    fn replace_all(&self, user_id_to_replace: i32, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error> {
         use self::device_sync_groups::dsl as dsg_dsl;
 
         let mut connection = self.database.connection()?;
 
-        diesel::delete(dsg_dsl::device_sync_groups.filter(dsg_dsl::username.eq(username)))
+        diesel::delete(dsg_dsl::device_sync_groups.filter(dsg_dsl::user_id.eq(user_id_to_replace)))
             .execute(&mut connection)
             .map_err(PersistenceError::from)?;
 
         for group in groups {
             diesel::insert_into(dsg_dsl::device_sync_groups)
                 .values(NewDeviceSyncGroupEntity {
-                    username: group.username,
+                    user_id: group.user_id,
                     group_id: group.group_id,
                     device_id: group.device_id,
                 })

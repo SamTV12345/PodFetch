@@ -1,6 +1,6 @@
 pub struct DeviceSyncGroup {
     pub id: i32,
-    pub username: String,
+    pub user_id: i32,
     pub group_id: i32,
     pub device_id: String,
 }
@@ -8,6 +8,6 @@ pub struct DeviceSyncGroup {
 pub trait DeviceSyncGroupRepository: Send + Sync {
     type Error;
 
-    fn get_by_username(&self, username: &str) -> Result<Vec<DeviceSyncGroup>, Self::Error>;
-    fn replace_all(&self, username: &str, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error>;
+    fn get_by_user_id(&self, user_id: i32) -> Result<Vec<DeviceSyncGroup>, Self::Error>;
+    fn replace_all(&self, user_id: i32, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error>;
 }

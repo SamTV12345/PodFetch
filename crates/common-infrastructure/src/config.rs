@@ -51,6 +51,8 @@ pub const S3_PROFILE: &str = "S3_PROFILE";
 pub const S3_SECURITY_TOKEN: &str = "S3_SECURITY_TOKEN";
 pub const S3_SESSION_TOKEN: &str = "S3_SESSION_TOKEN";
 pub const POLLING_INTERVAL_DEFAULT: u32 = 300;
+pub const USER_PODCAST_LIMIT: &str = "USER_PODCAST_LIMIT";
+pub const DEFAULT_USER_PODCAST_LIMIT: u32 = 0;
 
 pub fn is_env_var_present_and_true(env_var: &str) -> bool {
     match env::var(env_var) {
@@ -134,6 +136,7 @@ pub struct EnvironmentService {
     pub default_file_handler: FileHandlerType,
     pub default_podfetch_folder: String,
     pub s3_config: S3Config,
+    pub user_podcast_limit: u32,
 }
 
 #[derive(Clone)]
@@ -313,6 +316,10 @@ impl EnvironmentService {
             s3_config: handler.1,
             default_podfetch_folder: var(PODFETCH_FOLDER)
                 .unwrap_or(DEFAULT_PODFETCH_FOLDER.to_string()),
+            user_podcast_limit: var(USER_PODCAST_LIMIT)
+                .ok()
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(DEFAULT_USER_PODCAST_LIMIT),
         }
     }
 

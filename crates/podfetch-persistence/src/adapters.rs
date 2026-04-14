@@ -21,12 +21,12 @@ impl DeviceSyncGroupRepositoryImpl {
 impl DeviceSyncGroupRepository for DeviceSyncGroupRepositoryImpl {
     type Error = CustomError;
 
-    fn get_by_username(&self, username: &str) -> Result<Vec<DeviceSyncGroup>, Self::Error> {
-        self.inner.get_by_username(username).map_err(Into::into)
+    fn get_by_user_id(&self, user_id: i32) -> Result<Vec<DeviceSyncGroup>, Self::Error> {
+        self.inner.get_by_user_id(user_id).map_err(Into::into)
     }
 
-    fn replace_all(&self, username: &str, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error> {
-        self.inner.replace_all(username, groups).map_err(Into::into)
+    fn replace_all(&self, user_id: i32, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error> {
+        self.inner.replace_all(user_id, groups).map_err(Into::into)
     }
 }
 
@@ -54,14 +54,12 @@ impl DeviceRepository for DeviceRepositoryImpl {
         self.inner.create(device).map_err(Into::into)
     }
 
-    fn get_devices_of_user(&self, username_to_find: &str) -> Result<Vec<Device>, CustomError> {
-        self.inner
-            .get_devices_of_user(username_to_find)
-            .map_err(Into::into)
+    fn get_devices_of_user(&self, user_id_to_find: i32) -> Result<Vec<Device>, CustomError> {
+        self.inner.get_devices_of_user(user_id_to_find).map_err(Into::into)
     }
 
-    fn delete_by_username(&self, username1: &str) -> Result<(), CustomError> {
-        self.inner.delete_by_username(username1).map_err(Into::into)
+    fn delete_by_user_id(&self, user_id: i32) -> Result<(), CustomError> {
+        self.inner.delete_by_user_id(user_id).map_err(Into::into)
     }
 }
 
@@ -85,8 +83,8 @@ impl FilterRepositoryImpl {
 impl FilterRepository for FilterRepositoryImpl {
     type Error = CustomError;
 
-    fn get_by_username(&self, username: &str) -> Result<Option<Filter>, Self::Error> {
-        self.inner.get_by_username(username).map_err(Into::into)
+    fn get_by_user_id(&self, user_id: i32) -> Result<Option<Filter>, Self::Error> {
+        self.inner.get_by_user_id(user_id).map_err(Into::into)
     }
 
     fn save(&self, filter: Filter) -> Result<(), Self::Error> {
@@ -95,11 +93,11 @@ impl FilterRepository for FilterRepositoryImpl {
 
     fn save_timeline_decision(
         &self,
-        username: &str,
+        user_id: i32,
         only_favored: bool,
     ) -> Result<(), Self::Error> {
         self.inner
-            .save_timeline_decision(username, only_favored)
+            .save_timeline_decision(user_id, only_favored)
             .map_err(Into::into)
     }
 }
@@ -126,12 +124,12 @@ impl GpodderSettingRepository for GpodderSettingRepositoryImpl {
 
     fn get_setting(
         &self,
-        username: &str,
+        user_id: i32,
         scope: &str,
         scope_id: Option<&str>,
     ) -> Result<Option<GpodderSetting>, Self::Error> {
         self.inner
-            .get_setting(username, scope, scope_id)
+            .get_setting(user_id, scope, scope_id)
             .map_err(Into::into)
     }
 
@@ -205,13 +203,13 @@ impl FavoritePodcastEpisodeRepositoryImpl {
 impl FavoritePodcastEpisodeRepository for FavoritePodcastEpisodeRepositoryImpl {
     type Error = CustomError;
 
-    fn get_by_username_and_episode_id(
+    fn get_by_user_id_and_episode_id(
         &self,
-        username: &str,
+        user_id: i32,
         episode_id: i32,
     ) -> Result<Option<FavoritePodcastEpisode>, Self::Error> {
         self.inner
-            .get_by_username_and_episode_id(username, episode_id)
+            .get_by_user_id_and_episode_id(user_id, episode_id)
             .map_err(Into::into)
     }
 
@@ -225,12 +223,12 @@ impl FavoritePodcastEpisodeRepository for FavoritePodcastEpisodeRepositoryImpl {
             .map_err(Into::into)
     }
 
-    fn get_favorites_by_username(
+    fn get_favorites_by_user_id(
         &self,
-        username: &str,
+        user_id: i32,
     ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error> {
         self.inner
-            .get_favorites_by_username(username)
+            .get_favorites_by_user_id(user_id)
             .map_err(Into::into)
     }
 }
@@ -264,17 +262,17 @@ impl ListeningEventRepository for ListeningEventRepositoryImpl {
 
     fn get_by_user_and_range(
         &self,
-        username: &str,
+        user_id: i32,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
     ) -> Result<Vec<ListeningEvent>, Self::Error> {
         self.inner
-            .get_by_user_and_range(username, from, to)
+            .get_by_user_and_range(user_id, from, to)
             .map_err(Into::into)
     }
 
-    fn delete_by_username(&self, username: &str) -> Result<usize, Self::Error> {
-        self.inner.delete_by_username(username).map_err(Into::into)
+    fn delete_by_user_id(&self, user_id: i32) -> Result<usize, Self::Error> {
+        self.inner.delete_by_user_id(user_id).map_err(Into::into)
     }
 
     fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<usize, Self::Error> {
@@ -511,8 +509,8 @@ impl SessionRepository for SessionRepositoryImpl {
             .map_err(Into::into)
     }
 
-    fn delete_by_username(&self, username: &str) -> Result<usize, Self::Error> {
-        self.inner.delete_by_username(username).map_err(Into::into)
+    fn delete_by_user_id(&self, user_id: i32) -> Result<usize, Self::Error> {
+        self.inner.delete_by_user_id(user_id).map_err(Into::into)
     }
 
     fn cleanup_expired(&self, now: NaiveDateTime) -> Result<usize, Self::Error> {
@@ -575,42 +573,42 @@ impl SubscriptionRepositoryImpl {
 impl SubscriptionRepository for SubscriptionRepositoryImpl {
     type Error = CustomError;
 
-    fn delete_by_username(&self, username: &str) -> Result<(), Self::Error> {
-        self.inner.delete_by_username(username).map_err(Into::into)
+    fn delete_by_user_id(&self, user_id: i32) -> Result<(), Self::Error> {
+        self.inner.delete_by_user_id(user_id).map_err(Into::into)
     }
 
     fn get_device_subscriptions(
         &self,
         device_id: &str,
-        username: &str,
+        user_id: i32,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error> {
         self.inner
-            .get_device_subscriptions(device_id, username, since, timestamp)
+            .get_device_subscriptions(device_id, user_id, since, timestamp)
             .map_err(Into::into)
     }
 
     fn get_user_subscriptions(
         &self,
-        username: &str,
+        user_id: i32,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error> {
         self.inner
-            .get_user_subscriptions(username, since, timestamp)
+            .get_user_subscriptions(user_id, since, timestamp)
             .map_err(Into::into)
     }
 
     fn update_subscriptions(
         &self,
         device_id: &str,
-        username: &str,
+        user_id: i32,
         add: &[String],
         remove: &[String],
     ) -> Result<Vec<Vec<String>>, Self::Error> {
         self.inner
-            .update_subscriptions(device_id, username, add, remove)
+            .update_subscriptions(device_id, user_id, add, remove)
             .map_err(Into::into)
     }
 
@@ -623,10 +621,10 @@ impl SubscriptionRepository for SubscriptionRepositoryImpl {
     fn get_active_device_podcast_urls(
         &self,
         device_id: &str,
-        username: &str,
+        user_id: i32,
     ) -> Result<Vec<String>, Self::Error> {
         self.inner
-            .get_active_device_podcast_urls(device_id, username)
+            .get_active_device_podcast_urls(device_id, user_id)
             .map_err(Into::into)
     }
 }
@@ -655,27 +653,27 @@ impl TagRepository for TagRepositoryImpl {
         self.inner.create(tag).map_err(Into::into)
     }
 
-    fn get_tags(&self, username: &str) -> Result<Vec<Tag>, Self::Error> {
-        self.inner.get_tags(username).map_err(Into::into)
+    fn get_tags(&self, user_id: i32) -> Result<Vec<Tag>, Self::Error> {
+        self.inner.get_tags(user_id).map_err(Into::into)
     }
 
     fn get_tags_of_podcast(
         &self,
         podcast_id: i32,
-        username: &str,
+        user_id: i32,
     ) -> Result<Vec<Tag>, Self::Error> {
         self.inner
-            .get_tags_of_podcast(podcast_id, username)
+            .get_tags_of_podcast(podcast_id, user_id)
             .map_err(Into::into)
     }
 
-    fn get_tag_by_id_and_username(
+    fn get_tag_by_id_and_user_id(
         &self,
         tag_id: &str,
-        username: &str,
+        user_id: i32,
     ) -> Result<Option<Tag>, Self::Error> {
         self.inner
-            .get_tag_by_id_and_username(tag_id, username)
+            .get_tag_by_id_and_user_id(tag_id, user_id)
             .map_err(Into::into)
     }
 

@@ -22,33 +22,33 @@ impl FavoritePodcastEpisodeService {
         )))
     }
 
-    pub fn get_by_username_and_episode_id(
+    pub fn get_by_user_id_and_episode_id(
         &self,
-        username: &str,
+        user_id: i32,
         episode_id: i32,
     ) -> Result<Option<FavoritePodcastEpisode>, CustomError> {
         self.repository
-            .get_by_username_and_episode_id(username, episode_id)
+            .get_by_user_id_and_episode_id(user_id, episode_id)
     }
 
     pub fn set_favorite(
         &self,
-        username: &str,
+        user_id: i32,
         episode_id: i32,
         favorite: bool,
     ) -> Result<(), CustomError> {
         self.repository
-            .save_or_update(FavoritePodcastEpisode::new(username, episode_id, favorite))
+            .save_or_update(FavoritePodcastEpisode::new(user_id, episode_id, favorite))
     }
 
     pub fn is_liked_by_someone(&self, episode_id: i32) -> Result<bool, CustomError> {
         self.repository.is_liked_by_someone(episode_id)
     }
 
-    pub fn get_favorites_by_username(
+    pub fn get_favorites_by_user_id(
         &self,
-        username: &str,
+        user_id: i32,
     ) -> Result<Vec<FavoritePodcastEpisode>, CustomError> {
-        self.repository.get_favorites_by_username(username)
+        self.repository.get_favorites_by_user_id(user_id)
     }
 }

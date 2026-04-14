@@ -19,8 +19,8 @@ impl SessionService {
         Self::new(Arc::new(SessionRepositoryImpl::new(database())))
     }
 
-    pub fn create_session(&self, username: String) -> Result<Session, CustomError> {
-        self.repository.create(Session::new(username))
+    pub fn create_session(&self, username: String, user_id: i32) -> Result<Session, CustomError> {
+        self.repository.create(Session::new(username, user_id))
     }
 
     pub fn create_existing_session(&self, session: Session) -> Result<Session, CustomError> {
@@ -31,8 +31,8 @@ impl SessionService {
         self.repository.find_by_session_id(session_id)
     }
 
-    pub fn delete_by_username(&self, username: &str) -> Result<usize, CustomError> {
-        self.repository.delete_by_username(username)
+    pub fn delete_by_user_id(&self, user_id: i32) -> Result<usize, CustomError> {
+        self.repository.delete_by_user_id(user_id)
     }
 
     pub fn cleanup_expired(&self) -> Result<usize, CustomError> {

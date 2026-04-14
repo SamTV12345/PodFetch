@@ -39,7 +39,7 @@ pub async fn get_subscriptions(
 
     state
         .subscription_service
-        .get_device_subscriptions(deviceid.0, &username, query.since)
+        .get_device_subscriptions(deviceid.0, flag.user_id, query.since)
         .map(Json)
 }
 
@@ -64,7 +64,7 @@ pub async fn get_subscriptions_all(
 
     let changes = state
         .subscription_service
-        .get_user_subscriptions(&flag.username, query.since)?;
+        .get_user_subscriptions(flag.user_id, query.since)?;
 
     if username.1 == "opml" {
         Ok(Response::builder()
@@ -100,7 +100,7 @@ pub async fn upload_subscription_changes(
     let update_urls =
         state
             .subscription_service
-            .update_subscriptions(deviceid.0, &username, upload_request.0)?;
+            .update_subscriptions(deviceid.0, flag.user_id, upload_request.0)?;
 
     Ok(Json(SubscriptionPostResponse {
         update_urls,
@@ -156,7 +156,7 @@ pub async fn put_device_subscriptions(
     let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
     let current_urls = state
         .subscription_service
-        .get_active_device_podcast_urls(deviceid.0, &username)?;
+        .get_active_device_podcast_urls(deviceid.0, flag.user_id)?;
 
     let to_add: Vec<String> = new_urls
         .iter()
@@ -171,7 +171,7 @@ pub async fn put_device_subscriptions(
 
     let update_urls = state.subscription_service.update_subscriptions(
         deviceid.0,
-        &username,
+        flag.user_id,
         crate::subscription::SubscriptionUpdateRequest {
             add: to_add,
             remove: to_remove,
@@ -211,7 +211,7 @@ pub async fn get_simple_subscriptions(
 
     let changes = state
         .subscription_service
-        .get_user_subscriptions(&flag.username, 0)?;
+        .get_user_subscriptions(flag.user_id, 0)?;
 
     match format {
         "opml" => {
@@ -261,7 +261,7 @@ pub async fn put_simple_subscriptions(
     let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
     let current_urls = state
         .subscription_service
-        .get_active_device_podcast_urls(deviceid.0, username)?;
+        .get_active_device_podcast_urls(deviceid.0, flag.user_id)?;
 
     let to_add: Vec<String> = new_urls
         .iter()
@@ -276,7 +276,7 @@ pub async fn put_simple_subscriptions(
 
     let update_urls = state.subscription_service.update_subscriptions(
         deviceid.0,
-        username,
+        flag.user_id,
         crate::subscription::SubscriptionUpdateRequest {
             add: to_add,
             remove: to_remove,

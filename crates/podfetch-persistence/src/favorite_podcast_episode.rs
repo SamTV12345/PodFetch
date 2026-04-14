@@ -6,8 +6,8 @@ use podfetch_domain::favorite_podcast_episode::{
 };
 
 diesel::table! {
-    favorite_podcast_episodes (username, episode_id) {
-        username -> Text,
+    favorite_podcast_episodes (user_id, episode_id) {
+        user_id -> Integer,
         episode_id -> Integer,
         favorite -> Bool,
     }
@@ -16,7 +16,7 @@ diesel::table! {
 #[derive(Queryable, Selectable, Clone)]
 #[diesel(table_name = favorite_podcast_episodes)]
 struct FavoritePodcastEpisodeEntity {
-    username: String,
+    user_id: i32,
     episode_id: i32,
     favorite: bool,
 }
@@ -24,7 +24,7 @@ struct FavoritePodcastEpisodeEntity {
 #[derive(Insertable, Clone)]
 #[diesel(table_name = favorite_podcast_episodes)]
 struct FavoritePodcastEpisodeInsertEntity {
-    username: String,
+    user_id: i32,
     episode_id: i32,
     favorite: bool,
 }
@@ -32,7 +32,7 @@ struct FavoritePodcastEpisodeInsertEntity {
 impl From<FavoritePodcastEpisodeEntity> for FavoritePodcastEpisode {
     fn from(value: FavoritePodcastEpisodeEntity) -> Self {
         Self {
-            username: value.username,
+            user_id: value.user_id,
             episode_id: value.episode_id,
             favorite: value.favorite,
         }
@@ -42,7 +42,7 @@ impl From<FavoritePodcastEpisodeEntity> for FavoritePodcastEpisode {
 impl From<FavoritePodcastEpisode> for FavoritePodcastEpisodeInsertEntity {
     fn from(value: FavoritePodcastEpisode) -> Self {
         Self {
-            username: value.username,
+            user_id: value.user_id,
             episode_id: value.episode_id,
             favorite: value.favorite,
         }
@@ -62,16 +62,16 @@ impl DieselFavoritePodcastEpisodeRepository {
 impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository {
     type Error = PersistenceError;
 
-    fn get_by_username_and_episode_id(
+    fn get_by_user_id_and_episode_id(
         &self,
-        username_to_search: &str,
+        user_id_to_search: i32,
         episode_id_to_search: i32,
     ) -> Result<Option<FavoritePodcastEpisode>, Self::Error> {
         use self::favorite_podcast_episodes::dsl as fpe_dsl;
         use self::favorite_podcast_episodes::table as fpe_table;
 
         fpe_table
-            .filter(fpe_dsl::username.eq(username_to_search))
+            .filter(fpe_dsl::user_id.eq(user_id_to_search))
             .filter(fpe_dsl::episode_id.eq(episode_id_to_search))
             .first::<FavoritePodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()
@@ -85,7 +85,7 @@ impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository
 
         let favorite_to_store = favorite.clone();
         let existing = fpe_table
-            .filter(fpe_dsl::username.eq(&favorite.username))
+            .filter(fpe_dsl::user_id.eq(favorite.user_id))
             .filter(fpe_dsl::episode_id.eq(favorite.episode_id))
             .first::<FavoritePodcastEpisodeEntity>(&mut self.database.connection()?)
             .optional()?;
@@ -93,7 +93,7 @@ impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository
         match existing {
             Some(_) => diesel::update(
                 fpe_table
-                    .filter(fpe_dsl::username.eq(&favorite.username))
+                    .filter(fpe_dsl::user_id.eq(favorite.user_id))
                     .filter(fpe_dsl::episode_id.eq(favorite.episode_id)),
             )
             .set(fpe_dsl::favorite.eq(favorite.favorite))
@@ -108,15 +108,15 @@ impl FavoritePodcastEpisodeRepository for DieselFavoritePodcastEpisodeRepository
         }
     }
 
-    fn get_favorites_by_username(
+    fn get_favorites_by_user_id(
         &self,
-        username_to_search: &str,
+        user_id_to_search: i32,
     ) -> Result<Vec<FavoritePodcastEpisode>, Self::Error> {
         use self::favorite_podcast_episodes::dsl as fpe_dsl;
         use self::favorite_podcast_episodes::table as fpe_table;
 
         fpe_table
-            .filter(fpe_dsl::username.eq(username_to_search))
+            .filter(fpe_dsl::user_id.eq(user_id_to_search))
             .filter(fpe_dsl::favorite.eq(true))
             .load::<FavoritePodcastEpisodeEntity>(&mut self.database.connection()?)
             .map(|favs| favs.into_iter().map(Into::into).collect())

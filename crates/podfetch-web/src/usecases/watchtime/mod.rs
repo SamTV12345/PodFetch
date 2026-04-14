@@ -12,6 +12,7 @@ use chrono::{NaiveDateTime, Utc};
 use common_infrastructure::error::CustomError;
 use podfetch_domain::episode::{EpisodeRepository, NewEpisode};
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_domain::user_admin::UserAdminRepository;
 use podfetch_domain::listening_event::NewListeningEvent;
 use podfetch_domain::user::User;
 use podfetch_persistence::db::database;
@@ -19,6 +20,7 @@ use podfetch_persistence::episode::DieselEpisodeRepository;
 use podfetch_persistence::episode::EpisodeEntity as Episode;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
+use podfetch_persistence::user_admin::DieselUserAdminRepository;
 
 use common_infrastructure::error::CustomErrorInner;
 use common_infrastructure::error::ErrorSeverity::Warning;
@@ -36,6 +38,13 @@ impl WatchtimeUseCase {
 
     fn repo() -> DieselEpisodeRepository {
         DieselEpisodeRepository::new(database())
+    }
+
+    fn get_user_id_by_username(username: &str) -> Result<i32, CustomError> {
+        DieselUserAdminRepository::new(database())
+            .find_by_username(username)?
+            .map(|user| user.id)
+            .ok_or_else(|| CustomErrorInner::NotFound(Warning).into())
     }
 
     pub fn insert_episode(
@@ -125,7 +134,8 @@ impl WatchtimeUseCase {
     }
 
     pub fn delete_by_username_and_episode(username: &str) -> Result<(), CustomError> {
-        ListeningEventService::default_service().delete_by_username(username)?;
+        let user_id = Self::get_user_id_by_username(username)?;
+        ListeningEventService::default_service().delete_by_user_id(user_id)?;
         Self::repo()
             .delete_by_username(username)
             .map_err(Into::into)
@@ -139,7 +149,8 @@ impl WatchtimeUseCase {
     }
 
     pub fn delete_by_username(username: &str) -> Result<(), CustomError> {
-        ListeningEventService::default_service().delete_by_username(username)?;
+        let user_id = Self::get_user_id_by_username(username)?;
+        ListeningEventService::default_service().delete_by_user_id(user_id)?;
         Self::repo()
             .delete_by_username(username)
             .map_err(Into::into)
@@ -164,6 +175,7 @@ impl WatchtimeUseCase {
         )?;
 
         let now = Utc::now().naive_utc();
+        let user_id = Self::get_user_id_by_username(&username)?;
 
         match Self::get_watchlog_by_device_and_episode(
             &username,
@@ -179,7 +191,7 @@ impl WatchtimeUseCase {
                 );
                 if listened_delta_seconds > 0 {
                     ListeningEventService::create_event(NewListeningEvent {
-                        username: username.clone(),
+                        user_id,
                         device: DEFAULT_DEVICE.to_string(),
                         podcast_episode_id: found_episode.episode_id.clone(),
                         podcast_id: found_episode.podcast_id,

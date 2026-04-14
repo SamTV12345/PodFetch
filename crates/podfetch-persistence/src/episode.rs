@@ -14,7 +14,7 @@ use podfetch_domain::podcast_episode::PodcastEpisode;
 diesel::table! {
     episodes (id) {
         id -> Integer,
-        username -> Text,
+        user_id -> Integer,
         device -> Text,
         podcast -> Text,
         episode -> Text,
@@ -27,13 +27,20 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(episodes, podcasts, podcast_episodes);
+diesel::table! {
+    users (id) {
+        id -> Integer,
+        username -> Text,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(episodes, podcasts, podcast_episodes, users);
 
 #[derive(Queryable, Selectable, Debug, Clone, PartialEq, Eq)]
 #[diesel(table_name = episodes)]
-pub struct EpisodeEntity {
+struct DbEpisodeEntity {
     pub id: i32,
-    pub username: String,
+    pub user_id: i32,
     pub device: String,
     pub podcast: String,
     pub episode: String,
@@ -48,7 +55,7 @@ pub struct EpisodeEntity {
 #[derive(Insertable, Debug, Clone)]
 #[diesel(table_name = episodes)]
 struct NewEpisodeEntity {
-    username: String,
+    user_id: i32,
     device: String,
     podcast: String,
     episode: String,
@@ -58,6 +65,21 @@ struct NewEpisodeEntity {
     started: Option<i32>,
     position: Option<i32>,
     total: Option<i32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EpisodeEntity {
+    pub id: i32,
+    pub username: String,
+    pub device: String,
+    pub podcast: String,
+    pub episode: String,
+    pub timestamp: NaiveDateTime,
+    pub guid: Option<String>,
+    pub action: String,
+    pub started: Option<i32>,
+    pub position: Option<i32>,
+    pub total: Option<i32>,
 }
 
 #[derive(Queryable, Selectable, Debug, Clone)]
@@ -100,76 +122,7 @@ struct PodcastEntity {
     directory_name: String,
     download_location: Option<String>,
     guid: Option<String>,
-}
-
-impl From<EpisodeEntity> for Episode {
-    fn from(entity: EpisodeEntity) -> Self {
-        Self {
-            id: entity.id,
-            username: entity.username,
-            device: entity.device,
-            podcast: entity.podcast,
-            episode: entity.episode,
-            timestamp: entity.timestamp,
-            guid: entity.guid,
-            action: entity.action,
-            started: entity.started,
-            position: entity.position,
-            total: entity.total,
-        }
-    }
-}
-
-impl From<Episode> for EpisodeEntity {
-    fn from(episode: Episode) -> Self {
-        Self {
-            id: episode.id,
-            username: episode.username,
-            device: episode.device,
-            podcast: episode.podcast,
-            episode: episode.episode,
-            timestamp: episode.timestamp,
-            guid: episode.guid,
-            action: episode.action,
-            started: episode.started,
-            position: episode.position,
-            total: episode.total,
-        }
-    }
-}
-
-impl From<NewEpisode> for NewEpisodeEntity {
-    fn from(episode: NewEpisode) -> Self {
-        Self {
-            username: episode.username,
-            device: episode.device,
-            podcast: episode.podcast,
-            episode: episode.episode,
-            timestamp: episode.timestamp,
-            guid: episode.guid,
-            action: episode.action,
-            started: episode.started,
-            position: episode.position,
-            total: episode.total,
-        }
-    }
-}
-
-impl From<&Episode> for NewEpisodeEntity {
-    fn from(episode: &Episode) -> Self {
-        Self {
-            username: episode.username.clone(),
-            device: episode.device.clone(),
-            podcast: episode.podcast.clone(),
-            episode: episode.episode.clone(),
-            timestamp: episode.timestamp,
-            guid: episode.guid.clone(),
-            action: episode.action.clone(),
-            started: episode.started,
-            position: episode.position,
-            total: episode.total,
-        }
-    }
+    added_by: Option<i32>,
 }
 
 impl From<PodcastEpisodeEntity> for PodcastEpisode {
@@ -214,6 +167,43 @@ impl From<PodcastEntity> for Podcast {
             directory_name: entity.directory_name,
             download_location: entity.download_location,
             guid: entity.guid,
+            added_by: entity.added_by,
+        }
+    }
+}
+
+impl From<Episode> for EpisodeEntity {
+    fn from(episode: Episode) -> Self {
+        Self {
+            id: episode.id,
+            username: episode.username,
+            device: episode.device,
+            podcast: episode.podcast,
+            episode: episode.episode,
+            timestamp: episode.timestamp,
+            guid: episode.guid,
+            action: episode.action,
+            started: episode.started,
+            position: episode.position,
+            total: episode.total,
+        }
+    }
+}
+
+impl From<EpisodeEntity> for Episode {
+    fn from(episode: EpisodeEntity) -> Self {
+        Self {
+            id: episode.id,
+            username: episode.username,
+            device: episode.device,
+            podcast: episode.podcast,
+            episode: episode.episode,
+            timestamp: episode.timestamp,
+            guid: episode.guid,
+            action: episode.action,
+            started: episode.started,
+            position: episode.position,
+            total: episode.total,
         }
     }
 }
@@ -226,41 +216,100 @@ impl DieselEpisodeRepository {
     pub fn new(database: Database) -> Self {
         Self { database }
     }
+
+    fn find_user_id(&self, username: &str) -> Result<Option<i32>, PersistenceError> {
+        users::table
+            .filter(users::username.eq(username))
+            .select(users::id)
+            .first::<i32>(&mut self.database.connection()?)
+            .optional()
+            .map_err(Into::into)
+    }
+
+    fn require_user_id(&self, username: &str) -> Result<i32, PersistenceError> {
+        self.find_user_id(username)?
+            .ok_or(PersistenceError::Database(diesel::result::Error::NotFound))
+    }
+
+    fn to_domain(entity: DbEpisodeEntity, username: &str) -> Episode {
+        Episode {
+            id: entity.id,
+            username: username.to_string(),
+            device: entity.device,
+            podcast: entity.podcast,
+            episode: entity.episode,
+            timestamp: entity.timestamp,
+            guid: entity.guid,
+            action: entity.action,
+            started: entity.started,
+            position: entity.position,
+            total: entity.total,
+        }
+    }
 }
 
 impl EpisodeRepository for DieselEpisodeRepository {
     type Error = PersistenceError;
 
     fn create(&self, episode: NewEpisode) -> Result<Episode, Self::Error> {
+        let username = episode.username.clone();
+        let user_id = self.require_user_id(&username)?;
+        let entity = NewEpisodeEntity {
+            user_id,
+            device: episode.device,
+            podcast: episode.podcast,
+            episode: episode.episode,
+            timestamp: episode.timestamp,
+            guid: episode.guid,
+            action: episode.action,
+            started: episode.started,
+            position: episode.position,
+            total: episode.total,
+        };
+
         diesel::insert_into(episodes::table)
-            .values(NewEpisodeEntity::from(episode))
-            .get_result::<EpisodeEntity>(&mut self.database.connection()?)
-            .map(Into::into)
+            .values(entity)
+            .get_result::<DbEpisodeEntity>(&mut self.database.connection()?)
+            .map(|entity| Self::to_domain(entity, &username))
             .map_err(Into::into)
     }
 
     fn insert_episode(&self, episode: &Episode) -> Result<Episode, Self::Error> {
+        let user_id = self.require_user_id(&episode.username)?;
+
         // Check for existing entry with same timestamp, device, podcast, and episode URL
         let existing = episodes::table
             .filter(
-                episodes::timestamp
-                    .eq(episode.timestamp)
+                episodes::user_id
+                    .eq(user_id)
+                    .and(episodes::timestamp.eq(episode.timestamp))
                     .and(episodes::device.eq(&episode.device))
                     .and(episodes::podcast.eq(&episode.podcast))
                     .and(episodes::episode.eq(&episode.episode)),
             )
-            .first::<EpisodeEntity>(&mut self.database.connection()?)
+            .first::<DbEpisodeEntity>(&mut self.database.connection()?)
             .optional()?;
 
         if let Some(entity) = existing {
-            return Ok(entity.into());
+            return Ok(Self::to_domain(entity, &episode.username));
         }
 
         // Insert new episode
         diesel::insert_into(episodes::table)
-            .values(NewEpisodeEntity::from(episode))
-            .get_result::<EpisodeEntity>(&mut self.database.connection()?)
-            .map(Into::into)
+            .values(NewEpisodeEntity {
+                user_id,
+                device: episode.device.clone(),
+                podcast: episode.podcast.clone(),
+                episode: episode.episode.clone(),
+                timestamp: episode.timestamp,
+                guid: episode.guid.clone(),
+                action: episode.action.clone(),
+                started: episode.started,
+                position: episode.position,
+                total: episode.total,
+            })
+            .get_result::<DbEpisodeEntity>(&mut self.database.connection()?)
+            .map(|entity| Self::to_domain(entity, &episode.username))
             .map_err(Into::into)
     }
 
@@ -269,16 +318,20 @@ impl EpisodeRepository for DieselEpisodeRepository {
         username: &str,
         episode_url: &str,
     ) -> Result<Option<Episode>, Self::Error> {
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(None);
+        };
+
         episodes::table
             .filter(
-                episodes::username
-                    .eq(username)
+                episodes::user_id
+                    .eq(user_id)
                     .and(episodes::episode.eq(episode_url)),
             )
             .order_by(episodes::timestamp.desc())
-            .first::<EpisodeEntity>(&mut self.database.connection()?)
+            .first::<DbEpisodeEntity>(&mut self.database.connection()?)
             .optional()
-            .map(|opt| opt.map(Into::into))
+            .map(|opt| opt.map(|entity| Self::to_domain(entity, username)))
             .map_err(Into::into)
     }
 
@@ -288,17 +341,21 @@ impl EpisodeRepository for DieselEpisodeRepository {
         device: &str,
         guid: &str,
     ) -> Result<Option<Episode>, Self::Error> {
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(None);
+        };
+
         episodes::table
             .filter(
-                episodes::username
-                    .eq(username)
+                episodes::user_id
+                    .eq(user_id)
                     .and(episodes::device.eq(device))
                     .and(episodes::guid.eq(guid)),
             )
             .order_by(episodes::timestamp.desc())
-            .first::<EpisodeEntity>(&mut self.database.connection()?)
+            .first::<DbEpisodeEntity>(&mut self.database.connection()?)
             .optional()
-            .map(|opt| opt.map(Into::into))
+            .map(|opt| opt.map(|entity| Self::to_domain(entity, username)))
             .map_err(Into::into)
     }
 
@@ -307,12 +364,16 @@ impl EpisodeRepository for DieselEpisodeRepository {
         username: &str,
         guid: &str,
     ) -> Result<Option<Episode>, Self::Error> {
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(None);
+        };
+
         episodes::table
-            .filter(episodes::username.eq(username).and(episodes::guid.eq(guid)))
+            .filter(episodes::user_id.eq(user_id).and(episodes::guid.eq(guid)))
             .order_by(episodes::timestamp.desc())
-            .first::<EpisodeEntity>(&mut self.database.connection()?)
+            .first::<DbEpisodeEntity>(&mut self.database.connection()?)
             .optional()
-            .map(|opt| opt.map(Into::into))
+            .map(|opt| opt.map(|entity| Self::to_domain(entity, username)))
             .map_err(Into::into)
     }
 
@@ -324,8 +385,12 @@ impl EpisodeRepository for DieselEpisodeRepository {
         podcast: Option<&str>,
         default_device: Option<&str>,
     ) -> Result<Vec<Episode>, Self::Error> {
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(vec![]);
+        };
+
         let mut query = episodes::table
-            .filter(episodes::username.eq(username))
+            .filter(episodes::user_id.eq(user_id))
             .into_boxed();
 
         if let Some(since_date) = since {
@@ -351,8 +416,13 @@ impl EpisodeRepository for DieselEpisodeRepository {
 
         query
             .order_by(episodes::timestamp.desc())
-            .load::<EpisodeEntity>(&mut self.database.connection()?)
-            .map(|entities| entities.into_iter().map(Into::into).collect())
+            .load::<DbEpisodeEntity>(&mut self.database.connection()?)
+            .map(|entities| {
+                entities
+                    .into_iter()
+                    .map(|entity| Self::to_domain(entity, username))
+                    .collect()
+            })
             .map_err(Into::into)
     }
 
@@ -363,15 +433,19 @@ impl EpisodeRepository for DieselEpisodeRepository {
     ) -> Result<Option<Episode>, Self::Error> {
         use diesel::JoinOnDsl;
 
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(None);
+        };
+
         episodes::table
             .inner_join(podcasts::table.on(episodes::podcast.eq(podcasts::rssfeed)))
-            .filter(episodes::username.eq(username))
+            .filter(episodes::user_id.eq(user_id))
             .filter(episodes::episode.eq(episode_url))
             .order_by(episodes::timestamp.desc())
-            .select(EpisodeEntity::as_select())
-            .first::<EpisodeEntity>(&mut self.database.connection()?)
+            .select(DbEpisodeEntity::as_select())
+            .first::<DbEpisodeEntity>(&mut self.database.connection()?)
             .optional()
-            .map(|opt| opt.map(Into::into))
+            .map(|opt| opt.map(|entity| Self::to_domain(entity, username)))
             .map_err(Into::into)
     }
 
@@ -380,6 +454,10 @@ impl EpisodeRepository for DieselEpisodeRepository {
         username: &str,
     ) -> Result<Vec<LastWatchedEpisode>, Self::Error> {
         use diesel::JoinOnDsl;
+
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(vec![]);
+        };
 
         let (episodes1, episodes2) = diesel::alias!(episodes as e1, episodes as e2);
 
@@ -391,7 +469,7 @@ impl EpisodeRepository for DieselEpisodeRepository {
                     .field(episodes::episode)
                     .eq(episodes1.field(episodes::episode)),
             )
-            .filter(episodes2.field(episodes::username).eq(username))
+            .filter(episodes2.field(episodes::user_id).eq(user_id))
             .group_by(episodes2.field(episodes::episode));
 
         // Main query: join podcast_episodes, episodes, and podcasts
@@ -402,7 +480,7 @@ impl EpisodeRepository for DieselEpisodeRepository {
                     .eq(episodes1.field(episodes::guid))),
             )
             .inner_join(podcasts::table.on(podcasts::id.eq(podcast_episodes::podcast_id)))
-            .filter(episodes1.field(episodes::username).eq(username))
+            .filter(episodes1.field(episodes::user_id).eq(user_id))
             .filter(
                 episodes1
                     .field(episodes::timestamp)
@@ -415,7 +493,7 @@ impl EpisodeRepository for DieselEpisodeRepository {
                 PodcastEpisodeEntity::as_select(),
                 (
                     episodes1.field(episodes::id),
-                    episodes1.field(episodes::username),
+                    episodes1.field(episodes::user_id),
                     episodes1.field(episodes::device),
                     episodes1.field(episodes::podcast),
                     episodes1.field(episodes::episode),
@@ -432,7 +510,7 @@ impl EpisodeRepository for DieselEpisodeRepository {
                 PodcastEpisodeEntity,
                 (
                     i32,
-                    String,
+                    i32,
                     String,
                     String,
                     String,
@@ -449,9 +527,9 @@ impl EpisodeRepository for DieselEpisodeRepository {
         Ok(results
             .into_iter()
             .map(|(pe, ep_tuple, p)| {
-                let episode_entity = EpisodeEntity {
+                let episode_entity = DbEpisodeEntity {
                     id: ep_tuple.0,
-                    username: ep_tuple.1,
+                    user_id: ep_tuple.1,
                     device: ep_tuple.2,
                     podcast: ep_tuple.3,
                     episode: ep_tuple.4,
@@ -464,7 +542,7 @@ impl EpisodeRepository for DieselEpisodeRepository {
                 };
                 LastWatchedEpisode {
                     podcast_episode: pe.into(),
-                    episode_action: episode_entity.into(),
+                    episode_action: Self::to_domain(episode_entity, username),
                     podcast: p.into(),
                 }
             })
@@ -476,6 +554,10 @@ impl EpisodeRepository for DieselEpisodeRepository {
         episode_id: &str,
         username: &str,
     ) -> Result<Option<Episode>, Self::Error> {
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(None);
+        };
+
         // First find the podcast episode by episode_id
         let podcast_episode = podcast_episodes::table
             .filter(podcast_episodes::episode_id.eq(episode_id))
@@ -488,12 +570,12 @@ impl EpisodeRepository for DieselEpisodeRepository {
 
         // Then find the episode action by guid
         episodes::table
-            .filter(episodes::username.eq(username))
+            .filter(episodes::user_id.eq(user_id))
             .filter(episodes::guid.eq(&pe.guid))
             .order_by(episodes::timestamp.desc())
-            .first::<EpisodeEntity>(&mut self.database.connection()?)
+            .first::<DbEpisodeEntity>(&mut self.database.connection()?)
             .optional()
-            .map(|opt| opt.map(Into::into))
+            .map(|opt| opt.map(|entity| Self::to_domain(entity, username)))
             .map_err(Into::into)
     }
 
@@ -515,7 +597,11 @@ impl EpisodeRepository for DieselEpisodeRepository {
     }
 
     fn delete_by_username(&self, username: &str) -> Result<(), Self::Error> {
-        diesel::delete(episodes::table.filter(episodes::username.eq(username)))
+        let Some(user_id) = self.find_user_id(username)? else {
+            return Ok(());
+        };
+
+        diesel::delete(episodes::table.filter(episodes::user_id.eq(user_id)))
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)

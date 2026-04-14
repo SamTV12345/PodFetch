@@ -9,7 +9,7 @@ use podfetch_domain::listening_event::{
 diesel::table! {
     listening_events (id) {
         id -> Integer,
-        username -> Text,
+        user_id -> Integer,
         device -> Text,
         podcast_episode_id -> Text,
         podcast_id -> Integer,
@@ -25,7 +25,7 @@ diesel::table! {
 #[diesel(table_name = listening_events)]
 struct ListeningEventEntity {
     id: i32,
-    username: String,
+    user_id: i32,
     device: String,
     podcast_episode_id: String,
     podcast_id: i32,
@@ -39,7 +39,7 @@ struct ListeningEventEntity {
 #[derive(Insertable, Clone)]
 #[diesel(table_name = listening_events)]
 struct NewListeningEventEntity {
-    username: String,
+    user_id: i32,
     device: String,
     podcast_episode_id: String,
     podcast_id: i32,
@@ -54,7 +54,7 @@ impl From<ListeningEventEntity> for ListeningEvent {
     fn from(value: ListeningEventEntity) -> Self {
         Self {
             id: value.id,
-            username: value.username,
+            user_id: value.user_id,
             device: value.device,
             podcast_episode_id: value.podcast_episode_id,
             podcast_id: value.podcast_id,
@@ -70,7 +70,7 @@ impl From<ListeningEventEntity> for ListeningEvent {
 impl From<NewListeningEvent> for NewListeningEventEntity {
     fn from(value: NewListeningEvent) -> Self {
         Self {
-            username: value.username,
+            user_id: value.user_id,
             device: value.device,
             podcast_episode_id: value.podcast_episode_id,
             podcast_id: value.podcast_id,
@@ -108,7 +108,7 @@ impl ListeningEventRepository for DieselListeningEventRepository {
 
     fn get_by_user_and_range(
         &self,
-        username_to_search: &str,
+        user_id_to_search: i32,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
     ) -> Result<Vec<ListeningEvent>, Self::Error> {
@@ -116,7 +116,7 @@ impl ListeningEventRepository for DieselListeningEventRepository {
         use self::listening_events::table as le_table;
 
         let mut query = le_table
-            .filter(le_dsl::username.eq(username_to_search))
+            .filter(le_dsl::user_id.eq(user_id_to_search))
             .into_boxed();
 
         if let Some(from) = from {
@@ -134,11 +134,11 @@ impl ListeningEventRepository for DieselListeningEventRepository {
             .map_err(Into::into)
     }
 
-    fn delete_by_username(&self, username_to_search: &str) -> Result<usize, Self::Error> {
+    fn delete_by_user_id(&self, user_id_to_search: i32) -> Result<usize, Self::Error> {
         use self::listening_events::dsl as le_dsl;
         use self::listening_events::table as le_table;
 
-        diesel::delete(le_table.filter(le_dsl::username.eq(username_to_search)))
+        diesel::delete(le_table.filter(le_dsl::user_id.eq(user_id_to_search)))
             .execute(&mut self.database.connection()?)
             .map_err(Into::into)
     }

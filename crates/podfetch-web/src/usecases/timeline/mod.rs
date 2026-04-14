@@ -10,10 +10,10 @@ use common_infrastructure::error::{CustomError, map_db_error};
 use diesel::RunQueryDsl;
 use diesel::dsl::max;
 use diesel::prelude::*;
+use podfetch_domain::episode::Episode;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
 use podfetch_domain::user::User;
 use podfetch_persistence::db::get_connection;
-use podfetch_persistence::episode::EpisodeEntity as Episode;
 use podfetch_persistence::favorite::FavoriteEntity as Favorite;
 use podfetch_persistence::podcast::PodcastEntity as Podcast;
 use podfetch_persistence::podcast_episode::PodcastEpisodeEntity as PodcastEpisode;
@@ -35,15 +35,31 @@ pub struct TimelineItem {
 #[derive(Queryable, Clone)]
 #[diesel(table_name = podfetch_persistence::schema::favorite_podcast_episodes)]
 struct JoinedFavoritePodcastEpisode {
-    username: String,
+    user_id: i32,
     episode_id: i32,
     favorite: bool,
+}
+
+#[derive(Queryable, Clone)]
+#[diesel(table_name = podfetch_persistence::schema::episodes)]
+struct JoinedEpisode {
+    id: i32,
+    _user_id: i32,
+    device: String,
+    podcast: String,
+    episode: String,
+    timestamp: chrono::NaiveDateTime,
+    guid: Option<String>,
+    action: String,
+    started: Option<i32>,
+    position: Option<i32>,
+    total: Option<i32>,
 }
 
 impl From<JoinedFavoritePodcastEpisode> for FavoritePodcastEpisode {
     fn from(value: JoinedFavoritePodcastEpisode) -> Self {
         Self {
-            username: value.username,
+            user_id: value.user_id,
             episode_id: value.episode_id,
             favorite: value.favorite,
         }
@@ -63,21 +79,21 @@ impl TimelineItem {
         use podfetch_persistence::schema::episodes::episode as ehid;
         use podfetch_persistence::schema::episodes::guid as eguid;
         use podfetch_persistence::schema::episodes::timestamp as phistory_date;
-        use podfetch_persistence::schema::episodes::username as phi_username;
+        use podfetch_persistence::schema::episodes::user_id as phi_user_id;
         use podfetch_persistence::schema::favorite_podcast_episodes::episode_id as fpe_fav;
         use podfetch_persistence::schema::favorite_podcast_episodes::favorite as idpe_fav_liked;
-        use podfetch_persistence::schema::favorite_podcast_episodes::username as idpe_fav;
+        use podfetch_persistence::schema::favorite_podcast_episodes::user_id as idpe_fav;
         use podfetch_persistence::schema::favorites::dsl::*;
         use podfetch_persistence::schema::favorites::podcast_id as f_podcast_id;
-        use podfetch_persistence::schema::favorites::username as f_username;
+        use podfetch_persistence::schema::favorites::user_id as f_user_id;
         use podfetch_persistence::schema::podcast_episodes::guid as pguid;
         use podfetch_persistence::schema::podcast_episodes::id as e_p_id;
         use podfetch_persistence::schema::podcast_episodes::podcast_id as e_podcast_id;
 
-        let username_to_search = &user.username;
+        let user_id_to_search = user.id;
 
         let _ = FilterService::default_service().save_timeline_decision(
-            username_to_search,
+            user_id_to_search,
             favored_only.favored_only.unwrap_or(false),
         );
 
@@ -85,14 +101,14 @@ impl TimelineItem {
 
         let subquery = ph2
             .select(max(ph2.field(phistory_date)))
-            .filter(ph2.field(phi_username).eq(&username_to_search))
+            .filter(ph2.field(phi_user_id).eq(user_id_to_search))
             .group_by(ph2.field(ehid));
 
         let part_query = podcast_episodes
             .inner_join(podcasts.on(e_podcast_id.eq(pid)))
             .left_join(
                 favorite_podcast_episodes
-                    .on(e_p_id.eq(fpe_fav).and(idpe_fav.eq(&username_to_search))),
+                    .on(e_p_id.eq(fpe_fav).and(idpe_fav.eq(user_id_to_search))),
             )
             .left_join(ph1.on(ph1.field(eguid).eq(pguid.nullable())))
             .filter(
@@ -101,7 +117,7 @@ impl TimelineItem {
                     .eq_any(subquery)
                     .or(ph1.field(phistory_date).is_null()),
             )
-            .left_join(favorites.on(f_username.eq(&username_to_search).and(f_podcast_id.eq(pid))));
+            .left_join(favorites.on(f_user_id.eq(user_id_to_search).and(f_podcast_id.eq(pid))));
 
         let mut query = part_query
             .order(date_of_recording.desc())
@@ -116,9 +132,9 @@ impl TimelineItem {
                     query = query.filter(date_of_recording.lt(last_id.clone()));
                 }
 
-                query = query.filter(f_username.eq(&username_to_search));
+                query = query.filter(f_user_id.eq(user_id_to_search));
                 query = query.filter(favored.eq(true));
-                total_count = total_count.filter(f_username.eq(&username_to_search));
+                total_count = total_count.filter(f_user_id.eq(user_id_to_search));
             }
             false => {
                 if let Some(last_id) = favored_only.last_timestamp {
@@ -145,7 +161,7 @@ impl TimelineItem {
                 PodcastEpisode,
                 Podcast,
                 Option<JoinedFavoritePodcastEpisode>,
-                Option<Episode>,
+                Option<JoinedEpisode>,
                 Option<Favorite>,
             )>(&mut get_connection())
             .map_err(|e| map_db_error(e, Critical))?
@@ -154,7 +170,21 @@ impl TimelineItem {
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
                     let history_dto = history
                         .as_ref()
-                        .map(|episode| map_episode_to_dto(&episode.clone().into()));
+                        .map(|episode| {
+                            map_episode_to_dto(&Episode {
+                                id: episode.id,
+                                username: user.username.clone(),
+                                device: episode.device.clone(),
+                                podcast: episode.podcast.clone(),
+                                episode: episode.episode.clone(),
+                                timestamp: episode.timestamp,
+                                guid: episode.guid.clone(),
+                                action: episode.action.clone(),
+                                started: episode.started,
+                                position: episode.position,
+                                total: episode.total,
+                            })
+                        });
                     (
                         PodcastEpisodeDto::from((
                             podcast_episode,

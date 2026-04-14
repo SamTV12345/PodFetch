@@ -41,7 +41,11 @@ pub async fn handle_cookie_session(
                 .and_then(|h| h.to_str().ok());
             let auth_val = require_present_header_value::<CustomError>(proxy_header)
                 .map_err(map_gpodder_error)?;
-            Session::new(auth_val)
+            let user = state
+                .user_auth_service
+                .find_by_username(&auth_val)
+                .map_err(|_| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
+            Session::new(user.username, user.id)
         } else {
             let (username, password) = AuthFilter::basic_auth_login(auth_header)?;
             let user = state
@@ -50,7 +54,7 @@ pub async fn handle_cookie_session(
                 .map_err(|_| CustomError::from(CustomErrorInner::Forbidden(Warning)))?;
             require_password_match::<CustomError>(user.password.as_deref(), &digest(password))
                 .map_err(map_gpodder_error)?;
-            Session::new(user.username)
+            Session::new(user.username, user.id)
         };
 
         req.extensions_mut().insert(session);

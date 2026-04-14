@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
 pub struct Subscription {
     pub id: i32,
-    pub username: String,
+    pub user_id: i32,
     pub device: String,
     pub podcast: String,
     pub created: chrono::NaiveDateTime,
@@ -15,7 +15,7 @@ impl From<podfetch_domain::subscription::Subscription> for Subscription {
     fn from(value: podfetch_domain::subscription::Subscription) -> Self {
         Self {
             id: value.id,
-            username: value.username,
+            user_id: value.user_id,
             device: value.device,
             podcast: value.podcast,
             created: value.created,
@@ -100,18 +100,18 @@ pub trait SubscriptionApplicationService {
     fn get_device_subscriptions(
         &self,
         device_id: &str,
-        username: &str,
+        user_id: i32,
         since: i32,
     ) -> Result<SubscriptionChangesToClient, Self::Error>;
     fn get_user_subscriptions(
         &self,
-        username: &str,
+        user_id: i32,
         since: i32,
     ) -> Result<SubscriptionModelChanges, Self::Error>;
     fn update_subscriptions(
         &self,
         device_id: &str,
-        username: &str,
+        user_id: i32,
         request: SubscriptionUpdateRequest,
     ) -> Result<Vec<Vec<String>>, Self::Error>;
     fn get_available_gpodder_podcasts(&self) -> Result<Vec<GPodderAvailablePodcast>, Self::Error>;
