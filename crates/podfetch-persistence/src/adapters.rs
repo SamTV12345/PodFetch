@@ -55,7 +55,9 @@ impl DeviceRepository for DeviceRepositoryImpl {
     }
 
     fn get_devices_of_user(&self, user_id_to_find: i32) -> Result<Vec<Device>, CustomError> {
-        self.inner.get_devices_of_user(user_id_to_find).map_err(Into::into)
+        self.inner
+            .get_devices_of_user(user_id_to_find)
+            .map_err(Into::into)
     }
 
     fn delete_by_user_id(&self, user_id: i32) -> Result<(), CustomError> {
@@ -91,11 +93,7 @@ impl FilterRepository for FilterRepositoryImpl {
         self.inner.save(filter).map_err(Into::into)
     }
 
-    fn save_timeline_decision(
-        &self,
-        user_id: i32,
-        only_favored: bool,
-    ) -> Result<(), Self::Error> {
+    fn save_timeline_decision(&self, user_id: i32, only_favored: bool) -> Result<(), Self::Error> {
         self.inner
             .save_timeline_decision(user_id, only_favored)
             .map_err(Into::into)
@@ -657,11 +655,7 @@ impl TagRepository for TagRepositoryImpl {
         self.inner.get_tags(user_id).map_err(Into::into)
     }
 
-    fn get_tags_of_podcast(
-        &self,
-        podcast_id: i32,
-        user_id: i32,
-    ) -> Result<Vec<Tag>, Self::Error> {
+    fn get_tags_of_podcast(&self, podcast_id: i32, user_id: i32) -> Result<Vec<Tag>, Self::Error> {
         self.inner
             .get_tags_of_podcast(podcast_id, user_id)
             .map_err(Into::into)

@@ -65,8 +65,7 @@ pub trait FavoriteRepository: Send + Sync {
     ) -> Result<(), Self::Error>;
 
     /// Get all favored podcasts for a user with their favorite status.
-    fn get_favored_podcasts(&self, user_id: i32)
-    -> Result<Vec<PodcastWithFavorite>, Self::Error>;
+    fn get_favored_podcasts(&self, user_id: i32) -> Result<Vec<PodcastWithFavorite>, Self::Error>;
 
     /// Search for favored podcasts with tags.
     fn search_podcasts_favored(

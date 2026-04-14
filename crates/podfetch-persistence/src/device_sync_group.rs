@@ -68,7 +68,11 @@ impl DeviceSyncGroupRepository for DieselDeviceSyncGroupRepository {
             .map_err(Into::into)
     }
 
-    fn replace_all(&self, user_id_to_replace: i32, groups: Vec<DeviceSyncGroup>) -> Result<(), Self::Error> {
+    fn replace_all(
+        &self,
+        user_id_to_replace: i32,
+        groups: Vec<DeviceSyncGroup>,
+    ) -> Result<(), Self::Error> {
         use self::device_sync_groups::dsl as dsg_dsl;
 
         let mut connection = self.database.connection()?;

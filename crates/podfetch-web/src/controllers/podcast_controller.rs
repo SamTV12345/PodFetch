@@ -34,16 +34,16 @@ use crate::podcast::{
     parse_search_type, require_admin, require_privileged, require_proxy_episode,
     sanitize_proxy_request_headers, spawn_podindex_download,
 };
-use podfetch_domain::podcast::PodcastRepository;
-use podfetch_persistence::podcast::DieselPodcastRepository;
-use podfetch_persistence::db::database;
 use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
 use crate::url_rewriting::create_url_rewriter;
 use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_domain::podcast::PodcastRepository;
 use podfetch_domain::user::User;
+use podfetch_persistence::db::database;
+use podfetch_persistence::podcast::DieselPodcastRepository;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
 
@@ -101,9 +101,7 @@ pub async fn search_podcasts(
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let rewriter = create_url_rewriter(&headers);
-    let existing_filter = state
-        .filter_service
-        .get_filter_by_user_id(requester.id)?;
+    let existing_filter = state.filter_service.get_filter_by_user_id(requester.id)?;
     let search_plan = build_podcast_search_plan(query, requester.id, existing_filter);
     state.filter_service.save_filter(search_plan.filter)?;
 
@@ -524,11 +522,7 @@ pub async fn favorite_podcast(
     requester: Extension<User>,
     update_model: Json<PodcastFavorUpdateModel>,
 ) -> Result<StatusCode, CustomError> {
-    PodcastService::update_favor_podcast(
-        update_model.id,
-        update_model.favored,
-        requester.id,
-    )?;
+    PodcastService::update_favor_podcast(update_model.id, update_model.favored, requester.id)?;
     Ok(StatusCode::OK)
 }
 

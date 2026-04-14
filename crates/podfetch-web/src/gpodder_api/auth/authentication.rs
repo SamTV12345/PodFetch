@@ -104,9 +104,7 @@ fn handle_proxy_auth(
         .and_then(|header| header.to_str().ok());
 
     if authorization_header.is_none() {
-        log::warn!(
-            "GPodder proxy auth: missing header '{header_name}' for user '{username}'"
-        );
+        log::warn!("GPodder proxy auth: missing header '{header_name}' for user '{username}'");
     }
 
     let auth_val = require_present_header_value::<CustomError>(authorization_header)
@@ -128,9 +126,7 @@ fn handle_proxy_auth(
         }
         Err(e) => {
             if config.auto_sign_up {
-                log::info!(
-                    "GPodder proxy auth: user '{username}' not found, auto-signing up"
-                );
+                log::info!("GPodder proxy auth: user '{username}' not found, auto-signing up");
                 user_auth_service
                     .create_user(username.to_string(), "user".to_string(), None, false)
                     .expect("Error inserting user on auto registering");
@@ -201,9 +197,7 @@ fn handle_gpodder_basic_auth(
         Ok(user) => {
             let password_hash = digest(&password);
             if user.password.as_deref() != Some(password_hash.as_str()) {
-                log::warn!(
-                    "GPodder basic auth: password mismatch for user '{username}'"
-                );
+                log::warn!("GPodder basic auth: password mismatch for user '{username}'");
             }
             require_password_match::<CustomError>(user.password.as_deref(), &password_hash)
                 .map_err(map_gpodder_error)?;

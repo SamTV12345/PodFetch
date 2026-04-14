@@ -105,7 +105,8 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         diesel::delete(
-            subscriptions_dsl::subscriptions.filter(subscriptions_dsl::user_id.eq(user_id_to_delete)),
+            subscriptions_dsl::subscriptions
+                .filter(subscriptions_dsl::user_id.eq(user_id_to_delete)),
         )
         .execute(&mut self.database.connection()?)
         .map(|_| ())

@@ -74,12 +74,8 @@ pub trait TagsApplicationService {
         color: String,
     ) -> Result<Tag, Self::Error>;
     fn get_tags(&self, user_id: i32) -> Result<Vec<Tag>, Self::Error>;
-    fn update_tag(
-        &self,
-        user_id: i32,
-        tag_id: &str,
-        update: TagCreate,
-    ) -> Result<Tag, Self::Error>;
+    fn update_tag(&self, user_id: i32, tag_id: &str, update: TagCreate)
+    -> Result<Tag, Self::Error>;
     fn delete_tag(&self, user_id: i32, tag_id: &str) -> Result<(), Self::Error>;
     fn add_podcast_to_tag(
         &self,

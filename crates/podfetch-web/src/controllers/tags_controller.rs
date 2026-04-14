@@ -22,12 +22,7 @@ pub async fn insert_tag(
     Extension(requester): Extension<User>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    tags::create_tag(
-        state.tag_service.as_ref(),
-        requester.id,
-        tag_create,
-    )
-    .map(Json)
+    tags::create_tag(state.tag_service.as_ref(), requester.id, tag_create).map(Json)
 }
 
 #[utoipa::path(
@@ -56,8 +51,7 @@ pub async fn delete_tag(
     Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    tags::delete_tag(state.tag_service.as_ref(), requester.id, &tag_id)
-        .map(|_| StatusCode::OK)
+    tags::delete_tag(state.tag_service.as_ref(), requester.id, &tag_id).map(|_| StatusCode::OK)
 }
 
 #[utoipa::path(

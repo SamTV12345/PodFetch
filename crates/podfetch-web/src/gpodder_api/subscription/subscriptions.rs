@@ -97,10 +97,11 @@ pub async fn upload_subscription_changes(
     let deviceid = trim_from_path(&paths.1);
     ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
 
-    let update_urls =
-        state
-            .subscription_service
-            .update_subscriptions(deviceid.0, flag.user_id, upload_request.0)?;
+    let update_urls = state.subscription_service.update_subscriptions(
+        deviceid.0,
+        flag.user_id,
+        upload_request.0,
+    )?;
 
     Ok(Json(SubscriptionPostResponse {
         update_urls,

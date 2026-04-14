@@ -168,23 +168,21 @@ impl TimelineItem {
             .into_iter()
             .map(
                 |(podcast_episode, podcast, fav_episode, history, favorite)| {
-                    let history_dto = history
-                        .as_ref()
-                        .map(|episode| {
-                            map_episode_to_dto(&Episode {
-                                id: episode.id,
-                                username: user.username.clone(),
-                                device: episode.device.clone(),
-                                podcast: episode.podcast.clone(),
-                                episode: episode.episode.clone(),
-                                timestamp: episode.timestamp,
-                                guid: episode.guid.clone(),
-                                action: episode.action.clone(),
-                                started: episode.started,
-                                position: episode.position,
-                                total: episode.total,
-                            })
-                        });
+                    let history_dto = history.as_ref().map(|episode| {
+                        map_episode_to_dto(&Episode {
+                            id: episode.id,
+                            username: user.username.clone(),
+                            device: episode.device.clone(),
+                            podcast: episode.podcast.clone(),
+                            episode: episode.episode.clone(),
+                            timestamp: episode.timestamp,
+                            guid: episode.guid.clone(),
+                            action: episode.action.clone(),
+                            started: episode.started,
+                            position: episode.position,
+                            total: episode.total,
+                        })
+                    });
                     (
                         PodcastEpisodeDto::from((
                             podcast_episode,

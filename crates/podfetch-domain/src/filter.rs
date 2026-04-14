@@ -30,6 +30,5 @@ pub trait FilterRepository: Send + Sync {
 
     fn get_by_user_id(&self, user_id: i32) -> Result<Option<Filter>, Self::Error>;
     fn save(&self, filter: Filter) -> Result<(), Self::Error>;
-    fn save_timeline_decision(&self, user_id: i32, only_favored: bool)
-    -> Result<(), Self::Error>;
+    fn save_timeline_decision(&self, user_id: i32, only_favored: bool) -> Result<(), Self::Error>;
 }

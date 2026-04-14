@@ -21,12 +21,12 @@ use podfetch_domain::favorite::FavoriteRepository;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::{NewPodcast, PodcastMetadataUpdate, PodcastRepository};
 use podfetch_domain::subscription::SubscriptionRepository;
-use podfetch_persistence::subscription::DieselSubscriptionRepository;
 use podfetch_domain::user::User;
 use podfetch_persistence::db::PersistenceError;
 use podfetch_persistence::db::database;
 use podfetch_persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::podcast::DieselPodcastRepository;
+use podfetch_persistence::subscription::DieselSubscriptionRepository;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde_json::Value;
@@ -269,10 +269,7 @@ impl PodcastService {
             .ok_or_else(|| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
     }
 
-    pub fn get_favorite_state(
-        user_id: i32,
-        podcast_id: i32,
-    ) -> Result<Option<bool>, CustomError> {
+    pub fn get_favorite_state(user_id: i32, podcast_id: i32) -> Result<Option<bool>, CustomError> {
         favorite_repo()
             .find_by_user_id_and_podcast_id(user_id, podcast_id)
             .map(|opt| opt.map(|f| f.favored))
@@ -428,10 +425,7 @@ impl PodcastService {
             .map_err(CustomError::from)?;
 
         if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
-            if let Some(podcast) = podcast_repo()
-                .find_by_id(id)
-                .map_err(CustomError::from)?
-            {
+            if let Some(podcast) = podcast_repo().find_by_id(id).map_err(CustomError::from)? {
                 let sub_repo = DieselSubscriptionRepository::new(database());
                 let (add, remove) = if favored {
                     (vec![podcast.rssfeed], vec![])

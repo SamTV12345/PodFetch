@@ -286,10 +286,7 @@ impl FavoriteRepository for DieselFavoriteRepository {
         }
     }
 
-    fn get_favored_podcasts(
-        &self,
-        user_id: i32,
-    ) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
+    fn get_favored_podcasts(&self, user_id: i32) -> Result<Vec<PodcastWithFavorite>, Self::Error> {
         podcasts::table
             .inner_join(favorites::table.on(podcasts::id.eq(favorites::podcast_id)))
             .filter(

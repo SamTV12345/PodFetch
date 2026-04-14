@@ -74,8 +74,8 @@ pub async fn get_devices_of_user(
         flag.user_id,
         user_query,
     )
-        .map(Json)
-        .map_err(map_controller_error)
+    .map(Json)
+    .map_err(map_controller_error)
 }
 
 #[derive(Deserialize)]
