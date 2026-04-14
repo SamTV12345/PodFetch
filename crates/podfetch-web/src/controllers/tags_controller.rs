@@ -173,6 +173,14 @@ mod tests {
         AppState::new()
     }
 
+    fn admin_user_id() -> i32 {
+        app_state()
+            .user_auth_service
+            .find_by_username(&admin_username())
+            .unwrap()
+            .id
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_insert_update_and_delete_tag() {
@@ -264,7 +272,7 @@ mod tests {
 
         let tags_for_podcast = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, 9999)
+            .get_tags_of_podcast(podcast.id, admin_user_id())
             .unwrap();
         assert_eq!(tags_for_podcast.len(), 1);
         assert_eq!(tags_for_podcast[0].id, tag.id);
@@ -277,7 +285,7 @@ mod tests {
 
         let tags_after_remove = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, 9999)
+            .get_tags_of_podcast(podcast.id, admin_user_id())
             .unwrap();
         assert!(tags_after_remove.is_empty());
     }

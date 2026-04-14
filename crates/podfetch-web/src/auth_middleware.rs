@@ -104,7 +104,7 @@ async fn handle_auth_internal(
             &state.environment.reverse_proxy_config.clone().unwrap(),
             state.user_auth_service.as_ref(),
         ),
-        AuthType::None => Ok(state.user_auth_service.read_only_admin_user()),
+        AuthType::None => state.user_auth_service.ensure_admin_user(),
     }
 }
 

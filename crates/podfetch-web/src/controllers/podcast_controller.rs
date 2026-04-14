@@ -1311,7 +1311,7 @@ pub mod tests {
         let import_result = super::import_podcasts_from_opml(
             Extension(non_privileged.clone()),
             Json(OpmlModel {
-                content: "<opml version=\"2.0\"><body></body></opml>".to_string(),
+                content: "<opml version=\"2.0\"><head><title>Test</title></head><body><outline text=\"feed\" xmlUrl=\"https://example.com/feed.xml\" /></body></opml>".to_string(),
             }),
         )
         .await;

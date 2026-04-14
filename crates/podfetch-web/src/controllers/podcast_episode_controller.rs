@@ -434,6 +434,7 @@ mod tests {
     use axum::extract::{Path, State};
     use chrono::Utc;
     use common_infrastructure::error::CustomErrorInner;
+    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
@@ -456,6 +457,18 @@ mod tests {
 
     fn app_state() -> AppState {
         AppState::new()
+    }
+
+    fn admin_user_id() -> i32 {
+        let username = ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "postgres".to_string());
+        app_state()
+            .user_auth_service
+            .find_by_username(&username)
+            .unwrap()
+            .id
     }
 
     fn assert_client_error_status(status: u16) {
@@ -592,7 +605,7 @@ mod tests {
         assert_eq!(response.status_code(), 200);
 
         let favorite = FavoritePodcastEpisodeService::default_service()
-            .get_by_user_id_and_episode_id(crate::role::STANDARD_USER_ID, inserted_episode.id)
+            .get_by_user_id_and_episode_id(admin_user_id(), inserted_episode.id)
             .unwrap();
         assert!(favorite.is_some());
         assert!(favorite.unwrap().favorite);
@@ -605,7 +618,7 @@ mod tests {
 
         diesel::insert_into(subs_dsl::subscriptions)
             .values((
-                subs_dsl::user_id.eq(crate::role::STANDARD_USER_ID),
+                subs_dsl::user_id.eq(admin_user_id()),
                 subs_dsl::device.eq("phone".to_string()),
                 subs_dsl::podcast.eq("https://example.com/not-present.xml".to_string()),
                 subs_dsl::created.eq(Utc::now().naive_utc()),

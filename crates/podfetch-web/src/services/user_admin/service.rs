@@ -24,6 +24,12 @@ impl UserAdminService {
     }
 
     pub fn read_only_admin_id(&self) -> i32 {
+        if let Some(admin_username) = &self.environment.username
+            && let Ok(Some(user)) = self.repository.find_by_username(admin_username)
+        {
+            return user.id;
+        }
+
         STANDARD_USER_ID
     }
 
