@@ -136,7 +136,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_aggregates_data() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -224,7 +224,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_respects_date_range() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -306,7 +306,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_clamps_top_limit_to_maximum() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -372,7 +372,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_accepts_rfc3339_range() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -423,7 +423,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_clamps_top_limit_to_minimum_one() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -475,7 +475,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_rewrites_image_urls_with_forwarded_headers() {
         let mut server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());

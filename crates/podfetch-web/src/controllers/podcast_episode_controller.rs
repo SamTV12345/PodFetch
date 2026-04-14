@@ -434,7 +434,6 @@ mod tests {
     use axum::extract::{Path, State};
     use chrono::Utc;
     use common_infrastructure::error::CustomErrorInner;
-    use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
     use diesel::ExpressionMethods;
     use diesel::QueryDsl;
     use diesel::RunQueryDsl;
@@ -446,13 +445,6 @@ mod tests {
     use serde_json::json;
     use serial_test::serial;
     use uuid::Uuid;
-
-    fn admin_username() -> String {
-        ENVIRONMENT_SERVICE
-            .username
-            .clone()
-            .unwrap_or_else(|| "postgres".to_string())
-    }
 
     fn unique_name(prefix: &str) -> String {
         format!("{prefix}-{}", Uuid::new_v4())

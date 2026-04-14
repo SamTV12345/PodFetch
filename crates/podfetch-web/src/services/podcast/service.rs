@@ -425,15 +425,16 @@ impl PodcastService {
             .map_err(CustomError::from)?;
 
         if ENVIRONMENT_SERVICE.gpodder_integration_enabled
-            && let Some(podcast) = podcast_repo().find_by_id(id).map_err(CustomError::from)? {
-                let sub_repo = DieselSubscriptionRepository::new(database());
-                let (add, remove) = if favored {
-                    (vec![podcast.rssfeed], vec![])
-                } else {
-                    (vec![], vec![podcast.rssfeed])
-                };
-                let _ = sub_repo.update_subscriptions("webview", user_id, &add, &remove);
-            }
+            && let Some(podcast) = podcast_repo().find_by_id(id).map_err(CustomError::from)?
+        {
+            let sub_repo = DieselSubscriptionRepository::new(database());
+            let (add, remove) = if favored {
+                (vec![podcast.rssfeed], vec![])
+            } else {
+                (vec![], vec![podcast.rssfeed])
+            };
+            let _ = sub_repo.update_subscriptions("webview", user_id, &add, &remove);
+        }
 
         Ok(())
     }

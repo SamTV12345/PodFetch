@@ -230,7 +230,7 @@ mod tests {
     #[serial]
     async fn test_add_and_remove_podcast_from_tag() {
         let server = handle_test_startup().await;
-        let username = admin_username();
+        let _username = admin_username();
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("tagged-podcast-{unique}");
         let tag_name = unique_name("Favorites");

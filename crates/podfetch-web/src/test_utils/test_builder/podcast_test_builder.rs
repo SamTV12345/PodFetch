@@ -25,6 +25,7 @@ pub mod tests {
         pub directory_name: String,
         pub download_location: Option<String>,
         pub guid: Option<String>,
+        pub added_by: Option<i32>,
     }
 
     impl PodcastTestData {
@@ -52,6 +53,7 @@ pub mod tests {
                 directory_name: Faker.fake(),
                 download_location: None,
                 guid: Some(Faker.fake()),
+                added_by: None,
             }
         }
 
@@ -73,6 +75,7 @@ pub mod tests {
                 keywords: self.keywords,
                 language: self.language,
                 guid: self.guid,
+                added_by: self.added_by,
             }
         }
     }
@@ -96,6 +99,7 @@ pub mod tests {
                 image_url: value.image_url,
                 rssfeed: value.rssfeed,
                 guid: value.guid,
+                added_by: value.added_by,
             }
         }
     }
