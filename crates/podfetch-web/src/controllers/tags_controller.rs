@@ -22,12 +22,7 @@ pub async fn insert_tag(
     Extension(requester): Extension<User>,
     Json(tag_create): Json<TagCreate>,
 ) -> Result<Json<Tag>, CustomError> {
-    tags::create_tag(
-        state.tag_service.as_ref(),
-        requester.username.clone(),
-        tag_create,
-    )
-    .map(Json)
+    tags::create_tag(state.tag_service.as_ref(), requester.id, tag_create).map(Json)
 }
 
 #[utoipa::path(
@@ -41,7 +36,7 @@ pub async fn get_tags(
     State(state): State<AppState>,
     requester: Extension<User>,
 ) -> Result<Json<Vec<Tag>>, CustomError> {
-    tags::get_tags(state.tag_service.as_ref(), &requester.username).map(Json)
+    tags::get_tags(state.tag_service.as_ref(), requester.id).map(Json)
 }
 
 #[utoipa::path(
@@ -56,8 +51,7 @@ pub async fn delete_tag(
     Path(tag_id): Path<String>,
     Extension(requester): Extension<User>,
 ) -> Result<StatusCode, CustomError> {
-    tags::delete_tag(state.tag_service.as_ref(), &requester.username, &tag_id)
-        .map(|_| StatusCode::OK)
+    tags::delete_tag(state.tag_service.as_ref(), requester.id, &tag_id).map(|_| StatusCode::OK)
 }
 
 #[utoipa::path(
@@ -75,7 +69,7 @@ pub async fn update_tag(
 ) -> Result<Json<Tag>, CustomError> {
     tags::update_tag(
         state.tag_service.as_ref(),
-        &requester.username,
+        requester.id,
         &tag_id,
         tag_create,
     )
@@ -97,7 +91,7 @@ pub async fn add_podcast_to_tag(
     let (tag_id, podcast_id) = tag_id_to_convert;
     tags::add_podcast_to_tag(
         state.tag_service.as_ref(),
-        &requester.username,
+        requester.id,
         &tag_id,
         podcast_id,
     )
@@ -120,7 +114,7 @@ pub async fn delete_podcast_from_tag(
 
     tags::delete_podcast_from_tag(
         state.tag_service.as_ref(),
-        &requester.username,
+        requester.id,
         &tag_id,
         podcast_id,
     )
@@ -177,6 +171,14 @@ mod tests {
 
     fn app_state() -> AppState {
         AppState::new()
+    }
+
+    fn admin_user_id() -> i32 {
+        app_state()
+            .user_auth_service
+            .find_by_username(&admin_username())
+            .unwrap()
+            .id
     }
 
     #[tokio::test]
@@ -236,7 +238,7 @@ mod tests {
     #[serial]
     async fn test_add_and_remove_podcast_from_tag() {
         let server = handle_test_startup().await;
-        let username = admin_username();
+        let _username = admin_username();
         let unique = Uuid::new_v4().to_string();
         let podcast_slug = format!("tagged-podcast-{unique}");
         let tag_name = unique_name("Favorites");
@@ -270,7 +272,7 @@ mod tests {
 
         let tags_for_podcast = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, &username)
+            .get_tags_of_podcast(podcast.id, admin_user_id())
             .unwrap();
         assert_eq!(tags_for_podcast.len(), 1);
         assert_eq!(tags_for_podcast[0].id, tag.id);
@@ -283,7 +285,7 @@ mod tests {
 
         let tags_after_remove = app_state()
             .tag_service
-            .get_tags_of_podcast(podcast.id, &username)
+            .get_tags_of_podcast(podcast.id, admin_user_id())
             .unwrap();
         assert!(tags_after_remove.is_empty());
     }

@@ -5,7 +5,8 @@ use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use podfetch_domain::session::{Session, SessionRepository};
 
 diesel::table! {
-    sessions (session_id) {
+    sessions (user_id, session_id) {
+        user_id -> Integer,
         username -> Text,
         session_id -> Text,
         expires -> Timestamp,
@@ -15,6 +16,7 @@ diesel::table! {
 #[derive(Queryable, Insertable, Clone)]
 #[diesel(table_name = sessions)]
 struct SessionEntity {
+    user_id: i32,
     username: String,
     session_id: String,
     expires: NaiveDateTime,
@@ -23,6 +25,7 @@ struct SessionEntity {
 impl From<SessionEntity> for Session {
     fn from(value: SessionEntity) -> Self {
         Self {
+            user_id: value.user_id,
             username: value.username,
             session_id: value.session_id,
             expires: value.expires,
@@ -33,6 +36,7 @@ impl From<SessionEntity> for Session {
 impl From<Session> for SessionEntity {
     fn from(value: Session) -> Self {
         Self {
+            user_id: value.user_id,
             username: value.username,
             session_id: value.session_id,
             expires: value.expires,
@@ -74,10 +78,10 @@ impl SessionRepository for DieselSessionRepository {
             .map_err(Into::into)
     }
 
-    fn delete_by_username(&self, username_to_delete: &str) -> Result<usize, Self::Error> {
+    fn delete_by_user_id(&self, user_id_to_delete: i32) -> Result<usize, Self::Error> {
         use self::sessions::dsl::*;
 
-        diesel::delete(sessions.filter(username.eq(username_to_delete)))
+        diesel::delete(sessions.filter(user_id.eq(user_id_to_delete)))
             .execute(&mut self.database.connection()?)
             .map_err(Into::into)
     }

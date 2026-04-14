@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema)]
 pub struct Filter {
-    pub username: String,
+    pub user_id: i32,
     pub title: Option<String>,
     pub ascending: bool,
     pub filter: Option<String>,
@@ -12,14 +12,14 @@ pub struct Filter {
 
 impl Filter {
     pub fn new(
-        username: String,
+        user_id: i32,
         title: Option<String>,
         ascending: bool,
         filter: Option<String>,
         only_favored: bool,
     ) -> Self {
         Self {
-            username,
+            user_id,
             title,
             ascending,
             filter,
@@ -30,7 +30,7 @@ impl Filter {
 
 pub fn default_podcast_filter() -> Filter {
     Filter {
-        username: String::new(),
+        user_id: 0,
         title: None,
         ascending: true,
         filter: Some("PUBLISHEDDATE".to_string()),
@@ -41,7 +41,7 @@ pub fn default_podcast_filter() -> Filter {
 impl From<podfetch_domain::filter::Filter> for Filter {
     fn from(value: podfetch_domain::filter::Filter) -> Self {
         Self {
-            username: value.username,
+            user_id: value.user_id,
             title: value.title,
             ascending: value.ascending,
             filter: value.filter,
@@ -53,7 +53,7 @@ impl From<podfetch_domain::filter::Filter> for Filter {
 impl From<Filter> for podfetch_domain::filter::Filter {
     fn from(value: Filter) -> Self {
         Self {
-            username: value.username,
+            user_id: value.user_id,
             title: value.title,
             ascending: value.ascending,
             filter: value.filter,

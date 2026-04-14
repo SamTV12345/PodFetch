@@ -9,7 +9,7 @@ diesel::table! {
         deviceid -> Text,
         kind -> Text,
         name -> Text,
-        username -> Text,
+        user_id -> Integer,
     }
 }
 
@@ -20,7 +20,7 @@ struct DeviceEntity {
     deviceid: String,
     kind: String,
     name: String,
-    username: String,
+    user_id: i32,
 }
 
 impl From<Device> for DeviceEntity {
@@ -30,7 +30,7 @@ impl From<Device> for DeviceEntity {
             deviceid: value.deviceid,
             kind: value.kind,
             name: value.name,
-            username: value.username,
+            user_id: value.user_id,
         }
     }
 }
@@ -42,7 +42,7 @@ impl From<DeviceEntity> for Device {
             deviceid: value.deviceid,
             kind: value.kind,
             name: value.name,
-            username: value.username,
+            user_id: value.user_id,
         }
     }
 }
@@ -73,24 +73,24 @@ impl DeviceRepository for DieselDeviceRepository {
             .map_err(Into::into)
     }
 
-    fn get_devices_of_user(&self, username_to_find: &str) -> Result<Vec<Device>, Self::Error> {
+    fn get_devices_of_user(&self, user_id_to_find: i32) -> Result<Vec<Device>, Self::Error> {
         use self::devices::dsl::*;
 
         let mut conn = self.database.connection()?;
 
         devices
-            .filter(username.eq(username_to_find))
+            .filter(user_id.eq(user_id_to_find))
             .load::<DeviceEntity>(&mut conn)
             .map(|items| items.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
 
-    fn delete_by_username(&self, username_to_delete: &str) -> Result<(), Self::Error> {
+    fn delete_by_user_id(&self, user_id_to_delete: i32) -> Result<(), Self::Error> {
         use self::devices::dsl::*;
 
         let mut conn = self.database.connection()?;
 
-        diesel::delete(devices.filter(username.eq(username_to_delete)))
+        diesel::delete(devices.filter(user_id.eq(user_id_to_delete)))
             .execute(&mut conn)
             .map(|_| ())
             .map_err(Into::into)

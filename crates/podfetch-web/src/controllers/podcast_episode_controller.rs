@@ -259,7 +259,7 @@ pub async fn like_podcast_episode(
     println!("User id is {}, Episode id is {}", requester.id, id.clone());
     state
         .favorite_podcast_episode_service
-        .set_favorite(&requester.username, id, fav.favored)?;
+        .set_favorite(requester.id, id, fav.favored)?;
 
     Ok(StatusCode::OK)
 }
@@ -447,13 +447,6 @@ mod tests {
     use serial_test::serial;
     use uuid::Uuid;
 
-    fn admin_username() -> String {
-        ENVIRONMENT_SERVICE
-            .username
-            .clone()
-            .unwrap_or_else(|| "postgres".to_string())
-    }
-
     fn unique_name(prefix: &str) -> String {
         format!("{prefix}-{}", Uuid::new_v4())
     }
@@ -464,6 +457,18 @@ mod tests {
 
     fn app_state() -> AppState {
         AppState::new()
+    }
+
+    fn admin_user_id() -> i32 {
+        let username = ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "postgres".to_string());
+        app_state()
+            .user_auth_service
+            .find_by_username(&username)
+            .unwrap()
+            .id
     }
 
     fn assert_client_error_status(status: u16) {
@@ -600,7 +605,7 @@ mod tests {
         assert_eq!(response.status_code(), 200);
 
         let favorite = FavoritePodcastEpisodeService::default_service()
-            .get_by_username_and_episode_id(&admin_username(), inserted_episode.id)
+            .get_by_user_id_and_episode_id(admin_user_id(), inserted_episode.id)
             .unwrap();
         assert!(favorite.is_some());
         assert!(favorite.unwrap().favorite);
@@ -613,7 +618,7 @@ mod tests {
 
         diesel::insert_into(subs_dsl::subscriptions)
             .values((
-                subs_dsl::username.eq(admin_username()),
+                subs_dsl::user_id.eq(admin_user_id()),
                 subs_dsl::device.eq("phone".to_string()),
                 subs_dsl::podcast.eq("https://example.com/not-present.xml".to_string()),
                 subs_dsl::created.eq(Utc::now().naive_utc()),

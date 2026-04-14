@@ -2,6 +2,11 @@ use crate::services::listening_event::service::ListeningEventService;
 use crate::stats::{StatsApplicationService, StatsOverview, TopPodcastStats, WeekdayStats};
 use chrono::{Datelike, NaiveDateTime};
 use common_infrastructure::error::CustomError;
+use common_infrastructure::error::CustomErrorInner;
+use common_infrastructure::error::ErrorSeverity::Warning;
+use podfetch_domain::user_admin::UserAdminRepository;
+use podfetch_persistence::db::database;
+use podfetch_persistence::user_admin::DieselUserAdminRepository;
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -30,9 +35,13 @@ impl StatsApplicationService for StatsService {
         to: Option<NaiveDateTime>,
         top_limit: usize,
     ) -> Result<Self::StatsOverview, Self::Error> {
+        let user_id = DieselUserAdminRepository::new(database())
+            .find_by_username(username)?
+            .map(|user| user.id)
+            .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Warning)))?;
         let events = self
             .listening_event_service
-            .get_by_user_and_range(username, from, to)?;
+            .get_by_user_and_range(user_id, from, to)?;
         let total_listened_seconds = events
             .iter()
             .map(|event| i64::from(event.delta_seconds))

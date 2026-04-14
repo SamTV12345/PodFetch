@@ -10,7 +10,7 @@ diesel::table! {
     tags (id) {
         id -> Text,
         name -> Text,
-        username -> Text,
+        user_id -> Integer,
         description -> Nullable<Text>,
         created_at -> Timestamp,
         color -> Text,
@@ -32,7 +32,7 @@ diesel::allow_tables_to_appear_in_same_query!(tags, tags_podcasts);
 struct TagEntity {
     id: String,
     name: String,
-    username: String,
+    user_id: i32,
     description: Option<String>,
     created_at: chrono::NaiveDateTime,
     color: String,
@@ -50,7 +50,7 @@ impl From<TagEntity> for Tag {
         Self {
             id: value.id,
             name: value.name,
-            username: value.username,
+            user_id: value.user_id,
             description: value.description,
             created_at: value.created_at,
             color: value.color,
@@ -63,7 +63,7 @@ impl From<Tag> for TagEntity {
         Self {
             id: value.id,
             name: value.name,
-            username: value.username,
+            user_id: value.user_id,
             description: value.description,
             created_at: value.created_at,
             color: value.color,
@@ -101,11 +101,11 @@ impl TagRepository for DieselTagRepository {
             .map_err(Into::into)
     }
 
-    fn get_tags(&self, username: &str) -> Result<Vec<Tag>, Self::Error> {
+    fn get_tags(&self, user_id_to_find: i32) -> Result<Vec<Tag>, Self::Error> {
         use self::tags::dsl as tags_dsl;
 
         tags_dsl::tags
-            .filter(tags_dsl::username.eq(username))
+            .filter(tags_dsl::user_id.eq(user_id_to_find))
             .load::<TagEntity>(&mut self.database.connection()?)
             .map(|tags| tags.into_iter().map(Into::into).collect())
             .map_err(Into::into)
@@ -114,7 +114,7 @@ impl TagRepository for DieselTagRepository {
     fn get_tags_of_podcast(
         &self,
         podcast_id: i32,
-        username: &str,
+        user_id_to_find: i32,
     ) -> Result<Vec<Tag>, Self::Error> {
         use self::tags::dsl as tags_dsl;
         use self::tags_podcasts::dsl as tags_podcasts_dsl;
@@ -123,22 +123,22 @@ impl TagRepository for DieselTagRepository {
             .inner_join(tags_podcasts::table.on(tags_dsl::id.eq(tags_podcasts_dsl::tag_id)))
             .select(tags::all_columns)
             .filter(tags_podcasts_dsl::podcast_id.eq(podcast_id))
-            .filter(tags_dsl::username.eq(username))
+            .filter(tags_dsl::user_id.eq(user_id_to_find))
             .load::<TagEntity>(&mut self.database.connection()?)
             .map(|tags: Vec<TagEntity>| tags.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
 
-    fn get_tag_by_id_and_username(
+    fn get_tag_by_id_and_user_id(
         &self,
         tag_id: &str,
-        username: &str,
+        user_id_to_find: i32,
     ) -> Result<Option<Tag>, Self::Error> {
         use self::tags::dsl as tags_dsl;
 
         tags_dsl::tags
             .filter(tags_dsl::id.eq(tag_id))
-            .filter(tags_dsl::username.eq(username))
+            .filter(tags_dsl::user_id.eq(user_id_to_find))
             .first::<TagEntity>(&mut self.database.connection()?)
             .optional()
             .map(|tag| tag.map(Into::into))

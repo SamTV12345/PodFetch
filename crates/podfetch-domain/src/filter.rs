@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Filter {
-    pub username: String,
+    pub user_id: i32,
     pub title: Option<String>,
     pub ascending: bool,
     pub filter: Option<String>,
@@ -9,14 +9,14 @@ pub struct Filter {
 
 impl Filter {
     pub fn new(
-        username: String,
+        user_id: i32,
         title: Option<String>,
         ascending: bool,
         filter: Option<String>,
         only_favored: bool,
     ) -> Self {
         Self {
-            username,
+            user_id,
             title,
             ascending,
             filter,
@@ -28,8 +28,7 @@ impl Filter {
 pub trait FilterRepository: Send + Sync {
     type Error;
 
-    fn get_by_username(&self, username: &str) -> Result<Option<Filter>, Self::Error>;
+    fn get_by_user_id(&self, user_id: i32) -> Result<Option<Filter>, Self::Error>;
     fn save(&self, filter: Filter) -> Result<(), Self::Error>;
-    fn save_timeline_decision(&self, username: &str, only_favored: bool)
-    -> Result<(), Self::Error>;
+    fn save_timeline_decision(&self, user_id: i32, only_favored: bool) -> Result<(), Self::Error>;
 }

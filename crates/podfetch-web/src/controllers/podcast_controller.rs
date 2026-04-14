@@ -29,10 +29,10 @@ pub use crate::podcast::{
     SearchType::{ITunes, Podindex},
 };
 use crate::podcast::{
-    build_podcast_search_plan, ensure_podindex_configured, ensure_proxy_api_access,
-    map_podcast_error, map_proxy_podcast_error, parse_podcast_id, parse_search_type, require_admin,
-    require_privileged, require_proxy_episode, sanitize_proxy_request_headers,
-    spawn_podindex_download,
+    build_podcast_search_plan, check_podcast_add_permission, ensure_podindex_configured,
+    ensure_proxy_api_access, map_podcast_error, map_proxy_podcast_error, parse_podcast_id,
+    parse_search_type, require_admin, require_privileged, require_proxy_episode,
+    sanitize_proxy_request_headers, spawn_podindex_download,
 };
 use crate::services::file::service::{FileService, perform_podcast_variable_replacement};
 use crate::url_rewriting::create_url_rewriter;
@@ -40,7 +40,10 @@ use common_infrastructure::config::is_env_var_present_and_true;
 use common_infrastructure::http::get_http_client;
 use common_infrastructure::request::add_basic_auth_headers_conditionally;
 use podfetch_domain::favorite_podcast_episode::FavoritePodcastEpisode;
+use podfetch_domain::podcast::PodcastRepository;
 use podfetch_domain::user::User;
+use podfetch_persistence::db::database;
+use podfetch_persistence::podcast::DieselPodcastRepository;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
 use tokio::runtime::Runtime;
 
@@ -57,7 +60,7 @@ pub async fn get_filter(
 ) -> Result<Json<Filter>, CustomError> {
     let filter = state
         .filter_service
-        .get_filter_by_username(&requester.username)?
+        .get_filter_by_user_id(requester.id)?
         .unwrap_or(crate::filter::default_podcast_filter());
     Ok(Json(filter))
 }
@@ -98,10 +101,8 @@ pub async fn search_podcasts(
     headers: HeaderMap,
 ) -> Result<Json<Vec<PodcastDto>>, CustomError> {
     let rewriter = create_url_rewriter(&headers);
-    let existing_filter = state
-        .filter_service
-        .get_filter_by_username(&requester.username)?;
-    let search_plan = build_podcast_search_plan(query, &requester.username, existing_filter);
+    let existing_filter = state.filter_service.get_filter_by_user_id(requester.id)?;
+    let search_plan = build_podcast_search_plan(query, requester.id, existing_filter);
     state.filter_service.save_filter(search_plan.filter)?;
 
     match search_plan.favored_only {
@@ -110,7 +111,7 @@ pub async fn search_podcasts(
                 search_plan.order,
                 search_plan.title,
                 search_plan.order_option,
-                search_plan.username,
+                search_plan.user_id,
                 search_plan.tag,
                 &requester,
             )?;
@@ -152,12 +153,11 @@ pub async fn find_podcast_by_id(
     headers: HeaderMap,
 ) -> Result<Json<PodcastDto>, CustomError> {
     let id_num = parse_podcast_id::<CustomError>(&id).map_err(map_podcast_error)?;
-    let username = &user.username;
     let rewriter = create_url_rewriter(&headers);
 
     let podcast = PodcastService::get_podcast(id_num)?;
-    let tags = state.tag_service.get_tags_of_podcast(id_num, username)?;
-    let favorite = PodcastService::get_favorite_state(username, id_num)?;
+    let tags = state.tag_service.get_tags_of_podcast(id_num, user.id)?;
+    let favorite = PodcastService::get_favorite_state(user.id, id_num)?;
     let podcast_dto = map_podcast_with_context_to_dto(podcast.into(), favorite, tags, &user)
         .with_rewritten_urls(&rewriter);
     Ok(Json(podcast_dto))
@@ -234,7 +234,16 @@ pub async fn add_podcast(
     Extension(requester): Extension<User>,
     Json(track_id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
-    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
+    let current_count = DieselPodcastRepository::new(database())
+        .count_by_added_by(requester.id)
+        .map_err(CustomError::from)?;
+    check_podcast_add_permission::<CustomError>(
+        requester.is_privileged_user(),
+        ENVIRONMENT_SERVICE.user_podcast_limit,
+        current_count,
+        1,
+    )
+    .map_err(map_podcast_error)?;
 
     let query: Vec<(&str, String)> = vec![
         ("id", track_id.track_id.to_string()),
@@ -260,6 +269,7 @@ pub async fn add_podcast(
             image_url: unwrap_string(&res["results"][0]["artworkUrl600"]),
         },
         None,
+        Some(requester.id),
     )
     .await?;
     Ok(StatusCode::OK)
@@ -277,7 +287,16 @@ pub async fn add_podcast_by_feed(
     Extension(requester): Extension<User>,
     Json(rss_feed): Json<PodcastRSSAddModel>,
 ) -> Result<Json<PodcastDto>, CustomError> {
-    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
+    let current_count = DieselPodcastRepository::new(database())
+        .count_by_added_by(requester.id)
+        .map_err(CustomError::from)?;
+    check_podcast_add_permission::<CustomError>(
+        requester.is_privileged_user(),
+        ENVIRONMENT_SERVICE.user_podcast_limit,
+        current_count,
+        1,
+    )
+    .map_err(map_podcast_error)?;
     let mut header_map = ReqwestHeaderMap::new();
     header_map.insert("User-Agent", COMMON_USER_AGENT.parse().unwrap());
     add_basic_auth_headers_conditionally(rss_feed.clone().rss_feed_url, &mut header_map);
@@ -305,6 +324,7 @@ pub async fn add_podcast_by_feed(
                 .unwrap_or(get_default_image()),
         },
         Some(channel),
+        Some(requester.id),
     )
     .await?;
     let res: PodcastDto = map_podcast_to_dto(inserted.into());
@@ -324,20 +344,45 @@ pub async fn import_podcasts_from_opml(
     requester: Extension<User>,
     Json(opml): Json<OpmlModel>,
 ) -> Result<StatusCode, CustomError> {
-    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
     let document = OPML::from_str(&opml.content).unwrap();
+    let outline_count = count_opml_feeds(&document.body.outlines);
+    let current_count = DieselPodcastRepository::new(database())
+        .count_by_added_by(requester.id)
+        .map_err(CustomError::from)?;
+    check_podcast_add_permission::<CustomError>(
+        requester.is_privileged_user(),
+        ENVIRONMENT_SERVICE.user_podcast_limit,
+        current_count,
+        outline_count,
+    )
+    .map_err(map_podcast_error)?;
 
+    let user_id = requester.id;
     spawn_blocking(move || {
         for outline in document.body.outlines {
+            let added_by = user_id;
             thread::spawn(move || {
                 let rt = Runtime::new().unwrap();
                 let rng = rand::rng();
-                rt.block_on(insert_outline(outline.clone(), rng.clone()));
+                rt.block_on(insert_outline(outline.clone(), rng.clone(), Some(added_by)));
             });
         }
     });
 
     Ok(StatusCode::OK)
+}
+
+fn count_opml_feeds(outlines: &[Outline]) -> u32 {
+    outlines
+        .iter()
+        .map(|o| {
+            if o.outlines.is_empty() {
+                if o.xml_url.is_some() { 1 } else { 0 }
+            } else {
+                count_opml_feeds(&o.outlines)
+            }
+        })
+        .sum()
 }
 
 #[utoipa::path(
@@ -352,15 +397,25 @@ pub async fn add_podcast_from_podindex(
     Extension(requester): Extension<User>,
     Json(id): Json<PodcastAddModel>,
 ) -> Result<StatusCode, CustomError> {
-    require_privileged::<CustomError>(requester.is_privileged_user()).map_err(map_podcast_error)?;
+    let current_count = DieselPodcastRepository::new(database())
+        .count_by_added_by(requester.id)
+        .map_err(CustomError::from)?;
+    check_podcast_add_permission::<CustomError>(
+        requester.is_privileged_user(),
+        ENVIRONMENT_SERVICE.user_podcast_limit,
+        current_count,
+        1,
+    )
+    .map_err(map_podcast_error)?;
     ensure_podindex_configured::<CustomError>(ENVIRONMENT_SERVICE.get_config().podindex_configured)
         .map_err(map_podcast_error)?;
 
+    let added_by = Some(requester.id);
     spawn_blocking(move || {
-        spawn_podindex_download(id.track_id, |track_id| {
+        spawn_podindex_download(id.track_id, move |track_id| {
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
-                PodcastService::insert_podcast_from_podindex(track_id)
+                PodcastService::insert_podcast_from_podindex(track_id, added_by)
                     .await
                     .map(|_| ())
             })
@@ -467,11 +522,7 @@ pub async fn favorite_podcast(
     requester: Extension<User>,
     update_model: Json<PodcastFavorUpdateModel>,
 ) -> Result<StatusCode, CustomError> {
-    PodcastService::update_favor_podcast(
-        update_model.id,
-        update_model.favored,
-        &requester.username,
-    )?;
+    PodcastService::update_favor_podcast(update_model.id, update_model.favored, requester.id)?;
     Ok(StatusCode::OK)
 }
 
@@ -538,10 +589,10 @@ pub async fn update_active_podcast(
 }
 
 #[async_recursion(?Send)]
-async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
+async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<i32>) {
     if !podcast.outlines.is_empty() {
         for outline_nested in podcast.clone().outlines {
-            insert_outline(outline_nested, rng.clone()).await;
+            insert_outline(outline_nested, rng.clone(), added_by).await;
         }
         return;
     }
@@ -583,6 +634,7 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng) {
                     image_url,
                 },
                 Some(channel),
+                added_by,
             )
             .await;
             match inserted_podcast {
@@ -1259,7 +1311,7 @@ pub mod tests {
         let import_result = super::import_podcasts_from_opml(
             Extension(non_privileged.clone()),
             Json(OpmlModel {
-                content: "<opml version=\"2.0\"><body></body></opml>".to_string(),
+                content: "<opml version=\"2.0\"><head><title>Test</title></head><body><outline text=\"feed\" xmlUrl=\"https://example.com/feed.xml\" /></body></opml>".to_string(),
             }),
         )
         .await;

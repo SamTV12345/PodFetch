@@ -19,9 +19,9 @@ impl FilterService {
         Self::new(Arc::new(FilterRepositoryImpl::new(database())))
     }
 
-    pub fn get_filter_by_username(&self, username: &str) -> Result<Option<Filter>, CustomError> {
+    pub fn get_filter_by_user_id(&self, user_id: i32) -> Result<Option<Filter>, CustomError> {
         self.repository
-            .get_by_username(username)
+            .get_by_user_id(user_id)
             .map(|filter| filter.map(Into::into))
     }
 
@@ -31,10 +31,10 @@ impl FilterService {
 
     pub fn save_timeline_decision(
         &self,
-        username: &str,
+        user_id: i32,
         only_favored: bool,
     ) -> Result<(), CustomError> {
         self.repository
-            .save_timeline_decision(username, only_favored)
+            .save_timeline_decision(user_id, only_favored)
     }
 }

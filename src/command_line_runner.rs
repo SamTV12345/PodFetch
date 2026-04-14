@@ -192,23 +192,24 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     );
                     username = trim_string(&username);
                     match available_users.iter().find(|u| u.username == username) {
-                        Some(..) => {
+                        Some(user) => {
+                            let user_id = user.id;
                             WatchtimeService::delete_by_username(&username)
                                 .expect("Error deleting entries for podcast history item");
                             device_service
-                                .delete_by_username(&username)
+                                .delete_by_user_id(user_id)
                                 .expect("Error deleting devices");
                             WatchtimeService::delete_by_username_and_episode(&username)
                                 .expect("Error deleting episodes");
-                            PodcastService::delete_favorites_by_username(&trim_string(&username))
+                            PodcastService::delete_favorites_by_user_id(user_id)
                                 .expect("Error deleting favorites");
                             state
                                 .session_service
-                                .delete_by_username(&trim_string(&username))
+                                .delete_by_user_id(user_id)
                                 .expect("Error deleting sessions");
                             state
                                 .subscription_service
-                                .delete_by_username(&trim_string(&username))
+                                .delete_by_user_id(user_id)
                                 .expect("Error deleting subscriptions");
                             state
                                 .user_admin_service

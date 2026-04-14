@@ -7,7 +7,7 @@ use podfetch_domain::gpodder_setting::{GpodderSetting, GpodderSettingRepository}
 diesel::table! {
     gpodder_settings (id) {
         id -> Integer,
-        username -> Text,
+        user_id -> Integer,
         scope -> Text,
         scope_id -> Nullable<Text>,
         data -> Text,
@@ -19,8 +19,8 @@ diesel::table! {
 struct GpodderSettingEntity {
     #[diesel(sql_type = Integer)]
     id: i32,
-    #[diesel(sql_type = Text)]
-    username: String,
+    #[diesel(sql_type = Integer)]
+    user_id: i32,
     #[diesel(sql_type = Text)]
     scope: String,
     #[diesel(sql_type = Nullable<Text>)]
@@ -32,7 +32,7 @@ struct GpodderSettingEntity {
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = gpodder_settings)]
 struct NewGpodderSettingEntity {
-    username: String,
+    user_id: i32,
     scope: String,
     scope_id: Option<String>,
     data: String,
@@ -42,7 +42,7 @@ impl From<GpodderSettingEntity> for GpodderSetting {
     fn from(value: GpodderSettingEntity) -> Self {
         Self {
             id: value.id,
-            username: value.username,
+            user_id: value.user_id,
             scope: value.scope,
             scope_id: value.scope_id,
             data: value.data,
@@ -65,14 +65,14 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
 
     fn get_setting(
         &self,
-        username: &str,
+        user_id_to_find: i32,
         scope: &str,
         scope_id: Option<&str>,
     ) -> Result<Option<GpodderSetting>, Self::Error> {
         use self::gpodder_settings::dsl as gs_dsl;
 
         let mut query = gs_dsl::gpodder_settings
-            .filter(gs_dsl::username.eq(username))
+            .filter(gs_dsl::user_id.eq(user_id_to_find))
             .filter(gs_dsl::scope.eq(scope))
             .into_boxed();
 
@@ -98,7 +98,7 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
         let mut connection = self.database.connection()?;
 
         let mut query = gs_dsl::gpodder_settings
-            .filter(gs_dsl::username.eq(&setting.username))
+            .filter(gs_dsl::user_id.eq(setting.user_id))
             .filter(gs_dsl::scope.eq(&setting.scope))
             .into_boxed();
 
@@ -125,7 +125,7 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
 
                 Ok(GpodderSetting {
                     id: existing.id,
-                    username: setting.username,
+                    user_id: setting.user_id,
                     scope: setting.scope,
                     scope_id: setting.scope_id,
                     data: setting.data,
@@ -134,7 +134,7 @@ impl GpodderSettingRepository for DieselGpodderSettingRepository {
             None => {
                 diesel::insert_into(gs_dsl::gpodder_settings)
                     .values(NewGpodderSettingEntity {
-                        username: setting.username.clone(),
+                        user_id: setting.user_id,
                         scope: setting.scope.clone(),
                         scope_id: setting.scope_id.clone(),
                         data: setting.data.clone(),

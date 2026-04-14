@@ -27,7 +27,7 @@ impl UserAuthService {
         if let Some(admin_username) = &self.environment.username
             && admin_username == username
         {
-            return Ok(self.configured_admin_user());
+            return self.ensure_admin_user();
         }
 
         self.repository
@@ -68,7 +68,7 @@ impl UserAuthService {
             && !admin_api_key.is_empty()
             && admin_api_key == api_key
         {
-            return Ok(Some(self.read_only_admin_user()));
+            return self.ensure_admin_user().map(Some);
         }
 
         self.repository.find_by_api_key(api_key)
@@ -96,9 +96,29 @@ impl UserAuthService {
         }
     }
 
+    pub fn ensure_admin_user(&self) -> Result<User, CustomError> {
+        let Some(admin_username) = &self.environment.username else {
+            return Ok(self.read_only_admin_user());
+        };
+
+        if let Some(user) = self.repository.find_by_username(admin_username)? {
+            return Ok(user);
+        }
+
+        self.repository
+            .create(ManagedUser {
+                id: 0,
+                username: admin_username.clone(),
+                role: Role::Admin.to_string(),
+                password: self.environment.password.clone(),
+                explicit_consent: true,
+                created_at: chrono::Utc::now().naive_utc(),
+                api_key: self.environment.api_key_admin.clone(),
+            })}
+
     pub fn read_only_admin_user(&self) -> User {
         User {
-            id: 9999,
+            id: STANDARD_USER_ID,
             username: STANDARD_USER.to_string(),
             role: Role::Admin.to_string(),
             password: None,

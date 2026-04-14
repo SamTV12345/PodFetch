@@ -20,11 +20,13 @@ use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, ITUNES_URL};
 use podfetch_domain::favorite::FavoriteRepository;
 use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::{NewPodcast, PodcastMetadataUpdate, PodcastRepository};
+use podfetch_domain::subscription::SubscriptionRepository;
 use podfetch_domain::user::User;
 use podfetch_persistence::db::PersistenceError;
 use podfetch_persistence::db::database;
 use podfetch_persistence::favorite::DieselFavoriteRepository;
 use podfetch_persistence::podcast::DieselPodcastRepository;
+use podfetch_persistence::subscription::DieselSubscriptionRepository;
 use reqwest::header::{HeaderMap, HeaderValue};
 use rss::Channel;
 use serde_json::Value;
@@ -103,7 +105,10 @@ impl PodcastService {
         }
     }
 
-    pub async fn insert_podcast_from_podindex(id: i32) -> Result<Podcast, CustomError> {
+    pub async fn insert_podcast_from_podindex(
+        id: i32,
+        added_by: Option<i32>,
+    ) -> Result<Podcast, CustomError> {
         let resp = get_http_client(&ENVIRONMENT_SERVICE)
             .get(format!(
                 "https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id={}",
@@ -126,6 +131,7 @@ impl PodcastService {
                 image_url: unwrap_string(&podcast["feed"]["image"]),
             },
             None,
+            added_by,
         )
         .await
     }
@@ -133,6 +139,7 @@ impl PodcastService {
     pub async fn handle_insert_of_podcast(
         podcast_insert: PodcastInsertModel,
         channel: Option<Channel>,
+        added_by: Option<i32>,
     ) -> Result<Podcast, CustomError> {
         let opt_podcast = podcast_repo()
             .find_by_rss_feed(&podcast_insert.feed_url)
@@ -158,6 +165,7 @@ impl PodcastService {
                 rssfeed: podcast_insert.feed_url.clone(),
                 image_url: podcast_insert.image_url.clone(),
                 directory_name: podcast_directory_created,
+                added_by,
             })
             .map(Into::into)
             .map_err(CustomError::from)?;
@@ -261,12 +269,9 @@ impl PodcastService {
             .ok_or_else(|| CustomErrorInner::NotFound(ErrorSeverity::Warning).into())
     }
 
-    pub fn get_favorite_state(
-        username: &str,
-        podcast_id: i32,
-    ) -> Result<Option<bool>, CustomError> {
+    pub fn get_favorite_state(user_id: i32, podcast_id: i32) -> Result<Option<bool>, CustomError> {
         favorite_repo()
-            .find_by_username_and_podcast_id(username, podcast_id)
+            .find_by_user_id_and_podcast_id(user_id, podcast_id)
             .map(|opt| opt.map(|f| f.favored))
             .map_err(CustomError::from)
     }
@@ -310,9 +315,9 @@ impl PodcastService {
         podcast_repo().delete(id).map_err(CustomError::from)
     }
 
-    pub fn delete_favorites_by_username(username: &str) -> Result<(), CustomError> {
+    pub fn delete_favorites_by_user_id(user_id: i32) -> Result<(), CustomError> {
         favorite_repo()
-            .delete_by_username(username)
+            .delete_by_user_id(user_id)
             .map_err(CustomError::from)
     }
 
@@ -330,6 +335,7 @@ impl PodcastService {
                 rssfeed: feed_url.to_string(),
                 image_url: image_url_1.to_string(),
                 directory_name: directory_name_to_insert.to_string(),
+                added_by: None,
             })
             .map(Into::into)
             .map_err(CustomError::from)
@@ -413,10 +419,24 @@ impl PodcastService {
             .map_err(|e| common_infrastructure::error::map_db_error(e, ErrorSeverity::Critical))
     }
 
-    pub fn update_favor_podcast(id: i32, x: bool, username: &str) -> Result<(), CustomError> {
+    pub fn update_favor_podcast(id: i32, favored: bool, user_id: i32) -> Result<(), CustomError> {
         favorite_repo()
-            .update_podcast_favor(id, x, username)
-            .map_err(CustomError::from)
+            .update_podcast_favor(id, favored, user_id)
+            .map_err(CustomError::from)?;
+
+        if ENVIRONMENT_SERVICE.gpodder_integration_enabled
+            && let Some(podcast) = podcast_repo().find_by_id(id).map_err(CustomError::from)?
+        {
+            let sub_repo = DieselSubscriptionRepository::new(database());
+            let (add, remove) = if favored {
+                (vec![podcast.rssfeed], vec![])
+            } else {
+                (vec![], vec![podcast.rssfeed])
+            };
+            let _ = sub_repo.update_subscriptions("webview", user_id, &add, &remove);
+        }
+
+        Ok(())
     }
 
     pub fn get_podcast_by_id(id: i32) -> Podcast {
@@ -430,13 +450,13 @@ impl PodcastService {
 
     pub fn get_favored_podcasts(requester: User) -> Result<Vec<PodcastDto>, CustomError> {
         let result = favorite_repo()
-            .get_favored_podcasts(&requester.username)
+            .get_favored_podcasts(requester.id)
             .map_err(CustomError::from)?;
         let mapped_result = result
             .iter()
             .map(|podcast| {
                 let tags = TagService::default_service()
-                    .get_tags_of_podcast(podcast.podcast.id, &requester.username)
+                    .get_tags_of_podcast(podcast.podcast.id, requester.id)
                     .unwrap();
                 map_podcast_with_context_to_dto(
                     podcast.podcast.clone(),
@@ -511,13 +531,13 @@ impl PodcastService {
 
     pub fn get_podcasts(u: &User) -> Result<Vec<PodcastDto>, CustomError> {
         let result = podcast_repo()
-            .find_all_with_favorites(&u.username)
+            .find_all_with_favorites(u.id)
             .map_err(CustomError::from)?;
         let mapped_result = result
             .iter()
             .map(|podcast| {
                 let tags = TagService::default_service()
-                    .get_tags_of_podcast(podcast.podcast.id, &u.username)
+                    .get_tags_of_podcast(podcast.podcast.id, u.id)
                     .unwrap();
                 map_podcast_with_context_to_dto(
                     podcast.podcast.clone(),
@@ -534,12 +554,12 @@ impl PodcastService {
         order: OrderCriteria,
         title: Option<String>,
         latest_pub: OrderOption,
-        designated_username: String,
+        designated_user_id: i32,
         tag: Option<String>,
         requester: &User,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts = favorite_repo()
-            .search_podcasts_favored(order, title, latest_pub, &designated_username)
+            .search_podcasts_favored(order, title, latest_pub, designated_user_id)
             .map_err(CustomError::from)?
             .iter()
             .filter(|podcast| {
@@ -569,7 +589,7 @@ impl PodcastService {
         requester: &User,
     ) -> Result<Vec<PodcastDto>, CustomError> {
         let podcasts = favorite_repo()
-            .search_podcasts(order, title, latest_pub, &requester.username)
+            .search_podcasts(order, title, latest_pub, requester.id)
             .map_err(CustomError::from)?
             .iter()
             .filter(|podcast| {

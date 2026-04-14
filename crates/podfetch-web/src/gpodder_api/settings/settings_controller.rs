@@ -58,7 +58,7 @@ pub async fn get_settings(
     let result =
         state
             .gpodder_setting_service
-            .get_setting(username.0, scope.0, scope_id.as_deref())?;
+            .get_setting(flag.user_id, scope.0, scope_id.as_deref())?;
 
     match result {
         Some(setting) => {
@@ -94,7 +94,7 @@ pub async fn save_settings(
     let existing =
         state
             .gpodder_setting_service
-            .get_setting(username.0, scope.0, scope_id.as_deref())?;
+            .get_setting(flag.user_id, scope.0, scope_id.as_deref())?;
 
     let mut data: serde_json::Map<String, Value> = existing
         .as_ref()
@@ -119,7 +119,7 @@ pub async fn save_settings(
 
     let setting = GpodderSetting {
         id: existing.map(|s| s.id).unwrap_or(0),
-        username: username.0.to_string(),
+        user_id: flag.user_id,
         scope: scope.0.to_string(),
         scope_id,
         data: data_string,

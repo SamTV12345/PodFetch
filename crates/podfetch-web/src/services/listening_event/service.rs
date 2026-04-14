@@ -31,15 +31,15 @@ impl ListeningEventService {
 
     pub fn get_by_user_and_range(
         &self,
-        username: &str,
+        user_id: i32,
         from: Option<NaiveDateTime>,
         to: Option<NaiveDateTime>,
     ) -> Result<Vec<ListeningEvent>, CustomError> {
-        self.repository.get_by_user_and_range(username, from, to)
+        self.repository.get_by_user_and_range(user_id, from, to)
     }
 
-    pub fn delete_by_username(&self, username: &str) -> Result<usize, CustomError> {
-        self.repository.delete_by_username(username)
+    pub fn delete_by_user_id(&self, user_id: i32) -> Result<usize, CustomError> {
+        self.repository.delete_by_user_id(user_id)
     }
 
     pub fn delete_by_podcast_id(&self, podcast_id: i32) -> Result<usize, CustomError> {

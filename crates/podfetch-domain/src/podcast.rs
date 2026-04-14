@@ -19,6 +19,7 @@ pub struct Podcast {
     pub directory_name: String,
     pub download_location: Option<String>,
     pub guid: Option<String>,
+    pub added_by: Option<i32>,
 }
 
 /// A podcast with its optional favorite status for a specific user.
@@ -36,6 +37,7 @@ pub struct NewPodcast {
     pub rssfeed: String,
     pub image_url: String,
     pub directory_name: String,
+    pub added_by: Option<i32>,
 }
 
 /// Data for updating podcast metadata (from RSS feed parsing).
@@ -65,7 +67,7 @@ pub trait PodcastRepository: Send + Sync {
     fn find_all(&self) -> Result<Vec<Podcast>, Self::Error>;
     fn find_all_with_favorites(
         &self,
-        username: &str,
+        user_id: i32,
     ) -> Result<Vec<PodcastWithFavorite>, Self::Error>;
     fn update_metadata(&self, update: PodcastMetadataUpdate) -> Result<(), Self::Error>;
     fn update_active(&self, id: i32, active: bool) -> Result<(), Self::Error>;
@@ -79,4 +81,5 @@ pub trait PodcastRepository: Send + Sync {
         download_location: &str,
     ) -> Result<(), Self::Error>;
     fn delete(&self, id: i32) -> Result<(), Self::Error>;
+    fn count_by_added_by(&self, user_id: i32) -> Result<i64, Self::Error>;
 }

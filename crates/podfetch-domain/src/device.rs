@@ -4,13 +4,13 @@ pub struct Device {
     pub deviceid: String,
     pub kind: String,
     pub name: String,
-    pub username: String,
+    pub user_id: i32,
 }
 
 pub trait DeviceRepository: Send + Sync {
     type Error;
 
     fn create(&self, device: Device) -> Result<Device, Self::Error>;
-    fn get_devices_of_user(&self, username: &str) -> Result<Vec<Device>, Self::Error>;
-    fn delete_by_username(&self, username: &str) -> Result<(), Self::Error>;
+    fn get_devices_of_user(&self, user_id: i32) -> Result<Vec<Device>, Self::Error>;
+    fn delete_by_user_id(&self, user_id: i32) -> Result<(), Self::Error>;
 }

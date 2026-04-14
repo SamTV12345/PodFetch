@@ -32,13 +32,13 @@ pub struct PodcastSearchPlan {
     pub title: Option<String>,
     pub tag: Option<String>,
     pub favored_only: bool,
-    pub username: String,
+    pub user_id: i32,
     pub filter: Filter,
 }
 
 pub fn build_podcast_search_plan(
     query: PodcastSearchModelUtoipa,
-    username: &str,
+    user_id: i32,
     existing_filter: Option<Filter>,
 ) -> PodcastSearchPlan {
     let order = query.order.map(|o| o.into()).unwrap_or(OrderCriteria::Asc);
@@ -49,9 +49,8 @@ pub fn build_podcast_search_plan(
     let only_favored = existing_filter
         .map(|filter| filter.only_favored)
         .unwrap_or(true);
-    let username = username.to_string();
     let filter = Filter::new(
-        username.clone(),
+        user_id,
         query.title.clone(),
         order.to_bool(),
         Some(order_option.to_string()),
@@ -64,7 +63,7 @@ pub fn build_podcast_search_plan(
         title: query.title,
         tag: query.tag,
         favored_only: query.favored_only,
-        username,
+        user_id,
         filter,
     }
 }
@@ -369,6 +368,8 @@ pub enum PodcastControllerError<E: Display> {
     NotFound,
     #[error("bad request: {0}")]
     BadRequest(String),
+    #[error("quota exceeded: {0}")]
+    QuotaExceeded(String),
     #[error("{0}")]
     Service(E),
 }
@@ -381,6 +382,9 @@ pub fn map_podcast_error(error: PodcastControllerError<CustomError>) -> CustomEr
         PodcastControllerError::NotFound => CustomErrorInner::NotFound(ErrorSeverity::Debug).into(),
         PodcastControllerError::BadRequest(message) => {
             CustomErrorInner::BadRequest(message, ErrorSeverity::Info).into()
+        }
+        PodcastControllerError::QuotaExceeded(message) => {
+            CustomErrorInner::BadRequest(message, ErrorSeverity::Warning).into()
         }
         PodcastControllerError::Service(error) => error,
     }
@@ -464,6 +468,31 @@ pub fn require_admin<Err: Display>(is_admin: bool) -> Result<(), PodcastControll
     } else {
         Err(PodcastControllerError::Forbidden)
     }
+}
+
+pub fn check_podcast_add_permission<Err: Display>(
+    is_privileged: bool,
+    user_podcast_limit: u32,
+    current_count: i64,
+    adding_count: u32,
+) -> Result<(), PodcastControllerError<Err>> {
+    if is_privileged {
+        return Ok(());
+    }
+
+    if user_podcast_limit == 0 {
+        return Err(PodcastControllerError::Forbidden);
+    }
+
+    let new_total = current_count + adding_count as i64;
+    if new_total > user_podcast_limit as i64 {
+        return Err(PodcastControllerError::QuotaExceeded(format!(
+            "Adding {} podcast(s) would exceed your limit of {}. You currently have {}.",
+            adding_count, user_podcast_limit, current_count
+        )));
+    }
+
+    Ok(())
 }
 
 pub fn parse_podcast_id<Err: Display>(id: &str) -> Result<i32, PodcastControllerError<Err>> {

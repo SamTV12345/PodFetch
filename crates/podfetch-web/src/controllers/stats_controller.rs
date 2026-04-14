@@ -49,6 +49,7 @@ pub fn get_stats_router() -> OpenApiRouter<AppState> {
 
 #[cfg(test)]
 mod tests {
+    use crate::app_state::AppState;
     use crate::services::listening_event::service::ListeningEventService;
     use crate::test_support::tests::handle_test_startup;
     use chrono::{NaiveDate, NaiveDateTime};
@@ -132,11 +133,23 @@ mod tests {
             .unwrap()
     }
 
+    fn admin_user_id() -> i32 {
+        let username = ENVIRONMENT_SERVICE
+            .username
+            .clone()
+            .unwrap_or_else(|| "postgres".to_string());
+        AppState::new()
+            .user_auth_service
+            .find_by_username(&username)
+            .unwrap()
+            .id
+    }
+
     #[tokio::test]
     #[serial]
     async fn test_get_stats_overview_aggregates_data() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -161,9 +174,10 @@ mod tests {
         let episode_a1 = insert_episode(podcast_a.id, "stats-ep-a1", "stats-guid-a1", "A1");
         let episode_a2 = insert_episode(podcast_a.id, "stats-ep-a2", "stats-guid-a2", "A2");
         let episode_b1 = insert_episode(podcast_b.id, "stats-ep-b1", "stats-guid-b1", "B1");
+        let user_id = admin_user_id();
 
         ListeningEventService::create_event(NewListeningEvent {
-            username: username.clone(),
+            user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode_a1.episode_id.clone(),
             podcast_id: podcast_a.id,
@@ -175,7 +189,7 @@ mod tests {
         })
         .unwrap();
         ListeningEventService::create_event(NewListeningEvent {
-            username: username.clone(),
+            user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode_a2.episode_id.clone(),
             podcast_id: podcast_a.id,
@@ -187,7 +201,7 @@ mod tests {
         })
         .unwrap();
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode_b1.episode_id.clone(),
             podcast_id: podcast_b.id,
@@ -224,7 +238,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_respects_date_range() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -238,9 +252,10 @@ mod tests {
         )
         .unwrap();
         let episode = insert_episode(podcast.id, "stats-ep-range", "stats-guid-range", "Range");
+        let user_id = admin_user_id();
 
         ListeningEventService::create_event(NewListeningEvent {
-            username: username.clone(),
+            user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id.clone(),
             podcast_id: podcast.id,
@@ -252,7 +267,7 @@ mod tests {
         })
         .unwrap();
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
             podcast_id: podcast.id,
@@ -306,10 +321,11 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_clamps_top_limit_to_maximum() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
+        let user_id = admin_user_id();
 
         for i in 0..3 {
             let unique = Uuid::new_v4().to_string();
@@ -331,7 +347,7 @@ mod tests {
             );
 
             ListeningEventService::create_event(NewListeningEvent {
-                username: username.clone(),
+                user_id,
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
                 podcast_id: podcast.id,
@@ -372,7 +388,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_accepts_rfc3339_range() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -393,9 +409,10 @@ mod tests {
             &format!("stats-rfc3339-guid-{unique}"),
             "Stats RFC3339 Episode",
         );
+        let user_id = admin_user_id();
 
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
             podcast_id: podcast.id,
@@ -423,10 +440,11 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_clamps_top_limit_to_minimum_one() {
         let server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
+        let user_id = admin_user_id();
 
         for i in 0..2 {
             let unique = Uuid::new_v4().to_string();
@@ -448,7 +466,7 @@ mod tests {
             );
 
             ListeningEventService::create_event(NewListeningEvent {
-                username: username.clone(),
+                user_id,
                 device: "webview".to_string(),
                 podcast_episode_id: episode.episode_id,
                 podcast_id: podcast.id,
@@ -475,7 +493,7 @@ mod tests {
     #[serial]
     async fn test_get_stats_overview_rewrites_image_urls_with_forwarded_headers() {
         let mut server = handle_test_startup().await;
-        let username = ENVIRONMENT_SERVICE
+        let _username = ENVIRONMENT_SERVICE
             .username
             .clone()
             .unwrap_or_else(|| "user123".to_string());
@@ -496,9 +514,10 @@ mod tests {
             &format!("stats-rewrite-guid-{unique}"),
             "Stats Rewrite Episode",
         );
+        let user_id = admin_user_id();
 
         ListeningEventService::create_event(NewListeningEvent {
-            username,
+            user_id,
             device: "webview".to_string(),
             podcast_episode_id: episode.episode_id,
             podcast_id: podcast.id,

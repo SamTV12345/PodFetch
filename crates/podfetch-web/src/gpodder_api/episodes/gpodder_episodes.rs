@@ -114,7 +114,7 @@ pub async fn get_favorites(
 
     let favorites = state
         .favorite_podcast_episode_service
-        .get_favorites_by_username(username.0)?;
+        .get_favorites_by_user_id(flag.user_id)?;
 
     let mut result = Vec::new();
     for fav in favorites {

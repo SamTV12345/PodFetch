@@ -13,7 +13,7 @@ use podfetch_domain::subscription::{
 diesel::table! {
     subscriptions (id) {
         id -> Integer,
-        username -> Text,
+        user_id -> Integer,
         device -> Text,
         podcast -> Text,
         created -> Timestamp,
@@ -36,8 +36,8 @@ diesel::allow_tables_to_appear_in_same_query!(subscriptions, podcasts);
 struct SubscriptionEntity {
     #[diesel(sql_type = Integer)]
     id: i32,
-    #[diesel(sql_type = Text)]
-    username: String,
+    #[diesel(sql_type = Integer)]
+    user_id: i32,
     #[diesel(sql_type = Text)]
     device: String,
     #[diesel(sql_type = Text)]
@@ -51,7 +51,7 @@ struct SubscriptionEntity {
 #[derive(Debug, Clone, Insertable)]
 #[diesel(table_name = subscriptions)]
 struct NewSubscriptionEntity {
-    username: String,
+    user_id: i32,
     device: String,
     podcast: String,
     created: NaiveDateTime,
@@ -70,7 +70,7 @@ impl From<SubscriptionEntity> for Subscription {
     fn from(value: SubscriptionEntity) -> Self {
         Self {
             id: value.id,
-            username: value.username,
+            user_id: value.user_id,
             device: value.device,
             podcast: value.podcast,
             created: value.created,
@@ -101,11 +101,12 @@ impl DieselSubscriptionRepository {
 impl SubscriptionRepository for DieselSubscriptionRepository {
     type Error = PersistenceError;
 
-    fn delete_by_username(&self, username: &str) -> Result<(), Self::Error> {
+    fn delete_by_user_id(&self, user_id_to_delete: i32) -> Result<(), Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         diesel::delete(
-            subscriptions_dsl::subscriptions.filter(subscriptions_dsl::username.eq(username)),
+            subscriptions_dsl::subscriptions
+                .filter(subscriptions_dsl::user_id.eq(user_id_to_delete)),
         )
         .execute(&mut self.database.connection()?)
         .map(|_| ())
@@ -115,14 +116,14 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
     fn get_device_subscriptions(
         &self,
         device_id: &str,
-        username: &str,
+        user_id_to_find: i32,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         let subscriptions = subscriptions_dsl::subscriptions
-            .filter(subscriptions_dsl::username.eq(username))
+            .filter(subscriptions_dsl::user_id.eq(user_id_to_find))
             .filter(
                 subscriptions_dsl::device
                     .eq(device_id)
@@ -147,14 +148,14 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
 
     fn get_user_subscriptions(
         &self,
-        username: &str,
+        user_id_to_find: i32,
         since: NaiveDateTime,
         timestamp: i64,
     ) -> Result<SubscriptionModelChanges, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         let subscriptions = subscriptions_dsl::subscriptions
-            .filter(subscriptions_dsl::username.eq(username))
+            .filter(subscriptions_dsl::user_id.eq(user_id_to_find))
             .filter(subscriptions_dsl::created.gt(since))
             .load::<SubscriptionEntity>(&mut self.database.connection()?)
             .map_err(PersistenceError::from)?
@@ -176,7 +177,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
     fn update_subscriptions(
         &self,
         device_id: &str,
-        username: &str,
+        user_id_to_update: i32,
         add: &[String],
         remove: &[String],
     ) -> Result<Vec<Vec<String>>, Self::Error> {
@@ -193,8 +194,8 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
 
             let existing = subscriptions_dsl::subscriptions
                 .filter(
-                    subscriptions_dsl::username
-                        .eq(username)
+                    subscriptions_dsl::user_id
+                        .eq(user_id_to_update)
                         .and(subscriptions_dsl::device.eq(device_id))
                         .and(subscriptions_dsl::podcast.eq(podcast)),
                 )
@@ -212,13 +213,13 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                 }
                 None => {
                     let subscription = Subscription::new(
-                        username.to_string(),
+                        user_id_to_update,
                         device_id.to_string(),
                         podcast.to_string(),
                     );
                     diesel::insert_into(subscriptions_dsl::subscriptions)
                         .values(NewSubscriptionEntity {
-                            username: subscription.username,
+                            user_id: subscription.user_id,
                             device: subscription.device,
                             podcast: subscription.podcast,
                             created: subscription.created,
@@ -237,8 +238,8 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
 
             if let Some(existing) = subscriptions_dsl::subscriptions
                 .filter(
-                    subscriptions_dsl::username
-                        .eq(username)
+                    subscriptions_dsl::user_id
+                        .eq(user_id_to_update)
                         .and(subscriptions_dsl::device.eq(device_id))
                         .and(subscriptions_dsl::podcast.eq(podcast)),
                 )
@@ -259,14 +260,14 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
     fn get_active_device_podcast_urls(
         &self,
         device_id: &str,
-        username: &str,
+        user_id_to_find: i32,
     ) -> Result<Vec<String>, Self::Error> {
         use self::subscriptions::dsl as subscriptions_dsl;
 
         subscriptions_dsl::subscriptions
             .filter(
-                subscriptions_dsl::username
-                    .eq(username)
+                subscriptions_dsl::user_id
+                    .eq(user_id_to_find)
                     .and(subscriptions_dsl::device.eq(device_id))
                     .and(subscriptions_dsl::deleted.is_null()),
             )

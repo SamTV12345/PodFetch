@@ -39,7 +39,7 @@ pub async fn get_subscriptions(
 
     state
         .subscription_service
-        .get_device_subscriptions(deviceid.0, &username, query.since)
+        .get_device_subscriptions(deviceid.0, flag.user_id, query.since)
         .map(Json)
 }
 
@@ -64,7 +64,7 @@ pub async fn get_subscriptions_all(
 
     let changes = state
         .subscription_service
-        .get_user_subscriptions(&flag.username, query.since)?;
+        .get_user_subscriptions(flag.user_id, query.since)?;
 
     if username.1 == "opml" {
         Ok(Response::builder()
@@ -97,10 +97,11 @@ pub async fn upload_subscription_changes(
     let deviceid = trim_from_path(&paths.1);
     ensure_session_user::<CustomError>(&flag.username, &username).map_err(map_gpodder_error)?;
 
-    let update_urls =
-        state
-            .subscription_service
-            .update_subscriptions(deviceid.0, &username, upload_request.0)?;
+    let update_urls = state.subscription_service.update_subscriptions(
+        deviceid.0,
+        flag.user_id,
+        upload_request.0,
+    )?;
 
     Ok(Json(SubscriptionPostResponse {
         update_urls,
@@ -156,7 +157,7 @@ pub async fn put_device_subscriptions(
     let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
     let current_urls = state
         .subscription_service
-        .get_active_device_podcast_urls(deviceid.0, &username)?;
+        .get_active_device_podcast_urls(deviceid.0, flag.user_id)?;
 
     let to_add: Vec<String> = new_urls
         .iter()
@@ -171,7 +172,7 @@ pub async fn put_device_subscriptions(
 
     let update_urls = state.subscription_service.update_subscriptions(
         deviceid.0,
-        &username,
+        flag.user_id,
         crate::subscription::SubscriptionUpdateRequest {
             add: to_add,
             remove: to_remove,
@@ -211,7 +212,7 @@ pub async fn get_simple_subscriptions(
 
     let changes = state
         .subscription_service
-        .get_user_subscriptions(&flag.username, 0)?;
+        .get_user_subscriptions(flag.user_id, 0)?;
 
     match format {
         "opml" => {
@@ -261,7 +262,7 @@ pub async fn put_simple_subscriptions(
     let new_urls = parse_urls_from_body(&body_str, deviceid.1)?;
     let current_urls = state
         .subscription_service
-        .get_active_device_podcast_urls(deviceid.0, username)?;
+        .get_active_device_podcast_urls(deviceid.0, flag.user_id)?;
 
     let to_add: Vec<String> = new_urls
         .iter()
@@ -276,7 +277,7 @@ pub async fn put_simple_subscriptions(
 
     let update_urls = state.subscription_service.update_subscriptions(
         deviceid.0,
-        username,
+        flag.user_id,
         crate::subscription::SubscriptionUpdateRequest {
             add: to_add,
             remove: to_remove,
@@ -361,6 +362,8 @@ mod tests {
         assert_eq!(response.header("Content-Type"), "text/x-opml+xml",);
         let body = response.text();
         assert!(body.contains("<opml"));
+        assert!(body.contains("<title>PodFetch Subscriptions</title>"));
+        assert!(body.contains("<outline"));
     }
 
     #[tokio::test]
@@ -382,6 +385,8 @@ mod tests {
         assert_eq!(response.header("Content-Type"), "text/x-opml+xml",);
         let body = response.text();
         assert!(body.contains("<opml"));
+        assert!(body.contains("<title>PodFetch Subscriptions</title>"));
+        assert!(body.contains("<outline"));
     }
 
     #[tokio::test]
