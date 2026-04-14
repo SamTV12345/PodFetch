@@ -104,7 +104,7 @@ native-tls = { version = "0.2.18" }
 opml = "1.1.6"
 r2d2 = "0.8.10"
 r2d2_postgres = { version = "0.18.2" }
-rand = "0.10.0"
+rand = "0.10.1"
 regex = "1.12.3"
 reqwest = { version = "0.13.2", features = ["stream", "json", "blocking", "rustls", "hickory-dns", "query"] }
 rpassword = "7.4.0"
