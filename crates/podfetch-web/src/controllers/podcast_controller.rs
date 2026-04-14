@@ -634,7 +634,7 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<i
                     image_url,
                 },
                 Some(channel),
-                added_by.clone(),
+                added_by,
             )
             .await;
             match inserted_podcast {

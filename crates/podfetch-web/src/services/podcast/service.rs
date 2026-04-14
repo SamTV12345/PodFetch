@@ -424,8 +424,8 @@ impl PodcastService {
             .update_podcast_favor(id, favored, user_id)
             .map_err(CustomError::from)?;
 
-        if ENVIRONMENT_SERVICE.gpodder_integration_enabled {
-            if let Some(podcast) = podcast_repo().find_by_id(id).map_err(CustomError::from)? {
+        if ENVIRONMENT_SERVICE.gpodder_integration_enabled
+            && let Some(podcast) = podcast_repo().find_by_id(id).map_err(CustomError::from)? {
                 let sub_repo = DieselSubscriptionRepository::new(database());
                 let (add, remove) = if favored {
                     (vec![podcast.rssfeed], vec![])
@@ -434,7 +434,6 @@ impl PodcastService {
                 };
                 let _ = sub_repo.update_subscriptions("webview", user_id, &add, &remove);
             }
-        }
 
         Ok(())
     }
