@@ -128,6 +128,7 @@
   "upload-opml-file": "Wgraj plik UPML",
   "search-episodes": "Szukaj odcinków",
   "no-results-found-for": "Niczego nie znaleziono dla zapytania",
+  "no-tags-created": "Nie utworzono jeszcze żadnych tagów. Użyj formularza powyżej, aby dodać.",
   "descendant": "Potomek",
   "sort-by": "Sortuj",
   "sort-by-published-date": "Sortuj po dacie publikacji",

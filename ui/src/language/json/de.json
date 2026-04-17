@@ -136,6 +136,7 @@
   "upload-opml-file": "OPML-Datei hochladen",
   "search-episodes": "Episoden suchen",
   "no-results-found-for": "Keine Ergebnisse gefunden für",
+  "no-tags-created": "Noch keine Tags erstellt. Verwende das Formular oben, um einen hinzuzufügen.",
   "descendant": "Absteigend",
   "sort-by": "Sortiere nach",
   "sort-by-published-date": "Nach Veröffentlichungsdatum sortieren",

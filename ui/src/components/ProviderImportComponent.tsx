@@ -9,11 +9,11 @@ import { CustomButtonSecondary } from './CustomButtonSecondary'
 import { CustomInput } from './CustomInput'
 import { Spinner } from './Spinner'
 import 'material-symbols/outlined.css'
-import useModal from "../store/ModalSlice";
 import {$api} from "../utils/http";
 
 type ProviderImportComponent = {
-    selectedSearchType: AddTypes
+    selectedSearchType: AddTypes,
+    onClose?: () => void
 }
 
 export type AddPostPostModel = {
@@ -21,13 +21,12 @@ export type AddPostPostModel = {
     userId: number
 }
 
-export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedSearchType }) => {
+export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedSearchType, onClose }) => {
     const setSearchedPodcasts = useCommon(state => state.setSearchedPodcasts)
     const searchedPodcasts = useCommon(state => state.searchedPodcasts)
     const [loading, setLoading] = useState<boolean>()
     const [searchText, setSearchText] = useState<string>('')
     const { t } = useTranslation()
-    const setModalOpen = useModal(state => state.setOpenModal)
     const addPodcastFromItunes = $api.useMutation('post', '/api/v1/podcasts/itunes')
     const addPodcastFromPodindex = $api.useMutation('post', '/api/v1/podcasts/podindex')
     const searchProviderMutation = $api.useMutation('get', '/api/v1/podcasts/{type_of}/{podcast}/search')
@@ -39,7 +38,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     body: podcast
                 })
                     .then(() => {
-                        setModalOpen(false)
+                        onClose?.()
                         handleAddPodcast(200,
                             searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
                     })
@@ -54,7 +53,7 @@ export const ProviderImportComponent: FC<ProviderImportComponent> = ({ selectedS
                     body: podcast
                 })
                     .then(() => {
-                        setModalOpen(false)
+                        onClose?.()
                         handleAddPodcast(200,
                             searchedPodcasts!.find((v) => v.id === podcast.trackId)?.title!, t)
                     })

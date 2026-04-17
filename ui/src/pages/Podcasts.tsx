@@ -20,7 +20,7 @@ import {CustomSelect, Option} from '../components/CustomSelect'
 import {Heading1} from '../components/Heading1'
 import {PodcastCard} from '../components/PodcastCard'
 import 'material-symbols/outlined.css'
-import useModal from "../store/ModalSlice";
+
 import {$api} from "../utils/http";
 import {LoadingPodcastCard} from "../components/ui/LoadingPodcastCard";
 import {useQueryClient} from "@tanstack/react-query";
@@ -44,7 +44,7 @@ const allTags: Option = {
 export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
     const queryClient = useQueryClient()
     const {t} = useTranslation()
-    const setModalOpen = useModal(state => state.setOpenModal)
+    const [addModalOpen, setAddModalOpen] = useState(false)
     const [tagsVal, setTagVal] = useState<Option>(() => allTags)
 
     const refreshAllPodcasts = $api.useMutation('post', '/api/v1/podcasts/all')
@@ -97,7 +97,7 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
 
     return (
         <div>
-            <AddPodcastModal/>
+            <AddPodcastModal open={addModalOpen} onOpenChange={setAddModalOpen} />
 
             {/* Title and Add button */}
             <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-4 mb-10">
@@ -123,7 +123,7 @@ export const Podcasts: FC<PodcastsProps> = ({onlyFavorites}) => {
 
 
                 <CustomButtonPrimary className="flex items-center" onClick={() => {
-                    setModalOpen(true)
+                    setAddModalOpen(true)
                 }}>
                     <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
                 </CustomButtonPrimary>

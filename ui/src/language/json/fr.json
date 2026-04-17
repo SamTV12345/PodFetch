@@ -128,6 +128,7 @@
   "upload-opml-file": "Télécharger un fichier OPML",
   "search-episodes": "Rechercher des épisodes",
   "no-results-found-for": "Aucun résultat trouvé pour",
+  "no-tags-created": "Aucun tag créé. Utilisez le formulaire ci-dessus pour en ajouter un.",
   "descendant": "Décroissant",
   "sort-by": "Trier par",
   "sort-by-published-date": "Trier par date de publication",

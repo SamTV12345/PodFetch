@@ -160,6 +160,6 @@ export const DetailedAudioPlayer: FC<DetailedAudioPlayerProps> = ({ audioAmplifi
                 </div>
             </div>
 
-        </div>,document.getElementById('modal')!
+        </div>,document.body
     )
 }

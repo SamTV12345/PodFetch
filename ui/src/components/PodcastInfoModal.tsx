@@ -1,12 +1,12 @@
-import { createPortal } from 'react-dom'
+import { FC, useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { useTranslation } from 'react-i18next'
-import {  removeHTML } from '../utils/Utilities'
-import useCommon from '../store/CommonSlice'
+import { removeHTML } from '../utils/Utilities'
 import { Heading2 } from './Heading2'
 import 'material-symbols/outlined.css'
-import {$api} from "../utils/http";
-import {useState} from "react";
-import {PodcastEpisodeChapterTable} from "./PodcastEpisodeChapterTable";
+import { $api } from '../utils/http'
+import { PodcastEpisodeChapterTable } from './PodcastEpisodeChapterTable'
+import { components } from '../../schema'
 
 const inferExtension = (url: string): string => {
     try {
@@ -19,13 +19,17 @@ const inferExtension = (url: string): string => {
     }
 }
 
-export const PodcastInfoModal = () => {
-    const infoModalOpen = useCommon(state => state.infoModalPodcastOpen)
-    const selectedPodcastEpisode = useCommon(state => state.infoModalPodcast)
-    const { t } =  useTranslation()
-    const [selectedTab, setSelectedTab] = useState<'description'|'chapters'>('description')
-    const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+type PodcastInfoModalProps = {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    episode: components["schemas"]["PodcastEpisodeDto"] | undefined
+}
+
+export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange, episode }) => {
+    const { t } = useTranslation()
+    const [selectedTab, setSelectedTab] = useState<'description' | 'chapters'>('description')
     const deleteEpisodeDownloadMutation = $api.useMutation('delete', '/api/v1/episodes/{id}/download')
+
     const download = (url: string, filename: string) => {
         const element = document.createElement('a')
         element.setAttribute('href', url)
@@ -45,68 +49,72 @@ export const PodcastInfoModal = () => {
                 }
             }
         }).then(() => {
-            setInfoModalPodcastOpen(false)
+            onOpenChange(false)
         })
     }
 
-    return createPortal(
-        <div
-            id="defaultModal"
-            tabIndex={-1}
-            aria-hidden="true"
-            onClick={() => setInfoModalPodcastOpen(false)}
-            className={`fixed inset-0 z-30 bg-[rgba(0,0,0,0.5)] backdrop-blur p-4 flex items-center justify-center transition-opacity
-        ${!infoModalOpen && 'pointer-events-none'}
-        ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
-        >
-            <div
-                className={`relative ui-surface w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-y-auto p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] ${infoModalOpen ? 'opacity-100' : 'opacity-0'}`}
-                onClick={e => e.stopPropagation()}
-            >
-                <button
-                    type="button"
-                    onClick={() => setInfoModalPodcastOpen(false)}
-                    className="absolute top-4 right-4 bg-transparent"
-                    data-modal-hide="defaultModal"
-                >
-                    <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
-                    <span className="sr-only">{t('closeModal')}</span>
-                </button>
-
-                <div className="mb-4">
-                    <Heading2 className="inline align-middle mr-2 break-all">{selectedPodcastEpisode?.name || ''}</Heading2>
-
-                    <span className={`material-symbols-outlined align-middle ${selectedPodcastEpisode ? 'cursor-pointer ui-icon hover:ui-icon-hover' : 'text-stone-300'}`} title={t('download-computer') as string} onClick={() => {
-                        if (selectedPodcastEpisode) {
-                            const extension = inferExtension(selectedPodcastEpisode.local_url || selectedPodcastEpisode.url)
-                            const downloadUrl = selectedPodcastEpisode.status ? selectedPodcastEpisode.local_url : selectedPodcastEpisode.url
-                            download(downloadUrl, `${selectedPodcastEpisode.name}.${extension}`)
+    return (
+        <Dialog.Root open={open} onOpenChange={onOpenChange}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-sm z-30" />
+                <Dialog.Content className="fixed inset-0 z-40 flex items-center justify-center p-4">
+                    <div className="relative ui-surface w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-y-auto p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))]">
+                        <Dialog.Close className="absolute top-4 right-4 bg-transparent">
+                            <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
+                            <span className="sr-only">{t('closeModal')}</span>
+                        </Dialog.Close>
+                        <div className="mb-4">
+                            <Dialog.Title asChild>
+                                <Heading2 className="inline align-middle mr-2 break-all">{episode?.name || ''}</Heading2>
+                            </Dialog.Title>
+                            <Dialog.Description className="sr-only">
+                                {t('podcast-episode-details')}
+                            </Dialog.Description>
+                            <span
+                                className={`material-symbols-outlined align-middle ${episode ? 'cursor-pointer ui-icon hover:ui-icon-hover' : 'text-stone-300'}`}
+                                title={t('download-computer') as string}
+                                onClick={() => {
+                                    if (episode) {
+                                        const extension = inferExtension(episode.local_url || episode.url)
+                                        const downloadUrl = episode.status ? episode.local_url : episode.url
+                                        download(downloadUrl, `${episode.name}.${extension}`)
+                                    }
+                                }}
+                            >save</span>
+                            {episode?.status &&
+                                <span
+                                    onClick={() => deleteEpisodeDownloadOnServer(episode?.episode_id)}
+                                    className="material-symbols-outlined align-middle cursor-pointer ui-text-danger hover:ui-text-danger-hover"
+                                    title={t('delete') as string}
+                                >delete</span>
+                            }
+                        </div>
+                        <ul className="flex flex-wrap gap-2 border-b ui-border mb-6 ui-text-muted">
+                            <li
+                                onClick={() => setSelectedTab('description')}
+                                className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 ui-border-accent ui-text-accent'}`}
+                            >
+                                {t('description')}
+                            </li>
+                            <li
+                                onClick={() => setSelectedTab('chapters')}
+                                className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 ui-border-accent ui-text-accent'}`}
+                            >
+                                {t('chapters')}
+                            </li>
+                        </ul>
+                        {episode &&
+                            <>
+                                {selectedTab === 'description' ? (
+                                    <p className="leading-[1.75] text-sm ui-text" dangerouslySetInnerHTML={removeHTML(episode.description)} />
+                                ) : (
+                                    <PodcastEpisodeChapterTable podcastEpisode={episode} className="overflow-auto max-h-1/2" />
+                                )}
+                            </>
                         }
-                    }}>save</span>
-
-                    {selectedPodcastEpisode?.status &&
-                        <span onClick={() => deleteEpisodeDownloadOnServer(selectedPodcastEpisode?.episode_id)} className="material-symbols-outlined align-middle cursor-pointer ui-text-danger hover:ui-text-danger-hover" title={t('delete') as string}>delete</span>
-                    }
-                </div>
-
-                <ul className="flex flex-wrap gap-2 border-b ui-border mb-6 ui-text-muted">
-                    <li onClick={()=>setSelectedTab('description')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'description' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
-                        {t('description')}
-                    </li>
-                    <li onClick={()=>setSelectedTab('chapters')} className={`cursor-pointer inline-block px-2 py-4 ${selectedTab === 'chapters' && 'border-b-2 ui-border-accent ui-text-accent'}`}>
-                        {t('chapters')}
-                    </li>
-                </ul>
-
-                {selectedPodcastEpisode &&
-                    <>
-                        {
-                            selectedTab === 'description' ? (
-                                <p className="leading-[1.75] text-sm ui-text" dangerouslySetInnerHTML={removeHTML(selectedPodcastEpisode.description)}/>
-                            ): (<PodcastEpisodeChapterTable podcastEpisode={selectedPodcastEpisode} className="overflow-auto max-h-1/2"/>)
-                        }
-                    </>
-                }
-            </div>
-        </div>, document.getElementById('modal1')!)
+                    </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
+    )
 }

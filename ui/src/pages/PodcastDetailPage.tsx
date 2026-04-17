@@ -2,7 +2,6 @@ import {Fragment, useEffect, useMemo, useState} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
 import {removeHTML} from '../utils/Utilities'
-import useCommon, {Podcast} from '../store/CommonSlice'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import {Chip} from '../components/Chip'
 import {Heading2} from '../components/Heading2'
@@ -24,7 +23,8 @@ export const PodcastDetailPage = () => {
     const params = useParams()
     const [lineClamp, setLineClamp] = useState(true)
     const {t} = useTranslation()
-    const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
+    const [infoModalOpen, setInfoModalOpen] = useState(false)
+    const [infoModalEpisode, setInfoModalEpisode] = useState<components["schemas"]["PodcastEpisodeDto"] | undefined>(undefined)
     const queryClient = useQueryClient()
 
     const [onlyUnplayed, setOnlyUnplayed] = useState<boolean>(false)
@@ -104,17 +104,10 @@ export const PodcastDetailPage = () => {
         }
     }, [params])
 
-    useEffect(() => {
-        return () => {
-            setInfoModalPodcastOpen(false)
-        }
-    }, []);
-
-
     return (
         <Fragment key={'detail'}>
             <div className="max-w-4xl">
-                <PodcastInfoModal/>
+                <PodcastInfoModal open={infoModalOpen} onOpenChange={setInfoModalOpen} episode={infoModalEpisode} />
                 <PodcastEpisodeAlreadyPlayed/>
 
                 {/* Header */}
@@ -253,7 +246,7 @@ export const PodcastDetailPage = () => {
                     {currentPodcastEpisodes.data?.map((episode, index) => (
                         <PodcastDetailItem episode={episode} currentEpisodes={currentPodcastEpisodes.data ?? []}
                                            key={episode.podcastEpisode.id} index={index}
-                                           onlyUnplayed={onlyUnplayed}/>
+                                           onlyUnplayed={onlyUnplayed} onShowInfo={(ep) => { setInfoModalEpisode(ep); setInfoModalOpen(true) }}/>
                     ))}
                 </div>
             </div>

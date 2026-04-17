@@ -1,7 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { ConfirmModal } from '../components/ConfirmModal'
 import { Heading1 } from '../components/Heading1'
-import { InfoModal } from '../components/InfoModal'
 import {NavLink, Outlet} from "react-router-dom";
 
 export const SettingsPage = () => {
@@ -9,8 +7,6 @@ export const SettingsPage = () => {
 
     return (
         <div>
-            <ConfirmModal />
-
             <Heading1 className="mb-10">{t('settings')}</Heading1>
 
             {/* Tabs */}
@@ -53,7 +49,6 @@ export const SettingsPage = () => {
                 <Outlet/>
             </div>
 
-            <InfoModal/>
         </div>
     )
 }
