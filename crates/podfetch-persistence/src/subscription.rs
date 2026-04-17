@@ -235,6 +235,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                         // On SQLite, the AUTOINCREMENT counter can get out of
                         // sync after migrations that copy rows with explicit IDs.
                         // Fix it before retrying.
+                        #[cfg(feature = "sqlite")]
                         {
                             use std::ops::DerefMut;
                             if matches!(connection.deref_mut(), crate::db::DBType::Sqlite(_)) {
