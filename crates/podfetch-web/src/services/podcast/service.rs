@@ -183,25 +183,35 @@ impl PodcastService {
         match podcast {
             Some(podcast) => {
                 ChatServerHandle::broadcast_podcast_downloaded(podcast.clone());
-                spawn_blocking(move || {
+                let join_result = spawn_blocking(move || {
                     log::debug!("Inserting podcast episodes of {}", podcast.name);
-                    let inserted_podcasts =
-                        PodcastEpisodeService::insert_podcast_episodes(&podcast).unwrap();
-
-                    ChatServerHandle::broadcast_added_podcast_episodes(
-                        &podcast,
-                        inserted_podcasts.clone(),
-                    );
-                    if let Err(e) = Self::schedule_episode_download(&podcast) {
-                        log::error!("Error scheduling episode download: {e}");
+                    match PodcastEpisodeService::insert_podcast_episodes(&podcast) {
+                        Ok(inserted_podcasts) => {
+                            ChatServerHandle::broadcast_added_podcast_episodes(
+                                &podcast,
+                                inserted_podcasts.clone(),
+                            );
+                            if let Err(e) = Self::schedule_episode_download(&podcast) {
+                                log::error!("Error scheduling episode download: {e}");
+                            }
+                        }
+                        Err(e) => {
+                            log::error!(
+                                "Error inserting podcast episodes for {}: {e}",
+                                podcast.name
+                            );
+                        }
                     }
                 })
-                .await
-                .unwrap();
+                .await;
+                if let Err(e) = join_result {
+                    log::error!("Blocking task failed: {e}");
+                }
                 Ok(inserted_podcast)
             }
             None => {
-                panic!("No podcast found")
+                log::error!("No podcast found after insert");
+                Err(CustomErrorInner::NotFound(ErrorSeverity::Error).into())
             }
         }
     }
