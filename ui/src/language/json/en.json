@@ -19,6 +19,8 @@
   "podcast-size": "Podcast directory size",
   "cpu-usage": "CPU",
   "used-cpu": "Used CPU",
+  "auto-transcode-opus": "Transcode to Opus",
+  "auto-transcode-opus-explanation": "Automatically convert downloaded episodes to Opus format. This can reduce storage usage by up to 50% compared to MP3. Requires ffmpeg to be installed on the server.",
   "rescan-audio-files": "Rescan audio files",
   "rescan-audio-files-description": "PodFetch will rescan all audio files to update metadata like chapters. This can take a while depending on the number of podcast episodes.",
   "rescan-done": "Rescan done",

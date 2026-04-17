@@ -18,6 +18,7 @@ diesel::table! {
         episode_format -> Text,
         podcast_format -> Text,
         direct_paths -> Bool,
+        auto_transcode_opus -> Bool,
     }
 }
 
@@ -36,6 +37,7 @@ struct SettingEntity {
     episode_format: String,
     podcast_format: String,
     direct_paths: bool,
+    auto_transcode_opus: bool,
 }
 
 impl From<SettingEntity> for Setting {
@@ -53,6 +55,7 @@ impl From<SettingEntity> for Setting {
             episode_format: value.episode_format,
             podcast_format: value.podcast_format,
             direct_paths: value.direct_paths,
+            auto_transcode_opus: value.auto_transcode_opus,
         }
     }
 }
@@ -72,6 +75,7 @@ impl From<Setting> for SettingEntity {
             episode_format: value.episode_format,
             podcast_format: value.podcast_format,
             direct_paths: value.direct_paths,
+            auto_transcode_opus: value.auto_transcode_opus,
         }
     }
 }
@@ -130,6 +134,7 @@ impl SettingRepository for DieselSettingsRepository {
                 episode_format.eq("{episodeTitle}"),
                 podcast_format.eq("{podcastTitle}"),
                 direct_paths.eq(false),
+                auto_transcode_opus.eq(false),
             ))
             .execute(&mut conn)
             .map(|_| ())

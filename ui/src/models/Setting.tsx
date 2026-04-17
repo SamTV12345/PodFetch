@@ -11,4 +11,5 @@ export type Setting = {
     episodeFormat: string,
     podcastFormat: string,
     directPaths: boolean,
+    autoTranscodeOpus: boolean,
 }

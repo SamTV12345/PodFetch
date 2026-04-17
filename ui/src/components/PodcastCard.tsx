@@ -143,7 +143,7 @@ export const PodcastCard: FC<PodcastCardProps> = ({podcast}) => {
                         src={podcast.image_url} alt=""/>
 
                     <span ref={likeButton}
-                          className={`material-symbols-outlined filled absolute top-2 right-2 h-6 w-6 filled ${podcast.favorites ? 'text-rose-700 hover:text-rose-600' : 'text-stone-200 hover:text-stone-100'}`}
+                          className={`material-symbols-outlined filled absolute top-2 right-2 h-6 w-6 filled ${podcast.favorites ? 'text-rose-700 hover:text-rose-600' : 'ui-text-muted hover:ui-text-hover'}`}
                           onClick={(e) => {
                               // Prevent icon click from triggering link to podcast detail
                               e.preventDefault()

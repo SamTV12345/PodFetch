@@ -276,7 +276,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 }} dangerouslySetInnerHTML={removeHTML(episode.podcastEpisode.description)}></div>
 
                 {/* Play button */}
-                <span className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'text-gray-500'}
+                <span className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'ui-text-muted'}
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4
                     self-center material-symbols-outlined cursor-pointer !text-5xl ui-text hover:ui-text-hover active:scale-90

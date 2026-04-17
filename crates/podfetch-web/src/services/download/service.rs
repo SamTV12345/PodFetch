@@ -267,10 +267,22 @@ impl DownloadService {
             &ENVIRONMENT_SERVICE.default_file_handler,
         )?;
 
+        let final_episode_path = if settings_in_db.auto_transcode_opus {
+            match Self::transcode_to_opus(&paths.filename) {
+                Ok(opus_path) => opus_path,
+                Err(e) => {
+                    log::warn!("Opus transcoding failed, keeping original file: {e}");
+                    paths.filename.clone()
+                }
+            }
+        } else {
+            paths.filename.clone()
+        };
+
         PodcastEpisodeService::update_local_paths(
             &podcast_episode.episode_id,
             &paths.image_filename,
-            &paths.filename,
+            &final_episode_path,
         )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Ok(chapters) = &result {
@@ -294,6 +306,47 @@ impl DownloadService {
         Ok(())
     }
 
+    fn transcode_to_opus(input_path: &str) -> Result<String, CustomError> {
+        let opus_path = {
+            let p = std::path::Path::new(input_path);
+            p.with_extension("opus").to_string_lossy().to_string()
+        };
+
+        let output = std::process::Command::new("ffmpeg")
+            .args([
+                "-i", input_path,
+                "-c:a", "libopus",
+                "-b:a", "48k",
+                "-vn",
+                "-y",
+                &opus_path,
+            ])
+            .output()
+            .map_err(|e| {
+                CustomErrorInner::Conflict(
+                    format!("Failed to run ffmpeg: {e}"),
+                    ErrorSeverity::Warning,
+                )
+            })?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(CustomErrorInner::Conflict(
+                format!("ffmpeg transcode failed: {stderr}"),
+                ErrorSeverity::Warning,
+            )
+            .into());
+        }
+
+        // Remove the original file after successful transcoding
+        if let Err(e) = std::fs::remove_file(input_path) {
+            log::warn!("Could not remove original file after opus transcode: {e}");
+        }
+
+        log::info!("Transcoded to opus: {opus_path}");
+        Ok(opus_path)
+    }
+
     pub fn handle_metadata_insertion(
         paths: &FilenameBuilderReturn,
         podcast_episode: &PodcastEpisode,
@@ -309,7 +362,6 @@ impl DownloadService {
         match detected_file {
             FileFormat::Mpeg12AudioLayer3
             | FileFormat::Mpeg12AudioLayer2
-            | FileFormat::AppleItunesAudio
             | FileFormat::Id3v2
             | FileFormat::WaveformAudio => {
                 chapters = Self::read_chapters_from_mp3(&paths.filename)?;
@@ -318,7 +370,7 @@ impl DownloadService {
                     log::error!("Error updating metadata: {err:?}");
                 }
             }
-            FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio => {
+            FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio | FileFormat::AppleItunesAudio => {
                 chapters = Self::read_chapters_from_mp4(&paths.filename);
                 let result_of_update = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
@@ -472,18 +524,26 @@ impl DownloadService {
                     }
                     Err(e) => {
                         log::error!("Error getting track number: {e:?}");
-                        e.to_string();
                     }
                 }
 
-                tag.write_to_path(&paths.filename).unwrap();
+                if let Err(e) = tag.write_to_path(&paths.filename) {
+                    log::error!(
+                        "Error writing MP4 metadata for episode {}, file may use an unsupported atom layout: {e}",
+                        podcast_episode.name
+                    );
+                }
                 Ok(())
             }
             Err(e) => {
-                log::error!("Error reading metadata: {e:?}");
-                let err: CustomError =
-                    CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into();
-                Err(err)
+                // Many M4A files (especially from Anchor/Spotify) have non-standard
+                // atom layouts that mp4ameta can't parse. This is not fatal - the
+                // audio file itself is fine, we just skip metadata writing.
+                log::warn!(
+                    "Could not read MP4 metadata for episode {}, skipping metadata update: {e}",
+                    podcast_episode.name
+                );
+                Ok(())
             }
         }
     }

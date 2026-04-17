@@ -405,6 +405,7 @@ pub async fn retrieve_episode_sample_format(
         episode_format: sample_string.0.content,
         podcast_format: "test".to_string(),
         direct_paths: true,
+        auto_transcode_opus: false,
     };
     let result = perform_episode_variable_replacement(settings.into(), episode, None)?;
 

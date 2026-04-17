@@ -8,7 +8,7 @@ export type IconProps = {
 }
 
 export const PlayIcon:FC<IconProps> = ({className, onClick}) => {
-    return             <div className={`relative rounded-full bg-black w-10 h-10 grid place-items-center bg-gray-700 hover:bg-gray-600 active:scale-75 ${className}`} onClick={()=>{
+    return             <div className={`relative rounded-full ui-bg-foreground w-10 h-10 grid place-items-center active:scale-75 ${className}`} onClick={()=>{
         if (onClick) {
             onClick()
         }

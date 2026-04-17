@@ -15,6 +15,7 @@ pub struct Setting {
     pub episode_format: String,
     pub podcast_format: String,
     pub direct_paths: bool,
+    pub auto_transcode_opus: bool,
 }
 
 #[derive(Clone)]

@@ -103,6 +103,7 @@ fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::sett
         episode_format: update.episode_format.clone(),
         podcast_format: update.podcast_format.clone(),
         direct_paths: update.direct_paths,
+        auto_transcode_opus: false,
     }
 }
 

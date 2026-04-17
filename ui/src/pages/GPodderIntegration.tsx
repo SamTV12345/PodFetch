@@ -29,7 +29,7 @@ export const GPodderIntegration = ()=> {
 
     return <table className="text-left text-sm w-full overflow-y-auto ui-text">
         <thead>
-        <tr className="border-b border-stone-300">
+        <tr className="border-b ui-border">
             <th scope="col" className="pr-2 py-3 ui-text">
                 #
             </th>

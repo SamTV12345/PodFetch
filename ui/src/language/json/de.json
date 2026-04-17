@@ -89,6 +89,8 @@
   "podcast-deleted": "Podcast {{name}} gelöscht",
   "manage-podcasts": "Podcasts verwalten",
   "data-retention": "Podcastaufbewahrung",
+  "auto-transcode-opus": "Zu Opus konvertieren",
+  "auto-transcode-opus-explanation": "Heruntergeladene Episoden automatisch ins Opus-Format konvertieren. Dies kann den Speicherverbrauch im Vergleich zu MP3 um bis zu 50% reduzieren. Erfordert ffmpeg auf dem Server.",
   "rescan-audio-files": "Audiodateien neu scannen",
   "rescan-audio-files-description": "PodFetch wird alle lokalen Audiodateien im Podcast-Verzeichnis neu scannen und Metadaten wie Kapitel ergänzen.",
   "rescan-done": "Neuscan abgeschlossen",

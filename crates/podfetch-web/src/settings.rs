@@ -20,6 +20,7 @@ pub struct Setting {
     pub episode_format: String,
     pub podcast_format: String,
     pub direct_paths: bool,
+    pub auto_transcode_opus: bool,
 }
 
 impl From<podfetch_domain::settings::Setting> for Setting {
@@ -37,6 +38,7 @@ impl From<podfetch_domain::settings::Setting> for Setting {
             episode_format: value.episode_format,
             podcast_format: value.podcast_format,
             direct_paths: value.direct_paths,
+            auto_transcode_opus: value.auto_transcode_opus,
         }
     }
 }
@@ -56,6 +58,7 @@ impl From<Setting> for podfetch_domain::settings::Setting {
             episode_format: value.episode_format,
             podcast_format: value.podcast_format,
             direct_paths: value.direct_paths,
+            auto_transcode_opus: value.auto_transcode_opus,
         }
     }
 }

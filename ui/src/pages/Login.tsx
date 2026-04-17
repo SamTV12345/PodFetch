@@ -61,8 +61,8 @@ export const Login = () => {
     }
 
     return (
-        <div className="flex flex-col items-center xs:justify-center bg-stone-900 h-full w-full">
-            <span className="flex items-center gap-2 xs:mb-10 px-4 py-3 text-white">
+        <div className="flex flex-col items-center xs:justify-center ui-surface h-full w-full">
+            <span className="flex items-center gap-2 xs:mb-10 px-4 py-3 ui-text">
                 <span className="material-symbols-outlined ui-text-accent">auto_detect_voice</span>
                 <span className="font-bold font-['Inter_variable']">Podfetch</span>
             </span>

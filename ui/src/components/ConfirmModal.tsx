@@ -28,7 +28,7 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({ open, onOpenChange, header
                         <div className="mb-4 ui-text">
                             {bodyText}
                         </div>
-                        <div className="text-right">
+                        <div className="flex justify-end gap-3">
                             <CustomButtonSecondary className="border-transparent shadow-none hover:shadow-none text-base ui-text hover:ui-text-hover" onClick={() => onOpenChange(false)}>{rejectText}</CustomButtonSecondary>
                             <CustomButtonPrimary className="bg-(--danger-fg-color) hover:bg-(--danger-fg-color-hover) hover:shadow-(--danger-fg-color-hover) ui-text" onClick={onAccept}>{acceptText}</CustomButtonPrimary>
                         </div>

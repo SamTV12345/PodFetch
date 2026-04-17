@@ -222,6 +222,7 @@ diesel::table! {
         episode_format -> Text,
         podcast_format -> Text,
         direct_paths -> Bool,
+        auto_transcode_opus -> Bool,
     }
 }
 

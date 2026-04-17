@@ -862,6 +862,7 @@ pub async fn retrieve_podcast_sample_format(
         episode_format: "".to_string(),
         podcast_format: sample_string.0.content,
         direct_paths: true,
+        auto_transcode_opus: false,
     };
     let result = perform_podcast_variable_replacement(settings.into(), podcast, None);
 

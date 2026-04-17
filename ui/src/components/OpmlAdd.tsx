@@ -75,7 +75,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
             case 'none':
                 return ''
             case 'allowed':
-                return 'bg-stone-100'
+                return 'ui-surface-muted'
             case 'invalid':
                 return 'border-solid border-red-500'
         }
@@ -139,7 +139,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
                             <div className="ui-slider-fill h-2.5 rounded-full" style={{width: `${Math.min((progress.length / podcastsToUpload) * 100, 100)}%`}}></div>
                             {!opmlUploading &&
                                 <div>
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} className="w-6 h-6 text-slate-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} className="w-6 h-6 ui-text">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                     </svg>
                                 </div>
