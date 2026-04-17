@@ -217,7 +217,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                         device_id.to_string(),
                         podcast.to_string(),
                     );
-                    diesel::insert_into(subscriptions_dsl::subscriptions)
+                    let insert_result = diesel::insert_into(subscriptions_dsl::subscriptions)
                         .values(NewSubscriptionEntity {
                             user_id: subscription.user_id,
                             device: subscription.device,
@@ -225,7 +225,26 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                             created: subscription.created,
                             deleted: subscription.deleted,
                         })
-                        .execute(&mut connection)?;
+                        .execute(&mut connection);
+                    if let Err(e) = insert_result {
+                        log::warn!(
+                            "Failed to insert subscription for podcast {}, retrying with explicit sequence fix: {}",
+                            podcast, e
+                        );
+                        // Fix the sqlite_sequence counter and retry
+                        diesel::sql_query(
+                            "UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM subscriptions) WHERE name = 'subscriptions'"
+                        ).execute(&mut connection).ok();
+                        diesel::insert_into(subscriptions_dsl::subscriptions)
+                            .values(NewSubscriptionEntity {
+                                user_id: subscription.user_id,
+                                device: subscription.device,
+                                podcast: subscription.podcast,
+                                created: subscription.created,
+                                deleted: subscription.deleted,
+                            })
+                            .execute(&mut connection)?;
+                    }
                 }
             }
         }
