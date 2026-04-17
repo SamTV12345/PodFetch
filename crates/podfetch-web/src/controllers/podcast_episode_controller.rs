@@ -1,14 +1,12 @@
 use crate::app_state::AppState;
 use crate::history::EpisodeDto;
 use crate::history::map_episode_to_dto;
-use crate::podcast::PodcastDto;
 pub use crate::podcast_episode::{
     EpisodeFormatDto, FavoritePut, OptionalId, PodcastChapterDto, TimelineQueryParams,
 };
 use crate::podcast_episode::{
     PodcastEpisodeControllerError, PodcastEpisodeWithHistory as WebPodcastEpisodeWithHistory,
-    TimeLinePodcastEpisode as WebTimeLinePodcastEpisode,
-    TimeLinePodcastItem as WebTimeLinePodcastItem, TimelineFavorite,
+    TimeLinePodcastEpisode, TimeLinePodcastItem,
 };
 use crate::podcast_episode::{
     get_episode_with_history as web_get_episode_with_history,
@@ -173,9 +171,6 @@ pub async fn find_all_podcast_episodes_of_podcast(
     Ok(Json(mapped_podcasts))
 }
 
-pub type TimeLinePodcastEpisode =
-    WebTimeLinePodcastEpisode<PodcastEpisodeDto, PodcastDto, EpisodeDto, TimelineFavorite>;
-
 #[utoipa::path(
     get,
     path="/podcasts/available/gpodder",
@@ -196,8 +191,6 @@ pub async fn get_available_podcasts_not_in_webview(
 
     Ok(Json(found_episodes))
 }
-
-pub type TimeLinePodcastItem = WebTimeLinePodcastItem<TimeLinePodcastEpisode>;
 
 #[utoipa::path(
 get,

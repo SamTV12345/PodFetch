@@ -722,13 +722,10 @@ impl PodcastEpisodeUseCase {
                 continue;
             }
             let days = match podcast_settings.unwrap() {
-                Some(podcast_settings)
-                    if podcast_settings.auto_cleanup => {
-                        podcast_settings.auto_cleanup_days
-                    }
-                _ => {
-                    days_from_settings
+                Some(podcast_settings) if podcast_settings.auto_cleanup => {
+                    podcast_settings.auto_cleanup_days
                 }
+                _ => days_from_settings,
             };
 
             let old_podcast_episodes = match Self::get_podcast_episodes_older_than_days(days, p.id)

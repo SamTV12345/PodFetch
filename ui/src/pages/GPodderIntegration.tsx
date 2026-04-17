@@ -14,7 +14,7 @@ export const GPodderIntegration = ()=> {
 
 
     const addPodcast = (feedUrl: string)=>{
-        queryClient.setQueryData(['get', '/api/v1/podcasts/available/gpodder'], (oldData?: components["schemas"]["GPodderAvailablePodcasts"][])=>{
+        queryClient.setQueryData(['get', '/api/v1/podcasts/available/gpodder'], (oldData?: components["schemas"]["GPodderAvailablePodcast"][])=>{
            return oldData?.filter(d=>d.podcast!=feedUrl)
         })
         addPodcastMutation.mutateAsync({

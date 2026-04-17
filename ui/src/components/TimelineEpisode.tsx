@@ -27,7 +27,7 @@ export const TimelineEpisode: FC<TimelineEpisodeProps> = ({ podcastEpisode,podca
             params: {
                 query: {
                     lastTimestamp: podcastEpisode.date_of_recording,
-                    favoredOnly: filters.data?.onlyFavored ?? false,
+                    favoredOnly: filters.data?.only_favored ?? false,
                     notListened: notListened,
                     favoredEpisodes
                 }

@@ -1,7 +1,7 @@
 export interface Filter {
-    username: string
-    title: string
+    user_id: number
+    title?: string | null
     ascending: boolean
-    filter?: string,
-    onlyFavored: boolean
+    filter?: string | null
+    only_favored: boolean
 }

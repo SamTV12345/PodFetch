@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/episodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_podcast_episode_by_id"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/episodes/{id}/download": {
         parameters: {
             query?: never;
@@ -711,6 +727,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stats/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_stats_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sys/config": {
         parameters: {
             query?: never;
@@ -871,6 +903,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/proxy/podcast/apiKey/{apiKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["proxy_podcast_with_path_api_key"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rss": {
         parameters: {
             query?: never;
@@ -879,6 +927,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_rss_feed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rss/apiKey/{apiKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_rss_feed_with_path_api_key"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rss/apiKey/{apiKey}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_rss_feed_for_podcast_with_path_api_key"];
         put?: never;
         post?: never;
         delete?: never;
@@ -975,12 +1055,6 @@ export interface components {
         EpisodeFormatDto: {
             content: string;
         };
-        Favorite: {
-            favored: boolean;
-            /** Format: int32 */
-            podcast_id: number;
-            username: string;
-        };
         FavoritePut: {
             favored: boolean;
         };
@@ -1010,11 +1084,12 @@ export interface components {
         Filter: {
             ascending: boolean;
             filter?: string | null;
-            onlyFavored: boolean;
+            only_favored: boolean;
             title?: string | null;
-            username: string;
+            /** Format: int32 */
+            user_id: number;
         };
-        GPodderAvailablePodcasts: {
+        GPodderAvailablePodcast: {
             device: string;
             podcast: string;
         };
@@ -1227,17 +1302,16 @@ export interface components {
         };
         PodindexResponse: {
             feeds: components["schemas"]["Feed"][];
-            status: boolean;
+            status: string;
         };
         /** @enum {string} */
         ReplacementStrategy: "replace-with-dash-and-underscore" | "remove" | "replace-with-dash";
-        /** @enum {string} */
-        Role: "admin" | "uploader" | "user";
         Setting: {
             autoCleanup: boolean;
             /** Format: int32 */
             autoCleanupDays: number;
             autoDownload: boolean;
+            autoTranscodeOpus: boolean;
             autoUpdate: boolean;
             directPaths: boolean;
             episodeFormat: string;
@@ -1256,6 +1330,20 @@ export interface components {
             name: string;
             /** Format: int64 */
             total_space: number;
+        };
+        StatsOverview: {
+            activeWeekdays: components["schemas"]["WeekdayStats"][];
+            /** Format: date-time */
+            from?: string | null;
+            /** Format: int64 */
+            listenedEpisodes: number;
+            /** Format: int64 */
+            listenedPodcasts: number;
+            /** Format: date-time */
+            to?: string | null;
+            topPodcasts: components["schemas"]["TopPodcastStats"][];
+            /** Format: int64 */
+            totalListenedSeconds: number;
         };
         SysExtraInfo: {
             disks: components["schemas"]["SimplifiedDisk"][];
@@ -1281,7 +1369,8 @@ export interface components {
             description?: string | null;
             id: string;
             name: string;
-            username: string;
+            /** Format: int32 */
+            user_id: number;
         };
         TagCreate: {
             color: components["schemas"]["Color"];
@@ -1294,7 +1383,7 @@ export interface components {
             tag_id: string;
         };
         TimeLinePodcastEpisode: {
-            favorite?: null | components["schemas"]["Favorite"];
+            favorite?: null | components["schemas"]["TimelineFavorite"];
             history?: null | components["schemas"]["EpisodeDto"];
             podcast: components["schemas"]["PodcastDto"];
             podcast_episode: components["schemas"]["PodcastEpisodeDto"];
@@ -1303,6 +1392,19 @@ export interface components {
             data: components["schemas"]["TimeLinePodcastEpisode"][];
             /** Format: int64 */
             totalElements: number;
+        };
+        TimelineFavorite: {
+            favored: boolean;
+        };
+        TopPodcastStats: {
+            imageUrl: string;
+            /** Format: int64 */
+            listenedEpisodes: number;
+            /** Format: int64 */
+            listenedSeconds: number;
+            /** Format: int32 */
+            podcastId: number;
+            podcastName: string;
         };
         UpdateNameSettings: {
             directPaths: boolean;
@@ -1324,9 +1426,18 @@ export interface components {
         };
         UserRoleUpdateModel: {
             explicitConsent: boolean;
-            role: components["schemas"]["Role"];
+            role: string;
         };
-        UserWithAPiKey: {
+        UserSummary: {
+            /** Format: date-time */
+            createdAt: string;
+            explicitConsent: boolean;
+            /** Format: int32 */
+            id: number;
+            role: string;
+            username: string;
+        };
+        UserWithApiKey: {
             apiKey?: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -1337,15 +1448,6 @@ export interface components {
             role: string;
             username: string;
         };
-        UserWithoutPassword: {
-            /** Format: date-time */
-            createdAt: string;
-            explicitConsent: boolean;
-            /** Format: int32 */
-            id: number;
-            role: string;
-            username: string;
-        };
         VersionInfo: {
             ci: string;
             commit: string;
@@ -1353,6 +1455,13 @@ export interface components {
             ref: string;
             time: string;
             version: string;
+        };
+        WeekdayStats: {
+            /** Format: int32 */
+            dayIndex: number;
+            /** Format: int64 */
+            listenedSeconds: number;
+            weekday: string;
         };
     };
     responses: never;
@@ -1382,6 +1491,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_podcast_episode_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                last_podcast_episode: string | null;
+                only_unlistened: boolean | null;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finds all podcast episodes of a given podcast id. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PodcastEpisodeWithHistory"][];
+                };
             };
         };
     };
@@ -1785,7 +1918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GPodderAvailablePodcasts"][];
+                    "application/json": components["schemas"]["GPodderAvailablePodcast"][];
                 };
             };
         };
@@ -2101,7 +2234,7 @@ export interface operations {
     get_timeline: {
         parameters: {
             query: {
-                favoredOnly: boolean;
+                favoredOnly?: boolean | null;
                 lastTimestamp?: string | null;
                 notListened: boolean;
                 favoredEpisodes: boolean;
@@ -2526,6 +2659,30 @@ export interface operations {
             };
         };
     };
+    get_stats_overview: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                topLimit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets listening statistics overview for the current user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatsOverview"];
+                };
+            };
+        };
+    };
     get_public_config: {
         parameters: {
             query?: never;
@@ -2713,7 +2870,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserWithoutPassword"][];
+                    "application/json": components["schemas"]["UserSummary"][];
                 };
             };
         };
@@ -2737,7 +2894,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserWithoutPassword"];
+                    "application/json": components["schemas"]["UserSummary"];
                 };
             };
         };
@@ -2759,7 +2916,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null | components["schemas"]["UserWithAPiKey"];
+                    "application/json": null | components["schemas"]["UserWithApiKey"];
                 };
             };
         };
@@ -2785,7 +2942,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserWithAPiKey"];
+                    "application/json": components["schemas"]["UserWithApiKey"];
                 };
             };
         };
@@ -2831,7 +2988,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": null | components["schemas"]["UserWithoutPassword"];
+                    "application/json": null | components["schemas"]["UserSummary"];
                 };
             };
         };
@@ -2854,6 +3011,26 @@ export interface operations {
             };
         };
     };
+    proxy_podcast_with_path_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                apiKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proxies a podcast (API key in path) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_rss_feed: {
         parameters: {
             query?: never;
@@ -2864,6 +3041,47 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Gets the complete rss feed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_rss_feed_with_path_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                apiKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets the complete rss feed (API key in path) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_rss_feed_for_podcast_with_path_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                apiKey: string;
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Gets a specific rss feed (API key in path) */
             200: {
                 headers: {
                     [name: string]: unknown;

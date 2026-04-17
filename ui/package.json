@@ -73,11 +73,5 @@
     "typescript": "^5.9.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.4"
-  },
-  "pnpm": {
-    "overrides": {
-      "minimatch": "5.1.9",
-      "rollup": "4.59.0"
-    }
   }
 }

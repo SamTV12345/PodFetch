@@ -314,12 +314,7 @@ impl DownloadService {
 
         let output = std::process::Command::new("ffmpeg")
             .args([
-                "-i", input_path,
-                "-c:a", "libopus",
-                "-b:a", "48k",
-                "-vn",
-                "-y",
-                &opus_path,
+                "-i", input_path, "-c:a", "libopus", "-b:a", "48k", "-vn", "-y", &opus_path,
             ])
             .output()
             .map_err(|e| {
@@ -370,7 +365,9 @@ impl DownloadService {
                     log::error!("Error updating metadata: {err:?}");
                 }
             }
-            FileFormat::Mpeg4Part14 | FileFormat::Mpeg4Part14Audio | FileFormat::AppleItunesAudio => {
+            FileFormat::Mpeg4Part14
+            | FileFormat::Mpeg4Part14Audio
+            | FileFormat::AppleItunesAudio => {
                 chapters = Self::read_chapters_from_mp4(&paths.filename);
                 let result_of_update = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {

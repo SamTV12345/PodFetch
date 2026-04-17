@@ -105,16 +105,16 @@ impl UserAuthService {
             return Ok(user);
         }
 
-        self.repository
-            .create(ManagedUser {
-                id: 0,
-                username: admin_username.clone(),
-                role: Role::Admin.to_string(),
-                password: self.environment.password.clone(),
-                explicit_consent: true,
-                created_at: chrono::Utc::now().naive_utc(),
-                api_key: self.environment.api_key_admin.clone(),
-            })}
+        self.repository.create(ManagedUser {
+            id: 0,
+            username: admin_username.clone(),
+            role: Role::Admin.to_string(),
+            password: self.environment.password.clone(),
+            explicit_consent: true,
+            created_at: chrono::Utc::now().naive_utc(),
+            api_key: self.environment.api_key_admin.clone(),
+        })
+    }
 
     pub fn read_only_admin_user(&self) -> User {
         User {
