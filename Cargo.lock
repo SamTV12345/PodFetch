@@ -3186,6 +3186,7 @@ dependencies = [
  "diesel_migrations",
  "indexmap 2.13.1",
  "libsqlite3-sys",
+ "log",
  "podfetch-domain",
  "r2d2",
  "r2d2_postgres",
