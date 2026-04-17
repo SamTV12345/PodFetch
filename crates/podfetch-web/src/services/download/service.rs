@@ -552,7 +552,7 @@ impl DownloadService {
         }
 
         // Order chapters by start time.
-        chapters.sort_by(|a, b| a.start.cmp(&b.start));
+        chapters.sort_by_key(|a| a.start);
 
         Ok(chapters)
     }
