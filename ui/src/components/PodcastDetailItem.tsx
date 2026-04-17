@@ -1,4 +1,4 @@
-import {FC, Fragment, useMemo} from 'react'
+import {FC, Fragment, useMemo, useRef} from 'react'
 import {useParams} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
 import {useSnackbar} from 'notistack'
@@ -18,10 +18,11 @@ type PodcastDetailItemProps = {
     episode: components["schemas"]["PodcastEpisodeWithHistory"],
     currentEpisodes: components["schemas"]["PodcastEpisodeWithHistory"][],
     index: number,
-    onlyUnplayed: boolean
+    onlyUnplayed: boolean,
+    onShowInfo?: (episode: components["schemas"]["PodcastEpisodeDto"]) => void
 }
 
-export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, currentEpisodes, onlyUnplayed}) => {
+export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, currentEpisodes, onlyUnplayed, onShowInfo}) => {
     const params = useParams()
     const { enqueueSnackbar } = useSnackbar()
     const { t } =  useTranslation()
@@ -33,14 +34,13 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
         return Math.round(episode.podcastHistoryItem.position!*100/episode.podcastEpisode.total_time)
     }, [episode.podcastHistoryItem?.position])
     const setEpisodeDownloaded = useCommon(state => state.setEpisodeDownloaded)
-    const setInfoModalPodcast = useCommon(state => state.setInfoModalPodcast)
-    const setInfoModalPodcastOpen = useCommon(state => state.setInfoModalPodcastOpen)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const setSelectedEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const setMetadata = useAudioPlayer(state => state.setMetadata)
     const queryClient = useQueryClient()
     const logCurrentPlaybackTime = usePlaybackLogger()
     const fetchPodcastEpisodes = $api.useMutation('get', '/api/v1/podcasts/{id}/episodes')
+    const exhaustedRef = useRef(false)
     const downloadEpisodeMutation = $api.useMutation('put', '/api/v1/podcasts/{id}/episodes/download')
     const favorEpisodeMutation = $api.useMutation('put', '/api/v1/podcasts/{id}/episodes/favor')
 
@@ -122,14 +122,18 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 }
             }
         }).then((response) => {
+            if (!response || response.length === 0) {
+                exhaustedRef.current = true
+                return
+            }
             for (const cache of queryClient.getQueryCache().getAll()) {
                 if (cache.queryKey[0] == "get" && (cache.queryKey[1] as string) === ("/api/v1/podcasts/{id}/episodes")
                     && (cache.queryKey[2] as {params: operations['find_all_podcast_episodes_of_podcast']['parameters']}).params.path.id === params.id) {
                     queryClient.setQueryData(cache.queryKey, (oldData?: components["schemas"]["PodcastEpisodeWithHistory"][]) => {
                         if (!oldData) {
-                            return response ?? []
+                            return response
                         }
-                        return [...oldData, ...(response ?? [])]
+                        return [...oldData, ...response]
                     })
                 }
             }
@@ -258,8 +262,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     xs:col-start-2 xs:col-end-3
                     font-bold leading-tight  ui-text transition-color group-hover:ui-text-hover
                 "  onClick={() => {
-                    setInfoModalPodcast(episode.podcastEpisode)
-                    setInfoModalPodcastOpen(true)
+                    onShowInfo?.(episode.podcastEpisode)
                 }}>{episode.podcastEpisode.name}</span>
 
                 {/* Description */}
@@ -269,8 +272,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                     xs:col-start-2 xs:col-end-3
                     leading-[1.75] text-sm ui-text transition-color group-hover:ui-text-hover
                 "  onClick={() => {
-                    setInfoModalPodcast(episode.podcastEpisode)
-                    setInfoModalPodcastOpen(true)
+                    onShowInfo?.(episode.podcastEpisode)
                 }} dangerouslySetInnerHTML={removeHTML(episode.podcastEpisode.description)}></div>
 
                 {/* Play button */}
@@ -307,7 +309,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 <InfiniteScrollSentinel
                     className="h-1 w-full"
                     onEnter={loadMoreEpisodes}
-                    disabled={fetchPodcastEpisodes.isPending || !params.id}
+                    disabled={fetchPodcastEpisodes.isPending || !params.id || exhaustedRef.current}
                 />
             }
         </Fragment>

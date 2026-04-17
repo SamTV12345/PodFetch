@@ -102,7 +102,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
 
     return (
         <>
-            <EpisodeFormatModal heading={t('standard-episode-format')} open={infoEpisodeModalOpen} setOpen={(v) => setInfoEpisodeModalOpen(v)}>
+            <EpisodeFormatModal heading={t('standard-episode-format')} open={infoEpisodeModalOpen} onOpenChange={setInfoEpisodeModalOpen}>
                 <ul className="list-disc ui-text">
                     <li>{'{title}'}</li>
                     <li>{'{date}'}</li>
@@ -112,7 +112,7 @@ const Settings: FC<SettingsProps> = ({ intialSettings }) => {
                     <li>{'{url}'}</li>
                 </ul>
             </EpisodeFormatModal>
-            <EpisodeFormatModal heading={t('standard-podcast-format')} open={infoPodcastModalOpen} setOpen={(v) => setInfoPodcastModalOpen(v)}>
+            <EpisodeFormatModal heading={t('standard-podcast-format')} open={infoPodcastModalOpen} onOpenChange={setInfoPodcastModalOpen}>
                 <ul className="list-disc ui-text">
                     <li>{'{title}'}</li>
                     <li>{'{description}'}</li>

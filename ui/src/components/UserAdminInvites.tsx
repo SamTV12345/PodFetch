@@ -59,8 +59,8 @@ export const UserAdminInvites = () => {
     const [error, setError] = useState<boolean>()
     const [selectedInviteType, setSelectedInviteType] = useState<InviteTypeSelection>(InviteTypeSelection.all)
     const { t } = useTranslation()
-    const setCreateInviteModalOpen = useCommon(state => state.setCreateInviteModalOpen)
     const setInvites = useCommon(state => state.setInvites)
+    const [inviteModalOpen, setInviteModalOpen] = useState(false)
     const invitesQuery = $api.useQuery('get', '/api/v1/invites', {}, {retry: false})
     const inviteLinkMutation = $api.useMutation('get', '/api/v1/invites/{invite_id}/link')
     const deleteInviteMutation = $api.useMutation('delete', '/api/v1/invites/{invite_id}')
@@ -101,12 +101,12 @@ export const UserAdminInvites = () => {
 
     return (
         <div>
-            <CreateInviteModal />
+            <CreateInviteModal open={inviteModalOpen} onOpenChange={setInviteModalOpen} onCreated={(newInvite) => setInvites([...invites, newInvite])} />
 
             <CustomSelect options={options} value={selectedInviteType} onChange={v => setSelectedInviteType(v as InviteTypeSelection)} />
 
             <CustomButtonPrimary className="flex items-center xs:float-right mb-4 xs:mb-10" onClick={() => {
-                setCreateInviteModalOpen(true)
+                setInviteModalOpen(true)
             }}>
                 <span className="material-symbols-outlined leading-[0.875rem]">add</span> {t('add-new')}
             </CustomButtonPrimary>

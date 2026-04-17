@@ -1,29 +1,40 @@
+import { FC } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { CustomButtonPrimary } from './CustomButtonPrimary'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
-import { Modal } from './Modal'
-import useCommon from "../store/CommonSlice";
 
-export type ConfirmModalProps = {
-    headerText: string,
-    onAccept: () => void,
-    onReject: () => void,
-    acceptText: string,
-    rejectText: string,
+type ConfirmModalProps = {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    headerText: string
     bodyText: string
+    acceptText: string
+    rejectText: string
+    onAccept: () => void
 }
 
-export const ConfirmModal = () => {
-    const confirmModalData = useCommon(state => state.confirmModalData)
-
+export const ConfirmModal: FC<ConfirmModalProps> = ({ open, onOpenChange, headerText, bodyText, acceptText, rejectText, onAccept }) => {
     return (
-        <Modal acceptText={confirmModalData?.acceptText} headerText={confirmModalData?.headerText} onAccept={() => {}} cancelText={confirmModalData?.rejectText} onCancel={() => {}} onDelete={() => {}}>
-            <div className="mb-4 ui-text">
-                {confirmModalData?.bodyText}
-            </div>
-            <div className="text-right">
-                <CustomButtonSecondary className="border-transparent shadow-none hover:shadow-none text-base ui-text hover:ui-text-hover" onClick={confirmModalData?.onReject}>{confirmModalData?.rejectText}</CustomButtonSecondary>
-                <CustomButtonPrimary className="bg-(--danger-fg-color) hover:bg-(--danger-fg-color-hover) hover:shadow-(--danger-fg-color-hover) ui-text" onClick={confirmModalData?.onAccept}>{confirmModalData?.acceptText}</CustomButtonPrimary>
-            </div>
-        </Modal>
+        <Dialog.Root open={open} onOpenChange={onOpenChange}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-sm z-30" />
+                <Dialog.Content className="fixed inset-0 z-40 flex items-center justify-center p-4">
+                    <div className="relative ui-surface max-w-lg p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,var(--shadow-opacity))] w-full">
+                        <Dialog.Title className="font-bold leading-tight! text-xl xs:text-2xl ui-text mb-4">{headerText}</Dialog.Title>
+                        <Dialog.Close className="absolute top-4 right-4 bg-transparent">
+                            <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
+                        </Dialog.Close>
+
+                        <div className="mb-4 ui-text">
+                            {bodyText}
+                        </div>
+                        <div className="text-right">
+                            <CustomButtonSecondary className="border-transparent shadow-none hover:shadow-none text-base ui-text hover:ui-text-hover" onClick={() => onOpenChange(false)}>{rejectText}</CustomButtonSecondary>
+                            <CustomButtonPrimary className="bg-(--danger-fg-color) hover:bg-(--danger-fg-color-hover) hover:shadow-(--danger-fg-color-hover) ui-text" onClick={onAccept}>{acceptText}</CustomButtonPrimary>
+                        </div>
+                    </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     )
 }

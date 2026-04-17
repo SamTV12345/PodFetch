@@ -242,6 +242,8 @@ export const TagsPage = ()=>{
                             <LoadingSkeletonSpan height="30px" loading={true}/>
                         </div>
                     ))
+                ) : availableTags.length === 0 ? (
+                    <div className="p-4 text-sm ui-text-muted">{t('no-tags-created')}</div>
                 ) : filteredTags.length === 0 ? (
                     <div className="p-4 text-sm ui-text-muted">{t('no-results-found-for')} "{search}"</div>
                 ) : (

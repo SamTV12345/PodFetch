@@ -139,6 +139,7 @@
   "upload-opml-file": "Upload OPML file",
   "search-episodes": "Search episodes",
   "no-results-found-for": "No results found for",
+  "no-tags-created": "No tags created yet. Use the form above to add one.",
   "descendant": "Descendant",
   "sort-by": "Sort by",
   "sort-by-published-date": "Sort by published date",

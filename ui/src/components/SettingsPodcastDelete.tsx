@@ -1,22 +1,22 @@
 import {FC, Fragment, useEffect, useState} from 'react'
 import { useTranslation } from 'react-i18next'
 import { enqueueSnackbar } from 'notistack'
-import useCommon, { Podcast} from '../store/CommonSlice'
 import { CustomButtonSecondary } from './CustomButtonSecondary'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
-import useModal from "../store/ModalSlice";
 import {CustomCheckbox} from "./CustomCheckbox";
 import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {LoadingSkeletonSpan} from "./ui/LoadingSkeletonSpan";
 import {useQueryClient} from "@tanstack/react-query";
 import {AddPodcastModal} from "./AddPodcastModal";
+import {ConfirmModal} from "./ConfirmModal";
 
 export const SettingsPodcastDelete: FC = () => {
     const { t } = useTranslation()
     const podcasts = $api.useQuery('get','/api/v1/podcasts')
-    const setModalOpen = useModal(state => state.setOpenModal)
-    const setConfirmModalData  = useCommon(state => state.setConfirmModalData)
+    const [addModalOpen, setAddModalOpen] = useState(false)
+    const [confirmOpen, setConfirmOpen] = useState(false)
+    const [confirmData, setConfirmData] = useState<{headerText: string, bodyText: string, acceptText: string, rejectText: string, onAccept: () => void} | null>(null)
     const queryClient = useQueryClient()
     const [selectedPodcasts, setSelectedPodcasts] = useState<components["schemas"]["PodcastDto"][]>([])
     const deletePodcastMutation = $api.useMutation('delete', '/api/v1/podcasts/{id}')
@@ -48,11 +48,12 @@ export const SettingsPodcastDelete: FC = () => {
 
     return (
         <div>
-            <AddPodcastModal/>
+            <AddPodcastModal open={addModalOpen} onOpenChange={setAddModalOpen} />
+            {confirmData && <ConfirmModal open={confirmOpen} onOpenChange={setConfirmOpen} {...confirmData} />}
 
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold ui-text">{t('manage-podcasts')}</h2>
-                <CustomButtonPrimary className="flex items-center" onClick={() => setModalOpen(true)}>
+                <CustomButtonPrimary className="flex items-center" onClick={() => setAddModalOpen(true)}>
                     <span className="material-symbols-outlined leading-[0.875rem] mr-1">add</span>
                     {t('add-podcast')}
                 </CustomButtonPrimary>
@@ -69,37 +70,31 @@ export const SettingsPodcastDelete: FC = () => {
             }
 
             <CustomButtonSecondary disabled={selectedPodcasts.length === 0} onClick={() => {
-                setConfirmModalData({
+                setConfirmData({
                     headerText: t('delete-podcast-with-files'),
                     onAccept:()=>{
                         deletePodcast(true)
-                        setModalOpen(false)
-                    },
-                    onReject: ()=>{
-                        setModalOpen(false)
+                        setConfirmOpen(false)
                     },
                     acceptText: t('delete-podcast-confirm'),
                     rejectText: t('cancel'),
                     bodyText: t('delete-podcast-with-files-body', {name: [selectedPodcasts.map(a=>a.name).join(', ')]})
                 })
-                setModalOpen(true)
+                setConfirmOpen(true)
             }}>{t('delete-podcast-with-files')}</CustomButtonSecondary>
 
             <CustomButtonSecondary disabled={selectedPodcasts.length === 0} onClick={() => {
-                setConfirmModalData({
+                setConfirmData({
                     headerText: t('delete-podcast-without-files'),
                     onAccept:()=>{
                         deletePodcast(false)
-                        setModalOpen(false)
-                    },
-                    onReject: ()=>{
-                        setModalOpen(false)
+                        setConfirmOpen(false)
                     },
                     acceptText: t('delete-podcast-confirm'),
                     rejectText: t('cancel'),
                     bodyText: t('delete-podcast-without-files-body', {name: [selectedPodcasts.map(a=>a.name).join(', ')]})
                 })
-                setModalOpen(true)
+                setConfirmOpen(true)
             }}>{t('delete-podcast-without-files')}</CustomButtonSecondary>
             <hr className="col-span-1 lg:col-span-3"/>
             {(podcasts.isLoading || !podcasts.data) ?Array.from({length: 10}).map((value, index, array)=>{

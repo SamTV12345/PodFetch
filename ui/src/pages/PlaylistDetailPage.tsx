@@ -1,4 +1,4 @@
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {useParams} from "react-router-dom";
 import {Heading2} from "../components/Heading2";
@@ -10,6 +10,7 @@ import useCommon from "../store/CommonSlice";
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {startAudioPlayer} from "../utils/audioPlayer";
 import {$api} from "../utils/http";
+import {components} from "../../schema";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
 import {CustomButtonSecondary} from "../components/CustomButtonSecondary";
 
@@ -19,6 +20,8 @@ export const PlaylistDetailPage = () => {
     const selectedPlaylist = usePlaylist(state => state.selectedPlaylist)
     const setSelectedPlaylist = usePlaylist(state => state.setSelectedPlaylist)
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
+    const [infoModalOpen, setInfoModalOpen] = useState(false)
+    const [infoModalEpisode, setInfoModalEpisode] = useState<components["schemas"]["PodcastEpisodeDto"] | undefined>(undefined)
     const setSelectedEpisodeIndex = useAudioPlayer(state => state.setCurrentPodcastEpisode)
     const playlistQuery = $api.useQuery('get', '/api/v1/playlist/{playlist_id}', {
         params: {
@@ -54,7 +57,7 @@ export const PlaylistDetailPage = () => {
 
     return (
         <div>
-            <PodcastInfoModal/>
+            <PodcastInfoModal open={infoModalOpen} onOpenChange={setInfoModalOpen} episode={infoModalEpisode} />
             <PodcastEpisodeAlreadyPlayed/>
 
             <div className="mb-6 rounded-xl border ui-border p-4">
@@ -92,6 +95,7 @@ export const PlaylistDetailPage = () => {
                             episode={episode}
                             index={index}
                             currentEpisodes={selectedPlaylist.items}
+                            onShowInfo={(ep) => { setInfoModalEpisode(ep); setInfoModalOpen(true) }}
                         />
                         <button
                             className="absolute right-0 top-0 text-xs ui-text-accent hover:ui-text-accent-hover"

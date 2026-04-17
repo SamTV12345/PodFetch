@@ -8,17 +8,17 @@ import { ChangeRoleModal } from './ChangeRoleModal'
 import { Loading } from './Loading'
 import { ErrorIcon } from '../icons/ErrorIcon'
 import 'material-symbols/outlined.css'
-import useModal from "../store/ModalSlice";
 import {$api} from "../utils/http";
+import {components} from "../../schema";
 
 export const UserAdminUsers = () => {
-    const setSelectedUser = useCommon(state => state.setSelectedUser)
     const setUsers = useCommon(state => state.setUsers)
     const users = useCommon(state => state.users)
     const [error, setError] = useState<boolean>()
     const {enqueueSnackbar} = useSnackbar()
     const { t } = useTranslation()
-    const setModalOpen = useModal(state => state.setOpenModal)
+    const [changeRoleOpen, setChangeRoleOpen] = useState(false)
+    const [userToEdit, setUserToEdit] = useState<components["schemas"]["UserWithoutPassword"] | undefined>(undefined)
     const usersQuery = $api.useQuery('get', '/api/v1/users', {}, {retry: false})
     const deleteUserMutation = $api.useMutation('delete', '/api/v1/users/{username}')
 
@@ -58,7 +58,7 @@ export const UserAdminUsers = () => {
 
     return (
         <div>
-            <ChangeRoleModal />
+            <ChangeRoleModal open={changeRoleOpen} onOpenChange={setChangeRoleOpen} user={userToEdit} onSuccess={(updatedUser) => { setUsers(users.map(u => u.username === updatedUser.username ? {...u, role: updatedUser.role, explicitConsent: updatedUser.explicitConsent} : u)) }} />
 
             <div className={`
                 scrollbox-x
@@ -92,7 +92,7 @@ export const UserAdminUsers = () => {
                                     {t(v.role)}
 
                                     <button className="flex ml-2" onClick={() => {
-                                        setSelectedUser({
+                                        setUserToEdit({
                                             role: v.role,
                                             id: v.id,
                                             createdAt: v.createdAt,
@@ -100,7 +100,7 @@ export const UserAdminUsers = () => {
                                             username: v.username
                                         })
 
-                                        setModalOpen(true)
+                                        setChangeRoleOpen(true)
                                     }} title={t('change-role') || ''}>
                                         <span className="material-symbols-outlined ui-text hover:ui-text-hover">edit</span>
                                     </button>

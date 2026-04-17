@@ -1,4 +1,4 @@
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {enqueueSnackbar} from "notistack";
 import {useNavigate} from "react-router-dom";
@@ -7,14 +7,15 @@ import {CustomButtonSecondary} from "../components/CustomButtonSecondary";
 import {CreatePlaylistModal} from "../components/CreatePlaylistModal";
 import usePlaylist from "../store/PlaylistSlice";
 import {$api} from "../utils/http";
+import {components} from "../../schema";
 
 export const PlaylistPage = () => {
     const {t} = useTranslation()
     const navigate = useNavigate()
     const playlist = usePlaylist(state => state.playlist)
     const setPlaylist = usePlaylist(state => state.setPlaylist)
-    const setCreatePlaylistOpen = usePlaylist(state => state.setCreatePlaylistOpen)
-    const setCurrentPlaylistToEdit = usePlaylist(state => state.setCurrentPlaylistToEdit)
+    const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false)
+    const [playlistToEdit, setPlaylistToEdit] = useState<components["schemas"]["PlaylistDto"] | undefined>(undefined)
     const playlistsQuery = $api.useQuery('get', '/api/v1/playlist')
     const playlistDetailQuery = $api.useMutation('get', '/api/v1/playlist/{playlist_id}')
     const deletePlaylistMutation = $api.useMutation('delete', '/api/v1/playlist/{playlist_id}')
@@ -25,7 +26,7 @@ export const PlaylistPage = () => {
 
     return (
         <div>
-            <CreatePlaylistModal/>
+            <CreatePlaylistModal open={createPlaylistOpen} onOpenChange={setCreatePlaylistOpen} playlistToEdit={playlistToEdit} />
 
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -37,7 +38,7 @@ export const PlaylistPage = () => {
                 <CustomButtonPrimary
                     className="flex items-center"
                     onClick={() => {
-                        setCurrentPlaylistToEdit({name: '', items: [], id: String(-1)})
+                        setPlaylistToEdit({name: '', items: [], id: String(-1)})
                         setCreatePlaylistOpen(true)
                     }}
                 >
@@ -58,7 +59,7 @@ export const PlaylistPage = () => {
                     <CustomButtonSecondary
                         className="mt-4"
                         onClick={() => {
-                            setCurrentPlaylistToEdit({name: '', items: [], id: String(-1)})
+                            setPlaylistToEdit({name: '', items: [], id: String(-1)})
                             setCreatePlaylistOpen(true)
                         }}
                     >
@@ -94,7 +95,7 @@ export const PlaylistPage = () => {
                                             path: {playlist_id: String(item.id)}
                                         }
                                     })
-                                    setCurrentPlaylistToEdit(response)
+                                    setPlaylistToEdit(response)
                                     setCreatePlaylistOpen(true)
                                 }}
                             >
