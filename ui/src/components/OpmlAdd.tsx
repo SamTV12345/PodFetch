@@ -24,10 +24,10 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
     const uploadOpmlMutation = $api.useMutation('post', '/api/v1/podcasts/opml')
 
     useEffect(() => {
-        if (progress.length === podcastsToUpload) {
+        if (podcastsToUpload > 0 && progress.length >= podcastsToUpload) {
             setInProgress(false)
         }
-    }, [progress])
+    }, [progress, podcastsToUpload])
 
     const handleClick = () => {
         fileInputRef.current?.click()
@@ -52,8 +52,10 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
             return
         }
         let content = files[0]!.content
-        const count = (content.match(/type="rss"/g) || []).length
+        const count = (content.match(/xmlUrl\s*=/gi) || []).length
 
+        useOpmlImport.getState().setProgress([])
+        useOpmlImport.getState().setMessages([])
         setPodcastsToUpload(count)
 
         uploadOpmlMutation.mutate({
@@ -134,7 +136,7 @@ export const OpmlAdd: FC<OpmlAddProps> = ({}) => {
 
                     {podcastsToUpload > 0 && progress.length > 0 &&
                         <div className="ui-slider-surface h-2.5 mt-2  rounded-full w-full">
-                            <div className="ui-slider-fill h-2.5 rounded-full" style={{width: `${(progress.length / podcastsToUpload) * 100}%`}}></div>
+                            <div className="ui-slider-fill h-2.5 rounded-full" style={{width: `${Math.min((progress.length / podcastsToUpload) * 100, 100)}%`}}></div>
                             {!opmlUploading &&
                                 <div>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} className="w-6 h-6 text-slate-800">
