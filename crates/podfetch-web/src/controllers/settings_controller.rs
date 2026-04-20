@@ -308,7 +308,8 @@ mod tests {
                 "replacementStrategy": "replace-with-dash",
                 "episodeFormat": "{episodeTitle}",
                 "podcastFormat": "{podcastTitle}",
-                "directPaths": true
+                "directPaths": true,
+                "autoTranscodeOpus": false
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
