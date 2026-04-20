@@ -58,17 +58,16 @@ pub async fn get_last_watched(
     headers: HeaderMap,
 ) -> Result<Json<Vec<LastWatchedItem>>, CustomError> {
     let rewriter = create_url_rewriter(&headers);
-    let episodes =
-        watchtime::get_last_watched(state.watchtime_service.as_ref(), &requester.username)
-            .map_err(map_watchtime_error)?
-            .into_iter()
-            .map(|mut item| {
-                rewriter.rewrite_in_place(&mut item.podcast_episode.local_url);
-                rewriter.rewrite_in_place(&mut item.podcast_episode.local_image_url);
-                item.podcast.rewrite_urls(&rewriter);
-                item
-            })
-            .collect();
+    let episodes = watchtime::get_last_watched(state.watchtime_service.as_ref(), &requester)
+        .map_err(map_watchtime_error)?
+        .into_iter()
+        .map(|mut item| {
+            rewriter.rewrite_in_place(&mut item.podcast_episode.local_url);
+            rewriter.rewrite_in_place(&mut item.podcast_episode.local_image_url);
+            item.podcast.rewrite_urls(&rewriter);
+            item
+        })
+        .collect();
     Ok(Json(episodes))
 }
 

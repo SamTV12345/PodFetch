@@ -25,13 +25,7 @@ pub async fn add_playlist(
     Extension(requester): Extension<User>,
     Json(playlist): Json<PlaylistDtoPost>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    playlist::add_playlist(
-        state.playlist_service.as_ref(),
-        requester.id,
-        requester.username.clone(),
-        playlist,
-    )
-    .map(Json)
+    playlist::add_playlist(state.playlist_service.as_ref(), requester, playlist).map(Json)
 }
 
 #[utoipa::path(
@@ -49,8 +43,7 @@ pub async fn update_playlist(
 ) -> Result<Json<PlaylistDto>, CustomError> {
     playlist::update_playlist(
         state.playlist_service.as_ref(),
-        requester.id,
-        requester.username.clone(),
+        requester,
         playlist_id,
         playlist,
     )
@@ -68,12 +61,7 @@ pub async fn get_all_playlists(
     State(state): State<AppState>,
     Extension(requester): Extension<User>,
 ) -> Result<Json<Vec<PlaylistDto>>, CustomError> {
-    playlist::get_all_playlists(
-        state.playlist_service.as_ref(),
-        requester.id,
-        requester.username.clone(),
-    )
-    .map(Json)
+    playlist::get_all_playlists(state.playlist_service.as_ref(), requester).map(Json)
 }
 
 #[utoipa::path(
@@ -88,13 +76,7 @@ pub async fn get_playlist_by_id(
     Extension(requester): Extension<User>,
     Path(playlist_id): Path<String>,
 ) -> Result<Json<PlaylistDto>, CustomError> {
-    playlist::get_playlist_by_id(
-        state.playlist_service.as_ref(),
-        requester.id,
-        requester.username.clone(),
-        playlist_id,
-    )
-    .map(Json)
+    playlist::get_playlist_by_id(state.playlist_service.as_ref(), requester, playlist_id).map(Json)
 }
 
 #[utoipa::path(
