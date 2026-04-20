@@ -438,6 +438,7 @@ mod tests {
                 episode_format: "{episodeTitle}".to_string(),
                 podcast_format: "{podcastTitle}".to_string(),
                 direct_paths: false,
+                auto_transcode_opus: false,
             }),
         )
         .await;
