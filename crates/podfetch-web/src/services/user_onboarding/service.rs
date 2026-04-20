@@ -77,6 +77,8 @@ impl UserOnboardingService {
             explicit_consent: invite.explicit_consent,
             created_at: chrono::Utc::now().naive_utc(),
             api_key: None,
+            country: None,
+            language: None,
         })?;
 
         self.invite_service.invalidate_invite(&invite_id)?;

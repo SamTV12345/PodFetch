@@ -128,6 +128,7 @@ pub async fn get_public_config(
 #[utoipa::path(
 post,
 path="/login",
+operation_id="sys_login",
 request_body=LoginRequest,
 responses(
 (status = 200, description = "Performs a login if basic auth is enabled",

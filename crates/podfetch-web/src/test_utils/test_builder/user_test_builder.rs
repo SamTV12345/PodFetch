@@ -43,6 +43,8 @@ pub mod tests {
                 created_at: self.created_at.naive_utc(),
                 api_key: self.api_key,
                 role: self.role,
+                country: None,
+                language: None,
             }
         }
     }

@@ -12,6 +12,8 @@ diesel::table! {
         explicit_consent -> Bool,
         created_at -> Timestamp,
         api_key -> Nullable<Text>,
+        country -> Nullable<Text>,
+        language -> Nullable<Text>,
     }
 }
 
@@ -25,6 +27,8 @@ struct UserEntity {
     explicit_consent: bool,
     created_at: chrono::NaiveDateTime,
     api_key: Option<String>,
+    country: Option<String>,
+    language: Option<String>,
 }
 
 impl From<UserEntity> for ManagedUser {
@@ -37,6 +41,8 @@ impl From<UserEntity> for ManagedUser {
             explicit_consent: value.explicit_consent,
             created_at: value.created_at,
             api_key: value.api_key,
+            country: value.country,
+            language: value.language,
         }
     }
 }
@@ -51,6 +57,8 @@ impl From<ManagedUser> for UserEntity {
             explicit_consent: value.explicit_consent,
             created_at: value.created_at,
             api_key: value.api_key,
+            country: value.country,
+            language: value.language,
         }
     }
 }
@@ -80,6 +88,8 @@ impl UserAdminRepository for DieselUserAdminRepository {
                 explicit_consent.eq(user.explicit_consent),
                 created_at.eq(chrono::Utc::now().naive_utc()),
                 api_key.eq(user.api_key),
+                country.eq(user.country),
+                language.eq(user.language),
             ))
             .get_result::<UserEntity>(&mut conn)
             .map(Into::into)

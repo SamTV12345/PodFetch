@@ -17,6 +17,7 @@ use reqwest::StatusCode;
 #[utoipa::path(
 get,
 path="/settings",
+operation_id="get_app_settings",
 responses(
 (status = 200, description = "Gets the current settings", body=Setting)),
 tag="podcast_episodes"

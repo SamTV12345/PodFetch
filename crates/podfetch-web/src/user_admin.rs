@@ -46,6 +46,8 @@ pub struct UserWithApiKey {
     pub explicit_consent: bool,
     pub api_key: Option<String>,
     pub read_only: bool,
+    pub country: Option<String>,
+    pub language: Option<String>,
 }
 
 impl From<podfetch_domain::user_admin::UserWithApiKey> for UserWithApiKey {
@@ -58,6 +60,8 @@ impl From<podfetch_domain::user_admin::UserWithApiKey> for UserWithApiKey {
             explicit_consent: value.explicit_consent,
             api_key: value.api_key,
             read_only: value.read_only,
+            country: value.country,
+            language: value.language,
         }
     }
 }
@@ -71,6 +75,8 @@ pub struct ManagedUser {
     pub explicit_consent: bool,
     pub created_at: chrono::NaiveDateTime,
     pub api_key: Option<String>,
+    pub country: Option<String>,
+    pub language: Option<String>,
 }
 
 impl From<podfetch_domain::user_admin::ManagedUser> for ManagedUser {
@@ -83,6 +89,8 @@ impl From<podfetch_domain::user_admin::ManagedUser> for ManagedUser {
             explicit_consent: value.explicit_consent,
             created_at: value.created_at,
             api_key: value.api_key,
+            country: value.country,
+            language: value.language,
         }
     }
 }
@@ -97,6 +105,8 @@ impl From<ManagedUser> for podfetch_domain::user_admin::ManagedUser {
             explicit_consent: value.explicit_consent,
             created_at: value.created_at,
             api_key: value.api_key,
+            country: value.country,
+            language: value.language,
         }
     }
 }
@@ -125,6 +135,8 @@ impl ManagedUser {
             explicit_consent: self.explicit_consent,
             api_key: self.api_key.clone(),
             read_only,
+            country: self.country.clone(),
+            language: self.language.clone(),
         }
     }
 }

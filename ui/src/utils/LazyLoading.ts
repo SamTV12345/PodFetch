@@ -39,3 +39,7 @@ export const HomepageViewLazyLoad = lazy(()=>import('../pages/Homepage').then(mo
 export const StatisticsViewLazyLoad = lazy(()=>import('../pages/StatisticsPage').then(module=> {
     return{default:module["StatisticsPage"]}
 }))
+
+export const DiscoverViewLazyLoad = lazy(()=>import('../pages/DiscoverPage').then(module=> {
+    return{default:module["DiscoverPage"]}
+}))

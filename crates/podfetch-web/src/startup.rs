@@ -2,6 +2,7 @@ use crate::app_state::AppState;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
+use crate::controllers::discover_controller::get_discover_router;
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
 use crate::controllers::notification_controller::get_notification_router;
@@ -101,63 +102,83 @@ fn fix_links(content: &str) -> String {
     content.replace("/ui/", &dir)
 }
 
-pub static INDEX_HTML: OnceLock<Markup> = OnceLock::new();
+/// Cached asset filenames (js + css). The files themselves don't change per
+/// request, so we resolve them once and reuse.
+pub static INDEX_ASSETS: OnceLock<(String, String)> = OnceLock::new();
 
-pub fn transform_index_files() -> String {
-    let html = INDEX_HTML.get_or_init(|| {
-        let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
-        let manifest_json_location =
-            ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/manifest.json";
+fn resolve_index_assets() -> &'static (String, String) {
+    INDEX_ASSETS.get_or_init(|| {
         let found_files = std::fs::read_dir("./static/assets/")
             .expect("Could not read directory")
             .map(|x| x.unwrap().file_name().into_string().unwrap())
             .collect::<Vec<String>>();
         let js_file = found_files
             .iter()
-            .filter(|x| x.starts_with("index") && x.ends_with(".js"))
-            .collect::<Vec<&String>>()[0];
+            .find(|x| x.starts_with("index") && x.ends_with(".js"))
+            .cloned()
+            .expect("no index*.js asset found");
         let css_file = found_files
             .iter()
-            .filter(|x| x.starts_with("index") && x.ends_with(".css"))
-            .collect::<Vec<&String>>()[0];
+            .find(|x| x.starts_with("index") && x.ends_with(".css"))
+            .cloned()
+            .expect("no index*.css asset found");
+        (js_file, css_file)
+    })
+}
 
-        let config = ENVIRONMENT_SERVICE.get_config();
-        let config_string = serde_json::to_string(&config).unwrap();
-        let html = html! {
-            html {
-                head {
-                    meta charset="utf-8";
-                    meta name="viewport" content="width=device-width, initial-scale=1";
-                    title {"Podfetch"};
-                    link rel="icon" type="image/png" href="/ui/favicon.ico";
-                    link rel="manifest" href=(manifest_json_location);
-                    script type="module" crossorigin src=(format!("{}{}{}",dir.clone(),
-                        "assets/",js_file))
-                    {};
-                    link rel="stylesheet" href=(format!("{}{}{}",dir.clone(), "assets/",css_file));
-                }
+pub fn transform_index_files(headers: &http::HeaderMap) -> String {
+    let dir = ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/ui/";
+    let manifest_json_location =
+        ENVIRONMENT_SERVICE.sub_directory.clone().unwrap() + "/manifest.json";
+    let (js_file, css_file) = resolve_index_assets();
+
+    let base_config = ENVIRONMENT_SERVICE.get_config();
+    let resolved_server_url =
+        crate::url_rewriting::resolve_server_url_from_headers(headers);
+    let rewriter = crate::url_rewriting::create_url_rewriter(headers);
+    let rewritten_oidc_redirect_uri = base_config
+        .oidc_config
+        .as_ref()
+        .map(|oidc| rewriter.rewrite(&oidc.redirect_uri));
+    let public_config = crate::sys::get_public_config(
+        base_config,
+        &resolved_server_url,
+        rewritten_oidc_redirect_uri,
+    );
+    let config_string = serde_json::to_string(&public_config).unwrap();
+
+    let html: Markup = html! {
+        html {
+            head {
+                meta charset="utf-8";
+                meta name="viewport" content="width=device-width, initial-scale=1";
+                title {"Podfetch"};
+                link rel="icon" type="image/png" href="/ui/favicon.ico";
+                link rel="manifest" href=(manifest_json_location);
+                script type="module" crossorigin src=(format!("{}{}{}", dir.clone(),
+                    "assets/", js_file))
+                {};
+                link rel="stylesheet" href=(format!("{}{}{}", dir.clone(), "assets/", css_file));
+            }
             body {
-            div id="config" data-config=(config_string)    {};
-            div id="root" {};
-            div id="modal" {};
-            div id="modal1"{};
-            div id="modal2"{};
-            div id="confirm-modal"{};
-                }
-
-        }};
-        html
-    });
-
-    html.0.to_string()
+                div id="config" data-config=(config_string) {};
+                div id="root" {};
+                div id="modal" {};
+                div id="modal1" {};
+                div id="modal2" {};
+                div id="confirm-modal" {};
+            }
+        }
+    };
+    html.0
 }
 
 #[utoipa::path(get, path = "/index.html")]
-async fn index() -> Result<Response<String>, CustomError> {
+async fn index(headers: http::HeaderMap) -> Result<Response<String>, CustomError> {
     let response = Response::builder()
         .header("Content-Type", "text/html")
         .status(200)
-        .body(transform_index_files())
+        .body(transform_index_files(&headers))
         .unwrap();
     Ok(response)
 }
@@ -233,7 +254,8 @@ pub fn insert_default_settings_if_not_present(
 
 async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
     let (req_parts, _) = req.into_parts();
-    let path = req_parts.uri.path();
+    let path = req_parts.uri.path().to_string();
+    let headers = req_parts.headers.clone();
 
     if path.contains("..") {
         return Err(CustomErrorInner::NotFound(Warning).into());
@@ -244,7 +266,7 @@ async fn handle_ui_access(req: Request) -> Result<Response<Body>, CustomError> {
         Ok(e) => Ok::<Vec<u8>, CustomError>(e),
         Err(_) => {
             file_path = format!("{}{}", "./static", "/ui/index.html");
-            Ok(transform_index_files().as_bytes().to_vec())
+            Ok(transform_index_files(&headers).as_bytes().to_vec())
         }
     }?;
     let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
@@ -295,6 +317,7 @@ fn config(state: AppState) -> OpenApiRouter {
 
 fn get_private_api(state: AppState) -> OpenApiRouter {
     let router = OpenApiRouter::new()
+        .merge(get_discover_router().with_state(state.clone()))
         .merge(get_playlist_router().with_state(state.clone()))
         .merge(get_podcast_router().with_state(state.clone()))
         .merge(get_sys_info_router().with_state(state.clone()))

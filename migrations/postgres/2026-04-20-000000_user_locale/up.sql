@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN country TEXT;
+ALTER TABLE users ADD COLUMN language TEXT;

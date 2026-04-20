@@ -495,9 +495,27 @@ impl PodcastEpisodeUseCase {
                             updated_podcast_episode.description = description.to_string();
                         }
 
+                        // Backfill missing episode artwork with the parent
+                        // podcast's image so older rows that stored the
+                        // default fallback get repaired on next feed refresh.
+                        let episode_itunes_image = itunes_ext
+                            .as_ref()
+                            .and_then(|ext| ext.image.clone());
+                        if let Some(itunes_image) = episode_itunes_image {
+                            updated_podcast_episode.image_url = itunes_image;
+                        } else if DownloadService::is_default_fallback_image_url(
+                            &updated_podcast_episode.image_url,
+                        ) && !DownloadService::is_default_fallback_image_url(
+                            &podcast.original_image_url,
+                        ) {
+                            updated_podcast_episode.image_url =
+                                podcast.original_image_url.clone();
+                        }
+
                         if updated_podcast_episode.name != podcast_episode.name
                             || updated_podcast_episode.url != podcast_episode.url
                             || updated_podcast_episode.description != podcast_episode.description
+                            || updated_podcast_episode.image_url != podcast_episode.image_url
                         {
                             Self::update_podcast_episode(updated_podcast_episode.clone())?;
                         }
@@ -507,8 +525,14 @@ impl PodcastEpisodeUseCase {
                     };
 
                     let mut duration_of_podcast_episode = 0;
-                    let mut image_url =
-                        format!("{}{}", ENVIRONMENT_SERVICE.server_url, DEFAULT_IMAGE_URL);
+                    // Fall back to the parent podcast's image (the one that
+                    // wraps all episodes) when an episode carries no image of
+                    // its own.
+                    let mut image_url = if !podcast.original_image_url.is_empty() {
+                        podcast.original_image_url.clone()
+                    } else {
+                        format!("{}{}", ENVIRONMENT_SERVICE.server_url, DEFAULT_IMAGE_URL)
+                    };
 
                     // itunes extension checking
                     if let Some(itunes_ext) = &itunes_ext {

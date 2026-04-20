@@ -105,6 +105,59 @@ impl PodcastService {
         }
     }
 
+    /// Hit Podcastindex `/podcasts/trending`. Passing empty slices / None for
+    /// filters yields globally trending podcasts.
+    pub async fn trending_on_podindex(
+        categories: &[u32],
+        language: Option<&str>,
+        max: u32,
+    ) -> Result<PodindexResponse, CustomError> {
+        let headers = Self::compute_podindex_header();
+        let mut url = "https://api.podcastindex.org/api/1.0/podcasts/trending".to_string();
+        let mut params = vec![("max", max.to_string())];
+        if !categories.is_empty() {
+            let joined = categories
+                .iter()
+                .map(|id| id.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            params.push(("cat", joined));
+        }
+        if let Some(lang) = language
+            && !lang.is_empty()
+        {
+            params.push(("lang", lang.to_string()));
+        }
+
+        let query = params
+            .iter()
+            .map(|(k, v)| format!("{}={}", k, urlencoding::encode(v)))
+            .collect::<Vec<_>>()
+            .join("&");
+        url.push('?');
+        url.push_str(&query);
+
+        let result = get_http_client(&ENVIRONMENT_SERVICE)
+            .get(&url)
+            .headers(headers)
+            .send()
+            .await
+            .map_err(map_reqwest_error)?;
+
+        let status = result.status();
+        let body = result.text().await.map_err(map_reqwest_error)?;
+
+        if status.is_client_error() || status.is_server_error() {
+            log::error!("Podcastindex trending error {status}: {body}");
+            return Err(CustomErrorInner::BadRequest(body, Error).into());
+        }
+
+        serde_json::from_str::<PodindexResponse>(&body).map_err(|e| {
+            log::error!("Could not parse Podcastindex trending response: {e}");
+            CustomErrorInner::BadRequest(e.to_string(), Error).into()
+        })
+    }
+
     pub async fn insert_podcast_from_podindex(
         id: i32,
         added_by: Option<i32>,
