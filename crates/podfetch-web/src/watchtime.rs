@@ -1,3 +1,4 @@
+use podfetch_domain::user::User;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use utoipa::ToSchema;
@@ -27,7 +28,7 @@ pub trait WatchtimeApplicationService {
         username: String,
         request: PodcastWatchedPostModel,
     ) -> Result<(), Self::Error>;
-    fn get_last_watched(&self, username: &str) -> Result<Vec<Self::LastWatchedItem>, Self::Error>;
+    fn get_last_watched(&self, user: &User) -> Result<Vec<Self::LastWatchedItem>, Self::Error>;
     fn get_watchtime(
         &self,
         episode_id: &str,
@@ -59,14 +60,14 @@ where
 
 pub fn get_last_watched<S>(
     service: &S,
-    username: &str,
+    user: &User,
 ) -> Result<Vec<S::LastWatchedItem>, WatchtimeControllerError<S::Error>>
 where
     S: WatchtimeApplicationService,
     S::Error: Display,
 {
     service
-        .get_last_watched(username)
+        .get_last_watched(user)
         .map_err(WatchtimeControllerError::Service)
 }
 

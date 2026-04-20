@@ -281,16 +281,8 @@ impl WatchtimeApplicationService for WatchtimeUseCase {
         Self::log_watchtime(&request.podcast_episode_id, request.time, username)
     }
 
-    fn get_last_watched(&self, username: &str) -> Result<Vec<Self::LastWatchedItem>, Self::Error> {
-        let user = User::new(
-            0,
-            username.to_string(),
-            "user",
-            None::<String>,
-            chrono::Utc::now().naive_utc(),
-            true,
-        );
-        Self::get_last_watched_episodes(&user).map(|items| {
+    fn get_last_watched(&self, user: &User) -> Result<Vec<Self::LastWatchedItem>, Self::Error> {
+        Self::get_last_watched_episodes(user).map(|items| {
             items
                 .into_iter()
                 .map(|(podcast_episode, episode, podcast)| {

@@ -29,17 +29,6 @@ impl PlaylistService {
         Self::new(Arc::new(PlaylistRepositoryImpl::new(database())))
     }
 
-    fn map_user(user_id: i32, username: String) -> User {
-        User::new(
-            user_id,
-            username,
-            "user",
-            None::<String>,
-            chrono::Utc::now().naive_utc(),
-            true,
-        )
-    }
-
     fn to_playlist_dto(
         playlist: Playlist,
         items: Vec<(PlaylistItem, PodcastEpisode, Option<Episode>)>,
@@ -161,11 +150,9 @@ impl PlaylistApplicationService for PlaylistService {
 
     fn add_playlist(
         &self,
-        user_id: i32,
-        username: String,
+        user: User,
         playlist: PlaylistDtoPost,
     ) -> Result<Self::PlaylistDto, Self::Error> {
-        let user = Self::map_user(user_id, username);
         let playlist = self.create_playlist_if_missing(playlist, &user)?;
         let items = self.load_playlist_items(&playlist.id, &user)?;
         Ok(Self::to_playlist_dto(playlist, items, user))
@@ -173,12 +160,10 @@ impl PlaylistApplicationService for PlaylistService {
 
     fn update_playlist(
         &self,
-        user_id: i32,
-        username: String,
+        user: User,
         playlist_id: String,
         playlist: PlaylistDtoPost,
     ) -> Result<Self::PlaylistDto, Self::Error> {
-        let user = Self::map_user(user_id, username);
         let playlist_to_update = self.find_playlist_by_id(&playlist_id)?;
         if playlist_to_update.user_id != user.id {
             return Err(common_infrastructure::error::CustomErrorInner::Forbidden(
@@ -203,12 +188,7 @@ impl PlaylistApplicationService for PlaylistService {
         Ok(Self::to_playlist_dto(playlist, items, user))
     }
 
-    fn get_all_playlists(
-        &self,
-        user_id: i32,
-        username: String,
-    ) -> Result<Vec<Self::PlaylistDto>, Self::Error> {
-        let user = Self::map_user(user_id, username);
+    fn get_all_playlists(&self, user: User) -> Result<Vec<Self::PlaylistDto>, Self::Error> {
         self.repository
             .list_by_user(user.id)?
             .into_iter()
@@ -221,11 +201,9 @@ impl PlaylistApplicationService for PlaylistService {
 
     fn get_playlist_by_id(
         &self,
-        user_id: i32,
-        username: String,
+        user: User,
         playlist_id: String,
     ) -> Result<Self::PlaylistDto, Self::Error> {
-        let user = Self::map_user(user_id, username);
         let playlist = self.find_playlist_by_user_and_id(&playlist_id, user.id)?;
         let items = self.load_playlist_items(&playlist_id, &user)?;
         Ok(Self::to_playlist_dto(playlist, items, user))
