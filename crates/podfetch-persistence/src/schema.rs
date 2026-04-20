@@ -264,6 +264,8 @@ diesel::table! {
         explicit_consent -> Bool,
         created_at -> Timestamp,
         api_key -> Nullable<Text>,
+        country -> Nullable<Text>,
+        language -> Nullable<Text>,
     }
 }
 

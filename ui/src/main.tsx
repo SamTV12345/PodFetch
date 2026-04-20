@@ -31,7 +31,7 @@ registerPwaServiceWorker()
 
 
 if (config) {
-    const postUrl = config.serverUrl + "ui/login"
+    const postUrl = window.location.origin + import.meta.env.BASE_URL + "login"
     if (!window.location.pathname.endsWith('login') && !window.location.pathname.includes('/invite/')) {
         setLogin({
             rememberMe: false,

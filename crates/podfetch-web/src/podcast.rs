@@ -6,7 +6,7 @@ use podfetch_domain::ordering::{OrderCriteria, OrderOption};
 use podfetch_domain::podcast::Podcast;
 use podfetch_domain::user::User;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::thread;
 use utoipa::{IntoParams, ToSchema};
@@ -291,22 +291,25 @@ pub enum PodcastSearchReturn {
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Feed {
-    id: Option<i32>,
-    podcast_guid: Option<String>,
-    title: Option<String>,
-    url: Option<String>,
-    original_url: Option<String>,
-    link: Option<String>,
-    description: Option<String>,
-    author: Option<String>,
-    owner_name: Option<String>,
-    image: Option<String>,
-    artwork: Option<String>,
-    last_update_time: Option<i32>,
-    last_crawl_time: Option<i32>,
-    last_parse_time: Option<i32>,
-    last_good_http_status_time: Option<i32>,
-    explicit: Option<bool>,
+    pub id: Option<i32>,
+    pub podcast_guid: Option<String>,
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub original_url: Option<String>,
+    pub link: Option<String>,
+    pub description: Option<String>,
+    pub author: Option<String>,
+    pub owner_name: Option<String>,
+    pub image: Option<String>,
+    pub artwork: Option<String>,
+    pub last_update_time: Option<i32>,
+    pub last_crawl_time: Option<i32>,
+    pub last_parse_time: Option<i32>,
+    pub last_good_http_status_time: Option<i32>,
+    pub explicit: Option<bool>,
+    #[serde(default)]
+    pub categories: Option<HashMap<String, String>>,
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]

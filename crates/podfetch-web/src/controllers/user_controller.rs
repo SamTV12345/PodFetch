@@ -11,6 +11,8 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use podfetch_domain::user::User;
 use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::services::user_admin::service::map_requester;
 use common_infrastructure::error::{
@@ -288,6 +290,42 @@ fn map_user_admin_error_type(error: UserAdminControllerError<CustomError>) -> Er
     }
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserLocaleUpdate {
+    pub country: Option<String>,
+    pub language: Option<String>,
+}
+
+#[utoipa::path(
+    put,
+    path = "/me/locale",
+    request_body = UserLocaleUpdate,
+    responses((status = 200, description = "Updates the authenticated user's country/language preference", body = UserWithApiKey)),
+    tag = "user"
+)]
+pub async fn update_locale(
+    State(state): State<AppState>,
+    Extension(requester): Extension<User>,
+    Json(update): Json<UserLocaleUpdate>,
+) -> Result<Json<UserWithApiKey>, CustomError> {
+    let read_only_admin_id = state.user_admin_service.read_only_admin_id();
+
+    let mut user = requester.clone();
+    user.country = sanitize_locale(update.country.as_deref(), 8);
+    user.language = sanitize_locale(update.language.as_deref(), 8);
+    let updated = state.user_admin_service.update_user(user)?;
+    let read_only = updated.id == read_only_admin_id;
+    Ok(Json(updated.to_api_dto(read_only).into()))
+}
+
+fn sanitize_locale(value: Option<&str>, max_len: usize) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.chars().take(max_len).collect::<String>())
+}
+
 pub fn get_user_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .nest(
@@ -296,6 +334,7 @@ pub fn get_user_router() -> OpenApiRouter<AppState> {
                 .routes(routes!(get_users))
                 .routes(routes!(get_user))
                 .routes(routes!(update_role))
+                .routes(routes!(update_locale))
                 .routes(routes!(delete_user))
                 .routes(routes!(update_user)),
         )

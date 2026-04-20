@@ -13,7 +13,18 @@ function chartingLibrary(): PluginOption {
     enforce: 'pre',
     apply: 'serve',
     transformIndexHtml: async (html, ctx)=>{
-      const resp =  await fetch('http://localhost:8000/ui/index.html')
+      // Tell the backend which host the browser actually talks to, so its
+      // embedded `data-config.serverUrl` reflects the Vite dev server rather
+      // than the backend's internal bind address. Vite's bind host may be
+      // `0.0.0.0` or `true`; the browser reaches it via `localhost`.
+      const port = ctx.server?.config?.server?.port ?? 5173
+      const host = `localhost:${port}`
+      const resp = await fetch('http://localhost:8000/ui/index.html', {
+        headers: {
+          'x-forwarded-host': host,
+          'x-forwarded-proto': 'http',
+        },
+      })
       const htmlFromServer = await resp.text()
       const browser = new Browser()
       const page = browser.newPage();

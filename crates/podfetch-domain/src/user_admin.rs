@@ -9,6 +9,8 @@ pub struct ManagedUser {
     pub explicit_consent: bool,
     pub created_at: NaiveDateTime,
     pub api_key: Option<String>,
+    pub country: Option<String>,
+    pub language: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -29,6 +31,8 @@ pub struct UserWithApiKey {
     pub explicit_consent: bool,
     pub api_key: Option<String>,
     pub read_only: bool,
+    pub country: Option<String>,
+    pub language: Option<String>,
 }
 
 impl ManagedUser {
@@ -48,6 +52,8 @@ impl ManagedUser {
             explicit_consent,
             created_at,
             api_key: None,
+            country: None,
+            language: None,
         }
     }
 
@@ -78,6 +84,8 @@ impl ManagedUser {
             explicit_consent: self.explicit_consent,
             api_key: self.api_key.clone(),
             read_only,
+            country: self.country.clone(),
+            language: self.language.clone(),
         }
     }
 }

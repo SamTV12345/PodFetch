@@ -56,6 +56,8 @@ impl UserAuthService {
             explicit_consent,
             created_at: chrono::Utc::now().naive_utc(),
             api_key: None,
+            country: None,
+            language: None,
         })
     }
 
@@ -93,6 +95,8 @@ impl UserAuthService {
             explicit_consent: true,
             created_at: Default::default(),
             api_key: self.environment.api_key_admin.clone(),
+            country: None,
+            language: None,
         }
     }
 
@@ -113,6 +117,8 @@ impl UserAuthService {
             explicit_consent: true,
             created_at: chrono::Utc::now().naive_utc(),
             api_key: self.environment.api_key_admin.clone(),
+            country: None,
+            language: None,
         })
     }
 
@@ -125,6 +131,8 @@ impl UserAuthService {
             explicit_consent: true,
             created_at: Default::default(),
             api_key: self.environment.api_key_admin.clone(),
+            country: None,
+            language: None,
         }
     }
 }

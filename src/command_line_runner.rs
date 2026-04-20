@@ -314,6 +314,8 @@ pub fn read_user_account(state: &AppState) -> Result<User, CustomError> {
         explicit_consent: false,
         created_at: get_current_timestamp_str(),
         api_key: Some(api_key_generated),
+        country: None,
+        language: None,
     };
 
     Ok(user)

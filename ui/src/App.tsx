@@ -1,6 +1,7 @@
 import {FC, PropsWithChildren, Suspense} from 'react'
 import {createBrowserRouter, createRoutesFromElements, Navigate, Route} from 'react-router-dom'
 import {
+    DiscoverViewLazyLoad,
     EpisodeSearchViewLazyLoad,
     HomepageViewLazyLoad,
     PlaylistViewLazyLoad,
@@ -48,6 +49,10 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route path={"search"} element={<Suspense><EpisodeSearchViewLazyLoad/></Suspense>}/>
             </Route>
 
+            <Route path="discover">
+                <Route index element={<Suspense><DiscoverViewLazyLoad /></Suspense>} />
+                <Route path=":tab" element={<Suspense><DiscoverViewLazyLoad /></Suspense>} />
+            </Route>
             <Route path="timeline" element={<Suspense><TimeLineViewLazyLoad /></Suspense>} />
             <Route path="stats" element={<Suspense><StatisticsViewLazyLoad /></Suspense>} />
             <Route path={"favorites"}>

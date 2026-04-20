@@ -29,6 +29,7 @@ export const Sidebar = () => {
             <ul className="flex flex-col gap-2">
                 <SidebarItem iconName="home" path="./home" translationKey="homepage"/>
                 <SidebarItem iconName="podcasts" path="podcasts" translationKey="all-subscriptions"/>
+                <SidebarItem iconName="explore" path="discover" translationKey="discover"/>
                 <SidebarItem iconName="favorite" path="favorites" translationKey="favorites"/>
                 <SidebarItem iconName="magic_button" path="timeline" translationKey="timeline"/>
                 <SidebarItem iconName="query_stats" path="stats" translationKey="stats-title"/>
