@@ -48,7 +48,7 @@ interface CommonProps {
     detailedAudioPlayerTab: 'description' | 'chapters' | 'video',
     currentDetailedPodcastId: number|undefined,
     loginData: Partial<LoginData>|undefined,
-    users: components["schemas"]["UserWithoutPassword"][],
+    users: components["schemas"]["UserSummary"][],
     invites: components["schemas"]["Invite"][],
     timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]|undefined
     filters: components["schemas"]["Filter"]|undefined,
@@ -63,7 +63,7 @@ interface CommonProps {
     setDetailedAudioPlayerTab: (tab: 'description' | 'chapters' | 'video') => void,
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => void,
     setLoginData: (loginData: Partial<LoginData>) => void,
-    setUsers: (users: components["schemas"]["UserWithoutPassword"][]) => void,
+    setUsers: (users: components["schemas"]["UserSummary"][]) => void,
     setInvites: (invites: components["schemas"]["Invite"][]) => void,
     setTimeLineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => void,
     addTimelineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => void,
@@ -106,7 +106,7 @@ const useCommon = create<CommonProps>((set, get) => ({
     setDetailedAudioPlayerTab: (tab) => set({detailedAudioPlayerTab: tab}),
     setCurrentDetailedPodcastId: (currentDetailedPodcastId: number) => set({currentDetailedPodcastId}),
     setLoginData: (loginData: Partial<LoginData>) => set({loginData}),
-    setUsers: (users: components["schemas"]["UserWithoutPassword"][]) => set({users}),
+    setUsers: (users: components["schemas"]["UserSummary"][]) => set({users}),
     setInvites: (invites) => set({invites}),
     setTimeLineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => set({timeLineEpisodes}),
     addTimelineEpisodes: (timeLineEpisodes: components["schemas"]["TimeLinePodcastItem"]) => {

@@ -5,5 +5,5 @@ type InfoIconProps = {
     onClick?: () => void
 }
 export const InfoIcon:FC<InfoIconProps> = ({onClick, className}) => {
-    return <i className={`fa-solid fa-circle-info fa-2x text-slate-800 hover:text-slate-600 active:scale-95 ${className}`} onClick={()=> onClick ? onClick() :''}/>
+    return <i className={`fa-solid fa-circle-info fa-2x ui-icon hover:ui-icon-hover active:scale-95 ${className}`} onClick={()=> onClick ? onClick() :''}/>
 }

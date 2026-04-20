@@ -230,7 +230,8 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                     if let Err(e) = insert_result {
                         log::warn!(
                             "Failed to insert subscription for podcast {}, retrying: {}",
-                            podcast, e
+                            podcast,
+                            e
                         );
                         // On SQLite, the AUTOINCREMENT counter can get out of
                         // sync after migrations that copy rows with explicit IDs.

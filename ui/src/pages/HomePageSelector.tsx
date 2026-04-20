@@ -11,7 +11,7 @@ export const HomePageSelector = ()=>{
                 <Heading1 className="">{t('homepage')}</Heading1>
 
                 {/* Tabs */}
-                <ul className="flex gap-2 border-b lg:border-none border-stone-200 text-sm text-stone-500 w-full lg:w-auto home-page-selector">
+                <ul className="flex gap-2 border-b lg:border-none ui-border text-sm ui-text-muted w-full lg:w-auto home-page-selector">
                     <NavLink className={`cursor-pointer inline-block px-2 py-3`} to={"/home/view"}>
                         <span className="flex items-center gap-2">
                             <span className="material-symbols-outlined filled leading-5">home</span> {t('homepage')}

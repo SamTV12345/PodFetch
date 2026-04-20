@@ -308,7 +308,8 @@ mod tests {
                 "replacementStrategy": "replace-with-dash",
                 "episodeFormat": "{episodeTitle}",
                 "podcastFormat": "{podcastTitle}",
-                "directPaths": true
+                "directPaths": true,
+                "autoTranscodeOpus": false
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
@@ -438,6 +439,7 @@ mod tests {
                 episode_format: "{episodeTitle}".to_string(),
                 podcast_format: "{podcastTitle}".to_string(),
                 direct_paths: false,
+                auto_transcode_opus: false,
             }),
         )
         .await;

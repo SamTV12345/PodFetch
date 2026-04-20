@@ -509,6 +509,7 @@ mod tests {
 
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -534,6 +535,7 @@ mod tests {
 
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -559,6 +561,7 @@ mod tests {
 
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -582,6 +585,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -623,6 +627,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -664,6 +669,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -705,6 +711,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let podcast_episode = PodcastParsed {
@@ -735,6 +742,7 @@ mod tests {
             use_existing_filename: false,
             podcast_prefill: 0,
             direct_paths: false,
+            auto_transcode_opus: false,
         };
 
         let podcast_episode = PodcastParsed {

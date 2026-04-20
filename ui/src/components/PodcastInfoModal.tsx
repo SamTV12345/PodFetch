@@ -71,7 +71,7 @@ export const PodcastInfoModal: FC<PodcastInfoModalProps> = ({ open, onOpenChange
                                 {t('podcast-episode-details')}
                             </Dialog.Description>
                             <span
-                                className={`material-symbols-outlined align-middle ${episode ? 'cursor-pointer ui-icon hover:ui-icon-hover' : 'text-stone-300'}`}
+                                className={`material-symbols-outlined align-middle ${episode ? 'cursor-pointer ui-icon hover:ui-icon-hover' : 'ui-text-disabled'}`}
                                 title={t('download-computer') as string}
                                 onClick={() => {
                                     if (episode) {

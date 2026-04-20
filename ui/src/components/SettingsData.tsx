@@ -77,6 +77,15 @@ export const Settings = () => {
                     }} type="number" value={settingsModel.data?.podcastPrefill} />
                 </div>
                 <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="auto-transcode-opus" className="flex gap-1">{t('auto-transcode-opus')} <SettingsInfoIcon headerKey="auto-transcode-opus" textKey="auto-transcode-opus-explanation" /></label>
+                    <Switcher loading={settingsModel.isLoading} checked={settingsModel.data?.autoTranscodeOpus} className="xs:justify-self-end" id="auto-transcode-opus" onChange={() => {
+                        queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                            ...oldData,
+                            autoTranscodeOpus: !oldData?.autoTranscodeOpus
+                        }))
+                    }} />
+                </div>
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="flex gap-1">{t('rescan-audio-files')} <SettingsInfoIcon headerKey="rescan-audio-files" textKey="rescan-audio-files-description" /></label>
                     <CustomButtonPrimary onClick={async ()=>{
                         await rescanEpisodesMutation.mutateAsync({})

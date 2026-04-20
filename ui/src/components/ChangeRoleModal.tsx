@@ -18,7 +18,7 @@ const roleOptions = [
 type ChangeRoleModalProps = {
     open: boolean
     onOpenChange: (open: boolean) => void
-    user: components["schemas"]["UserWithoutPassword"] | undefined
+    user: components["schemas"]["UserSummary"] | undefined
     onSuccess: (updatedUser: User) => void
 }
 

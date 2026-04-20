@@ -17,7 +17,7 @@ export const PlayerEpisodeInfo: FC<PlayerEpisodeInfoProps> = ({ podcastEpisode, 
             <div className="hidden md:block relative aspect-square bg-center bg-cover h-full rounded-md" style={{backgroundImage: `url("${podcastEpisode?.local_image_url}")`}}>
                 <div className="absolute inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] cursor-pointer opacity-0 hover:opacity-100 rounded-md transition-opacity"
                      onClick={()=>{setDetailedAudioPlayerOpen(true)}}>
-                    <span className="material-symbols-outlined text-white">open_in_full</span>
+                    <span className="material-symbols-outlined ui-text-inverse">open_in_full</span>
                 </div>
             </div>
 

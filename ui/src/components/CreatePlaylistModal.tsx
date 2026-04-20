@@ -162,7 +162,7 @@ export const CreatePlaylistModal: FC<CreatePlaylistModalProps> = ({ open, onOpen
                 >
                     <div className="relative mx-auto ui-surface ui-text max-w-5xl w-full md:w-[70%] p-6 md:p-8 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.2)] max-h-[92vh] overflow-hidden">
                         <Dialog.Close className="absolute top-4 right-4 bg-transparent">
-                            <span className="material-symbols-outlined text-stone-400 hover:text-stone-600">close</span>
+                            <span className="material-symbols-outlined ui-modal-close hover:ui-modal-close-hover">close</span>
                             <span className="sr-only">{t('closeModal')}</span>
                         </Dialog.Close>
 

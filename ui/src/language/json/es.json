@@ -38,6 +38,8 @@
   "days-to-keep": "Días a mantener",
   "auto-update": "Actualizar podcast automáticamente",
   "auto-download": "Descargar nuevos episodios automáticamente",
+  "auto-transcode-opus": "Convertir a Opus",
+  "auto-transcode-opus-explanation": "Convertir automáticamente los episodios descargados al formato Opus. Esto puede reducir el uso de almacenamiento hasta un 50% en comparación con MP3. Requiere que ffmpeg esté instalado en el servidor.",
   "save": "Guardar",
   "active": "Activar",
   "run-cleanup": "Ejecutar limpieza ahora",

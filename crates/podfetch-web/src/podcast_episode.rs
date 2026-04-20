@@ -34,17 +34,17 @@ pub struct PodcastEpisodeWithHistory<E, H> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct TimeLinePodcastEpisode<E, P, H, F> {
-    pub podcast_episode: E,
-    pub podcast: P,
-    pub history: Option<H>,
-    pub favorite: Option<F>,
+pub struct TimeLinePodcastEpisode {
+    pub podcast_episode: crate::podcast_episode_dto::PodcastEpisodeDto,
+    pub podcast: crate::podcast::PodcastDto,
+    pub history: Option<crate::history::EpisodeDto>,
+    pub favorite: Option<TimelineFavorite>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct TimeLinePodcastItem<T> {
-    pub data: Vec<T>,
+pub struct TimeLinePodcastItem {
+    pub data: Vec<TimeLinePodcastEpisode>,
     pub total_elements: i64,
 }
 

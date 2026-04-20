@@ -81,9 +81,9 @@ export const getFiltersDefault = () => {
     return {
         ascending: true,
         filter: "PUBLISHEDDATE",
-        onlyFavored: false,
+        only_favored: false,
         title: '',
-        username: ''
+        user_id: 0
     } satisfies Filter
 }
 

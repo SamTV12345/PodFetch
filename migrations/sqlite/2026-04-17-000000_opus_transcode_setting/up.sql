@@ -1,0 +1,1 @@
+ALTER TABLE settings ADD COLUMN auto_transcode_opus BOOLEAN NOT NULL DEFAULT FALSE;

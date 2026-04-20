@@ -310,7 +310,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     font-family: anton, serif;
     font-weight: 800;
     font-size: 50px;
-    @apply text-gray-900;
+    color: var(--fg-color);
 }
 
 .overlay {
@@ -378,7 +378,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 /* Track */
 ::-webkit-scrollbar-track {
-    @apply bg-gray-200
+    background-color: var(--input-bg-color);
 }
 
 /* Handle */

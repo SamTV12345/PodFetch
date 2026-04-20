@@ -20,7 +20,7 @@ export const PlaylistData = ({name, onNameChange}: PlaylistDataProps)=>{
 
             <div className="flex flex-col gap-2">
                 <div className="flex">
-                            <CustomInput id="playlist-name" className="border-gray-500 border-2" onChange={e=>onNameChange(e.target.value)} value ={name} />
+                            <CustomInput id="playlist-name" className="ui-border border-2" onChange={e=>onNameChange(e.target.value)} value ={name} />
 
                 </div>
             </div>

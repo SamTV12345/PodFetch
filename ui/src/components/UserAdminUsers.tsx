@@ -18,7 +18,7 @@ export const UserAdminUsers = () => {
     const {enqueueSnackbar} = useSnackbar()
     const { t } = useTranslation()
     const [changeRoleOpen, setChangeRoleOpen] = useState(false)
-    const [userToEdit, setUserToEdit] = useState<components["schemas"]["UserWithoutPassword"] | undefined>(undefined)
+    const [userToEdit, setUserToEdit] = useState<components["schemas"]["UserSummary"] | undefined>(undefined)
     const usersQuery = $api.useQuery('get', '/api/v1/users', {}, {retry: false})
     const deleteUserMutation = $api.useMutation('delete', '/api/v1/users/{username}')
 

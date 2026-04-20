@@ -18,7 +18,7 @@ export const Timeline = () => {
     const timeline = $api.useQuery('get', '/api/v1/podcasts/timeline', {
         params: {
             query: {
-                favoredOnly: filter.data === undefined ? false : filter.data.onlyFavored,
+                favoredOnly: filter.data === undefined ? false : filter.data.only_favored,
                 notListened: notListened,
                 favoredEpisodes: notFavored
             }
@@ -37,11 +37,11 @@ export const Timeline = () => {
                     <div className="flex items-center gap-3">
                         <span className="text-xs ui-text-muted">{t('onlyFavored')}</span>
 
-                        <Switcher loading={filter.isLoading} checked={filter.data?.onlyFavored}
+                        <Switcher loading={filter.isLoading} checked={filter.data?.only_favored}
                                   onChange={() => {
                                       queryClient.setQueryData(['get', '/api/v1/podcasts/filter'], (oldData: Filter) => ({
                                             ...oldData,
-                                            onlyFavored: !oldData.onlyFavored
+                                            only_favored: !oldData.only_favored
                                       }))}}/>
                     </div>
                     <div className="flex items-center gap-3">
