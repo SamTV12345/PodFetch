@@ -37,7 +37,9 @@ impl ItunesChartsService {
             Some(id) => format!(
                 "https://itunes.apple.com/{country}/rss/toppodcasts/limit={limit}/genre={id}/json"
             ),
-            None => format!("https://itunes.apple.com/{country}/rss/toppodcasts/limit={limit}/json"),
+            None => {
+                format!("https://itunes.apple.com/{country}/rss/toppodcasts/limit={limit}/json")
+            }
         };
 
         let result = get_http_client(&ENVIRONMENT_SERVICE)
@@ -148,9 +150,7 @@ impl From<RawEntry> for ItunesChartEntry {
             artist: value.artist.map(|l| l.label),
             image,
             feed_url: None,
-            genre: value
-                .category
-                .and_then(|c| c.attributes.map(|a| a.label)),
+            genre: value.category.and_then(|c| c.attributes.map(|a| a.label)),
             release_date: value.release_date.map(|l| l.label),
         }
     }

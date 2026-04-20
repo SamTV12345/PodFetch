@@ -498,9 +498,8 @@ impl PodcastEpisodeUseCase {
                         // Backfill missing episode artwork with the parent
                         // podcast's image so older rows that stored the
                         // default fallback get repaired on next feed refresh.
-                        let episode_itunes_image = itunes_ext
-                            .as_ref()
-                            .and_then(|ext| ext.image.clone());
+                        let episode_itunes_image =
+                            itunes_ext.as_ref().and_then(|ext| ext.image.clone());
                         if let Some(itunes_image) = episode_itunes_image {
                             updated_podcast_episode.image_url = itunes_image;
                         } else if DownloadService::is_default_fallback_image_url(
@@ -508,8 +507,7 @@ impl PodcastEpisodeUseCase {
                         ) && !DownloadService::is_default_fallback_image_url(
                             &podcast.original_image_url,
                         ) {
-                            updated_podcast_episode.image_url =
-                                podcast.original_image_url.clone();
+                            updated_podcast_episode.image_url = podcast.original_image_url.clone();
                         }
 
                         if updated_podcast_episode.name != podcast_episode.name

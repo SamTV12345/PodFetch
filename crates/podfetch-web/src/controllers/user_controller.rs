@@ -316,7 +316,7 @@ pub async fn update_locale(
     user.language = sanitize_locale(update.language.as_deref(), 8);
     let updated = state.user_admin_service.update_user(user)?;
     let read_only = updated.id == read_only_admin_id;
-    Ok(Json(podfetch_domain::user_admin::ManagedUser::from(updated).to_api_dto(read_only).into()))
+    Ok(Json(updated.to_api_dto(read_only).into()))
 }
 
 fn sanitize_locale(value: Option<&str>, max_len: usize) -> Option<String> {

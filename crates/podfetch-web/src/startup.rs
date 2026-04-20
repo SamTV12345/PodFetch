@@ -133,8 +133,7 @@ pub fn transform_index_files(headers: &http::HeaderMap) -> String {
     let (js_file, css_file) = resolve_index_assets();
 
     let base_config = ENVIRONMENT_SERVICE.get_config();
-    let resolved_server_url =
-        crate::url_rewriting::resolve_server_url_from_headers(headers);
+    let resolved_server_url = crate::url_rewriting::resolve_server_url_from_headers(headers);
     let rewriter = crate::url_rewriting::create_url_rewriter(headers);
     let rewritten_oidc_redirect_uri = base_config
         .oidc_config

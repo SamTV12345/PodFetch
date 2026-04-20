@@ -76,10 +76,7 @@ impl DiscoverService {
     /// common, hit Podcastindex trending with those categories and the user's
     /// preferred language, then filter out feeds whose URL matches one the
     /// user is already subscribed to.
-    pub async fn for_you(
-        user: &User,
-        limit: u32,
-    ) -> Result<Vec<Feed>, CustomError> {
+    pub async fn for_you(user: &User, limit: u32) -> Result<Vec<Feed>, CustomError> {
         let favorite_repo = DieselFavoriteRepository::new(database());
         let podcast_repo = DieselPodcastRepository::new(database());
 
@@ -104,7 +101,7 @@ impl DiscoverService {
         }
 
         let mut sorted: Vec<(u32, usize)> = category_counts.into_iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.1));
         let top_cats: Vec<u32> = sorted.into_iter().take(3).map(|(id, _)| id).collect();
 
         let language = user.language.as_deref();

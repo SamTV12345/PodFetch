@@ -199,18 +199,17 @@ impl DownloadService {
         );
 
         let mut image_data = if should_download_main_image {
-            let image_url =
-                if !Self::is_default_fallback_image_url(&podcast_episode.image_url) {
-                    Some(podcast_episode.image_url.as_str())
-                } else if !Self::is_default_fallback_image_url(&podcast.original_image_url) {
-                    log::info!(
-                        "Episode {} has no image, falling back to podcast image",
-                        podcast_episode.episode_id
-                    );
-                    Some(podcast.original_image_url.as_str())
-                } else {
-                    None
-                };
+            let image_url = if !Self::is_default_fallback_image_url(&podcast_episode.image_url) {
+                Some(podcast_episode.image_url.as_str())
+            } else if !Self::is_default_fallback_image_url(&podcast.original_image_url) {
+                log::info!(
+                    "Episode {} has no image, falling back to podcast image",
+                    podcast_episode.episode_id
+                );
+                Some(podcast.original_image_url.as_str())
+            } else {
+                None
+            };
 
             match image_url {
                 Some(url) => Some(Self::handle_suffix_response(
