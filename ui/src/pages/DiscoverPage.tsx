@@ -151,11 +151,10 @@ export const DiscoverPage: FC = () => {
             const trackId = Number(rawId)
             if (!Number.isFinite(trackId)) return
             try {
-                const res = await addItunesPodcastMutation.mutateAsync({
+                await addItunesPodcastMutation.mutateAsync({
                     body: { trackId, userId: 1 },
                 })
-                const name = (res as { name?: string })?.name ?? fallbackName
-                handleAddPodcast(200, name, t)
+                handleAddPodcast(200, fallbackName, t)
             } catch {
                 // snackbar emitted by http.ts middleware
             }

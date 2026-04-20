@@ -226,14 +226,14 @@ post,
 path="/podcasts/itunes",
 request_body=PodcastAddModel,
 responses(
-(status = 200, description = "Adds a podcast to the database.")),
+(status = 200, description = "Adds a podcast to the database.", body = PodcastDto)),
 tag="podcasts"
 )]
 #[debug_handler]
 pub async fn add_podcast(
     Extension(requester): Extension<User>,
     Json(track_id): Json<PodcastAddModel>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<PodcastDto>, CustomError> {
     let current_count = DieselPodcastRepository::new(database())
         .count_by_added_by(requester.id)
         .map_err(CustomError::from)?;
@@ -259,7 +259,7 @@ pub async fn add_podcast(
 
     let res = res.json::<Value>().await.unwrap();
 
-    PodcastService::handle_insert_of_podcast(
+    let inserted = PodcastService::handle_insert_of_podcast(
         PodcastInsertModel {
             feed_url: unwrap_string(&res["results"][0]["feedUrl"]),
             title: unwrap_string(&res["results"][0]["collectionName"]),
@@ -272,7 +272,7 @@ pub async fn add_podcast(
         Some(requester.id),
     )
     .await?;
-    Ok(StatusCode::OK)
+    Ok(Json(map_podcast_to_dto(inserted.into())))
 }
 
 #[utoipa::path(
