@@ -32,9 +32,22 @@ volumes:
 | PORT             | The port PodFetch listens on                         | 8000                     |
 | SUB_DIRECTORY    | Sub-path when hosting behind a reverse proxy (e.g. `/podfetch`) | _(none)_      |
 | DATABASE_URL     | URL of the database                                  | sqlite://./db/podcast.db |
+| PODFETCH_FOLDER  | Directory (inside the container) where podcast files are stored | podcasts     |
 
 It is important to change `UID` and `GID` to your user id and group id so that the files are owned by you and not by root.
 Docker will create the volumes by default as root and podfetch will not be able to write to them.
+
+### Storing podcasts on a different drive
+
+In most cases you don't need `PODFETCH_FOLDER`. To put podcast files on a different drive (e.g. a separate HDD while the rest of the container stays on an SSD), just bind-mount that drive to the default `/app/podcasts`:
+
+```yaml
+volumes:
+  - /mnt/hdd/podcasts:/app/podcasts
+  - podfetch-db:/app/db
+```
+
+If you do want to change the in-container path, set `PODFETCH_FOLDER` and mount the drive at that path. The directory (and any missing parents) will be created on startup.
 
 ## Installation with Docker (Postgres)
 
