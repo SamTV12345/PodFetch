@@ -28,7 +28,7 @@ impl LocalStorageBackend {
     }
 
     pub fn create_dir(path: &str) -> Result<(), StorageError> {
-        std::fs::create_dir(path).map_err(|source| StorageError::Io {
+        std::fs::create_dir_all(path).map_err(|source| StorageError::Io {
             path: path.to_string(),
             source,
         })?;
