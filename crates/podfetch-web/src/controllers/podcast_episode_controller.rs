@@ -356,6 +356,115 @@ pub async fn delete_podcast_episode_locally(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct BatchActionResponse {
+    pub affected: usize,
+}
+
+fn parse_podcast_id(id: &str) -> Result<i32, CustomError> {
+    id.parse::<i32>().map_err(|_| {
+        CustomErrorInner::BadRequest("podcast id must be an integer".to_string(), Warning).into()
+    })
+}
+
+#[utoipa::path(
+post,
+path="/podcasts/{id}/episodes/download-all",
+responses(
+(status = 202, description = "Queues every missing episode of the podcast for download.")),
+tag = "podcast_episodes"
+)]
+pub async fn download_all_missing_episodes(
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, CustomError> {
+    web_require_privileged::<CustomError>(requester.is_admin())
+        .map_err(map_podcast_episode_controller_error)?;
+    let podcast_id = parse_podcast_id(&id)?;
+
+    tokio::task::spawn_blocking(move || {
+        let podcast = PodcastService::get_podcast_by_id(podcast_id);
+        if let Err(err) = PodcastEpisodeService::download_missing_episodes_for_podcast(&podcast) {
+            log::error!("download-all failed for podcast {podcast_id}: {err}");
+        }
+    });
+
+    Ok(StatusCode::ACCEPTED)
+}
+
+#[utoipa::path(
+post,
+path="/podcasts/{id}/episodes/resync-files",
+responses(
+(status = 202, description = "Re-downloads episodes whose file is missing on disk.")),
+tag = "podcast_episodes"
+)]
+pub async fn resync_files_for_podcast(
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, CustomError> {
+    web_require_privileged::<CustomError>(requester.is_admin())
+        .map_err(map_podcast_episode_controller_error)?;
+    let podcast_id = parse_podcast_id(&id)?;
+
+    tokio::task::spawn_blocking(move || {
+        let podcast = PodcastService::get_podcast_by_id(podcast_id);
+        if let Err(err) = PodcastEpisodeService::redownload_missing_files_for_podcast(&podcast) {
+            log::error!("resync-files failed for podcast {podcast_id}: {err}");
+        }
+    });
+
+    Ok(StatusCode::ACCEPTED)
+}
+
+#[utoipa::path(
+post,
+path="/podcasts/{id}/episodes/resync-db",
+responses(
+(status = 200, description = "Clears DB download flags for episodes whose file is missing on disk.", body = BatchActionResponse)),
+tag = "podcast_episodes"
+)]
+pub async fn resync_db_for_podcast(
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+) -> Result<Json<BatchActionResponse>, CustomError> {
+    web_require_privileged::<CustomError>(requester.is_admin())
+        .map_err(map_podcast_episode_controller_error)?;
+    let podcast_id = parse_podcast_id(&id)?;
+
+    let affected = tokio::task::spawn_blocking(move || {
+        PodcastEpisodeService::resync_db_for_podcast(podcast_id)
+    })
+    .await
+    .unwrap()?;
+
+    Ok(Json(BatchActionResponse { affected }))
+}
+
+#[utoipa::path(
+delete,
+path="/podcasts/{id}/episodes/downloads",
+responses(
+(status = 200, description = "Removes every downloaded file for this podcast and clears the matching DB flags.", body = BatchActionResponse)),
+tag = "podcast_episodes"
+)]
+pub async fn delete_all_downloaded_files(
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+) -> Result<Json<BatchActionResponse>, CustomError> {
+    web_require_privileged::<CustomError>(requester.is_admin())
+        .map_err(map_podcast_episode_controller_error)?;
+    let podcast_id = parse_podcast_id(&id)?;
+
+    let affected = tokio::task::spawn_blocking(move || {
+        PodcastEpisodeService::delete_all_downloaded_files_for_podcast(podcast_id)
+    })
+    .await
+    .unwrap()?;
+
+    Ok(Json(BatchActionResponse { affected }))
+}
+
 #[utoipa::path(
     post,
     path="/episodes/formatting",
@@ -414,6 +523,10 @@ pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
         .routes(routes!(get_podcast_episode_by_id))
         .routes(routes!(download_podcast_episodes_of_podcast))
         .routes(routes!(delete_podcast_episode_locally))
+        .routes(routes!(download_all_missing_episodes))
+        .routes(routes!(resync_files_for_podcast))
+        .routes(routes!(resync_db_for_podcast))
+        .routes(routes!(delete_all_downloaded_files))
         .routes(routes!(retrieve_episode_sample_format))
         .routes(routes!(find_all_chapters_of_podcast_episode))
 }
@@ -821,5 +934,313 @@ mod tests {
             .put("/api/v1/podcasts/does-not-exist/episodes/download")
             .await;
         assert_eq!(response.status_code(), 200);
+    }
+
+    fn mark_episode_downloaded(episode: &PodcastEpisode, file_episode_path: &str) {
+        diesel::update(
+            pe_dsl::podcast_episodes.filter(pe_dsl::id.eq(episode.id)),
+        )
+        .set((
+            pe_dsl::download_location.eq("Local".to_string()),
+            pe_dsl::download_time.eq(Some(Utc::now().naive_utc())),
+            pe_dsl::file_episode_path.eq(file_episode_path.to_string()),
+            pe_dsl::file_image_path.eq::<Option<String>>(None),
+        ))
+        .execute(&mut get_connection())
+        .unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_resync_db_clears_flags_for_missing_files() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("resync-db-podcast-{unique}");
+
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            &unique_name("Resync DB Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("resync-db-episode-{unique}"),
+            &format!("resync-db-guid-{unique}"),
+            "Resync DB Episode",
+        );
+        // Mark downloaded with a path that does not exist on disk.
+        mark_episode_downloaded(&episode, "./podcasts/definitely-not-a-real-file.mp3");
+
+        let response = server
+            .test_server
+            .post(&format!("/api/v1/podcasts/{}/episodes/resync-db", podcast.id))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let body = response.json::<serde_json::Value>();
+        assert_eq!(body["affected"], json!(1));
+
+        let persisted = pe_dsl::podcast_episodes
+            .filter(pe_dsl::id.eq(episode.id))
+            .first::<PodcastEpisode>(&mut get_connection())
+            .unwrap();
+        assert!(persisted.download_location.is_none());
+        assert!(persisted.file_episode_path.is_none());
+        assert!(persisted.download_time.is_none());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_all_downloaded_files_removes_files_and_clears_flags() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("delete-all-podcast-{unique}");
+
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            &unique_name("Delete All Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+        let episode = insert_episode(
+            podcast.id,
+            &format!("delete-all-episode-{unique}"),
+            &format!("delete-all-guid-{unique}"),
+            "Delete All Episode",
+        );
+        // Create a real file on disk so cleanup has something to remove.
+        let file_path = std::env::temp_dir()
+            .join(format!("delete-all-{unique}.mp3"))
+            .to_string_lossy()
+            .to_string();
+        std::fs::write(&file_path, b"hello").unwrap();
+        mark_episode_downloaded(&episode, &file_path);
+
+        let response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/podcasts/{}/episodes/downloads",
+                podcast.id
+            ))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let body = response.json::<serde_json::Value>();
+        assert_eq!(body["affected"], json!(1));
+
+        assert!(
+            !std::path::Path::new(&file_path).exists(),
+            "file should have been removed"
+        );
+        let persisted = pe_dsl::podcast_episodes
+            .filter(pe_dsl::id.eq(episode.id))
+            .first::<PodcastEpisode>(&mut get_connection())
+            .unwrap();
+        assert!(persisted.download_location.is_none());
+        assert!(persisted.file_episode_path.is_none());
+        // Unlike single-episode delete, the `deleted` flag must stay false so
+        // the episode can be re-downloaded by the scheduler.
+        assert!(!persisted.deleted);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_download_all_missing_returns_accepted() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("download-all-podcast-{unique}");
+
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            &unique_name("Download All Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+
+        let response = server
+            .test_server
+            .post(&format!(
+                "/api/v1/podcasts/{}/episodes/download-all",
+                podcast.id
+            ))
+            .await;
+        assert_eq!(response.status_code(), 202);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_resync_files_returns_accepted() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("resync-files-podcast-{unique}");
+
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            &unique_name("Resync Files Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+
+        let response = server
+            .test_server
+            .post(&format!(
+                "/api/v1/podcasts/{}/episodes/resync-files",
+                podcast.id
+            ))
+            .await;
+        assert_eq!(response.status_code(), 202);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_batch_actions_reject_non_admin_users() {
+        // Batch operations touch every episode of a podcast and so are
+        // restricted to admins. Neither a regular user nor an uploader may
+        // invoke them, even though uploaders can trigger single-episode
+        // downloads elsewhere.
+        let regular_user = non_admin_user();
+        let mut uploader = non_admin_user();
+        uploader.role = "uploader".to_string();
+
+        for caller in [regular_user, uploader] {
+            let download_all = super::download_all_missing_episodes(
+                Extension(caller.clone()),
+                Path("1".to_string()),
+            )
+            .await;
+            match download_all {
+                Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+                Ok(_) => panic!("expected forbidden for download_all_missing_episodes"),
+            }
+
+            let resync_files = super::resync_files_for_podcast(
+                Extension(caller.clone()),
+                Path("1".to_string()),
+            )
+            .await;
+            match resync_files {
+                Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+                Ok(_) => panic!("expected forbidden for resync_files_for_podcast"),
+            }
+
+            let resync_db = super::resync_db_for_podcast(
+                Extension(caller.clone()),
+                Path("1".to_string()),
+            )
+            .await;
+            match resync_db {
+                Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+                Ok(_) => panic!("expected forbidden for resync_db_for_podcast"),
+            }
+
+            let delete_all = super::delete_all_downloaded_files(
+                Extension(caller),
+                Path("1".to_string()),
+            )
+            .await;
+            match delete_all {
+                Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
+                Ok(_) => panic!("expected forbidden for delete_all_downloaded_files"),
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_delete_all_downloaded_files_preserves_favorited_episodes() {
+        let server = handle_test_startup().await;
+        let unique = Uuid::new_v4().to_string();
+        let slug = format!("delete-keeps-fav-{unique}");
+
+        let podcast = crate::services::podcast::service::PodcastService::add_podcast_to_database(
+            &unique_name("Delete Keeps Favorite Podcast"),
+            &slug,
+            &format!("https://example.com/{slug}.xml"),
+            "http://localhost:8080/ui/default.jpg",
+            &slug,
+        )
+        .unwrap();
+        let fav_episode = insert_episode(
+            podcast.id,
+            &format!("fav-episode-{unique}"),
+            &format!("fav-guid-{unique}"),
+            "Favorite Episode",
+        );
+        let plain_episode = insert_episode(
+            podcast.id,
+            &format!("plain-episode-{unique}"),
+            &format!("plain-guid-{unique}"),
+            "Plain Episode",
+        );
+        let fav_file = std::env::temp_dir()
+            .join(format!("fav-{unique}.mp3"))
+            .to_string_lossy()
+            .to_string();
+        let plain_file = std::env::temp_dir()
+            .join(format!("plain-{unique}.mp3"))
+            .to_string_lossy()
+            .to_string();
+        std::fs::write(&fav_file, b"favorite").unwrap();
+        std::fs::write(&plain_file, b"plain").unwrap();
+        mark_episode_downloaded(&fav_episode, &fav_file);
+        mark_episode_downloaded(&plain_episode, &plain_file);
+        FavoritePodcastEpisodeService::default_service()
+            .set_favorite(admin_user_id(), fav_episode.id, true)
+            .unwrap();
+
+        let response = server
+            .test_server
+            .delete(&format!(
+                "/api/v1/podcasts/{}/episodes/downloads",
+                podcast.id
+            ))
+            .await;
+        assert_eq!(response.status_code(), 200);
+        let body = response.json::<serde_json::Value>();
+        assert_eq!(body["affected"], json!(1));
+
+        // Favorite survives; plain episode is wiped.
+        assert!(
+            std::path::Path::new(&fav_file).exists(),
+            "favorited file should have been spared"
+        );
+        assert!(
+            !std::path::Path::new(&plain_file).exists(),
+            "non-favorite file should have been removed"
+        );
+
+        let fav_persisted = pe_dsl::podcast_episodes
+            .filter(pe_dsl::id.eq(fav_episode.id))
+            .first::<PodcastEpisode>(&mut get_connection())
+            .unwrap();
+        assert!(fav_persisted.download_location.is_some());
+
+        let plain_persisted = pe_dsl::podcast_episodes
+            .filter(pe_dsl::id.eq(plain_episode.id))
+            .first::<PodcastEpisode>(&mut get_connection())
+            .unwrap();
+        assert!(plain_persisted.download_location.is_none());
+
+        // Clean up the favorite file we left behind.
+        std::fs::remove_file(&fav_file).ok();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_batch_actions_reject_non_integer_podcast_id() {
+        let server = handle_test_startup().await;
+
+        let response = server
+            .test_server
+            .post("/api/v1/podcasts/not-a-number/episodes/resync-db")
+            .await;
+        assert_client_error_status(response.status_code().as_u16());
     }
 }
