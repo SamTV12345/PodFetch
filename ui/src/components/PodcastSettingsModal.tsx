@@ -12,6 +12,8 @@ import { components } from '../../schema'
 import { $api } from '../utils/http'
 import { generatePodcastDefaultSettings } from '../models/PodcastDefaultSettings'
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
+import { ConfirmModal } from './ConfirmModal'
+import { enqueueSnackbar } from 'notistack'
 
 type PodcastSettingsModalProps = {
     podcast: components['schemas']['PodcastDto']
@@ -36,6 +38,33 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
         '/api/v1/podcasts/{id}/settings'
     )
     const runCleanupMutation = $api.useMutation('put', '/api/v1/settings/runcleanup')
+
+    const downloadAllMissingMutation = $api.useMutation(
+        'post',
+        '/api/v1/podcasts/{id}/episodes/download-all'
+    )
+    const resyncFilesMutation = $api.useMutation(
+        'post',
+        '/api/v1/podcasts/{id}/episodes/resync-files'
+    )
+    const resyncDbMutation = $api.useMutation(
+        'post',
+        '/api/v1/podcasts/{id}/episodes/resync-db'
+    )
+    const deleteAllDownloadsMutation = $api.useMutation(
+        'delete',
+        '/api/v1/podcasts/{id}/episodes/downloads'
+    )
+
+    type ConfirmState = {
+        headerText: string
+        bodyText: string
+        acceptText: string
+        rejectText: string
+        onAccept: () => void
+    }
+    const [confirmOpen, setConfirmOpen] = useState(false)
+    const [confirmData, setConfirmData] = useState<ConfirmState | null>(null)
 
     const [draft, setDraft] = useState<PodcastSetting | null>(null)
 
@@ -187,6 +216,131 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
                         </div>
+
+                        <hr className="mt-6 mb-4 ui-border" />
+                        <h3 className="ui-text-accent text-lg mb-3">
+                            {t('batch-actions')}
+                        </h3>
+                        <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-3 items-center">
+                            <div className="ui-text">
+                                <div>{t('download-all-missing')}</div>
+                                <div className="text-xs ui-text-muted">
+                                    {t('download-all-missing-explanation')}
+                                </div>
+                            </div>
+                            <CustomButtonSecondary
+                                onClick={() => {
+                                    downloadAllMissingMutation.mutate(
+                                        { params: { path: { id: String(podcast.id) } } },
+                                        {
+                                            onSuccess: () => {
+                                                enqueueSnackbar(t('download-all-missing'), { variant: 'success' })
+                                            },
+                                        }
+                                    )
+                                }}
+                            >
+                                {t('run')}
+                            </CustomButtonSecondary>
+
+                            <div className="ui-text">
+                                <div>{t('redownload-missing-files')}</div>
+                                <div className="text-xs ui-text-muted">
+                                    {t('redownload-missing-files-explanation')}
+                                </div>
+                            </div>
+                            <CustomButtonSecondary
+                                onClick={() => {
+                                    resyncFilesMutation.mutate(
+                                        { params: { path: { id: String(podcast.id) } } },
+                                        {
+                                            onSuccess: () => {
+                                                enqueueSnackbar(t('redownload-missing-files'), { variant: 'success' })
+                                            },
+                                        }
+                                    )
+                                }}
+                            >
+                                {t('run')}
+                            </CustomButtonSecondary>
+
+                            <div className="ui-text">
+                                <div>{t('refresh-local-state')}</div>
+                                <div className="text-xs ui-text-muted">
+                                    {t('refresh-local-state-explanation')}
+                                </div>
+                            </div>
+                            <CustomButtonSecondary
+                                onClick={() => {
+                                    setConfirmData({
+                                        headerText: t('confirm-refresh-local-state-header'),
+                                        bodyText: t('confirm-refresh-local-state-body'),
+                                        acceptText: t('run'),
+                                        rejectText: t('cancel'),
+                                        onAccept: () => {
+                                            resyncDbMutation.mutate(
+                                                { params: { path: { id: String(podcast.id) } } },
+                                                {
+                                                    onSuccess: (data) => {
+                                                        enqueueSnackbar(
+                                                            t('affected-n-episodes', { count: data.affected }),
+                                                            { variant: 'success' }
+                                                        )
+                                                    },
+                                                }
+                                            )
+                                            setConfirmOpen(false)
+                                        },
+                                    })
+                                    setConfirmOpen(true)
+                                }}
+                            >
+                                {t('run')}
+                            </CustomButtonSecondary>
+
+                            <div className="ui-text">
+                                <div>{t('delete-all-downloads')}</div>
+                                <div className="text-xs ui-text-muted">
+                                    {t('delete-all-downloads-explanation')}
+                                </div>
+                            </div>
+                            <CustomButtonSecondary
+                                className="bg-(--danger-fg-color) hover:bg-(--danger-fg-color-hover) hover:shadow-(--danger-fg-color-hover)"
+                                onClick={() => {
+                                    setConfirmData({
+                                        headerText: t('confirm-delete-all-downloads-header'),
+                                        bodyText: t('confirm-delete-all-downloads-body'),
+                                        acceptText: t('delete'),
+                                        rejectText: t('cancel'),
+                                        onAccept: () => {
+                                            deleteAllDownloadsMutation.mutate(
+                                                { params: { path: { id: String(podcast.id) } } },
+                                                {
+                                                    onSuccess: (data) => {
+                                                        enqueueSnackbar(
+                                                            t('affected-n-episodes', { count: data.affected }),
+                                                            { variant: 'success' }
+                                                        )
+                                                    },
+                                                }
+                                            )
+                                            setConfirmOpen(false)
+                                        },
+                                    })
+                                    setConfirmOpen(true)
+                                }}
+                            >
+                                {t('delete')}
+                            </CustomButtonSecondary>
+                        </div>
+
+                        {confirmData && (
+                            <ConfirmModal
+                                open={confirmOpen}
+                                onOpenChange={setConfirmOpen}
+                                {...confirmData}
+                            />
+                        )}
 
                         <div className="mt-6 flex justify-end gap-3">
                             <Dialog.Close asChild>
