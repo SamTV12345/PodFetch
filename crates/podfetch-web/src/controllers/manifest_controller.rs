@@ -41,8 +41,11 @@ mod tests {
         let manifest = response.json::<Value>();
         assert_eq!(manifest["name"], "PodFetch");
         assert_eq!(manifest["short_name"], "PodFetch");
-        assert_eq!(manifest["display"], "fullscreen");
-        assert_eq!(manifest["orientation"], "landscape");
+        assert_eq!(manifest["display"], "standalone");
+        assert_eq!(manifest["orientation"], "portrait-primary");
+        assert!(manifest["id"].as_str().is_some());
+        assert_eq!(manifest["id"], manifest["start_url"]);
+        assert_eq!(manifest["scope"], manifest["start_url"]);
         assert!(manifest["icons"].as_array().is_some());
         assert!(!manifest["icons"].as_array().unwrap().is_empty());
     }
@@ -55,16 +58,19 @@ mod tests {
             .test_server
             .add_header("x-forwarded-host", "manifest.example.com");
         server.test_server.add_header("x-forwarded-proto", "https");
-        server.test_server.add_header("x-forwarded-prefix", "/ui");
+        server.test_server.add_header("x-forwarded-prefix", "/podfetch");
 
         let response = server.test_server.get("/manifest.json").await;
         assert_eq!(response.status_code(), 200);
 
         let manifest = response.json::<Value>();
-        assert_eq!(manifest["start_url"], "https://manifest.example.com/ui/");
+        assert_eq!(
+            manifest["start_url"],
+            "https://manifest.example.com/podfetch/ui/"
+        );
         assert_eq!(
             manifest["icons"][0]["src"],
-            "https://manifest.example.com/ui/ui/logo.png"
+            "https://manifest.example.com/podfetch/ui/pwa-192x192.png"
         );
     }
 
@@ -111,7 +117,10 @@ mod tests {
     #[serial]
     async fn test_get_manifest_direct_handler_without_headers_uses_env_fallback() {
         let response = super::get_manifest(HeaderMap::new()).await.unwrap();
-        assert_eq!(response.0.start_url, ENVIRONMENT_SERVICE.server_url);
+        assert_eq!(
+            response.0.start_url,
+            format!("{}ui/", ENVIRONMENT_SERVICE.server_url)
+        );
     }
 
     #[tokio::test]
