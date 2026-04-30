@@ -1,5 +1,8 @@
 # GPodder API
 
+> **See also:** [Kodi (RSS Podcasts addon)](./Kodi.md) for using
+> PodFetch with the Kodi RSS Podcasts addon.
+
 ## 📖 Activating the GPodder API
 
 The following environment variable must be set to `true` to enable it:
