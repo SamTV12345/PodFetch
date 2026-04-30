@@ -21,9 +21,10 @@ drove issue #372.
 ## Placement
 
 - **New file:** `docs/src/tutorials/Kodi.md`.
-- **`docs/src/SUMMARY.md`:** add a `- [Kodi](./tutorials/Kodi.md)`
-  entry directly under the existing AntennaPod / GPodder entry,
-  at the same indent level.
+- **`docs/src/SUMMARY.md`:** under the `# Tutorials` heading, add
+  `- [Kodi (RSS Podcasts addon)](./tutorials/Kodi.md)` immediately
+  after the existing `- [Adding GPodder support](./tutorials/GPodder.md)`
+  line, at the same top-level bullet indent.
 - **Cross-link:** add a one-line "See also: [Kodi](./Kodi.md)"
   pointer near the top of `docs/src/tutorials/GPodder.md` so
   AntennaPod readers find the Kodi page.
