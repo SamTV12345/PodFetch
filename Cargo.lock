@@ -4360,27 +4360,12 @@ dependencies = [
  "matchit 0.9.1",
  "pin-project-lite",
  "serde",
- "socketioxide-core 0.18.0",
+ "socketioxide-core",
  "socketioxide-parser-common",
  "thiserror 2.0.18",
  "tokio",
  "tower-layer",
  "tower-service",
-]
-
-[[package]]
-name = "socketioxide-core"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b07b95089a961994921d23dd6e70792a06f5daa250b5ec8919f6f9de371d2cc5"
-dependencies = [
- "arbitrary",
- "bytes",
- "engineioxide-core",
- "futures-core",
- "serde",
- "smallvec",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -4400,15 +4385,15 @@ dependencies = [
 
 [[package]]
 name = "socketioxide-parser-common"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fe3b57122bf9c17fe8c2f364e1d307983068396cfb1b0407ec897de411f8033"
+checksum = "5ba9a856b0de7f665fe0d66fb7d60c74ad2e1810552c60a31f72e9aa6372cc02"
 dependencies = [
  "bytes",
  "itoa",
  "serde",
  "serde_json",
- "socketioxide-core 0.17.0",
+ "socketioxide-core",
 ]
 
 [[package]]
