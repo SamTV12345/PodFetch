@@ -73,8 +73,8 @@ podfetch-web = { path = "crates/podfetch-web", default-features = false }
 
 # External dependencies
 async-recursion = "1.1.1"
-axum = { version = "0.8.8", features = ["macros", "http2"] }
-axum-extra = { version = "0.12.5", features = ["cookie", "query"] }
+axum = { version = "0.8.9", features = ["macros", "http2"] }
+axum-extra = { version = "0.12.6", features = ["cookie", "query"] }
 axum-test = "20.0.0"
 base64 = "0.22.1"
 bollard = { version = "*", features = ["rustls", "rustls-native-certs"], default-features = false }
@@ -82,8 +82,8 @@ built = { version = "0.8.0", features = ["chrono", "semver", "cargo-lock"] }
 chrono = { version = "0.4.44", default-features = false, features = ["clock"] }
 clokwerk = "0.4.0"
 derive_builder = "0.20.2"
-diesel = { version = "2.3.7", features = ["chrono", "r2d2"] }
-diesel_migrations = "2.3.1"
+diesel = { version = "2.3.9", features = ["chrono", "r2d2"] }
+diesel_migrations = "2.3.2"
 fake = { version = "5.0.0", features = ["chrono", "url"] }
 file-format = "0.29.0"
 frankenstein = { version = "0.49.0", features = ["client-ureq"] }
@@ -104,8 +104,8 @@ r2d2 = "0.8.10"
 r2d2_postgres = { version = "0.18.2" }
 rand = "0.10.1"
 regex = "1.12.3"
-reqwest = { version = "0.13.2", features = ["stream", "json", "blocking", "rustls", "hickory-dns", "query"] }
-rpassword = "7.4.0"
+reqwest = { version = "0.13.3", features = ["stream", "json", "blocking", "rustls", "hickory-dns", "query"] }
+rpassword = "7.5.1"
 rss = "2.0.12"
 rust-s3 = { version = "0.37.1", features = ["blocking", "fail-on-err", "futures-util", "tokio", "tokio-rustls-tls"], default-features = false }
 serial_test = "3.4.0"
@@ -113,13 +113,13 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sha1 = "0.11.0"
 sha256 = "1.6.0"
-socketioxide = "0.18.2"
+socketioxide = "0.18.3"
 strfmt = "0.2.5"
 sysinfo = { version = "0.38.4", default-features = false, features = ["disk", "system"] }
-testcontainers = { version = "0.27.2" }
+testcontainers = { version = "0.27.3" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
-tokio = { version = "1.51.1", features = ["full"] }
+tokio = { version = "1.52.1", features = ["full"] }
 tower = { version = "0.5.3", features = ["util"] }
 tower-http = { version = "0.6.6", features = ["fs", "trace"] }
 tracing = "0.1"
@@ -134,5 +134,5 @@ utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-uuid = { version = "1.23.0", features = ["v4", "serde"] }
+uuid = { version = "1.23.1", features = ["v4", "serde"] }
 xml-builder = "0.6.0"
