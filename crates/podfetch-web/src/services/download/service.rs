@@ -86,7 +86,7 @@ impl DownloadService {
                 Ok(bytes) => return Ok(bytes),
                 Err(err) if attempt == MAX_RETRIES => return Err(err),
                 Err(err) => {
-                    log::warn!(
+                    tracing::warn!(
                         "Download attempt {}/{} failed for {}: {}",
                         attempt,
                         MAX_RETRIES,
@@ -126,7 +126,7 @@ impl DownloadService {
                 Ok(bytes) => return Ok(bytes),
                 Err(err) if attempt == MAX_RETRIES => return Err(err),
                 Err(err) => {
-                    log::warn!(
+                    tracing::warn!(
                         "Async download attempt {}/{} failed for {}: {}",
                         attempt,
                         MAX_RETRIES,
@@ -170,6 +170,11 @@ impl DownloadService {
         }
     }
 
+    #[tracing::instrument(skip_all, fields(
+        episode_id = podcast_episode.id,
+        episode_name = %podcast_episode.name,
+        podcast_id = podcast.id,
+    ))]
     pub fn download_podcast_episode(
         podcast_episode: PodcastEpisode,
         podcast: &Podcast,
@@ -202,7 +207,7 @@ impl DownloadService {
             let image_url = if !Self::is_default_fallback_image_url(&podcast_episode.image_url) {
                 Some(podcast_episode.image_url.as_str())
             } else if !Self::is_default_fallback_image_url(&podcast.original_image_url) {
-                log::info!(
+                tracing::info!(
                     "Episode {} has no image, falling back to podcast image",
                     podcast_episode.episode_id
                 );
@@ -282,7 +287,7 @@ impl DownloadService {
             match Self::transcode_to_opus(&paths.filename) {
                 Ok(opus_path) => opus_path,
                 Err(e) => {
-                    log::warn!("Opus transcoding failed, keeping original file: {e}");
+                    tracing::warn!("Opus transcoding failed, keeping original file: {e}");
                     paths.filename.clone()
                 }
             }
@@ -297,12 +302,12 @@ impl DownloadService {
         )?;
         let result = Self::handle_metadata_insertion(&paths, &podcast_episode, podcast);
         if let Ok(chapters) = &result {
-            log::info!("Inserting chapters for episode {}", podcast_episode.id);
+            tracing::info!("Inserting chapters for episode {}", podcast_episode.id);
             for chapter in chapters {
                 let res = PodcastEpisodeChapterService::default_service()
                     .save_chapter(chapter, &podcast_episode);
                 if let Err(err) = res {
-                    log::error!(
+                    tracing::error!(
                         "Error while saving chapter for episode {}: {}",
                         podcast_episode.id,
                         err
@@ -312,7 +317,7 @@ impl DownloadService {
         }
 
         if let Err(err) = result {
-            log::error!("Error handling metadata insertion: {err:?}");
+            tracing::error!("Error handling metadata insertion: {err:?}");
         }
         Ok(())
     }
@@ -346,10 +351,10 @@ impl DownloadService {
 
         // Remove the original file after successful transcoding
         if let Err(e) = std::fs::remove_file(input_path) {
-            log::warn!("Could not remove original file after opus transcode: {e}");
+            tracing::warn!("Could not remove original file after opus transcode: {e}");
         }
 
-        log::info!("Transcoded to opus: {opus_path}");
+        tracing::info!("Transcoded to opus: {opus_path}");
         Ok(opus_path)
     }
 
@@ -373,7 +378,7 @@ impl DownloadService {
                 chapters = Self::read_chapters_from_mp3(&paths.filename)?;
                 let result_of_update = Self::update_meta_data_mp3(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
-                    log::error!("Error updating metadata: {err:?}");
+                    tracing::error!("Error updating metadata: {err:?}");
                 }
             }
             FileFormat::Mpeg4Part14
@@ -382,11 +387,11 @@ impl DownloadService {
                 chapters = Self::read_chapters_from_mp4(&paths.filename);
                 let result_of_update = Self::update_meta_data_mp4(paths, podcast_episode, podcast);
                 if let Some(err) = result_of_update.err() {
-                    log::error!("Error updating metadata: {err:?}");
+                    tracing::error!("Error updating metadata: {err:?}");
                 }
             }
             _ => {
-                log::error!("File format not supported: {detected_file:?}");
+                tracing::error!("File format not supported: {detected_file:?}");
                 return Err(CustomErrorInner::Conflict(
                     "File format not supported".to_string(),
                     ErrorSeverity::Error,
@@ -499,7 +504,7 @@ impl DownloadService {
             .map_err(|e| CustomErrorInner::Conflict(e.to_string(), ErrorSeverity::Error).into());
 
         if write_succesful.is_err() {
-            log::error!(
+            tracing::error!(
                 "Error writing metadata: {:?}",
                 write_succesful.err().unwrap()
             );
@@ -531,12 +536,12 @@ impl DownloadService {
                         tag.set_track_number(track_number as u16);
                     }
                     Err(e) => {
-                        log::error!("Error getting track number: {e:?}");
+                        tracing::error!("Error getting track number: {e:?}");
                     }
                 }
 
                 if let Err(e) = tag.write_to_path(&paths.filename) {
-                    log::error!(
+                    tracing::error!(
                         "Error writing MP4 metadata for episode {}, file may use an unsupported atom layout: {e}",
                         podcast_episode.name
                     );
@@ -547,7 +552,7 @@ impl DownloadService {
                 // Many M4A files (especially from Anchor/Spotify) have non-standard
                 // atom layouts that mp4ameta can't parse. This is not fatal - the
                 // audio file itself is fine, we just skip metadata writing.
-                log::warn!(
+                tracing::warn!(
                     "Could not read MP4 metadata for episode {}, skipping metadata update: {e}",
                     podcast_episode.name
                 );
@@ -563,7 +568,7 @@ impl DownloadService {
         let tag = match tag {
             Ok(tag) => tag,
             Err(err) => {
-                log::error!("Error reading ID3 tag: {}", err);
+                tracing::error!("Error reading ID3 tag: {}", err);
                 return Ok(Vec::new());
             }
         };
@@ -630,7 +635,7 @@ impl DownloadService {
         let tag = match tag {
             Ok(tag) => tag,
             Err(err) => {
-                log::error!("Error reading MP4 tag: {}", err);
+                tracing::error!("Error reading MP4 tag: {}", err);
                 return Vec::new();
             }
         };

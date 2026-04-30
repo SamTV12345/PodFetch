@@ -76,7 +76,7 @@ impl PodcastSettingsService {
                         if let Err(error) = PodcastEpisodeChapterService::default_service()
                             .save_chapter(&chapter, &episode)
                         {
-                            log::error!(
+                            tracing::error!(
                                 "Error while saving chapter for episode {}: {}",
                                 episode.id,
                                 error
@@ -85,7 +85,7 @@ impl PodcastSettingsService {
                     }
                 }
                 Err(error) => {
-                    log::error!(
+                    tracing::error!(
                         "Error while updating metadata for episode {}: {}",
                         episode.id,
                         error.inner

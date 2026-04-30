@@ -41,7 +41,7 @@ pub async fn log_watchtime(
         podcast_watch,
     )
     .map_err(map_watchtime_error)?;
-    log::debug!("Logged watchtime for episode: {podcast_episode_id}");
+    tracing::debug!("Logged watchtime for episode: {podcast_episode_id}");
     Ok(StatusCode::OK)
 }
 

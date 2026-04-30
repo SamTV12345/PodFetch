@@ -21,8 +21,10 @@ axum = { workspace = true }
 sha256 = { workspace = true }
 url = { workspace = true }
 chrono = { workspace = true }
-env_logger = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
+tracing-error = { workspace = true }
+tracing-log = { workspace = true }
+tracing-subscriber = { workspace = true }
 reqwest = { workspace = true }
 base64 = { workspace = true }
 regex = { workspace = true }

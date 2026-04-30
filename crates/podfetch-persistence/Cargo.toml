@@ -18,7 +18,7 @@ chrono = { workspace = true, features = ["serde"] }
 diesel = { workspace = true }
 diesel_migrations = { workspace = true }
 indexmap = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
 libsqlite3-sys = { workspace = true, optional = true }
 r2d2_postgres = { workspace = true, optional = true }
 r2d2 = { workspace = true }

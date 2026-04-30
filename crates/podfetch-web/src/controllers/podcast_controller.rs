@@ -203,7 +203,7 @@ pub async fn find_podcast(
         ITunes => {
             let res;
             {
-                log::debug!("Searching for podcast: {podcast}");
+                tracing::debug!("Searching for podcast: {podcast}");
                 res = PodcastService::find_podcast(&podcast).await;
             }
             Ok(Json(PodcastSearchReturn::Itunes(res)))
@@ -467,7 +467,7 @@ pub async fn refresh_all_podcasts(
         for podcast in podcasts {
             let refresh_result = PodcastService::refresh_podcast(&podcast);
             if let Err(e) = refresh_result {
-                log::error!("Error refreshing podcast: {e}");
+                tracing::error!("Error refreshing podcast: {e}");
             }
             ChatServerHandle::broadcast_podcast_refreshed(&podcast);
         }
@@ -493,17 +493,17 @@ pub async fn download_podcast(
     thread::spawn(move || {
         match PodcastService::refresh_podcast(&podcast) {
             Ok(_) => {
-                log::info!("Succesfully refreshed podcast.");
+                tracing::info!("Succesfully refreshed podcast.");
             }
             Err(e) => {
-                log::error!("Error refreshing podcast: {e}");
+                tracing::error!("Error refreshing podcast: {e}");
             }
         }
 
         let download = PodcastService::schedule_episode_download(&podcast);
 
         if download.is_err() {
-            log::error!("Error downloading podcast: {}", download.err().unwrap());
+            tracing::error!("Error downloading podcast: {}", download.err().unwrap());
         }
     });
 
@@ -618,7 +618,7 @@ async fn insert_outline(podcast: Outline, mut rng: ThreadRng, added_by: Option<i
             let image_url = match channel.image {
                 Some(ref image) => image.url.clone(),
                 None => {
-                    log::info!(
+                    tracing::info!(
                         "No image found for podcast. Downloading from {}",
                         ENVIRONMENT_SERVICE.server_url.clone().to_owned() + DEFAULT_IMAGE_URL
                     );

@@ -54,13 +54,13 @@ impl PodcastService {
             .send()
             .await
             .unwrap();
-        log::info!("Found podcast: {}", result.url());
+        tracing::info!("Found podcast: {}", result.url());
         let res_of_search = result.json().await;
 
         match res_of_search {
             Ok(res) => res,
             _ => {
-                log::error!(
+                tracing::error!(
                     "Error searching for podcast: {}",
                     res_of_search.err().unwrap()
                 );
@@ -82,13 +82,13 @@ impl PodcastService {
             .await
             .map_err(map_reqwest_error)?;
 
-        log::info!("Found podcast: {}", result.url());
+        tracing::info!("Found podcast: {}", result.url());
 
         let status = result.status();
         let possible_json = result.text().await.map_err(map_reqwest_error)?;
 
         if status.is_client_error() || status.is_server_error() {
-            log::error!("Error searching for podcast: {possible_json}");
+            tracing::error!("Error searching for podcast: {possible_json}");
             Err(CustomErrorInner::BadRequest(possible_json, Error).into())
         } else {
             let res_of_search = serde_json::from_str(&possible_json);
@@ -96,7 +96,7 @@ impl PodcastService {
             if let Ok(res) = res_of_search {
                 Ok(res)
             } else {
-                log::error!(
+                tracing::error!(
                     "Error searching for podcast: {}",
                     res_of_search.err().unwrap()
                 );
@@ -148,12 +148,12 @@ impl PodcastService {
         let body = result.text().await.map_err(map_reqwest_error)?;
 
         if status.is_client_error() || status.is_server_error() {
-            log::error!("Podcastindex trending error {status}: {body}");
+            tracing::error!("Podcastindex trending error {status}: {body}");
             return Err(CustomErrorInner::BadRequest(body, Error).into());
         }
 
         serde_json::from_str::<PodindexResponse>(&body).map_err(|e| {
-            log::error!("Could not parse Podcastindex trending response: {e}");
+            tracing::error!("Could not parse Podcastindex trending response: {e}");
             CustomErrorInner::BadRequest(e.to_string(), Error).into()
         })
     }
@@ -237,7 +237,7 @@ impl PodcastService {
             Some(podcast) => {
                 ChatServerHandle::broadcast_podcast_downloaded(podcast.clone());
                 let join_result = spawn_blocking(move || {
-                    log::debug!("Inserting podcast episodes of {}", podcast.name);
+                    tracing::debug!("Inserting podcast episodes of {}", podcast.name);
                     match PodcastEpisodeService::insert_podcast_episodes(&podcast) {
                         Ok(inserted_podcasts) => {
                             ChatServerHandle::broadcast_added_podcast_episodes(
@@ -245,11 +245,11 @@ impl PodcastService {
                                 inserted_podcasts.clone(),
                             );
                             if let Err(e) = Self::schedule_episode_download(&podcast) {
-                                log::error!("Error scheduling episode download: {e}");
+                                tracing::error!("Error scheduling episode download: {e}");
                             }
                         }
                         Err(e) => {
-                            log::error!(
+                            tracing::error!(
                                 "Error inserting podcast episodes for {}: {e}",
                                 podcast.name
                             );
@@ -258,17 +258,18 @@ impl PodcastService {
                 })
                 .await;
                 if let Err(e) = join_result {
-                    log::error!("Blocking task failed: {e}");
+                    tracing::error!("Blocking task failed: {e}");
                 }
                 Ok(inserted_podcast)
             }
             None => {
-                log::error!("No podcast found after insert");
+                tracing::error!("No podcast found after insert");
                 Err(CustomErrorInner::NotFound(ErrorSeverity::Error).into())
             }
         }
     }
 
+    #[tracing::instrument(skip_all, fields(podcast_id = podcast.id, podcast_name = %podcast.name))]
     pub fn schedule_episode_download(podcast: &Podcast) -> Result<(), CustomError> {
         const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let settings =
@@ -293,14 +294,14 @@ impl PodcastService {
                                     podcast_episode,
                                     podcast_for_thread,
                                 ) {
-                                    log::error!("Error downloading podcast episode: {err}");
+                                    tracing::error!("Error downloading podcast episode: {err}");
                                 }
                             }));
                         }
 
                         for handle in handles {
                             if let Err(err) = handle.join() {
-                                log::error!(
+                                tracing::error!(
                                     "Error joining download worker for podcast {}: {:?}",
                                     podcast.id,
                                     err
@@ -312,14 +313,14 @@ impl PodcastService {
                 Ok(())
             }
             None => {
-                log::error!("Error getting settings");
+                tracing::error!("Error getting settings");
                 Err(CustomErrorInner::Unknown(Critical).into())
             }
         }
     }
 
     pub fn refresh_podcast(podcast: &Podcast) -> Result<(), CustomError> {
-        log::info!("Refreshing podcast: {}", podcast.name);
+        tracing::info!("Refreshing podcast: {}", podcast.name);
         PodcastEpisodeService::insert_podcast_episodes(podcast)?;
         Self::schedule_episode_download(podcast)
     }
@@ -339,6 +340,7 @@ impl PodcastService {
             .map_err(CustomError::from)
     }
 
+    #[tracing::instrument]
     pub fn get_all_podcasts_raw() -> Result<Vec<Podcast>, CustomError> {
         podcast_repo()
             .find_all()

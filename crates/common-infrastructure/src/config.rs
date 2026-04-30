@@ -379,25 +379,25 @@ impl EnvironmentService {
 
     pub fn get_environment(&self) {
         println!("\n");
-        log::info!("Starting with the following environment variables:");
+        tracing::info!("Starting with the following environment variables:");
         for (key, value) in env::vars() {
-            log::debug!("{key}: {value}");
+            tracing::debug!("{key}: {value}");
         }
-        log::info!("Listening on port: {}", self.port);
-        log::info!(
+        tracing::info!("Listening on port: {}", self.port);
+        tracing::info!(
             "Polling interval for new episodes: {} minutes",
             self.polling_interval
         );
-        log::info!(
+        tracing::info!(
             "Developer specifications available at http://localhost:{}/swagger-ui/index.html#/",
             self.port
         );
-        log::info!(
+        tracing::info!(
             "GPodder integration enabled: {}",
             self.gpodder_integration_enabled
         );
-        log::debug!("Database url is set to: {}", &self.database_url);
-        log::info!(
+        tracing::debug!("Database url is set to: {}", &self.database_url);
+        tracing::info!(
             "Podindex API key&secret configured: {}",
             !self.podindex_api_key.is_empty() && !self.podindex_api_secret.is_empty()
         );

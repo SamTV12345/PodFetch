@@ -283,7 +283,7 @@ pub async fn download_podcast_episodes_of_podcast(
                             &podcast_episode,
                             &podcast_found,
                         ) {
-                            log::error!(
+                            tracing::error!(
                                 "Error downloading episode {}: {}",
                                 podcast_episode.episode_id,
                                 err
@@ -294,7 +294,7 @@ pub async fn download_podcast_episodes_of_podcast(
                             &podcast_episode.episode_id,
                             false,
                         ) {
-                            log::error!(
+                            tracing::error!(
                                 "Error updating deleted status for episode {}: {}",
                                 podcast_episode.episode_id,
                                 err
@@ -306,7 +306,7 @@ pub async fn download_podcast_episodes_of_podcast(
                         );
                     }
                     Err(err) => {
-                        log::error!(
+                        tracing::error!(
                             "Could not load podcast {} for episode {}: {}",
                             podcast_episode.podcast_id,
                             podcast_episode.episode_id,
@@ -316,10 +316,10 @@ pub async fn download_podcast_episodes_of_podcast(
                 }
             }
             Ok(None) => {
-                log::error!("Episode with id {} not found", id);
+                tracing::error!("Episode with id {} not found", id);
             }
             Err(err) => {
-                log::error!("Error retrieving episode {}: {}", id, err);
+                tracing::error!("Error retrieving episode {}: {}", id, err);
             }
         }
     });
@@ -385,7 +385,7 @@ pub async fn download_all_missing_episodes(
     tokio::task::spawn_blocking(move || {
         let podcast = PodcastService::get_podcast_by_id(podcast_id);
         if let Err(err) = PodcastEpisodeService::download_missing_episodes_for_podcast(&podcast) {
-            log::error!("download-all failed for podcast {podcast_id}: {err}");
+            tracing::error!("download-all failed for podcast {podcast_id}: {err}");
         }
     });
 
@@ -410,7 +410,7 @@ pub async fn resync_files_for_podcast(
     tokio::task::spawn_blocking(move || {
         let podcast = PodcastService::get_podcast_by_id(podcast_id);
         if let Err(err) = PodcastEpisodeService::redownload_missing_files_for_podcast(&podcast) {
-            log::error!("resync-files failed for podcast {podcast_id}: {err}");
+            tracing::error!("resync-files failed for podcast {podcast_id}: {err}");
         }
     });
 

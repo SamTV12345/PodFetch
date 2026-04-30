@@ -9,7 +9,7 @@ path = "src/lib.rs"
 [dependencies]
 common-infrastructure = { workspace = true }
 file-format = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 rust-s3 = { workspace = true }

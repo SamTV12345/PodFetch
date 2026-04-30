@@ -27,23 +27,23 @@ pub async fn login(
     jar: CookieJar,
     req: axum::extract::Request,
 ) -> Result<(CookieJar, StatusCode), CustomError> {
-    log::info!("GPodder login attempt for user '{username}'");
+    tracing::info!("GPodder login attempt for user '{username}'");
 
     // If cookie is already set, return it
     if let Some(cookie) = jar.get("sessionid") {
         let session = cookie.value();
-        log::debug!("GPodder login: existing sessionid cookie found for user '{username}'");
+        tracing::debug!("GPodder login: existing sessionid cookie found for user '{username}'");
         if let Ok(Some(unwrapped_session)) = state.session_service.find_by_session_id(session) {
-            log::info!("GPodder login: reusing existing session for user '{username}'");
+            tracing::info!("GPodder login: reusing existing session for user '{username}'");
             let user_cookie = create_session_cookie(unwrapped_session);
             return Ok((user_cookie, StatusCode::OK));
         }
-        log::debug!("GPodder login: existing session invalid/expired for user '{username}'");
+        tracing::debug!("GPodder login: existing session invalid/expired for user '{username}'");
     }
 
     match state.environment.reverse_proxy {
         true => {
-            log::debug!("GPodder login: using reverse proxy auth for user '{username}'");
+            tracing::debug!("GPodder login: using reverse proxy auth for user '{username}'");
             handle_proxy_auth(
                 req,
                 &username,
@@ -53,7 +53,7 @@ pub async fn login(
             )
         }
         false => {
-            log::debug!("GPodder login: using basic auth for user '{username}'");
+            tracing::debug!("GPodder login: using basic auth for user '{username}'");
             handle_gpodder_basic_auth(
                 req,
                 &username,
@@ -104,14 +104,14 @@ fn handle_proxy_auth(
         .and_then(|header| header.to_str().ok());
 
     if authorization_header.is_none() {
-        log::warn!("GPodder proxy auth: missing header '{header_name}' for user '{username}'");
+        tracing::warn!("GPodder proxy auth: missing header '{header_name}' for user '{username}'");
     }
 
     let auth_val = require_present_header_value::<CustomError>(authorization_header)
         .map_err(map_gpodder_error)?;
 
     if auth_val != username {
-        log::warn!(
+        tracing::warn!(
             "GPodder proxy auth: header value '{auth_val}' does not match URL username '{username}'"
         );
     }
@@ -119,14 +119,14 @@ fn handle_proxy_auth(
 
     match user_auth_service.find_by_username(&auth_val) {
         Ok(user) => {
-            log::info!("GPodder proxy auth: session created for user '{username}'");
+            tracing::info!("GPodder proxy auth: session created for user '{username}'");
             let session = session_service.create_session(user.username, user.id)?;
             let user_cookie = create_session_cookie(session);
             Ok((user_cookie, StatusCode::OK))
         }
         Err(e) => {
             if config.auto_sign_up {
-                log::info!("GPodder proxy auth: user '{username}' not found, auto-signing up");
+                tracing::info!("GPodder proxy auth: user '{username}' not found, auto-signing up");
                 user_auth_service
                     .create_user(username.to_string(), "user".to_string(), None, false)
                     .expect("Error inserting user on auto registering");
@@ -138,7 +138,7 @@ fn handle_proxy_auth(
                     session_service,
                 )
             } else {
-                log::error!(
+                tracing::error!(
                     "GPodder proxy auth: user '{username}' not found and auto_sign_up is disabled: {e}"
                 );
                 Err(CustomErrorInner::Forbidden(Warning).into())
@@ -160,7 +160,7 @@ fn handle_gpodder_basic_auth(
         .and_then(|header| header.to_str().ok());
 
     if authorization_header.is_none() {
-        log::warn!("GPodder basic auth: no Authorization header for user '{username}'");
+        tracing::warn!("GPodder basic auth: no Authorization header for user '{username}'");
     }
 
     let authorization = require_present_header_value::<CustomError>(authorization_header)
@@ -169,7 +169,7 @@ fn handle_gpodder_basic_auth(
     let (username_basic, password) = AuthFilter::basic_auth_login(&authorization)?;
 
     if username_basic != username {
-        log::warn!(
+        tracing::warn!(
             "GPodder basic auth: username mismatch - header='{}', url='{username}'",
             username_basic
         );
@@ -180,7 +180,7 @@ fn handle_gpodder_basic_auth(
     if let Some(admin_username) = &environment.username
         && admin_username == username
     {
-        log::error!(
+        tracing::error!(
             "GPodder basic auth: user '{username}' is the admin user (configured via USERNAME env var). \
              Admin users cannot log in via GPodder API. Please create a separate user for GPodder/Kodi."
         );
@@ -197,18 +197,18 @@ fn handle_gpodder_basic_auth(
         Ok(user) => {
             let password_hash = digest(&password);
             if user.password.as_deref() != Some(password_hash.as_str()) {
-                log::warn!("GPodder basic auth: password mismatch for user '{username}'");
+                tracing::warn!("GPodder basic auth: password mismatch for user '{username}'");
             }
             require_password_match::<CustomError>(user.password.as_deref(), &password_hash)
                 .map_err(map_gpodder_error)?;
 
             let session = session_service.create_session(user.username, user.id)?;
-            log::info!("GPodder basic auth: login successful for user '{username}'");
+            tracing::info!("GPodder basic auth: login successful for user '{username}'");
             let user_cookie = create_session_cookie(session);
             Ok((user_cookie, StatusCode::OK))
         }
         Err(e) => {
-            log::error!("GPodder basic auth: user '{username}' not found in database: {e}");
+            tracing::error!("GPodder basic auth: user '{username}' not found in database: {e}");
             Err(e)
         }
     }

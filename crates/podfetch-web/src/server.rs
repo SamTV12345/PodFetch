@@ -35,7 +35,7 @@ impl ChatServerHandle {
         let socket = match SOCKET_IO_LAYER.get() {
             Some(socket) => socket,
             None => {
-                log::warn!(
+                tracing::warn!(
                     "Skipping websocket broadcast for event '{}' because socket layer is not initialized",
                     event.as_ref()
                 );
@@ -45,7 +45,7 @@ impl ChatServerHandle {
         let namespace = match socket.of(room_id) {
             Some(namespace) => namespace,
             None => {
-                log::warn!(
+                tracing::warn!(
                     "Skipping websocket broadcast for event '{}' because namespace is unavailable",
                     event.as_ref()
                 );
@@ -53,7 +53,7 @@ impl ChatServerHandle {
             }
         };
         if let Err(err) = block_on(namespace.emit(event.as_ref(), msg)) {
-            log::warn!(
+            tracing::warn!(
                 "Websocket broadcast failed for event '{}': {}",
                 event.as_ref(),
                 err

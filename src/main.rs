@@ -21,7 +21,7 @@ async fn main() -> std::io::Result<()> {
     ENVIRONMENT_SERVICE.get_environment();
     if args().len() > 1 {
         if let Err(e) = start_command_line(args()).await {
-            log::error!("Error in command line: {e}");
+            tracing::error!("Error in command line: {e}");
             exit(1);
         }
         exit(0)
@@ -31,7 +31,7 @@ async fn main() -> std::io::Result<()> {
     let port = ENVIRONMENT_SERVICE.port;
     let bind_addr = format!("0.0.0.0:{port}");
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
-    log::info!("Listening on {bind_addr}");
+    tracing::info!("Listening on {bind_addr}");
 
     axum::serve(listener, router).await?;
     Ok(())

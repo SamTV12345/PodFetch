@@ -29,7 +29,7 @@ pub fn get_async_sync_client(environment: &EnvironmentService) -> ClientBuilder 
                 builder = builder.proxy(proxy);
             }
             Err(error) => {
-                log::error!("Proxy is invalid {error}");
+                tracing::error!("Proxy is invalid {error}");
             }
         }
     }
@@ -51,7 +51,7 @@ pub fn get_sync_client(environment: &EnvironmentService) -> BlockingClientBuilde
                 builder = builder.proxy(proxy);
             }
             Err(error) => {
-                log::error!("Proxy is invalid {error}");
+                tracing::error!("Proxy is invalid {error}");
             }
         }
     }

@@ -366,14 +366,14 @@ impl PodcastEpisodeUseCase {
         let _guard = match Self::try_acquire_download_guard(&podcast_episode.episode_id) {
             Some(guard) => guard,
             None => {
-                log::info!(
+                tracing::info!(
                     "Skipping download for episode {} because a download is already running",
                     podcast_episode.episode_id
                 );
                 return Ok(podcast_episode.clone());
             }
         };
-        log::info!("Downloading podcast episode: {}", podcast_episode.name);
+        tracing::info!("Downloading podcast episode: {}", podcast_episode.name);
         if let Err(err) =
             DownloadService::download_podcast_episode(podcast_episode.clone(), podcast_cloned)
         {
@@ -384,7 +384,7 @@ impl PodcastEpisodeUseCase {
                 type_of_message: "DownloadFailed".to_string(),
                 status: "unread".to_string(),
             }) {
-                log::error!(
+                tracing::error!(
                     "Failed to insert failed-download notification for episode {}: {}",
                     podcast_episode.episode_id,
                     notification_err
@@ -428,6 +428,7 @@ impl PodcastEpisodeUseCase {
     }
 
     // Used for creating/updating podcasts
+    #[tracing::instrument(skip_all, fields(podcast_id = podcast.id, podcast_name = %podcast.name))]
     pub fn insert_podcast_episodes(podcast: &Podcast) -> Result<Vec<PodcastEpisode>, CustomError> {
         let is_redirected = Arc::new(Mutex::new(false)); // Variable to store the redirection status
 
@@ -439,7 +440,7 @@ impl PodcastEpisodeUseCase {
         match channel {
             Ok(channel) => {
                 if *is_redirected.clone().lock().ignore_poison() {
-                    log::info!(
+                    tracing::info!(
                         "The podcast {} has moved to {}",
                         podcast.name,
                         returned_data_from_podcast_insert.url
@@ -461,7 +462,7 @@ impl PodcastEpisodeUseCase {
 
                 for item in channel.items.iter() {
                     if item.enclosure.is_none() {
-                        log::info!(
+                        tracing::info!(
                             "Skipping podcast episode {:?} as it has no enclosure",
                             item.title
                         );
@@ -557,7 +558,7 @@ impl PodcastEpisodeUseCase {
                 Ok(podcast_inserted)
             }
             Err(e) => {
-                log::info!(
+                tracing::info!(
                     "Error parsing podcast {} {:?} with cause {:?}",
                     podcast.name,
                     returned_data_from_podcast_insert.content,
@@ -756,7 +757,7 @@ impl PodcastEpisodeUseCase {
             {
                 Ok(episodes) => episodes,
                 Err(err) => {
-                    log::error!(
+                    tracing::error!(
                         "Error loading old podcast episodes for podcast {}: {}",
                         p.id,
                         err
@@ -765,7 +766,7 @@ impl PodcastEpisodeUseCase {
                 }
             };
 
-            log::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
+            tracing::info!("Cleaning up {} old episodes", old_podcast_episodes.len());
             for old_podcast_episode in old_podcast_episodes {
                 match FavoritePodcastEpisodeService::default_service()
                     .is_liked_by_someone(old_podcast_episode.id)
@@ -775,7 +776,7 @@ impl PodcastEpisodeUseCase {
                     }
                     Ok(false) => {}
                     Err(e) => {
-                        log::error!("Error checking if podcast episode is liked.{e}");
+                        tracing::error!("Error checking if podcast episode is liked.{e}");
                     }
                 }
 
@@ -786,7 +787,7 @@ impl PodcastEpisodeUseCase {
                         if let Err(err) =
                             Self::remove_download_status_of_episode(old_podcast_episode.clone().id)
                         {
-                            log::error!(
+                            tracing::error!(
                                 "Error clearing download status for episode {}: {}",
                                 old_podcast_episode.id,
                                 err
@@ -877,13 +878,13 @@ impl PodcastEpisodeUseCase {
                         episode,
                         podcast_for_thread,
                     ) {
-                        log::error!("Error downloading podcast episode: {err}");
+                        tracing::error!("Error downloading podcast episode: {err}");
                     }
                 }));
             }
             for handle in handles {
                 if let Err(err) = handle.join() {
-                    log::error!(
+                    tracing::error!(
                         "Error joining download worker for podcast {}: {:?}",
                         podcast.id,
                         err
@@ -923,7 +924,7 @@ impl PodcastEpisodeUseCase {
                             );
                         }
                         Err(err) => {
-                            log::error!(
+                            tracing::error!(
                                 "Error re-downloading episode {}: {}",
                                 episode.episode_id,
                                 err
@@ -934,7 +935,7 @@ impl PodcastEpisodeUseCase {
             }
             for handle in handles {
                 if let Err(err) = handle.join() {
-                    log::error!(
+                    tracing::error!(
                         "Error joining re-download worker for podcast {}: {:?}",
                         podcast.id,
                         err
