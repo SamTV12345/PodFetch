@@ -1,4 +1,5 @@
 {
+  "id": "/ui/",
   "name": "Podfetch",
   "short_name": "Podfetch",
   "description": "Open source podcast manager and player.",
