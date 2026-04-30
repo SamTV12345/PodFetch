@@ -1,7 +1,7 @@
 use common_infrastructure::error::ErrorSeverity::Error as ErrorSeverityError;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::time::get_current_timestamp_str;
-use log::error;
+use tracing::error;
 use podfetch_domain::user::{User, UserWithoutPassword};
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::db::database;
@@ -158,7 +158,7 @@ pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
                     match arg.as_str() {
                         "apiKey" => {
                             state.user_admin_service.list_users()?.iter().for_each(|u| {
-                                log::info!("Updating api key of user {}", &u.username);
+                                tracing::info!("Updating api key of user {}", &u.username);
                                 let user = state
                                     .user_admin_service
                                     .find_user_by_username(&u.username)

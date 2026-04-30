@@ -31,7 +31,7 @@ use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
-use log::info;
+use tracing::info;
 use maud::{Markup, html};
 use socketioxide::SocketIoBuilder;
 use socketioxide::extract::SocketRef;
@@ -76,7 +76,7 @@ pub fn run_poll() -> Result<(), CustomError> {
             let podcast_clone = podcast.clone();
             let insert_result = PodcastEpisodeService::insert_podcast_episodes(&podcast);
             if let Err(e) = insert_result {
-                log::error!(
+                tracing::error!(
                     "Could not insert new podcast episodes for podcast: {} with cause {}",
                     &podcast.name,
                     e
@@ -85,7 +85,7 @@ pub fn run_poll() -> Result<(), CustomError> {
             }
             let schedule = PodcastService::schedule_episode_download(&podcast_clone);
             if let Err(e) = schedule {
-                log::error!(
+                tracing::error!(
                     "Could not schedule episode download for podcast: {} with cause {}",
                     &podcast.name,
                     e
@@ -350,7 +350,7 @@ pub fn build_server_router() -> Router {
     match FileService::create_podcast_root_directory_exists() {
         Ok(_) => {}
         Err(e) => {
-            log::error!("Could not create podcast root directory: {e}");
+            tracing::error!("Could not create podcast root directory: {e}");
             panic!("Could not create podcast root directory: {e}");
         }
     }
@@ -373,7 +373,7 @@ pub fn build_server_router() -> Router {
             if ENVIRONMENT_SERVICE.any_auth_enabled
                 && !is_socket_authenticated(&socket, &auth_service)
             {
-                log::warn!(
+                tracing::warn!(
                     "Rejecting unauthenticated WebSocket connection {}",
                     socket.id
                 );
@@ -389,7 +389,7 @@ pub fn build_server_router() -> Router {
             if ENVIRONMENT_SERVICE.any_auth_enabled
                 && !is_socket_authenticated(&socket, &auth_service)
             {
-                log::warn!(
+                tracing::warn!(
                     "Rejecting unauthenticated WebSocket connection {} to main room",
                     socket.id
                 );
@@ -412,6 +412,7 @@ pub fn build_server_router() -> Router {
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
         .merge(Scalar::with_url("/scalar", api))
         .layer(layer)
+        .layer(tower_http::trace::TraceLayer::new_for_http())
 }
 
 /// Full server startup including background scheduler for polling and cleanup.
@@ -437,13 +438,13 @@ pub fn handle_config_for_server_startup() -> Router {
                                 info!("Polling for new episodes successful");
                             }
                             Err(e) => {
-                                log::error!("Error polling for new episodes: {e}");
+                                tracing::error!("Error polling for new episodes: {e}");
                             }
                         }
                     }
                 }
                 None => {
-                    log::error!("Could not get settings from database");
+                    tracing::error!("Could not get settings from database");
                 }
             }
         });
@@ -460,7 +461,7 @@ pub fn handle_config_for_server_startup() -> Router {
                     }
                 }
                 None => {
-                    log::error!("Could not get settings from database");
+                    tracing::error!("Could not get settings from database");
                 }
             }
         });

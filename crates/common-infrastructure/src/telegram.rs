@@ -23,7 +23,7 @@ pub fn send_new_episode_notification(podcast_episode_name: &str, podcast_name: &
     match telegram_res {
         Ok(_) => {}
         Err(e) => {
-            log::error!("Error sending telegram message: {e}");
+            tracing::error!("Error sending telegram message: {e}");
         }
     }
 }

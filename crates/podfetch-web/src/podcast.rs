@@ -450,7 +450,7 @@ where
 {
     thread::spawn(move || {
         if let Err(error) = download(track_id) {
-            log::error!("Error downloading podindex podcast: {error}");
+            tracing::error!("Error downloading podindex podcast: {error}");
         }
     });
 }

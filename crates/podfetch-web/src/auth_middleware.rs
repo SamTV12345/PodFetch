@@ -12,7 +12,7 @@ use common_infrastructure::http::get_async_sync_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
-use log::info;
+use tracing::info;
 use podfetch_domain::user::User;
 use serde_json::Value;
 use sha256::digest;
@@ -208,7 +208,7 @@ impl AuthFilter {
         let first_jwk = match jwk.keys.first() {
             Some(jwk) => Ok(jwk),
             None => {
-                log::error!(
+                tracing::error!(
                     "No JWK found for {}",
                     environment.oidc_config.clone().unwrap().jwks_uri
                 );
@@ -233,7 +233,7 @@ impl AuthFilter {
         let decoded_token = match decode::<Value>(&token, &key, &validation) {
             Ok(decoded) => Ok(decoded),
             Err(e) => {
-                log::error!("Error is {e:?}");
+                tracing::error!("Error is {e:?}");
                 Err(CustomError::from(CustomErrorInner::Forbidden(Warning)))
             }
         }?;

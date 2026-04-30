@@ -253,7 +253,7 @@ where
             let format = match service.detect_file_format(&episode.file_path) {
                 Ok(f) => f,
                 Err(e) => {
-                    log::error!(
+                    tracing::error!(
                         "Error detecting file format for episode {}: {}",
                         episode.id,
                         e
@@ -267,20 +267,20 @@ where
                 MediaFileFormat::Mp3 => match service.read_chapters_mp3(&episode.file_path) {
                     Ok(chapters) => chapters,
                     Err(e) => {
-                        log::error!("Error reading chapters for episode {}: {}", episode.id, e);
+                        tracing::error!("Error reading chapters for episode {}: {}", episode.id, e);
                         stats.errors += 1;
                         continue;
                     }
                 },
                 MediaFileFormat::Mp4 => service.read_chapters_mp4(&episode.file_path),
                 MediaFileFormat::Unsupported => {
-                    log::debug!("Unsupported format for episode {}", episode.id);
+                    tracing::debug!("Unsupported format for episode {}", episode.id);
                     stats.skipped += 1;
                     continue;
                 }
             };
 
-            log::info!(
+            tracing::info!(
                 "Found {} chapters for episode {}",
                 chapters.len(),
                 episode.name
@@ -289,7 +289,7 @@ where
             for chapter in chapters {
                 let upsert = chapter.to_upsert(episode.id);
                 if let Err(e) = service.save_chapter(upsert) {
-                    log::error!("Error saving chapter for episode {}: {}", episode.id, e);
+                    tracing::error!("Error saving chapter for episode {}: {}", episode.id, e);
                     stats.errors += 1;
                 } else {
                     stats.chapters_saved += 1;

@@ -51,12 +51,12 @@ impl ItunesChartsService {
         let body = result.text().await.map_err(map_reqwest_error)?;
 
         if !status.is_success() {
-            log::error!("iTunes charts error {status}: {body}");
+            tracing::error!("iTunes charts error {status}: {body}");
             return Err(CustomErrorInner::BadRequest(body, ErrorSev).into());
         }
 
         let parsed: RawFeed = serde_json::from_str(&body).map_err(|e| {
-            log::error!("Could not parse iTunes charts response: {e}");
+            tracing::error!("Could not parse iTunes charts response: {e}");
             CustomError::from(CustomErrorInner::BadRequest(e.to_string(), ErrorSev))
         })?;
 

@@ -148,7 +148,7 @@ impl FileService {
     }
 
     pub fn cleanup_old_episode(episode: &PodcastEpisode) -> Result<(), CustomError> {
-        log::info!("Cleaning up old episode: {}", episode.episode_id);
+        tracing::info!("Cleaning up old episode: {}", episode.episode_id);
 
         fn check_if_file_exists(file_path: &str, file_type: &FileHandlerType) -> bool {
             FileHandleWrapper::path_exists(file_path, FileRequest::File, file_type)
@@ -302,7 +302,7 @@ pub fn perform_podcast_variable_replacement(
     match result {
         Ok(res) => Ok(sanitizer.sanitize(res)),
         Err(err) => {
-            log::error!("Error formatting podcast title: {err}");
+            tracing::error!("Error formatting podcast title: {err}");
             Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
         }
     }
@@ -386,7 +386,7 @@ pub fn perform_episode_variable_replacement(
     match result {
         Ok(res) => Ok(res.to_string()),
         Err(err) => {
-            log::error!("Error formatting episode title: {err}");
+            tracing::error!("Error formatting episode title: {err}");
             Err(CustomErrorInner::Conflict(err.to_string(), ErrorSeverity::Error).into())
         }
     }

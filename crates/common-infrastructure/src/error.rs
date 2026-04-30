@@ -1,21 +1,21 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use log::{debug, error, info, warn};
+use tracing::{debug, error};
 use s3::error::S3Error;
 use serde::{Deserialize, Serialize};
-use std::backtrace::Backtrace;
 use std::collections::HashMap;
 use std::convert::{Infallible, Into};
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
 use thiserror::Error;
+use tracing_error::SpanTrace;
 
 use crate::db::PersistenceError;
 
 pub struct CustomError {
     pub inner: CustomErrorInner,
-    pub backtrace: Box<Backtrace>,
+    pub span_trace: SpanTrace,
     pub error_severity: ErrorSeverity,
 }
 
@@ -125,7 +125,7 @@ impl Display for CustomError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Initial error: {:}", self.inner)?;
         writeln!(f, "Error context:")?;
-        writeln!(f, "{:}", self.backtrace)
+        writeln!(f, "{:}", self.span_trace)
     }
 }
 
@@ -146,12 +146,14 @@ impl From<CustomErrorInner> for CustomError {
             | CustomErrorInner::BadRequest(_, sev)
             | CustomErrorInner::UnAuthorized(_, sev) => sev.clone(),
         };
-        let backtrace = Box::new(Backtrace::force_capture());
-        Self {
+        let span_trace = SpanTrace::capture();
+        let me = Self {
             inner,
-            backtrace,
+            span_trace,
             error_severity: error_severity.clone(),
-        }
+        };
+        me.emit_log();
+        me
     }
 }
 
@@ -169,9 +171,7 @@ impl<T> ResultExt for Result<T, CustomError> {
         match self {
             Ok(ok) => ok,
             Err(bterr) => {
-                eprintln!("Error occurred{msg}");
-                eprintln!();
-                eprintln!("{bterr:}");
+                tracing::error!("Error occurred {msg}\n{bterr}");
                 panic!("{}", msg);
             }
         }
@@ -180,15 +180,15 @@ impl<T> ResultExt for Result<T, CustomError> {
 
 pub struct DynBacktraceError {
     inner: Box<dyn Error + Send + Sync + 'static>,
-    backtrace: Box<Backtrace>,
+    span_trace: SpanTrace,
 }
 
 impl<E: Error + Send + Sync + 'static> From<E> for DynBacktraceError {
     fn from(inner: E) -> Self {
-        let backtrace = Box::new(Backtrace::force_capture());
+        let span_trace = SpanTrace::capture();
         Self {
             inner: Box::new(inner),
-            backtrace,
+            span_trace,
         }
     }
 }
@@ -210,7 +210,7 @@ impl Display for DynBacktraceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Initial error: {:}", self.inner)?;
         writeln!(f, "Error context:")?;
-        writeln!(f, "{:}", self.backtrace)
+        writeln!(f, "{:}", self.span_trace)
     }
 }
 
@@ -232,9 +232,7 @@ impl ResultExt for Result<(), DynBacktraceError> {
         match self {
             Ok(()) => (),
             Err(bterr) => {
-                eprintln!("{msg}");
-                eprintln!();
-                eprintln!("{bterr:}");
+                tracing::error!("{msg}\n{bterr}");
                 panic!("{}", msg);
             }
         }
@@ -297,28 +295,24 @@ impl CustomError {
                 | CustomErrorInner::Conflict(_, _)
         )
     }
-}
 
-impl Drop for CustomError {
-    fn drop(&mut self) {
+    fn emit_log(&self) {
         if self.is_client_error() {
-            // Expected 4xx style errors are client-facing and should not flood server logs.
-            debug!("Client error: {}", self.inner);
+            tracing::debug!(error = %self.inner, "client error");
             return;
         }
-
         match self.error_severity {
             ErrorSeverity::Critical | ErrorSeverity::Error => {
-                error!("Error {}: {} with error", self.inner, self.backtrace);
+                tracing::error!(error = %self.inner, span_trace = %self.span_trace, "server error");
             }
             ErrorSeverity::Warning => {
-                warn!("Warning {}: {} with error", self.inner, self.backtrace);
+                tracing::warn!(error = %self.inner, span_trace = %self.span_trace, "warning");
             }
             ErrorSeverity::Info => {
-                info!("Info {}: {} with error", self.inner, self.backtrace);
+                tracing::info!(error = %self.inner, "info");
             }
             ErrorSeverity::Debug => {
-                debug!("Debug {}: {} with error", self.inner, self.backtrace);
+                tracing::debug!(error = %self.inner, "debug");
             }
         }
     }
@@ -388,7 +382,7 @@ pub fn map_io_error(
 }
 
 pub fn map_s3_error(error: S3Error, error_severity: ErrorSeverity) -> CustomError {
-    log::info!("S3 error: {error}");
+    tracing::info!("S3 error: {error}");
     CustomErrorInner::Unknown(error_severity).into()
 }
 

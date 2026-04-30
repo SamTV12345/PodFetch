@@ -42,7 +42,7 @@ pub async fn rescan_episodes(Extension(requester): Extension<User>) -> Result<()
     let scan_service = EpisodeScanServiceImpl::default_service();
     settings::rescan_episodes(&scan_service, requester.is_admin())
         .map(|stats| {
-            log::info!(
+            tracing::info!(
                 "Rescan complete: {} episodes scanned, {} chapters saved, {} skipped, {} errors",
                 stats.episodes_scanned,
                 stats.chapters_saved,

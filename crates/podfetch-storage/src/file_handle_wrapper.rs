@@ -111,14 +111,14 @@ impl FileHandleWrapper {
                                     .remove_file(file_path)
                                     .map_err(Self::map_storage_error)
                             {
-                                log::error!("Error removing file: {file_path} with reason {e}");
+                                tracing::error!("Error removing file: {file_path} with reason {e}");
                             }
                             if let Some(file_path) = &episode.file_episode_path
                                 && let Err(e) = Self::s3_backend()
                                     .remove_file(file_path)
                                     .map_err(Self::map_storage_error)
                             {
-                                log::error!("Error removing file: {file_path} with reason {e}");
+                                tracing::error!("Error removing file: {file_path} with reason {e}");
                             }
                         }
                     }
@@ -139,27 +139,27 @@ impl FileHandleWrapper {
                                     .remove_file(file_path)
                                     .map_err(Self::map_storage_error)
                             {
-                                log::error!("Error removing file: {file_path} with reason {e}");
+                                tracing::error!("Error removing file: {file_path} with reason {e}");
                             }
                             if let Some(file_path) = &episode.file_episode_path
                                 && let Err(e) = Self::s3_backend()
                                     .remove_file(file_path)
                                     .map_err(Self::map_storage_error)
                             {
-                                log::error!("Error removing file: {file_path} {e}");
+                                tracing::error!("Error removing file: {file_path} {e}");
                             }
                         } else {
                             if let Some(file_path) = &episode.file_image_path
                                 && let Err(e) = LocalStorageBackend::remove_file(file_path)
                                     .map_err(Self::map_storage_error)
                             {
-                                log::error!("Error removing file: {file_path} with reason {e}");
+                                tracing::error!("Error removing file: {file_path} with reason {e}");
                             }
                             if let Some(file_path) = &episode.file_episode_path
                                 && let Err(e) = LocalStorageBackend::remove_file(file_path)
                                     .map_err(Self::map_storage_error)
                             {
-                                log::error!("Error removing file: {file_path} {e}");
+                                tracing::error!("Error removing file: {file_path} {e}");
                             }
                         }
                     }

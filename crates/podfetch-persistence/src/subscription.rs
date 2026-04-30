@@ -6,7 +6,7 @@ use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable, QueryableByName};
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use log;
+use tracing;
 use podfetch_domain::subscription::{
     GPodderAvailablePodcast, Subscription, SubscriptionModelChanges, SubscriptionRepository,
 };
@@ -228,7 +228,7 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                         })
                         .execute(&mut connection);
                     if let Err(e) = insert_result {
-                        log::warn!(
+                        tracing::warn!(
                             "Failed to insert subscription for podcast {}, retrying: {}",
                             podcast,
                             e
