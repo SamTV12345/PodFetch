@@ -18,6 +18,7 @@
 - [Setting up basic auth](./tutorials/BasicAuth.md)
 - [Setting up OIDC](./tutorials/OIDC.md)
 - [Adding GPodder support](./tutorials/GPodder.md)
+- [Kodi (RSS Podcasts addon)](./tutorials/Kodi.md)
 
 
 # FAQ
