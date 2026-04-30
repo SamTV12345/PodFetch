@@ -30,17 +30,28 @@ PodFetch's gpodder-compatible Simple API.
 
 ## Known limitations
 
-The table below maps each Kodi addon feature to the PodFetch route
-it depends on.
+The "RSS Podcasts" addon talks to PodFetch on a deliberately narrow
+surface: it logs in once for a session cookie, then downloads your
+subscriptions as OPML. Everything else — episode play-state sync,
+device management, pushing changes back from Kodi — is **not
+implemented by the addon itself**, regardless of what PodFetch
+supports. The addon is effectively a one-way subscription importer.
 
 | Feature | Kodi calls | PodFetch route | Status |
 | --- | --- | --- | --- |
-| _to be filled in Task 2_ | | | |
+| Login (Basic Auth → session cookie) | `POST /api/2/auth/{user}/login.json` | `login` in `gpodder_api/auth/authentication.rs` | endpoint exists ✓ |
+| Import subscriptions (OPML) | `GET /subscriptions/{user}.opml` | `get_simple_subscriptions` in `gpodder_api/subscription/subscriptions.rs` | endpoint exists ✓ |
+| Push subscription changes from Kodi | — | — | not supported by the addon |
+| Episode play-state / position sync | — | — | not supported by the addon |
+| Device list / management | — | — | not supported by the addon |
 
-> Statuses above are **code-derived** and not yet empirically
-> verified end-to-end through Kodi. If a row marked _endpoint exists_
-> does not work for you, please report it on
+> The ✓ rows are empirically confirmed working end-to-end against
+> recent PodFetch releases. If you hit a problem on either of those
+> rows, please report it on
 > [issue #372](https://github.com/SamTV12345/PodFetch/issues/372).
+> If you want bidirectional sync (episode actions, push), use
+> AntennaPod via the [GPodder tutorial](./GPodder.md) — that flow
+> exercises the full gpodder API.
 
 ## Troubleshooting
 
