@@ -10,6 +10,7 @@
 - [Translations](./I18n.md)
 - [RSS Feed](./rss_feed.md)
 - [Podindex Integration](./podindex.md)
+- [Chromecast](./Chromecast.md)
 - [CLI usage](./CLI.md)
 - [Contributing](./Contributing.md)
 

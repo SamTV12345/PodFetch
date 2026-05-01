@@ -25,6 +25,21 @@ podfetch users --help
 podfetch podcasts --help
 ```
 
+## Running as a Chromecast agent
+
+PodFetch can also run in agent mode, where it does not start an HTTP
+server but instead connects to a remote PodFetch instance over
+websocket and forwards Chromecast control commands to devices on the
+local LAN. See the [Chromecast](./Chromecast.md) chapter for the full
+flow.
+
+```bash
+podfetch --agent \
+  --remote https://podfetch.example.com \
+  --api-key YOUR_USER_API_KEY \
+  --agent-id home-lan
+```
+
 
 ## Usage in docker
 
