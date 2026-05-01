@@ -252,14 +252,18 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn play_against_unreachable_device_returns_transport_error() {
         let svc = service();
-        // Use a device with a reserved/unroutable IP so the CAST connect
-        // attempt fails fast.
+        // Bind+drop a loopback port so the CAST connect attempt gets an
+        // instant ECONNREFUSED on every OS — class-E IPs like 240.0.0.1
+        // hang for the full TCP connect timeout on Linux CI runners.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
         let unreachable = DiscoveredCastDevice {
             uuid: CastDeviceUuid("uuid-1".into()),
             friendly_name: "Unreachable".into(),
             model: None,
-            ip: Some(IpAddr::V4(Ipv4Addr::new(240, 0, 0, 1))),
-            port: 8009,
+            ip: Some(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+            port,
         };
         let out = svc
             .handle(play_msg("uuid-1", "req-2"), &[unreachable])

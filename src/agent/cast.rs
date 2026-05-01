@@ -382,13 +382,21 @@ pub fn driver_with_dummy_event_sink() -> (Arc<LocalCastDriver>, tokio_mpsc::Rece
 mod tests {
     use super::*;
     use podfetch_cast::CastDeviceUuid;
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::net::{IpAddr, Ipv4Addr, TcpListener};
 
-    fn unreachable_target() -> CastTarget {
+    /// Pick a TCP port on loopback that is guaranteed not to be listening,
+    /// so a connect() attempt returns ECONNREFUSED instantly on every OS.
+    /// We avoided 240.0.0.1 (class-E) because Linux happily attempts to
+    /// route it via the default gateway and waits ~2 minutes for the
+    /// connect timeout — that hangs CI.
+    fn refused_target() -> CastTarget {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind ephemeral");
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
         CastTarget {
             uuid: CastDeviceUuid("test".into()),
-            ip: IpAddr::V4(Ipv4Addr::new(240, 0, 0, 1)),
-            port: 8009,
+            ip: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            port,
         }
     }
 
@@ -406,7 +414,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn play_against_unreachable_device_returns_connect_error() {
         let (driver, _rx) = driver_with_dummy_event_sink();
-        let result = driver.play(&unreachable_target(), &media()).await;
+        let result = driver.play(&refused_target(), &media()).await;
         match result {
             Err(CastDriveError::Connect { .. }) => {}
             other => panic!("expected Connect error, got {other:?}"),
