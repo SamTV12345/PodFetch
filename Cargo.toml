@@ -33,6 +33,11 @@ tokio = { workspace = true }
 axum = { workspace = true }
 futures = { workspace = true }
 mdns-sd = { workspace = true }
+rust_cast = { workspace = true }
+# Pull in rustls with the ring crypto provider explicitly so that
+# rust_cast's transitive rustls dep auto-selects a provider. Without this,
+# CastDevice::connect panics on TLS init.
+rustls = { version = "0.23", features = ["ring"] }
 tokio-tungstenite = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

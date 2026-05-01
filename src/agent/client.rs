@@ -2,13 +2,15 @@
 //! Hello/HelloAck handshake, then runs the read/write loop until
 //! disconnection — at which point it backs off and retries.
 
+use crate::agent::cast::LocalCastDriver;
 use crate::agent::config::{self, AgentConfig};
 use crate::agent::discovery::DiscoveryHandle;
-use crate::agent::inbound::{self, InboundOutcome};
+use crate::agent::inbound::{AgentService, InboundOutcome};
 use futures::{SinkExt, StreamExt};
 use podfetch_agent_protocol::{
     AgentCapabilities, AgentMsg, PROTOCOL_VERSION, ServerMsg,
 };
+use std::sync::Arc;
 use tokio::time::sleep;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::Request;
@@ -35,9 +37,11 @@ pub async fn run(config: AgentConfig) -> std::io::Result<()> {
     })?;
     info!("mDNS discovery started; browsing _googlecast._tcp.local.");
 
+    let service = AgentService::new(Arc::new(LocalCastDriver::new()));
+
     let mut backoff = config.reconnect_initial;
     loop {
-        match connect_and_run(&url, &config.api_key, &agent_id, &discovery).await {
+        match connect_and_run(&url, &config.api_key, &agent_id, &discovery, &service).await {
             Ok(()) => {
                 info!(%agent_id, "agent session ended cleanly; reconnecting");
                 backoff = config.reconnect_initial;
@@ -56,6 +60,7 @@ async fn connect_and_run(
     api_key: &str,
     agent_id: &str,
     discovery: &DiscoveryHandle,
+    service: &AgentService,
 ) -> Result<(), AgentRunError> {
     let request = build_request(url, api_key)?;
     let (ws_stream, _resp) = tokio_tungstenite::connect_async(request).await?;
@@ -120,7 +125,7 @@ async fn connect_and_run(
                 None => return Ok(()),
                 Some(msg) => {
                     let snapshot = discovery.snapshot();
-                    match inbound::dispatch(msg, &snapshot) {
+                    match service.handle(msg, &snapshot).await {
                         InboundOutcome::Reply(replies) => {
                             for reply in replies {
                                 send_msg(&mut sink, &reply).await?;

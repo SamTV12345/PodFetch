@@ -13,6 +13,7 @@
 //! `Control` with `Error { code: NotImplemented }` so the rest of the
 //! relay stack can be exercised end-to-end.
 
+pub mod cast;
 pub mod client;
 pub mod config;
 pub mod discovery;
