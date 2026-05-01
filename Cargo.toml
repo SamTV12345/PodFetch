@@ -31,6 +31,7 @@ podfetch-web = { workspace = true }
 # Async runtime
 tokio = { workspace = true }
 axum = { workspace = true }
+chrono = { workspace = true }
 futures = { workspace = true }
 mdns-sd = { workspace = true }
 rust_cast = { workspace = true }
@@ -134,7 +135,7 @@ testcontainers = { version = "0.27.3" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
 mdns-sd = { version = "0.19" }
-rust_cast = { version = "0.20" }
+rust_cast = { version = "0.20", features = ["thread_safe"] }
 tokio = { version = "1.52.1", features = ["full"] }
 tokio-tungstenite = { version = "0.29.0" }
 tower = { version = "0.5.3", features = ["util"] }

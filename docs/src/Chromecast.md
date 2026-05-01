@@ -68,18 +68,17 @@ if the websocket drops.
   personal devices owned by the agent's user.
 - Play: starting playback on a Chromecast works end-to-end. The Default
   Media Receiver app is launched and the episode URL is loaded.
+- Pause / Resume / Stop / Seek / SetVolume: forwarded to the receiver
+  via the per-session worker that holds the CAST connection.
+- Live status streamback: the agent polls the receiver every ~1.5s and
+  pushes Status updates over the agent websocket. The UI's progress bar
+  reflects what the Chromecast actually plays, including external
+  pauses or end-of-stream.
 - Permission resolution: per-user vs household visibility is enforced
   on every API call.
 
 ## Known limitations
 
-- **Pause / Resume / Stop / Seek** through the agent currently return
-  `NotImplemented`. Implementing these correctly requires a long-lived
-  CAST connection per session and a receiver loop that streams status
-  updates back. This is planned for a follow-up.
-- **Status streaming** from the receiver back to the UI is not yet
-  wired through the agent — the player shows the position it sent, not
-  the position the Chromecast is at.
 - **Codec transcoding**: PodFetch does not transcode for Chromecast.
   Common podcast codecs (MP3, AAC) work; uncommon ones may fail at the
   receiver.

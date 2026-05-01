@@ -2,7 +2,7 @@
 //! Hello/HelloAck handshake, then runs the read/write loop until
 //! disconnection — at which point it backs off and retries.
 
-use crate::agent::cast::LocalCastDriver;
+use crate::agent::cast::{AgentEvent, LocalCastDriver};
 use crate::agent::config::{self, AgentConfig};
 use crate::agent::discovery::DiscoveryHandle;
 use crate::agent::inbound::{AgentService, InboundOutcome};
@@ -11,6 +11,7 @@ use podfetch_agent_protocol::{
     AgentCapabilities, AgentMsg, PROTOCOL_VERSION, ServerMsg,
 };
 use std::sync::Arc;
+use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::Request;
@@ -37,11 +38,22 @@ pub async fn run(config: AgentConfig) -> std::io::Result<()> {
     })?;
     info!("mDNS discovery started; browsing _googlecast._tcp.local.");
 
-    let service = AgentService::new(Arc::new(LocalCastDriver::new()));
+    let (event_tx, event_rx) = mpsc::channel::<AgentEvent>(64);
+    let service = AgentService::new(Arc::new(LocalCastDriver::new(event_tx)));
+    let event_rx = Arc::new(tokio::sync::Mutex::new(event_rx));
 
     let mut backoff = config.reconnect_initial;
     loop {
-        match connect_and_run(&url, &config.api_key, &agent_id, &discovery, &service).await {
+        match connect_and_run(
+            &url,
+            &config.api_key,
+            &agent_id,
+            &discovery,
+            &service,
+            event_rx.clone(),
+        )
+        .await
+        {
             Ok(()) => {
                 info!(%agent_id, "agent session ended cleanly; reconnecting");
                 backoff = config.reconnect_initial;
@@ -61,7 +73,9 @@ async fn connect_and_run(
     agent_id: &str,
     discovery: &DiscoveryHandle,
     service: &AgentService,
+    event_rx: Arc<tokio::sync::Mutex<mpsc::Receiver<AgentEvent>>>,
 ) -> Result<(), AgentRunError> {
+    let mut event_rx = event_rx.lock().await;
     let request = build_request(url, api_key)?;
     let (ws_stream, _resp) = tokio_tungstenite::connect_async(request).await?;
     info!(agent_id, "connected to remote");
@@ -147,6 +161,19 @@ async fn connect_and_run(
                     },
                 )
                 .await?;
+            }
+            event = event_rx.recv() => match event {
+                Some(AgentEvent::Status(status)) => {
+                    send_msg(&mut sink, &AgentMsg::Status { status }).await?;
+                }
+                Some(AgentEvent::SessionEnded { session_id, reason }) => {
+                    send_msg(
+                        &mut sink,
+                        &AgentMsg::SessionEnded { session_id, reason },
+                    )
+                    .await?;
+                }
+                None => return Ok(()),
             }
         }
     }

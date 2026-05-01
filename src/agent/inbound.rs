@@ -107,12 +107,19 @@ impl AgentService {
         cmd: ControlCmd,
     ) -> InboundOutcome {
         match self.cast.control(&session_id, &cmd).await {
-            Ok(()) => InboundOutcome::Reply(vec![AgentMsg::SessionStarted {
-                // No dedicated success ack in the protocol yet; reusing
-                // SessionStarted as a "done" signal. Pause/Resume/Stop/Seek
-                // currently always return NotImplemented anyway.
-                request_id,
-                session_id,
+            // The dispatcher accepts a Status reply as a generic "done"
+            // signal for control commands. We can't synthesise a real
+            // Status here without round-tripping the receiver, so fall
+            // through to a fresh empty status — the worker's poll loop
+            // will publish authoritative status milliseconds later.
+            Ok(()) => InboundOutcome::Reply(vec![AgentMsg::Status {
+                status: podfetch_cast::CastStatus {
+                    session_id: session_id.clone(),
+                    state: podfetch_cast::CastState::Buffering,
+                    position_secs: 0.0,
+                    volume: 1.0,
+                    at: chrono::Utc::now(),
+                },
             }]),
             Err(err) => InboundOutcome::Reply(vec![AgentMsg::Error {
                 request_id: Some(request_id),
@@ -143,7 +150,7 @@ fn cast_error_code(err: &CastDriveError) -> ErrorCode {
     match err {
         CastDriveError::Connect { .. } => ErrorCode::Transport,
         CastDriveError::Receiver(_) => ErrorCode::Receiver,
-        CastDriveError::NotImplemented(_) => ErrorCode::NotImplemented,
+        CastDriveError::SessionGone(_) => ErrorCode::SessionNotFound,
         CastDriveError::Internal(_) => ErrorCode::Receiver,
     }
 }
@@ -164,7 +171,8 @@ mod tests {
     }
 
     fn service() -> AgentService {
-        AgentService::new(Arc::new(LocalCastDriver::new()))
+        let (driver, _rx) = crate::agent::cast::driver_with_dummy_event_sink();
+        AgentService::new(driver)
     }
 
     fn play_msg(uuid: &str, request_id: &str) -> ServerMsg {
@@ -268,7 +276,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn control_returns_not_implemented_error() {
+    async fn control_on_unknown_session_returns_session_not_found() {
         let svc = service();
         let out = svc
             .handle(
@@ -283,7 +291,7 @@ mod tests {
         match out {
             InboundOutcome::Reply(msgs) => match &msgs[0] {
                 AgentMsg::Error { code, .. } => {
-                    assert_eq!(*code, ErrorCode::NotImplemented);
+                    assert_eq!(*code, ErrorCode::SessionNotFound);
                 }
                 other => panic!("unexpected: {other:?}"),
             },
