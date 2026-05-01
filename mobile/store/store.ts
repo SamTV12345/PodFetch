@@ -52,6 +52,16 @@ type ZustandStore = {
     offlineMode: boolean,
     setOfflineMode: (enabled: boolean) => void,
     toggleOfflineMode: () => void,
+    // Cast session
+    castSession: components["schemas"]["CastSessionResponse"] | null,
+    castDeviceName: string | null,
+    castStatus: components["schemas"]["CastStatusResponse"] | null,
+    setCastSession: (
+        session: components["schemas"]["CastSessionResponse"] | null,
+        deviceName?: string | null,
+    ) => void,
+    setCastStatus: (status: components["schemas"]["CastStatusResponse"] | null) => void,
+    clearCastSession: () => void,
 }
 
 const db =  SQLite.openDatabaseSync('podfetch.db')
@@ -208,6 +218,24 @@ export const useStore = create<ZustandStore>()(
             offlineMode: false,
             setOfflineMode: (enabled) => set({ offlineMode: enabled }),
             toggleOfflineMode: () => set((state) => ({ offlineMode: !state.offlineMode })),
+            // Cast session
+            castSession: null,
+            castDeviceName: null,
+            castStatus: null,
+            setCastSession: (session, deviceName) => set({
+                castSession: session,
+                castDeviceName: deviceName ?? null,
+                castStatus: session ? {
+                    session_id: session.session_id,
+                    chromecast_uuid: session.chromecast_uuid,
+                    episode_id: session.episode_id,
+                    state: session.state,
+                    position_secs: session.position_secs,
+                    volume: session.volume,
+                } : null,
+            }),
+            setCastStatus: (status) => set({ castStatus: status }),
+            clearCastSession: () => set({ castSession: null, castDeviceName: null, castStatus: null }),
         }),
         {
             name: 'podfetch-storage', // name of the item in the storage (must be unique)

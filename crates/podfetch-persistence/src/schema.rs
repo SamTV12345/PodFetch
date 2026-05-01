@@ -16,6 +16,10 @@ diesel::table! {
         kind -> Text,
         name -> Text,
         user_id -> Integer,
+        chromecast_uuid -> Nullable<Text>,
+        agent_id -> Nullable<Text>,
+        last_seen_at -> Nullable<Timestamp>,
+        ip -> Nullable<Text>,
     }
 }
 

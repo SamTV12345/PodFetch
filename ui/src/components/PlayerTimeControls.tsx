@@ -9,6 +9,7 @@ import useCommon from "../store/CommonSlice";
 import {getAudioPlayer, startAudioPlayer} from "../utils/audioPlayer";
 import {cn} from "../lib/utils";
 import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
+import {useCastRemote} from "../hooks/useCastRemote";
 
 type PlayerTimeControlsProps = {
     currentPodcastEpisode?: AudioPlayerPlay
@@ -20,6 +21,7 @@ const SPEED_STEPS = [0.5, 1,1.1,1.25, 1.5, 2, 2.5, 3]
 
 export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcastEpisode }) => {
     const logCurrentPlaybackTime = usePlaybackLogger()
+    const cast = useCastRemote()
     const setSelectedEpisodes = useCommon(state => state.setSelectedEpisodes)
     const episodes = useCommon(state => state.selectedEpisodes)
     const isPlaying  = useAudioPlayer(state => state.isPlaying)
@@ -81,6 +83,14 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
     }
 
     const handleButton = () => {
+        if (cast.isCasting) {
+            if (cast.state === 'playing' || cast.state === 'buffering') {
+                void cast.pause()
+            } else {
+                void cast.resume()
+            }
+            return
+        }
         const audioPlayer = getAudioPlayer()
         if (!audioPlayer) {
             return
@@ -129,6 +139,11 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
     }
 
     const seekForward = () => {
+        if (cast.isCasting) {
+            const max = cast.durationSecs > 0 ? cast.durationSecs : Infinity
+            void cast.seek(Math.min(max, cast.positionSecs + SKIPPED_TIME))
+            return
+        }
         const audioPlayer = getAudioPlayer()
         if (!audioPlayer) {
             return
@@ -140,6 +155,10 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
     }
 
     const seekBackward = () => {
+        if (cast.isCasting) {
+            void cast.seek(Math.max(0, cast.positionSecs - SKIPPED_TIME))
+            return
+        }
         const audioPlayer = getAudioPlayer()
         if (!audioPlayer) {
             return
@@ -168,7 +187,7 @@ export const PlayerTimeControls: FC<PlayerTimeControlsProps> = ({ currentPodcast
 
             {/* Play/pause */}
             <span className="flex items-center justify-center ui-bg-foreground hover:bg-(--fg-color-hover) cursor-pointer h-10 w-10 lg:h-12 lg:w-12 rounded-full active:scale-90" onClick={() => handleButton()}>
-                {isPlaying?
+                {(cast.isCasting ? (cast.state === 'playing' || cast.state === 'buffering') : isPlaying)?
                     <span className="material-symbols-outlined filled text-2xl lg:text-4xl ui-text-inverse">pause</span>:
                     <span className="material-symbols-outlined filled text-2xl lg:text-4xl ui-text-inverse">play_arrow</span>
                 }

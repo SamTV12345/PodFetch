@@ -1,6 +1,7 @@
 import io, {Socket} from "socket.io-client";
 import useOpmlImport from "../store/opmlImportSlice";
 import useCommon from "../store/CommonSlice";
+import useCast from "../store/CastSlice";
 import {components} from "../../schema";
 import {decodeHTMLEntities} from "./decodingUtilities";
 import {enqueueSnackbar} from "notistack";
@@ -103,6 +104,36 @@ export function connectSocket(apiKey: string) {
 
     socket.on('opmlAdded', () => {
         useOpmlImport.getState().setProgress([...useOpmlImport.getState().progress, true])
+    })
+
+    socket.on('cast:status', (data: {
+        status: {
+            session_id: string,
+            state: components['schemas']['CastSessionState'],
+            position_secs: number,
+            volume: number,
+            at: string,
+        }
+    }) => {
+        if (!data?.status) return
+        useCast.getState().updateStatus(data.status.session_id, {
+            state: data.status.state,
+            positionSecs: data.status.position_secs,
+            volume: data.status.volume,
+        })
+    })
+
+    socket.on('cast:ended', (data: {
+        session_id: string,
+        reason: 'stopped' | 'finished' | 'device_gone' | 'error',
+    }) => {
+        if (!data?.session_id) return
+        const active = useCast.getState().activeSession
+        if (active && active.sessionId === data.session_id) {
+            const reasonKey = `cast-ended-${data.reason}`
+            enqueueSnackbar(t(reasonKey, { defaultValue: t('cast-ended') }), { variant: 'info' })
+        }
+        useCast.getState().clearIfMatches(data.session_id)
     })
 }
 

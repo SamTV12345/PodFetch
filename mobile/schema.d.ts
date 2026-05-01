@@ -935,6 +935,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cast/devices": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["list_cast_devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/devices/discover": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get?: never;
+        put?: never;
+        post: operations["discover_cast_devices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get?: never;
+        put?: never;
+        post: operations["start_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{id}": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["get_cast_session"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{id}/control": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get?: never;
+        put?: never;
+        post: operations["control_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1370,6 +1425,56 @@ export interface components {
             time: string;
             version: string;
         };
+        CastDeviceResponse: {
+            chromecast_uuid: string;
+            name: string;
+            /** @enum {string} */
+            kind: "chromecast_personal" | "chromecast_shared";
+            agent_id?: string | null;
+            last_seen_at?: string | null;
+            ip?: string | null;
+        };
+        DiscoveredCastDeviceResponse: {
+            uuid: string;
+            friendly_name: string;
+            model?: string | null;
+            ip?: string | null;
+            /** Format: int32 */
+            port: number;
+        };
+        CastSessionStartRequest: {
+            chromecast_uuid: string;
+            episode_id: string;
+            url: string;
+            mime: string;
+            title: string;
+            artwork_url?: string | null;
+            duration_secs?: number | null;
+        };
+        /** @enum {string} */
+        CastSessionState: "idle" | "buffering" | "playing" | "paused" | "stopped";
+        CastSessionResponse: {
+            session_id: string;
+            chromecast_uuid: string;
+            episode_id?: string | null;
+            state: components["schemas"]["CastSessionState"];
+            position_secs: number;
+            volume: number;
+        };
+        CastStatusResponse: {
+            session_id: string;
+            chromecast_uuid: string;
+            episode_id?: string | null;
+            state: components["schemas"]["CastSessionState"];
+            position_secs: number;
+            volume: number;
+        };
+        CastControlRequest:
+            | { cmd: "pause" }
+            | { cmd: "resume" }
+            | { cmd: "stop" }
+            | { cmd: "seek"; position_secs: number }
+            | { cmd: "set_volume"; volume: number };
     };
     responses: never;
     parameters: never;
@@ -2941,5 +3046,69 @@ export interface operations {
         };
         requestBody?: never;
         responses: never;
+    };
+    list_cast_devices: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: { [name: string]: unknown; };
+                content: { "application/json": components["schemas"]["CastDeviceResponse"][]; };
+            };
+        };
+    };
+    discover_cast_devices: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: { [name: string]: unknown; };
+                content: { "application/json": components["schemas"]["DiscoveredCastDeviceResponse"][]; };
+            };
+        };
+    };
+    start_cast_session: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: {
+            content: { "application/json": components["schemas"]["CastSessionStartRequest"]; };
+        };
+        responses: {
+            200: {
+                headers: { [name: string]: unknown; };
+                content: { "application/json": components["schemas"]["CastSessionResponse"]; };
+            };
+        };
+    };
+    get_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: { id: string; };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: { [name: string]: unknown; };
+                content: { "application/json": components["schemas"]["CastStatusResponse"]; };
+            };
+        };
+    };
+    control_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: { id: string; };
+            cookie?: never;
+        };
+        requestBody: {
+            content: { "application/json": components["schemas"]["CastControlRequest"]; };
+        };
+        responses: {
+            204: {
+                headers: { [name: string]: unknown; };
+                content?: never;
+            };
+        };
     };
 }

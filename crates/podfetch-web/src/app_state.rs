@@ -1,3 +1,7 @@
+use crate::cast::ServerCastOrchestrator;
+use crate::services::agent::dispatcher::AgentDispatcher;
+use crate::services::agent::registry::AgentRegistry;
+use crate::services::cast::service::CastOrchestrator;
 use crate::services::device::service::DeviceService;
 use crate::services::device_sync_group::service::DeviceSyncGroupService;
 use crate::services::favorite_podcast_episode::service::FavoritePodcastEpisodeService;
@@ -20,6 +24,7 @@ use crate::services::user_onboarding::service::UserOnboardingService;
 use crate::usecases::watchtime::WatchtimeUseCase;
 use common_infrastructure::config::EnvironmentService;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
+use podfetch_cast::StubCastDriver;
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::adapters::DeviceSyncGroupRepositoryImpl;
 use podfetch_persistence::adapters::FavoritePodcastEpisodeRepositoryImpl;
@@ -40,6 +45,9 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub agent_dispatcher: Arc<AgentDispatcher>,
+    pub agent_registry: Arc<AgentRegistry>,
+    pub cast_orchestrator: Arc<ServerCastOrchestrator>,
     pub device_service: Arc<DeviceService>,
     pub device_sync_group_service: Arc<DeviceSyncGroupService>,
     pub environment: Arc<EnvironmentService>,
@@ -76,6 +84,13 @@ impl AppState {
         let device_service = Arc::new(DeviceService::new(Arc::new(DeviceRepositoryImpl::new(
             database.clone(),
         ))));
+        let agent_registry = Arc::new(AgentRegistry::new());
+        let agent_dispatcher = Arc::new(AgentDispatcher::new(agent_registry.clone()));
+        let cast_orchestrator = Arc::new(CastOrchestrator::new(
+            device_service.clone(),
+            Arc::new(StubCastDriver),
+            agent_dispatcher.clone(),
+        ));
         let device_sync_group_service = Arc::new(DeviceSyncGroupService::new(Arc::new(
             DeviceSyncGroupRepositoryImpl::new(database.clone()),
         )));
@@ -139,6 +154,9 @@ impl AppState {
         ));
 
         Self {
+            agent_dispatcher,
+            agent_registry,
+            cast_orchestrator,
             device_service,
             device_sync_group_service,
             environment,

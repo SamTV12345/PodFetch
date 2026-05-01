@@ -18,6 +18,10 @@ impl From<DeviceCreate> for Device {
             kind: val.type_,
             name: val.caption,
             user_id: val.user_id,
+            chromecast_uuid: None,
+            agent_id: None,
+            last_seen_at: None,
+            ip: None,
         }
     }
 }

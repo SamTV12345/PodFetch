@@ -20,12 +20,18 @@ import { useStore } from '@/store/store';
 import { AudioProvider } from '@/components/AudioProvider';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import {useIsAudioPlayerShown} from "@/hooks/useIsAudioPlayerShown";
+import { useCastSessionPolling } from '@/hooks/useCastSession';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 
 const queryClient = new QueryClient()
+
+const CastSessionWatcher = () => {
+    useCastSessionPolling();
+    return null;
+};
 
 export default function RootLayout() {
   const router = useRouter();
@@ -75,6 +81,7 @@ export default function RootLayout() {
        },
     }}>
       <AudioProvider>
+      <CastSessionWatcher />
       <Stack>
         <Stack.Screen name="server-setup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -113,6 +120,16 @@ export default function RootLayout() {
               headerTitleStyle: { fontWeight: '600' },
             }}
         />
+          <Stack.Screen
+              name="cast-devices"
+              options={{
+                title: t('cast-devices', { defaultValue: 'Cast devices' }),
+                headerBackTitle: t('settings', { defaultValue: 'Settings' }),
+                headerStyle: { backgroundColor: styles.darkColor },
+                headerTintColor: styles.white,
+                headerTitleStyle: { fontWeight: '600' },
+              }}
+          />
           <Stack.Screen
               name="managePodcasts"
               options={{

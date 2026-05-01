@@ -23,6 +23,36 @@ impl DeviceService {
     pub fn delete_by_user_id(&self, user_id: i32) -> Result<(), CustomError> {
         self.repository.delete_by_user_id(user_id)
     }
+
+    pub fn list_castable_for_user(&self, user_id: i32) -> Result<Vec<Device>, CustomError> {
+        self.repository.list_castable_for_user(user_id)
+    }
+
+    pub fn find_by_chromecast_uuid(
+        &self,
+        chromecast_uuid: &str,
+    ) -> Result<Option<Device>, CustomError> {
+        self.repository.find_by_chromecast_uuid(chromecast_uuid)
+    }
+
+    pub fn upsert_chromecast_from_agent(
+        &self,
+        chromecast_uuid: &str,
+        agent_id: &str,
+        owner_user_id: i32,
+        name: &str,
+        ip: Option<&str>,
+        last_seen_at: chrono::NaiveDateTime,
+    ) -> Result<Device, CustomError> {
+        self.repository.upsert_chromecast_from_agent(
+            chromecast_uuid,
+            agent_id,
+            owner_user_id,
+            name,
+            ip,
+            last_seen_at,
+        )
+    }
 }
 
 impl DeviceApplicationService for DeviceService {

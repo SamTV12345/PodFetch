@@ -1,3 +1,5 @@
+pub mod agent_ws_controller;
+pub mod cast_controller;
 pub mod controller_utils;
 pub mod discover_controller;
 pub mod file_hosting;
