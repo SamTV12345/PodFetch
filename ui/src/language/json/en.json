@@ -301,7 +301,7 @@
   "cast-how-to-run-agent": "How to run an agent",
   "cast-how-to-run-agent-hide": "Hide agent instructions",
   "cast-how-to-run-agent-description": "Run the PodFetch agent on a machine on your home LAN to discover and control Chromecasts. The agent connects back to this server using your API key.",
-  "cast-how-to-run-agent-api-key": "Find your API key on your",
+  "cast-how-to-run-agent-api-key-here": "Use the API key shown above.",
   "casting-on": "Casting on {{name}}",
   "stop-casting": "Stop casting",
   "cast-control-not-available": "Cast control is not available yet for this session.",

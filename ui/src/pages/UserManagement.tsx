@@ -1,6 +1,7 @@
 import {FC, useEffect} from "react";
 import {useTranslation} from "react-i18next";
 import {Heading1} from "../components/Heading1";
+import {Heading2} from "../components/Heading2";
 import {CustomInput} from "../components/CustomInput";
 import {Controller, useForm} from "react-hook-form";
 import {CustomButtonPrimary} from "../components/CustomButtonPrimary";
@@ -8,6 +9,7 @@ import {v4} from "uuid";
 import {$api} from "../utils/http";
 import {components} from "../../schema";
 import {useQueryClient} from "@tanstack/react-query";
+import {ProfileCastDevices} from "../components/ProfileCastDevices";
 
 type UserManagementPageProps = {
 
@@ -99,6 +101,13 @@ export const UserManagementPage: FC<UserManagementPageProps> = () => {
                     </div>
                     <CustomButtonPrimary disabled={user.data?.readOnly || user.isLoading} type="submit" className="float-right">{t('save')}</CustomButtonPrimary>
                 </form>
+            </div>
+
+            <div className="mt-12 pt-8 border-t ui-border">
+                <Heading2>{t('cast-devices')}</Heading2>
+                <div className="mt-5">
+                    <ProfileCastDevices/>
+                </div>
             </div>
         </div>
     )

@@ -303,7 +303,7 @@
   "cast-how-to-run-agent": "Agent starten",
   "cast-how-to-run-agent-hide": "Anleitung ausblenden",
   "cast-how-to-run-agent-description": "Starte den PodFetch-Agent auf einem Gerät in deinem Heim-LAN, um Chromecasts zu erkennen und zu steuern. Der Agent verbindet sich mit diesem Server über deinen API-Schlüssel.",
-  "cast-how-to-run-agent-api-key": "Deinen API-Schlüssel findest du in deinem",
+  "cast-how-to-run-agent-api-key-here": "Verwende den oben angezeigten API-Schlüssel.",
   "casting-on": "Streame auf {{name}}",
   "stop-casting": "Streamen beenden",
   "cast-control-not-available": "Diese Cast-Sitzung kann noch nicht gesteuert werden.",

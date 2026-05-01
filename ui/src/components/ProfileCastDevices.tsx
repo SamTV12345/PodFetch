@@ -17,7 +17,7 @@ const formatLastSeen = (value: string | null | undefined) => {
     return date.toLocaleString()
 }
 
-export const SettingsCastDevices: FC = () => {
+export const ProfileCastDevices: FC = () => {
     const { t } = useTranslation()
     const { enqueueSnackbar } = useSnackbar()
     const [showAgentInfo, setShowAgentInfo] = useState(false)
