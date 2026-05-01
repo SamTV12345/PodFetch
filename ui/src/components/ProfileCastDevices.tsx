@@ -138,8 +138,7 @@ export const ProfileCastDevices: FC = () => {
                             <code>{agentSnippet}</code>
                         </pre>
                         <p className="text-xs ui-text-muted">
-                            {t('cast-how-to-run-agent-api-key')}{' '}
-                            <a className="underline" href="/ui/profile">{t('profile')}</a>.
+                            {t('cast-how-to-run-agent-api-key-here')}
                         </p>
                     </div>
                 )}
