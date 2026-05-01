@@ -1,3 +1,4 @@
+use podfetch_cast::{CastSessionId, CastStatus};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -58,4 +59,28 @@ pub struct PodcastAddedMessage<P> {
     pub type_of: PodcastType,
     pub message: String,
     pub podcast: P,
+}
+
+/// Reason a cast session terminated, for the `cast:ended` event.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CastEndedReason {
+    Stopped,
+    Finished,
+    DeviceGone,
+    Error,
+}
+
+/// Live status update for an in-flight cast session.
+#[derive(Serialize)]
+pub struct CastStatusMessage {
+    pub status: CastStatus,
+}
+
+/// Sent once when a cast session ends. The UI uses this to drop the
+/// remote-control overlay and resume normal local-player behaviour.
+#[derive(Serialize)]
+pub struct CastEndedMessage {
+    pub session_id: CastSessionId,
+    pub reason: CastEndedReason,
 }

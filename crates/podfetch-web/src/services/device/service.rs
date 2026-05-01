@@ -23,6 +23,10 @@ impl DeviceService {
     pub fn delete_by_user_id(&self, user_id: i32) -> Result<(), CustomError> {
         self.repository.delete_by_user_id(user_id)
     }
+
+    pub fn list_castable_for_user(&self, user_id: i32) -> Result<Vec<Device>, CustomError> {
+        self.repository.list_castable_for_user(user_id)
+    }
 }
 
 impl DeviceApplicationService for DeviceService {

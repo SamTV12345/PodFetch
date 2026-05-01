@@ -2,6 +2,7 @@ use crate::app_state::AppState;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
+use crate::controllers::cast_controller::get_cast_router;
 use crate::controllers::discover_controller::get_discover_router;
 use crate::controllers::file_hosting::podcast_serving;
 use crate::controllers::manifest_controller::get_manifest_router;
@@ -316,6 +317,7 @@ fn config(state: AppState) -> OpenApiRouter {
 
 fn get_private_api(state: AppState) -> OpenApiRouter {
     let router = OpenApiRouter::new()
+        .merge(get_cast_router().with_state(state.clone()))
         .merge(get_discover_router().with_state(state.clone()))
         .merge(get_playlist_router().with_state(state.clone()))
         .merge(get_podcast_router().with_state(state.clone()))

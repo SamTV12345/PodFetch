@@ -1,8 +1,9 @@
 use crate::events::{
-    OpmlAddedMessage, OpmlErrorMessage, PodcastAddedMessage, PodcastEpisodeDeleteMessage,
-    PodcastEpisodeOfflineAvailableMessage, PodcastEpisodesAdded, PodcastRefreshedMessage,
-    PodcastType,
+    CastEndedMessage, CastEndedReason, CastStatusMessage, OpmlAddedMessage, OpmlErrorMessage,
+    PodcastAddedMessage, PodcastEpisodeDeleteMessage, PodcastEpisodeOfflineAvailableMessage,
+    PodcastEpisodesAdded, PodcastRefreshedMessage, PodcastType,
 };
+use podfetch_cast::{CastSessionId, CastStatus};
 use crate::podcast::PodcastDto;
 use crate::podcast::map_podcast_to_dto;
 use crate::podcast_episode_dto::PodcastEpisodeDto;
@@ -148,6 +149,26 @@ impl ChatServerHandle {
                 podcast,
             },
             "addedPodcast",
+        );
+    }
+
+    /// Push a single cast status snapshot to subscribers. The session owner
+    /// filters by `session.session_id` on the client. The current namespace
+    /// model does not split by user, so we broadcast to MAIN_ROOM and rely
+    /// on the orchestrator to only emit for sessions it owns.
+    pub fn broadcast_cast_status(status: CastStatus) {
+        Self::send_broadcast_sync(
+            MAIN_ROOM.parse().unwrap(),
+            &CastStatusMessage { status },
+            "cast:status",
+        );
+    }
+
+    pub fn broadcast_cast_ended(session_id: CastSessionId, reason: CastEndedReason) {
+        Self::send_broadcast_sync(
+            MAIN_ROOM.parse().unwrap(),
+            &CastEndedMessage { session_id, reason },
+            "cast:ended",
         );
     }
 

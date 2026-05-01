@@ -3073,6 +3073,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "podfetch-cast"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "podfetch-domain"
 version = "0.1.0"
 dependencies = [
@@ -3138,6 +3151,7 @@ dependencies = [
  "mime_guess",
  "mp4ameta",
  "opml",
+ "podfetch-cast",
  "podfetch-domain",
  "podfetch-persistence",
  "podfetch-storage",

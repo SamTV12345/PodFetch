@@ -1,7 +1,9 @@
 use crate::db::{Database, PersistenceError};
+use chrono::NaiveDateTime;
+use diesel::BoolExpressionMethods;
 use diesel::RunQueryDsl;
 use diesel::{ExpressionMethods, QueryDsl};
-use podfetch_domain::device::{Device, DeviceRepository};
+use podfetch_domain::device::{Device, DeviceRepository, kind as device_kind};
 
 diesel::table! {
     devices (id) {
@@ -10,6 +12,10 @@ diesel::table! {
         kind -> Text,
         name -> Text,
         user_id -> Integer,
+        chromecast_uuid -> Nullable<Text>,
+        agent_id -> Nullable<Text>,
+        last_seen_at -> Nullable<Timestamp>,
+        ip -> Nullable<Text>,
     }
 }
 
@@ -21,6 +27,10 @@ struct DeviceEntity {
     kind: String,
     name: String,
     user_id: i32,
+    chromecast_uuid: Option<String>,
+    agent_id: Option<String>,
+    last_seen_at: Option<NaiveDateTime>,
+    ip: Option<String>,
 }
 
 impl From<Device> for DeviceEntity {
@@ -31,6 +41,10 @@ impl From<Device> for DeviceEntity {
             kind: value.kind,
             name: value.name,
             user_id: value.user_id,
+            chromecast_uuid: value.chromecast_uuid,
+            agent_id: value.agent_id,
+            last_seen_at: value.last_seen_at,
+            ip: value.ip,
         }
     }
 }
@@ -43,6 +57,10 @@ impl From<DeviceEntity> for Device {
             kind: value.kind,
             name: value.name,
             user_id: value.user_id,
+            chromecast_uuid: value.chromecast_uuid,
+            agent_id: value.agent_id,
+            last_seen_at: value.last_seen_at,
+            ip: value.ip,
         }
     }
 }
@@ -93,6 +111,26 @@ impl DeviceRepository for DieselDeviceRepository {
         diesel::delete(devices.filter(user_id.eq(user_id_to_delete)))
             .execute(&mut conn)
             .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    fn list_castable_for_user(
+        &self,
+        viewer_user_id: i32,
+    ) -> Result<Vec<Device>, Self::Error> {
+        use self::devices::dsl::*;
+
+        let mut conn = self.database.connection()?;
+
+        // Owned personal Chromecasts OR any shared Chromecast on the instance.
+        devices
+            .filter(
+                kind.eq(device_kind::CHROMECAST_SHARED).or(kind
+                    .eq(device_kind::CHROMECAST_PERSONAL)
+                    .and(user_id.eq(viewer_user_id))),
+            )
+            .load::<DeviceEntity>(&mut conn)
+            .map(|items| items.into_iter().map(Into::into).collect())
             .map_err(Into::into)
     }
 }
