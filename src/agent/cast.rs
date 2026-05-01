@@ -13,15 +13,17 @@
 use chrono::Utc;
 use podfetch_agent_protocol::SessionEndReason;
 use podfetch_cast::{
-    CastDeviceUuid, CastMedia, CastSessionId, CastState, CastStatus, CastTarget, ControlCmd,
+    CastMedia, CastSessionId, CastState, CastStatus, CastTarget, ControlCmd,
 };
 use rust_cast::CastDevice;
 use rust_cast::channels::media::{IdleReason, Media, PlayerState, StreamType};
 use rust_cast::channels::receiver::CastDeviceApp;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::sync::Once;
+#[cfg(test)]
+use std::sync::Arc;
 use std::sync::mpsc as std_mpsc;
-use std::sync::{Arc, Once};
 use std::time::Duration;
 use thiserror::Error;
 use tokio::sync::mpsc as tokio_mpsc;
@@ -61,7 +63,6 @@ enum WorkerCommand {
     Stop,
     Seek(f64),
     SetVolume(f32),
-    Shutdown,
 }
 
 #[derive(Debug)]
@@ -229,6 +230,7 @@ impl LocalCastDriver {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn knows_session(&self, session_id: &CastSessionId) -> bool {
         self.sessions
             .lock()
@@ -313,8 +315,7 @@ fn run_session_worker(
     }
 }
 
-/// Returns false iff the worker should exit after this command (Stop /
-/// Shutdown).
+/// Returns false iff the worker should exit after this command (Stop).
 fn apply_command(
     cast: &CastDevice<'static>,
     transport_id: &str,
@@ -358,7 +359,6 @@ fn apply_command(
             }
             true
         }
-        WorkerCommand::Shutdown => false,
     }
 }
 

@@ -102,10 +102,8 @@ fn apply_event(inner: &Arc<DiscoveryInner>, event: ServiceEvent) {
                     changed = prior.as_ref() != Some(&device);
                 }
             }
-            ServiceEvent::ServiceRemoved(_, fullname) => {
-                if guard.remove(&fullname).is_some() {
-                    changed = true;
-                }
+            ServiceEvent::ServiceRemoved(_, fullname) if guard.remove(&fullname).is_some() => {
+                changed = true;
             }
             // Other events are informational only.
             _ => {}

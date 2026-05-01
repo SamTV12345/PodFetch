@@ -57,12 +57,11 @@ struct ApiKeyQuery {
 }
 
 fn extract_api_key(headers: &HeaderMap, query: Option<&ApiKeyQuery>) -> Option<String> {
-    if let Some(value) = headers.get(axum::http::header::AUTHORIZATION) {
-        if let Ok(s) = value.to_str() {
-            if let Some(rest) = s.strip_prefix("Bearer ") {
-                return Some(rest.trim().to_string());
-            }
-        }
+    if let Some(value) = headers.get(axum::http::header::AUTHORIZATION)
+        && let Ok(s) = value.to_str()
+        && let Some(rest) = s.strip_prefix("Bearer ")
+    {
+        return Some(rest.trim().to_string());
     }
     query.and_then(|q| q.api_key.clone())
 }
