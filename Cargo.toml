@@ -21,6 +21,8 @@ sqlite = ["common-infrastructure/sqlite", "podfetch-persistence/sqlite", "podfet
 [dependencies]
 # Workspace crates
 common-infrastructure = { workspace = true }
+podfetch-agent-protocol = { workspace = true }
+podfetch-cast = { workspace = true }
 podfetch-domain = { workspace = true }
 podfetch-persistence = { workspace = true }
 podfetch-storage = { workspace = true }
@@ -29,6 +31,10 @@ podfetch-web = { workspace = true }
 # Async runtime
 tokio = { workspace = true }
 axum = { workspace = true }
+futures = { workspace = true }
+tokio-tungstenite = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
 
 # CLI
 rpassword = { workspace = true }
@@ -122,6 +128,7 @@ testcontainers = { version = "0.27.3" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
 tokio = { version = "1.52.1", features = ["full"] }
+tokio-tungstenite = { version = "0.29.0" }
 tower = { version = "0.5.3", features = ["util"] }
 tower-http = { version = "0.6.6", features = ["fs", "trace"] }
 tracing = "0.1"
