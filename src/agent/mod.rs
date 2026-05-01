@@ -15,6 +15,7 @@
 
 pub mod client;
 pub mod config;
+pub mod discovery;
 pub mod inbound;
 
 pub use client::run as run_agent;

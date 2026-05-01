@@ -3,12 +3,12 @@
 //! disconnection — at which point it backs off and retries.
 
 use crate::agent::config::{self, AgentConfig};
+use crate::agent::discovery::DiscoveryHandle;
 use crate::agent::inbound::{self, InboundOutcome};
 use futures::{SinkExt, StreamExt};
 use podfetch_agent_protocol::{
     AgentCapabilities, AgentMsg, PROTOCOL_VERSION, ServerMsg,
 };
-use podfetch_cast::DiscoveredCastDevice;
 use tokio::time::sleep;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::Request;
@@ -30,14 +30,14 @@ pub async fn run(config: AgentConfig) -> std::io::Result<()> {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string())
     })?;
 
-    // Real mDNS discovery is Phase 5c — for now the agent advertises an
-    // empty device list so the orchestrator sees the connection but
-    // gracefully reports no devices.
-    let devices: Vec<DiscoveredCastDevice> = Vec::new();
+    let discovery = DiscoveryHandle::start().map_err(|e| {
+        std::io::Error::other(format!("could not start mDNS discovery: {e}"))
+    })?;
+    info!("mDNS discovery started; browsing _googlecast._tcp.local.");
 
     let mut backoff = config.reconnect_initial;
     loop {
-        match connect_and_run(&url, &config.api_key, &agent_id, &devices).await {
+        match connect_and_run(&url, &config.api_key, &agent_id, &discovery).await {
             Ok(()) => {
                 info!(%agent_id, "agent session ended cleanly; reconnecting");
                 backoff = config.reconnect_initial;
@@ -55,7 +55,7 @@ async fn connect_and_run(
     url: &str,
     api_key: &str,
     agent_id: &str,
-    devices: &[DiscoveredCastDevice],
+    discovery: &DiscoveryHandle,
 ) -> Result<(), AgentRunError> {
     let request = build_request(url, api_key)?;
     let (ws_stream, _resp) = tokio_tungstenite::connect_async(request).await?;
@@ -97,27 +97,52 @@ async fn connect_and_run(
     };
     send_msg(&mut sink, &hello_ack).await?;
 
-    // Push the (currently empty) device list so the server sees us as a
-    // healthy, reporting agent.
-    let initial_list = AgentMsg::DeviceList {
-        request_id: None,
-        devices: devices.to_vec(),
-    };
-    send_msg(&mut sink, &initial_list).await?;
+    // Push the current device snapshot so the server has fresh state on
+    // every (re)connect.
+    let initial = discovery.snapshot();
+    info!(agent_id, count = initial.len(), "sending initial DeviceList");
+    send_msg(
+        &mut sink,
+        &AgentMsg::DeviceList {
+            request_id: None,
+            devices: initial,
+        },
+    )
+    .await?;
 
-    // Main loop: process inbound messages until the stream closes.
+    // Main loop: race inbound messages against discovery-change events.
+    // On each iteration we re-snapshot so DiscoverRequest replies and any
+    // synchronous lookup are answered with up-to-date data.
     loop {
-        match next_server_msg(&mut stream).await? {
-            None => return Ok(()),
-            Some(msg) => match inbound::dispatch(msg, devices) {
-                InboundOutcome::Reply(replies) => {
-                    for reply in replies {
-                        send_msg(&mut sink, &reply).await?;
+        tokio::select! {
+            biased;
+            frame = next_server_msg(&mut stream) => match frame? {
+                None => return Ok(()),
+                Some(msg) => {
+                    let snapshot = discovery.snapshot();
+                    match inbound::dispatch(msg, &snapshot) {
+                        InboundOutcome::Reply(replies) => {
+                            for reply in replies {
+                                send_msg(&mut sink, &reply).await?;
+                            }
+                        }
+                        InboundOutcome::Goodbye => return Ok(()),
+                        InboundOutcome::Ignore => {}
                     }
                 }
-                InboundOutcome::Goodbye => return Ok(()),
-                InboundOutcome::Ignore => {}
             },
+            _ = discovery.wait_for_change() => {
+                let snapshot = discovery.snapshot();
+                info!(agent_id, count = snapshot.len(), "device list changed, pushing update");
+                send_msg(
+                    &mut sink,
+                    &AgentMsg::DeviceList {
+                        request_id: None,
+                        devices: snapshot,
+                    },
+                )
+                .await?;
+            }
         }
     }
 }
