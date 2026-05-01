@@ -2,7 +2,7 @@ import {Image, Modal, Pressable, ScrollView, Text, View, Share, useWindowDimensi
 import {SafeAreaView} from "react-native-safe-area-context";
 import {styles} from "@/styles/styles";
 import {useStore} from "@/store/store";
-import {AntDesign, MaterialIcons, Ionicons, Feather} from "@expo/vector-icons";
+import {AntDesign, MaterialIcons, Ionicons, Feather, MaterialCommunityIcons} from "@expo/vector-icons";
 import {useAudioPlayerStatus} from 'expo-audio';
 import {router} from 'expo-router';
 import {useTranslation} from "react-i18next";
@@ -10,6 +10,9 @@ import Slider from '@react-native-community/slider';
 import {useState, useCallback} from 'react';
 import { DownloadButton, DownloadStatusIcon } from "@/components/DownloadButton";
 import WebView from "react-native-webview";
+import { CastBottomSheet } from "@/components/CastBottomSheet";
+import { CastingPill } from "@/components/CastingPill";
+import { useCastControls } from "@/hooks/useCastSession";
 
 const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -27,10 +30,26 @@ export default function PlayerScreen() {
 
     const status = audioPlayer ? useAudioPlayerStatus(audioPlayer) : null;
 
+    const castSession = useStore(state => state.castSession);
+    const castStatus = useStore(state => state.castStatus);
+    const isCasting = !!castSession;
+    const { sendCommand } = useCastControls();
+
     const [isOptionsVisible, setIsOptionsVisible] = useState(false);
+    const [isCastSheetVisible, setIsCastSheetVisible] = useState(false);
     const [isSeeking, setIsSeeking] = useState(false);
     const [seekValue, setSeekValue] = useState(0);
     const [isToggling, setIsToggling] = useState(false);
+
+    const remoteDuration = selectedPodcastEpisode?.podcastEpisode.total_time || 0;
+    const remotePosition = castStatus?.position_secs ?? castSession?.position_secs ?? 0;
+    const remoteIsPlaying = (castStatus?.state ?? castSession?.state) === 'playing';
+
+    const effectiveDuration = isCasting ? remoteDuration : (status?.duration || 0);
+    const effectiveCurrent = isCasting
+        ? remotePosition
+        : (status?.currentTime || 0);
+    const effectivePlaying = isCasting ? remoteIsPlaying : isPlaying;
 
     const isSmallScreen = screenWidth < 375;
     const isShortScreen = screenHeight < 700;
@@ -46,19 +65,21 @@ export default function PlayerScreen() {
 
     const handleSeekStart = useCallback(() => {
         setIsSeeking(true);
-        setSeekValue(status?.currentTime || 0);
-    }, [status?.currentTime]);
+        setSeekValue(effectiveCurrent);
+    }, [effectiveCurrent]);
 
     const handleSeekChange = useCallback((value: number) => {
         setSeekValue(value);
     }, []);
 
     const handleSeekComplete = useCallback((value: number) => {
-        if (audioPlayer) {
+        if (isCasting) {
+            sendCommand({ cmd: 'seek', position_secs: value });
+        } else if (audioPlayer) {
             audioPlayer.seekTo(value);
         }
         setIsSeeking(false);
-    }, [audioPlayer]);
+    }, [audioPlayer, isCasting, sendCommand]);
 
     const handleShare = useCallback(async () => {
         if (selectedPodcastEpisode) {
@@ -77,6 +98,11 @@ export default function PlayerScreen() {
     }, [selectedPodcastEpisode, t]);
 
     const handleSkipBackward = () => {
+        if (isCasting) {
+            const newTime = Math.max(0, effectiveCurrent - 15);
+            sendCommand({ cmd: 'seek', position_secs: newTime });
+            return;
+        }
         if (audioPlayer && status) {
             const newTime = Math.max(0, status.currentTime - 15);
             audioPlayer.seekTo(newTime);
@@ -84,6 +110,11 @@ export default function PlayerScreen() {
     };
 
     const handleSkipForward = () => {
+        if (isCasting) {
+            const newTime = Math.min(effectiveDuration || effectiveCurrent + 30, effectiveCurrent + 30);
+            sendCommand({ cmd: 'seek', position_secs: newTime });
+            return;
+        }
         if (audioPlayer && status) {
             const newTime = Math.min(status.duration, status.currentTime + 30);
             audioPlayer.seekTo(newTime);
@@ -91,6 +122,10 @@ export default function PlayerScreen() {
     };
 
     const handleTogglePlay = useCallback(() => {
+        if (isCasting) {
+            sendCommand({ cmd: remoteIsPlaying ? 'pause' : 'resume' });
+            return;
+        }
         if (isToggling || !audioPlayer) return;
 
         setIsToggling(true);
@@ -104,7 +139,7 @@ export default function PlayerScreen() {
         }
 
         setTimeout(() => setIsToggling(false), 300);
-    }, [isPlaying, audioPlayer, setIsPlaying, isToggling]);
+    }, [isPlaying, audioPlayer, setIsPlaying, isToggling, isCasting, remoteIsPlaying, sendCommand]);
 
     if (!selectedPodcastEpisode) {
         return (
@@ -134,10 +169,23 @@ export default function PlayerScreen() {
                         {selectedPodcastEpisode.podcast?.name || ''}
                     </Text>
                 </View>
+                <Pressable
+                    onPress={() => setIsCastSheetVisible(true)}
+                    style={{ marginRight: 12 }}
+                    hitSlop={8}
+                >
+                    <MaterialCommunityIcons
+                        name={isCasting ? 'cast-connected' : 'cast'}
+                        size={22}
+                        color={isCasting ? styles.accentColor : 'white'}
+                    />
+                </Pressable>
                 <Pressable onPress={() => setIsOptionsVisible(true)}>
                     <MaterialIcons name="more-vert" size={24} color="white"/>
                 </Pressable>
             </View>
+
+            <CastingPill />
 
             {/* Album Art */}
             <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: isSmallScreen ? 20 : 40}}>
@@ -176,8 +224,8 @@ export default function PlayerScreen() {
                 <Slider
                     style={{width: '100%', height: isSmallScreen ? 35 : 40}}
                     minimumValue={0}
-                    maximumValue={status?.duration || 1}
-                    value={isSeeking ? seekValue : (status?.currentTime || 0)}
+                    maximumValue={effectiveDuration || 1}
+                    value={isSeeking ? seekValue : effectiveCurrent}
                     onSlidingStart={handleSeekStart}
                     onValueChange={handleSeekChange}
                     onSlidingComplete={handleSeekComplete}
@@ -187,10 +235,10 @@ export default function PlayerScreen() {
                 />
                 <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: -5, paddingHorizontal: 10}}>
                     <Text style={{color: styles.gray, fontSize: isSmallScreen ? 11 : 12}}>
-                        {formatTime(isSeeking ? seekValue : (status?.currentTime || 0))}
+                        {formatTime(isSeeking ? seekValue : effectiveCurrent)}
                     </Text>
                     <Text style={{color: styles.gray, fontSize: isSmallScreen ? 11 : 12}}>
-                        -{formatTime((status?.duration || 0) - (isSeeking ? seekValue : (status?.currentTime || 0)))}
+                        -{formatTime(effectiveDuration - (isSeeking ? seekValue : effectiveCurrent))}
                     </Text>
                 </View>
             </View>
@@ -222,7 +270,7 @@ export default function PlayerScreen() {
                     }}
                 >
                     <AntDesign
-                        name={isPlaying ? "pause" : "caret-right"}
+                        name={effectivePlaying ? "pause" : "caret-right"}
                         size={isSmallScreen ? 26 : 30}
                         color={styles.darkColor}
                     />
@@ -420,6 +468,11 @@ export default function PlayerScreen() {
                     </Pressable>
                 </Pressable>
             </Modal>
+
+            <CastBottomSheet
+                visible={isCastSheetVisible}
+                onClose={() => setIsCastSheetVisible(false)}
+            />
         </SafeAreaView>
     );
 }

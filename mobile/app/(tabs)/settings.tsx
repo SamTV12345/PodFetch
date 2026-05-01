@@ -711,6 +711,34 @@ const SettingsScreen = () => {
                     </View>
                 )}
 
+                {/* Cast devices */}
+                <TouchableOpacity
+                    style={{
+                        backgroundColor: styles.darkColor,
+                        borderRadius: 10,
+                        padding: 15,
+                        marginTop: 20,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        opacity: offlineMode ? 0.6 : 1,
+                    }}
+                    onPress={() => router.push('/cast-devices')}
+                    disabled={offlineMode}
+                >
+                    <Ionicons name="tv-outline" size={22} color={offlineMode ? 'rgba(255,255,255,0.3)' : styles.accentColor} />
+                    <View style={{ flex: 1 }}>
+                        <ThemedText style={{ fontSize: 16, color: offlineMode ? 'rgba(255,255,255,0.3)' : styles.white, fontWeight: '500' }}>
+                            {t('cast-devices', { defaultValue: 'Cast devices' })}
+                        </ThemedText>
+                        <ThemedText style={{ fontSize: 12, color: offlineMode ? 'rgba(255,255,255,0.2)' : styles.gray, marginTop: 2 }}>
+                            {t('cast-devices-description', { defaultValue: 'Manage Chromecast devices for streaming' })}
+                        </ThemedText>
+                    </View>
+                    {!offlineMode && <Ionicons name="chevron-forward" size={16} color={styles.gray} />}
+                    {offlineMode && <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.3)" />}
+                </TouchableOpacity>
+
                 {/* Server Info Section */}
                 <View style={{
                     backgroundColor: styles.darkColor,

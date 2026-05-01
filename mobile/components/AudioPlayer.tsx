@@ -1,9 +1,10 @@
 import {Image, Pressable, Text, View, useWindowDimensions} from "react-native";
 import {styles} from "@/styles/styles";
 import {useStore} from "@/store/store";
-import {Ionicons} from "@expo/vector-icons";
+import {Ionicons, MaterialCommunityIcons} from "@expo/vector-icons";
 import {router} from 'expo-router';
 import {useCallback, useState} from 'react';
+import {useCastControls} from "@/hooks/useCastSession";
 
 type AudioPlayerProps = {
     bottomOffset?: number;
@@ -19,8 +20,21 @@ export const AudioPlayer = ({ bottomOffset = 30 }: AudioPlayerProps) => {
     const audioPercent = useStore(state => state.audioProgress);
     const audioPlayer = useStore(state => state.audioPlayer);
     const setIsPlaying = useStore(state => state.setIsPlaying);
+    const castSession = useStore(state => state.castSession);
+    const castStatus = useStore(state => state.castStatus);
+    const { sendCommand } = useCastControls();
 
     const [isToggling, setIsToggling] = useState(false);
+
+    const isCasting = !!castSession;
+    const remoteState = castStatus?.state ?? castSession?.state;
+    const remoteIsPlaying = remoteState === 'playing';
+    const effectivePlaying = isCasting ? remoteIsPlaying : isPlaying;
+    const totalSecs = selectedPodcastEpisode?.podcastEpisode.total_time ?? 0;
+    const remotePercent = isCasting && totalSecs > 0
+        ? ((castStatus?.position_secs ?? castSession?.position_secs ?? 0) / totalSecs) * 100
+        : 0;
+    const effectivePercent = isCasting ? remotePercent : audioPercent;
 
     const isSmallScreen = screenWidth < 375;
     const albumArtSize = isSmallScreen ? 40 : 48;
@@ -31,6 +45,11 @@ export const AudioPlayer = ({ bottomOffset = 30 }: AudioPlayerProps) => {
 
     const handleTogglePlay = useCallback((e: any) => {
         e.stopPropagation();
+
+        if (isCasting) {
+            sendCommand({ cmd: remoteIsPlaying ? 'pause' : 'resume' });
+            return;
+        }
 
         if (isToggling || !audioPlayer) return;
         setIsToggling(true);
@@ -44,7 +63,7 @@ export const AudioPlayer = ({ bottomOffset = 30 }: AudioPlayerProps) => {
         }
 
         setTimeout(() => setIsToggling(false), 300);
-    }, [isPlaying, audioPlayer, setIsPlaying, isToggling]);
+    }, [isPlaying, audioPlayer, setIsPlaying, isToggling, isCasting, remoteIsPlaying, sendCommand]);
 
     const handleOpenFullscreen = () => {
         router.push('/player');
@@ -80,7 +99,7 @@ export const AudioPlayer = ({ bottomOffset = 30 }: AudioPlayerProps) => {
             }}>
                 <View style={{
                     height: '100%',
-                    width: `${audioPercent}%`,
+                    width: `${effectivePercent}%`,
                     backgroundColor: styles.accentColor,
                 }}/>
             </View>
@@ -137,6 +156,13 @@ export const AudioPlayer = ({ bottomOffset = 30 }: AudioPlayerProps) => {
                     alignItems: 'center',
                     gap: isSmallScreen ? 12 : 16,
                 }}>
+                    {isCasting && (
+                        <MaterialCommunityIcons
+                            name="cast-connected"
+                            size={iconSize}
+                            color={styles.accentColor}
+                        />
+                    )}
                     {/* Play/Pause Button */}
                     <Pressable
                         onPress={handleTogglePlay}
@@ -149,7 +175,7 @@ export const AudioPlayer = ({ bottomOffset = 30 }: AudioPlayerProps) => {
                             alignItems: 'center',
                         }}
                     >
-                        {isPlaying ? (
+                        {effectivePlaying ? (
                             <Ionicons name="pause" size={iconSize} color={styles.darkColor} />
                         ) : (
                             <Ionicons name="play" size={iconSize} color={styles.darkColor} style={{marginLeft: 2}} />
