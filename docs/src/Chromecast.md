@@ -74,6 +74,10 @@ if the websocket drops.
   pushes Status updates over the agent websocket. The UI's progress bar
   reflects what the Chromecast actually plays, including external
   pauses or end-of-stream.
+- Watchtime sync: every status update from the Chromecast is also
+  persisted via the existing watchtime store, so the listened position
+  during a cast session is visible everywhere PodFetch shows progress
+  (episode resume, last-watched list, gPodder sync).
 - Permission resolution: per-user vs household visibility is enforced
   on every API call.
 

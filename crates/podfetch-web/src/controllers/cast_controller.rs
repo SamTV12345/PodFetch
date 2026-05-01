@@ -3,6 +3,7 @@ use crate::cast::{
     CastControlRequest, CastDeviceResponse, CastSessionResponse, CastStartRequest,
     CastStatusResponse, DiscoveredCastDeviceResponse, parse_device_uuid, parse_session_id,
 };
+use crate::usecases::podcast_episode::PodcastEpisodeUseCase;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_infrastructure::error::CustomError;
@@ -73,6 +74,14 @@ pub async fn start_cast_session(
     Extension(user): Extension<User>,
     Json(req): Json<CastStartRequest>,
 ) -> Result<Json<CastSessionResponse>, CustomError> {
+    // Resolve the GUID-like string id used by the watchtime store. If
+    // the episode isn't found we still allow the cast to start — the
+    // session simply won't persist watchtime.
+    let episode_string_id = PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(
+        req.episode_id,
+    )?
+    .map(|e| e.episode_id);
+
     let media = CastMedia {
         url: req.url,
         mime: req.mime,
@@ -83,7 +92,7 @@ pub async fn start_cast_session(
     };
     let session = state
         .cast_orchestrator
-        .start(&user, &req.chromecast_uuid, media)
+        .start(&user, &req.chromecast_uuid, media, episode_string_id)
         .await
         .map_err(CustomError::from)?;
     Ok(Json(CastSessionResponse::from_active(&session)))

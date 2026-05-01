@@ -2,6 +2,8 @@ use crate::app_state::AppState;
 use crate::events::CastEndedReason;
 use crate::server::ChatServerHandle;
 use crate::services::agent::registry::AgentSessionHandle;
+use crate::services::cast::service::ActiveSession;
+use crate::usecases::watchtime::WatchtimeUseCase;
 use axum::Router;
 use axum::extract::State;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
@@ -219,17 +221,15 @@ async fn handle_agent_message(
             state.agent_dispatcher.complete_pending(&rid, msg);
         }
         AgentMsg::Status { status } => {
-            // Update the cached snapshot and broadcast onward to the UI.
-            if state.cast_orchestrator.record_status(status.clone()).is_some() {
-                ChatServerHandle::broadcast_cast_status(status);
+            if let Some(session) = state.cast_orchestrator.record_status(status.clone()) {
+                ChatServerHandle::broadcast_cast_status(status.clone());
+                persist_watchtime_async(&session, status.position_secs);
             }
         }
         AgentMsg::SessionEnded { session_id, reason } => {
-            if state
-                .cast_orchestrator
-                .drop_session(&session_id)
-                .is_some()
-            {
+            if let Some(session) = state.cast_orchestrator.drop_session(&session_id) {
+                // Persist a final position before the session goes away.
+                persist_watchtime_async(&session, session.last_status.position_secs);
                 ChatServerHandle::broadcast_cast_ended(
                     session_id,
                     map_session_end_reason(reason),
@@ -258,6 +258,21 @@ async fn handle_agent_message(
         }
     }
     let _ = ErrorCode::InvalidRequest; // keep variant exercised
+}
+
+fn persist_watchtime_async(session: &ActiveSession, position_secs: f64) {
+    let Some(podcast_episode_id) = session.episode_string_id.clone() else {
+        return;
+    };
+    let username = session.username.clone();
+    let position = position_secs.max(0.0).min(f64::from(i32::MAX)) as i32;
+    tokio::task::spawn_blocking(move || {
+        if let Err(err) =
+            WatchtimeUseCase::log_watchtime(&podcast_episode_id, position, username)
+        {
+            warn!("cast watchtime persist failed: {err}");
+        }
+    });
 }
 
 fn map_session_end_reason(

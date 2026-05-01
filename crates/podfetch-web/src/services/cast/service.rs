@@ -20,7 +20,14 @@ pub struct ActiveSession {
     pub session_id: CastSessionId,
     pub device_uuid: CastDeviceUuid,
     pub user_id: i32,
+    /// Username of the session owner — cached so watchtime persistence
+    /// from the WS handler doesn't need to round-trip the user repo.
+    pub username: String,
     pub episode_id: Option<i32>,
+    /// String episode identifier used by `WatchtimeUseCase::log_watchtime`
+    /// (i.e. `PodcastEpisode::episode_id`, the GUID-like string), looked
+    /// up at session-start time.
+    pub episode_string_id: Option<String>,
     /// Set when the session is being driven through a remote agent;
     /// `None` means the session is on the server's own LAN.
     pub agent_id: Option<String>,
@@ -132,11 +139,16 @@ impl<L: CastDriver> CastOrchestrator<L> {
 
     /// Start a media session on the given Chromecast. Routes to the local
     /// driver or to the owning agent based on `device.agent_id`.
+    ///
+    /// `episode_string_id` is the GUID-like string the watchtime store
+    /// keys on; the caller looks it up from the numeric episode id before
+    /// invoking us (see the cast controller).
     pub async fn start(
         &self,
         user: &User,
         chromecast_uuid: &str,
         media: CastMedia,
+        episode_string_id: Option<String>,
     ) -> Result<ActiveSession, OrchestratorError> {
         let device = self.resolve_castable(user, chromecast_uuid)?;
         let target = build_target(&device)?;
@@ -157,7 +169,9 @@ impl<L: CastDriver> CastOrchestrator<L> {
             session_id: session_id.clone(),
             device_uuid: target.uuid,
             user_id: user.id,
+            username: user.username.clone(),
             episode_id: media.episode_id,
+            episode_string_id,
             agent_id,
             last_status: status,
         };
@@ -200,27 +214,28 @@ impl<L: CastDriver> CastOrchestrator<L> {
     }
 
     /// Update the cached last_status — called from the status pump that
-    /// also broadcasts over Socket.io. Returns the user_id the session
-    /// belongs to so the caller knows which room to broadcast into.
-    pub fn record_status(&self, status: CastStatus) -> Option<i32> {
+    /// also broadcasts over Socket.io. Returns a clone of the active
+    /// session (post-update) so the caller has everything it needs to
+    /// broadcast the event AND persist watchtime against the session's
+    /// owning user / episode.
+    pub fn record_status(&self, status: CastStatus) -> Option<ActiveSession> {
         let mut guard = self
             .sessions
             .write()
             .expect("orchestrator session lock poisoned");
         let session = guard.get_mut(&status.session_id)?;
         session.last_status = status;
-        Some(session.user_id)
+        Some(session.clone())
     }
 
-    /// Drop a session from the registry. Returns the user_id if the session
-    /// was known, so the caller can broadcast a `cast:ended` event into the
-    /// owning user's room.
-    pub fn drop_session(&self, session_id: &CastSessionId) -> Option<i32> {
+    /// Drop a session from the registry. Returns the full session state
+    /// (with last cached status) so the caller can broadcast `cast:ended`
+    /// AND persist a final watchtime snapshot.
+    pub fn drop_session(&self, session_id: &CastSessionId) -> Option<ActiveSession> {
         self.sessions
             .write()
             .expect("orchestrator session lock poisoned")
             .remove(session_id)
-            .map(|s| s.user_id)
     }
 
     fn lookup_session(
@@ -524,6 +539,7 @@ mod tests {
                     duration_secs: Some(60.0),
                     episode_id: Some(1),
                 },
+                Some("ep-uuid".into()),
             )
             .await
             .map(|s| (s.session_id, s.agent_id))
@@ -571,6 +587,7 @@ mod tests {
                     duration_secs: None,
                     episode_id: None,
                 },
+                None,
             )
             .await;
         match res {
@@ -590,7 +607,9 @@ mod tests {
                 session_id: session_id.clone(),
                 device_uuid: CastDeviceUuid("u".into()),
                 user_id: 42,
+                username: "u42".into(),
                 episode_id: None,
+                episode_string_id: None,
                 agent_id: None,
                 last_status: CastStatus {
                     session_id: session_id.clone(),
@@ -609,7 +628,9 @@ mod tests {
             volume: 0.8,
             at: Utc::now(),
         };
-        assert_eq!(orch.record_status(status), Some(42));
+        let recorded = orch.record_status(status).expect("known session");
+        assert_eq!(recorded.user_id, 42);
+        assert_eq!(recorded.last_status.position_secs, 5.0);
 
         let unknown = CastStatus {
             session_id: CastSessionId::new(),
@@ -618,6 +639,6 @@ mod tests {
             volume: 1.0,
             at: Utc::now(),
         };
-        assert_eq!(orch.record_status(unknown), None);
+        assert!(orch.record_status(unknown).is_none());
     }
 }
