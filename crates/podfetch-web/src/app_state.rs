@@ -1,4 +1,5 @@
 use crate::cast::ServerCastOrchestrator;
+use crate::services::agent::registry::AgentRegistry;
 use crate::services::cast::service::CastOrchestrator;
 use crate::services::device::service::DeviceService;
 use crate::services::device_sync_group::service::DeviceSyncGroupService;
@@ -43,6 +44,7 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub agent_registry: Arc<AgentRegistry>,
     pub cast_orchestrator: Arc<ServerCastOrchestrator>,
     pub device_service: Arc<DeviceService>,
     pub device_sync_group_service: Arc<DeviceSyncGroupService>,
@@ -84,6 +86,7 @@ impl AppState {
             device_service.clone(),
             Arc::new(StubCastDriver),
         ));
+        let agent_registry = Arc::new(AgentRegistry::new());
         let device_sync_group_service = Arc::new(DeviceSyncGroupService::new(Arc::new(
             DeviceSyncGroupRepositoryImpl::new(database.clone()),
         )));
@@ -147,6 +150,7 @@ impl AppState {
         ));
 
         Self {
+            agent_registry,
             cast_orchestrator,
             device_service,
             device_sync_group_service,

@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/common-infrastructure", "crates/podfetch-cast", "crates/podfetch-domain", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
+members = [".", "crates/common-infrastructure", "crates/podfetch-agent-protocol", "crates/podfetch-cast", "crates/podfetch-domain", "crates/podfetch-web", "crates/podfetch-persistence", "crates/podfetch-storage"]
 resolver = "2"
 
 [package]
@@ -66,6 +66,7 @@ debug = false
 [workspace.dependencies]
 # Workspace internal crates
 common-infrastructure = { path = "crates/common-infrastructure", default-features = false }
+podfetch-agent-protocol = { path = "crates/podfetch-agent-protocol" }
 podfetch-cast = { path = "crates/podfetch-cast" }
 podfetch-domain = { path = "crates/podfetch-domain" }
 podfetch-persistence = { path = "crates/podfetch-persistence", default-features = false }
@@ -74,7 +75,7 @@ podfetch-web = { path = "crates/podfetch-web", default-features = false }
 
 # External dependencies
 async-recursion = "1.1.1"
-axum = { version = "0.8.9", features = ["macros", "http2"] }
+axum = { version = "0.8.9", features = ["macros", "http2", "ws"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "query"] }
 axum-test = "20.0.0"
 base64 = "0.22.1"

@@ -13,6 +13,7 @@ postgresql = ["common-infrastructure/postgresql", "podfetch-persistence/postgres
 
 [dependencies]
 common-infrastructure = { workspace = true }
+podfetch-agent-protocol = { workspace = true }
 podfetch-cast = { workspace = true }
 podfetch-domain = { workspace = true }
 podfetch-persistence = { workspace = true }

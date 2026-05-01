@@ -310,6 +310,31 @@ mod tests {
                 .cloned()
                 .collect())
         }
+
+        fn find_by_chromecast_uuid(
+            &self,
+            chromecast_uuid: &str,
+        ) -> Result<Option<Device>, Self::Error> {
+            Ok(self
+                .devices
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|d| d.chromecast_uuid.as_deref() == Some(chromecast_uuid))
+                .cloned())
+        }
+
+        fn upsert_chromecast_from_agent(
+            &self,
+            _chromecast_uuid: &str,
+            _agent_id: &str,
+            _owner_user_id: i32,
+            _name: &str,
+            _ip: Option<&str>,
+            _last_seen_at: chrono::NaiveDateTime,
+        ) -> Result<Device, Self::Error> {
+            unimplemented!("not exercised by these tests")
+        }
     }
 
     fn user(id: i32, role: &str) -> User {

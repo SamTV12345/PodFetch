@@ -114,6 +114,88 @@ impl DeviceRepository for DieselDeviceRepository {
             .map_err(Into::into)
     }
 
+    fn find_by_chromecast_uuid(
+        &self,
+        chromecast_uuid_to_find: &str,
+    ) -> Result<Option<Device>, Self::Error> {
+        use self::devices::dsl::*;
+
+        let mut conn = self.database.connection()?;
+
+        match devices
+            .filter(chromecast_uuid.eq(chromecast_uuid_to_find))
+            .first::<DeviceEntity>(&mut conn)
+        {
+            Ok(entity) => Ok(Some(entity.into())),
+            Err(diesel::result::Error::NotFound) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn upsert_chromecast_from_agent(
+        &self,
+        chromecast_uuid_value: &str,
+        agent_id_value: &str,
+        owner_user_id: i32,
+        name_value: &str,
+        ip_value: Option<&str>,
+        last_seen_at_value: NaiveDateTime,
+    ) -> Result<Device, Self::Error> {
+        use self::devices::dsl::*;
+
+        let mut conn = self.database.connection()?;
+
+        // Try to find existing row for this chromecast UUID.
+        let existing: Option<DeviceEntity> = devices
+            .filter(chromecast_uuid.eq(chromecast_uuid_value))
+            .first::<DeviceEntity>(&mut conn)
+            .map(Some)
+            .or_else(|err| match err {
+                diesel::result::Error::NotFound => Ok(None),
+                other => Err(other),
+            })?;
+
+        match existing {
+            Some(row) => {
+                let row_id = row.id;
+                // Preserve the existing kind so admin-promoted shared
+                // devices stay shared even when the agent reports them.
+                diesel::update(devices.filter(chromecast_uuid.eq(chromecast_uuid_value)))
+                    .set((
+                        agent_id.eq(Some(agent_id_value)),
+                        name.eq(name_value),
+                        ip.eq(ip_value),
+                        last_seen_at.eq(Some(last_seen_at_value)),
+                    ))
+                    .execute(&mut conn)?;
+
+                let updated = devices
+                    .filter(chromecast_uuid.eq(chromecast_uuid_value))
+                    .first::<DeviceEntity>(&mut conn)?;
+                let _ = row_id;
+                Ok(updated.into())
+            }
+            None => {
+                let entity = DeviceEntity {
+                    id: None,
+                    deviceid: chromecast_uuid_value.to_string(),
+                    kind: device_kind::CHROMECAST_PERSONAL.to_string(),
+                    name: name_value.to_string(),
+                    user_id: owner_user_id,
+                    chromecast_uuid: Some(chromecast_uuid_value.to_string()),
+                    agent_id: Some(agent_id_value.to_string()),
+                    last_seen_at: Some(last_seen_at_value),
+                    ip: ip_value.map(ToString::to_string),
+                };
+                diesel::insert_into(devices)
+                    .values(&entity)
+                    .get_result::<DeviceEntity>(&mut conn)
+                    .map(Into::into)
+                    .map_err(Into::into)
+            }
+        }
+    }
+
     fn list_castable_for_user(
         &self,
         viewer_user_id: i32,

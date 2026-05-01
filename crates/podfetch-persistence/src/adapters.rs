@@ -69,6 +69,36 @@ impl DeviceRepository for DeviceRepositoryImpl {
             .list_castable_for_user(user_id)
             .map_err(Into::into)
     }
+
+    fn find_by_chromecast_uuid(
+        &self,
+        chromecast_uuid: &str,
+    ) -> Result<Option<Device>, CustomError> {
+        self.inner
+            .find_by_chromecast_uuid(chromecast_uuid)
+            .map_err(Into::into)
+    }
+
+    fn upsert_chromecast_from_agent(
+        &self,
+        chromecast_uuid: &str,
+        agent_id: &str,
+        owner_user_id: i32,
+        name: &str,
+        ip: Option<&str>,
+        last_seen_at: NaiveDateTime,
+    ) -> Result<Device, CustomError> {
+        self.inner
+            .upsert_chromecast_from_agent(
+                chromecast_uuid,
+                agent_id,
+                owner_user_id,
+                name,
+                ip,
+                last_seen_at,
+            )
+            .map_err(Into::into)
+    }
 }
 
 // ── Filter ──────────────────────────────────────────────────────────────────

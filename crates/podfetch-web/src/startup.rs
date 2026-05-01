@@ -2,6 +2,7 @@ use crate::app_state::AppState;
 use crate::auth_middleware::{
     handle_basic_auth, handle_no_auth, handle_oidc_auth, handle_proxy_auth,
 };
+use crate::controllers::agent_ws_controller::get_agent_ws_router;
 use crate::controllers::cast_controller::get_cast_router;
 use crate::controllers::discover_controller::get_discover_router;
 use crate::controllers::file_hosting::podcast_serving;
@@ -404,11 +405,13 @@ pub fn build_server_router() -> Router {
     SOCKET_IO_LAYER.get_or_init(|| io);
 
     let api_config = get_api_config(state.clone());
+    let agent_ws_router = get_agent_ws_router().with_state(state.clone());
     let (router, api) = OpenApiRouter::new()
         .merge(global_routes(state, api_config))
         .route("/", get(Redirect::to(&ui_dir)))
         .split_for_parts();
     router
+        .merge(agent_ws_router)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api.clone()))
         .merge(Redoc::with_url("/redoc", api.clone()))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
