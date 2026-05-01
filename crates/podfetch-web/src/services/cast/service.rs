@@ -1,3 +1,4 @@
+use crate::services::agent::dispatcher::AgentDispatcher;
 use crate::services::device::service::DeviceService;
 use chrono::Utc;
 use common_infrastructure::error::{CustomError, CustomErrorInner, ErrorSeverity};
@@ -20,17 +21,22 @@ pub struct ActiveSession {
     pub device_uuid: CastDeviceUuid,
     pub user_id: i32,
     pub episode_id: Option<i32>,
+    /// Set when the session is being driven through a remote agent;
+    /// `None` means the session is on the server's own LAN.
+    pub agent_id: Option<String>,
     pub last_status: CastStatus,
 }
 
 /// Routes Chromecast operations on behalf of a user, enforces the
 /// per-user / shared-device permission model, and tracks active sessions.
 ///
-/// `D` is the backing CAST driver. In production this is a local mDNS+CAST
-/// implementation; in tests it is a [`StubCastDriver`].
-pub struct CastOrchestrator<D: CastDriver> {
+/// `L` is the local CAST driver — mDNS+TLS to devices on the server's own
+/// LAN. Devices contributed by a connected agent are routed through the
+/// [`AgentDispatcher`] instead, picked per-device via `device.agent_id`.
+pub struct CastOrchestrator<L: CastDriver> {
     device_service: Arc<DeviceService>,
-    driver: Arc<D>,
+    local_driver: Arc<L>,
+    agent_dispatcher: Arc<AgentDispatcher>,
     sessions: RwLock<HashMap<CastSessionId, ActiveSession>>,
 }
 
@@ -77,11 +83,16 @@ impl From<OrchestratorError> for CustomError {
     }
 }
 
-impl<D: CastDriver> CastOrchestrator<D> {
-    pub fn new(device_service: Arc<DeviceService>, driver: Arc<D>) -> Self {
+impl<L: CastDriver> CastOrchestrator<L> {
+    pub fn new(
+        device_service: Arc<DeviceService>,
+        local_driver: Arc<L>,
+        agent_dispatcher: Arc<AgentDispatcher>,
+    ) -> Self {
         Self {
             device_service,
-            driver,
+            local_driver,
+            agent_dispatcher,
             sessions: RwLock::new(HashMap::new()),
         }
     }
@@ -106,7 +117,9 @@ impl<D: CastDriver> CastOrchestrator<D> {
             .ok_or(OrchestratorError::DeviceNotFound)
     }
 
-    /// Trigger a fresh discovery scan via the driver. Admin-only.
+    /// Trigger a fresh discovery scan against the local driver. Admin-only.
+    /// Agent-contributed devices are reported asynchronously via DeviceList
+    /// over the agent websocket and therefore aren't included here.
     pub async fn discover(
         &self,
         user: &User,
@@ -114,10 +127,11 @@ impl<D: CastDriver> CastOrchestrator<D> {
         if !user.is_admin() {
             return Err(OrchestratorError::Forbidden);
         }
-        Ok(self.driver.discover().await?)
+        Ok(self.local_driver.discover().await?)
     }
 
-    /// Start a media session on the given Chromecast.
+    /// Start a media session on the given Chromecast. Routes to the local
+    /// driver or to the owning agent based on `device.agent_id`.
     pub async fn start(
         &self,
         user: &User,
@@ -126,22 +140,25 @@ impl<D: CastDriver> CastOrchestrator<D> {
     ) -> Result<ActiveSession, OrchestratorError> {
         let device = self.resolve_castable(user, chromecast_uuid)?;
         let target = build_target(&device)?;
+        let agent_id = device.agent_id.clone();
 
-        let session_id = self.driver.play(&target, &media).await?;
-        let status = self.driver.status_snapshot(&session_id).await.unwrap_or(
-            CastStatus {
-                session_id: session_id.clone(),
-                state: CastState::Buffering,
-                position_secs: 0.0,
-                volume: 1.0,
-                at: Utc::now(),
-            },
-        );
+        let session_id = match &agent_id {
+            Some(id) => self.agent_dispatcher.play(id, &target, &media).await?,
+            None => self.local_driver.play(&target, &media).await?,
+        };
+        let status = CastStatus {
+            session_id: session_id.clone(),
+            state: CastState::Buffering,
+            position_secs: 0.0,
+            volume: 1.0,
+            at: Utc::now(),
+        };
         let active = ActiveSession {
             session_id: session_id.clone(),
             device_uuid: target.uuid,
             user_id: user.id,
             episode_id: media.episode_id,
+            agent_id,
             last_status: status,
         };
         self.sessions
@@ -151,7 +168,8 @@ impl<D: CastDriver> CastOrchestrator<D> {
         Ok(active)
     }
 
-    /// Issue a control command against a session the user owns.
+    /// Issue a control command against a session the user owns. Routes to
+    /// whichever backend originally started the session.
     pub async fn control(
         &self,
         user: &User,
@@ -159,7 +177,14 @@ impl<D: CastDriver> CastOrchestrator<D> {
         cmd: ControlCmd,
     ) -> Result<(), OrchestratorError> {
         let session = self.lookup_session(user, session_id)?;
-        self.driver.control(&session.session_id, &cmd).await?;
+        match &session.agent_id {
+            Some(id) => {
+                self.agent_dispatcher
+                    .control(id, &session.session_id, &cmd)
+                    .await?
+            }
+            None => self.local_driver.control(&session.session_id, &cmd).await?,
+        }
         Ok(())
     }
 
@@ -257,6 +282,7 @@ pub fn is_chromecast_kind(kind: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::services::agent::registry::AgentRegistry;
     use chrono::NaiveDate;
     use podfetch_cast::StubCastDriver;
     use podfetch_domain::device::DeviceRepository;
@@ -366,9 +392,24 @@ mod tests {
     }
 
     fn orchestrator(devices: Vec<Device>) -> CastOrchestrator<StubCastDriver> {
+        orchestrator_with_dispatcher(devices, Arc::new(AgentDispatcher::new(Arc::new(
+            AgentRegistry::new(),
+        ))))
+        .0
+    }
+
+    fn orchestrator_with_dispatcher(
+        devices: Vec<Device>,
+        dispatcher: Arc<AgentDispatcher>,
+    ) -> (CastOrchestrator<StubCastDriver>, Arc<AgentRegistry>) {
         let repo = Arc::new(FakeDeviceRepo::new(devices));
         let device_service = Arc::new(DeviceService::new(repo));
-        CastOrchestrator::new(device_service, Arc::new(StubCastDriver))
+        // Tests that need the registry construct the dispatcher from a
+        // shared registry; tests that don't can use the simple helper.
+        let registry = Arc::new(AgentRegistry::new());
+        let orch =
+            CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher);
+        (orch, registry)
     }
 
     #[test]
@@ -431,6 +472,113 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn start_routes_to_agent_when_device_has_agent_id() {
+        use crate::services::agent::registry::{AgentRegistry, AgentSessionHandle};
+        use podfetch_agent_protocol::{AgentMsg, ServerMsg};
+        use tokio::sync::mpsc;
+
+        // Wire a shared registry so we can both register an agent and
+        // observe what the dispatcher sends it.
+        let registry = Arc::new(AgentRegistry::new());
+        let dispatcher = Arc::new(AgentDispatcher::new(registry.clone()));
+
+        let (tx, mut wire) = mpsc::channel(16);
+        registry.register(AgentSessionHandle::new(
+            "agent-1".into(),
+            5,
+            "0.1.0".into(),
+            tx,
+        ));
+
+        let alice = user(5, "user");
+        let mut device = make_device(
+            21,
+            alice.id,
+            device_kind::CHROMECAST_PERSONAL,
+            "uuid-remote",
+        );
+        device.agent_id = Some("agent-1".into());
+
+        let repo = Arc::new(FakeDeviceRepo::new(vec![device]));
+        let device_service = Arc::new(DeviceService::new(repo));
+        let orch = CastOrchestrator::new(
+            device_service,
+            Arc::new(StubCastDriver),
+            dispatcher.clone(),
+        );
+
+        // Drive `start` and intercept the Play that leaves for the agent.
+        let alice_clone = alice.clone();
+        let dispatcher_clone = dispatcher.clone();
+        let task = tokio::spawn(async move {
+            let _ = dispatcher_clone; // keep alive for duration
+            orch.start(
+                &alice_clone,
+                "uuid-remote",
+                CastMedia {
+                    url: "https://x/audio.mp3".into(),
+                    mime: "audio/mpeg".into(),
+                    title: "Ep".into(),
+                    artwork_url: None,
+                    duration_secs: Some(60.0),
+                    episode_id: Some(1),
+                },
+            )
+            .await
+            .map(|s| (s.session_id, s.agent_id))
+        });
+
+        let request_id = match wire.recv().await.expect("server msg") {
+            ServerMsg::Play { request_id, .. } => request_id,
+            other => panic!("expected Play, got {other:?}"),
+        };
+        dispatcher.complete_pending(
+            &request_id,
+            AgentMsg::SessionStarted {
+                request_id: request_id.clone(),
+                session_id: CastSessionId("remote-session".into()),
+            },
+        );
+
+        let (session_id, agent_id) = task.await.unwrap().unwrap();
+        assert_eq!(session_id.0, "remote-session");
+        assert_eq!(agent_id.as_deref(), Some("agent-1"));
+    }
+
+    #[tokio::test]
+    async fn start_against_local_device_uses_local_driver() {
+        let alice = user(1, "user");
+        let device = make_device(
+            10,
+            alice.id,
+            device_kind::CHROMECAST_PERSONAL,
+            "uuid-local",
+        );
+        let orch = orchestrator(vec![device]);
+
+        // Local driver is the stub which returns NotImplemented; so we
+        // assert the call routed through it (rather than the dispatcher).
+        let res = orch
+            .start(
+                &alice,
+                "uuid-local",
+                CastMedia {
+                    url: "https://x/audio.mp3".into(),
+                    mime: "audio/mpeg".into(),
+                    title: "Ep".into(),
+                    artwork_url: None,
+                    duration_secs: None,
+                    episode_id: None,
+                },
+            )
+            .await;
+        match res {
+            Err(OrchestratorError::Cast(CastError::NotImplemented)) => {}
+            other => panic!("expected stub local NotImplemented, got {other:?}"),
+        }
+    }
+
     #[test]
     fn record_status_returns_owning_user() {
         let orch = orchestrator(vec![]);
@@ -443,6 +591,7 @@ mod tests {
                 device_uuid: CastDeviceUuid("u".into()),
                 user_id: 42,
                 episode_id: None,
+                agent_id: None,
                 last_status: CastStatus {
                     session_id: session_id.clone(),
                     state: CastState::Idle,

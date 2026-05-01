@@ -1,4 +1,6 @@
 use crate::app_state::AppState;
+use crate::events::CastEndedReason;
+use crate::server::ChatServerHandle;
 use crate::services::agent::registry::AgentSessionHandle;
 use axum::Router;
 use axum::extract::State;
@@ -178,7 +180,10 @@ async fn handle_agent_message(
         AgentMsg::HelloAck { .. } => {
             warn!(agent_id, "unexpected duplicate HelloAck");
         }
-        AgentMsg::DeviceList { devices, .. } => {
+        AgentMsg::DeviceList {
+            request_id,
+            ref devices,
+        } => {
             for device in devices {
                 let ip = device.ip.map(|ip| ip.to_string());
                 if let Err(err) = state.device_service.upsert_chromecast_from_agent(
@@ -189,22 +194,82 @@ async fn handle_agent_message(
                     ip.as_deref(),
                     Utc::now().naive_utc(),
                 ) {
-                    warn!(agent_id, "failed to upsert device {}: {err}", device.uuid.as_ref());
+                    warn!(
+                        agent_id,
+                        "failed to upsert device {}: {err}",
+                        device.uuid.as_ref()
+                    );
                 }
             }
+            // Solicited DeviceList → wake the dispatcher waiting on the
+            // matching DiscoverRequest.
+            if let Some(rid) = request_id.clone() {
+                state.agent_dispatcher.complete_pending(
+                    &rid,
+                    AgentMsg::DeviceList {
+                        request_id: Some(rid.clone()),
+                        devices: devices.clone(),
+                    },
+                );
+            }
         }
-        AgentMsg::Status { .. }
-        | AgentMsg::SessionStarted { .. }
-        | AgentMsg::SessionEnded { .. } => {
-            // Cast session orchestration is wired in a follow-up step;
-            // accept and ignore for now so the agent doesn't see errors.
+        AgentMsg::SessionStarted { ref request_id, .. } => {
+            // Always correlated — forward to whoever issued the Play.
+            let rid = request_id.clone();
+            state.agent_dispatcher.complete_pending(&rid, msg);
+        }
+        AgentMsg::Status { status } => {
+            // Update the cached snapshot and broadcast onward to the UI.
+            if state.cast_orchestrator.record_status(status.clone()).is_some() {
+                ChatServerHandle::broadcast_cast_status(status);
+            }
+        }
+        AgentMsg::SessionEnded { session_id, reason } => {
+            if state
+                .cast_orchestrator
+                .drop_session(&session_id)
+                .is_some()
+            {
+                ChatServerHandle::broadcast_cast_ended(
+                    session_id,
+                    map_session_end_reason(reason),
+                );
+            }
         }
         AgentMsg::Pong => {}
-        AgentMsg::Error { code, message, .. } => {
-            warn!(agent_id, "agent reported error {code:?}: {message}");
+        AgentMsg::Error {
+            request_id,
+            code,
+            ref message,
+        } => {
+            if let Some(rid) = request_id.clone() {
+                let rid_for_lookup = rid.clone();
+                state.agent_dispatcher.complete_pending(
+                    &rid_for_lookup,
+                    AgentMsg::Error {
+                        request_id: Some(rid),
+                        code,
+                        message: message.clone(),
+                    },
+                );
+            } else {
+                warn!(agent_id, "agent reported uncorrelated error {code:?}: {message}");
+            }
         }
     }
     let _ = ErrorCode::InvalidRequest; // keep variant exercised
+}
+
+fn map_session_end_reason(
+    reason: podfetch_agent_protocol::SessionEndReason,
+) -> CastEndedReason {
+    use podfetch_agent_protocol::SessionEndReason;
+    match reason {
+        SessionEndReason::Stopped => CastEndedReason::Stopped,
+        SessionEndReason::Finished => CastEndedReason::Finished,
+        SessionEndReason::DeviceGone => CastEndedReason::DeviceGone,
+        SessionEndReason::Error => CastEndedReason::Error,
+    }
 }
 
 async fn send_msg<S>(sink: &mut S, msg: &ServerMsg) -> Result<(), ()>
