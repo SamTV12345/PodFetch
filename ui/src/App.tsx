@@ -28,6 +28,7 @@ import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
 import {GPodderIntegration} from "./pages/GPodderIntegration";
+import {SettingsCastDevices} from "./components/SettingsCastDevices";
 import {TagsPage} from "./pages/TagsPage";
 
 export const router = createBrowserRouter(createRoutesFromElements(
@@ -68,6 +69,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="naming" element={<SettingsNaming/>}/>
                 <Route path="podcasts" element={<SettingsPodcastDelete/>}/>
                 <Route path="gpodder" element={<GPodderIntegration/>}/>
+                <Route path="cast" element={<SettingsCastDevices/>}/>
             </Route>
             <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad /></Suspense>}>
                 <Route index element={<Navigate to="users"/>}/>

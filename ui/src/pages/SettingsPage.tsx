@@ -42,6 +42,11 @@ export const SettingsPage = () => {
                             {t('manage-gpodder-podcasts')}
                         </NavLink>
                     </li>
+                    <li className={`cursor-pointer inline-block px-2 py-4`}>
+                        <NavLink to="cast">
+                            {t('cast-devices')}
+                        </NavLink>
+                    </li>
                 </ul>
             </div>
 

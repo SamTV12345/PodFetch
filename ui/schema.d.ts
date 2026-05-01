@@ -1127,6 +1127,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cast/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_cast_devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/devices/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discover_cast_devices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_cast_session"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cast/sessions/{id}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["control_cast_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ui/index.html": {
         parameters: {
             query?: never;
@@ -1150,6 +1230,61 @@ export interface components {
         BatchActionResponse: {
             affected: number;
         };
+        /** @enum {string} */
+        CastDeviceKind: "chromecast_personal" | "chromecast_shared";
+        CastDeviceResponse: {
+            chromecast_uuid: string;
+            name: string;
+            kind: components["schemas"]["CastDeviceKind"];
+            agent_id?: string | null;
+            last_seen_at?: string | null;
+            ip?: string | null;
+        };
+        DiscoveredCastDeviceResponse: {
+            uuid: string;
+            friendly_name: string;
+            model?: string | null;
+            ip?: string | null;
+            /** Format: int32 */
+            port: number;
+        };
+        /** @enum {string} */
+        CastSessionState: "idle" | "buffering" | "playing" | "paused" | "stopped";
+        CastSessionResponse: {
+            session_id: string;
+            chromecast_uuid: string;
+            episode_id?: number | null;
+            state: components["schemas"]["CastSessionState"];
+            /** Format: float */
+            position_secs: number;
+            /** Format: float */
+            volume: number;
+        };
+        CastStatusResponse: {
+            session_id: string;
+            state: components["schemas"]["CastSessionState"];
+            /** Format: float */
+            position_secs: number;
+            /** Format: float */
+            volume: number;
+        };
+        CastStartSessionRequest: {
+            chromecast_uuid: string;
+            /** Format: int32 */
+            episode_id: number;
+            url: string;
+            mime: string;
+            title: string;
+            artwork_url?: string | null;
+            /** Format: float */
+            duration_secs?: number | null;
+        };
+        CastControlCommand:
+            | { cmd: "pause" }
+            | { cmd: "resume" }
+            | { cmd: "stop" }
+            | { cmd: "seek"; position_secs: number }
+            | { cmd: "set_volume"; volume: number };
         CategoryDto: {
             /** Format: int32 */
             itunesGenreId: number;
@@ -3489,6 +3624,113 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_cast_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastDeviceResponse"][];
+                };
+            };
+        };
+    };
+    discover_cast_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoveredCastDeviceResponse"][];
+                };
+            };
+        };
+    };
+    start_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastStartSessionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastSessionResponse"];
+                };
+            };
+        };
+    };
+    get_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastStatusResponse"];
+                };
+            };
+        };
+    };
+    control_cast_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastControlCommand"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CastStatusResponse"];
+                };
             };
         };
     };

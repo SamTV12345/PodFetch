@@ -4,6 +4,7 @@ import { PlayerTimeControls } from './PlayerTimeControls'
 import { PlayerEpisodeInfo } from './PlayerEpisodeInfo'
 import { PlayerProgressBar } from './PlayerProgressBar'
 import { PlayerVolumeSlider } from './PlayerVolumeSlider'
+import { CastButton } from './CastButton'
 import useAudioPlayer from "../store/AudioPlayerSlice";
 import {Podcast} from "../store/CommonSlice";
 import {$api} from "../utils/http";
@@ -40,7 +41,10 @@ export const DrawerAudioPlayer: FC<DrawerAudioPlayerProps> = ({ audioAmplifier }
                 <PlayerProgressBar currentPodcastEpisode={podcastEpisode}/>
             </div>
 
-            <PlayerVolumeSlider audioAmplifier={audioAmplifier}/>
+            <div className="flex items-center gap-2 w-full">
+                <CastButton/>
+                <PlayerVolumeSlider audioAmplifier={audioAmplifier}/>
+            </div>
         </div>
     )
 }

@@ -29,6 +29,19 @@ export interface ServerToClientEvents {
         message: string,
         podcast: components["schemas"]["PodcastDto"]
     })=>void,
+    "cast:status": (data: {
+        status: {
+            session_id: string,
+            state: components["schemas"]["CastSessionState"],
+            position_secs: number,
+            volume: number,
+            at: string,
+        }
+    })=>void,
+    "cast:ended": (data: {
+        session_id: string,
+        reason: "stopped" | "finished" | "device_gone" | "error",
+    })=>void,
 }
 
 

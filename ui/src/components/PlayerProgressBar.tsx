@@ -2,6 +2,7 @@ import React, {FC, useEffect, useMemo, useRef, useState} from 'react'
 import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import {getAudioPlayer} from "../utils/audioPlayer";
 import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
+import {useCastRemote} from "../hooks/useCastRemote";
 
 type PlayerProgressBarProps = {
     className?: string,
@@ -31,9 +32,18 @@ const convertToMinutes = (time: number | undefined) => {
 
 export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, currentPodcastEpisode }) => {
     const logCurrentPlaybackTime = usePlaybackLogger()
+    const cast = useCastRemote()
     const wrapper = useRef<HTMLDivElement>(null)
-    const metadata = useAudioPlayer(state => state.metadata)
-    const minute = useAudioPlayer(state => state.metadata?.currentTime)
+    const localMetadata = useAudioPlayer(state => state.metadata)
+    const localMinute = useAudioPlayer(state => state.metadata?.currentTime)
+    const metadata = cast.isCasting && cast.durationSecs > 0
+        ? {
+              currentTime: cast.positionSecs,
+              duration: cast.durationSecs,
+              percentage: (cast.positionSecs / cast.durationSecs) * 100,
+          }
+        : localMetadata
+    const minute = cast.isCasting ? cast.positionSecs : localMinute
     const [isDragging, setIsDragging] = useState(false)
     const [dragPercentage, setDragPercentage] = useState<number | null>(null)
     const setCurrentTimeUpdatePercentage = useAudioPlayer(state => state.setCurrentTimeUpdatePercentage)
@@ -68,6 +78,12 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
         const offset = wrapper.current.getBoundingClientRect()
         const localX = e.clientX - offset.left
         const percentage = Math.max(0, Math.min(100, (localX / offset.width) * 100))
+
+        if (cast.isCasting) {
+            const newTime = Math.floor((percentage / 100) * (metadata.duration || 0))
+            void cast.seek(newTime)
+            return
+        }
 
         const audioPlayer = getAudioPlayer()
         if (!audioPlayer) {
@@ -105,6 +121,13 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
 
     const handleMouseUp = () => {
         if (isDragging && dragPercentage !== null && metadata) {
+            if (cast.isCasting) {
+                const newTime = Math.floor((dragPercentage / 100) * (metadata.duration || 0))
+                void cast.seek(newTime)
+                setIsDragging(false)
+                setDragPercentage(null)
+                return
+            }
             const audioPlayer = getAudioPlayer()
             if (!audioPlayer) {
                 return
