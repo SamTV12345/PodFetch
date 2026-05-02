@@ -3955,9 +3955,9 @@ dependencies = [
 
 [[package]]
 name = "rust_cast"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c403f9630e398a4a5f2655df392254fcade5e4df94b11308487f2aea49ddee46"
+checksum = "235d09067a35143d271fdeaf28298b4f729b5da50abdbf3b9e6395262d8bc7a9"
 dependencies = [
  "byteorder",
  "log",
@@ -3967,7 +3967,7 @@ dependencies = [
  "rustls-native-certs",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
