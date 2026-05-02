@@ -36,7 +36,7 @@
     "expo-font": "~14.0.11",
     "expo-haptics": "~55.0.14",
     "expo-linear-gradient": "~55.0.13",
-    "expo-linking": "~8.0.11",
+    "expo-linking": "~8.0.12",
     "expo-localization": "~55.0.13",
     "expo-network": "^55.0.13",
     "expo-router": "~6.0.23",
