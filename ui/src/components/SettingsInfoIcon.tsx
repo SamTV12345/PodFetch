@@ -14,8 +14,8 @@ export const SettingsInfoIcon: FC<SettingsInfoIconProps> = ({ textKey, headerKey
     return (
         <Dialog.Root>
             <Dialog.Trigger asChild>
-                <button type="button">
-                    <span className="material-symbols-outlined pointer active:scale-95">info</span>
+                <button type="button" className={`inline-flex items-center align-middle ml-1 cursor-pointer ${className ?? ''}`}>
+                    <span className="material-symbols-outlined text-base leading-none active:scale-95">info</span>
                 </button>
             </Dialog.Trigger>
             <Dialog.Portal>

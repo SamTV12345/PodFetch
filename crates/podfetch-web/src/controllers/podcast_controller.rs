@@ -1193,6 +1193,7 @@ pub mod tests {
             direct_paths: false,
             activated: true,
             podcast_prefill: 10,
+            use_one_cover_for_all_episodes: false,
         };
 
         let update_resp = ts_server

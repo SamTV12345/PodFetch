@@ -20,6 +20,7 @@ diesel::table! {
         direct_paths -> Bool,
         activated -> Bool,
         podcast_prefill -> Integer,
+        use_one_cover_for_all_episodes -> Bool,
     }
 }
 
@@ -40,6 +41,7 @@ struct PodcastSettingEntity {
     direct_paths: bool,
     activated: bool,
     podcast_prefill: i32,
+    use_one_cover_for_all_episodes: bool,
 }
 
 impl From<PodcastSettingEntity> for PodcastSetting {
@@ -59,6 +61,7 @@ impl From<PodcastSettingEntity> for PodcastSetting {
             direct_paths: value.direct_paths,
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
+            use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
         }
     }
 }
@@ -80,6 +83,7 @@ impl From<PodcastSetting> for PodcastSettingEntity {
             direct_paths: value.direct_paths,
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
+            use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
         }
     }
 }

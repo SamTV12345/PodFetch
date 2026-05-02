@@ -178,6 +178,7 @@ diesel::table! {
         direct_paths -> Bool,
         activated -> Bool,
         podcast_prefill -> Integer,
+        use_one_cover_for_all_episodes -> Bool,
     }
 }
 
