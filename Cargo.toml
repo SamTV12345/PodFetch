@@ -109,7 +109,7 @@ hyper-tls = { version = "0.6.0" }
 id3 = "1.16.4"
 indexmap = "2"
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
-libsqlite3-sys = { version = "0.36.0", features = ["bundled"] }
+libsqlite3-sys = { version = "0.37.0", features = ["bundled"] }
 maud = { version = "*", features = ["axum", "axum-core"] }
 mime_guess = "2.0.5"
 mp4ameta = "0.13.0"
