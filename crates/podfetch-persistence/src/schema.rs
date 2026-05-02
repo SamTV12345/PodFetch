@@ -138,6 +138,7 @@ diesel::table! {
         image -> Nullable<Text>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
+        chapter_type -> Text,
     }
 }
 
@@ -159,6 +160,7 @@ diesel::table! {
         file_image_path -> Nullable<Text>,
         episode_numbering_processed -> Bool,
         download_location -> Nullable<Text>,
+        sponsorblock_fetched_at -> Nullable<Timestamp>,
     }
 }
 
@@ -179,6 +181,8 @@ diesel::table! {
         activated -> Bool,
         podcast_prefill -> Integer,
         use_one_cover_for_all_episodes -> Bool,
+        sponsorblock_enabled -> Bool,
+        sponsorblock_categories -> Text,
     }
 }
 
@@ -229,6 +233,8 @@ diesel::table! {
         direct_paths -> Bool,
         auto_transcode_opus -> Bool,
         use_one_cover_for_all_episodes -> Bool,
+        sponsorblock_enabled -> Bool,
+        sponsorblock_categories -> Text,
     }
 }
 

@@ -15,6 +15,7 @@ pub struct PodcastChapterDto {
     pub start_time: i32,
     pub title: String,
     pub end_time: i32,
+    pub chapter_type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, IntoParams)]

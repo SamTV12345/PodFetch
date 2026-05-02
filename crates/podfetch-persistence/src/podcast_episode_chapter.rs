@@ -17,6 +17,7 @@ diesel::table! {
         image -> Nullable<Text>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
+        chapter_type -> Text,
     }
 }
 
@@ -32,6 +33,7 @@ struct PodcastEpisodeChapterEntity {
     image: Option<String>,
     created_at: NaiveDateTime,
     updated_at: NaiveDateTime,
+    chapter_type: String,
 }
 
 #[derive(Insertable, Clone)]
@@ -46,6 +48,7 @@ struct PodcastEpisodeChapterInsertEntity {
     image: Option<String>,
     created_at: NaiveDateTime,
     updated_at: NaiveDateTime,
+    chapter_type: String,
 }
 
 impl From<PodcastEpisodeChapterEntity> for PodcastEpisodeChapter {
@@ -58,6 +61,7 @@ impl From<PodcastEpisodeChapterEntity> for PodcastEpisodeChapter {
             end_time: value.end_time,
             href: value.href,
             image: value.image,
+            chapter_type: value.chapter_type,
             created_at: value.created_at,
             updated_at: value.updated_at,
         }
@@ -85,6 +89,7 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
         let existing = pec_table
             .filter(pec_dsl::episode_id.eq(chapter.episode_id))
             .filter(pec_dsl::start_time.eq(chapter.start_time))
+            .filter(pec_dsl::chapter_type.eq(&chapter.chapter_type))
             .first::<PodcastEpisodeChapterEntity>(&mut self.database.connection()?)
             .optional()?;
 
@@ -97,6 +102,7 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
                 end_time: chapter.end_time,
                 href: chapter.href,
                 image: chapter.image,
+                chapter_type: chapter.chapter_type,
                 created_at: existing.created_at,
                 updated_at: now,
             },
@@ -108,6 +114,7 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
                 end_time: chapter.end_time,
                 href: chapter.href,
                 image: chapter.image,
+                chapter_type: chapter.chapter_type,
                 created_at: now,
                 updated_at: now,
             },
@@ -122,6 +129,7 @@ impl PodcastEpisodeChapterRepository for DieselPodcastEpisodeChapterRepository {
                     pec_dsl::end_time.eq(chapter_to_store.end_time),
                     pec_dsl::href.eq(chapter_to_store.href),
                     pec_dsl::image.eq(chapter_to_store.image),
+                    pec_dsl::chapter_type.eq(chapter_to_store.chapter_type),
                     pec_dsl::updated_at.eq(chapter_to_store.updated_at),
                 ))
                 .execute(&mut self.database.connection()?)

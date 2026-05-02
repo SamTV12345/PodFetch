@@ -15,6 +15,8 @@ pub struct PodcastSetting {
     pub activated: bool,
     pub podcast_prefill: i32,
     pub use_one_cover_for_all_episodes: bool,
+    pub sponsorblock_enabled: bool,
+    pub sponsorblock_categories: Vec<crate::sponsorblock::SponsorBlockCategory>,
 }
 
 pub trait PodcastSettingsRepository: Send + Sync {

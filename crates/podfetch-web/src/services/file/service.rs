@@ -511,6 +511,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -538,6 +540,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -565,6 +569,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let result = perform_replacement(title, settings, None);
@@ -590,6 +596,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -609,6 +617,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            sponsorblock_fetched_at: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -633,6 +642,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -652,6 +663,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            sponsorblock_fetched_at: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -676,6 +688,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let podcast_episode = PodcastEpisode {
@@ -695,6 +709,7 @@ mod tests {
             deleted: false,
             episode_numbering_processed: false,
             download_location: None,
+            sponsorblock_fetched_at: None,
         };
 
         let result = perform_episode_variable_replacement(settings, podcast_episode, None);
@@ -719,6 +734,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let podcast_episode = PodcastParsed {
@@ -751,6 +768,8 @@ mod tests {
             direct_paths: false,
             auto_transcode_opus: false,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let podcast_episode = PodcastParsed {

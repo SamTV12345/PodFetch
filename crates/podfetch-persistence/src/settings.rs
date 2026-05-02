@@ -3,6 +3,7 @@ use diesel::insert_into;
 use diesel::prelude::{AsChangeset, Identifiable, Insertable, Queryable};
 use diesel::{ExpressionMethods, OptionalExtension, RunQueryDsl};
 use podfetch_domain::settings::{Setting, SettingRepository};
+use podfetch_domain::sponsorblock::{categories_from_csv, categories_to_csv};
 
 diesel::table! {
     settings (id) {
@@ -20,6 +21,8 @@ diesel::table! {
         direct_paths -> Bool,
         auto_transcode_opus -> Bool,
         use_one_cover_for_all_episodes -> Bool,
+        sponsorblock_enabled -> Bool,
+        sponsorblock_categories -> Text,
     }
 }
 
@@ -40,6 +43,8 @@ struct SettingEntity {
     direct_paths: bool,
     auto_transcode_opus: bool,
     use_one_cover_for_all_episodes: bool,
+    sponsorblock_enabled: bool,
+    sponsorblock_categories: String,
 }
 
 impl From<SettingEntity> for Setting {
@@ -59,6 +64,8 @@ impl From<SettingEntity> for Setting {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: categories_from_csv(&value.sponsorblock_categories),
         }
     }
 }
@@ -80,6 +87,8 @@ impl From<Setting> for SettingEntity {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: categories_to_csv(&value.sponsorblock_categories),
         }
     }
 }
@@ -140,6 +149,8 @@ impl SettingRepository for DieselSettingsRepository {
                 direct_paths.eq(false),
                 auto_transcode_opus.eq(false),
                 use_one_cover_for_all_episodes.eq(false),
+                sponsorblock_enabled.eq(false),
+                sponsorblock_categories.eq("sponsor,selfpromo,interaction"),
             ))
             .execute(&mut conn)
             .map(|_| ())

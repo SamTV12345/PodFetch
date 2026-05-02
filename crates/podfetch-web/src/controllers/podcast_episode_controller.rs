@@ -72,6 +72,7 @@ pub async fn find_all_chapters_of_podcast_episode(
             title: v.title,
             start_time: v.start_time,
             end_time: v.end_time,
+            chapter_type: v.chapter_type,
         })
         .collect();
 
@@ -466,6 +467,31 @@ pub async fn delete_all_downloaded_files(
 }
 
 #[utoipa::path(
+post,
+path="/podcasts/{id}/sponsorblock/resync",
+responses(
+(status = 200, description = "Resets the SponsorBlock fetched marker for every episode of the podcast and refetches.", body = BatchActionResponse)),
+tag = "podcast_episodes"
+)]
+pub async fn sponsorblock_resync(
+    Extension(requester): Extension<User>,
+    Path(id): Path<String>,
+) -> Result<Json<BatchActionResponse>, CustomError> {
+    web_require_privileged::<CustomError>(requester.is_admin())
+        .map_err(map_podcast_episode_controller_error)?;
+    let podcast_id = parse_podcast_id(&id)?;
+
+    let affected = tokio::task::spawn_blocking(move || {
+        crate::services::sponsorblock::service::SponsorBlockSyncService::default_service()
+            .force_resync_podcast(podcast_id)
+    })
+    .await
+    .unwrap()?;
+
+    Ok(Json(BatchActionResponse { affected }))
+}
+
+#[utoipa::path(
     post,
     path="/episodes/formatting",
     responses(
@@ -493,6 +519,7 @@ pub async fn retrieve_episode_sample_format(
         file_image_path: None,
         episode_numbering_processed: false,
         download_location: None,
+        sponsorblock_fetched_at: None,
     };
     let settings = Setting {
         id: 0,
@@ -509,6 +536,8 @@ pub async fn retrieve_episode_sample_format(
         direct_paths: true,
         auto_transcode_opus: false,
         use_one_cover_for_all_episodes: false,
+        sponsorblock_enabled: false,
+        sponsorblock_categories: Vec::new(),
     };
     let result = perform_episode_variable_replacement(settings.into(), episode, None)?;
 
@@ -528,6 +557,7 @@ pub fn get_podcast_episode_router() -> OpenApiRouter<AppState> {
         .routes(routes!(resync_files_for_podcast))
         .routes(routes!(resync_db_for_podcast))
         .routes(routes!(delete_all_downloaded_files))
+        .routes(routes!(sponsorblock_resync))
         .routes(routes!(retrieve_episode_sample_format))
         .routes(routes!(find_all_chapters_of_podcast_episode))
 }

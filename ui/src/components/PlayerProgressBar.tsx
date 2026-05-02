@@ -3,6 +3,18 @@ import useAudioPlayer, {type AudioPlayerPlay} from '../store/AudioPlayerSlice'
 import {getAudioPlayer} from "../utils/audioPlayer";
 import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
 import {useCastRemote} from "../hooks/useCastRemote";
+import {useTranslation} from 'react-i18next'
+
+const SPONSORBLOCK_CATEGORY_COLORS: Record<string, string> = {
+    sponsor: '#00d400',
+    selfpromo: '#ffff00',
+    interaction: '#cc00ff',
+    intro: '#00ffff',
+    outro: '#0202ed',
+    preview: '#008fd6',
+    music_offtopic: '#ff9900',
+    filler: '#7300ff',
+}
 
 type PlayerProgressBarProps = {
     className?: string,
@@ -34,8 +46,10 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
     const logCurrentPlaybackTime = usePlaybackLogger()
     const cast = useCastRemote()
     const wrapper = useRef<HTMLDivElement>(null)
+    const {t} = useTranslation()
     const localMetadata = useAudioPlayer(state => state.metadata)
     const localMinute = useAudioPlayer(state => state.metadata?.currentTime)
+    const chapters = useAudioPlayer(state => state.loadedPodcastEpisode?.chapters)
     const metadata = cast.isCasting && cast.durationSecs > 0
         ? {
               currentTime: cast.positionSecs,
@@ -164,16 +178,38 @@ export const PlayerProgressBar: FC<PlayerProgressBarProps> = ({ className, curre
 
     const displayPercentage = Math.max(0, Math.min(100, isDragging && dragPercentage !== null ? dragPercentage : (metadata?.percentage ?? 0)))
 
+    const sponsorMarkers = useMemo(() => {
+        const duration = metadata?.duration
+        if (!duration || duration <= 0 || !chapters?.length) return []
+        return chapters
+            .filter(c => c.chapterType !== 'content' && SPONSORBLOCK_CATEGORY_COLORS[c.chapterType])
+            .map(c => ({
+                id: c.id,
+                left: Math.max(0, Math.min(100, (c.startTime / duration) * 100)),
+                width: Math.max(0, Math.min(100, ((c.endTime - c.startTime) / duration) * 100)),
+                color: SPONSORBLOCK_CATEGORY_COLORS[c.chapterType],
+                label: t(`category-${c.chapterType.replace('_', '-')}`),
+            }))
+    }, [chapters, metadata?.duration, t])
+
     return (
         <div aria-controls="playbar" className="flex items-center gap-3">
             <span className={`text-xs text-right ui-text w-12 ${className}`}>{currentTime}</span>
 
             <div
-                className="grow ui-slider-surface cursor-pointer h-1"
+                className="grow ui-slider-surface cursor-pointer h-1 relative"
                 ref={wrapper}
                 onClick={handleWrapperClick}
                 onMouseDown={handleMouseDown}
             >
+                {sponsorMarkers.map(m => (
+                    <div
+                        key={m.id}
+                        title={m.label}
+                        className="absolute top-0 h-full opacity-70 pointer-events-none"
+                        style={{ left: `${m.left}%`, width: `${m.width}%`, background: m.color }}
+                    />
+                ))}
                 <div className="relative ui-slider-fill h-1 text-right" style={{width: displayPercentage + '%'}}>
                     <span
                         className="absolute -right-1 -top-1 ui-slider-fill h-3 w-3 rounded-full cursor-grab active:cursor-grabbing">

@@ -13,4 +13,6 @@ export type Setting = {
     directPaths: boolean,
     autoTranscodeOpus: boolean,
     useOneCoverForAllEpisodes: boolean,
+    sponsorblockEnabled: boolean,
+    sponsorblockCategories: string[],
 }

@@ -3,6 +3,7 @@ use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use podfetch_domain::podcast_settings::{PodcastSetting, PodcastSettingsRepository};
+use podfetch_domain::sponsorblock::{categories_from_csv, categories_to_csv};
 
 diesel::table! {
     podcast_settings (podcast_id) {
@@ -21,6 +22,8 @@ diesel::table! {
         activated -> Bool,
         podcast_prefill -> Integer,
         use_one_cover_for_all_episodes -> Bool,
+        sponsorblock_enabled -> Bool,
+        sponsorblock_categories -> Text,
     }
 }
 
@@ -42,6 +45,8 @@ struct PodcastSettingEntity {
     activated: bool,
     podcast_prefill: i32,
     use_one_cover_for_all_episodes: bool,
+    sponsorblock_enabled: bool,
+    sponsorblock_categories: String,
 }
 
 impl From<PodcastSettingEntity> for PodcastSetting {
@@ -62,6 +67,8 @@ impl From<PodcastSettingEntity> for PodcastSetting {
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: categories_from_csv(&value.sponsorblock_categories),
         }
     }
 }
@@ -84,6 +91,8 @@ impl From<PodcastSetting> for PodcastSettingEntity {
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: categories_to_csv(&value.sponsorblock_categories),
         }
     }
 }

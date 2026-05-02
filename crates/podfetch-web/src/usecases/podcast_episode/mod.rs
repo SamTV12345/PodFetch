@@ -553,6 +553,13 @@ impl PodcastEpisodeUseCase {
                         &image_url,
                         duration_of_podcast_episode as i32,
                     )?;
+                    crate::services::sponsorblock::service::SponsorBlockSyncService::default_service()
+                        .maybe_sync(
+                            inserted_episode.id,
+                            podcast.id,
+                            &inserted_episode.url,
+                            &inserted_episode.guid,
+                        )?;
                     podcast_inserted.push(inserted_episode);
                 }
                 Ok(podcast_inserted)

@@ -1,6 +1,7 @@
 use chrono::Local;
 use serde::Deserialize;
 use std::fmt::Display;
+use std::str::FromStr;
 use xml_builder::{XMLBuilder, XMLElement, XMLVersion};
 
 #[derive(
@@ -22,6 +23,8 @@ pub struct Setting {
     pub direct_paths: bool,
     pub auto_transcode_opus: bool,
     pub use_one_cover_for_all_episodes: bool,
+    pub sponsorblock_enabled: bool,
+    pub sponsorblock_categories: Vec<String>,
 }
 
 impl From<podfetch_domain::settings::Setting> for Setting {
@@ -41,6 +44,12 @@ impl From<podfetch_domain::settings::Setting> for Setting {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: value
+                .sponsorblock_categories
+                .iter()
+                .map(|c| c.as_str().to_string())
+                .collect(),
         }
     }
 }
@@ -62,6 +71,14 @@ impl From<Setting> for podfetch_domain::settings::Setting {
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: value
+                .sponsorblock_categories
+                .iter()
+                .filter_map(|s| {
+                    podfetch_domain::sponsorblock::SponsorBlockCategory::from_str(s).ok()
+                })
+                .collect(),
         }
     }
 }
@@ -131,6 +148,7 @@ pub struct UpsertPodcastEpisodeChapter {
     pub end_time: i32,
     pub href: Option<String>,
     pub image: Option<String>,
+    pub chapter_type: String,
 }
 
 impl From<UpsertPodcastEpisodeChapter>
@@ -144,6 +162,7 @@ impl From<UpsertPodcastEpisodeChapter>
             end_time: value.end_time,
             href: value.href,
             image: value.image,
+            chapter_type: value.chapter_type,
         }
     }
 }
@@ -182,6 +201,8 @@ impl ParsedChapter {
             end_time: self.end_time_seconds,
             href: self.href.clone(),
             image: self.image.clone(),
+            chapter_type: podfetch_domain::podcast_episode_chapter::CHAPTER_TYPE_CONTENT
+                .to_string(),
         }
     }
 }

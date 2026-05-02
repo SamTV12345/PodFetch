@@ -19,6 +19,7 @@ pub mod podcast_episode_chapter;
 pub mod podcast_settings;
 pub mod session;
 pub mod settings;
+pub mod sponsorblock;
 pub mod stats;
 pub mod subscription;
 pub mod tag;

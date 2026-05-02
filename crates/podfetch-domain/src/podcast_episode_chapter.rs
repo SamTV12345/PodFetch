@@ -9,6 +9,7 @@ pub struct PodcastEpisodeChapter {
     pub end_time: i32,
     pub href: Option<String>,
     pub image: Option<String>,
+    pub chapter_type: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -21,7 +22,11 @@ pub struct UpsertPodcastEpisodeChapter {
     pub end_time: i32,
     pub href: Option<String>,
     pub image: Option<String>,
+    pub chapter_type: String,
 }
+
+/// Chapter type for content that came from the original media file (ID3, MP4 atoms).
+pub const CHAPTER_TYPE_CONTENT: &str = "content";
 
 pub trait PodcastEpisodeChapterRepository: Send + Sync {
     type Error;

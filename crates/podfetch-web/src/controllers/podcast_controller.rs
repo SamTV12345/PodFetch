@@ -864,6 +864,8 @@ pub async fn retrieve_podcast_sample_format(
         direct_paths: true,
         auto_transcode_opus: false,
         use_one_cover_for_all_episodes: false,
+        sponsorblock_enabled: false,
+        sponsorblock_categories: Vec::new(),
     };
     let result = perform_podcast_variable_replacement(settings.into(), podcast, None);
 
@@ -1194,6 +1196,8 @@ pub mod tests {
             activated: true,
             podcast_prefill: 10,
             use_one_cover_for_all_episodes: false,
+            sponsorblock_enabled: false,
+            sponsorblock_categories: Vec::new(),
         };
 
         let update_resp = ts_server

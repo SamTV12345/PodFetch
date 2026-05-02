@@ -14,6 +14,7 @@ import { generatePodcastDefaultSettings } from '../models/PodcastDefaultSettings
 import {CustomButtonPrimary} from "./CustomButtonPrimary";
 import { ConfirmModal } from './ConfirmModal'
 import { enqueueSnackbar } from 'notistack'
+import { SponsorBlockCategorySettings } from './SponsorBlockCategorySettings'
 
 type PodcastSettingsModalProps = {
     podcast: components['schemas']['PodcastDto']
@@ -54,6 +55,10 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
     const deleteAllDownloadsMutation = $api.useMutation(
         'delete',
         '/api/v1/podcasts/{id}/episodes/downloads'
+    )
+    const sponsorblockResyncMutation = $api.useMutation(
+        'post',
+        '/api/v1/podcasts/{id}/sponsorblock/resync'
     )
 
     type ConfirmState = {
@@ -254,6 +259,30 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             />
 
                             <label className="col-span-2 ui-text">
+                                {t('sponsorblock-enabled')}
+                                <SettingsInfoIcon
+                                    headerKey="sponsorblock-enabled"
+                                    textKey="sponsorblock-enabled-explanation"
+                                />
+                            </label>
+                            <Switcher
+                                checked={draft.sponsorblockEnabled}
+                                onChange={(v) =>
+                                    update('sponsorblockEnabled', v)
+                                }
+                            />
+
+                            {draft.sponsorblockEnabled && (
+                                <div className="col-span-3 mt-1 mb-2 pl-4 border-l-2 ui-border">
+                                    <div className="ui-text-muted text-xs mb-2">{t('sponsorblock-categories')}</div>
+                                    <SponsorBlockCategorySettings
+                                        categories={draft.sponsorblockCategories}
+                                        onChange={(next) => update('sponsorblockCategories', next)}
+                                    />
+                                </div>
+                            )}
+
+                            <label className="col-span-2 ui-text">
                                 {t('activated')}
                             </label>
                             <Switcher
@@ -324,6 +353,40 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                         rejectText: t('cancel'),
                                         onAccept: () => {
                                             resyncDbMutation.mutate(
+                                                { params: { path: { id: String(podcast.id) } } },
+                                                {
+                                                    onSuccess: (data) => {
+                                                        enqueueSnackbar(
+                                                            t('affected-n-episodes', { count: data.affected }),
+                                                            { variant: 'success' }
+                                                        )
+                                                    },
+                                                }
+                                            )
+                                            setConfirmOpen(false)
+                                        },
+                                    })
+                                    setConfirmOpen(true)
+                                }}
+                            >
+                                {t('run')}
+                            </CustomButtonSecondary>
+
+                            <div className="ui-text">
+                                <div>{t('sponsorblock-resync')}</div>
+                                <div className="text-xs ui-text-muted">
+                                    {t('sponsorblock-resync-explanation')}
+                                </div>
+                            </div>
+                            <CustomButtonSecondary
+                                onClick={() => {
+                                    setConfirmData({
+                                        headerText: t('confirm-sponsorblock-resync-header'),
+                                        bodyText: t('confirm-sponsorblock-resync-body'),
+                                        acceptText: t('run'),
+                                        rejectText: t('cancel'),
+                                        onAccept: () => {
+                                            sponsorblockResyncMutation.mutate(
                                                 { params: { path: { id: String(podcast.id) } } },
                                                 {
                                                     onSuccess: (data) => {

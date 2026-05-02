@@ -1,4 +1,6 @@
+use podfetch_domain::sponsorblock::SponsorBlockCategory;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, ToSchema, Default)]
@@ -19,6 +21,8 @@ pub struct PodcastSetting {
     pub activated: bool,
     pub podcast_prefill: i32,
     pub use_one_cover_for_all_episodes: bool,
+    pub sponsorblock_enabled: bool,
+    pub sponsorblock_categories: Vec<String>,
 }
 
 impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting {
@@ -39,6 +43,12 @@ impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting 
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: value
+                .sponsorblock_categories
+                .iter()
+                .map(|c| c.as_str().to_string())
+                .collect(),
         }
     }
 }
@@ -61,6 +71,12 @@ impl From<PodcastSetting> for podfetch_domain::podcast_settings::PodcastSetting 
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
             use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
+            sponsorblock_enabled: value.sponsorblock_enabled,
+            sponsorblock_categories: value
+                .sponsorblock_categories
+                .iter()
+                .filter_map(|s| SponsorBlockCategory::from_str(s).ok())
+                .collect(),
         }
     }
 }

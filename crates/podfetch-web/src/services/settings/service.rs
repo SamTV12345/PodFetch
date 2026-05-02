@@ -80,6 +80,7 @@ impl SettingsService {
             file_image_path: None,
             episode_numbering_processed: false,
             download_location: None,
+            sponsorblock_fetched_at: None,
         };
 
         let transient_setting = build_name_only_setting(&update_settings);
@@ -105,6 +106,8 @@ fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::sett
         direct_paths: update.direct_paths,
         auto_transcode_opus: false,
         use_one_cover_for_all_episodes: false,
+        sponsorblock_enabled: false,
+        sponsorblock_categories: Vec::new(),
     }
 }
 

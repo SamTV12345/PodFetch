@@ -22,6 +22,7 @@ pub struct PodcastEpisode {
     pub file_image_path: Option<String>,
     pub episode_numbering_processed: bool,
     pub download_location: Option<String>,
+    pub sponsorblock_fetched_at: Option<NaiveDateTime>,
 }
 
 impl PodcastEpisode {
@@ -144,4 +145,18 @@ pub trait PodcastEpisodeRepository: Send + Sync {
         episode_id: &str,
         processed: bool,
     ) -> Result<(), Self::Error>;
+
+    /// Update the SponsorBlock fetch marker. Pass `None` to reset (force re-fetch).
+    fn set_sponsorblock_fetched_at(
+        &self,
+        id: i32,
+        ts: Option<NaiveDateTime>,
+    ) -> Result<(), Self::Error>;
+
+    /// Clear the SponsorBlock fetch marker for every episode of a podcast.
+    /// Returns the number of affected rows.
+    fn clear_sponsorblock_fetched_at_for_podcast(
+        &self,
+        podcast_id: i32,
+    ) -> Result<usize, Self::Error>;
 }

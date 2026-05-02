@@ -1,4 +1,4 @@
-import {FC, useEffect} from 'react'
+import {FC, useEffect, useRef} from 'react'
 import useOnMount from '../hooks/useOnMount'
 import useAudioPlayer from '../store/AudioPlayerSlice'
 import { AudioAmplifier } from '../models/AudioAmplifier'
@@ -7,6 +7,8 @@ import {getAudioPlayer} from "../utils/audioPlayer";
 import useCommon from "../store/CommonSlice";
 import {SKIPPED_TIME} from "../utils/Utilities";
 import {usePlaybackLogger} from "../hooks/usePlaybackLogger";
+import {useTranslation} from 'react-i18next'
+import {enqueueSnackbar} from 'notistack'
 
 type HiddenAudioPlayerProps = {
     setAudioAmplifier: (audioAmplifier: AudioAmplifier | undefined) => void
@@ -14,8 +16,11 @@ type HiddenAudioPlayerProps = {
 
 export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifier }) => {
     const logCurrentPlaybackTime = usePlaybackLogger()
+    const {t} = useTranslation()
     const episodeDurationQuery = $api.useMutation('get', '/api/v1/podcasts/episode/{id}')
     const podcastEpisode = useAudioPlayer(state => state.loadedPodcastEpisode)
+    const settingsQuery = $api.useQuery('get', '/api/v1/settings')
+    const lastSkippedRef = useRef<string | null>(null)
     const currentPodcast = useAudioPlayer(state => state.currentPodcast)
     const currentPodcastEpisodeIndex = useAudioPlayer(state => state.currentPodcastEpisodeIndex)
     const setCurrentPodcastEpisode = useAudioPlayer(state => state.setCurrentPodcastEpisode)
@@ -173,6 +178,10 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
         setAudioAmplifier(undefined)
     })
 
+    useEffect(() => {
+        lastSkippedRef.current = null
+    }, [podcastEpisode?.podcastEpisode.episode_id])
+
 
     useEffect(() => {
         const audioPlayer = getAudioPlayer()
@@ -198,8 +207,37 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
             })
         }
 
+        const maybeSkipSponsorBlock = (el: HTMLMediaElement): boolean => {
+            const settings = settingsQuery.data
+            if (!settings?.sponsorblockEnabled) return false
+            const skipSet = new Set(settings.sponsorblockCategories ?? [])
+            if (skipSet.size === 0) return false
+            const chapters = useAudioPlayer.getState().loadedPodcastEpisode?.chapters
+            if (!chapters?.length) return false
+            const now = el.currentTime
+            const skippable = chapters.find((c) =>
+                c.chapterType !== 'content'
+                && skipSet.has(c.chapterType)
+                && now >= c.startTime
+                && now < c.endTime
+            )
+            if (!skippable) {
+                lastSkippedRef.current = null
+                return false
+            }
+            if (lastSkippedRef.current === skippable.id) return false
+            lastSkippedRef.current = skippable.id
+            el.currentTime = skippable.endTime
+            enqueueSnackbar(
+                t('skipped-segment', { category: t(`category-${skippable.chapterType.replace('_', '-')}`) }),
+                { variant: 'info' }
+            )
+            return true
+        }
+
         const onTimeUpdate = (e: Event) => {
             const el = e.currentTarget as HTMLMediaElement
+            if (maybeSkipSponsorBlock(el)) return
             if (!useAudioPlayer.getState().metadata) {
                 updateMetadata(el)
                 return
@@ -254,7 +292,7 @@ export const HiddenAudioPlayer: FC<HiddenAudioPlayerProps> = ({ setAudioAmplifie
             audioPlayer.removeEventListener('durationchange', onDurationChange)
             audioPlayer.removeEventListener('canplay', onCanPlay)
         }
-    }, [podcastEpisode?.podcastEpisode.episode_id, podcastEpisode?.podcastEpisode.total_time, setCurrentTimeUpdate, setMetadata]);
+    }, [podcastEpisode?.podcastEpisode.episode_id, podcastEpisode?.podcastEpisode.total_time, setCurrentTimeUpdate, setMetadata, settingsQuery.data, t]);
 
     return (
         <div></div>

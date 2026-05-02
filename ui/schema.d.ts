@@ -711,6 +711,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/podcasts/{id}/sponsorblock/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sponsorblock_resync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/podcasts/{id}/refresh": {
         parameters: {
             query?: never;
@@ -1507,6 +1523,7 @@ export interface components {
             userId: number;
         };
         PodcastChapterDto: {
+            chapterType: string;
             /** Format: int32 */
             endTime: number;
             id: string;
@@ -1587,6 +1604,8 @@ export interface components {
             podcastPrefill: number;
             replaceInvalidCharacters: boolean;
             replacementStrategy: string;
+            sponsorblockCategories: string[];
+            sponsorblockEnabled: boolean;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
         };
@@ -1625,6 +1644,8 @@ export interface components {
             podcastPrefill: number;
             replaceInvalidCharacters: boolean;
             replacementStrategy: string;
+            sponsorblockCategories: string[];
+            sponsorblockEnabled: boolean;
             useExistingFilename: boolean;
             useOneCoverForAllEpisodes: boolean;
         };
@@ -2858,6 +2879,28 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Clears DB download flags for episodes whose file is missing on disk. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchActionResponse"];
+                };
+            };
+        };
+    };
+    sponsorblock_resync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resets the SponsorBlock fetched marker for every episode of the podcast and refetches. */
             200: {
                 headers: {
                     [name: string]: unknown;

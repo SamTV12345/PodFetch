@@ -14,4 +14,6 @@ export type PodcastSetting = {
     activated: boolean,
     podcastPrefill: number,
     useOneCoverForAllEpisodes: boolean,
+    sponsorblockEnabled: boolean,
+    sponsorblockCategories: string[],
 }

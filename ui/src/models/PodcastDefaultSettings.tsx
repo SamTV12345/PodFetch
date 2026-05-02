@@ -16,6 +16,8 @@ export const generatePodcastDefaultSettings = (podcastId: number) => {
         replaceInvalidCharacters: false,
         replacementStrategy: "replace-with-dash-and-underscore",
         useExistingFilename: false,
-        useOneCoverForAllEpisodes: false
+        useOneCoverForAllEpisodes: false,
+        sponsorblockEnabled: false,
+        sponsorblockCategories: []
     } satisfies components['schemas']['PodcastSetting']
 }

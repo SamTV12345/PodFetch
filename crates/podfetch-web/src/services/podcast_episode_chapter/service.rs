@@ -39,6 +39,8 @@ impl PodcastEpisodeChapterService {
                     .clone()
                     .map(|link| link.url.to_string()),
                 image: chapter_to_save.image.clone().map(|img| img.to_string()),
+                chapter_type: podfetch_domain::podcast_episode_chapter::CHAPTER_TYPE_CONTENT
+                    .to_string(),
             }
             .into(),
         )

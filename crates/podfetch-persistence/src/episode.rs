@@ -101,6 +101,7 @@ struct PodcastEpisodeEntity {
     file_image_path: Option<String>,
     episode_numbering_processed: bool,
     download_location: Option<String>,
+    sponsorblock_fetched_at: Option<chrono::NaiveDateTime>,
 }
 
 #[derive(Queryable, Selectable, Debug, Clone)]
@@ -144,6 +145,7 @@ impl From<PodcastEpisodeEntity> for PodcastEpisode {
             file_image_path: entity.file_image_path,
             episode_numbering_processed: entity.episode_numbering_processed,
             download_location: entity.download_location,
+            sponsorblock_fetched_at: entity.sponsorblock_fetched_at,
         }
     }
 }

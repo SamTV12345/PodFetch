@@ -311,7 +311,9 @@ mod tests {
                 "podcastFormat": "{podcastTitle}",
                 "directPaths": true,
                 "autoTranscodeOpus": false,
-                "useOneCoverForAllEpisodes": false
+                "useOneCoverForAllEpisodes": false,
+                "sponsorblockEnabled": false,
+                "sponsorblockCategories": []
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
@@ -443,6 +445,8 @@ mod tests {
                 direct_paths: false,
                 auto_transcode_opus: false,
                 use_one_cover_for_all_episodes: false,
+                sponsorblock_enabled: false,
+                sponsorblock_categories: Vec::new(),
             }),
         )
         .await;

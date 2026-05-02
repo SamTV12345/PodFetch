@@ -31,6 +31,7 @@ diesel::table! {
         file_image_path -> Nullable<Text>,
         episode_numbering_processed -> Bool,
         download_location -> Nullable<Text>,
+        sponsorblock_fetched_at -> Nullable<Timestamp>,
     }
 }
 
@@ -114,6 +115,7 @@ pub struct PodcastEpisodeEntity {
     pub file_image_path: Option<String>,
     pub episode_numbering_processed: bool,
     pub download_location: Option<String>,
+    pub sponsorblock_fetched_at: Option<NaiveDateTime>,
 }
 
 #[derive(Insertable, Debug, Clone)]
@@ -175,6 +177,7 @@ impl From<PodcastEpisodeEntity> for PodcastEpisode {
             file_image_path: entity.file_image_path,
             episode_numbering_processed: entity.episode_numbering_processed,
             download_location: entity.download_location,
+            sponsorblock_fetched_at: entity.sponsorblock_fetched_at,
         }
     }
 }
@@ -198,6 +201,7 @@ impl From<&PodcastEpisode> for PodcastEpisodeEntity {
             file_image_path: episode.file_image_path.clone(),
             episode_numbering_processed: episode.episode_numbering_processed,
             download_location: episode.download_location.clone(),
+            sponsorblock_fetched_at: episode.sponsorblock_fetched_at,
         }
     }
 }
@@ -247,6 +251,7 @@ impl From<PodcastEpisode> for PodcastEpisodeEntity {
             file_image_path: episode.file_image_path,
             episode_numbering_processed: episode.episode_numbering_processed,
             download_location: episode.download_location,
+            sponsorblock_fetched_at: episode.sponsorblock_fetched_at,
         }
     }
 }
@@ -641,5 +646,29 @@ impl PodcastEpisodeRepository for DieselPodcastEpisodeRepository {
             .execute(&mut self.database.connection()?)
             .map(|_| ())
             .map_err(Into::into)
+    }
+
+    fn set_sponsorblock_fetched_at(
+        &self,
+        id: i32,
+        ts: Option<NaiveDateTime>,
+    ) -> Result<(), Self::Error> {
+        diesel::update(podcast_episodes::table.filter(podcast_episodes::id.eq(id)))
+            .set(podcast_episodes::sponsorblock_fetched_at.eq(ts))
+            .execute(&mut self.database.connection()?)
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    fn clear_sponsorblock_fetched_at_for_podcast(
+        &self,
+        podcast_id: i32,
+    ) -> Result<usize, Self::Error> {
+        diesel::update(
+            podcast_episodes::table.filter(podcast_episodes::podcast_id.eq(podcast_id)),
+        )
+        .set(podcast_episodes::sponsorblock_fetched_at.eq::<Option<NaiveDateTime>>(None))
+        .execute(&mut self.database.connection()?)
+        .map_err(Into::into)
     }
 }

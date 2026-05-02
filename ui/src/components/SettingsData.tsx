@@ -8,6 +8,7 @@ import { Switcher } from './Switcher'
 import { SettingsInfoIcon } from './SettingsInfoIcon'
 import {$api} from '../utils/http'
 import {useQueryClient} from "@tanstack/react-query";
+import { SponsorBlockCategorySettings } from './SponsorBlockCategorySettings'
 
 
 export const Settings = () => {
@@ -95,6 +96,16 @@ export const Settings = () => {
                     }} />
                 </div>
                 <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="sponsorblock-enabled" className="flex gap-1">{t('sponsorblock-enabled')} <SettingsInfoIcon headerKey="sponsorblock-enabled" textKey="sponsorblock-enabled-explanation" /></label>
+                    <Switcher loading={settingsModel.isLoading} checked={settingsModel.data?.sponsorblockEnabled} className="xs:justify-self-end" id="sponsorblock-enabled" onChange={() => {
+                        queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                            ...oldData,
+                            sponsorblockEnabled: !oldData?.sponsorblockEnabled
+                        }))
+                    }} />
+                </div>
+
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="flex gap-1">{t('rescan-audio-files')} <SettingsInfoIcon headerKey="rescan-audio-files" textKey="rescan-audio-files-description" /></label>
                     <CustomButtonPrimary onClick={async ()=>{
                         await rescanEpisodesMutation.mutateAsync({})
@@ -102,6 +113,22 @@ export const Settings = () => {
                     }}>{t('rescan-audio-files')}</CustomButtonPrimary>
                 </div>
             </div>
+
+            {settingsModel.data?.sponsorblockEnabled && (
+                <div className="mb-10">
+                    <h3 className="ui-text-accent text-lg mb-3">{t('sponsorblock-categories')}</h3>
+                    <SponsorBlockCategorySettings
+                        loading={settingsModel.isLoading}
+                        categories={settingsModel.data?.sponsorblockCategories ?? []}
+                        onChange={(next) => {
+                            queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                                ...oldData,
+                                sponsorblockCategories: next
+                            }))
+                        }}
+                    />
+                </div>
+            )}
 
             <CustomButtonPrimary loading={settingsModel.isLoading} className="float-right" onClick={() => {
                 saveSettingsMutation.mutateAsync({

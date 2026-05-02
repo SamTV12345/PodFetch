@@ -17,6 +17,8 @@ pub struct Setting {
     pub direct_paths: bool,
     pub auto_transcode_opus: bool,
     pub use_one_cover_for_all_episodes: bool,
+    pub sponsorblock_enabled: bool,
+    pub sponsorblock_categories: Vec<crate::sponsorblock::SponsorBlockCategory>,
 }
 
 #[derive(Clone)]
