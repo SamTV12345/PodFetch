@@ -13,4 +13,5 @@ export type PodcastSetting = {
     directPaths: boolean,
     activated: boolean,
     podcastPrefill: number,
+    useOneCoverForAllEpisodes: boolean,
 }

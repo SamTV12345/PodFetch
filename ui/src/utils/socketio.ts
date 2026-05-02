@@ -8,7 +8,13 @@ import {enqueueSnackbar} from "notistack";
 import {t} from "i18next";
 import {QueryClient} from "@tanstack/react-query";
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            retry: false,
+        },
+    },
+})
 let socket: Socket | null = null
 
 export function connectSocket(apiKey: string) {

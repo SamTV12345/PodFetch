@@ -14,6 +14,7 @@ pub struct PodcastSetting {
     pub direct_paths: bool,
     pub activated: bool,
     pub podcast_prefill: i32,
+    pub use_one_cover_for_all_episodes: bool,
 }
 
 pub trait PodcastSettingsRepository: Send + Sync {

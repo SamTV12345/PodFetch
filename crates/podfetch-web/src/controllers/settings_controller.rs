@@ -310,7 +310,8 @@ mod tests {
                 "episodeFormat": "{episodeTitle}",
                 "podcastFormat": "{podcastTitle}",
                 "directPaths": true,
-                "autoTranscodeOpus": false
+                "autoTranscodeOpus": false,
+                "useOneCoverForAllEpisodes": false
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
@@ -441,6 +442,7 @@ mod tests {
                 podcast_format: "{podcastTitle}".to_string(),
                 direct_paths: false,
                 auto_transcode_opus: false,
+                use_one_cover_for_all_episodes: false,
             }),
         )
         .await;

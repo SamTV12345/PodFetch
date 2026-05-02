@@ -65,14 +65,17 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
     }
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [confirmData, setConfirmData] = useState<ConfirmState | null>(null)
+    const [activeTab, setActiveTab] = useState<'settings' | 'actions'>('settings')
 
     const [draft, setDraft] = useState<PodcastSetting | null>(null)
 
     useEffect(() => {
         if (settingsQuery.data) {
             setDraft(settingsQuery.data)
+        } else if (!settingsQuery.isLoading) {
+            setDraft(generatePodcastDefaultSettings(podcast.id))
         }
-    }, [settingsQuery.data])
+    }, [settingsQuery.data, settingsQuery.isLoading, podcast.id])
 
     const update = <K extends keyof PodcastSetting>(
         key: K,
@@ -127,6 +130,36 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
 
                         <hr className="mb-5 mt-1 ui-border" />
 
+                        <div className="flex gap-2 mb-5 border-b ui-border" role="tablist">
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === 'settings'}
+                                onClick={() => setActiveTab('settings')}
+                                className={`px-4 py-2 -mb-px border-b-2 transition-colors cursor-pointer ${
+                                    activeTab === 'settings'
+                                        ? 'border-(--accent-color) text-(--accent-color)'
+                                        : 'border-transparent ui-text hover:text-(--accent-color-hover)'
+                                }`}
+                            >
+                                {t('settings')}
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === 'actions'}
+                                onClick={() => setActiveTab('actions')}
+                                className={`px-4 py-2 -mb-px border-b-2 transition-colors cursor-pointer ${
+                                    activeTab === 'actions'
+                                        ? 'border-(--accent-color) text-(--accent-color)'
+                                        : 'border-transparent ui-text hover:text-(--accent-color-hover)'
+                                }`}
+                            >
+                                {t('batch-actions')}
+                            </button>
+                        </div>
+
+                        {activeTab === 'settings' && (
                         <div className="grid grid-cols-3 gap-5">
                             <label className="col-span-2 ui-text">
                                 {t('episode-numbering')}
@@ -207,6 +240,20 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             />
 
                             <label className="col-span-2 ui-text">
+                                {t('use-one-cover-for-all-episodes')}
+                                <SettingsInfoIcon
+                                    headerKey="use-one-cover-for-all-episodes"
+                                    textKey="use-one-cover-for-all-episodes-explanation"
+                                />
+                            </label>
+                            <Switcher
+                                checked={draft.useOneCoverForAllEpisodes}
+                                onChange={(v) =>
+                                    update('useOneCoverForAllEpisodes', v)
+                                }
+                            />
+
+                            <label className="col-span-2 ui-text">
                                 {t('activated')}
                             </label>
                             <Switcher
@@ -216,11 +263,9 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 }
                             />
                         </div>
+                        )}
 
-                        <hr className="mt-6 mb-4 ui-border" />
-                        <h3 className="ui-text-accent text-lg mb-3">
-                            {t('batch-actions')}
-                        </h3>
+                        {activeTab === 'actions' && (
                         <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-3 items-center">
                             <div className="ui-text">
                                 <div>{t('download-all-missing')}</div>
@@ -305,7 +350,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 </div>
                             </div>
                             <CustomButtonSecondary
-                                className="bg-(--danger-fg-color) hover:bg-(--danger-fg-color-hover) hover:shadow-(--danger-fg-color-hover)"
+                                className="border-(--danger-fg-color)! text-(--danger-fg-color)! hover:border-(--danger-fg-color-hover)! hover:text-(--danger-fg-color-hover)! hover:shadow-[0_2px_16px_var(--danger-fg-color-hover)]!"
                                 onClick={() => {
                                     setConfirmData({
                                         headerText: t('confirm-delete-all-downloads-header'),
@@ -333,6 +378,7 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 {t('delete')}
                             </CustomButtonSecondary>
                         </div>
+                        )}
 
                         {confirmData && (
                             <ConfirmModal
@@ -349,9 +395,11 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                                 </button>
                             </Dialog.Close>
 
-                            <CustomButtonPrimary onClick={save}>
-                                {t('save')}
-                            </CustomButtonPrimary>
+                            {activeTab === 'settings' && (
+                                <CustomButtonPrimary onClick={save}>
+                                    {t('save')}
+                                </CustomButtonPrimary>
+                            )}
                         </div>
                     </div>
                 </Dialog.Content>

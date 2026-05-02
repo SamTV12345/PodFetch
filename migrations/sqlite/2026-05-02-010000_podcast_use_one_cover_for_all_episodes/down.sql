@@ -1,0 +1,1 @@
+ALTER TABLE podcast_settings DROP COLUMN use_one_cover_for_all_episodes;

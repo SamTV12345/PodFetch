@@ -40,6 +40,8 @@
   "auto-download": "Download nye episoder automatisk",
   "auto-transcode-opus": "Konverter til Opus",
   "auto-transcode-opus-explanation": "Konverter automatisk downloadede episoder til Opus-format. Dette kan reducere lagerforbruget med op til 50% sammenlignet med MP3. Kræver at ffmpeg er installeret på serveren.",
+  "use-one-cover-for-all-episodes": "Brug ét cover til alle episoder",
+  "use-one-cover-for-all-episodes-explanation": "Når dette er aktiveret, downloades der ikke et separat coverbillede for hver episode. I stedet bruges det fælles podcast-cover (image.jpg), hvilket sparer diskplads.",
   "save": "Gem",
   "active": "Aktiv",
   "run-cleanup": "Kør oprydning nu",

@@ -35,6 +35,8 @@
   "used-cpu": "Used CPU",
   "auto-transcode-opus": "Transcode to Opus",
   "auto-transcode-opus-explanation": "Automatically convert downloaded episodes to Opus format. This can reduce storage usage by up to 50% compared to MP3. Requires ffmpeg to be installed on the server.",
+  "use-one-cover-for-all-episodes": "Use one cover for all episodes",
+  "use-one-cover-for-all-episodes-explanation": "When enabled, do not download a separate cover image for each episode. The shared podcast directory cover (image.jpg) will be used instead, saving disk space.",
   "rescan-audio-files": "Rescan audio files",
   "rescan-audio-files-description": "PodFetch will rescan all audio files to update metadata like chapters. This can take a while depending on the number of podcast episodes.",
   "rescan-done": "Rescan done",

@@ -40,6 +40,8 @@
   "auto-download": "Téléchargement automatique des épisodes",
   "auto-transcode-opus": "Convertir en Opus",
   "auto-transcode-opus-explanation": "Convertir automatiquement les épisodes téléchargés au format Opus. Cela peut réduire l'utilisation du stockage jusqu'à 50% par rapport au MP3. Nécessite l'installation de ffmpeg sur le serveur.",
+  "use-one-cover-for-all-episodes": "Utiliser une seule pochette pour tous les épisodes",
+  "use-one-cover-for-all-episodes-explanation": "Lorsque cette option est activée, aucune image de pochette distincte n'est téléchargée pour chaque épisode. La pochette partagée du dossier du podcast (image.jpg) sera utilisée à la place, économisant de l'espace disque.",
   "save": "Enregistrer",
   "active": "Actif",
   "run-cleanup": "Exécuter le nettoyage maintenant",

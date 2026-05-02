@@ -198,10 +198,17 @@ impl DownloadService {
         let settings_in_db = crate::services::settings::service::SettingsService::shared()
             .get_settings()?
             .unwrap();
-        let should_download_main_image = !FileService::check_if_podcast_main_image_downloaded(
-            &podcast.clone().directory_id,
-            conn,
-        );
+        let podcast_settings_override =
+            PodcastSettingsService::get_settings_for_podcast(podcast.id)?;
+        let use_one_cover_for_all_episodes = podcast_settings_override
+            .as_ref()
+            .map(|s| s.use_one_cover_for_all_episodes)
+            .unwrap_or(settings_in_db.use_one_cover_for_all_episodes);
+        let should_download_main_image = !use_one_cover_for_all_episodes
+            && !FileService::check_if_podcast_main_image_downloaded(
+                &podcast.clone().directory_id,
+                conn,
+            );
 
         let mut image_data = if should_download_main_image {
             let image_url = if !Self::is_default_fallback_image_url(&podcast_episode.image_url) {

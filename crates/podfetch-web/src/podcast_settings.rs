@@ -18,6 +18,7 @@ pub struct PodcastSetting {
     pub direct_paths: bool,
     pub activated: bool,
     pub podcast_prefill: i32,
+    pub use_one_cover_for_all_episodes: bool,
 }
 
 impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting {
@@ -37,6 +38,7 @@ impl From<podfetch_domain::podcast_settings::PodcastSetting> for PodcastSetting 
             direct_paths: value.direct_paths,
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
+            use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
         }
     }
 }
@@ -58,6 +60,7 @@ impl From<PodcastSetting> for podfetch_domain::podcast_settings::PodcastSetting 
             direct_paths: value.direct_paths,
             activated: value.activated,
             podcast_prefill: value.podcast_prefill,
+            use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
         }
     }
 }

@@ -1588,6 +1588,7 @@ export interface components {
             replaceInvalidCharacters: boolean;
             replacementStrategy: string;
             useExistingFilename: boolean;
+            useOneCoverForAllEpisodes: boolean;
         };
         PodcastUpdateNameRequest: {
             name: string;
@@ -1625,6 +1626,7 @@ export interface components {
             replaceInvalidCharacters: boolean;
             replacementStrategy: string;
             useExistingFilename: boolean;
+            useOneCoverForAllEpisodes: boolean;
         };
         SimplifiedDisk: {
             /** Format: int64 */
