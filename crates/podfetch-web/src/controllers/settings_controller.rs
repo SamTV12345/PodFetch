@@ -310,7 +310,8 @@ mod tests {
                 "episodeFormat": "{episodeTitle}",
                 "podcastFormat": "{podcastTitle}",
                 "directPaths": true,
-                "autoTranscodeOpus": false
+                "autoTranscodeOpus": false,
+                "useOneCoverForAllEpisodes": false
             }))
             .await;
         assert_eq!(update_response.status_code(), 200);
