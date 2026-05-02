@@ -40,6 +40,8 @@
   "auto-download": "Automatycznie pobieranie podcastów",
   "auto-transcode-opus": "Konwertuj do Opus",
   "auto-transcode-opus-explanation": "Automatycznie konwertuj pobrane odcinki do formatu Opus. Może to zmniejszyć zużycie pamięci o nawet 50% w porównaniu z MP3. Wymaga zainstalowania ffmpeg na serwerze.",
+  "use-one-cover-for-all-episodes": "Użyj jednej okładki dla wszystkich odcinków",
+  "use-one-cover-for-all-episodes-explanation": "Po włączeniu nie będzie pobierana osobna okładka dla każdego odcinka. Zamiast tego używana będzie wspólna okładka katalogu podcastu (image.jpg), oszczędzając miejsce na dysku.",
   "save": "Zapisz",
   "active": "Aktywuj",
   "run-cleanup": "Czyść teraz",

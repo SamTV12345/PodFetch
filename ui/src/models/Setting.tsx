@@ -12,4 +12,5 @@ export type Setting = {
     podcastFormat: string,
     directPaths: boolean,
     autoTranscodeOpus: boolean,
+    useOneCoverForAllEpisodes: boolean,
 }

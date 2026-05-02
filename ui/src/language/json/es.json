@@ -40,6 +40,8 @@
   "auto-download": "Descargar nuevos episodios automáticamente",
   "auto-transcode-opus": "Convertir a Opus",
   "auto-transcode-opus-explanation": "Convertir automáticamente los episodios descargados al formato Opus. Esto puede reducir el uso de almacenamiento hasta un 50% en comparación con MP3. Requiere que ffmpeg esté instalado en el servidor.",
+  "use-one-cover-for-all-episodes": "Usar una sola portada para todos los episodios",
+  "use-one-cover-for-all-episodes-explanation": "Cuando está activado, no se descarga una imagen de portada separada para cada episodio. En su lugar, se utilizará la portada compartida del directorio del podcast (image.jpg), ahorrando espacio en disco.",
   "save": "Guardar",
   "active": "Activar",
   "run-cleanup": "Ejecutar limpieza ahora",

@@ -104,6 +104,7 @@ fn build_name_only_setting(update: &UpdateNameSettings) -> podfetch_domain::sett
         podcast_format: update.podcast_format.clone(),
         direct_paths: update.direct_paths,
         auto_transcode_opus: false,
+        use_one_cover_for_all_episodes: false,
     }
 }
 

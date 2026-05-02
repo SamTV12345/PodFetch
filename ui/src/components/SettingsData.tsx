@@ -86,6 +86,15 @@ export const Settings = () => {
                     }} />
                 </div>
                 <div className="flex flex-col gap-2 xs:contents mb-4">
+                    <label htmlFor="use-one-cover-for-all-episodes" className="flex gap-1">{t('use-one-cover-for-all-episodes')} <SettingsInfoIcon headerKey="use-one-cover-for-all-episodes" textKey="use-one-cover-for-all-episodes-explanation" /></label>
+                    <Switcher loading={settingsModel.isLoading} checked={settingsModel.data?.useOneCoverForAllEpisodes} className="xs:justify-self-end" id="use-one-cover-for-all-episodes" onChange={() => {
+                        queryClient.setQueryData(['get', '/api/v1/settings'], (oldData: Setting) => ({
+                            ...oldData,
+                            useOneCoverForAllEpisodes: !oldData?.useOneCoverForAllEpisodes
+                        }))
+                    }} />
+                </div>
+                <div className="flex flex-col gap-2 xs:contents mb-4">
                     <label className="flex gap-1">{t('rescan-audio-files')} <SettingsInfoIcon headerKey="rescan-audio-files" textKey="rescan-audio-files-description" /></label>
                     <CustomButtonPrimary onClick={async ()=>{
                         await rescanEpisodesMutation.mutateAsync({})

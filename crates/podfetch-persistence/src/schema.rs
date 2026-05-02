@@ -227,6 +227,7 @@ diesel::table! {
         podcast_format -> Text,
         direct_paths -> Bool,
         auto_transcode_opus -> Bool,
+        use_one_cover_for_all_episodes -> Bool,
     }
 }
 

@@ -510,6 +510,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -536,6 +537,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -562,6 +564,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let result = perform_replacement(title, settings, None);
@@ -586,6 +589,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -628,6 +632,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -670,6 +675,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let podcast_episode = PodcastEpisode {
@@ -712,6 +718,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let podcast_episode = PodcastParsed {
@@ -743,6 +750,7 @@ mod tests {
             podcast_prefill: 0,
             direct_paths: false,
             auto_transcode_opus: false,
+            use_one_cover_for_all_episodes: false,
         };
 
         let podcast_episode = PodcastParsed {

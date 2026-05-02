@@ -441,6 +441,7 @@ mod tests {
                 podcast_format: "{podcastTitle}".to_string(),
                 direct_paths: false,
                 auto_transcode_opus: false,
+                use_one_cover_for_all_episodes: false,
             }),
         )
         .await;

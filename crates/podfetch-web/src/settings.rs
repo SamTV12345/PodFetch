@@ -21,6 +21,7 @@ pub struct Setting {
     pub podcast_format: String,
     pub direct_paths: bool,
     pub auto_transcode_opus: bool,
+    pub use_one_cover_for_all_episodes: bool,
 }
 
 impl From<podfetch_domain::settings::Setting> for Setting {
@@ -39,6 +40,7 @@ impl From<podfetch_domain::settings::Setting> for Setting {
             podcast_format: value.podcast_format,
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
+            use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
         }
     }
 }
@@ -59,6 +61,7 @@ impl From<Setting> for podfetch_domain::settings::Setting {
             podcast_format: value.podcast_format,
             direct_paths: value.direct_paths,
             auto_transcode_opus: value.auto_transcode_opus,
+            use_one_cover_for_all_episodes: value.use_one_cover_for_all_episodes,
         }
     }
 }
