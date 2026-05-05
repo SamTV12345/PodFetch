@@ -81,11 +81,9 @@ impl From<OrchestratorError> for CustomError {
                 ErrorSeverity::Warning,
             )
             .into(),
-            OrchestratorError::Cast(e) => CustomErrorInner::BadRequest(
-                e.to_string(),
-                ErrorSeverity::Warning,
-            )
-            .into(),
+            OrchestratorError::Cast(e) => {
+                CustomErrorInner::BadRequest(e.to_string(), ErrorSeverity::Warning).into()
+            }
         }
     }
 }
@@ -272,10 +270,7 @@ fn build_target(device: &Device) -> Result<CastTarget, OrchestratorError> {
         .as_ref()
         .ok_or(OrchestratorError::DeviceUnreachable)?;
     let ip = IpAddr::from_str(ip_str).map_err(|err| {
-        warn!(
-            "device {} has unparseable ip {}: {err}",
-            uuid, ip_str
-        );
+        warn!("device {} has unparseable ip {}: {err}", uuid, ip_str);
         OrchestratorError::DeviceUnreachable
     })?;
     Ok(CastTarget {
@@ -407,9 +402,10 @@ mod tests {
     }
 
     fn orchestrator(devices: Vec<Device>) -> CastOrchestrator<StubCastDriver> {
-        orchestrator_with_dispatcher(devices, Arc::new(AgentDispatcher::new(Arc::new(
-            AgentRegistry::new(),
-        ))))
+        orchestrator_with_dispatcher(
+            devices,
+            Arc::new(AgentDispatcher::new(Arc::new(AgentRegistry::new()))),
+        )
         .0
     }
 
@@ -422,8 +418,7 @@ mod tests {
         // Tests that need the registry construct the dispatcher from a
         // shared registry; tests that don't can use the simple helper.
         let registry = Arc::new(AgentRegistry::new());
-        let orch =
-            CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher);
+        let orch = CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher);
         (orch, registry)
     }
 
@@ -517,11 +512,8 @@ mod tests {
 
         let repo = Arc::new(FakeDeviceRepo::new(vec![device]));
         let device_service = Arc::new(DeviceService::new(repo));
-        let orch = CastOrchestrator::new(
-            device_service,
-            Arc::new(StubCastDriver),
-            dispatcher.clone(),
-        );
+        let orch =
+            CastOrchestrator::new(device_service, Arc::new(StubCastDriver), dispatcher.clone());
 
         // Drive `start` and intercept the Play that leaves for the agent.
         let alice_clone = alice.clone();
@@ -565,12 +557,7 @@ mod tests {
     #[tokio::test]
     async fn start_against_local_device_uses_local_driver() {
         let alice = user(1, "user");
-        let device = make_device(
-            10,
-            alice.id,
-            device_kind::CHROMECAST_PERSONAL,
-            "uuid-local",
-        );
+        let device = make_device(10, alice.id, device_kind::CHROMECAST_PERSONAL, "uuid-local");
         let orch = orchestrator(vec![device]);
 
         // Local driver is the stub which returns NotImplemented; so we

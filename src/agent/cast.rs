@@ -12,17 +12,15 @@
 
 use chrono::Utc;
 use podfetch_agent_protocol::SessionEndReason;
-use podfetch_cast::{
-    CastMedia, CastSessionId, CastState, CastStatus, CastTarget, ControlCmd,
-};
+use podfetch_cast::{CastMedia, CastSessionId, CastState, CastStatus, CastTarget, ControlCmd};
 use rust_cast::CastDevice;
 use rust_cast::channels::media::{IdleReason, Media, PlayerState, StreamType};
 use rust_cast::channels::receiver::CastDeviceApp;
 use std::collections::HashMap;
-use std::sync::Mutex;
-use std::sync::Once;
 #[cfg(test)]
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::Once;
 use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 use thiserror::Error;
@@ -119,71 +117,72 @@ impl LocalCastDriver {
 
         ensure_crypto_provider();
 
-        let cmd_tx = tokio::task::spawn_blocking(move || -> Result<std_mpsc::Sender<WorkerCommand>, CastDriveError> {
-            let cast = CastDevice::connect(host.clone(), port)
-                .map_err(|err| CastDriveError::Connect {
-                    host: host.clone(),
-                    port,
-                    reason: err.to_string(),
+        let cmd_tx = tokio::task::spawn_blocking(
+            move || -> Result<std_mpsc::Sender<WorkerCommand>, CastDriveError> {
+                let cast = CastDevice::connect(host.clone(), port).map_err(|err| {
+                    CastDriveError::Connect {
+                        host: host.clone(),
+                        port,
+                        reason: err.to_string(),
+                    }
                 })?;
 
-            cast.connection
-                .connect(RECEIVER_DESTINATION)
-                .map_err(|e| CastDriveError::Internal(format!("connection.connect: {e}")))?;
-            cast.heartbeat
-                .ping()
-                .map_err(|e| CastDriveError::Internal(format!("heartbeat.ping: {e}")))?;
+                cast.connection
+                    .connect(RECEIVER_DESTINATION)
+                    .map_err(|e| CastDriveError::Internal(format!("connection.connect: {e}")))?;
+                cast.heartbeat
+                    .ping()
+                    .map_err(|e| CastDriveError::Internal(format!("heartbeat.ping: {e}")))?;
 
-            let app = cast
-                .receiver
-                .launch_app(&CastDeviceApp::DefaultMediaReceiver)
-                .map_err(|e| CastDriveError::Receiver(format!("launch_app: {e}")))?;
+                let app = cast
+                    .receiver
+                    .launch_app(&CastDeviceApp::DefaultMediaReceiver)
+                    .map_err(|e| CastDriveError::Receiver(format!("launch_app: {e}")))?;
 
-            cast.connection
-                .connect(app.transport_id.as_str())
-                .map_err(|e| CastDriveError::Internal(format!("app connect: {e}")))?;
+                cast.connection
+                    .connect(app.transport_id.as_str())
+                    .map_err(|e| CastDriveError::Internal(format!("app connect: {e}")))?;
 
-            let to_load = Media {
-                content_id: url,
-                stream_type: StreamType::Buffered,
-                content_type: mime,
-                metadata: None,
-                duration,
-            };
-            let status = cast
-                .media
-                .load(
-                    app.transport_id.as_str(),
-                    app.session_id.as_str(),
-                    &to_load,
-                )
-                .map_err(|e| CastDriveError::Receiver(format!("media.load: {e}")))?;
+                let to_load = Media {
+                    content_id: url,
+                    stream_type: StreamType::Buffered,
+                    content_type: mime,
+                    metadata: None,
+                    duration,
+                };
+                let status = cast
+                    .media
+                    .load(app.transport_id.as_str(), app.session_id.as_str(), &to_load)
+                    .map_err(|e| CastDriveError::Receiver(format!("media.load: {e}")))?;
 
-            let media_session_id = status
-                .entries
-                .first()
-                .map(|entry| entry.media_session_id)
-                .ok_or_else(|| CastDriveError::Receiver("CAST status returned no entries".into()))?;
+                let media_session_id = status
+                    .entries
+                    .first()
+                    .map(|entry| entry.media_session_id)
+                    .ok_or_else(|| {
+                    CastDriveError::Receiver("CAST status returned no entries".into())
+                })?;
 
-            let (cmd_tx, cmd_rx) = std_mpsc::channel::<WorkerCommand>();
-            let transport_id = app.transport_id.clone();
+                let (cmd_tx, cmd_rx) = std_mpsc::channel::<WorkerCommand>();
+                let transport_id = app.transport_id.clone();
 
-            std::thread::Builder::new()
-                .name(format!("podfetch-cast-{}", session_id_for_worker.0))
-                .spawn(move || {
-                    run_session_worker(
-                        cast,
-                        transport_id,
-                        media_session_id,
-                        session_id_for_worker,
-                        cmd_rx,
-                        event_tx,
-                    );
-                })
-                .map_err(|e| CastDriveError::Internal(format!("spawn worker: {e}")))?;
+                std::thread::Builder::new()
+                    .name(format!("podfetch-cast-{}", session_id_for_worker.0))
+                    .spawn(move || {
+                        run_session_worker(
+                            cast,
+                            transport_id,
+                            media_session_id,
+                            session_id_for_worker,
+                            cmd_rx,
+                            event_tx,
+                        );
+                    })
+                    .map_err(|e| CastDriveError::Internal(format!("spawn worker: {e}")))?;
 
-            Ok(cmd_tx)
-        })
+                Ok(cmd_tx)
+            },
+        )
         .await
         .map_err(|e| CastDriveError::Internal(format!("blocking task panic: {e}")))??;
 
@@ -210,10 +209,7 @@ impl LocalCastDriver {
             ControlCmd::Seek { position_secs } => WorkerCommand::Seek(*position_secs),
             ControlCmd::SetVolume { volume } => WorkerCommand::SetVolume(*volume),
         };
-        let mut sessions = self
-            .sessions
-            .lock()
-            .expect("driver session lock poisoned");
+        let mut sessions = self.sessions.lock().expect("driver session lock poisoned");
         let entry = sessions
             .get(session_id)
             .ok_or_else(|| CastDriveError::SessionGone(session_id.clone()))?;
@@ -253,7 +249,13 @@ fn run_session_worker(
         // one per tick so status polling stays regular.
         match cmd_rx.try_recv() {
             Ok(cmd) => {
-                if !apply_command(&cast, &transport_id, media_session_id, cmd, &mut last_volume) {
+                if !apply_command(
+                    &cast,
+                    &transport_id,
+                    media_session_id,
+                    cmd,
+                    &mut last_volume,
+                ) {
                     let _ = event_tx.blocking_send(AgentEvent::SessionEnded {
                         session_id: session_id.clone(),
                         reason: SessionEndReason::Stopped,
@@ -283,7 +285,10 @@ fn run_session_worker(
                         volume: last_volume,
                         at: Utc::now(),
                     };
-                    if event_tx.blocking_send(AgentEvent::Status(snapshot)).is_err() {
+                    if event_tx
+                        .blocking_send(AgentEvent::Status(snapshot))
+                        .is_err()
+                    {
                         return;
                     }
                     if state == CastState::Idle && entry.idle_reason.is_some() {
@@ -293,10 +298,8 @@ fn run_session_worker(
                             Some(IdleReason::Error) => SessionEndReason::Error,
                             _ => SessionEndReason::DeviceGone,
                         };
-                        let _ = event_tx.blocking_send(AgentEvent::SessionEnded {
-                            session_id,
-                            reason,
-                        });
+                        let _ =
+                            event_tx.blocking_send(AgentEvent::SessionEnded { session_id, reason });
                         return;
                     }
                 }
@@ -343,9 +346,9 @@ fn apply_command(
             false
         }
         WorkerCommand::Seek(secs) => {
-            if let Err(e) =
-                cast.media
-                    .seek(transport_id, media_session_id, Some(secs as f32), None)
+            if let Err(e) = cast
+                .media
+                .seek(transport_id, media_session_id, Some(secs as f32), None)
             {
                 warn!("media.seek: {e}");
             }
@@ -443,7 +446,10 @@ mod tests {
     fn map_player_state_covers_all_variants() {
         assert_eq!(map_player_state(PlayerState::Idle), CastState::Idle);
         assert_eq!(map_player_state(PlayerState::Playing), CastState::Playing);
-        assert_eq!(map_player_state(PlayerState::Buffering), CastState::Buffering);
+        assert_eq!(
+            map_player_state(PlayerState::Buffering),
+            CastState::Buffering
+        );
         assert_eq!(map_player_state(PlayerState::Paused), CastState::Paused);
     }
 

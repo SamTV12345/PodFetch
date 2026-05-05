@@ -12,12 +12,12 @@ use common_infrastructure::http::get_async_sync_client;
 use common_infrastructure::runtime::ENVIRONMENT_SERVICE;
 use jsonwebtoken::jwk::{JwkSet, KeyAlgorithm};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
-use tracing::info;
 use podfetch_domain::user::User;
 use serde_json::Value;
 use sha256::digest;
 use std::collections::HashSet;
 use std::sync::OnceLock;
+use tracing::info;
 
 enum AuthType {
     Basic,

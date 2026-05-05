@@ -60,31 +60,22 @@ where
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--remote" => {
-                config.remote = iter
-                    .next()
-                    .ok_or(ConfigError::NoValue("--remote"))?;
+                config.remote = iter.next().ok_or(ConfigError::NoValue("--remote"))?;
             }
             "--api-key" => {
-                config.api_key = iter
-                    .next()
-                    .ok_or(ConfigError::NoValue("--api-key"))?;
+                config.api_key = iter.next().ok_or(ConfigError::NoValue("--api-key"))?;
             }
             "--agent-id" => {
-                config.agent_id = Some(
-                    iter.next()
-                        .ok_or(ConfigError::NoValue("--agent-id"))?,
-                );
+                config.agent_id = Some(iter.next().ok_or(ConfigError::NoValue("--agent-id"))?);
             }
             "--proxy-port" => {
-                let raw = iter
-                    .next()
-                    .ok_or(ConfigError::NoValue("--proxy-port"))?;
-                config.proxy_port = raw.parse().map_err(|err: std::num::ParseIntError| {
-                    ConfigError::BadValue {
-                        arg: "--proxy-port",
-                        message: err.to_string(),
-                    }
-                })?;
+                let raw = iter.next().ok_or(ConfigError::NoValue("--proxy-port"))?;
+                config.proxy_port =
+                    raw.parse()
+                        .map_err(|err: std::num::ParseIntError| ConfigError::BadValue {
+                            arg: "--proxy-port",
+                            message: err.to_string(),
+                        })?;
             }
             // Tolerate the `--agent` flag if the caller forwarded it.
             "--agent" => {}
@@ -193,17 +184,17 @@ mod tests {
             "--proxy-port",
             "not-a-number",
         ]) {
-            Err(ConfigError::BadValue { arg: "--proxy-port", .. }) => {}
+            Err(ConfigError::BadValue {
+                arg: "--proxy-port",
+                ..
+            }) => {}
             other => panic!("expected --proxy-port BadValue, got {other:?}"),
         }
     }
 
     #[test]
     fn ws_url_converts_http_scheme() {
-        assert_eq!(
-            ws_url("http://srv:8000").unwrap(),
-            "ws://srv:8000/agent/ws"
-        );
+        assert_eq!(ws_url("http://srv:8000").unwrap(), "ws://srv:8000/agent/ws");
         assert_eq!(
             ws_url("https://srv:8000/").unwrap(),
             "wss://srv:8000/agent/ws"
@@ -212,16 +203,15 @@ mod tests {
 
     #[test]
     fn ws_url_passes_through_ws_scheme() {
-        assert_eq!(
-            ws_url("ws://srv:8000").unwrap(),
-            "ws://srv:8000/agent/ws"
-        );
+        assert_eq!(ws_url("ws://srv:8000").unwrap(), "ws://srv:8000/agent/ws");
     }
 
     #[test]
     fn ws_url_rejects_unknown_scheme() {
         match ws_url("ftp://srv") {
-            Err(ConfigError::BadValue { arg: "--remote", .. }) => {}
+            Err(ConfigError::BadValue {
+                arg: "--remote", ..
+            }) => {}
             other => panic!("expected scheme rejection, got {other:?}"),
         }
     }

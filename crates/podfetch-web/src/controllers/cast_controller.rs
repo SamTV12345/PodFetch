@@ -54,9 +54,7 @@ pub async fn discover_cast_devices(
         .discover(&user)
         .await
         .map_err(CustomError::from)?;
-    Ok(Json(
-        found.into_iter().map(Into::into).collect::<Vec<_>>(),
-    ))
+    Ok(Json(found.into_iter().map(Into::into).collect::<Vec<_>>()))
 }
 
 #[utoipa::path(
@@ -77,10 +75,9 @@ pub async fn start_cast_session(
     // Resolve the GUID-like string id used by the watchtime store. If
     // the episode isn't found we still allow the cast to start — the
     // session simply won't persist watchtime.
-    let episode_string_id = PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(
-        req.episode_id,
-    )?
-    .map(|e| e.episode_id);
+    let episode_string_id =
+        PodcastEpisodeUseCase::get_podcast_episode_by_internal_id(req.episode_id)?
+            .map(|e| e.episode_id);
 
     let media = CastMedia {
         url: req.url,

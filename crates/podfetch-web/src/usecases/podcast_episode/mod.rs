@@ -858,9 +858,7 @@ impl PodcastEpisodeUseCase {
     /// `download_location` (i.e. never downloaded) and is not soft-deleted.
     /// Runs downloads in parallel chunks of 3, matching `schedule_episode_download`.
     /// Returns the number of episodes that were queued.
-    pub fn download_missing_episodes_for_podcast(
-        podcast: &Podcast,
-    ) -> Result<usize, CustomError> {
+    pub fn download_missing_episodes_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
         const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let episodes = Self::get_episodes_by_podcast_id(podcast.id)?;
         let missing: Vec<PodcastEpisode> = episodes
@@ -900,9 +898,7 @@ impl PodcastEpisodeUseCase {
     /// `perform_download` directly (bypasses the `is_downloaded` guard in
     /// `download_podcast_episode_if_not_locally_available`). Returns the
     /// number of episodes that were queued.
-    pub fn redownload_missing_files_for_podcast(
-        podcast: &Podcast,
-    ) -> Result<usize, CustomError> {
+    pub fn redownload_missing_files_for_podcast(podcast: &Podcast) -> Result<usize, CustomError> {
         const MAX_PARALLEL_DOWNLOADS: usize = 3;
         let episodes = Self::get_episodes_by_podcast_id(podcast.id)?;
         let to_redownload: Vec<PodcastEpisode> = episodes
@@ -972,9 +968,7 @@ impl PodcastEpisodeUseCase {
     /// marked as favorite are skipped — same convention as the auto-cleanup
     /// path (see `cleanup_old_episodes`). Returns the number of episodes
     /// whose files were removed.
-    pub fn delete_all_downloaded_files_for_podcast(
-        podcast_id: i32,
-    ) -> Result<usize, CustomError> {
+    pub fn delete_all_downloaded_files_for_podcast(podcast_id: i32) -> Result<usize, CustomError> {
         let favorite_service = FavoritePodcastEpisodeService::default_service();
         let episodes = Self::get_episodes_by_podcast_id(podcast_id)?;
         let mut affected = 0usize;

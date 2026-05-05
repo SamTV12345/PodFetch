@@ -58,7 +58,9 @@ mod tests {
             .test_server
             .add_header("x-forwarded-host", "manifest.example.com");
         server.test_server.add_header("x-forwarded-proto", "https");
-        server.test_server.add_header("x-forwarded-prefix", "/podfetch");
+        server
+            .test_server
+            .add_header("x-forwarded-prefix", "/podfetch");
 
         let response = server.test_server.get("/manifest.json").await;
         assert_eq!(response.status_code(), 200);

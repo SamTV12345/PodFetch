@@ -33,10 +33,10 @@ use axum::routing::get;
 use clokwerk::{Scheduler, TimeUnits};
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::runtime::{ENVIRONMENT_SERVICE, MAIN_ROOM};
-use tracing::info;
 use maud::{Markup, html};
 use socketioxide::SocketIoBuilder;
 use socketioxide::extract::SocketRef;
+use tracing::info;
 
 const CSS: &str = "css";
 const JS: &str = "javascript";

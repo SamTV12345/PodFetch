@@ -938,17 +938,15 @@ mod tests {
     }
 
     fn mark_episode_downloaded(episode: &PodcastEpisode, file_episode_path: &str) {
-        diesel::update(
-            pe_dsl::podcast_episodes.filter(pe_dsl::id.eq(episode.id)),
-        )
-        .set((
-            pe_dsl::download_location.eq("Local".to_string()),
-            pe_dsl::download_time.eq(Some(Utc::now().naive_utc())),
-            pe_dsl::file_episode_path.eq(file_episode_path.to_string()),
-            pe_dsl::file_image_path.eq::<Option<String>>(None),
-        ))
-        .execute(&mut get_connection())
-        .unwrap();
+        diesel::update(pe_dsl::podcast_episodes.filter(pe_dsl::id.eq(episode.id)))
+            .set((
+                pe_dsl::download_location.eq("Local".to_string()),
+                pe_dsl::download_time.eq(Some(Utc::now().naive_utc())),
+                pe_dsl::file_episode_path.eq(file_episode_path.to_string()),
+                pe_dsl::file_image_path.eq::<Option<String>>(None),
+            ))
+            .execute(&mut get_connection())
+            .unwrap();
     }
 
     #[tokio::test]
@@ -977,7 +975,10 @@ mod tests {
 
         let response = server
             .test_server
-            .post(&format!("/api/v1/podcasts/{}/episodes/resync-db", podcast.id))
+            .post(&format!(
+                "/api/v1/podcasts/{}/episodes/resync-db",
+                podcast.id
+            ))
             .await;
         assert_eq!(response.status_code(), 200);
         let body = response.json::<serde_json::Value>();
@@ -1121,31 +1122,24 @@ mod tests {
                 Ok(_) => panic!("expected forbidden for download_all_missing_episodes"),
             }
 
-            let resync_files = super::resync_files_for_podcast(
-                Extension(caller.clone()),
-                Path("1".to_string()),
-            )
-            .await;
+            let resync_files =
+                super::resync_files_for_podcast(Extension(caller.clone()), Path("1".to_string()))
+                    .await;
             match resync_files {
                 Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
                 Ok(_) => panic!("expected forbidden for resync_files_for_podcast"),
             }
 
-            let resync_db = super::resync_db_for_podcast(
-                Extension(caller.clone()),
-                Path("1".to_string()),
-            )
-            .await;
+            let resync_db =
+                super::resync_db_for_podcast(Extension(caller.clone()), Path("1".to_string()))
+                    .await;
             match resync_db {
                 Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
                 Ok(_) => panic!("expected forbidden for resync_db_for_podcast"),
             }
 
-            let delete_all = super::delete_all_downloaded_files(
-                Extension(caller),
-                Path("1".to_string()),
-            )
-            .await;
+            let delete_all =
+                super::delete_all_downloaded_files(Extension(caller), Path("1".to_string())).await;
             match delete_all {
                 Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
                 Ok(_) => panic!("expected forbidden for delete_all_downloaded_files"),

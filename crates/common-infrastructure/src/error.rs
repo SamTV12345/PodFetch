@@ -1,6 +1,5 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use tracing::{debug, error};
 use s3::error::S3Error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,6 +8,7 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
 use thiserror::Error;
+use tracing::{debug, error};
 use tracing_error::SpanTrace;
 
 use crate::db::PersistenceError;

@@ -2,12 +2,8 @@
 //! [`LocalCastDriver`] so Play/Control can actually drive the receiver.
 
 use crate::agent::cast::{CastDriveError, LocalCastDriver};
-use podfetch_agent_protocol::{
-    AgentMsg, ErrorCode, PlayMedia, ServerMsg,
-};
-use podfetch_cast::{
-    CastDeviceUuid, CastMedia, CastTarget, ControlCmd, DiscoveredCastDevice,
-};
+use podfetch_agent_protocol::{AgentMsg, ErrorCode, PlayMedia, ServerMsg};
+use podfetch_cast::{CastDeviceUuid, CastMedia, CastTarget, ControlCmd, DiscoveredCastDevice};
 use std::sync::Arc;
 
 /// Decision the dispatch loop should act on after handling a server msg.
@@ -35,11 +31,7 @@ impl AgentService {
 
     /// Routes one inbound message. Discovered-device snapshot is passed in
     /// so `DiscoverRequest` answers with current data.
-    pub async fn handle(
-        &self,
-        msg: ServerMsg,
-        devices: &[DiscoveredCastDevice],
-    ) -> InboundOutcome {
+    pub async fn handle(&self, msg: ServerMsg, devices: &[DiscoveredCastDevice]) -> InboundOutcome {
         match msg {
             ServerMsg::Hello { .. } => InboundOutcome::Ignore,
             ServerMsg::Ping => InboundOutcome::Reply(vec![AgentMsg::Pong]),
@@ -54,10 +46,15 @@ impl AgentService {
                 request_id,
                 chromecast_uuid,
                 media,
-            } => self.handle_play(request_id, chromecast_uuid, media, devices).await,
-            ServerMsg::Control { request_id, session_id, cmd } => {
-                self.handle_control(request_id, session_id, cmd).await
+            } => {
+                self.handle_play(request_id, chromecast_uuid, media, devices)
+                    .await
             }
+            ServerMsg::Control {
+                request_id,
+                session_id,
+                cmd,
+            } => self.handle_control(request_id, session_id, cmd).await,
         }
     }
 
@@ -130,10 +127,7 @@ impl AgentService {
     }
 }
 
-fn resolve_target(
-    chromecast_uuid: &str,
-    devices: &[DiscoveredCastDevice],
-) -> Option<CastTarget> {
+fn resolve_target(chromecast_uuid: &str, devices: &[DiscoveredCastDevice]) -> Option<CastTarget> {
     devices
         .iter()
         .find(|d| d.uuid.as_ref() == chromecast_uuid)
@@ -221,7 +215,10 @@ mod tests {
             .await;
         match out {
             InboundOutcome::Reply(msgs) => match &msgs[0] {
-                AgentMsg::DeviceList { request_id, devices } => {
+                AgentMsg::DeviceList {
+                    request_id,
+                    devices,
+                } => {
                     assert_eq!(request_id.as_deref(), Some("req-1"));
                     assert_eq!(devices.len(), 1);
                 }
@@ -239,7 +236,9 @@ mod tests {
             .await;
         match out {
             InboundOutcome::Reply(msgs) => match &msgs[0] {
-                AgentMsg::Error { code, request_id, .. } => {
+                AgentMsg::Error {
+                    code, request_id, ..
+                } => {
                     assert_eq!(*code, ErrorCode::DeviceNotFound);
                     assert_eq!(request_id.as_deref(), Some("req-1"));
                 }

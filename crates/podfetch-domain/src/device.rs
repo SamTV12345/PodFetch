@@ -49,10 +49,8 @@ pub trait DeviceRepository: Send + Sync {
     /// personal devices plus any shared/household devices on the instance.
     fn list_castable_for_user(&self, user_id: i32) -> Result<Vec<Device>, Self::Error>;
 
-    fn find_by_chromecast_uuid(
-        &self,
-        chromecast_uuid: &str,
-    ) -> Result<Option<Device>, Self::Error>;
+    fn find_by_chromecast_uuid(&self, chromecast_uuid: &str)
+    -> Result<Option<Device>, Self::Error>;
 
     /// Insert or update a Chromecast row reported by an agent. Lookup is
     /// keyed by `chromecast_uuid`. New rows default to `chromecast_personal`

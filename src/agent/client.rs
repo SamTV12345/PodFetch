@@ -7,15 +7,13 @@ use crate::agent::config::{self, AgentConfig};
 use crate::agent::discovery::DiscoveryHandle;
 use crate::agent::inbound::{AgentService, InboundOutcome};
 use futures::{SinkExt, StreamExt};
-use podfetch_agent_protocol::{
-    AgentCapabilities, AgentMsg, PROTOCOL_VERSION, ServerMsg,
-};
+use podfetch_agent_protocol::{AgentCapabilities, AgentMsg, PROTOCOL_VERSION, ServerMsg};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::Request;
-use tokio_tungstenite::tungstenite::Message;
 use tracing::{info, warn};
 
 const AGENT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -29,13 +27,11 @@ pub async fn run(config: AgentConfig) -> std::io::Result<()> {
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     info!(%agent_id, remote = %config.remote, "agent starting");
 
-    let url = config::ws_url(&config.remote).map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string())
-    })?;
+    let url = config::ws_url(&config.remote)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))?;
 
-    let discovery = DiscoveryHandle::start().map_err(|e| {
-        std::io::Error::other(format!("could not start mDNS discovery: {e}"))
-    })?;
+    let discovery = DiscoveryHandle::start()
+        .map_err(|e| std::io::Error::other(format!("could not start mDNS discovery: {e}")))?;
     info!("mDNS discovery started; browsing _googlecast._tcp.local.");
 
     let (event_tx, event_rx) = mpsc::channel::<AgentEvent>(64);
@@ -119,7 +115,11 @@ async fn connect_and_run(
     // Push the current device snapshot so the server has fresh state on
     // every (re)connect.
     let initial = discovery.snapshot();
-    info!(agent_id, count = initial.len(), "sending initial DeviceList");
+    info!(
+        agent_id,
+        count = initial.len(),
+        "sending initial DeviceList"
+    );
     send_msg(
         &mut sink,
         &AgentMsg::DeviceList {
@@ -183,28 +183,25 @@ fn build_request(url: &str, api_key: &str) -> Result<Request<()>, AgentRunError>
     let mut request = url
         .into_client_request()
         .map_err(|e| AgentRunError::BadUrl(e.to_string()))?;
-    let header_value = format!("Bearer {api_key}")
-        .parse()
-        .map_err(|e: tokio_tungstenite::tungstenite::http::header::InvalidHeaderValue| {
+    let header_value = format!("Bearer {api_key}").parse().map_err(
+        |e: tokio_tungstenite::tungstenite::http::header::InvalidHeaderValue| {
             AgentRunError::BadUrl(e.to_string())
-        })?;
+        },
+    )?;
     request.headers_mut().insert("Authorization", header_value);
     Ok(request)
 }
 
 async fn next_server_msg<S>(stream: &mut S) -> Result<Option<ServerMsg>, AgentRunError>
 where
-    S: futures::Stream<
-            Item = Result<Message, tokio_tungstenite::tungstenite::Error>,
-        > + Unpin,
+    S: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
     while let Some(frame) = stream.next().await {
         let frame = frame?;
         match frame {
             Message::Text(text) => {
-                let msg: ServerMsg = serde_json::from_str(&text).map_err(|e| {
-                    AgentRunError::BadFrame(format!("json: {e}; raw: {text}"))
-                })?;
+                let msg: ServerMsg = serde_json::from_str(&text)
+                    .map_err(|e| AgentRunError::BadFrame(format!("json: {e}; raw: {text}")))?;
                 return Ok(Some(msg));
             }
             Message::Binary(_) => {

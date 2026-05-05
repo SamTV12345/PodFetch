@@ -196,10 +196,7 @@ impl DeviceRepository for DieselDeviceRepository {
         }
     }
 
-    fn list_castable_for_user(
-        &self,
-        viewer_user_id: i32,
-    ) -> Result<Vec<Device>, Self::Error> {
+    fn list_castable_for_user(&self, viewer_user_id: i32) -> Result<Vec<Device>, Self::Error> {
         use self::devices::dsl::*;
 
         let mut conn = self.database.connection()?;

@@ -6,7 +6,6 @@ use diesel::OptionalExtension;
 use diesel::prelude::{AsChangeset, Insertable, Queryable, QueryableByName};
 use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use tracing;
 use podfetch_domain::subscription::{
     GPodderAvailablePodcast, Subscription, SubscriptionModelChanges, SubscriptionRepository,
 };
@@ -218,44 +217,15 @@ impl SubscriptionRepository for DieselSubscriptionRepository {
                         device_id.to_string(),
                         podcast.to_string(),
                     );
-                    let insert_result = diesel::insert_into(subscriptions_dsl::subscriptions)
+                    diesel::insert_into(subscriptions_dsl::subscriptions)
                         .values(NewSubscriptionEntity {
                             user_id: subscription.user_id,
-                            device: subscription.device.clone(),
-                            podcast: subscription.podcast.clone(),
+                            device: subscription.device,
+                            podcast: subscription.podcast,
                             created: subscription.created,
                             deleted: subscription.deleted,
                         })
-                        .execute(&mut connection);
-                    if let Err(e) = insert_result {
-                        tracing::warn!(
-                            "Failed to insert subscription for podcast {}, retrying: {}",
-                            podcast,
-                            e
-                        );
-                        // On SQLite, the AUTOINCREMENT counter can get out of
-                        // sync after migrations that copy rows with explicit IDs.
-                        // Fix it before retrying.
-                        #[cfg(feature = "sqlite")]
-                        {
-                            use std::ops::DerefMut;
-                            if matches!(connection.deref_mut(), crate::db::DBType::Sqlite(_)) {
-                                diesel::sql_query(
-                                    "UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM subscriptions) WHERE name = 'subscriptions'"
-                                ).execute(&mut connection).ok();
-                            }
-                        }
-
-                        diesel::insert_into(subscriptions_dsl::subscriptions)
-                            .values(NewSubscriptionEntity {
-                                user_id: subscription.user_id,
-                                device: subscription.device,
-                                podcast: subscription.podcast,
-                                created: subscription.created,
-                                deleted: subscription.deleted,
-                            })
-                            .execute(&mut connection)?;
-                    }
+                        .execute(&mut connection)?;
                 }
             }
         }

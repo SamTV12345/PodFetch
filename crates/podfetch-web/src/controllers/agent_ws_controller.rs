@@ -13,9 +13,7 @@ use axum::response::Response;
 use axum::routing::get;
 use chrono::Utc;
 use futures::{SinkExt, StreamExt};
-use podfetch_agent_protocol::{
-    AgentMsg, ErrorCode, PROTOCOL_VERSION, ServerMsg,
-};
+use podfetch_agent_protocol::{AgentMsg, ErrorCode, PROTOCOL_VERSION, ServerMsg};
 use podfetch_domain::user::User;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -36,8 +34,7 @@ async fn agent_ws_upgrade(
     axum_extra::extract::OptionalQuery(query): axum_extra::extract::OptionalQuery<ApiKeyQuery>,
     ws: WebSocketUpgrade,
 ) -> Result<Response, StatusCode> {
-    let api_key = extract_api_key(&headers, query.as_ref())
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+    let api_key = extract_api_key(&headers, query.as_ref()).ok_or(StatusCode::UNAUTHORIZED)?;
 
     let user = state
         .user_auth_service
@@ -92,11 +89,7 @@ async fn handle_agent_socket(state: AppState, user: User, socket: WebSocket) {
                 ..
             }) => {
                 if protocol_version != PROTOCOL_VERSION {
-                    let _ = send_msg(
-                        &mut ws_sink,
-                        &ServerMsg::Goodbye,
-                    )
-                    .await;
+                    let _ = send_msg(&mut ws_sink, &ServerMsg::Goodbye).await;
                     warn!(
                         "agent ws: protocol mismatch (server={PROTOCOL_VERSION}, agent={protocol_version})"
                     );
@@ -158,10 +151,7 @@ async fn handle_agent_socket(state: AppState, user: User, socket: WebSocket) {
             Ok(msg) => handle_agent_message(&state, &agent_id, user.id, msg).await,
             Err(err) => {
                 warn!(agent_id = %agent_id, "agent ws: bad json: {err}");
-                let _ = state.agent_registry.send_to(
-                    &agent_id,
-                    ServerMsg::Goodbye,
-                );
+                let _ = state.agent_registry.send_to(&agent_id, ServerMsg::Goodbye);
             }
         }
     }
@@ -171,12 +161,7 @@ async fn handle_agent_socket(state: AppState, user: User, socket: WebSocket) {
     info!(agent_id = %agent_id, "agent disconnected");
 }
 
-async fn handle_agent_message(
-    state: &AppState,
-    agent_id: &str,
-    user_id: i32,
-    msg: AgentMsg,
-) {
+async fn handle_agent_message(state: &AppState, agent_id: &str, user_id: i32, msg: AgentMsg) {
     match msg {
         AgentMsg::HelloAck { .. } => {
             warn!(agent_id, "unexpected duplicate HelloAck");
@@ -229,10 +214,7 @@ async fn handle_agent_message(
             if let Some(session) = state.cast_orchestrator.drop_session(&session_id) {
                 // Persist a final position before the session goes away.
                 persist_watchtime_async(&session, session.last_status.position_secs);
-                ChatServerHandle::broadcast_cast_ended(
-                    session_id,
-                    map_session_end_reason(reason),
-                );
+                ChatServerHandle::broadcast_cast_ended(session_id, map_session_end_reason(reason));
             }
         }
         AgentMsg::Pong => {}
@@ -252,7 +234,10 @@ async fn handle_agent_message(
                     },
                 );
             } else {
-                warn!(agent_id, "agent reported uncorrelated error {code:?}: {message}");
+                warn!(
+                    agent_id,
+                    "agent reported uncorrelated error {code:?}: {message}"
+                );
             }
         }
     }
@@ -266,17 +251,13 @@ fn persist_watchtime_async(session: &ActiveSession, position_secs: f64) {
     let username = session.username.clone();
     let position = position_secs.max(0.0).min(f64::from(i32::MAX)) as i32;
     tokio::task::spawn_blocking(move || {
-        if let Err(err) =
-            WatchtimeUseCase::log_watchtime(&podcast_episode_id, position, username)
-        {
+        if let Err(err) = WatchtimeUseCase::log_watchtime(&podcast_episode_id, position, username) {
             warn!("cast watchtime persist failed: {err}");
         }
     });
 }
 
-fn map_session_end_reason(
-    reason: podfetch_agent_protocol::SessionEndReason,
-) -> CastEndedReason {
+fn map_session_end_reason(reason: podfetch_agent_protocol::SessionEndReason) -> CastEndedReason {
     use podfetch_agent_protocol::SessionEndReason;
     match reason {
         SessionEndReason::Stopped => CastEndedReason::Stopped,

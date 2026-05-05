@@ -1,7 +1,5 @@
 use crate::services::agent::registry::AgentRegistry;
-use podfetch_agent_protocol::{
-    AgentMsg, ErrorCode, PlayMedia, RequestId, ServerMsg,
-};
+use podfetch_agent_protocol::{AgentMsg, ErrorCode, PlayMedia, RequestId, ServerMsg};
 use podfetch_cast::{
     CastDeviceUuid, CastError, CastMedia, CastSessionId, CastTarget, ControlCmd,
     DiscoveredCastDevice,
@@ -89,9 +87,12 @@ impl AgentDispatcher {
 
         match self.await_reply(rx, &request_id).await? {
             AgentMsg::SessionStarted { session_id, .. } => Ok(session_id),
-            AgentMsg::Error { code, message, .. } => {
-                Err(map_agent_error(code, message, Some(target.uuid.clone()), None))
-            }
+            AgentMsg::Error { code, message, .. } => Err(map_agent_error(
+                code,
+                message,
+                Some(target.uuid.clone()),
+                None,
+            )),
             other => Err(CastError::Transport(format!(
                 "unexpected agent reply to Play: {other:?}"
             ))),
@@ -137,10 +138,7 @@ impl AgentDispatcher {
         }
     }
 
-    pub async fn discover(
-        &self,
-        agent_id: &str,
-    ) -> Result<Vec<DiscoveredCastDevice>, CastError> {
+    pub async fn discover(&self, agent_id: &str) -> Result<Vec<DiscoveredCastDevice>, CastError> {
         let request_id = uuid::Uuid::new_v4().to_string();
         let rx = self.register_pending(&request_id);
 
@@ -210,12 +208,12 @@ fn map_agent_error(
     session: Option<CastSessionId>,
 ) -> CastError {
     match code {
-        ErrorCode::DeviceNotFound => CastError::DeviceNotFound(
-            target.unwrap_or(CastDeviceUuid("?".into())),
-        ),
-        ErrorCode::SessionNotFound => CastError::SessionNotFound(
-            session.unwrap_or(CastSessionId("?".into())),
-        ),
+        ErrorCode::DeviceNotFound => {
+            CastError::DeviceNotFound(target.unwrap_or(CastDeviceUuid("?".into())))
+        }
+        ErrorCode::SessionNotFound => {
+            CastError::SessionNotFound(session.unwrap_or(CastSessionId("?".into())))
+        }
         ErrorCode::Receiver => CastError::Receiver(message),
         ErrorCode::Transport => CastError::Transport(message),
         ErrorCode::NotImplemented => CastError::NotImplemented,
@@ -278,11 +276,8 @@ mod tests {
         let target = target("uuid-A");
 
         let dispatcher_clone = dispatcher.clone();
-        let task = tokio::spawn(async move {
-            dispatcher_clone
-                .play("agent-1", &target, &media())
-                .await
-        });
+        let task =
+            tokio::spawn(async move { dispatcher_clone.play("agent-1", &target, &media()).await });
 
         // Read what the dispatcher sent over the channel.
         let sent = wire.recv().await.expect("server msg");
@@ -305,9 +300,7 @@ mod tests {
     async fn play_against_disconnected_agent_returns_transport_error() {
         let registry = Arc::new(AgentRegistry::new());
         let dispatcher = AgentDispatcher::new(registry);
-        let result = dispatcher
-            .play("nope", &target("uuid-A"), &media())
-            .await;
+        let result = dispatcher.play("nope", &target("uuid-A"), &media()).await;
         match result {
             Err(CastError::Transport(_)) => {}
             other => panic!("expected Transport, got {other:?}"),
@@ -358,9 +351,7 @@ mod tests {
         let (registry, mut wire) = registry_with_agent("agent-1");
         let dispatcher = Arc::new(AgentDispatcher::new(registry));
         let dispatcher_clone = dispatcher.clone();
-        let task = tokio::spawn(async move {
-            dispatcher_clone.discover("agent-1").await
-        });
+        let task = tokio::spawn(async move { dispatcher_clone.discover("agent-1").await });
         let request_id = extract_request_id(&wire.recv().await.unwrap());
         dispatcher.complete_pending(
             &request_id,

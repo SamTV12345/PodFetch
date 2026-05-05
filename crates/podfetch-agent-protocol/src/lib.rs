@@ -10,9 +10,7 @@
 //! their version in the initial Hello/HelloAck exchange and refuse to
 //! continue if they're incompatible.
 
-use podfetch_cast::{
-    CastSessionId, CastStatus, ControlCmd, DiscoveredCastDevice,
-};
+use podfetch_cast::{CastSessionId, CastStatus, ControlCmd, DiscoveredCastDevice};
 use serde::{Deserialize, Serialize};
 
 /// Bumped whenever a wire-incompatible change lands.
@@ -35,9 +33,7 @@ pub enum ServerMsg {
     },
     /// Ask the agent to run a fresh mDNS discovery scan and report back via
     /// `DeviceList`.
-    DiscoverRequest {
-        request_id: RequestId,
-    },
+    DiscoverRequest { request_id: RequestId },
     /// Start media playback on a given device. The agent replies with
     /// `SessionStarted { request_id, session_id }` on success or
     /// `Error { request_id, ... }` on failure.

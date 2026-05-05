@@ -167,10 +167,7 @@ mod tests {
         assert_eq!(device.friendly_name, "Living Room");
         assert_eq!(device.model.as_deref(), Some("Chromecast Audio"));
         assert_eq!(device.port, 8009);
-        assert_eq!(
-            device.ip,
-            Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50)))
-        );
+        assert_eq!(device.ip, Some(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50))));
     }
 
     #[test]
@@ -185,15 +182,13 @@ mod tests {
 
     #[test]
     fn empty_model_string_becomes_none() {
-        let device =
-            parse_cast_record("uuid-1", "name", Some(""), 8009, None).expect("parse");
+        let device = parse_cast_record("uuid-1", "name", Some(""), 8009, None).expect("parse");
         assert!(device.model.is_none());
     }
 
     #[test]
     fn missing_ip_is_allowed() {
-        let device =
-            parse_cast_record("uuid-1", "name", Some("model"), 8009, None).expect("parse");
+        let device = parse_cast_record("uuid-1", "name", Some("model"), 8009, None).expect("parse");
         assert_eq!(device.ip, None);
         assert_eq!(device.port, 8009);
     }

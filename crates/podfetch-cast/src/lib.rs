@@ -150,23 +150,13 @@ pub trait CastDriver: Send + Sync {
         media: &CastMedia,
     ) -> Result<CastSessionId, CastError>;
 
-    async fn control(
-        &self,
-        session: &CastSessionId,
-        cmd: &ControlCmd,
-    ) -> Result<(), CastError>;
+    async fn control(&self, session: &CastSessionId, cmd: &ControlCmd) -> Result<(), CastError>;
 
-    async fn status_snapshot(
-        &self,
-        session: &CastSessionId,
-    ) -> Result<CastStatus, CastError>;
+    async fn status_snapshot(&self, session: &CastSessionId) -> Result<CastStatus, CastError>;
 
     /// Stream of incremental status updates for an active session. Ends when
     /// the session terminates (stop, error, or device gone).
-    fn status_stream(
-        &self,
-        session: &CastSessionId,
-    ) -> BoxStream<'static, CastStatus>;
+    fn status_stream(&self, session: &CastSessionId) -> BoxStream<'static, CastStatus>;
 }
 
 /// Stub backend that fails every call with `NotImplemented`. Lets the rest
@@ -187,25 +177,15 @@ impl CastDriver for StubCastDriver {
         Err(CastError::NotImplemented)
     }
 
-    async fn control(
-        &self,
-        _session: &CastSessionId,
-        _cmd: &ControlCmd,
-    ) -> Result<(), CastError> {
+    async fn control(&self, _session: &CastSessionId, _cmd: &ControlCmd) -> Result<(), CastError> {
         Err(CastError::NotImplemented)
     }
 
-    async fn status_snapshot(
-        &self,
-        _session: &CastSessionId,
-    ) -> Result<CastStatus, CastError> {
+    async fn status_snapshot(&self, _session: &CastSessionId) -> Result<CastStatus, CastError> {
         Err(CastError::NotImplemented)
     }
 
-    fn status_stream(
-        &self,
-        _session: &CastSessionId,
-    ) -> BoxStream<'static, CastStatus> {
+    fn status_stream(&self, _session: &CastSessionId) -> BoxStream<'static, CastStatus> {
         Box::pin(futures::stream::empty())
     }
 }
@@ -232,7 +212,9 @@ mod tests {
 
     #[test]
     fn control_cmd_round_trips_json() {
-        let cmd = ControlCmd::Seek { position_secs: 42.5 };
+        let cmd = ControlCmd::Seek {
+            position_secs: 42.5,
+        };
         let json = serde_json::to_string(&cmd).expect("serialize");
         let back: ControlCmd = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(cmd, back);

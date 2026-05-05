@@ -1,7 +1,6 @@
 use common_infrastructure::error::ErrorSeverity::Error as ErrorSeverityError;
 use common_infrastructure::error::{CustomError, CustomErrorInner};
 use common_infrastructure::time::get_current_timestamp_str;
-use tracing::error;
 use podfetch_domain::user::{User, UserWithoutPassword};
 use podfetch_persistence::adapters::DeviceRepositoryImpl;
 use podfetch_persistence::db::database;
@@ -17,6 +16,7 @@ use std::env::Args;
 use std::io::{Error, ErrorKind, stdin};
 use std::process::exit;
 use std::sync::Arc;
+use tracing::error;
 
 pub async fn start_command_line(mut args: Args) -> Result<(), CustomError> {
     println!("Starting from command line");
