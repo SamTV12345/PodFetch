@@ -130,7 +130,7 @@ sha1 = "0.11.0"
 sha256 = "1.6.0"
 socketioxide = "0.18.3"
 strfmt = "0.2.5"
-sysinfo = { version = "0.38.4", default-features = false, features = ["disk", "system"] }
+sysinfo = { version = "0.39.0", default-features = false, features = ["disk", "system"] }
 testcontainers = { version = "0.27.3" }
 testcontainers-modules = { version = "0.15.0", features = ["postgres", "blocking"] }
 thiserror = { version = "2.0.18", features = ["std"] }
