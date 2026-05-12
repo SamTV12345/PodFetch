@@ -14,7 +14,7 @@ mod command_line_runner;
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     println!(
-        "Debug file located at {}",
+        "Debug file located at location {}",
         concat!(env!("OUT_DIR"), "/built.rs")
     );
 
