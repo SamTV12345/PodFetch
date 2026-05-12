@@ -333,6 +333,52 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_new_boolean_settings_persist_when_enabled() {
+        let server = handle_test_startup().await;
+
+        let update_response = server
+            .test_server
+            .put("/api/v1/settings")
+            .json(&json!({
+                "id": 1,
+                "autoDownload": true,
+                "autoUpdate": true,
+                "autoCleanup": true,
+                "autoCleanupDays": 30,
+                "podcastPrefill": 5,
+                "replaceInvalidCharacters": false,
+                "useExistingFilename": false,
+                "replacementStrategy": "replace-with-dash",
+                "episodeFormat": "{episodeTitle}",
+                "podcastFormat": "{podcastTitle}",
+                "directPaths": false,
+                "autoTranscodeOpus": true,
+                "useOneCoverForAllEpisodes": true
+            }))
+            .await;
+        assert_eq!(update_response.status_code(), 200);
+        let updated = update_response.json::<Setting>();
+        assert!(updated.auto_transcode_opus, "autoTranscodeOpus should be true in PUT response");
+        assert!(
+            updated.use_one_cover_for_all_episodes,
+            "useOneCoverForAllEpisodes should be true in PUT response"
+        );
+
+        let get_response = server.test_server.get("/api/v1/settings").await;
+        assert_eq!(get_response.status_code(), 200);
+        let persisted = get_response.json::<Setting>();
+        assert!(
+            persisted.auto_transcode_opus,
+            "autoTranscodeOpus should persist as true after GET"
+        );
+        assert!(
+            persisted.use_one_cover_for_all_episodes,
+            "useOneCoverForAllEpisodes should persist as true after GET"
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_update_settings_rejects_invalid_payload() {
         let server = handle_test_startup().await;
 
