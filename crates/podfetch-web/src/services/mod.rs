@@ -4,6 +4,7 @@ pub mod device;
 pub mod device_sync_group;
 pub mod discover;
 pub mod download;
+pub mod episode_rescan;
 pub mod episode_scan;
 pub mod favorite_podcast_episode;
 pub mod file;

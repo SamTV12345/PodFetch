@@ -329,7 +329,7 @@ impl DownloadService {
         Ok(())
     }
 
-    fn transcode_to_opus(input_path: &str) -> Result<String, CustomError> {
+    pub(crate) fn transcode_to_opus(input_path: &str) -> Result<String, CustomError> {
         let opus_path = {
             let p = std::path::Path::new(input_path);
             p.with_extension("opus").to_string_lossy().to_string()

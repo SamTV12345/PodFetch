@@ -53,6 +53,35 @@ impl LocalStorageBackend {
         })
     }
 
+    pub fn rename_file(src: &str, dst: &str) -> Result<(), StorageError> {
+        if let Some(parent) = std::path::Path::new(dst).parent()
+            && !parent.as_os_str().is_empty()
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent).map_err(|source| StorageError::Io {
+                path: parent.to_string_lossy().into_owned(),
+                source,
+            })?;
+        }
+
+        if let Err(rename_err) = std::fs::rename(src, dst) {
+            // Same-filesystem rename failed (often EXDEV on Unix or
+            // ERROR_NOT_SAME_DEVICE on Windows when crossing volumes); fall
+            // back to copy + delete so cross-device moves still work.
+            if std::fs::copy(src, dst).is_err() {
+                return Err(StorageError::Io {
+                    path: src.to_string(),
+                    source: rename_err,
+                });
+            }
+            std::fs::remove_file(src).map_err(|source| StorageError::Io {
+                path: src.to_string(),
+                source,
+            })?;
+        }
+        Ok(())
+    }
+
     pub fn write_file_async<'a>(
         path: &'a str,
         content: &'a mut [u8],

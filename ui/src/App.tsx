@@ -24,6 +24,7 @@ import {Settings} from "./components/SettingsData";
 import {SettingsOPMLExport} from "./components/SettingsOPMLExport";
 import {SettingsNaming} from "./components/SettingsNaming";
 import {SettingsPodcastDelete} from "./components/SettingsPodcastDelete";
+import {SettingsRescan} from "./components/SettingsRescan";
 import {UserAdminUsers} from "./components/UserAdminUsers";
 import {UserAdminInvites} from "./components/UserAdminInvites";
 import {UserManagementPage} from "./pages/UserManagement";
@@ -67,6 +68,7 @@ export const router = createBrowserRouter(createRoutesFromElements(
                 <Route path="opml" element={<SettingsOPMLExport/>}/>
                 <Route path="naming" element={<SettingsNaming/>}/>
                 <Route path="podcasts" element={<SettingsPodcastDelete/>}/>
+                <Route path="rescan" element={<SettingsRescan/>}/>
                 <Route path="gpodder" element={<GPodderIntegration/>}/>
             </Route>
             <Route path={"administration"} element={<Suspense><UserAdminViewLazyLoad /></Suspense>}>

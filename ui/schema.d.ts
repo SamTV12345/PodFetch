@@ -1609,6 +1609,12 @@ export interface components {
         };
         /** @enum {string} */
         ReplacementStrategy: "replace-with-dash-and-underscore" | "remove" | "replace-with-dash";
+        RescanOptions: {
+            applyCovers?: boolean;
+            applyFilenames?: boolean;
+            applyMetadata?: boolean;
+            applyTranscode?: boolean;
+        };
         Setting: {
             autoCleanup: boolean;
             /** Format: int32 */
@@ -3125,7 +3131,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RescanOptions"];
+            };
+        };
         responses: {
             /** @description Rescans all episodes for metadata */
             200: {

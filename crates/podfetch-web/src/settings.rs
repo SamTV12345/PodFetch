@@ -313,6 +313,10 @@ pub struct RescanStats {
     pub chapters_saved: usize,
     pub skipped: usize,
     pub errors: usize,
+    pub renamed: usize,
+    pub transcoded: usize,
+    pub covers_consolidated: usize,
+    pub metadata_refreshed: usize,
 }
 
 #[derive(Debug, thiserror::Error)]
