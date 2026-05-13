@@ -25,9 +25,20 @@ use uuid::Uuid;
 pub struct ScanReport {
     pub scanned_folders: usize,
     pub books_upserted: usize,
+    pub books_added: usize,
+    pub books_updated: usize,
     pub audio_files: usize,
     pub chapters: usize,
     pub errors: Vec<String>,
+    /// Per-book results - consumers (e.g. the scan controller) emit
+    /// `item_added` / `item_updated` socket.io events from these.
+    pub book_results: Vec<ScannedBookResult>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScannedBookResult {
+    pub book_id: String,
+    pub is_new: bool,
 }
 
 #[derive(Clone)]
@@ -67,6 +78,15 @@ impl AudiobookScanner {
                         report.books_upserted += 1;
                         report.audio_files += stats.audio_files;
                         report.chapters += stats.chapters;
+                        if stats.is_new {
+                            report.books_added += 1;
+                        } else {
+                            report.books_updated += 1;
+                        }
+                        report.book_results.push(ScannedBookResult {
+                            book_id: stats.book_id,
+                            is_new: stats.is_new,
+                        });
                     }
                     Err(e) => {
                         report
@@ -126,6 +146,7 @@ impl AudiobookScanner {
         let now = Utc::now().naive_utc();
         let folder_path_str = folder.to_string_lossy().to_string();
         let existing = self.book_repository.find_by_folder_path(&folder_path_str)?;
+        let is_new = existing.is_none();
         let book_id = existing
             .as_ref()
             .map(|b| b.id.clone())
@@ -247,6 +268,8 @@ impl AudiobookScanner {
         Ok(BookScanStats {
             audio_files: audio_count,
             chapters: chapter_count,
+            is_new,
+            book_id: book.id,
         })
     }
 }
@@ -255,6 +278,8 @@ impl AudiobookScanner {
 pub struct BookScanStats {
     pub audio_files: usize,
     pub chapters: usize,
+    pub is_new: bool,
+    pub book_id: String,
 }
 
 fn cover_storage_dir(env: &EnvironmentService) -> PathBuf {

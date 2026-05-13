@@ -7,3 +7,4 @@ pub mod public_session;
 pub mod scan;
 pub mod server_status;
 pub mod sessions;
+pub mod uploads;

@@ -1,9 +1,13 @@
-//! Resolves a book's metadata from a fixed precedence chain.
+//! Resolves a book's metadata from the full audiobookshelf precedence chain.
 //!
-//! For Phase B v1 the chain is `folderStructure → audioMetatags`. Later phases
-//! will extend this to nfoFile / txtFiles / opfFile / absMetadata.
+//! Default order (matches `server/models/Library.js`):
+//!   folderStructure → audioMetatags → nfoFile → txtFiles → opfFile → absMetadata
+//!
+//! Each later source overrides earlier values whenever it defines them.
 
 use crate::services::audiobookshelf::audio_probe::ProbedTags;
+use crate::services::audiobookshelf::metadata_sources;
+use crate::services::audiobookshelf::metadata_sources::MetadataPatch;
 use std::path::Path;
 
 #[derive(Debug, Clone, Default)]
@@ -24,13 +28,109 @@ pub struct ResolvedBookMetadata {
 }
 
 pub fn resolve(folder: &Path, tags: &ProbedTags) -> ResolvedBookMetadata {
+    resolve_with_chain(folder, tags, default_precedence())
+}
+
+/// Runs the precedence chain. Each step name maps to a metadata source.
+/// Unknown step names are skipped (no panic).
+pub fn resolve_with_chain(
+    folder: &Path,
+    tags: &ProbedTags,
+    chain: impl IntoIterator<Item = String>,
+) -> ResolvedBookMetadata {
     let mut meta = ResolvedBookMetadata::default();
-    apply_folder_structure(&mut meta, folder);
-    apply_audio_tags(&mut meta, tags);
+    for step in chain {
+        match step.as_str() {
+            "folderStructure" => apply_folder_structure(&mut meta, folder),
+            "audioMetatags" => apply_audio_tags(&mut meta, tags),
+            "nfoFile" => {
+                if let Some(patch) = metadata_sources::nfo::load(folder) {
+                    apply_patch(&mut meta, &patch);
+                }
+            }
+            "txtFiles" => {
+                if let Some(patch) = metadata_sources::txt::load(folder) {
+                    apply_patch(&mut meta, &patch);
+                }
+            }
+            "opfFile" => {
+                if let Some(patch) = metadata_sources::opf::load(folder) {
+                    apply_patch(&mut meta, &patch);
+                }
+            }
+            "absMetadata" => {
+                if let Some(patch) = metadata_sources::abs::load(folder) {
+                    apply_patch(&mut meta, &patch);
+                }
+            }
+            _ => {
+                tracing::trace!("audiobookshelf metadata: unknown precedence step '{step}'");
+            }
+        }
+    }
     if meta.title.is_empty() {
         meta.title = "Unknown Title".to_string();
     }
     meta
+}
+
+pub fn default_precedence() -> Vec<String> {
+    vec![
+        "folderStructure".to_string(),
+        "audioMetatags".to_string(),
+        "nfoFile".to_string(),
+        "txtFiles".to_string(),
+        "opfFile".to_string(),
+        "absMetadata".to_string(),
+    ]
+}
+
+fn apply_patch(meta: &mut ResolvedBookMetadata, patch: &MetadataPatch) {
+    if let Some(v) = patch.title.as_deref()
+        && !v.trim().is_empty()
+    {
+        meta.title = v.to_string();
+    }
+    if let Some(v) = patch.subtitle.clone() {
+        meta.subtitle = Some(v);
+    }
+    if let Some(v) = patch.description.clone() {
+        meta.description = Some(v);
+    }
+    if let Some(v) = patch.publisher.clone() {
+        meta.publisher = Some(v);
+    }
+    if let Some(v) = patch.published_year.clone() {
+        meta.published_year = Some(v);
+    }
+    if let Some(v) = patch.published_date.clone() {
+        meta.published_date = Some(v);
+    }
+    if let Some(v) = patch.isbn.clone() {
+        meta.isbn = Some(v);
+    }
+    if let Some(v) = patch.asin.clone() {
+        meta.asin = Some(v);
+    }
+    if let Some(v) = patch.language.clone() {
+        meta.language = Some(v);
+    }
+    if let Some(v) = patch.explicit {
+        meta.explicit = v;
+    }
+    if let Some(v) = patch.authors.clone() {
+        if !v.is_empty() {
+            meta.authors = v;
+        }
+    }
+    if let Some(v) = patch.narrators.clone() {
+        if !v.is_empty() {
+            meta.narrators = v;
+        }
+    }
+    if let Some(v) = patch.series.clone() {
+        meta.series = Some(v);
+    }
 }
 
 /// Parse paths like `<library>/<Author>/<Title>` or `<library>/<Author>/<Series #N>/<Title>`.
@@ -130,6 +230,112 @@ fn split_multi(input: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn default_precedence_matches_upstream_order() {
+        assert_eq!(
+            default_precedence(),
+            vec![
+                "folderStructure".to_string(),
+                "audioMetatags".to_string(),
+                "nfoFile".to_string(),
+                "txtFiles".to_string(),
+                "opfFile".to_string(),
+                "absMetadata".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn unknown_chain_steps_are_skipped() {
+        let meta = resolve_with_chain(
+            Path::new("/audiobooks/Author/Title"),
+            &ProbedTags::default(),
+            ["folderStructure".to_string(), "nope".to_string()],
+        );
+        assert_eq!(meta.title, "Title");
+    }
+
+    #[test]
+    fn metadata_json_overrides_everything_earlier() {
+        let dir = tempdir();
+        std::fs::write(
+            dir.join("metadata.json"),
+            r#"{"title": "From ABS Metadata", "authors": ["ABS Author"]}"#,
+        )
+        .unwrap();
+
+        let mut tags = ProbedTags::default();
+        tags.title = Some("From ID3".to_string());
+        tags.artist = Some("From ID3 Artist".to_string());
+
+        let folder = dir.join("Book Author").join("Book Title");
+        std::fs::create_dir_all(&folder).unwrap();
+        // Move metadata.json into the book folder
+        std::fs::rename(dir.join("metadata.json"), folder.join("metadata.json")).unwrap();
+
+        let meta = resolve(&folder, &tags);
+        assert_eq!(meta.title, "From ABS Metadata");
+        assert_eq!(meta.authors, vec!["ABS Author".to_string()]);
+    }
+
+    #[test]
+    fn opf_overrides_audio_metatags_but_abs_overrides_opf() {
+        let dir = tempdir();
+        let folder = dir.join("X").join("Y");
+        std::fs::create_dir_all(&folder).unwrap();
+
+        std::fs::write(
+            folder.join("book.opf"),
+            r#"<?xml version="1.0"?>
+            <package><metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                <dc:title>From OPF</dc:title>
+                <dc:creator opf:role="aut">OPF Author</dc:creator>
+                <dc:language>de</dc:language>
+            </metadata></package>"#,
+        )
+        .unwrap();
+        std::fs::write(
+            folder.join("metadata.json"),
+            r#"{"title": "From ABS", "language": "fr"}"#,
+        )
+        .unwrap();
+        let mut tags = ProbedTags::default();
+        tags.title = Some("ID3 Title".to_string());
+        tags.language = Some("en".to_string());
+
+        let meta = resolve(&folder, &tags);
+        assert_eq!(meta.title, "From ABS");
+        // abs.json doesn't set authors → opf wins
+        assert_eq!(meta.authors, vec!["OPF Author".to_string()]);
+        // abs sets language → wins over opf
+        assert_eq!(meta.language.as_deref(), Some("fr"));
+    }
+
+    #[test]
+    fn reader_txt_supplies_narrators_when_other_sources_silent() {
+        let dir = tempdir();
+        let folder = dir.join("A").join("B");
+        std::fs::create_dir_all(&folder).unwrap();
+        std::fs::write(folder.join("reader.txt"), "Reader One, Reader Two\n").unwrap();
+        std::fs::write(folder.join("desc.txt"), "A long description.\n").unwrap();
+
+        let meta = resolve(&folder, &ProbedTags::default());
+        assert_eq!(
+            meta.narrators,
+            vec!["Reader One".to_string(), "Reader Two".to_string()]
+        );
+        assert_eq!(meta.description.as_deref(), Some("A long description."));
+    }
+
+    fn tempdir() -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join("podfetch-abs-meta-tests")
+            .join(uuid::Uuid::new_v4().simple().to_string());
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
 
     #[test]
     fn folder_structure_with_author_and_title() {

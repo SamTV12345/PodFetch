@@ -12,6 +12,7 @@ use crate::audiobookshelf_api::controllers::public_session::get_public_session_r
 use crate::audiobookshelf_api::controllers::scan::get_scan_router as get_audiobookshelf_scan_router;
 use crate::audiobookshelf_api::controllers::server_status::get_status_router as get_audiobookshelf_status_router;
 use crate::audiobookshelf_api::controllers::sessions::get_sessions_router as get_audiobookshelf_sessions_router;
+use crate::audiobookshelf_api::controllers::uploads::get_upload_router as get_audiobookshelf_upload_router;
 use crate::gpodder::{ClientParametrization, build_client_parametrization};
 use crate::gpodder_api::auth::authentication::get_auth_router;
 use crate::gpodder_api::device::device_controller::get_device_router;
@@ -106,6 +107,7 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
             .merge(get_audiobookshelf_items_router().with_state(state.clone()))
             .merge(get_audiobookshelf_me_router().with_state(state.clone()))
             .merge(get_audiobookshelf_sessions_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_upload_router().with_state(state.clone()))
             .merge(get_audiobookshelf_public_session_router().with_state(state.clone()))
             .merge(get_audiobookshelf_hls_router().with_state(state.clone()))
             .merge(get_audiobookshelf_authorize_router().with_state(state.clone()))

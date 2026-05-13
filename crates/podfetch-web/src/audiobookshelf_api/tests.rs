@@ -643,6 +643,154 @@ fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
     (0..len).map(|i| (i % 251) as u8).collect()
 }
 
+// ── Phase D: upload + scan reporting ────────────────────────────────────────
+
+#[tokio::test]
+#[serial]
+async fn upload_writes_file_and_returns_target_dir() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let lib = state
+        .audiobookshelf_library_service
+        .list()
+        .unwrap()
+        .into_iter()
+        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .unwrap();
+    let upload_root = std::env::temp_dir()
+        .join("podfetch-abs-uploads")
+        .join(uuid::Uuid::new_v4().simple().to_string());
+    std::fs::create_dir_all(&upload_root).unwrap();
+    let mut repo_lib = lib.clone();
+    repo_lib.folder_paths = vec![upload_root.to_string_lossy().to_string()];
+    use podfetch_domain::audiobookshelf::library::LibraryRepository;
+    use podfetch_persistence::adapters::LibraryRepositoryImpl;
+    use podfetch_persistence::db::database;
+    LibraryRepositoryImpl::new(database()).upsert(repo_lib).unwrap();
+
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .post("/api/upload")
+        .multipart(
+            axum_test::multipart::MultipartForm::new()
+                .add_text("library", lib.id.clone())
+                .add_text("author", "Andy Weir")
+                .add_text("title", "Hail Mary")
+                .add_part(
+                    "file",
+                    axum_test::multipart::Part::bytes(b"fake-audio-bytes".to_vec())
+                        .file_name("intro.mp3")
+                        .mime_type("audio/mpeg"),
+                ),
+        )
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    assert_eq!(body["libraryId"], json!(lib.id));
+    let uploaded = body["uploadedFiles"].as_array().unwrap();
+    assert_eq!(uploaded.len(), 1);
+    assert_eq!(uploaded[0], json!("intro.mp3"));
+    let target = body["targetDir"].as_str().unwrap();
+    let intro_path = std::path::Path::new(target).join("intro.mp3");
+    assert!(intro_path.is_file(), "expected file at {}", intro_path.display());
+    let content = std::fs::read(&intro_path).unwrap();
+    assert_eq!(content, b"fake-audio-bytes");
+
+    let _ = std::fs::remove_dir_all(&upload_root);
+}
+
+#[tokio::test]
+#[serial]
+async fn upload_without_library_returns_4xx() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .post("/api/upload")
+        .multipart(
+            axum_test::multipart::MultipartForm::new().add_part(
+                "file",
+                axum_test::multipart::Part::bytes(b"x".to_vec())
+                    .file_name("a.mp3")
+                    .mime_type("audio/mpeg"),
+            ),
+        )
+        .await;
+    assert!(
+        resp.status_code().is_client_error(),
+        "expected 4xx, got {}",
+        resp.status_code()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn upload_without_files_returns_4xx() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let lib = state
+        .audiobookshelf_library_service
+        .list()
+        .unwrap()
+        .into_iter()
+        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .unwrap();
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .post("/api/upload")
+        .multipart(axum_test::multipart::MultipartForm::new().add_text("library", lib.id))
+        .await;
+    assert!(resp.status_code().is_client_error());
+}
+
+#[tokio::test]
+#[serial]
+async fn scan_report_exposes_added_updated_counters() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let lib = state
+        .audiobookshelf_library_service
+        .list()
+        .unwrap()
+        .into_iter()
+        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .unwrap();
+    login_audiobookshelf(&mut server, &user).await;
+
+    use podfetch_domain::audiobookshelf::library::LibraryRepository;
+    use podfetch_persistence::adapters::LibraryRepositoryImpl;
+    use podfetch_persistence::db::database;
+    let empty = std::env::temp_dir()
+        .join("podfetch-abs-empty-scan")
+        .join(uuid::Uuid::new_v4().simple().to_string());
+    std::fs::create_dir_all(&empty).unwrap();
+    let mut updated = lib.clone();
+    updated.folder_paths = vec![empty.to_string_lossy().to_string()];
+    LibraryRepositoryImpl::new(database()).upsert(updated).unwrap();
+
+    let resp = server
+        .test_server
+        .post(&format!("/api/libraries/{}/scan", lib.id))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    assert_eq!(body["booksAdded"], json!(0));
+    assert_eq!(body["booksUpdated"], json!(0));
+    assert_eq!(body["scannedFolders"], json!(0));
+    let _ = std::fs::remove_dir_all(&empty);
+}
+
 // ── Phase C: HLS + playMethod + listening-sessions ──────────────────────────
 
 #[tokio::test]
