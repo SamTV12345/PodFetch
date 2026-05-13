@@ -254,6 +254,24 @@ export const PodcastSettingsModal: FC<PodcastSettingsModalProps> = ({
                             />
 
                             <label className="col-span-2 ui-text">
+                                {t('number-of-podcasts-to-download')}
+                                <SettingsInfoIcon
+                                    headerKey="number-of-podcasts-to-download"
+                                    textKey="number-of-podcasts-to-download-explanation"
+                                />
+                            </label>
+                            <CustomInput
+                                type="number"
+                                value={draft.podcastPrefill}
+                                onChange={(e) =>
+                                    update(
+                                        'podcastPrefill',
+                                        Number(e.target.value)
+                                    )
+                                }
+                            />
+
+                            <label className="col-span-2 ui-text">
                                 {t('activated')}
                             </label>
                             <Switcher
