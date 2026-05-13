@@ -1,4 +1,16 @@
 use crate::app_state::AppState;
+use crate::audiobookshelf_api::auth_middleware::audiobookshelf_bearer_auth;
+use crate::audiobookshelf_api::controllers::auth::{
+    get_auth_router as get_audiobookshelf_auth_router,
+    get_authorize_router as get_audiobookshelf_authorize_router,
+};
+use crate::audiobookshelf_api::controllers::items::get_items_router as get_audiobookshelf_items_router;
+use crate::audiobookshelf_api::controllers::libraries::get_libraries_router as get_audiobookshelf_libraries_router;
+use crate::audiobookshelf_api::controllers::me::get_me_router as get_audiobookshelf_me_router;
+use crate::audiobookshelf_api::controllers::public_session::get_public_session_router as get_audiobookshelf_public_session_router;
+use crate::audiobookshelf_api::controllers::scan::get_scan_router as get_audiobookshelf_scan_router;
+use crate::audiobookshelf_api::controllers::server_status::get_status_router as get_audiobookshelf_status_router;
+use crate::audiobookshelf_api::controllers::sessions::get_sessions_router as get_audiobookshelf_sessions_router;
 use crate::gpodder::{ClientParametrization, build_client_parametrization};
 use crate::gpodder_api::auth::authentication::get_auth_router;
 use crate::gpodder_api::device::device_controller::get_device_router;
@@ -75,6 +87,29 @@ pub fn global_routes(state: AppState, api_config: OpenApiRouter) -> OpenApiRoute
                     )
                     .layer(gpodder_session),
             );
+    }
+
+    if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
+        // Audiobookshelf-compatible surface. Endpoints sit at root paths so the
+        // official mobile apps (which hardcode `/login`, `/api/...`, `/public/...`,
+        // `/hls/...`, `/socket.io/`) work without a path prefix.
+        let abs_bearer = from_fn_with_state(state.clone(), audiobookshelf_bearer_auth);
+
+        let abs_unauth = OpenApiRouter::new()
+            .merge(get_audiobookshelf_status_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_auth_router().with_state(state.clone()));
+
+        let abs_auth = OpenApiRouter::new()
+            .merge(get_audiobookshelf_libraries_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_scan_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_items_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_me_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_sessions_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_public_session_router().with_state(state.clone()))
+            .merge(get_audiobookshelf_authorize_router().with_state(state.clone()))
+            .layer(abs_bearer);
+
+        router = router.merge(abs_unauth).merge(abs_auth);
     }
     router
 }

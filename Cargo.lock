@@ -3138,6 +3138,7 @@ dependencies = [
  "podfetch-domain",
  "r2d2",
  "r2d2_postgres",
+ "serde_json",
  "tracing",
  "uuid",
 ]

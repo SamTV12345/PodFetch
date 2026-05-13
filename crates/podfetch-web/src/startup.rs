@@ -61,8 +61,14 @@ fn is_socket_authenticated(socket: &SocketRef, auth_service: &Arc<UserAuthServic
     let req_parts = socket.req_parts();
     let query = req_parts.uri.query().unwrap_or("");
     for param in query.split('&') {
-        if let Some(key) = param.strip_prefix("apiKey=") {
-            let decoded = urlencoding::decode(key).unwrap_or_default();
+        // Native PodFetch UI sends `apiKey=...`; audiobookshelf mobile apps send
+        // `token=...` (the apps fall back to query when handshake auth is
+        // unsupported by the transport).
+        let candidate = param
+            .strip_prefix("apiKey=")
+            .or_else(|| param.strip_prefix("token="));
+        if let Some(value) = candidate {
+            let decoded = urlencoding::decode(value).unwrap_or_default();
             if auth_service.is_api_key_valid(&decoded) {
                 return true;
             }
@@ -360,6 +366,12 @@ pub fn build_server_router() -> Router {
 
     insert_default_settings_if_not_present(state.settings_service.as_ref())
         .expect("Could not insert default settings");
+
+    if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled
+        && let Err(e) = state.audiobookshelf_library_service.bootstrap_defaults()
+    {
+        tracing::error!("Could not bootstrap audiobookshelf default libraries: {e:?}");
+    }
 
     let sub_dir = ENVIRONMENT_SERVICE
         .sub_directory

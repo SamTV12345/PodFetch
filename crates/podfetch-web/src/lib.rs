@@ -49,6 +49,9 @@ pub mod auth_middleware;
 // GPodder API handlers
 pub mod gpodder_api;
 
+// audiobookshelf-compatible API (for official audiobookshelf mobile apps)
+pub mod audiobookshelf_api;
+
 // Route configuration
 pub mod routes;
 
@@ -78,6 +81,7 @@ fn init_test_env() {
         std::env::set_var("USERNAME", "postgres");
         std::env::set_var("PASSWORD", "postgres");
         std::env::set_var("GPODDER_INTEGRATION_ENABLED", "true");
+        std::env::set_var("AUDIOBOOKSHELF_INTEGRATION_ENABLED", "true");
         std::env::set_var("API_KEY", "test-api-key");
         #[cfg(feature = "sqlite")]
         std::env::set_var("DATABASE_URL", "sqlite://./podcast.db");

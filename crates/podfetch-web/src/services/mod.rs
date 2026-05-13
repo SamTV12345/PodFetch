@@ -1,4 +1,5 @@
 pub mod agent;
+pub mod audiobookshelf;
 pub mod cast;
 pub mod device;
 pub mod device_sync_group;

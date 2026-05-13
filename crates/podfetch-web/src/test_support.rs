@@ -98,6 +98,19 @@ END $$;
 
         // Order matters: delete children before parents (foreign keys)
         let tables: &[&str] = &[
+            "audiobookshelf_book_chapters",
+            "audiobookshelf_book_audio_files",
+            "audiobookshelf_book_series",
+            "audiobookshelf_series",
+            "audiobookshelf_book_narrators",
+            "audiobookshelf_narrators",
+            "audiobookshelf_book_authors",
+            "audiobookshelf_authors",
+            "audiobookshelf_books",
+            "audiobookshelf_listening_sessions",
+            "audiobookshelf_media_progress",
+            "audiobookshelf_playback_sessions",
+            "audiobookshelf_libraries",
             "listening_events",
             "playlist_items",
             "favorite_podcast_episodes",
@@ -141,6 +154,7 @@ END $$;
         INIT.call_once(|| unsafe {
             // Enable GPodder routes in tests
             std::env::set_var("GPODDER_INTEGRATION_ENABLED", "true");
+            std::env::set_var("AUDIOBOOKSHELF_INTEGRATION_ENABLED", "true");
             // Enable basic auth so GPodder tests can authenticate
             std::env::set_var("BASIC_AUTH", "true");
             std::env::set_var("USERNAME", "postgres");
@@ -183,6 +197,24 @@ END $$;
         fn drop(&mut self) {
             use diesel::RunQueryDsl;
             use podfetch_persistence::db::get_connection;
+            for table in [
+                "audiobookshelf_book_chapters",
+                "audiobookshelf_book_audio_files",
+                "audiobookshelf_book_series",
+                "audiobookshelf_series",
+                "audiobookshelf_book_narrators",
+                "audiobookshelf_narrators",
+                "audiobookshelf_book_authors",
+                "audiobookshelf_authors",
+                "audiobookshelf_books",
+                "audiobookshelf_listening_sessions",
+                "audiobookshelf_media_progress",
+                "audiobookshelf_playback_sessions",
+                "audiobookshelf_libraries",
+            ] {
+                let _ = diesel::sql_query(format!("DELETE FROM {table}"))
+                    .execute(&mut get_connection());
+            }
             {
                 use podfetch_persistence::schema::listening_events::dsl::listening_events;
                 diesel::delete(listening_events)
