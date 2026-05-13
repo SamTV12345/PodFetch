@@ -179,4 +179,21 @@ impl FileHandleWrapper {
                 .map_err(Self::map_storage_error),
         }
     }
+
+    pub fn rename_file(
+        src: &str,
+        dst: &str,
+        download_location: &FileHandlerType,
+    ) -> Result<(), CustomError> {
+        match download_location {
+            FileHandlerType::Local => {
+                LocalStorageBackend::rename_file(src, dst).map_err(Self::map_storage_error)
+            }
+            FileHandlerType::S3 => Err(CustomErrorInner::Conflict(
+                "rename_file is not supported for the S3 backend".to_string(),
+                Critical,
+            )
+            .into()),
+        }
+    }
 }

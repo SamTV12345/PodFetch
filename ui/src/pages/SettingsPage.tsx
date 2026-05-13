@@ -38,6 +38,11 @@ export const SettingsPage = () => {
                         </NavLink>
                     </li>
                     <li className={`cursor-pointer inline-block px-2 py-4`}>
+                        <NavLink to="rescan">
+                            {t('rescan-audio-files')}
+                        </NavLink>
+                    </li>
+                    <li className={`cursor-pointer inline-block px-2 py-4`}>
                         <NavLink to="gpodder">
                             {t('manage-gpodder-podcasts')}
                         </NavLink>

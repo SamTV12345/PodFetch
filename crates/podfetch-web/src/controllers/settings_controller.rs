@@ -1,4 +1,7 @@
 use crate::app_state::AppState;
+use crate::services::episode_rescan::service::{
+    EpisodeRescanService, RescanApplyStats, RescanOptions,
+};
 use crate::services::episode_scan::service::EpisodeScanServiceImpl;
 use crate::services::podcast::service::PodcastService;
 use crate::settings::{
@@ -34,23 +37,75 @@ pub async fn get_settings(
 #[utoipa::path(
     post,
     path="/settings/rescan-episodes",
+    request_body=RescanOptions,
     responses(
 (status = 200, description = "Rescans all episodes for metadata")),
     tag="podcast_episodes"
 )]
-pub async fn rescan_episodes(Extension(requester): Extension<User>) -> Result<(), CustomError> {
+pub async fn rescan_episodes(
+    Extension(requester): Extension<User>,
+    body: Option<Json<RescanOptions>>,
+) -> Result<(), CustomError> {
+    if !requester.is_admin() {
+        return Err(map_rescan_error(RescanError::<CustomError>::Forbidden));
+    }
+    let opts = body.map(|Json(o)| o).unwrap_or_default();
+
     let scan_service = EpisodeScanServiceImpl::default_service();
-    settings::rescan_episodes(&scan_service, requester.is_admin())
-        .map(|stats| {
-            tracing::info!(
-                "Rescan complete: {} episodes scanned, {} chapters saved, {} skipped, {} errors",
-                stats.episodes_scanned,
-                stats.chapters_saved,
-                stats.skipped,
-                stats.errors
-            );
-        })
-        .map_err(map_rescan_error)
+    let chapter_stats = settings::rescan_episodes(&scan_service, requester.is_admin())
+        .map_err(map_rescan_error)?;
+
+    let apply_stats = if opts.any_enabled() {
+        apply_settings_to_downloaded_episodes(&opts)?
+    } else {
+        RescanApplyStats::default()
+    };
+
+    tracing::info!(
+        "Rescan complete: {} scanned, {} chapters, {} skipped, {} chapter-errors, \
+         {} renamed, {} transcoded, {} covers consolidated, {} metadata refreshed, {} apply-errors",
+        chapter_stats.episodes_scanned,
+        chapter_stats.chapters_saved,
+        chapter_stats.skipped,
+        chapter_stats.errors,
+        apply_stats.renamed,
+        apply_stats.transcoded,
+        apply_stats.covers_consolidated,
+        apply_stats.metadata_refreshed,
+        apply_stats.errors,
+    );
+    Ok(())
+}
+
+fn apply_settings_to_downloaded_episodes(
+    opts: &RescanOptions,
+) -> Result<RescanApplyStats, CustomError> {
+    use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
+
+    let mut apply_stats = RescanApplyStats::default();
+    let mut last_id = 0;
+    loop {
+        let page = PodcastEpisodeService::get_nth_page_of_podcast_episodes(last_id)?;
+        if page.is_empty() {
+            break;
+        }
+        for episode in &page {
+            if episode.file_episode_path.is_none() {
+                continue;
+            }
+            if let Err(err) =
+                EpisodeRescanService::apply_to_episode(episode, opts, &mut apply_stats)
+            {
+                tracing::error!(
+                    "apply_to_episode failed for {}: {err}",
+                    episode.episode_id
+                );
+                apply_stats.errors += 1;
+            }
+        }
+        last_id = page.last().map(|e| e.id).unwrap_or(last_id);
+    }
+    Ok(apply_stats)
 }
 
 #[utoipa::path(
@@ -515,7 +570,7 @@ mod tests {
             Ok(_) => panic!("expected forbidden error for update_name"),
         }
 
-        let rescan_result = super::rescan_episodes(Extension(user)).await;
+        let rescan_result = super::rescan_episodes(Extension(user), None).await;
         match rescan_result {
             Err(err) => assert!(matches!(err.inner, CustomErrorInner::Forbidden(_))),
             Ok(_) => panic!("expected forbidden error for rescan_episodes"),
