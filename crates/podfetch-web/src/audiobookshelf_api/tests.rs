@@ -643,6 +643,261 @@ fn generate_pseudo_audio_bytes(len: usize) -> Vec<u8> {
     (0..len).map(|i| (i % 251) as u8).collect()
 }
 
+// ── Phase C: HLS + playMethod + listening-sessions ──────────────────────────
+
+#[tokio::test]
+#[serial]
+async fn play_chooses_hls_when_client_lacks_source_codec() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("HLS podcast", &state, user.id);
+    let episode = insert_test_episode_with_path(
+        podcast.id,
+        "FLAC episode",
+        "/tmp/episode.flac",
+    );
+
+    login_audiobookshelf(&mut server, &user).await;
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({
+            "mediaPlayer": "test",
+            "supportedMimeTypes": ["audio/mpeg", "audio/mp4"]
+        }))
+        .await;
+    assert_eq!(play_resp.status_code().as_u16(), 200);
+    let body: Value = play_resp.json();
+    assert_eq!(body["playMethod"], json!(1), "expected playMethod=1 (HLS), got body: {body}");
+    let tracks = body["audioTracks"].as_array().unwrap();
+    assert_eq!(tracks.len(), 1);
+    let content_url = tracks[0]["contentUrl"].as_str().unwrap();
+    assert!(content_url.ends_with("/master.m3u8"), "got contentUrl: {content_url}");
+    assert_eq!(tracks[0]["mimeType"], json!("application/vnd.apple.mpegurl"));
+}
+
+#[tokio::test]
+#[serial]
+async fn play_uses_direct_when_client_supports_source_codec() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("Direct podcast", &state, user.id);
+    let episode = insert_test_episode_with_path(
+        podcast.id,
+        "MP3 episode",
+        "/tmp/ep.mp3",
+    );
+
+    login_audiobookshelf(&mut server, &user).await;
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({
+            "supportedMimeTypes": ["audio/mpeg", "audio/mp4"]
+        }))
+        .await;
+    let body: Value = play_resp.json();
+    assert_eq!(body["playMethod"], json!(0));
+    let content_url = body["audioTracks"][0]["contentUrl"].as_str().unwrap();
+    assert!(content_url.starts_with("/public/session/"), "got: {content_url}");
+}
+
+#[tokio::test]
+#[serial]
+async fn hls_master_playlist_returns_m3u8_for_owned_session() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("HLS pod", &state, user.id);
+    let episode = insert_test_episode_with_path(podcast.id, "HLS ep", "/tmp/x.flac");
+    login_audiobookshelf(&mut server, &user).await;
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({ "supportedMimeTypes": ["audio/mpeg"] }))
+        .await;
+    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+
+    let master_resp = server
+        .test_server
+        .get(&format!("/hls/{session_id}/master.m3u8"))
+        .await;
+    assert_eq!(master_resp.status_code().as_u16(), 200);
+    let ct = master_resp
+        .headers()
+        .get("content-type")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or_default();
+    assert!(ct.contains("mpegurl"), "got content-type: {ct}");
+    let body = master_resp.text();
+    assert!(body.starts_with("#EXTM3U"));
+    assert!(body.contains(&format!("/hls/{session_id}/index.m3u8")));
+}
+
+#[tokio::test]
+#[serial]
+async fn hls_media_playlist_lists_segments_for_duration() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("HLS-Index pod", &state, user.id);
+    let episode = insert_test_episode_with_path(podcast.id, "Ep", "/tmp/x.flac");
+    // total_time = 300 → expect 50 segments at 6 sec each
+    login_audiobookshelf(&mut server, &user).await;
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({ "supportedMimeTypes": ["audio/mpeg"] }))
+        .await;
+    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+
+    let resp = server
+        .test_server
+        .get(&format!("/hls/{session_id}/index.m3u8"))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body = resp.text();
+    assert!(body.contains("#EXT-X-TARGETDURATION:6"));
+    assert!(body.contains(&format!("/hls/{session_id}/seg-0.ts")));
+    assert!(body.contains(&format!("/hls/{session_id}/seg-49.ts")));
+    assert!(body.contains("#EXT-X-ENDLIST"));
+    let _ = episode;
+}
+
+#[tokio::test]
+#[serial]
+async fn hls_playlist_cross_user_access_is_forbidden() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user_a = create_user_for_audiobookshelf(&state);
+    let user_b = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("HLS XUser pod", &state, user_a.id);
+    let episode = insert_test_episode_with_path(podcast.id, "Ep", "/tmp/x.flac");
+    login_audiobookshelf(&mut server, &user_a).await;
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({ "supportedMimeTypes": ["audio/mpeg"] }))
+        .await;
+    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+
+    login_audiobookshelf(&mut server, &user_b).await;
+    let resp = server
+        .test_server
+        .get(&format!("/hls/{session_id}/master.m3u8"))
+        .await;
+    assert!(
+        resp.status_code().is_client_error(),
+        "expected 4xx, got {}",
+        resp.status_code()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn close_session_persists_listening_session_history() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("History pod", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "History ep");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({}))
+        .await;
+    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    server
+        .test_server
+        .post(&format!("/api/session/{session_id}/close"))
+        .json(&json!({
+            "currentTime": 60.0,
+            "timeListened": 60.0,
+            "duration": episode.total_time
+        }))
+        .await;
+
+    // Now query /api/me/listening-sessions
+    let resp = server
+        .test_server
+        .get("/api/me/listening-sessions?limit=10")
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    let sessions = body["sessions"].as_array().expect("sessions array");
+    assert_eq!(sessions.len(), 1, "expected 1 listening session, got {sessions:#?}");
+    let entry = &sessions[0];
+    assert_eq!(entry["mediaType"], json!("podcast"));
+    assert_eq!(entry["libraryItemId"], json!(format!("li_pod_{}", podcast.id)));
+    assert_eq!(entry["episodeId"], json!(format!("ep_{}", episode.id)));
+    assert!((entry["timeListening"].as_f64().unwrap() - 60.0).abs() < 0.1);
+}
+
+#[tokio::test]
+#[serial]
+async fn listening_sessions_isolated_per_user() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user_a = create_user_for_audiobookshelf(&state);
+    let user_b = create_user_for_audiobookshelf(&state);
+
+    let podcast = insert_test_podcast("Isolation pod", &state, user_a.id);
+    let episode = insert_test_episode(podcast.id, "Iso ep");
+
+    // user_a opens and closes a session
+    login_audiobookshelf(&mut server, &user_a).await;
+    let play_resp = server
+        .test_server
+        .post(&format!(
+            "/api/items/li_pod_{}/play/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({}))
+        .await;
+    let session_id = play_resp.json::<Value>()["id"].as_str().unwrap().to_string();
+    server
+        .test_server
+        .post(&format!("/api/session/{session_id}/close"))
+        .json(&json!({"currentTime": 10.0, "timeListened": 10.0, "duration": episode.total_time}))
+        .await;
+
+    // user_b has no listening history
+    login_audiobookshelf(&mut server, &user_b).await;
+    let resp = server.test_server.get("/api/me/listening-sessions").await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    let sessions = body["sessions"].as_array().unwrap();
+    assert_eq!(sessions.len(), 0, "user_b should see no sessions, got {sessions:#?}");
+}
+
 // ── Book-side integration tests (Phase B) ───────────────────────────────────
 
 #[tokio::test]

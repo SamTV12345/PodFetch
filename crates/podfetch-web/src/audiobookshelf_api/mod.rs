@@ -10,6 +10,7 @@ pub mod auth_middleware;
 pub mod controllers;
 pub mod dto;
 pub mod mapping;
+pub mod socket_io;
 
 #[cfg(test)]
 pub mod test_support;

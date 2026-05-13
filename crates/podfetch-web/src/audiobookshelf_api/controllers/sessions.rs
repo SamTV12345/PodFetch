@@ -6,6 +6,8 @@ use crate::audiobookshelf_api::dto::playback_session::{
     AudioTrackMetadataDto, PlayRequestBody, PlaybackAudioTrackDto, PlaybackSessionDto,
     SyncRequestBody,
 };
+use crate::audiobookshelf_api::socket_io::broadcaster;
+use crate::services::audiobookshelf::hls_transcoder::should_use_hls;
 use crate::services::podcast::service::PodcastService;
 use crate::usecases::podcast_episode::PodcastEpisodeUseCase as PodcastEpisodeService;
 use axum::Json;
@@ -76,7 +78,7 @@ async fn start_session(
         .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
 
     if let LibraryItemId::Book(_) = parsed_item {
-        return start_book_session(state, user, item_id).await;
+        return start_book_session(state, user, item_id, _body).await;
     }
     let LibraryItemId::Podcast(podcast_id) = parsed_item else {
         return Err(CustomErrorInner::NotFound(Debug).into());
@@ -124,9 +126,24 @@ async fn start_session(
     let mime_type = mime_for_ext(&ext);
     let codec = codec_for_ext(&ext);
 
-    // Phase A: always direct streaming. HLS decision moves to playback_session_service in Phase C.
-    let play_method = PlayMethod::Direct;
-    let content_url = format!("/public/session/{session_id}/track/0");
+    // Phase C: HLS decision based on the client's supportedMimeTypes.
+    let supported_mime_types = _body
+        .as_ref()
+        .and_then(|b| b.supported_mime_types.clone())
+        .unwrap_or_default();
+    let force_transcode = _body.as_ref().and_then(|b| b.force_transcode).unwrap_or(false);
+    let force_direct = _body.as_ref().and_then(|b| b.force_direct_play).unwrap_or(false);
+    let use_hls = should_use_hls(&mime_type, &supported_mime_types, force_transcode, force_direct);
+    let play_method = if use_hls {
+        PlayMethod::HlsTranscode
+    } else {
+        PlayMethod::Direct
+    };
+    let content_url = if use_hls {
+        format!("/hls/{session_id}/master.m3u8")
+    } else {
+        format!("/public/session/{session_id}/track/0")
+    };
 
     let session = PlaybackSession {
         id: session_id.clone(),
@@ -160,13 +177,18 @@ async fn start_session(
         session_with_progress.current_time = p.current_time;
     }
 
+    let track_mime_type = if use_hls {
+        "application/vnd.apple.mpegurl".to_string()
+    } else {
+        mime_type
+    };
     let audio_tracks = vec![PlaybackAudioTrackDto {
         index: 0,
         start_offset: 0.0,
         duration,
         title: episode.name.clone(),
         content_url,
-        mime_type,
+        mime_type: track_mime_type,
         codec,
         metadata: AudioTrackMetadataDto {
             filename,
@@ -237,7 +259,16 @@ pub async fn sync_session(
         .audiobookshelf_playback_session_service
         .update(session.clone())?;
 
-    upsert_progress(&state, &session, false)?;
+    let progress = upsert_progress(&state, &session, false)?;
+    broadcaster::emit_progress_updated(
+        user.id,
+        &progress,
+        &session.id,
+        session
+            .device_info_json
+            .as_deref()
+            .unwrap_or("audiobookshelf-mobile"),
+    );
     Ok(StatusCode::OK)
 }
 
@@ -275,7 +306,16 @@ pub async fn close_session(
     session.finished_at = Some(now);
 
     let is_finished = session.duration > 0.0 && session.current_time / session.duration > 0.95;
-    upsert_progress(&state, &session, is_finished)?;
+    let progress = upsert_progress(&state, &session, is_finished)?;
+    broadcaster::emit_progress_updated(
+        user.id,
+        &progress,
+        &session.id,
+        session
+            .device_info_json
+            .as_deref()
+            .unwrap_or("audiobookshelf-mobile"),
+    );
 
     // Persist into listening-sessions history.
     let listening = ListeningSession {
@@ -309,6 +349,7 @@ async fn start_book_session(
     state: AppState,
     user: podfetch_domain::user::User,
     item_id: &str,
+    body: Option<PlayRequestBody>,
 ) -> Result<Json<PlaybackSessionDto>, CustomError> {
     let book = state
         .audiobookshelf_book_service
@@ -319,6 +360,24 @@ async fn start_book_session(
         return Err(CustomErrorInner::NotFound(Debug).into());
     }
 
+    let source_mime = aggregate
+        .audio_files
+        .first()
+        .map(|af| af.mime_type.clone())
+        .unwrap_or_else(|| "audio/mpeg".to_string());
+    let supported_mime_types = body
+        .as_ref()
+        .and_then(|b| b.supported_mime_types.clone())
+        .unwrap_or_default();
+    let force_transcode = body.as_ref().and_then(|b| b.force_transcode).unwrap_or(false);
+    let force_direct = body.as_ref().and_then(|b| b.force_direct_play).unwrap_or(false);
+    let use_hls = should_use_hls(&source_mime, &supported_mime_types, force_transcode, force_direct);
+    let play_method = if use_hls {
+        PlayMethod::HlsTranscode
+    } else {
+        PlayMethod::Direct
+    };
+
     let now = Utc::now().naive_utc();
     let session_id = format!("play_{}", Uuid::new_v4().simple());
     let session = PlaybackSession {
@@ -328,7 +387,7 @@ async fn start_book_session(
         library_item_id: item_id.to_string(),
         episode_id: None,
         media_type: "book".to_string(),
-        play_method: PlayMethod::Direct,
+        play_method,
         current_time: 0.0,
         duration: aggregate.book.duration_seconds,
         started_at: now,
@@ -354,35 +413,66 @@ async fn start_book_session(
         session_with_progress.current_time = p.current_time;
     }
 
-    // Build one audio track per BookAudioFile
-    let audio_tracks: Vec<PlaybackAudioTrackDto> = aggregate
-        .audio_files
-        .iter()
-        .scan(0.0_f64, |start_offset, af| {
-            let offset = *start_offset;
-            *start_offset += af.duration;
-            let filename = StdPath::new(&af.path)
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or("")
-                .to_string();
-            Some(PlaybackAudioTrackDto {
-                index: af.idx,
-                start_offset: offset,
-                duration: af.duration,
-                title: filename.clone(),
-                content_url: format!("/public/session/{}/track/{}", session.id, af.idx),
-                mime_type: af.mime_type.clone(),
-                codec: af.codec.clone(),
-                metadata: AudioTrackMetadataDto {
-                    filename,
-                    ext: af.ext.clone(),
-                    path: af.path.clone(),
-                    rel_path: af.relative_path.clone(),
-                },
+    // Build audio tracks. For HLS we only expose a single master.m3u8 track
+    // covering the full duration; for direct streaming we expose one per file.
+    let audio_tracks: Vec<PlaybackAudioTrackDto> = if use_hls {
+        let title = aggregate.book.title.clone();
+        let first_file = aggregate.audio_files.first().cloned();
+        vec![PlaybackAudioTrackDto {
+            index: 0,
+            start_offset: 0.0,
+            duration: aggregate.book.duration_seconds,
+            title,
+            content_url: format!("/hls/{}/master.m3u8", session.id),
+            mime_type: "application/vnd.apple.mpegurl".to_string(),
+            codec: "aac".to_string(),
+            metadata: AudioTrackMetadataDto {
+                filename: first_file
+                    .as_ref()
+                    .and_then(|af| {
+                        StdPath::new(&af.path)
+                            .file_name()
+                            .and_then(|s| s.to_str().map(String::from))
+                    })
+                    .unwrap_or_default(),
+                ext: first_file.as_ref().map(|af| af.ext.clone()).unwrap_or_default(),
+                path: first_file.as_ref().map(|af| af.path.clone()).unwrap_or_default(),
+                rel_path: first_file
+                    .as_ref()
+                    .map(|af| af.relative_path.clone())
+                    .unwrap_or_default(),
+            },
+        }]
+    } else {
+        aggregate
+            .audio_files
+            .iter()
+            .scan(0.0_f64, |start_offset, af| {
+                let offset = *start_offset;
+                *start_offset += af.duration;
+                let filename = StdPath::new(&af.path)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_string();
+                Some(PlaybackAudioTrackDto {
+                    index: af.idx,
+                    start_offset: offset,
+                    duration: af.duration,
+                    title: filename.clone(),
+                    content_url: format!("/public/session/{}/track/{}", session.id, af.idx),
+                    mime_type: af.mime_type.clone(),
+                    codec: af.codec.clone(),
+                    metadata: AudioTrackMetadataDto {
+                        filename,
+                        ext: af.ext.clone(),
+                        path: af.path.clone(),
+                        rel_path: af.relative_path.clone(),
+                    },
+                })
             })
-        })
-        .collect();
+            .collect()
+    };
 
     Ok(Json(PlaybackSessionDto::from_domain(
         &session_with_progress,
@@ -394,7 +484,7 @@ fn upsert_progress(
     state: &AppState,
     session: &PlaybackSession,
     force_finished: bool,
-) -> Result<(), CustomError> {
+) -> Result<MediaProgress, CustomError> {
     let now = Utc::now().naive_utc();
     let progress_id = MediaProgress::compose_id(
         &session.library_item_id,
@@ -433,8 +523,7 @@ fn upsert_progress(
         last_update: now,
         started_at,
         finished_at,
-    })?;
-    Ok(())
+    })
 }
 
 fn mime_for_ext(ext: &str) -> String {

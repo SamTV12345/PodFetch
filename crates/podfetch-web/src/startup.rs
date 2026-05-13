@@ -414,6 +414,12 @@ pub fn build_server_router() -> Router {
             info!("Socket connected to main room");
         }
     });
+    if ENVIRONMENT_SERVICE.audiobookshelf_integration_enabled {
+        crate::audiobookshelf_api::socket_io::gateway::register(
+            &io,
+            state.audiobookshelf_login_service.clone(),
+        );
+    }
     SOCKET_IO_LAYER.get_or_init(|| io);
 
     let api_config = get_api_config(state.clone());

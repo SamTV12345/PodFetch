@@ -3,6 +3,7 @@ use crate::services::agent::dispatcher::AgentDispatcher;
 use crate::services::agent::registry::AgentRegistry;
 use crate::services::audiobookshelf::audiobook_scanner::AudiobookScanner;
 use crate::services::audiobookshelf::book_service::AudiobookshelfBookService;
+use crate::services::audiobookshelf::hls_transcoder::HlsTranscoder;
 use crate::services::audiobookshelf::library_service::AudiobookshelfLibraryService;
 use crate::services::audiobookshelf::listening_session_service::AudiobookshelfListeningSessionService;
 use crate::services::audiobookshelf::login_service::AudiobookshelfLoginService;
@@ -65,6 +66,7 @@ pub struct AppState {
     pub agent_dispatcher: Arc<AgentDispatcher>,
     pub agent_registry: Arc<AgentRegistry>,
     pub audiobookshelf_book_service: Arc<AudiobookshelfBookService>,
+    pub audiobookshelf_hls_transcoder: Arc<HlsTranscoder>,
     pub audiobookshelf_library_service: Arc<AudiobookshelfLibraryService>,
     pub audiobookshelf_listening_session_service: Arc<AudiobookshelfListeningSessionService>,
     pub audiobookshelf_login_service: Arc<AudiobookshelfLoginService>,
@@ -229,11 +231,13 @@ impl AppState {
             user_auth_service.clone(),
             user_admin_service.clone(),
         ));
+        let audiobookshelf_hls_transcoder = Arc::new(HlsTranscoder::new(environment.clone()));
 
         Self {
             agent_dispatcher,
             agent_registry,
             audiobookshelf_book_service,
+            audiobookshelf_hls_transcoder,
             audiobookshelf_library_service,
             audiobookshelf_listening_session_service,
             audiobookshelf_login_service,

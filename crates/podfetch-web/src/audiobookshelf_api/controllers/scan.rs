@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::audiobookshelf_api::auth_middleware::AuthenticatedUser;
+use crate::audiobookshelf_api::socket_io::broadcaster;
 use axum::Json;
 use axum::extract::{Path, State};
 use common_infrastructure::error::CustomError;
@@ -20,6 +21,9 @@ pub async fn scan_library(
     Path(library_id): Path<String>,
 ) -> Result<Json<Value>, CustomError> {
     let report = state.audiobookshelf_scanner.scan_library(&library_id)?;
+    if let Ok(Some(library)) = state.audiobookshelf_library_service.find_by_id(&library_id) {
+        broadcaster::emit_library_updated(&library);
+    }
     Ok(Json(json!({
         "scannedFolders": report.scanned_folders,
         "booksUpserted": report.books_upserted,

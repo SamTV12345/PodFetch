@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod hls;
 pub mod items;
 pub mod libraries;
 pub mod me;
