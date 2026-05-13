@@ -70,7 +70,7 @@ pub mod test_utils;
 /// Runs before any test, ensuring env vars are set before
 /// `ENVIRONMENT_SERVICE` LazyLock is first accessed.
 #[cfg(test)]
-#[ctor::ctor]
+#[ctor::ctor(unsafe)]
 fn init_test_env() {
     // SAFETY: This runs before any test thread starts.
     unsafe {
