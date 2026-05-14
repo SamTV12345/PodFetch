@@ -58,7 +58,12 @@ export const Timeline = () => {
             </div>
 
             <div
-                className="relative grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12 pl-6">
+                // `isolate` + `z-0` give the grid its own stacking context so
+                // the `-z-10` left line stays behind the date badges/cards
+                // but doesn't fall behind <body>'s background (which made it
+                // disappear entirely). `border-color` is bumped from the
+                // muted token to the accent so the timeline rail is visible.
+                className="relative isolate z-0 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12 pl-6">
                 {(timeline.isLoading || !timeline.data)? <></> : timeline.data.data.map((e, index) => (
                     <Fragment key={e.podcast_episode.episode_id+index + "Parent"}>
                         {/* Section start */
@@ -69,8 +74,12 @@ export const Timeline = () => {
                                 <span className="text-xs ui-text-accent">{formatTime(e.podcast_episode.date_of_recording)}</span>
                             </span>
 
-                            {/* Left line */}
-                            <div className="absolute h-full ui-surface-muted ml-[0.1875rem] w-px -z-10"></div>
+                            {/* Left rail. Positioned with `left-` rather than
+                                `ml-` because absolute elements without a
+                                directional offset use their static position
+                                as the anchor, which is fragile inside a CSS
+                                grid. */}
+                            <div className="absolute inset-y-0 left-[0.1875rem] w-px -z-10 bg-(--accent-color)"></div>
                         </>) : ''}
 
                         <TimelineEpisode
