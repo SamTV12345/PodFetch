@@ -156,10 +156,15 @@ export const CreatePlaylistModal: FC<CreatePlaylistModalProps> = ({ open, onOpen
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                onOpenChange(next)
+                if (!next) setStage(0)
+            }}
+        >
             <DialogContent
                 className="max-w-5xl w-full md:w-[70%] max-h-[92vh] overflow-hidden sm:max-w-5xl"
-                onInteractOutside={() => closeModal()}
             >
                 <form
                     onSubmit={(e) => {

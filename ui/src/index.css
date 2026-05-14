@@ -57,6 +57,21 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Match the rest of the app: shadcn components inherit Poppins so
+     headings/body stay visually consistent with everything outside ui/. */
+  --font-heading: 'Poppins', sans-serif;
+  --font-sans: 'Poppins', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 /*
@@ -75,13 +90,22 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
 
 :root {
     color-scheme: light;
     --date-picker-indicator-filter: none;
 
-    /* shadcn tokens (light) - mapped onto existing palette */
+    /* shadcn tokens (light) - mapped onto existing mustard/stone palette */
     --radius: 0.5rem;
     --background: var(--color-white);
     --foreground: var(--color-stone-900);
@@ -159,6 +183,14 @@
     --chip-emerald-color: var(--color-emerald-700);
     --chip-gray-color: var(--color-gray-700);
     --chip-zinc-color: var(--color-zinc-700);
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
 }
 
 :root.dark {
@@ -241,6 +273,15 @@
     --chip-orange-color: var(--color-orange-400);
     --chip-emerald-color: var(--color-emerald-400);
     --chip-gray-color: var(--color-gray-400);
+    /* shadcn sidebar tokens (dark) - matches the existing PodFetch sidebar look */
+    --sidebar: var(--color-stone-950);
+    --sidebar-foreground: var(--color-stone-100);
+    --sidebar-primary: var(--color-mustard-500);
+    --sidebar-primary-foreground: var(--color-stone-900);
+    --sidebar-accent: var(--color-stone-800);
+    --sidebar-accent-foreground: var(--color-stone-100);
+    --sidebar-border: var(--color-stone-800);
+    --sidebar-ring: var(--color-mustard-400);
     --chip-zinc-color: var(--color-zinc-400);
 }
 
@@ -680,4 +721,42 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 @utility ui-fill-inverse {
     fill: var(--bg-color);
+}
+
+/*
+  ---break---
+*/
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
