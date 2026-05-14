@@ -69,7 +69,7 @@ export const PodcastEpisodeChapterTable: FC<PodcastEpisodeChapterTableProps> = (
         <td className="pr-2 py-4">
             <CirclePlay
                 size={32}
-                fill="currentColor"
+                strokeWidth={1.5}
                 className="cursor-pointer ui-text hover:ui-text-hover active:scale-90"
                 onClick={async (e) => {
                     e.stopPropagation()

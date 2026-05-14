@@ -277,7 +277,7 @@ export const PodcastDetailItem: FC<PodcastDetailItemProps> = ({ episode, index, 
                 {/* Play button */}
                 <CirclePlay
                     size={48}
-                    fill="currentColor"
+                    strokeWidth={1.5}
                     className={`${percentagePlayed >=95  && episode.podcastEpisode.total_time > 0 && 'ui-text-muted'}
                     col-start-2 col-end-3 row-start-2 row-end-3
                     xs:col-start-3 xs:col-end-4 xs:row-start-1 xs:row-end-4

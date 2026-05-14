@@ -37,11 +37,18 @@ export const EpisodeCard: FC<EpisodeCardProps> = ({ podcast, podcastEpisode,  po
             {/* Thumbnail */}
             <div className="relative aspect-square bg-center bg-cover mb-2 overflow-hidden rounded-xl transition-shadow group-hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)] w-full" key={podcastEpisode.episode_id} style={{backgroundImage: `url("${podcastEpisode.local_image_url}")`}}>
                 <div className="absolute inset-0 grid place-items-center bg-[rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Overlay is the same dark scrim in both themes, so the
-                        play icon must always be white. `ui-text-inverse` maps
-                        to --bg-color which goes stone-900 in dark mode and
-                        disappeared on the scrim. */}
-                    <CirclePlay size={72} fill="currentColor" className="text-white group-active:scale-90" key={podcastEpisode.episode_id+"icon"} />
+                    {/* Lucide's CirclePlay is stroke-only by default; passing
+                        fill='currentColor' filled BOTH the circle and the play
+                        triangle white, so the icon collapsed to a featureless
+                        white blob on the dark scrim. Without `fill` we get the
+                        outlined play-in-circle shape, with `strokeWidth=1.5`
+                        for slightly bolder lines at this 72px size. */}
+                    <CirclePlay
+                        size={72}
+                        strokeWidth={1.5}
+                        className="text-white group-active:scale-90"
+                        key={podcastEpisode.episode_id+"icon"}
+                    />
                 </div>
 
                 {/* Progress bar */
