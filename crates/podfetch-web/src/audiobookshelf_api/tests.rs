@@ -2148,6 +2148,144 @@ fn insert_test_chapter_row(book_id: &str, idx: i32, start: f64, end: f64, title:
     repo.replace_for_book(book_id, existing).unwrap();
 }
 
+// ── /api/search/podcast + /api/podcasts/feed + /api/podcasts ────────────────
+
+#[tokio::test]
+#[serial]
+async fn search_podcast_without_token_is_unauthorized() {
+    let server = handle_test_startup().await;
+    let response = server.test_server.get("/api/search/podcast?term=test").await;
+    assert!(
+        response.status_code().is_client_error(),
+        "expected 4xx without bearer, got {}",
+        response.status_code()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn search_podcast_without_term_returns_empty_array() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    let response = server.test_server.get("/api/search/podcast").await;
+    assert_eq!(response.status_code().as_u16(), 200);
+    let body: Value = response.json();
+    assert!(
+        body.is_array(),
+        "search must return a top-level JSON array (audiobookshelf-app reads results[0] without an envelope), got {body}"
+    );
+    assert_eq!(body.as_array().map(|v| v.len()), Some(0));
+}
+
+#[tokio::test]
+#[serial]
+async fn create_podcast_feed_rejects_non_http_url() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    let response = server
+        .test_server
+        .post("/api/podcasts/feed")
+        .json(&json!({ "rssFeed": "ftp://example.com/feed.xml" }))
+        .await;
+    assert!(
+        response.status_code().is_client_error(),
+        "expected 4xx for non-http feed URL, got {}",
+        response.status_code()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn create_podcast_rejects_empty_feed_url() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    login_audiobookshelf(&mut server, &user).await;
+    let response = server
+        .test_server
+        .post("/api/podcasts")
+        .json(&json!({
+            "media": { "metadata": { "feedUrl": "" } },
+            "libraryId": "lib_default_podcasts"
+        }))
+        .await;
+    assert!(
+        response.status_code().is_client_error(),
+        "expected 4xx for empty feedUrl, got {}",
+        response.status_code()
+    );
+}
+
+#[test]
+fn parse_duration_seconds_handles_all_itunes_formats() {
+    use crate::audiobookshelf_api::controllers::podcasts::parse_duration_seconds_for_test as p;
+    assert_eq!(p(""), None);
+    assert_eq!(p("garbage"), None);
+    assert_eq!(p("3771"), Some(3771));
+    assert_eq!(p("02:30"), Some(150));
+    assert_eq!(p("01:02:30"), Some(3750));
+}
+
+#[test]
+fn map_itunes_result_pins_audiobookshelf_shape() {
+    use crate::audiobookshelf_api::controllers::search::map_itunes_result_for_test as m;
+    use crate::podcast::ItunesModel;
+    let r = ItunesModel {
+        artist_id: Some(42),
+        description: Some("HTML desc".to_string()),
+        artist_view_url: None,
+        kind: None,
+        wrapper_type: None,
+        collection_id: 9001,
+        track_id: None,
+        collection_censored_name: None,
+        track_censored_name: None,
+        artwork_url30: Some("http://img/30".to_string()),
+        artwork_url60: Some("http://img/60".to_string()),
+        artwork_url600: Some("http://img/600".to_string()),
+        collection_price: None,
+        track_price: None,
+        release_date: Some("2024-01-02".to_string()),
+        collection_explicitness: None,
+        track_explicitness: Some("explicit".to_string()),
+        track_count: Some(123),
+        country: None,
+        currency: None,
+        primary_genre_name: None,
+        content_advisory_rating: None,
+        feed_url: Some("https://feeds/x".to_string()),
+        collection_view_url: Some("https://itunes/x".to_string()),
+        collection_hd_price: None,
+        artist_name: Some("Alice".to_string()),
+        track_name: None,
+        collection_name: Some("Cool Podcast".to_string()),
+        artwork_url_100: None,
+        preview_url: None,
+        track_view_url: "https://x".to_string(),
+        track_time_millis: None,
+        genre_ids: vec!["1310".to_string()],
+        genres: vec!["Music".to_string(), "Comedy".to_string()],
+    };
+    let v = m(&r);
+    // Pin the exact keys the Vue + Kotlin clients read. Renaming any of
+    // these breaks the Add-Podcast search results page.
+    assert_eq!(v["id"], json!(9001));
+    assert_eq!(v["artistId"], json!(42));
+    assert_eq!(v["title"], json!("Cool Podcast"));
+    assert_eq!(v["artistName"], json!("Alice"));
+    assert_eq!(v["releaseDate"], json!("2024-01-02"));
+    assert_eq!(v["genres"], json!(["Music", "Comedy"]));
+    assert_eq!(v["cover"], json!("http://img/600"));
+    assert_eq!(v["trackCount"], json!(123));
+    assert_eq!(v["feedUrl"], json!("https://feeds/x"));
+    assert_eq!(v["pageUrl"], json!("https://itunes/x"));
+    assert_eq!(v["explicit"], json!(true));
+}
+
 fn write_temp_audio_file(bytes: &[u8], filename: &str) -> String {
     let dir = std::env::temp_dir().join("podfetch-abs-tests");
     std::fs::create_dir_all(&dir).expect("create temp dir");

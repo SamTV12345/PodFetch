@@ -274,6 +274,12 @@ pub struct ItunesWrapper {
     results: Vec<ItunesModel>,
 }
 
+impl ItunesWrapper {
+    pub fn results(&self) -> &[ItunesModel] {
+        &self.results
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PodindexResponse {
