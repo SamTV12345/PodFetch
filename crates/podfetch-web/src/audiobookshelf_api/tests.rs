@@ -693,6 +693,124 @@ async fn login_response_shape_matches_upstream_payload() {
 
 #[tokio::test]
 #[serial]
+async fn recent_episodes_endpoint_returns_episodes_envelope() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let lib = state
+        .audiobookshelf_library_service
+        .find_default_podcasts_library()
+        .unwrap()
+        .unwrap();
+    let podcast_a = insert_test_podcast("A pod", &state, user.id);
+    let _ep_a1 = insert_test_episode(podcast_a.id, "A1");
+    let _ep_a2 = insert_test_episode(podcast_a.id, "A2");
+    let podcast_b = insert_test_podcast("B pod", &state, user.id);
+    let _ep_b1 = insert_test_episode(podcast_b.id, "B1");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let resp = server
+        .test_server
+        .get(&format!("/api/libraries/{}/recent-episodes?limit=10", lib.id))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    assert!(body["episodes"].is_array(), "missing episodes array");
+    assert!(body["limit"].is_i64());
+    assert!(body["page"].is_i64());
+    let episodes = body["episodes"].as_array().unwrap();
+    assert_eq!(episodes.len(), 3, "expected 3 episodes, got {episodes:#?}");
+    for ep in episodes {
+        assert!(ep["podcast"].is_object(), "episode missing podcast: {ep:#?}");
+        assert!(ep["libraryId"].is_string());
+        assert!(ep["libraryItemId"].is_string());
+        assert!(ep["title"].is_string());
+        let pod = &ep["podcast"];
+        assert!(pod["id"].as_str().unwrap().starts_with("pod_"));
+        assert!(pod["libraryItemId"].as_str().unwrap().starts_with("li_pod_"));
+        assert!(pod["metadata"].is_object());
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn recent_episodes_rejects_non_podcast_library() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let lib = state
+        .audiobookshelf_library_service
+        .list()
+        .unwrap()
+        .into_iter()
+        .find(|l| matches!(l.media_type, podfetch_domain::audiobookshelf::library::MediaType::Book))
+        .unwrap();
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .get(&format!("/api/libraries/{}/recent-episodes", lib.id))
+        .await;
+    assert!(
+        resp.status_code().is_client_error(),
+        "expected 4xx for book library, got {}",
+        resp.status_code()
+    );
+}
+
+#[tokio::test]
+#[serial]
+async fn personalized_endpoint_returns_empty_array_stub() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let lib = state
+        .audiobookshelf_library_service
+        .find_default_podcasts_library()
+        .unwrap()
+        .unwrap();
+    login_audiobookshelf(&mut server, &user).await;
+    let resp = server
+        .test_server
+        .get(&format!("/api/libraries/{}/personalized", lib.id))
+        .await;
+    assert_eq!(resp.status_code().as_u16(), 200);
+    let body: Value = resp.json();
+    assert!(body.is_array());
+    assert_eq!(body.as_array().unwrap().len(), 0);
+}
+
+#[tokio::test]
+#[serial]
+async fn items_in_progress_returns_library_items_envelope() {
+    let mut server = handle_test_startup().await;
+    let state = AppState::new();
+    let user = create_user_for_audiobookshelf(&state);
+    let podcast = insert_test_podcast("Progress pod", &state, user.id);
+    let episode = insert_test_episode(podcast.id, "Ep");
+    login_audiobookshelf(&mut server, &user).await;
+
+    let empty = server.test_server.get("/api/me/items-in-progress").await;
+    assert_eq!(empty.status_code().as_u16(), 200);
+    let body: Value = empty.json();
+    assert_eq!(body["libraryItems"].as_array().unwrap().len(), 0);
+
+    let _ = server
+        .test_server
+        .patch(&format!(
+            "/api/me/progress/li_pod_{}/ep_{}",
+            podcast.id, episode.id
+        ))
+        .json(&json!({"currentTime": 30.0, "duration": 300.0}))
+        .await;
+    let with = server.test_server.get("/api/me/items-in-progress").await;
+    let body: Value = with.json();
+    let items = body["libraryItems"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert!((items[0]["currentTime"].as_f64().unwrap() - 30.0).abs() < 0.01);
+}
+
+#[tokio::test]
+#[serial]
 async fn playback_session_shape_matches_upstream() {
     // Pins PlaybackSession.toJSONForClient() so the mobile apps can read
     // the session payload off /api/items/.../play without crashing.

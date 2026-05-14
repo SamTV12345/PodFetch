@@ -269,10 +269,39 @@ fn upsert_progress_from_payload(
     Ok(updated)
 }
 
+/// Mirrors upstream `GET /api/me/items-in-progress`. The mobile apps
+/// poll this for the "Continue Listening" shelf. Returns a flat list of
+/// progress entries (we already build these for `/api/me`).
+#[utoipa::path(
+    get,
+    path = "/api/me/items-in-progress",
+    responses((status = 200, description = "Library items in progress")),
+    tag = "audiobookshelf"
+)]
+pub async fn list_items_in_progress(
+    State(state): State<AppState>,
+    AuthenticatedUser(user): AuthenticatedUser,
+) -> Result<Json<Value>, CustomError> {
+    let progress = state
+        .audiobookshelf_media_progress_service
+        .list_for_user(user.id)
+        .unwrap_or_default();
+    // Only entries with progress > 0 and not finished count for the shelf.
+    let in_progress: Vec<MediaProgressDto> = progress
+        .iter()
+        .filter(|p| p.current_time > 0.0 && !p.is_finished)
+        .map(MediaProgressDto::from)
+        .collect();
+    Ok(Json(json!({
+        "libraryItems": in_progress,
+    })))
+}
+
 pub fn get_me_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_me))
         .routes(routes!(list_listening_sessions))
+        .routes(routes!(list_items_in_progress))
         .routes(routes!(patch_progress_item))
         .routes(routes!(patch_progress_item_episode))
         .routes(routes!(patch_progress_batch))

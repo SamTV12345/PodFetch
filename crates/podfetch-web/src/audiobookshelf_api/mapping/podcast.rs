@@ -17,6 +17,52 @@ use podfetch_domain::podcast_episode::PodcastEpisode;
 use serde_json::{Value, json};
 use std::path::Path;
 
+/// Builds the inner `media`-style podcast JSON without the episodes array.
+/// Upstream's `Podcast.toOldJSON()` is similar but explicitly clears
+/// `podcastEpisodes` before serialising for some endpoints (e.g.
+/// `recent-episodes` embeds it on each episode). Use this where you only
+/// need the parent metadata.
+pub fn map_podcast_without_episodes(podcast: &Podcast, library_id: &str) -> Value {
+    let item_id = LibraryItemId::Podcast(podcast.id).as_string();
+    let updated_ms = Utc::now().naive_utc().and_utc().timestamp_millis();
+    json!({
+        "id": format!("pod_{}", podcast.id),
+        "libraryItemId": item_id,
+        "libraryId": library_id,
+        "metadata": metadata_json(podcast),
+        "coverPath": format!("/api/items/{item_id}/cover"),
+        "tags": Value::Array(vec![]),
+        "episodes": Value::Array(vec![]),
+        "autoDownloadEpisodes": podcast.active,
+        "autoDownloadSchedule": Value::Null,
+        "lastEpisodeCheck": updated_ms,
+        "maxEpisodesToKeep": 0,
+        "maxNewEpisodesToDownload": 0,
+        "size": 0,
+    })
+}
+
+/// Builds a single episode JSON with the parent `podcast` info embedded.
+/// Used by `GET /api/libraries/:id/recent-episodes` to mirror upstream's
+/// `libraryItemsPodcastFilters.getRecentEpisodes` output shape.
+pub fn map_episode_for_recent(
+    podcast: &Podcast,
+    episode: &PodcastEpisode,
+    index: i32,
+    library_id: &str,
+) -> Value {
+    let item_id = LibraryItemId::Podcast(podcast.id).as_string();
+    let mut ep_json = map_episode(episode, &item_id, podcast.id, index);
+    if let Some(obj) = ep_json.as_object_mut() {
+        obj.insert(
+            "podcast".to_string(),
+            map_podcast_without_episodes(podcast, library_id),
+        );
+        obj.insert("libraryId".to_string(), Value::from(library_id.to_string()));
+    }
+    ep_json
+}
+
 pub fn map_podcast(
     podcast: &Podcast,
     episodes: &[PodcastEpisode],
@@ -134,7 +180,7 @@ fn title_ignore_prefix(title: &str) -> String {
     title.to_string()
 }
 
-fn map_episode(
+pub fn map_episode(
     episode: &PodcastEpisode,
     library_item_id: &str,
     podcast_id: i32,
