@@ -1580,7 +1580,12 @@ async fn play_uses_direct_when_client_supports_source_codec() {
     let body: Value = play_resp.json();
     assert_eq!(body["playMethod"], json!(0));
     let content_url = body["audioTracks"][0]["contentUrl"].as_str().unwrap();
-    assert!(content_url.starts_with("/public/session/"), "got: {content_url}");
+    // Upstream parity: direct-play tracks point at /api/items/<id>/file/<ino>
+    // (PodcastEpisode.getAudioTrack), not at the /public/session share path.
+    assert!(
+        content_url.contains(&format!("/api/items/li_pod_{}/file/ino_ep_", podcast.id)),
+        "got contentUrl: {content_url}"
+    );
 }
 
 #[tokio::test]

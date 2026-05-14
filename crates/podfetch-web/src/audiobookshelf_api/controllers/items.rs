@@ -158,6 +158,9 @@ pub async fn get_item_cover(
         LibraryItemId::Podcast(pid) => {
             let podcast_entity = PodcastService::get_podcast(pid)?;
             let podcast: podfetch_domain::podcast::Podcast = podcast_entity.into();
+            // Prefer a local file on disk; if image_url is actually a remote
+            // URL (most podcasts: image lives in the RSS feed), redirect the
+            // client there so the mobile app's image loader handles it.
             let candidate = PathBuf::from(&podcast.image_url);
             if candidate.is_file() {
                 return serve_file(candidate).await;
@@ -165,6 +168,15 @@ pub async fn get_item_cover(
             let local_in_dir = PathBuf::from(&podcast.directory_name).join("cover.jpg");
             if local_in_dir.is_file() {
                 return serve_file(local_in_dir).await;
+            }
+            if podcast.image_url.starts_with("http://")
+                || podcast.image_url.starts_with("https://")
+            {
+                let mut headers = HeaderMap::new();
+                if let Ok(loc) = HeaderValue::from_str(&podcast.image_url) {
+                    headers.insert(header::LOCATION, loc);
+                }
+                return Ok((StatusCode::FOUND, headers, Body::empty()).into_response());
             }
             Err(CustomErrorInner::NotFound(Debug).into())
         }

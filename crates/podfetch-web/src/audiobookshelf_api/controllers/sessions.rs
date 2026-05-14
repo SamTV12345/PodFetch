@@ -139,10 +139,14 @@ async fn start_session(
     } else {
         PlayMethod::Direct
     };
+    // Upstream parity: direct-play audioTracks point at
+    // `/api/items/<itemId>/file/<ino>` (PodcastEpisode.getAudioTrack), HLS
+    // at `/hls/<sid>/master.m3u8`. The /public/session/.../track/N URL is a
+    // share-link-only path and not what the mobile players hit.
     let content_url = if use_hls {
         format!("/hls/{session_id}/master.m3u8")
     } else {
-        format!("/public/session/{session_id}/track/0")
+        format!("/api/items/{item_id}/file/ino_ep_{}", episode.id)
     };
 
     let session = PlaybackSession {
@@ -413,8 +417,10 @@ async fn start_book_session(
         session_with_progress.current_time = p.current_time;
     }
 
-    // Build audio tracks. For HLS we only expose a single master.m3u8 track
-    // covering the full duration; for direct streaming we expose one per file.
+    // Build audio tracks. For HLS we expose a single master.m3u8 track
+    // covering the full duration; for direct streaming we expose one per
+    // file with `/api/items/<itemId>/file/<ino>` content URLs (upstream
+    // parity: `PodcastEpisode.getAudioTrack` / `Book.getTracklist`).
     let audio_tracks: Vec<PlaybackAudioTrackDto> = if use_hls {
         let title = aggregate.book.title.clone();
         let first_file = aggregate.audio_files.first().cloned();
@@ -460,7 +466,7 @@ async fn start_book_session(
                     start_offset: offset,
                     duration: af.duration,
                     title: filename.clone(),
-                    content_url: format!("/public/session/{}/track/{}", session.id, af.idx),
+                    content_url: format!("/api/items/{}/file/{}", session.library_item_id, af.id),
                     mime_type: af.mime_type.clone(),
                     codec: af.codec.clone(),
                     metadata: AudioTrackMetadataDto {

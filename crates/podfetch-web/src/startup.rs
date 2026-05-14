@@ -476,7 +476,36 @@ pub fn build_server_router() -> Router {
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
         .merge(Scalar::with_url("/scalar", api))
         .layer(layer)
+        .layer(axum::middleware::from_fn(http_request_logger))
         .layer(tower_http::trace::TraceLayer::new_for_http())
+}
+
+/// Logs every HTTP request as one line with method + path + status + latency.
+/// Goes in front of `TraceLayer` so the message includes the path directly
+/// (TraceLayer puts the URI in a span; the default subscriber doesn't
+/// render span fields, so the message alone would be path-less).
+async fn http_request_logger(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let method = req.method().clone();
+    let uri = req.uri().clone();
+    let started = std::time::Instant::now();
+    let response = next.run(req).await;
+    let elapsed_ms = started.elapsed().as_millis();
+    let status = response.status().as_u16();
+    let path_and_query = uri
+        .path_and_query()
+        .map(|p| p.as_str())
+        .unwrap_or(uri.path());
+    if status >= 500 {
+        tracing::error!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
+    } else if status >= 400 {
+        tracing::warn!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
+    } else {
+        tracing::info!("{method} {path_and_query} -> {status} in {elapsed_ms}ms");
+    }
+    response
 }
 
 /// Full server startup including background scheduler for polling and cleanup.
