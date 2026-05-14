@@ -186,11 +186,13 @@ async fn start_session(
     } else {
         mime_type
     };
+    let now_ms = chrono::Utc::now().timestamp_millis();
     let audio_tracks = vec![PlaybackAudioTrackDto {
-        index: 0,
+        index: 1,
+        ino: format!("ino_ep_{}", episode.id),
         start_offset: 0.0,
         duration,
-        title: episode.name.clone(),
+        title: filename.clone(),
         content_url,
         mime_type: track_mime_type,
         codec,
@@ -199,7 +201,21 @@ async fn start_session(
             ext,
             path: local_path.clone(),
             rel_path: local_path,
+            size: 0,
+            mtime_ms: now_ms,
+            ctime_ms: now_ms,
+            birthtime_ms: now_ms,
         },
+        bit_rate: 0,
+        language: None,
+        time_base: "1/1000".to_string(),
+        channels: 2,
+        channel_layout: "stereo".to_string(),
+        chapters: Vec::new(),
+        embedded_cover_art: None,
+        manually_verified: false,
+        invalid: false,
+        exclude: false,
     }];
 
     Ok(Json(PlaybackSessionDto::from_domain(
@@ -421,11 +437,16 @@ async fn start_book_session(
     // covering the full duration; for direct streaming we expose one per
     // file with `/api/items/<itemId>/file/<ino>` content URLs (upstream
     // parity: `PodcastEpisode.getAudioTrack` / `Book.getTracklist`).
+    let now_ms = chrono::Utc::now().timestamp_millis();
     let audio_tracks: Vec<PlaybackAudioTrackDto> = if use_hls {
         let title = aggregate.book.title.clone();
         let first_file = aggregate.audio_files.first().cloned();
         vec![PlaybackAudioTrackDto {
-            index: 0,
+            index: 1,
+            ino: first_file
+                .as_ref()
+                .map(|af| af.id.clone())
+                .unwrap_or_default(),
             start_offset: 0.0,
             duration: aggregate.book.duration_seconds,
             title,
@@ -447,7 +468,21 @@ async fn start_book_session(
                     .as_ref()
                     .map(|af| af.relative_path.clone())
                     .unwrap_or_default(),
+                size: 0,
+                mtime_ms: now_ms,
+                ctime_ms: now_ms,
+                birthtime_ms: now_ms,
             },
+            bit_rate: 0,
+            language: None,
+            time_base: "1/1000".to_string(),
+            channels: first_file.as_ref().map(|af| af.channels).unwrap_or(2),
+            channel_layout: "stereo".to_string(),
+            chapters: Vec::new(),
+            embedded_cover_art: None,
+            manually_verified: false,
+            invalid: false,
+            exclude: false,
         }]
     } else {
         aggregate
@@ -463,6 +498,7 @@ async fn start_book_session(
                     .to_string();
                 Some(PlaybackAudioTrackDto {
                     index: af.idx,
+                    ino: af.id.clone(),
                     start_offset: offset,
                     duration: af.duration,
                     title: filename.clone(),
@@ -474,7 +510,25 @@ async fn start_book_session(
                         ext: af.ext.clone(),
                         path: af.path.clone(),
                         rel_path: af.relative_path.clone(),
+                        size: 0,
+                        mtime_ms: now_ms,
+                        ctime_ms: now_ms,
+                        birthtime_ms: now_ms,
                     },
+                    bit_rate: af.bitrate as i64,
+                    language: None,
+                    time_base: "1/1000".to_string(),
+                    channels: af.channels,
+                    channel_layout: if af.channels == 1 {
+                        "mono".to_string()
+                    } else {
+                        "stereo".to_string()
+                    },
+                    chapters: Vec::new(),
+                    embedded_cover_art: None,
+                    manually_verified: false,
+                    invalid: false,
+                    exclude: false,
                 })
             })
             .collect()

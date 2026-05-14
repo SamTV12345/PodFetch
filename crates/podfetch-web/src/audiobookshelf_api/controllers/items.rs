@@ -199,8 +199,8 @@ async fn serve_podcast_cover(
             return redirect(url_candidate);
         }
     }
-    tracing::debug!(
-        "cover lookup miss for podcast {} (image_url='{}', original_image_url='{}', dir='{}')",
+    tracing::warn!(
+        "audiobookshelf cover MISS for podcast id={} image_url='{}' original_image_url='{}' directory='{}'",
         podcast.id,
         podcast.image_url,
         podcast.original_image_url,
@@ -265,12 +265,32 @@ pub async fn get_item_file(
                 .map(podfetch_domain::podcast_episode::PodcastEpisode::from)
                 .find(|e| e.id == episode_db_id)
                 .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-            let local = episode
+            // Local downloaded file wins; if PodFetch never downloaded this
+            // episode (RSS-only), redirect to the original enclosure URL so
+            // the mobile-app player can still stream from the source CDN.
+            let local_opt = episode
                 .file_episode_path
                 .clone()
                 .or_else(|| episode.download_location.clone())
-                .ok_or_else(|| CustomError::from(CustomErrorInner::NotFound(Debug)))?;
-            PathBuf::from(local)
+                .filter(|p| std::path::Path::new(p).is_file());
+            match local_opt {
+                Some(local) => PathBuf::from(local),
+                None if !episode.url.is_empty() => {
+                    tracing::info!(
+                        "audiobookshelf file: episode {} not local, redirecting to enclosure {}",
+                        episode.id,
+                        episode.url
+                    );
+                    return redirect(&episode.url);
+                }
+                None => {
+                    tracing::warn!(
+                        "audiobookshelf file MISS for episode id={} (no local path, no enclosure url)",
+                        episode.id
+                    );
+                    return Err(CustomErrorInner::NotFound(Debug).into());
+                }
+            }
         }
         LibraryItemId::Book(_) => {
             let book = state

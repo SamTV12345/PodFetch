@@ -1,10 +1,15 @@
 use podfetch_domain::audiobookshelf::playback_session::PlaybackSession;
 use serde::{Deserialize, Serialize};
 
+/// Audiobookshelf audio-track payload. Field set mirrors upstream
+/// `PodcastEpisode.getAudioTrack` / `AudioFile.toJSON` (structuredClone +
+/// startOffset/title/index/contentUrl). Mobile-app players read `ino`,
+/// `mimeType` and `contentUrl` mandatorily.
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaybackAudioTrackDto {
     pub index: i32,
+    pub ino: String,
     pub start_offset: f64,
     pub duration: f64,
     pub title: String,
@@ -12,6 +17,16 @@ pub struct PlaybackAudioTrackDto {
     pub mime_type: String,
     pub codec: String,
     pub metadata: AudioTrackMetadataDto,
+    pub bit_rate: i64,
+    pub language: Option<String>,
+    pub time_base: String,
+    pub channels: i32,
+    pub channel_layout: String,
+    pub chapters: Vec<serde_json::Value>,
+    pub embedded_cover_art: Option<String>,
+    pub manually_verified: bool,
+    pub invalid: bool,
+    pub exclude: bool,
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
@@ -21,6 +36,10 @@ pub struct AudioTrackMetadataDto {
     pub ext: String,
     pub path: String,
     pub rel_path: String,
+    pub size: i64,
+    pub mtime_ms: i64,
+    pub ctime_ms: i64,
+    pub birthtime_ms: i64,
 }
 
 /// 100 % audiobookshelf-shape per upstream
